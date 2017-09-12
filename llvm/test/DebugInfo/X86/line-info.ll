@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj -O0 < %s > %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; CHECK: [[FILEID:[0-9]+]]]{{.*}}list0.h
 ; CHECK: [[FILEID]]      0      1   0  0 is_stmt{{$}}

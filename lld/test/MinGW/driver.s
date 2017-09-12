@@ -10,6 +10,11 @@
 # RUN: llvm-readobj %t.exe | FileCheck %s
 # CHECK: File:
 
+# RUN: ld.lld -m i386pep -e main %t.obj -o %t.exe -verbose -### | FileCheck %s -check-prefix CHECK-VERBOSE
+# CHECK-VERBOSE: lld-link -entry:main
+# CHECK-VERBOSE-SAME: -machine:x64 -alternatename:__image_base__=__ImageBase
+# CHECK-VERBOSE-SAME: -verbose
+
 # RUN: ld.lld -m i386pep --entry main %t.obj -o %t.exe --subsystem console
 # RUN: llvm-readobj -file-headers %t.exe | FileCheck %s -check-prefix CHECK-CONSOLE
 # CHECK-CONSOLE: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)

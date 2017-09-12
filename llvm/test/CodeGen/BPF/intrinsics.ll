@@ -55,7 +55,7 @@ entry:
   tail call void inttoptr (i64 4 to void (i64, i32)*)(i64 %call, i32 4) #2
   ret i32 0
 ; CHECK-LABEL: ld_pseudo:
-; CHECK: ld_pseudo r1, 2, 3ll # encoding: [0x18,0x21,0x00,0x00,0x03,0x00
+; CHECK: ld_pseudo r1, 2, 3 # encoding: [0x18,0x21,0x00,0x00,0x03,0x00
 }
 
 declare i64 @llvm.bpf.pseudo(i64, i64) #2

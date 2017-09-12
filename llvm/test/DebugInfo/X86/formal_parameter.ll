@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 ;
 ; RUN: opt %s -O2 -S -o %t
 ; RUN: cat %t | FileCheck --check-prefix=LOWERING %s
-; RUN: llc -filetype=obj %t -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -filetype=obj %t -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Test that we only emit only one DW_AT_formal_parameter "map" for this function.
 ; rdar://problem/14874886
 ;

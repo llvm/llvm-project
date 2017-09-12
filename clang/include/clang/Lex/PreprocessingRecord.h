@@ -504,7 +504,8 @@ namespace clang {
     void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
                  SourceRange Range) override;
 
-    void SourceRangeSkipped(SourceRange Range) override;
+    void SourceRangeSkipped(SourceRange Range,
+                            SourceLocation EndifLoc) override;
 
     void addMacroExpansion(const Token &Id, const MacroInfo *MI,
                            SourceRange Range);

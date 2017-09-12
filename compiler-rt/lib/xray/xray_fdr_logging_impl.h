@@ -571,6 +571,8 @@ inline void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
   }
 }
 
+thread_local volatile bool Running = false;
+
 inline void processFunctionHook(
     int32_t FuncId, XRayEntryType Entry, uint64_t TSC, unsigned char CPU,
     int (*wall_clock_reader)(clockid_t, struct timespec *),
@@ -581,7 +583,6 @@ inline void processFunctionHook(
   // don't want to be clobbering potentially partial writes already happening in
   // the thread. We use a simple thread_local latch to only allow one on-going
   // handleArg0 to happen at any given time.
-  thread_local volatile bool Running = false;
   RecursionGuard Guard{Running};
   if (!Guard) {
     assert(Running == true && "RecursionGuard is buggy!");

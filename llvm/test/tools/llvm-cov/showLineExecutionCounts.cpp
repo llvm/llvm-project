@@ -80,12 +80,9 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML-INDEX-LABEL: <table>
 // HTML-INDEX: <td class='column-entry-left'>Filename</td>
 // HTML-INDEX: <td class='column-entry'>Function Coverage</td>
-// HTML-INDEX: <td class='column-entry'>Instantiation Coverage</td>
 // HTML-INDEX: <td class='column-entry'>Line Coverage</td>
 // HTML-INDEX: <td class='column-entry'>Region Coverage</td>
 // HTML-INDEX: <a href='coverage{{.*}}showLineExecutionCounts.cpp.html'{{.*}}showLineExecutionCounts.cpp</a>
-// HTML-INDEX: <td class='column-entry-green'>
-// HTML-INDEX: 100.00% (1/1)
 // HTML-INDEX: <td class='column-entry-green'>
 // HTML-INDEX: 100.00% (1/1)
 // HTML-INDEX: <td class='column-entry-yellow'>

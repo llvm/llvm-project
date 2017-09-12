@@ -97,6 +97,10 @@ void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
   }
 
   OriginalLocation = CGF->Builder.getCurrentDebugLocation();
+
+  if (OriginalLocation && !DI->CGM.getExpressionLocationsEnabled())
+    return;
+
   if (TemporaryLocation.isValid()) {
     DI->EmitLocation(CGF->Builder, TemporaryLocation);
     return;

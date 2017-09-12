@@ -15,7 +15,7 @@ EOF
 // RUN: cp %p/../Inputs/modules-empty/1.o %p/../Inputs/modules-empty/Empty.pcm %t.dir
 // RUN: llvm-dsymutil -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump --debug-dump=info - | FileCheck %s
+// RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
 
 #include "Empty.h"
 int main() {

@@ -1,4 +1,4 @@
-// RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S 2>&1 | FileCheck %s
+// RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S 2>&1 -show-region-summary -show-instantiation-summary | FileCheck %s
 // RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S %s 2>&1 | FileCheck -check-prefix=FILT %s
 // RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S %s does-not-exist.cpp 2>&1 | FileCheck -check-prefix=FILT %s
 

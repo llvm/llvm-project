@@ -32,13 +32,13 @@ execution of an application.
 
 A more complete description of the Itanium ABI exception handling runtime
 support of can be found at `Itanium C++ ABI: Exception Handling
-<http://mentorembedded.github.com/cxx-abi/abi-eh.html>`_. A description of the
+<http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html>`_. A description of the
 exception frame format can be found at `Exception Frames
 <http://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html>`_,
 with details of the DWARF 4 specification at `DWARF 4 Standard
 <http://dwarfstd.org/Dwarf4Std.php>`_.  A description for the C++ exception
 table formats can be found at `Exception Handling Tables
-<http://mentorembedded.github.com/cxx-abi/exceptions.pdf>`_.
+<http://itanium-cxx-abi.github.io/cxx-abi/exceptions.pdf>`_.
 
 Setjmp/Longjmp Exception Handling
 ---------------------------------

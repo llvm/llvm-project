@@ -15,31 +15,36 @@
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Utils/SSAUpdaterImpl.h"
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-ssaupdater"
 
-typedef DenseMap<MachineBasicBlock*, unsigned> AvailableValsTy;
+using AvailableValsTy = DenseMap<MachineBasicBlock *, unsigned>;
+
 static AvailableValsTy &getAvailableVals(void *AV) {
   return *static_cast<AvailableValsTy*>(AV);
 }
 
 MachineSSAUpdater::MachineSSAUpdater(MachineFunction &MF,
                                      SmallVectorImpl<MachineInstr*> *NewPHI)
-  : AV(nullptr), InsertedPHIs(NewPHI) {
-  TII = MF.getSubtarget().getInstrInfo();
-  MRI = &MF.getRegInfo();
-}
+  : InsertedPHIs(NewPHI), TII(MF.getSubtarget().getInstrInfo()),
+    MRI(&MF.getRegInfo()) {}
 
 MachineSSAUpdater::~MachineSSAUpdater() {
   delete static_cast<AvailableValsTy*>(AV);
@@ -77,7 +82,7 @@ unsigned MachineSSAUpdater::GetValueAtEndOfBlock(MachineBasicBlock *BB) {
 
 static
 unsigned LookForIdenticalPHI(MachineBasicBlock *BB,
-        SmallVectorImpl<std::pair<MachineBasicBlock*, unsigned> > &PredValues) {
+        SmallVectorImpl<std::pair<MachineBasicBlock *, unsigned>> &PredValues) {
   if (BB->empty())
     return 0;
 
@@ -136,7 +141,6 @@ MachineInstrBuilder InsertNewDef(unsigned Opcode,
 /// their respective blocks.  However, the use of X happens in the *middle* of
 /// a block.  Because of this, we need to insert a new PHI node in SomeBB to
 /// merge the appropriate values, and this value isn't live out of the block.
-///
 unsigned MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
   // If there is no definition of the renamed variable in this block, just use
   // GetValueAtEndOfBlock to do our work.
@@ -233,14 +237,15 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
 /// SSAUpdaterTraits<MachineSSAUpdater> - Traits for the SSAUpdaterImpl
 /// template, specialized for MachineSSAUpdater.
 namespace llvm {
+
 template<>
 class SSAUpdaterTraits<MachineSSAUpdater> {
 public:
-  typedef MachineBasicBlock BlkT;
-  typedef unsigned ValT;
-  typedef MachineInstr PhiT;
+  using BlkT = MachineBasicBlock;
+  using ValT = unsigned;
+  using PhiT = MachineInstr;
+  using BlkSucc_iterator = MachineBasicBlock::succ_iterator;
 
-  typedef MachineBasicBlock::succ_iterator BlkSucc_iterator;
   static BlkSucc_iterator BlkSucc_begin(BlkT *BB) { return BB->succ_begin(); }
   static BlkSucc_iterator BlkSucc_end(BlkT *BB) { return BB->succ_end(); }
 
@@ -259,12 +264,16 @@ public:
     PHI_iterator &operator++() { idx += 2; return *this; } 
     bool operator==(const PHI_iterator& x) const { return idx == x.idx; }
     bool operator!=(const PHI_iterator& x) const { return !operator==(x); }
+
     unsigned getIncomingValue() { return PHI->getOperand(idx).getReg(); }
+
     MachineBasicBlock *getIncomingBlock() {
       return PHI->getOperand(idx+1).getMBB();
     }
   };
+
   static inline PHI_iterator PHI_begin(PhiT *PHI) { return PHI_iterator(PHI); }
+
   static inline PHI_iterator PHI_end(PhiT *PHI) {
     return PHI_iterator(PHI, true);
   }
@@ -309,7 +318,6 @@ public:
   }
 
   /// InstrIsPHI - Check if an instruction is a PHI.
-  ///
   static MachineInstr *InstrIsPHI(MachineInstr *I) {
     if (I && I->isPHI())
       return I;
@@ -338,7 +346,7 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
 /// GetValueAtEndOfBlockInternal - Check to see if AvailableVals has an entry
 /// for the specified BB and if so, return it.  If not, construct SSA form by

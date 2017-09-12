@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 #ifdef FILE1
 // Currently llvm-dsymutil will unique the contents of anonymous

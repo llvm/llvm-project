@@ -14,9 +14,8 @@
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -31,9 +30,10 @@
 using namespace lld;
 using namespace llvm;
 
-namespace lld {
-namespace mingw {
-namespace {
+LLVM_ATTRIBUTE_NORETURN static void error(const Twine &Msg) {
+  errs() << Msg << "\n";
+  exit(1);
+}
 
 // Create OptTable
 enum {
@@ -44,7 +44,7 @@ enum {
 };
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #include "Options.inc"
 #undef PREFIX
 
@@ -57,17 +57,28 @@ static const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class COFFLdOptTable : public opt::OptTable {
+namespace {
+class MinGWOptTable : public opt::OptTable {
 public:
-  COFFLdOptTable() : OptTable(InfoTable, false) {}
+  MinGWOptTable() : OptTable(InfoTable, false) {}
   opt::InputArgList parse(ArrayRef<const char *> Argv);
 };
-
 } // namespace
 
-LLVM_ATTRIBUTE_NORETURN static void error(const Twine &Msg) {
-  errs() << Msg << "\n";
-  exit(1);
+opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
+  unsigned MissingIndex;
+  unsigned MissingCount;
+
+  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
+
+  if (MissingCount)
+    error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + Arg->getSpelling());
+  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
+    error("no input files");
+  return Args;
 }
 
 // Find a file by concatenating given paths.
@@ -99,38 +110,22 @@ searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
   error("unable to find library -l" + Name);
 }
 
-opt::InputArgList COFFLdOptTable::parse(ArrayRef<const char *> Argv) {
-  unsigned MissingIndex;
-  unsigned MissingCount;
-
-  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
-  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
-
-  if (MissingCount)
-    error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
-  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + Arg->getSpelling());
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
-    error("no input files");
-  return Args;
-}
-
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
-  COFFLdOptTable Parser;
+bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
+  MinGWOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
   std::vector<std::string> LinkArgs;
   auto Add = [&](const Twine &S) { LinkArgs.push_back(S.str()); };
 
-  Add(ArgsArr[0]);
+  Add("lld-link");
 
   if (auto *A = Args.getLastArg(OPT_entry))
     Add("-entry:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_subs))
     Add("-subsystem:" + StringRef(A->getValue()));
-  if (auto *A = Args.getLastArg(OPT_outlib))
+  if (auto *A = Args.getLastArg(OPT_out_implib))
     Add("-implib:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_stack))
     Add("-stack:" + StringRef(A->getValue()));
@@ -159,6 +154,9 @@ bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
       error("unknown parameter: -m" + S);
   }
 
+  for (auto *A : Args.filtered(OPT_mllvm))
+    Add("-mllvm:" + StringRef(A->getValue()));
+
   if (Args.getLastArgValue(OPT_m) == "i386pe")
     Add("-alternatename:__image_base__=___ImageBase");
   else
@@ -175,12 +173,18 @@ bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
       Add(searchLibrary(A->getValue(), SearchPaths, Args.hasArg(OPT_Bstatic)));
   }
 
+  if (Args.hasArg(OPT_verbose))
+    Add("-verbose");
+
+  if (Args.hasArg(OPT_verbose) || Args.hasArg(OPT__HASH_HASH_HASH))
+    outs() << llvm::join(LinkArgs, " ") << "\n";
+
+  if (Args.hasArg(OPT__HASH_HASH_HASH))
+    return true;
+
   // Repack vector of strings to vector of const char pointers for coff::link.
   std::vector<const char *> Vec;
   for (const std::string &S : LinkArgs)
     Vec.push_back(S.c_str());
   return coff::link(Vec);
 }
-
-} // namespace mingw
-} // namespace lld

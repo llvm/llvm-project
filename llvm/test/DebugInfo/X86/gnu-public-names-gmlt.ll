@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-gnu-dwarf-pub-sections | llvm-dwarfdump - | FileCheck --check-prefix=GPUB --check-prefix=CHECK %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-dwarf-pub-sections=Enable | llvm-dwarfdump - | FileCheck --check-prefix=PUB --check-prefix=CHECK %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump - | FileCheck --check-prefix=NONE %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-gnu-dwarf-pub-sections | llvm-dwarfdump -v - | FileCheck --check-prefix=GPUB --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s -generate-dwarf-pub-sections=Enable | llvm-dwarfdump -v - | FileCheck --check-prefix=PUB --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck --check-prefix=NONE %s
 
 ; Generated from:
 ;   void f1();

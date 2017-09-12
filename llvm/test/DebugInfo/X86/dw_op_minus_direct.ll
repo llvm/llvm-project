@@ -1,8 +1,8 @@
 ; Test dwarf codegen of DW_OP_minus.
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s
-; RUN: llc -dwarf-version=2 -filetype=obj < %s | llvm-dwarfdump - \
+; RUN: llc -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -dwarf-version=2 -filetype=obj < %s | llvm-dwarfdump -v - \
 ; RUN:   | FileCheck %s --check-prefix=DWARF2
-; RUN: llc -dwarf-version=3 -filetype=obj < %s | llvm-dwarfdump - \
+; RUN: llc -dwarf-version=3 -filetype=obj < %s | llvm-dwarfdump -v - \
 ; RUN:   | FileCheck %s --check-prefix=DWARF2
 
 ; This was derived manually from:
