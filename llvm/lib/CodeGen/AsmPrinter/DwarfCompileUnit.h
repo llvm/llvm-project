@@ -275,6 +275,8 @@ public:
 
   void setBaseAddress(const MCSymbol *Base) { BaseAddress = Base; }
   const MCSymbol *getBaseAddress() const { return BaseAddress; }
+
+  bool hasDwarfPubSections() const;
 };
 
 } // end llvm namespace
