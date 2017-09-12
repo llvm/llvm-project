@@ -289,7 +289,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::basic_stringbuf(basic_stringbuf&& 
     if (__bout != -1)
     {
         this->setp(__p + __bout, __p + __eout);
-        this->pbump(__nout);
+        this->__pbump(__nout);
     }
     __hm_ = __hm == -1 ? nullptr : __p + __hm;
     __p = const_cast<char_type*>(__rhs.__str_.data());
@@ -332,7 +332,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
     if (__bout != -1)
     {
         this->setp(__p + __bout, __p + __eout);
-        this->pbump(__nout);
+        this->__pbump(__nout);
     }
     else
         this->setp(nullptr, nullptr);
@@ -403,7 +403,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
     if (__rbout != -1)
     {
         this->setp(__p + __rbout, __p + __reout);
-        this->pbump(__rnout);
+        this->__pbump(__rnout);
     }
     else
         this->setp(nullptr, nullptr);
@@ -416,7 +416,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
     if (__lbout != -1)
     {
         __rhs.setp(__p + __lbout, __p + __leout);
-        __rhs.pbump(__lnout);
+        __rhs.__pbump(__lnout);
     }
     else
         __rhs.setp(nullptr, nullptr);
@@ -471,7 +471,15 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
         this->setp(const_cast<char_type*>(__str_.data()),
                    const_cast<char_type*>(__str_.data()) + __str_.size());
         if (__mode_ & (ios_base::app | ios_base::ate))
-            this->pbump(__sz);
+        {
+            while (__sz > INT_MAX)
+            {
+            	this->pbump(INT_MAX);
+            	__sz -= INT_MAX;
+            }
+            if (__sz > 0)
+            	this->pbump(__sz);
+    	}
     }
 }
 
@@ -536,7 +544,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
                 __str_.resize(__str_.capacity());
                 char_type* __p = const_cast<char_type*>(__str_.data());
                 this->setp(__p, __p + __str_.size());
-                this->pbump(__nout);
+                this->__pbump(__nout);
                 __hm_ = this->pbase() + __hm;
 #ifndef _LIBCPP_NO_EXCEPTIONS
             }
