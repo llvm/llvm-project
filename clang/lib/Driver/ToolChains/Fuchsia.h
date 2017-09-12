@@ -49,6 +49,9 @@ public:
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;
   }
+  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
   bool isPICDefault() const override { return false; }
   bool isPIEDefault() const override { return true; }
   bool isPICDefaultForced() const override { return false; }

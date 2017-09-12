@@ -175,12 +175,6 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  if (Force && PrevNames.size() < NewNames.size()) {
-    // No matching PrevName for all NewNames. Without Force this is an error
-    // above already.
-    return 0;
-  }
-
   // Perform the renaming.
   tooling::RenamingAction RenameAction(NewNames, PrevNames, USRList,
                                        Tool.getReplacements(), PrintLocations);
