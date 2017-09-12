@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/gdb-index.s -o %t2.o
 # RUN: ld.lld --gdb-index -e main %t1.o %t2.o -o %t
-# RUN: llvm-dwarfdump -debug-dump=gdb_index %t | FileCheck %s
+# RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
 # RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM
 
 # DISASM:       Disassembly of section .text:

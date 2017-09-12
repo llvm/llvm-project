@@ -1014,24 +1014,27 @@ static uint32_t findEndOfFirstNonExec(OutputSection &Cmd) {
   return 0;
 }
 
-ThunkSection *ThunkCreator::getOSThunkSec(OutputSection *Cmd,
+ThunkSection *ThunkCreator::getOSThunkSec(OutputSection *OS,
                                           std::vector<InputSection *> *ISR) {
   if (CurTS == nullptr) {
-    uint32_t Off = findEndOfFirstNonExec(*Cmd);
-    CurTS = addThunkSection(Cmd, ISR, Off);
+    uint32_t Off = findEndOfFirstNonExec(*OS);
+    CurTS = addThunkSection(OS, ISR, Off);
   }
   return CurTS;
 }
 
-ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
+// Add a Thunk that needs to be placed in a ThunkSection that immediately
+// precedes its Target.
+ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
   ThunkSection *TS = ThunkedSections.lookup(IS);
   if (TS)
     return TS;
 
-  // Find InputSectionRange within TOS that IS is in
-  OutputSection *C = IS->getParent();
+  // Find InputSectionRange within Target Output Section (TOS) that the
+  // InputSection (IS) that we need to precede is in.
+  OutputSection *TOS = IS->getParent();
   std::vector<InputSection *> *Range = nullptr;
-  for (BaseCommand *BC : C->Commands)
+  for (BaseCommand *BC : TOS->Commands)
     if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
       InputSection *first = ISD->Sections.front();
       InputSection *last = ISD->Sections.back();
@@ -1041,15 +1044,15 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
         break;
       }
     }
-  TS = addThunkSection(C, Range, IS->OutSecOff);
+  TS = addThunkSection(TOS, Range, IS->OutSecOff);
   ThunkedSections[IS] = TS;
   return TS;
 }
 
-ThunkSection *ThunkCreator::addThunkSection(OutputSection *Cmd,
+ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
                                             std::vector<InputSection *> *ISR,
                                             uint64_t Off) {
-  auto *TS = make<ThunkSection>(Cmd, Off);
+  auto *TS = make<ThunkSection>(OS, Off);
   ThunkSections[ISR].push_back(TS);
   return TS;
 }
@@ -1108,7 +1111,7 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   // We separate the creation of ThunkSections from the insertion of the
   // ThunkSections back into the OutputSection as ThunkSections are not always
   // inserted into the same OutputSection as the caller.
-  forEachExecInputSection(OutputSections, [&](OutputSection *Cmd,
+  forEachExecInputSection(OutputSections, [&](OutputSection *OS,
                                               std::vector<InputSection *> *ISR,
                                               InputSection *IS) {
     for (Relocation &Rel : IS->Relocations) {
@@ -1123,9 +1126,9 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
         // Find or create a ThunkSection for the new Thunk
         ThunkSection *TS;
         if (auto *TIS = T->getTargetInputSection())
-          TS = getISThunkSec(TIS, Cmd);
+          TS = getISThunkSec(TIS);
         else
-          TS = getOSThunkSec(Cmd, ISR);
+          TS = getOSThunkSec(OS, ISR);
         TS->addThunk(T);
         Thunks[T->ThunkSym] = T;
       }

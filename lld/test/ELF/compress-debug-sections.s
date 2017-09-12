@@ -15,7 +15,7 @@
 # ZLIBFLAGS-NEXT:    Flags [
 # ZLIBFLAGS-NEXT:      SHF_COMPRESSED
 
-# RUN: llvm-dwarfdump %t1 -debug-dump=str | \
+# RUN: llvm-dwarfdump %t1 -debug-str | \
 # RUN:   FileCheck %s --check-prefix=DEBUGSTR
 # DEBUGSTR:     .debug_str contents:
 # DEBUGSTR-NEXT:  AAAAAAAAAAAAAAAAAAAAAAAAAAA
