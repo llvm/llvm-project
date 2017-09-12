@@ -114,11 +114,6 @@ Improvements to clang-tidy
   Finds cases where integer division in a floating point context is likely to
   cause unintended loss of precision.
 
-- New `cppcoreguidelines-owning-memory <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-owning-memory.html>`_ check 
-
-  This check implements the type-based semantic of ``gsl::owner<T*>``, but without
-  flow analysis.
-
 - New `hicpp-exception-baseclass
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-exception-baseclass.html>`_ check
 
