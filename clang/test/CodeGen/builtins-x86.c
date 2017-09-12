@@ -160,8 +160,6 @@ void f0() {
   tmp_V4s = __builtin_ia32_psubusw(tmp_V4s, tmp_V4s);
   tmp_V4s = __builtin_ia32_pmulhw(tmp_V4s, tmp_V4s);
   tmp_V4s = __builtin_ia32_pmulhuw(tmp_V4s, tmp_V4s);
-  tmp_V8c = __builtin_ia32_pavgb(tmp_V8c, tmp_V8c);
-  tmp_V4s = __builtin_ia32_pavgw(tmp_V4s, tmp_V4s);
   tmp_V8c = __builtin_ia32_pcmpeqb(tmp_V8c, tmp_V8c);
   tmp_V4s = __builtin_ia32_pcmpeqw(tmp_V4s, tmp_V4s);
   tmp_V2i = __builtin_ia32_pcmpeqd(tmp_V2i, tmp_V2i);
@@ -201,8 +199,6 @@ void f0() {
   tmp_V16c = __builtin_ia32_psubusb128(tmp_V16c, tmp_V16c);
   tmp_V8s = __builtin_ia32_psubusw128(tmp_V8s, tmp_V8s);
   tmp_V8s = __builtin_ia32_pmulhw128(tmp_V8s, tmp_V8s);
-  tmp_V16c = __builtin_ia32_pavgb128(tmp_V16c, tmp_V16c);
-  tmp_V8s = __builtin_ia32_pavgw128(tmp_V8s, tmp_V8s);
   tmp_V16c = __builtin_ia32_pmaxub128(tmp_V16c, tmp_V16c);
   tmp_V8s = __builtin_ia32_pmaxsw128(tmp_V8s, tmp_V8s);
   tmp_V16c = __builtin_ia32_pminub128(tmp_V16c, tmp_V16c);

@@ -252,7 +252,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
       Name.startswith("avx512.cvtmask2") || // Added in 5.0
       (Name.startswith("xop.vpcom") && // Added in 3.2
-       F->arg_size() == 2))
+       F->arg_size() == 2) ||
+      Name.startswith("sse2.pavg") || // Added in 6.0
+      Name.startswith("avx2.pavg") || // Added in 6.0
+      Name.startswith("avx512.mask.pavg")) // Added in 6.0
     return true;
 
   return false;
@@ -1972,6 +1975,25 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       LoadInst *LI = Builder.CreateAlignedLoad(BC, VTy->getBitWidth() / 8);
       LI->setMetadata(M->getMDKindID("nontemporal"), Node);
       Rep = LI;
+    } else if (IsX86 &&
+               (Name.startswith("sse2.pavg") || Name.startswith("avx2.pavg") ||
+                Name.startswith("avx512.mask.pavg"))) {
+      // llvm.x86.sse2.pavg.b/w, llvm.x86.avx2.pavg.b/w,
+      // llvm.x86.avx512.mask.pavg.b/w
+      Value *A = CI->getArgOperand(0);
+      Value *B = CI->getArgOperand(1);
+      VectorType *ZextType = VectorType::getExtendedElementVectorType(
+          cast<VectorType>(A->getType()));
+      Value *ExtendedA = Builder.CreateZExt(A, ZextType);
+      Value *ExtendedB = Builder.CreateZExt(B, ZextType);
+      Value *Sum = Builder.CreateAdd(ExtendedA, ExtendedB);
+      Value *AddOne = Builder.CreateAdd(Sum, ConstantInt::get(ZextType, 1));
+      Value *ShiftR = Builder.CreateLShr(AddOne, ConstantInt::get(ZextType, 1));
+      Rep = Builder.CreateTrunc(ShiftR, A->getType());
+      if (CI->getNumArgOperands() > 2) {
+        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                            CI->getArgOperand(2));
+      }
     } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
       Value *Arg = CI->getArgOperand(0);
       Value *Neg = Builder.CreateNeg(Arg, "neg");

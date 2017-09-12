@@ -418,7 +418,7 @@ namespace {
 class SourcePrinter {
 protected:
   DILineInfo OldLineInfo;
-  const ObjectFile *Obj;
+  const ObjectFile *Obj = nullptr;
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
   // File name to file contents of source
   std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
@@ -426,22 +426,22 @@ protected:
   std::unordered_map<std::string, std::vector<StringRef>> LineCache;
 
 private:
-  bool cacheSource(std::string File);
+  bool cacheSource(const std::string& File);
 
 public:
-  virtual ~SourcePrinter() {}
-  SourcePrinter() : Obj(nullptr), Symbolizer(nullptr) {}
+  SourcePrinter() = default;
   SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
     symbolize::LLVMSymbolizer::Options SymbolizerOpts(
         DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
         DefaultArch);
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
+  virtual ~SourcePrinter() = default;
   virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
                                StringRef Delimiter = "; ");
 };
 
-bool SourcePrinter::cacheSource(std::string File) {
+bool SourcePrinter::cacheSource(const std::string& File) {
   auto BufferOrError = MemoryBuffer::getFile(File);
   if (!BufferOrError)
     return false;
@@ -509,7 +509,7 @@ static bool isArmElf(const ObjectFile *Obj) {
 
 class PrettyPrinter {
 public:
-  virtual ~PrettyPrinter(){}
+  virtual ~PrettyPrinter() = default;
   virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
                          ArrayRef<uint8_t> Bytes, uint64_t Address,
                          raw_ostream &OS, StringRef Annot,

@@ -1960,7 +1960,7 @@ public:
 private:
   /// \return An upper bound for the vectorization factor, larger than zero.
   /// One is returned if vectorization should best be avoided due to cost.
-  unsigned computeFeasibleMaxVF(bool OptForSize, unsigned ConstTripCount = 0);
+  unsigned computeFeasibleMaxVF(bool OptForSize, unsigned ConstTripCount);
 
   /// The vectorization cost is a combination of the cost itself and a boolean
   /// indicating whether any of the contributing operations will actually
@@ -6161,8 +6161,9 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     return None;
   }
 
+  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (!OptForSize) // Remaining checks deal with scalar loop when OptForSize.
-    return computeFeasibleMaxVF(OptForSize);
+    return computeFeasibleMaxVF(OptForSize, TC);
 
   if (Legal->getRuntimePointerChecking()->Need) {
     ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
@@ -6175,7 +6176,6 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   }
 
   // If we optimize the program for size, avoid creating the tail loop.
-  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
 
   // If we don't know the precise trip count, don't try to vectorize.
@@ -6236,15 +6236,20 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
   DEBUG(dbgs() << "LV: The Widest register is: " << WidestRegister
                << " bits.\n");
 
+  assert(MaxVectorSize <= 64 && "Did not expect to pack so many elements"
+                                " into one vector!");
   if (MaxVectorSize == 0) {
     DEBUG(dbgs() << "LV: The target has no vector registers.\n");
     MaxVectorSize = 1;
   } else if (ConstTripCount && ConstTripCount < MaxVectorSize &&
-             isPowerOf2_32(ConstTripCount))
+             isPowerOf2_32(ConstTripCount)) {
+    // We need to clamp the VF to be the ConstTripCount. There is no point in
+    // choosing a higher viable VF as done in the loop below.
+    DEBUG(dbgs() << "LV: Clamping the MaxVF to the constant trip count: "
+                 << ConstTripCount << "\n");
     MaxVectorSize = ConstTripCount;
-
-  assert(MaxVectorSize <= 64 && "Did not expect to pack so many elements"
-                                " into one vector!");
+    return MaxVectorSize;
+  }
 
   unsigned MaxVF = MaxVectorSize;
   if (MaximizeBandwidth && !OptForSize) {

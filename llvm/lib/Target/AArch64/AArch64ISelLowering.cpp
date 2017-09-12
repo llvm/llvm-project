@@ -5360,6 +5360,7 @@ static SDValue NarrowVector(SDValue V128Reg, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
                                                   SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unknown opcode!");
+  DEBUG(dbgs() << "AArch64TargetLowering::ReconstructShuffle\n");
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
   unsigned NumElts = VT.getVectorNumElements();
@@ -5395,8 +5396,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1))) {
-      // A shuffle can only come from building a vector from various
-      // elements of other vectors, provided their indices are constant.
+      DEBUG(dbgs() << "Reshuffle failed: "
+                      "a shuffle can only come from building a vector from "
+                      "various elements of other vectors, provided their "
+                      "indices are constant\n");
       return SDValue();
     }
 
@@ -5412,10 +5415,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     Source->MaxElt = std::max(Source->MaxElt, EltNo);
   }
 
-  // Currently only do something sane when at most two source vectors
-  // are involved.
-  if (Sources.size() > 2)
+  if (Sources.size() > 2) {
+    DEBUG(dbgs() << "Reshuffle failed: currently only do something sane when at "
+                    "most two source vectors are involved\n");
     return SDValue();
+  }
 
   // Find out the smallest element size among result and two sources, and use
   // it as element size to build the shuffle_vector.
@@ -5459,7 +5463,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     assert(SrcVT.getSizeInBits() == 2 * VT.getSizeInBits());
 
     if (Src.MaxElt - Src.MinElt >= NumSrcElts) {
-      // Span too large for a VEXT to cope
+      DEBUG(dbgs() << "Reshuffle failed: span too large for a VEXT to cope\n");
       return SDValue();
     }
 
@@ -5540,8 +5544,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   }
 
   // Final check before we try to produce nonsense...
-  if (!isShuffleMaskLegal(Mask, ShuffleVT))
+  if (!isShuffleMaskLegal(Mask, ShuffleVT)) {
+    DEBUG(dbgs() << "Reshuffle failed: illegal shuffle mask\n");
     return SDValue();
+  }
 
   SDValue ShuffleOps[] = { DAG.getUNDEF(ShuffleVT), DAG.getUNDEF(ShuffleVT) };
   for (unsigned i = 0; i < Sources.size(); ++i)
@@ -5549,7 +5555,16 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
 
   SDValue Shuffle = DAG.getVectorShuffle(ShuffleVT, dl, ShuffleOps[0],
                                          ShuffleOps[1], Mask);
-  return DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
+  SDValue V = DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
+
+  DEBUG(
+    dbgs() << "Reshuffle, creating node: ";
+    Shuffle.dump();
+    dbgs() << "Reshuffle, creating node: ";
+    V.dump();
+  );
+
+  return V;
 }
 
 // check if an EXT instruction can handle the shuffle mask when the
@@ -6762,27 +6777,36 @@ FailedModImm:
       usesOnlyOneValue = false;
   }
 
-  if (!Value.getNode())
+  if (!Value.getNode()) {
+    DEBUG(dbgs() << "LowerBUILD_VECTOR: value undefined, creating undef node\n");
     return DAG.getUNDEF(VT);
+  }
 
-  if (isOnlyLowElement)
+  if (isOnlyLowElement) {
+    DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
+                    "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
+  }
 
-  // Use DUP for non-constant splats.  For f32 constant splats, reduce to
+  // Use DUP for non-constant splats. For f32 constant splats, reduce to
   // i32 and try again.
   if (usesOnlyOneValue) {
     if (!isConstant) {
       if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-          Value.getValueType() != VT)
+          Value.getValueType() != VT) {
+        DEBUG(dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
         return DAG.getNode(AArch64ISD::DUP, dl, VT, Value);
+      }
 
       // This is actually a DUPLANExx operation, which keeps everything vectory.
 
-      // DUPLANE works on 128-bit vectors, widen it if necessary.
       SDValue Lane = Value.getOperand(1);
       Value = Value.getOperand(0);
-      if (Value.getValueSizeInBits() == 64)
+      if (Value.getValueSizeInBits() == 64) {
+        DEBUG(dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
+                        "widening it\n");
         Value = WidenVector(Value, DAG);
+      }
 
       unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
       return DAG.getNode(Opcode, dl, VT, Value, Lane);
@@ -6793,11 +6817,17 @@ FailedModImm:
       EVT EltTy = VT.getVectorElementType();
       assert ((EltTy == MVT::f16 || EltTy == MVT::f32 || EltTy == MVT::f64) &&
               "Unsupported floating-point vector type");
+      DEBUG(dbgs() << "LowerBUILD_VECTOR: float constant splats, creating int "
+                      "BITCASTS, and try again\n");
       MVT NewType = MVT::getIntegerVT(EltTy.getSizeInBits());
       for (unsigned i = 0; i < NumElts; ++i)
         Ops.push_back(DAG.getNode(ISD::BITCAST, dl, NewType, Op.getOperand(i)));
       EVT VecVT = EVT::getVectorVT(*DAG.getContext(), NewType, NumElts);
       SDValue Val = DAG.getBuildVector(VecVT, dl, Ops);
+      DEBUG(
+        dbgs() << "LowerBUILD_VECTOR: trying to lower new vector: ";
+        Val.dump();
+      );
       Val = LowerBUILD_VECTOR(Val, DAG);
       if (Val.getNode())
         return DAG.getNode(ISD::BITCAST, dl, VT, Val);
@@ -6823,11 +6853,12 @@ FailedModImm:
     return Val;
   }
 
-  // If all elements are constants and the case above didn't get hit, fall back
-  // to the default expansion, which will generate a load from the constant
-  // pool.
-  if (isConstant)
+  // This will generate a load from the constant pool.
+  if (isConstant) {
+    DEBUG(dbgs() << "LowerBUILD_VECTOR: all elements are constant, use default "
+                    "expansion\n");
     return SDValue();
+  }
 
   // Empirical tests suggest this is rarely worth it for vectors of length <= 2.
   if (NumElts >= 4) {
@@ -6842,6 +6873,9 @@ FailedModImm:
   // shuffle is valid for the target) and materialization element by element
   // on the stack followed by a load for everything else.
   if (!isConstant && !usesOnlyOneValue) {
+    DEBUG(dbgs() << "LowerBUILD_VECTOR: alternatives failed, creating sequence "
+                    "of INSERT_VECTOR_ELT\n");
+
     SDValue Vec = DAG.getUNDEF(VT);
     SDValue Op0 = Op.getOperand(0);
     unsigned i = 0;
@@ -6857,9 +6891,14 @@ FailedModImm:
     // extended (i32) and it is safe to cast them to the vector type by ignoring
     // the upper bits of the lowest lane (e.g. v8i8, v4i16).
     if (!Op0.isUndef()) {
+      DEBUG(dbgs() << "Creating node for op0, it is not undefined:\n");
       Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op0);
       ++i;
     }
+    DEBUG(
+      if (i < NumElts)
+        dbgs() << "Creating nodes for the other vector elements:\n";
+    );
     for (; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       if (V.isUndef())
@@ -6870,7 +6909,8 @@ FailedModImm:
     return Vec;
   }
 
-  // Just use the default expansion. We failed to find a better alternative.
+  DEBUG(dbgs() << "LowerBUILD_VECTOR: use default expansion, failed to find "
+                  "better alternative\n");
   return SDValue();
 }
 

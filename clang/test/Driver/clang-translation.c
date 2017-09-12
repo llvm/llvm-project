@@ -87,6 +87,18 @@
 // ARMV5E: "-cc1"
 // ARMV5E: "-target-cpu" "arm1022e"
 
+// RUN: %clang -target arm-linux -mtp=cp15 -### -S %s -arch armv7 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER-HARD %s
+// ARMv7_THREAD_POINTER-HARD: "-target-feature" "+read-tp-hard"
+
+// RUN: %clang -target arm-linux -mtp=soft -### -S %s -arch armv7 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_SOFT %s
+// ARMv7_THREAD_POINTER_SOFT-NOT: "-target-feature" "+read-tp-hard"
+
+// RUN: %clang -target arm-linux -### -S %s -arch armv7 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_NON %s
+// ARMv7_THREAD_POINTER_NON-NOT: "-target-feature" "+read-tp-hard"
+
 // RUN: %clang -target powerpc64-unknown-linux-gnu \
 // RUN: -### -S %s -mcpu=G5 2>&1 | FileCheck -check-prefix=PPCG5 %s
 // PPCG5: clang

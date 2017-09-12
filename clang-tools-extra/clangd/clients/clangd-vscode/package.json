@@ -5,7 +5,7 @@
     "version": "0.0.1",
     "publisher": "Unpublished",
     "engines": {
-        "vscode": "^1.8.0"
+        "vscode": "^1.15.0"
     },
     "categories": [
         "Languages",
@@ -24,8 +24,8 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "dependencies": {
-        "vscode-languageclient": "^2.6.3",
-        "vscode-languageserver": "^2.6.2"
+        "vscode-languageclient": "^3.3.0",
+        "vscode-languageserver": "^3.3.0"
     },
     "devDependencies": {
         "typescript": "^2.0.3",

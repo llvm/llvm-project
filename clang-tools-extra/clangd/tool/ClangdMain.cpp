@@ -26,6 +26,12 @@ static llvm::cl::opt<unsigned>
                        llvm::cl::desc("Number of async workers used by clangd"),
                        llvm::cl::init(getDefaultAsyncThreadsCount()));
 
+static llvm::cl::opt<bool> EnableSnippets(
+    "enable-snippets",
+    llvm::cl::desc(
+        "Present snippet completions instead of plaintext completions"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool> RunSynchronously(
     "run-synchronously",
     llvm::cl::desc("Parse on main thread. If set, -j is ignored"),
@@ -61,6 +67,7 @@ int main(int argc, char *argv[]) {
   if (!ResourceDir.empty())
     ResourceDirRef = ResourceDir;
 
-  ClangdLSPServer LSPServer(Out, WorkerThreadsCount, ResourceDirRef);
+  ClangdLSPServer LSPServer(Out, WorkerThreadsCount, EnableSnippets,
+                            ResourceDirRef);
   LSPServer.run(std::cin);
 }

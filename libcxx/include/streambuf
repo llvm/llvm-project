@@ -255,6 +255,9 @@ protected:
     inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
     void pbump(int __n) { __nout_ += __n; }
 
+    _LIBCPP_ALWAYS_INLINE
+    void __pbump(streamsize __n) { __nout_ += __n; }
+
     inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
     void setp(char_type* __pbeg, char_type* __pend) {
         __bout_ = __nout_ = __pbeg;
