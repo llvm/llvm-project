@@ -7,7 +7,9 @@
   define void @fptrunc_s16_s64_fpr() { ret void }
   define void @fptrunc_s32_s64_fpr() { ret void }
 
-  define void @fpext() { ret void }
+  define void @fpext_s32_s16_fpr() { ret void }
+  define void @fpext_s64_s16_fpr() { ret void }
+  define void @fpext_s64_s32_fpr() { ret void }
 
   define void @sitofp_s32_s32_fpr() { ret void }
   define void @sitofp_s32_s64_fpr() { ret void }
@@ -106,8 +108,58 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fpext
-name:            fpext
+# CHECK-LABEL: name: fpext_s32_s16_fpr
+name:            fpext_s32_s16_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr16, preferred-register: '' }
+# CHECK: - { id: 1, class: fpr32, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %h0
+# CHECK:    %1 = FCVTSHr %0
+body:             |
+  bb.0:
+    liveins: %h0
+
+    %0(s16) = COPY %h0
+    %1(s32) = G_FPEXT %0
+    %s0 = COPY %1(s32)
+...
+
+---
+# CHECK-LABEL: name: fpext_s64_s16_fpr
+name:            fpext_s64_s16_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr16, preferred-register: '' }
+# CHECK: - { id: 1, class: fpr64, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %h0
+# CHECK:    %1 = FCVTDHr %0
+body:             |
+  bb.0:
+    liveins: %h0
+
+    %0(s16) = COPY %h0
+    %1(s64) = G_FPEXT %0
+    %d0 = COPY %1(s64)
+...
+
+---
+# CHECK-LABEL: name: fpext_s64_s32_fpr
+name:            fpext_s64_s32_fpr
 legalized:       true
 regBankSelected: true
 
