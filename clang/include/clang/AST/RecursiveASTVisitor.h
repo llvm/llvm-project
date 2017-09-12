@@ -537,7 +537,6 @@ private:
 
   bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue);
   bool PostVisitStmt(Stmt *S);
-  bool shouldTraverseTemplateArgumentsBeforeDecl() const { return false; }
 };
 
 template <typename Derived>
@@ -1691,13 +1690,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
 // template declarations.
 #define DEF_TRAVERSE_TMPL_DECL(TMPLDECLKIND)                                   \
   DEF_TRAVERSE_DECL(TMPLDECLKIND##TemplateDecl, {                              \
-    if (getDerived().shouldTraverseTemplateArgumentsBeforeDecl()) {            \
-      TRY_TO(TraverseTemplateParameterListHelper(D->getTemplateParameters())); \
-      TRY_TO(TraverseDecl(D->getTemplatedDecl()));                             \
-    } else {                                                                   \
-      TRY_TO(TraverseDecl(D->getTemplatedDecl()));                             \
-      TRY_TO(TraverseTemplateParameterListHelper(D->getTemplateParameters())); \
-    }                                                                          \
+    TRY_TO(TraverseTemplateParameterListHelper(D->getTemplateParameters()));   \
+    TRY_TO(TraverseDecl(D->getTemplatedDecl()));                               \
                                                                                \
     /* By default, we do not traverse the instantiations of                    \
        class templates since they do not appear in the user code. The          \

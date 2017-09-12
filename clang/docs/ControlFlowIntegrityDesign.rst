@@ -92,7 +92,7 @@ The compiler relies on co-operation from the linker in order to assemble
 the bit vectors for the whole program. It currently does this using LLVM's
 `type metadata`_ mechanism together with link-time optimization.
 
-.. _address point: https://mentorembedded.github.io/cxx-abi/abi.html#vtable-general
+.. _address point: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
 .. _type metadata: http://llvm.org/docs/TypeMetadata.html
 .. _ByteArrayBuilder: http://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 

@@ -111,8 +111,6 @@ public:
     return true;
   }
 
-  bool shouldTraverseTemplateArgumentsBeforeDecl() const { return true; }
-
   Stmt::child_range getStmtChildren(Stmt *S) { return S->children(); }
 
   SmallVector<Stmt *, 8> getStmtChildren(CXXOperatorCallExpr *CE) {

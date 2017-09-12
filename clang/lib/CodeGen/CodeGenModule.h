@@ -513,6 +513,9 @@ public:
   /// Finalize LLVM code generation.
   void Release();
 
+  /// Return true if we should emit location information for expressions.
+  bool getExpressionLocationsEnabled() const;
+
   /// Return a reference to the configured Objective-C runtime.
   CGObjCRuntime &getObjCRuntime() {
     if (!ObjCRuntime) createObjCRuntime();
