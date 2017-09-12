@@ -2559,6 +2559,55 @@ define <8 x float> @test_orps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2
   ret <8 x float> %8
 }
 
+define <4 x double> @test_perm2f128(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
+; GENERIC-LABEL: test_perm2f128:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
+; GENERIC-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [8:1.00]
+; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; SANDY-LABEL: test_perm2f128:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
+; SANDY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [8:1.00]
+; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_perm2f128:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; HASWELL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [3:1.00]
+; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_perm2f128:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; SKYLAKE-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [3:1.00]
+; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; BTVER2-LABEL: test_perm2f128:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:0.50]
+; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [6:1.00]
+; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_perm2f128:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [100:?]
+; ZNVER1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [100:?]
+; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  %1 = shufflevector <4 x double> %a0, <4 x double> %a1, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+  %2 = load <4 x double>, <4 x double> *%a2, align 32
+  %3 = shufflevector <4 x double> %a0, <4 x double> %2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+  %4 = fadd <4 x double> %1, %3
+  ret <4 x double> %4
+}
+
 define <2 x double> @test_permilpd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC-LABEL: test_permilpd:
 ; GENERIC:       # BB#0:

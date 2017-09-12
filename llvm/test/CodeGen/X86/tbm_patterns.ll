@@ -13,6 +13,18 @@ define i32 @test_x86_tbm_bextri_u32(i32 %a) nounwind {
   ret i32 %t1
 }
 
+; Make sure we still use AH subreg trick for extracting bits 15:8
+define i32 @test_x86_tbm_bextri_u32_subreg(i32 %a) nounwind {
+; CHECK-LABEL: test_x86_tbm_bextri_u32_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %t0 = lshr i32 %a, 8
+  %t1 = and i32 %t0, 255
+  ret i32 %t1
+}
+
 define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_m:
 ; CHECK:       # BB#0:
@@ -40,7 +52,8 @@ define i32 @test_x86_tbm_bextri_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_bextri_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    shrl $4, %edi
+; CHECK-NEXT:    testw $4095, %di # imm = 0xFFF
 ; CHECK-NEXT:    cmovnel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
@@ -58,6 +71,18 @@ define i64 @test_x86_tbm_bextri_u64(i64 %a) nounwind {
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %a, 4
   %t1 = and i64 %t0, 4095
+  ret i64 %t1
+}
+
+; Make sure we still use AH subreg trick for extracting bits 15:8
+define i64 @test_x86_tbm_bextri_u64_subreg(i64 %a) nounwind {
+; CHECK-LABEL: test_x86_tbm_bextri_u64_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %t0 = lshr i64 %a, 8
+  %t1 = and i64 %t0, 255
   ret i64 %t1
 }
 
@@ -88,7 +113,8 @@ define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind {
 define i64 @test_x86_tbm_bextri_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    shrl $4, %edi
+; CHECK-NEXT:    testw $4095, %di # imm = 0xFFF
 ; CHECK-NEXT:    cmovneq %rdx, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    retq

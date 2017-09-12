@@ -156,18 +156,6 @@ define <2 x i16> @test23vec(<2 x i16> %A) {
   ret <2 x i16> %D
 }
 
-; PR1738
-define i1 @test24(double %X, double %Y) {
-; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double %Y, %X
-; CHECK-NEXT:    ret i1 [[TMP1]]
-;
-  %tmp9 = fcmp uno double %X, 0.000000e+00
-  %tmp13 = fcmp uno double %Y, 0.000000e+00
-  %bothcond = or i1 %tmp13, %tmp9
-  ret i1 %bothcond
-}
-
 ; PR3266 & PR5276
 define i1 @test25(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test25(

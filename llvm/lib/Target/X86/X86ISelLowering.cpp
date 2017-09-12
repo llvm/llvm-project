@@ -24586,7 +24586,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::OR:                 return "X86ISD::OR";
   case X86ISD::XOR:                return "X86ISD::XOR";
   case X86ISD::AND:                return "X86ISD::AND";
-  case X86ISD::BEXTR:              return "X86ISD::BEXTR";
   case X86ISD::MUL_IMM:            return "X86ISD::MUL_IMM";
   case X86ISD::MOVMSK:             return "X86ISD::MOVMSK";
   case X86ISD::PTEST:              return "X86ISD::PTEST";
@@ -32162,9 +32161,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return ShiftRight;
 
   EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
 
   // Attempt to recursively combine a bitmask AND with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
@@ -32177,29 +32173,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       return SDValue(); // This routine will use CombineTo to replace N.
   }
 
-  // Create BEXTR instructions
-  // BEXTR is ((X >> imm) & (2**size-1))
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return SDValue();
-
-  if (!Subtarget.hasBMI() && !Subtarget.hasTBM())
-    return SDValue();
-  if (N0.getOpcode() != ISD::SRA && N0.getOpcode() != ISD::SRL)
-    return SDValue();
-
-  ConstantSDNode *MaskNode = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *ShiftNode = dyn_cast<ConstantSDNode>(N0.getOperand(1));
-  if (MaskNode && ShiftNode) {
-    uint64_t Mask = MaskNode->getZExtValue();
-    uint64_t Shift = ShiftNode->getZExtValue();
-    if (isMask_64(Mask)) {
-      uint64_t MaskSize = countPopulation(Mask);
-      if (Shift + MaskSize <= VT.getSizeInBits())
-        return DAG.getNode(X86ISD::BEXTR, DL, VT, N0.getOperand(0),
-                           DAG.getConstant(Shift | (MaskSize << 8), DL,
-                                           VT));
-    }
-  }
   return SDValue();
 }
 

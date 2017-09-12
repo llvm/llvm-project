@@ -273,7 +273,7 @@ public:
   /// An "identifier" for a virtual function. This contains the type identifier
   /// represented as a GUID and the offset from the address point to the virtual
   /// function pointer, where "address point" is as defined in the Itanium ABI:
-  /// https://mentorembedded.github.io/cxx-abi/abi.html#vtable-general
+  /// https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
   struct VFuncId {
     GlobalValue::GUID GUID;
     uint64_t Offset;

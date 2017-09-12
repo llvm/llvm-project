@@ -2239,3 +2239,46 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
   %res = zext <32 x i8>%x to <32 x i32>
   ret <32 x i32> %res
 }
+
+define <2 x i32> @zext_2i8_to_2i32(<2 x i8>* %addr) {
+; SSE2-LABEL: zext_2i8_to_2i32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    paddq %xmm0, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: zext_2i8_to_2i32:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movzwl (%rdi), %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSSE3-NEXT:    paddq %xmm0, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: zext_2i8_to_2i32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    paddq %xmm0, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: zext_2i8_to_2i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = load <2 x i8>, <2 x i8>* %addr, align 1
+  %y = zext <2 x i8> %x to <2 x i32>
+  %z = add <2 x i32>%y, %y
+  ret <2 x i32>%z
+}

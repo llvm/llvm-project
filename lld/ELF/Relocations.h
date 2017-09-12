@@ -134,16 +134,16 @@ public:
 
 private:
   void mergeThunks();
-  ThunkSection *getOSThunkSec(OutputSection *Cmd,
+  ThunkSection *getOSThunkSec(OutputSection *OS,
                               std::vector<InputSection *> *ISR);
-  ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
+  ThunkSection *getISThunkSec(InputSection *IS);
   void forEachExecInputSection(
       ArrayRef<OutputSection *> OutputSections,
       std::function<void(OutputSection *, std::vector<InputSection *> *,
                          InputSection *)>
           Fn);
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
-  ThunkSection *addThunkSection(OutputSection *Cmd,
+  ThunkSection *addThunkSection(OutputSection *OS,
                                 std::vector<InputSection *> *, uint64_t Off);
   // Record all the available Thunks for a Symbol
   llvm::DenseMap<SymbolBody *, std::vector<Thunk *>> ThunkedSymbols;

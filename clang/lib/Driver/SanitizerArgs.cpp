@@ -104,7 +104,7 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
     BlacklistFile = "dfsan_abilist.txt";
   else if (Kinds & CFI)
     BlacklistFile = "cfi_blacklist.txt";
-  else if (Kinds & Undefined)
+  else if (Kinds & (Undefined | Integer | Nullability))
     BlacklistFile = "ubsan_blacklist.txt";
 
   if (BlacklistFile) {

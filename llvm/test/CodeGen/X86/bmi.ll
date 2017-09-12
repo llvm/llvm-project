@@ -311,6 +311,18 @@ define i32 @bextr32b(i32 %x)  uwtable  ssp {
   ret i32 %2
 }
 
+; Make sure we still use AH subreg trick to extract 15:8
+define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
+; CHECK-LABEL: bextr32_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %1 = lshr i32 %x, 8
+  %2 = and i32 %1, 255
+  ret i32 %2
+}
+
 define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32b_load:
 ; CHECK:       # BB#0:
@@ -354,6 +366,18 @@ define i64 @bextr64b(i64 %x)  uwtable  ssp {
 ; CHECK-NEXT:    retq
   %1 = lshr i64 %x, 4
   %2 = and i64 %1, 4095
+  ret i64 %2
+}
+
+; Make sure we still use the AH subreg trick to extract 15:8
+define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
+; CHECK-LABEL: bextr64_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %1 = lshr i64 %x, 8
+  %2 = and i64 %1, 255
   ret i64 %2
 }
 

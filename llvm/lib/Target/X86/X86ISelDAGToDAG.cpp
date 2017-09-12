@@ -422,6 +422,8 @@ namespace {
     }
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
+
+    bool matchBEXTRFromAnd(SDNode *Node);
   };
 }
 
@@ -2280,6 +2282,90 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   return true;
 }
 
+// See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
+bool X86DAGToDAGISel::matchBEXTRFromAnd(SDNode *Node) {
+  MVT NVT = Node->getSimpleValueType(0);
+  SDLoc dl(Node);
+
+  SDValue N0 = Node->getOperand(0);
+  SDValue N1 = Node->getOperand(1);
+
+  if (!Subtarget->hasBMI() && !Subtarget->hasTBM())
+    return false;
+
+  // Must have a shift right.
+  if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
+    return false;
+
+  // Shift can't have additional users.
+  if (!N0->hasOneUse())
+    return false;
+
+  // Only supported for 32 and 64 bits.
+  if (NVT != MVT::i32 && NVT != MVT::i64)
+    return false;
+
+  // Shift amount and RHS of and must be constant.
+  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
+  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  if (!MaskCst || !ShiftCst)
+    return false;
+
+  // And RHS must be a mask.
+  uint64_t Mask = MaskCst->getZExtValue();
+  if (!isMask_64(Mask))
+    return false;
+
+  uint64_t Shift = ShiftCst->getZExtValue();
+  uint64_t MaskSize = countPopulation(Mask);
+
+  // Don't interfere with something that can be handled by extracting AH.
+  // TODO: If we are able to fold a load, BEXTR might still be better than AH.
+  if (Shift == 8 && MaskSize == 8)
+    return false;
+
+  // Make sure we are only using bits that were in the original value, not
+  // shifted in.
+  if (Shift + MaskSize > NVT.getSizeInBits())
+    return false;
+
+  SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
+  unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
+  unsigned MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+
+  // BMI requires the immediate to placed in a register.
+  if (!Subtarget->hasTBM()) {
+    ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
+    MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+    SDNode *Move = CurDAG->getMachineNode(X86::MOV32ri, dl, NVT, New);
+    New = SDValue(Move, 0);
+  }
+
+  MachineSDNode *NewNode;
+  SDValue Input = N0->getOperand(0);
+  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  if (tryFoldLoad(Node, Input, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
+    SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, New, Input.getOperand(0) };
+    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
+    NewNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+    // Update the chain.
+    ReplaceUses(N1.getValue(1), SDValue(NewNode, 1));
+    // Record the mem-refs
+    LoadSDNode *LoadNode = cast<LoadSDNode>(Input);
+    if (LoadNode) {
+      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+      MemOp[0] = LoadNode->getMemOperand();
+      NewNode->setMemRefs(MemOp, MemOp + 1);
+    }
+  } else {
+    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, Input, New);
+  }
+
+  ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
+  CurDAG->RemoveDeadNode(Node);
+  return true;
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opc, MOpc;
@@ -2333,8 +2419,14 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::AND:
+    // Try to match BEXTR/BEXTRI instruction.
+    if (matchBEXTRFromAnd(Node))
+      return;
+
+    LLVM_FALLTHROUGH;
   case ISD::OR:
   case ISD::XOR: {
+
     // For operations of the form (x << C1) op C2, check if we can use a smaller
     // encoding for C2 by transforming it into (x op (C2>>C1)) << C1.
     SDValue N0 = Node->getOperand(0);

@@ -2084,7 +2084,7 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
     // rules, we should implement the restrictions about over-sized
     // bitfields:
     //
-    // http://mentorembedded.github.com/cxx-abi/abi.html#POD :
+    // http://itanium-cxx-abi.github.io/cxx-abi/abi.html#POD :
     //   In general, a type is considered a POD for the purposes of
     //   layout if it is a POD type (in the sense of ISO C++
     //   [basic.types]). However, a POD-struct or POD-union (in the

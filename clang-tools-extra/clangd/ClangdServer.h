@@ -179,6 +179,9 @@ public:
   /// AsyncThreadsCount worker threads. However, if \p AsyncThreadsCount is 0,
   /// all requests will be processed on the calling thread.
   ///
+  /// When \p SnippetCompletions is true, completion items will be presented
+  /// with embedded snippets. Otherwise, plaintext items will be presented.
+  ///
   /// ClangdServer uses \p FSProvider to get an instance of vfs::FileSystem for
   /// each parsing request. Results of code completion and diagnostics also
   /// include a tag, that \p FSProvider returns along with the vfs::FileSystem.
@@ -201,6 +204,7 @@ public:
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
+               bool SnippetCompletions,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
@@ -274,6 +278,7 @@ private:
   // called before all other members to stop the worker thread that references
   // ClangdServer
   ClangdScheduler WorkScheduler;
+  bool SnippetCompletions;
 };
 
 } // namespace clangd

@@ -633,18 +633,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  if (!CI.hasVirtualFileSystem()) {
-    if (IntrusiveRefCntPtr<vfs::FileSystem> VFS =
-          createVFSFromCompilerInvocation(CI.getInvocation(),
-                                          CI.getDiagnostics()))
-      CI.setVirtualFileSystem(VFS);
-    else
-      goto failure;
-  }
-
   // Set up the file and source managers, if needed.
-  if (!CI.hasFileManager())
-    CI.createFileManager();
+  if (!CI.hasFileManager()) {
+    if (!CI.createFileManager()) {
+      goto failure;
+    }
+  }
   if (!CI.hasSourceManager())
     CI.createSourceManager(CI.getFileManager());
 

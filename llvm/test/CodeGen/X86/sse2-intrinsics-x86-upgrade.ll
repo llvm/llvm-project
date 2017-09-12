@@ -282,5 +282,24 @@ define <2 x double> @test_x86_sse2_div_sd(<2 x double> %a0, <2 x double> %a1) {
 }
 declare <2 x double> @llvm.x86.sse2.div.sd(<2 x double>, <2 x double>) nounwind readnone
 
+define <16 x i8> @mm_avg_epu8(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: mm_avg_epu8:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    pavgb %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+define <8 x i16> @mm_avg_epu16(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: mm_avg_epu16:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    pavgw %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
