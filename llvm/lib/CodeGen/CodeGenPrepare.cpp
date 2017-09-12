@@ -6189,6 +6189,170 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   return true;
 }
 
+// Return true if the GEP has two operands, the first operand is of a sequential
+// type, and the second operand is a constant.
+static bool GEPSequentialConstIndexed(GetElementPtrInst *GEP) {
+  gep_type_iterator I = gep_type_begin(*GEP);
+  return GEP->getNumOperands() == 2 &&
+      I.isSequential() &&
+      isa<ConstantInt>(GEP->getOperand(1));
+}
+
+// Try unmerging GEPs to reduce liveness interference (register pressure) across
+// IndirectBr edges. Since IndirectBr edges tend to touch on many blocks,
+// reducing liveness interference across those edges benefits global register
+// allocation. Currently handles only certain cases.
+//
+// For example, unmerge %GEPI and %UGEPI as below.
+//
+// ---------- BEFORE ----------
+// SrcBlock:
+//   ...
+//   %GEPIOp = ...
+//   ...
+//   %GEPI = gep %GEPIOp, Idx
+//   ...
+//   indirectbr ... [ label %DstB0, label %DstB1, ... label %DstBi ... ]
+//   (* %GEPI is alive on the indirectbr edges due to other uses ahead)
+//   (* %GEPIOp is alive on the indirectbr edges only because of it's used by
+//   %UGEPI)
+//
+// DstB0: ... (there may be a gep similar to %UGEPI to be unmerged)
+// DstB1: ... (there may be a gep similar to %UGEPI to be unmerged)
+// ...
+//
+// DstBi:
+//   ...
+//   %UGEPI = gep %GEPIOp, UIdx
+// ...
+// ---------------------------
+//
+// ---------- AFTER ----------
+// SrcBlock:
+//   ... (same as above)
+//    (* %GEPI is still alive on the indirectbr edges)
+//    (* %GEPIOp is no longer alive on the indirectbr edges as a result of the
+//    unmerging)
+// ...
+//
+// DstBi:
+//   ...
+//   %UGEPI = gep %GEPI, (UIdx-Idx)
+//   ...
+// ---------------------------
+//
+// The register pressure on the IndirectBr edges is reduced because %GEPIOp is
+// no longer alive on them.
+//
+// We try to unmerge GEPs here in CodGenPrepare, as opposed to limiting merging
+// of GEPs in the first place in InstCombiner::visitGetElementPtrInst() so as
+// not to disable further simplications and optimizations as a result of GEP
+// merging.
+//
+// Note this unmerging may increase the length of the data flow critical path
+// (the path from %GEPIOp to %UGEPI would go through %GEPI), which is a tradeoff
+// between the register pressure and the length of data-flow critical
+// path. Restricting this to the uncommon IndirectBr case would minimize the
+// impact of potentially longer critical path, if any, and the impact on compile
+// time.
+static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
+                                             const TargetTransformInfo *TTI) {
+  BasicBlock *SrcBlock = GEPI->getParent();
+  // Check that SrcBlock ends with an IndirectBr. If not, give up. The common
+  // (non-IndirectBr) cases exit early here.
+  if (!isa<IndirectBrInst>(SrcBlock->getTerminator()))
+    return false;
+  // Check that GEPI is a simple gep with a single constant index.
+  if (!GEPSequentialConstIndexed(GEPI))
+    return false;
+  ConstantInt *GEPIIdx = cast<ConstantInt>(GEPI->getOperand(1));
+  // Check that GEPI is a cheap one.
+  if (TTI->getIntImmCost(GEPIIdx->getValue(), GEPIIdx->getType())
+      > TargetTransformInfo::TCC_Basic)
+    return false;
+  Value *GEPIOp = GEPI->getOperand(0);
+  // Check that GEPIOp is an instruction that's also defined in SrcBlock.
+  if (!isa<Instruction>(GEPIOp))
+    return false;
+  auto *GEPIOpI = cast<Instruction>(GEPIOp);
+  if (GEPIOpI->getParent() != SrcBlock)
+    return false;
+  // Check that GEP is used outside the block, meaning it's alive on the
+  // IndirectBr edge(s).
+  if (find_if(GEPI->users(), [&](User *Usr) {
+        if (auto *I = dyn_cast<Instruction>(Usr)) {
+          if (I->getParent() != SrcBlock) {
+            return true;
+          }
+        }
+        return false;
+      }) == GEPI->users().end())
+    return false;
+  // The second elements of the GEP chains to be unmerged.
+  std::vector<GetElementPtrInst *> UGEPIs;
+  // Check each user of GEPIOp to check if unmerging would make GEPIOp not alive
+  // on IndirectBr edges.
+  for (User *Usr : GEPIOp->users()) {
+    if (Usr == GEPI) continue;
+    // Check if Usr is an Instruction. If not, give up.
+    if (!isa<Instruction>(Usr))
+      return false;
+    auto *UI = cast<Instruction>(Usr);
+    // Check if Usr in the same block as GEPIOp, which is fine, skip.
+    if (UI->getParent() == SrcBlock)
+      continue;
+    // Check if Usr is a GEP. If not, give up.
+    if (!isa<GetElementPtrInst>(Usr))
+      return false;
+    auto *UGEPI = cast<GetElementPtrInst>(Usr);
+    // Check if UGEPI is a simple gep with a single constant index and GEPIOp is
+    // the pointer operand to it. If so, record it in the vector. If not, give
+    // up.
+    if (!GEPSequentialConstIndexed(UGEPI))
+      return false;
+    if (UGEPI->getOperand(0) != GEPIOp)
+      return false;
+    if (GEPIIdx->getType() !=
+        cast<ConstantInt>(UGEPI->getOperand(1))->getType())
+      return false;
+    ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
+    if (TTI->getIntImmCost(UGEPIIdx->getValue(), UGEPIIdx->getType())
+        > TargetTransformInfo::TCC_Basic)
+      return false;
+    UGEPIs.push_back(UGEPI);
+  }
+  if (UGEPIs.size() == 0)
+    return false;
+  // Check the materializing cost of (Uidx-Idx).
+  for (GetElementPtrInst *UGEPI : UGEPIs) {
+    ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
+    APInt NewIdx = UGEPIIdx->getValue() - GEPIIdx->getValue();
+    unsigned ImmCost = TTI->getIntImmCost(NewIdx, GEPIIdx->getType());
+    if (ImmCost > TargetTransformInfo::TCC_Basic)
+      return false;
+  }
+  // Now unmerge between GEPI and UGEPIs.
+  for (GetElementPtrInst *UGEPI : UGEPIs) {
+    UGEPI->setOperand(0, GEPI);
+    ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
+    Constant *NewUGEPIIdx =
+        ConstantInt::get(GEPIIdx->getType(),
+                         UGEPIIdx->getValue() - GEPIIdx->getValue());
+    UGEPI->setOperand(1, NewUGEPIIdx);
+    // If GEPI is not inbounds but UGEPI is inbounds, change UGEPI to not
+    // inbounds to avoid UB.
+    if (!GEPI->isInBounds()) {
+      UGEPI->setIsInBounds(false);
+    }
+  }
+  // After unmerging, verify that GEPIOp is actually only used in SrcBlock (not
+  // alive on IndirectBr edges).
+  assert(find_if(GEPIOp->users(), [&](User *Usr) {
+        return cast<Instruction>(Usr)->getParent() != SrcBlock;
+      }) == GEPIOp->users().end() && "GEPIOp is used outside SrcBlock");
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -6300,6 +6464,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
       GEPI->eraseFromParent();
       ++NumGEPsElim;
       optimizeInst(NC, ModifiedDT);
+      return true;
+    }
+    if (tryUnmergingGEPsAcrossIndirectBr(GEPI, TTI)) {
       return true;
     }
     return false;

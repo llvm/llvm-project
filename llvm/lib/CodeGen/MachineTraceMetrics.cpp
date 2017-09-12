@@ -22,13 +22,13 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
@@ -42,6 +42,7 @@ using namespace llvm;
 #define DEBUG_TYPE "machine-trace-metrics"
 
 char MachineTraceMetrics::ID = 0;
+
 char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
 
 INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
@@ -945,7 +946,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
   return Height;
 }
 
-typedef DenseMap<const MachineInstr *, unsigned> MIHeightMap;
+using MIHeightMap = DenseMap<const MachineInstr *, unsigned>;
 
 // Push the height of DefMI upwards if required to match UseMI.
 // Return true if this is the first time DefMI was seen.

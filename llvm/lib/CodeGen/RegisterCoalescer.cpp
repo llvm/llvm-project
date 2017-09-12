@@ -1832,7 +1832,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
 
     if (!MRI->isConstantPhysReg(DstReg)) {
       // We checked above that there are no interfering defs of the physical
-      // register. However, for this case, where we intent to move up the def of
+      // register. However, for this case, where we intend to move up the def of
       // the physical register, we also need to check for interfering uses.
       SlotIndexes *Indexes = LIS->getSlotIndexes();
       for (SlotIndex SI = Indexes->getNextNonNullIndex(DestRegIdx);

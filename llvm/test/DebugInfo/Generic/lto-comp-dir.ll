@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-dump=line - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-line - | FileCheck %s
 ; RUN: %llc_dwarf < %s -filetype=asm | FileCheck --check-prefix=ASM %s
 
 ; If multiple line tables are emitted, one per CU, those line tables can

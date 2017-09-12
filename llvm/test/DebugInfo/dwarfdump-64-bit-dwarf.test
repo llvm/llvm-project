@@ -1,5 +1,5 @@
 RUN: llvm-dwarfdump %p/Inputs/dwarfdump.elf-mips64-64-bit-dwarf \
-RUN:   --debug-dump=line | FileCheck %s
+RUN:   ---debug-line | FileCheck %s
 
 # FIXME: llvm-dwarfdump's support for 64-bit dwarf is currently limited to
 # .debug_line.

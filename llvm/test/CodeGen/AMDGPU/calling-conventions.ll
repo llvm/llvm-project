@@ -43,3 +43,37 @@ define amdgpu_ps half @ps_ret_cc_inreg_f16(half inreg %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
+
+; GCN-LABEL: {{^}}fastcc:
+; GCN: v_add_f32_e32 v0, 4.0, v0
+define fastcc float @fastcc(float %arg0) #0 {
+  %add = fadd float %arg0, 4.0
+  ret float %add
+}
+
+; GCN-LABEL: {{^}}coldcc:
+; GCN: v_add_f32_e32 v0, 4.0, v0
+define coldcc float @coldcc(float %arg0) #0 {
+ %add = fadd float %arg0, 4.0
+ ret float %add
+}
+
+; GCN-LABEL: {{^}}call_coldcc:
+; GCN: v_mov_b32_e32 v0, 1.0
+; GCN: s_swappc_b64
+define amdgpu_kernel void @call_coldcc() #0 {
+  %val = call float @coldcc(float 1.0)
+  store float %val, float addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}call_fastcc:
+; GCN: v_mov_b32_e32 v0, 1.0
+; GCN: s_swappc_b64
+define amdgpu_kernel void @call_fastcc() #0 {
+  %val = call float @fastcc(float 1.0)
+  store float %val, float addrspace(1)* undef
+  ret void
+}
+
+attributes #0 = { nounwind noinline }

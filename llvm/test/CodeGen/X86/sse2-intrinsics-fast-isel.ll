@@ -252,11 +252,15 @@ define <2 x i64> @test_mm_avg_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %arg0, <16 x i8> %arg1)
+  %zext0 = zext <16 x i8> %arg0 to <16 x i16>
+  %zext1 = zext <16 x i8> %arg1 to <16 x i16>
+  %add = add <16 x i16> %zext0, %zext1
+  %add1 = add <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %lshr = lshr <16 x i16> %add1, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = trunc <16 x i16> %lshr to <16 x i8>
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %arg0, <16 x i8> %arg1) nounwind readnone
 
 define <2 x i64> @test_mm_avg_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_avg_epu16:
@@ -270,11 +274,15 @@ define <2 x i64> @test_mm_avg_epu16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %zext0 = zext <8 x i16> %arg0 to <8 x i32>
+  %zext1 = zext <8 x i16> %arg1 to <8 x i32>
+  %add = add <8 x i32> %zext0, %zext1
+  %add1 = add <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %lshr = lshr <8 x i32> %add1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %res = trunc <8 x i32> %lshr to <8 x i16>
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_bslli_si128(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm_bslli_si128:

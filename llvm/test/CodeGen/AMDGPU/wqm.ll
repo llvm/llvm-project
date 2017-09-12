@@ -12,24 +12,33 @@ main_body:
   ret <4 x float> %tex
 }
 
-; Check that WQM is triggered by image samples and left untouched for loads...
+; Check that WQM is triggered by code calculating inputs to image samples and is disabled as soon as possible
 ;
 ;CHECK-LABEL: {{^}}test2:
 ;CHECK-NEXT: ; %main_body
+;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
 ;CHECK-NEXT: s_wqm_b64 exec, exec
+;CHECK: interp
+;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK-NOT: interp
+;CHECK: image_sample
 ;CHECK-NOT: exec
-define amdgpu_ps void @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x float> %c) {
+;CHECK: .size test2
+define amdgpu_ps <4 x float> @test2(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
 main_body:
-  %c.1 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> %c, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
-  %c.2 = bitcast <4 x float> %c.1 to <4 x i32>
-  %c.3 = extractelement <4 x i32> %c.2, i32 0
-  %gep = getelementptr float, float addrspace(1)* %ptr, i32 %c.3
-  %data = load float, float addrspace(1)* %gep
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %data, float undef, float undef, float undef, i1 true, i1 true) #1
-  ret void
+  %inst23 = extractelement <2 x float> %pos, i32 0
+  %inst24 = extractelement <2 x float> %pos, i32 1
+  %inst25 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 0, i32 0, i32 %m0)
+  %inst26 = tail call float @llvm.amdgcn.interp.p2(float %inst25, float %inst24, i32 0, i32 0, i32 %m0)
+  %inst27 = insertelement <2 x float> undef, float %inst26, i32 0
+  %inst28 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 1, i32 0, i32 %m0)
+  %inst29 = tail call float @llvm.amdgcn.interp.p2(float %inst28, float %inst24, i32 1, i32 0, i32 %m0)
+  %inst30 = insertelement <2 x float> %inst27, float %inst29, i32 1
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %inst30, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
+  ret <4 x float> %tex
 }
 
-; ... but disabled for stores (and, in this simple case, not re-enabled).
+; ... but disabled for stores (and, in this simple case, not re-enabled) ...
 ;
 ;CHECK-LABEL: {{^}}test3:
 ;CHECK-NEXT: ; %main_body
@@ -49,6 +58,36 @@ main_body:
   call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %tex, <4 x i32> undef, i32 %tex.2, i32 0, i1 0, i1 0)
 
   ret <4 x float> %tex
+}
+
+; ... and disabled for export.
+;
+;CHECK-LABEL: {{^}}test3x:
+;CHECK-NEXT: ; %main_body
+;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
+;CHECK-NEXT: s_wqm_b64 exec, exec
+;CHECK: s_and_b64 exec, exec, [[ORIG]]
+;CHECK: image_sample
+;CHECK: exp
+;CHECK-NOT: exec
+;CHECK: .size test3x
+define amdgpu_ps void @test3x(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, <2 x float> %pos) #6 {
+main_body:
+  %inst23 = extractelement <2 x float> %pos, i32 0
+  %inst24 = extractelement <2 x float> %pos, i32 1
+  %inst25 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 0, i32 0, i32 %m0)
+  %inst26 = tail call float @llvm.amdgcn.interp.p2(float %inst25, float %inst24, i32 0, i32 0, i32 %m0)
+  %inst27 = insertelement <2 x float> undef, float %inst26, i32 0
+  %inst28 = tail call float @llvm.amdgcn.interp.p1(float %inst23, i32 1, i32 0, i32 %m0)
+  %inst29 = tail call float @llvm.amdgcn.interp.p2(float %inst28, float %inst24, i32 1, i32 0, i32 %m0)
+  %inst30 = insertelement <2 x float> %inst27, float %inst29, i32 1
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %inst30, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #0
+  %tex.0 = extractelement <4 x float> %tex, i32 0
+  %tex.1 = extractelement <4 x float> %tex, i32 1
+  %tex.2 = extractelement <4 x float> %tex, i32 2
+  %tex.3 = extractelement <4 x float> %tex, i32 3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tex.0, float %tex.1, float %tex.2, float %tex.3, i1 true, i1 true)
+  ret void
 }
 
 ; Check that WQM is re-enabled when required.
@@ -724,9 +763,14 @@ declare i32 @llvm.amdgcn.wwm.i32(i32) #3
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #4
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #3
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #3
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #3
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind readnone }
 attributes #4 = { nounwind readnone convergent }
 attributes #5 = { "amdgpu-ps-wqm-outputs" }
+attributes #6 = { nounwind "InitialPSInputAddr"="2" }

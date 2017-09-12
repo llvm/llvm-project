@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj \
-; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Clang modules leave Skeleton CUs as breadcrumbs to point from the object files
 ; to the pcm containing the module's debug info.

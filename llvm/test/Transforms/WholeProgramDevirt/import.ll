@@ -2,16 +2,17 @@
 ; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-uniform-ret-val.yaml < %s | FileCheck --check-prefixes=CHECK,UNIFORM-RET-VAL %s
 ; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-unique-ret-val0.yaml < %s | FileCheck --check-prefixes=CHECK,UNIQUE-RET-VAL0 %s
 ; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-unique-ret-val1.yaml < %s | FileCheck --check-prefixes=CHECK,UNIQUE-RET-VAL1 %s
-; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP64 %s
-; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=i686-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP,VCP32 %s
+; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP64 %s
+; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=i686-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP32 %s
+; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp.yaml -mtriple=armv7-unknown-linux -data-layout=e-p:32:32 < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-ARM %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; VCP: @__typeid_typeid1_0_1_byte = external hidden global i8, !absolute_symbol !0
-; VCP: @__typeid_typeid1_0_1_bit = external hidden global i8, !absolute_symbol !1
-; VCP: @__typeid_typeid2_8_3_byte = external hidden global i8, !absolute_symbol !0
-; VCP: @__typeid_typeid2_8_3_bit = external hidden global i8, !absolute_symbol !1
+; VCP-X86: @__typeid_typeid1_0_1_byte = external hidden global i8, !absolute_symbol !0
+; VCP-X86: @__typeid_typeid1_0_1_bit = external hidden global i8, !absolute_symbol !1
+; VCP-X86: @__typeid_typeid2_8_3_byte = external hidden global i8, !absolute_symbol !0
+; VCP-X86: @__typeid_typeid2_8_3_bit = external hidden global i8, !absolute_symbol !1
 
 ; Test cases where the argument values are known and we can apply virtual
 ; constant propagation.
@@ -31,7 +32,8 @@ define i32 @call1(i8* %obj) {
   ; UNIFORM-RET-VAL: ret i32 42
   ; VCP: {{.*}} = bitcast {{.*}} to i8*
   ; VCP: [[VT1:%.*]] = bitcast {{.*}} to i8*
-  ; VCP: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 ptrtoint (i8* @__typeid_typeid1_0_1_byte to i32)
+  ; VCP-X86: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 ptrtoint (i8* @__typeid_typeid1_0_1_byte to i32)
+  ; VCP-ARM: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 42
   ; VCP: [[BC1:%.*]] = bitcast i8* [[GEP1]] to i32*
   ; VCP: [[LOAD1:%.*]] = load i32, i32* [[BC1]]
   ; VCP: ret i32 [[LOAD1]]
@@ -82,9 +84,11 @@ cont:
   ; UNIQUE-RET-VAL0: icmp ne i8* %vtablei8, @__typeid_typeid2_8_3_unique_member
   ; UNIQUE-RET-VAL1: icmp eq i8* %vtablei8, @__typeid_typeid2_8_3_unique_member
   ; VCP: [[VT2:%.*]] = bitcast {{.*}} to i8*
-  ; VCP: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 ptrtoint (i8* @__typeid_typeid2_8_3_byte to i32)
+  ; VCP-X86: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 ptrtoint (i8* @__typeid_typeid2_8_3_byte to i32)
+  ; VCP-ARM: [[GEP2:%.*]] = getelementptr i8, i8* [[VT2]], i32 43
   ; VCP: [[LOAD2:%.*]] = load i8, i8* [[GEP2]]
-  ; VCP: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (i8* @__typeid_typeid2_8_3_bit to i8)
+  ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (i8* @__typeid_typeid2_8_3_bit to i8)
+  ; VCP-ARM: [[AND2:%.*]] = and i8 [[LOAD2]], -128
   ; VCP: [[ICMP2:%.*]] = icmp ne i8 [[AND2]], 0
   ; VCP: ret i1 [[ICMP2]]
   ret i1 %result

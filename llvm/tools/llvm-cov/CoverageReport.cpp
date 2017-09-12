@@ -181,18 +181,22 @@ void CoverageReport::render(const FileCoverageSummary &File,
   SmallString<256> FileName = File.Name;
   sys::path::remove_dots(FileName, /*remove_dot_dots=*/true);
   sys::path::native(FileName);
-  OS << column(FileName, FileReportColumns[0], Column::NoTrim)
-     << format("%*u", FileReportColumns[1],
-               (unsigned)File.RegionCoverage.NumRegions);
-  Options.colored_ostream(OS, FileCoverageColor) << format(
-      "%*u", FileReportColumns[2], (unsigned)File.RegionCoverage.NotCovered);
-  if (File.RegionCoverage.NumRegions)
-    Options.colored_ostream(OS, FileCoverageColor)
-        << format("%*.2f", FileReportColumns[3] - 1,
-                  File.RegionCoverage.getPercentCovered())
-        << '%';
-  else
-    OS << column("-", FileReportColumns[3], Column::RightAlignment);
+  OS << column(FileName, FileReportColumns[0], Column::NoTrim);
+
+  if (Options.ShowRegionSummary) {
+    OS << format("%*u", FileReportColumns[1],
+                 (unsigned)File.RegionCoverage.NumRegions);
+    Options.colored_ostream(OS, FileCoverageColor) << format(
+        "%*u", FileReportColumns[2], (unsigned)File.RegionCoverage.NotCovered);
+    if (File.RegionCoverage.NumRegions)
+      Options.colored_ostream(OS, FileCoverageColor)
+          << format("%*.2f", FileReportColumns[3] - 1,
+                    File.RegionCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[3], Column::RightAlignment);
+  }
+
   OS << format("%*u", FileReportColumns[4],
                (unsigned)File.FunctionCoverage.NumFunctions);
   OS << format("%*u", FileReportColumns[5],
@@ -205,18 +209,22 @@ void CoverageReport::render(const FileCoverageSummary &File,
         << '%';
   else
     OS << column("-", FileReportColumns[6], Column::RightAlignment);
-  OS << format("%*u", FileReportColumns[7],
-               (unsigned)File.InstantiationCoverage.NumFunctions);
-  OS << format("%*u", FileReportColumns[8],
-               (unsigned)(File.InstantiationCoverage.NumFunctions -
-                          File.InstantiationCoverage.Executed));
-  if (File.InstantiationCoverage.NumFunctions)
-    Options.colored_ostream(OS, InstantiationCoverageColor)
-        << format("%*.2f", FileReportColumns[9] - 1,
-                  File.InstantiationCoverage.getPercentCovered())
-        << '%';
-  else
-    OS << column("-", FileReportColumns[9], Column::RightAlignment);
+
+  if (Options.ShowInstantiationSummary) {
+    OS << format("%*u", FileReportColumns[7],
+                 (unsigned)File.InstantiationCoverage.NumFunctions);
+    OS << format("%*u", FileReportColumns[8],
+                 (unsigned)(File.InstantiationCoverage.NumFunctions -
+                            File.InstantiationCoverage.Executed));
+    if (File.InstantiationCoverage.NumFunctions)
+      Options.colored_ostream(OS, InstantiationCoverageColor)
+          << format("%*.2f", FileReportColumns[9] - 1,
+                    File.InstantiationCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[9], Column::RightAlignment);
+  }
+
   OS << format("%*u", FileReportColumns[10],
                (unsigned)File.LineCoverage.NumLines);
   Options.colored_ostream(OS, LineCoverageColor) << format(
@@ -359,17 +367,19 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
     Filenames.emplace_back(FCS.Name);
   adjustColumnWidths(Filenames, {});
 
-  OS << column("Filename", FileReportColumns[0])
-     << column("Regions", FileReportColumns[1], Column::RightAlignment)
-     << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
-     << column("Cover", FileReportColumns[3], Column::RightAlignment)
-     << column("Functions", FileReportColumns[4], Column::RightAlignment)
+  OS << column("Filename", FileReportColumns[0]);
+  if (Options.ShowRegionSummary)
+    OS << column("Regions", FileReportColumns[1], Column::RightAlignment)
+       << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
+       << column("Cover", FileReportColumns[3], Column::RightAlignment);
+  OS << column("Functions", FileReportColumns[4], Column::RightAlignment)
      << column("Missed Functions", FileReportColumns[5], Column::RightAlignment)
-     << column("Executed", FileReportColumns[6], Column::RightAlignment)
-     << column("Instantiations", FileReportColumns[7], Column::RightAlignment)
-     << column("Missed Insts.", FileReportColumns[8], Column::RightAlignment)
-     << column("Executed", FileReportColumns[9], Column::RightAlignment)
-     << column("Lines", FileReportColumns[10], Column::RightAlignment)
+     << column("Executed", FileReportColumns[6], Column::RightAlignment);
+  if (Options.ShowInstantiationSummary)
+    OS << column("Instantiations", FileReportColumns[7], Column::RightAlignment)
+       << column("Missed Insts.", FileReportColumns[8], Column::RightAlignment)
+       << column("Executed", FileReportColumns[9], Column::RightAlignment);
+  OS << column("Lines", FileReportColumns[10], Column::RightAlignment)
      << column("Missed Lines", FileReportColumns[11], Column::RightAlignment)
      << column("Cover", FileReportColumns[12], Column::RightAlignment) << "\n";
   renderDivider(FileReportColumns, OS);

@@ -38,6 +38,10 @@
                            # FIXME: This ought to point at the $34 but memory is treated as one operand.
   swe $5, 8($34)           # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   swe $5, 512($4)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lapc $7, 1048576         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $6, -1048580        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $3, 3               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+  lapc $3, -1              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
   lbu16 $9, 8($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range

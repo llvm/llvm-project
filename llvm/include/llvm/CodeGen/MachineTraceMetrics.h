@@ -52,13 +52,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
 
 class AnalysisUsage;
-class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
 class MachineLoop;

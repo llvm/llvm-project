@@ -1,4 +1,4 @@
-//===-- MachineVerifier.cpp - Machine Code Verifier -----------------------===//
+//===- MachineVerifier.cpp - Machine Code Verifier ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,41 +23,68 @@
 // the verifier errors.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveStackAnalysis.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <utility>
+
 using namespace llvm;
 
 namespace {
-  struct MachineVerifier {
 
-    MachineVerifier(Pass *pass, const char *b) :
-      PASS(pass),
-      Banner(b)
-      {}
+  struct MachineVerifier {
+    MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
     unsigned verify(MachineFunction &MF);
 
@@ -75,11 +102,11 @@ namespace {
     bool isFunctionRegBankSelected;
     bool isFunctionSelected;
 
-    typedef SmallVector<unsigned, 16> RegVector;
-    typedef SmallVector<const uint32_t*, 4> RegMaskVector;
-    typedef DenseSet<unsigned> RegSet;
-    typedef DenseMap<unsigned, const MachineInstr*> RegMap;
-    typedef SmallPtrSet<const MachineBasicBlock*, 8> BlockSet;
+    using RegVector = SmallVector<unsigned, 16>;
+    using RegMaskVector = SmallVector<const uint32_t *, 4>;
+    using RegSet = DenseSet<unsigned>;
+    using RegMap = DenseMap<unsigned, const MachineInstr *>;
+    using BlockSet = SmallPtrSet<const MachineBasicBlock *, 8>;
 
     const MachineInstr *FirstTerminator;
     BlockSet FunctionBlocks;
@@ -101,7 +128,7 @@ namespace {
 
     struct BBInfo {
       // Is this MBB reachable from the MF entry point?
-      bool reachable;
+      bool reachable = false;
 
       // Vregs that must be live in because they are used without being
       // defined. Map value is the user.
@@ -126,7 +153,7 @@ namespace {
       // Set versions of block's predecessor and successor lists.
       BlockSet Preds, Succs;
 
-      BBInfo() : reachable(false) {}
+      BBInfo() = default;
 
       // Add register to vregsPassed if it belongs there. Return true if
       // anything changed.
@@ -259,6 +286,7 @@ namespace {
 
   struct MachineVerifierPass : public MachineFunctionPass {
     static char ID; // Pass ID, replacement for typeid
+
     const std::string Banner;
 
     MachineVerifierPass(std::string banner = std::string())
@@ -279,9 +307,10 @@ namespace {
     }
   };
 
-}
+} // end anonymous namespace
 
 char MachineVerifierPass::ID = 0;
+
 INITIALIZE_PASS(MachineVerifierPass, "machineverifier",
                 "Verify generated machine code", false, false)
 
@@ -1466,8 +1495,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   }
 }
 
-void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
-}
+void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {}
 
 // This function gets called after visiting all instructions in a bundle. The
 // argument points to the bundle header.
@@ -1952,7 +1980,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // Skip this block.
     ++MFI;
   }
-  for (;;) {
+  while (true) {
     assert(LiveInts->isLiveInToMBB(LR, &*MFI));
     // We don't know how to track physregs into a landing pad.
     if (!TargetRegisterInfo::isVirtualRegister(Reg) &&
@@ -2058,23 +2086,25 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
 }
 
 namespace {
+
   // FrameSetup and FrameDestroy can have zero adjustment, so using a single
   // integer, we can't tell whether it is a FrameSetup or FrameDestroy if the
   // value is zero.
   // We use a bool plus an integer to capture the stack state.
   struct StackStateOfBB {
-    StackStateOfBB() : EntryValue(0), ExitValue(0), EntryIsSetup(false),
-      ExitIsSetup(false) { }
+    StackStateOfBB() = default;
     StackStateOfBB(int EntryVal, int ExitVal, bool EntrySetup, bool ExitSetup) :
       EntryValue(EntryVal), ExitValue(ExitVal), EntryIsSetup(EntrySetup),
-      ExitIsSetup(ExitSetup) { }
+      ExitIsSetup(ExitSetup) {}
+
     // Can be negative, which means we are setting up a frame.
-    int EntryValue;
-    int ExitValue;
-    bool EntryIsSetup;
-    bool ExitIsSetup;
+    int EntryValue = 0;
+    int ExitValue = 0;
+    bool EntryIsSetup = false;
+    bool ExitIsSetup = false;
   };
-}
+
+} // end anonymous namespace
 
 /// Make sure on every path through the CFG, a FrameSetup <n> is always followed
 /// by a FrameDestroy <n>, stack adjustments are identical on all
@@ -2090,8 +2120,8 @@ void MachineVerifier::verifyStackFrame() {
   df_iterator_default_set<const MachineBasicBlock*> Reachable;
 
   // Visit the MBBs in DFS order.
-  for (df_ext_iterator<const MachineFunction*,
-                       df_iterator_default_set<const MachineBasicBlock*> >
+  for (df_ext_iterator<const MachineFunction *,
+                       df_iterator_default_set<const MachineBasicBlock *>>
        DFI = df_ext_begin(MF, Reachable), DFE = df_ext_end(MF, Reachable);
        DFI != DFE; ++DFI) {
     const MachineBasicBlock *MBB = *DFI;

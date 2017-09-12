@@ -851,6 +851,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
     return CC_AMDGPU;
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Cold:
     return CC_AMDGPU_Func;
   default:
     report_fatal_error("Unsupported calling convention.");
@@ -871,6 +872,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
     return RetCC_SI_Shader;
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Cold:
     return RetCC_AMDGPU_Func;
   default:
     report_fatal_error("Unsupported calling convention.");

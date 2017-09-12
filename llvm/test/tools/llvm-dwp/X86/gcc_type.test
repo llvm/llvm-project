@@ -1,5 +1,5 @@
 RUN: llvm-dwp %p/../Inputs/gcc_type/a.dwo -o %t
-RUN: llvm-dwarfdump %t | FileCheck %s
+RUN: llvm-dwarfdump -v %t | FileCheck %s
 RUN: not llvm-dwp %p/../Inputs/gcc_type/a.dwo %p/../Inputs/gcc_type/a.dwo -o %t 2>&1 | FileCheck --check-prefix=DUP %s
 
 CHECK: Type Unit

@@ -88,7 +88,7 @@ void BPFInstPrinter::printImm64Operand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm())
-    O << (uint64_t)Op.getImm() << "ll";
+    O << (uint64_t)Op.getImm();
   else if (Op.isExpr())
     printExpr(Op.getExpr(), O);
   else

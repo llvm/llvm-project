@@ -2985,8 +2985,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // NOTE: we could fall back on load/store here too for targets without
     // SRA.  However, it is doubtful that any exist.
     EVT ShiftAmountTy = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-    if (VT.isVector())
-      ShiftAmountTy = VT;
     unsigned BitsDiff = VT.getScalarSizeInBits() -
                         ExtraVT.getScalarSizeInBits();
     SDValue ShiftCst = DAG.getConstant(BitsDiff, dl, ShiftAmountTy);

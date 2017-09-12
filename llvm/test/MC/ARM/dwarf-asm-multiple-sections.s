@@ -1,11 +1,11 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 5 -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
+// RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC5 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
+// RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC4 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 3 -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump %t | FileCheck -check-prefix DWARF -check-prefix DWARF3 %s
+// RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF3 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 2 2>&1 | FileCheck -check-prefix VERSION %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 1 2>&1 | FileCheck -check-prefix DWARF1 %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 6 2>&1 | FileCheck -check-prefix DWARF6 %s
