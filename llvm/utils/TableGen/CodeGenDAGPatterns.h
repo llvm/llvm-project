@@ -720,7 +720,8 @@ class CodeGenDAGPatterns {
   CodeGenIntrinsicTable TgtIntrinsics;
 
   std::map<Record*, SDNodeInfo, LessRecordByID> SDNodes;
-  std::map<Record*, std::pair<Record*, std::string>, LessRecordByID> SDNodeXForms;
+  std::map<Record*, std::pair<Record*, std::string>, LessRecordByID>
+      SDNodeXForms;
   std::map<Record*, ComplexPattern, LessRecordByID> ComplexPatterns;
   std::map<Record *, std::unique_ptr<TreePattern>, LessRecordByID>
       PatternFragments;

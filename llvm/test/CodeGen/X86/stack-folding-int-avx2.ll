@@ -17,7 +17,6 @@ define <4 x double> @stack_fold_broadcastsd_ymm(<2 x double> %a0) {
   %3 = fadd <4 x double> %2, <double 0x0, double 0x0, double 0x0, double 0x0>
   ret <4 x double> %3
 }
-declare <4 x double> @llvm.x86.avx2.vbroadcast.sd.pd.256(<2 x double>) nounwind readonly
 
 define <4 x float> @stack_fold_broadcastss(<4 x float> %a0) {
   ;CHECK-LABEL: stack_fold_broadcastss
@@ -28,7 +27,6 @@ define <4 x float> @stack_fold_broadcastss(<4 x float> %a0) {
   %3 = fadd <4 x float> %2, <float 0x0, float 0x0, float 0x0, float 0x0>
   ret <4 x float> %3
 }
-declare <4 x float> @llvm.x86.avx2.vbroadcast.ss.ps(<4 x float>) nounwind readonly
 
 define <8 x float> @stack_fold_broadcastss_ymm(<4 x float> %a0) {
   ;CHECK-LABEL: stack_fold_broadcastss_ymm
@@ -39,7 +37,6 @@ define <8 x float> @stack_fold_broadcastss_ymm(<4 x float> %a0) {
   %3 = fadd <8 x float> %2, <float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0>
   ret <8 x float> %3
 }
-declare <8 x float> @llvm.x86.avx2.vbroadcast.ss.ps.256(<4 x float>) nounwind readonly
 
 define <4 x i32> @stack_fold_extracti128(<8 x i32> %a0, <8 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_extracti128
@@ -252,7 +249,7 @@ define <16 x i16> @stack_fold_pavgw(<16 x i16> %a0, <16 x i16> %a1) {
   %4 = add <16 x i32> %2, %3
   %5 = add <16 x i32> %4, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = lshr <16 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %7 = trunc <16 x i32> %6 to <16 x i16>  
+  %7 = trunc <16 x i32> %6 to <16 x i16>
   ret <16 x i16> %7
 }
 

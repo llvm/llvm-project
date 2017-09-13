@@ -820,24 +820,24 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
 
 void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   // TODO: Set the section types and flags.
-  TextSection = Ctx->getWasmSection(".text", 0, 0);
-  DataSection = Ctx->getWasmSection(".data", 0, 0);
+  TextSection = Ctx->getWasmSection(".text", 0);
+  DataSection = Ctx->getWasmSection(".data", 0);
 
   // TODO: Set the section types and flags.
-  DwarfLineSection = Ctx->getWasmSection(".debug_line", 0, 0);
-  DwarfStrSection = Ctx->getWasmSection(".debug_str", 0, 0);
-  DwarfLocSection = Ctx->getWasmSection(".debug_loc", 0, 0);
-  DwarfAbbrevSection = Ctx->getWasmSection(".debug_abbrev", 0, 0, "section_abbrev");
-  DwarfARangesSection = Ctx->getWasmSection(".debug_aranges", 0, 0);
-  DwarfRangesSection = Ctx->getWasmSection(".debug_ranges", 0, 0, "debug_range");
-  DwarfMacinfoSection = Ctx->getWasmSection(".debug_macinfo", 0, 0, "debug_macinfo");
-  DwarfAddrSection = Ctx->getWasmSection(".debug_addr", 0, 0);
-  DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", 0, 0);
-  DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", 0, 0);
-  DwarfInfoSection = Ctx->getWasmSection(".debug_info", 0, 0, "section_info");
-  DwarfFrameSection = Ctx->getWasmSection(".debug_frame", 0, 0);
-  DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", 0, 0);
-  DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", 0, 0);
+  DwarfLineSection = Ctx->getWasmSection(".debug_line", 0);
+  DwarfStrSection = Ctx->getWasmSection(".debug_str", 0);
+  DwarfLocSection = Ctx->getWasmSection(".debug_loc", 0);
+  DwarfAbbrevSection = Ctx->getWasmSection(".debug_abbrev", 0, "section_abbrev");
+  DwarfARangesSection = Ctx->getWasmSection(".debug_aranges", 0);
+  DwarfRangesSection = Ctx->getWasmSection(".debug_ranges", 0, "debug_range");
+  DwarfMacinfoSection = Ctx->getWasmSection(".debug_macinfo", 0, "debug_macinfo");
+  DwarfAddrSection = Ctx->getWasmSection(".debug_addr", 0);
+  DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", 0);
+  DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", 0);
+  DwarfInfoSection = Ctx->getWasmSection(".debug_info", 0, "section_info");
+  DwarfFrameSection = Ctx->getWasmSection(".debug_frame", 0);
+  DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", 0);
+  DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", 0);
 
   // TODO: Define more sections.
 }

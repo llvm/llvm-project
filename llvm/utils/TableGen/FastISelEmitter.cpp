@@ -217,10 +217,6 @@ struct OperandsSignature {
           PredNo = ImmediatePredicates.getIDFor(PredFn)+1;
         }
 
-        // Handle unmatched immediate sizes here.
-        //if (Op->getType(0) != VT)
-        //  return false;
-
         Operands.push_back(OpKind::getImm(PredNo));
         continue;
       }

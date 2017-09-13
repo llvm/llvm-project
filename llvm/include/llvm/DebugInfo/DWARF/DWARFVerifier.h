@@ -10,6 +10,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
+#include "llvm/DebugInfo/DIContext.h"
+
 #include <cstdint>
 #include <map>
 #include <set>
@@ -30,6 +32,7 @@ struct DWARFSection;
 class DWARFVerifier {
   raw_ostream &OS;
   DWARFContext &DCtx;
+  DIDumpOptions DumpOpts;
   /// A map that tracks all references (converted absolute references) so we
   /// can verify each reference points to a valid DIE and not an offset that
   /// lies between to valid DIEs.
@@ -155,8 +158,8 @@ class DWARFVerifier {
                             DataExtractor *StrData, const char *SectionName);
 
 public:
-  DWARFVerifier(raw_ostream &S, DWARFContext &D)
-      : OS(S), DCtx(D) {}
+  DWARFVerifier(raw_ostream &S, DWARFContext &D, DIDumpOptions DumpOpts = {})
+      : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)) {}
   /// Verify the information in any of the following sections, if available:
   /// .debug_abbrev, debug_abbrev.dwo
   ///

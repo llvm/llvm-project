@@ -311,6 +311,18 @@ define i32 @bextr32b(i32 %x)  uwtable  ssp {
   ret i32 %2
 }
 
+; Make sure we still use AH subreg trick to extract 15:8
+define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
+; CHECK-LABEL: bextr32_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %1 = lshr i32 %x, 8
+  %2 = and i32 %1, 255
+  ret i32 %2
+}
+
 define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32b_load:
 ; CHECK:       # BB#0:
@@ -357,6 +369,18 @@ define i64 @bextr64b(i64 %x)  uwtable  ssp {
   ret i64 %2
 }
 
+; Make sure we still use the AH subreg trick to extract 15:8
+define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
+; CHECK-LABEL: bextr64_subreg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    retq
+  %1 = lshr i64 %x, 8
+  %2 = and i64 %1, 255
+  ret i64 %2
+}
+
 define i64 @bextr64b_load(i64* %x) {
 ; CHECK-LABEL: bextr64b_load:
 ; CHECK:       # BB#0:
@@ -379,6 +403,18 @@ define i64 @bextr64c(i64 %x, i32 %y) {
   %tmp0 = sext i32 %y to i64
   %tmp1 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %tmp0)
   ret i64 %tmp1
+}
+
+define i64 @bextr64d(i64 %a) {
+; CHECK-LABEL: bextr64d:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movl $8450, %eax # imm = 0x2102
+; CHECK-NEXT:    bextrq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %shr = lshr i64 %a, 2
+  %and = and i64 %shr, 8589934591
+  ret i64 %and
 }
 
 define i32 @non_bextr32(i32 %x) {

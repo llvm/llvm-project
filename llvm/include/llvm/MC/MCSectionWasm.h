@@ -31,11 +31,8 @@ private:
   /// TargetLoweringObjectFileWasm's WasmUniqueMap.
   StringRef SectionName;
 
-  /// This is the sh_type field of a section, drawn from the enums below.
+  /// This is the type of the section, from the enums in BinaryFormat/Wasm.h
   unsigned Type;
-
-  /// This is the sh_flags field of a section, drawn from the enums below.
-  unsigned Flags;
 
   unsigned UniqueID;
 
@@ -47,11 +44,10 @@ private:
   uint64_t SectionOffset;
 
   friend class MCContext;
-  MCSectionWasm(StringRef Section, unsigned type, unsigned flags, SectionKind K,
+  MCSectionWasm(StringRef Section, unsigned type, SectionKind K,
                 const MCSymbolWasm *group, unsigned UniqueID, MCSymbol *Begin)
       : MCSection(SV_Wasm, K, Begin), SectionName(Section), Type(type),
-        Flags(flags), UniqueID(UniqueID), Group(group), SectionOffset(0) {
-  }
+        UniqueID(UniqueID), Group(group), SectionOffset(0) {}
 
   void setSectionName(StringRef Name) { SectionName = Name; }
 
@@ -64,8 +60,6 @@ public:
 
   StringRef getSectionName() const { return SectionName; }
   unsigned getType() const { return Type; }
-  unsigned getFlags() const { return Flags; }
-  void setFlags(unsigned F) { Flags = F; }
   const MCSymbolWasm *getGroup() const { return Group; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

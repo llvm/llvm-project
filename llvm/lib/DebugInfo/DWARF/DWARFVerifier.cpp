@@ -236,13 +236,13 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         ++NumErrors;
         OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
               "bounds:\n";
-        Die.dump(OS, 0);
+        Die.dump(OS, 0, 0, DumpOpts);
         OS << "\n";
       }
     } else {
       ++NumErrors;
       OS << "error: DIE has invalid DW_AT_ranges encoding:\n";
-      Die.dump(OS, 0);
+      Die.dump(OS, 0, 0, DumpOpts);
       OS << "\n";
     }
     break;
@@ -254,13 +254,13 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
               "bounds: "
            << format("0x%08" PRIx64, *SectionOffset) << "\n";
-        Die.dump(OS, 0);
+        Die.dump(OS, 0, 0, DumpOpts);
         OS << "\n";
       }
     } else {
       ++NumErrors;
       OS << "error: DIE has invalid DW_AT_stmt_list encoding:\n";
-      Die.dump(OS, 0);
+      Die.dump(OS, 0, 0, DumpOpts);
       OS << "\n";
     }
     break;
@@ -295,7 +295,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
            << format("0x%08" PRIx64, CUOffset)
            << " is invalid (must be less than CU size of "
            << format("0x%08" PRIx32, CUSize) << "):\n";
-        Die.dump(OS, 0);
+        Die.dump(OS, 0, 0, DumpOpts);
         OS << "\n";
       } else {
         // Valid reference, but we will verify it points to an actual
@@ -315,7 +315,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
         ++NumErrors;
         OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
               "bounds:\n";
-        Die.dump(OS, 0);
+        Die.dump(OS, 0, 0, DumpOpts);
         OS << "\n";
       } else {
         // Valid reference, but we will verify it points to an actual
@@ -331,7 +331,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     if (SecOffset && *SecOffset >= DObj.getStringSection().size()) {
       ++NumErrors;
       OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
-      Die.dump(OS, 0);
+      Die.dump(OS, 0, 0, DumpOpts);
       OS << "\n";
     }
     break;
@@ -356,7 +356,7 @@ unsigned DWARFVerifier::verifyDebugInfoReferences() {
        << ". Offset is in between DIEs:\n";
     for (auto Offset : Pair.second) {
       auto ReferencingDie = DCtx.getDIEForOffset(Offset);
-      ReferencingDie.dump(OS, 0);
+      ReferencingDie.dump(OS, 0, 0, DumpOpts);
       OS << "\n";
     }
     OS << "\n";
@@ -381,7 +381,7 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
         ++NumDebugLineErrors;
         OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
            << "] was not able to be parsed for CU:\n";
-        Die.dump(OS, 0);
+        Die.dump(OS, 0, 0, DumpOpts);
         OS << '\n';
         continue;
       }
@@ -399,8 +399,8 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
          << format("0x%08" PRIx32, Iter->second.getOffset()) << " and "
          << format("0x%08" PRIx32, Die.getOffset())
          << ", have the same DW_AT_stmt_list section offset:\n";
-      Iter->second.dump(OS, 0);
-      Die.dump(OS, 0);
+      Iter->second.dump(OS, 0, 0, DumpOpts);
+      Die.dump(OS, 0, 0, DumpOpts);
       OS << '\n';
       // Already verified this line table before, no need to do it again.
       continue;
