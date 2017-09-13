@@ -1,5 +1,12 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+
 // UNSUPPORTED: powerpc64le
+
+// FIXME: Remove the test or find how to fix this.
+// On some distributions, probably with newer glibc, tsan initialization calls
+// dlsym which then calls malloc and crashes because of tsan is not initialized.
+// UNSUPPORTED: linux
+
 #include <stdio.h>
 
 // Defined by tsan.

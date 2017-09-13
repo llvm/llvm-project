@@ -35,11 +35,7 @@ namespace __asan {
 
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ScopedDeadlySignal signal_scope(GetCurrentThread());
-  // Write the first message using fd=2, just in case.
-  // It may actually fail to write in case stderr is closed.
-  internal_write(2, SanitizerToolName, internal_strlen(SanitizerToolName));
-  static const char kDeadlySignal[] = ":DEADLYSIGNAL\n";
-  internal_write(2, kDeadlySignal, sizeof(kDeadlySignal) - 1);
+  StartReportDeadlySignal();
   SignalContext sig = SignalContext::Create(siginfo, context);
   if (IsStackOverflow(((siginfo_t *)siginfo)->si_code, sig))
     ReportStackOverflow(sig);

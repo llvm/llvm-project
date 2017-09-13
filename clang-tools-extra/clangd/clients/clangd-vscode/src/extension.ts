@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (textEditor && textEditor.document.uri.toString(true) === uri) {
             textEditor.edit(mutator => {
                 for (const edit of edits) {
-                    mutator.replace(vscodelc.Protocol2Code.asRange(edit.range), edit.newText);
+                    mutator.replace(clangdClient.protocol2CodeConverter.asRange(edit.range), edit.newText);
                 }
             }).then((success) => {
                 if (!success) {

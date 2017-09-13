@@ -54,7 +54,7 @@ private:
   void sortSections();
   void finalizeSections();
   void addPredefinedSections();
-  void addPredefinedSymbols();
+  void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs();
   void removeEmptyPTLoad();
@@ -63,7 +63,7 @@ private:
   void assignFileOffsetsBinary();
   void setPhdrs();
   void fixSectionAlignments();
-  void fixPredefinedSymbols();
+  void makeMipsGpAbs();
   void openFile();
   void writeTrapInstr();
   void writeHeader();
@@ -198,12 +198,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   parallelForEach(OutputSections,
                   [](OutputSection *Sec) { Sec->maybeCompress<ELFT>(); });
 
-  // Generate assignments for predefined symbols (e.g. _end or _etext)
-  // before assigning addresses. These symbols may be referred to from
-  // the linker script and we need to ensure they have the correct value
-  // prior evaluating any expressions using these symbols.
-  addPredefinedSymbols();
-
   Script->assignAddresses();
   Script->allocateHeaders(Phdrs);
 
@@ -223,7 +217,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     for (OutputSection *Sec : OutputSections)
       Sec->Addr = 0;
   } else {
-    fixPredefinedSymbols();
+    makeMipsGpAbs();
   }
 
   // It does not make sense try to open the file if we have error already.
@@ -846,11 +840,11 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (Script->Opt.HasSections)
     return;
 
-  auto Add = [](StringRef S) {
-    return addOptionalRegular<ELFT>(S, Out::ElfHeader, 0, STV_DEFAULT);
+  auto Add = [](StringRef S, int64_t Pos = -1) {
+    return addOptionalRegular<ELFT>(S, Out::ElfHeader, Pos, STV_DEFAULT);
   };
 
-  ElfSym::Bss = Add("__bss_start");
+  ElfSym::Bss = Add("__bss_start", 0);
   ElfSym::End1 = Add("end");
   ElfSym::End2 = Add("_end");
   ElfSym::Etext1 = Add("etext");
@@ -886,24 +880,16 @@ template <class ELFT> static void sortBySymbolsOrder() {
 
 template <class ELFT>
 void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
-  for (InputSectionBase *IS : InputSections) {
-    if (!IS->Live)
-      continue;
-    // Scan all relocations. Each relocation goes through a series
-    // of tests to determine if it needs special treatment, such as
-    // creating GOT, PLT, copy relocations, etc.
-    // Note that relocations for non-alloc sections are directly
-    // processed by InputSection::relocateNonAlloc.
-    if (!(IS->Flags & SHF_ALLOC))
-      continue;
-    if (isa<InputSection>(IS) || isa<EhInputSection>(IS))
+  // Scan all relocations. Each relocation goes through a series
+  // of tests to determine if it needs special treatment, such as
+  // creating GOT, PLT, copy relocations, etc.
+  // Note that relocations for non-alloc sections are directly
+  // processed by InputSection::relocateNonAlloc.
+  for (InputSectionBase *IS : InputSections)
+    if (IS->Live && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
       Fn(*IS);
-  }
-
-  if (!Config->Relocatable) {
-    for (EhInputSection *ES : In<ELFT>::EhFrame->Sections)
-      Fn(*ES);
-  }
+  for (EhInputSection *ES : In<ELFT>::EhFrame->Sections)
+    Fn(*ES);
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
@@ -928,7 +914,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 // appropriate time. This ensures that the value is going to be correct by the
 // time any references to these symbols are processed and is equivalent to
 // defining these symbols explicitly in the linker script.
-template <class ELFT> void Writer<ELFT>::addPredefinedSymbols() {
+template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
   PhdrEntry *LastRW = nullptr;
@@ -943,57 +929,54 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSymbols() {
       LastRO = P;
   }
 
-  auto Make = [](DefinedRegular *S) {
-    auto *Cmd = make<SymbolAssignment>(
-        S->getName(), [=] { return Script->getSymbolValue("", "."); }, "");
-    Cmd->Sym = S;
-    return Cmd;
-  };
-
-  std::vector<BaseCommand *> &V = Script->Opt.Commands;
-
   // _end is the first location after the uninitialized data region.
   if (Last) {
-    for (size_t I = 0; I < V.size(); ++I) {
-      if (V[I] != Last->LastSec)
-        continue;
-      if (ElfSym::End2)
-        V.insert(V.begin() + I + 1, Make(ElfSym::End2));
-      if (ElfSym::End1)
-        V.insert(V.begin() + I + 1, Make(ElfSym::End1));
-      break;
-    }
+    if (ElfSym::End1)
+      ElfSym::End1->Section = Last->LastSec;
+    if (ElfSym::End2)
+      ElfSym::End2->Section = Last->LastSec;
   }
 
   // _etext is the first location after the last read-only loadable segment.
   if (LastRO) {
-    for (size_t I = 0; I < V.size(); ++I) {
-      if (V[I] != LastRO->LastSec)
-        continue;
-      if (ElfSym::Etext2)
-        V.insert(V.begin() + I + 1, Make(ElfSym::Etext2));
-      if (ElfSym::Etext1)
-        V.insert(V.begin() + I + 1, Make(ElfSym::Etext1));
-      break;
-    }
+    if (ElfSym::Etext1)
+      ElfSym::Etext1->Section = LastRO->LastSec;
+    if (ElfSym::Etext2)
+      ElfSym::Etext2->Section = LastRO->LastSec;
   }
 
   // _edata points to the end of the last non SHT_NOBITS section.
   if (LastRW) {
     size_t I = 0;
-    for (; I < V.size(); ++I)
-      if (V[I] == LastRW->FirstSec)
+    for (; I < OutputSections.size(); ++I)
+      if (OutputSections[I] == LastRW->FirstSec)
         break;
 
-    for (; I < V.size(); ++I) {
-      auto *Sec = dyn_cast<OutputSection>(V[I]);
-      if (!Sec || Sec->Type != SHT_NOBITS)
+    for (; I < OutputSections.size(); ++I) {
+      if (OutputSections[I]->Type != SHT_NOBITS)
         continue;
-      if (ElfSym::Edata2)
-        V.insert(V.begin() + I, Make(ElfSym::Edata2));
-      if (ElfSym::Edata1)
-        V.insert(V.begin() + I, Make(ElfSym::Edata1));
       break;
+    }
+    if (ElfSym::Edata1)
+      ElfSym::Edata1->Section = OutputSections[I - 1];
+    if (ElfSym::Edata2)
+      ElfSym::Edata2->Section = OutputSections[I - 1];
+  }
+
+  if (ElfSym::Bss)
+    ElfSym::Bss->Section = findSection(".bss");
+
+  // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
+  // be equal to the _gp symbol's value.
+  if (ElfSym::MipsGp && !ElfSym::MipsGp->Value) {
+    // Find GP-relative section with the lowest address
+    // and use this address to calculate default _gp value.
+    for (OutputSection *OS : OutputSections) {
+      if (OS->Flags & SHF_MIPS_GPREL) {
+        ElfSym::MipsGp->Section = OS;
+        ElfSym::MipsGp->Value = 0x7ff0;
+        break;
+      }
     }
   }
 }
@@ -1233,12 +1216,8 @@ static bool computeIsPreemptible(const SymbolBody &B) {
   if (B.symbol()->Visibility != STV_DEFAULT)
     return false;
 
-  // Undefined symbols in non-DSOs are usually just an error, so it
-  // doesn't matter whether we return true or false here. However, if
-  // -unresolved-symbols=ignore-all is specified, undefined symbols in
-  // executables are automatically exported so that the runtime linker
-  // can try to resolve them. In that case, they are preemptible. So, we
-  // return true for an undefined symbols in all cases.
+  // At this point copy relocations have not been created yet, so any
+  // symbol that is not defined locally is preemptible.
   if (!B.isInCurrentDSO())
     return true;
 
@@ -1293,7 +1272,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  forEachRelSec(scanRelocations<ELFT>);
+  if (!Config->Relocatable)
+    forEachRelSec(scanRelocations<ELFT>);
 
   if (InX::Plt && !InX::Plt->empty())
     InX::Plt->addSymbols();
@@ -1359,6 +1339,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     addPtArmExid(Phdrs);
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
+
+  // Some symbols are defined in term of program headers. Now that we
+  // have the headers, we can find out which sections they point to.
+  setReservedSymbolSections();
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
@@ -1790,25 +1774,11 @@ static uint16_t getELFType() {
   return ET_EXEC;
 }
 
-// This function is called after we have assigned address and size
-// to each section. This function fixes some predefined
-// symbol values that depend on section address and size.
-template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
-  if (ElfSym::Bss)
-    ElfSym::Bss->Section = findSection(".bss");
-
-  // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
-  // be equal to the _gp symbol's value.
-  if (Config->EMachine == EM_MIPS && !ElfSym::MipsGp->Value) {
-    // Find GP-relative section with the lowest address
-    // and use this address to calculate default _gp value.
-    for (const OutputSection *Cmd : OutputSections) {
-      const OutputSection *OS = Cmd;
-      if (OS->Flags & SHF_MIPS_GPREL) {
-        ElfSym::MipsGp->Value = OS->Addr + 0x7ff0;
-        break;
-      }
-    }
+// For some reason we have to make the mips gp symbol absolute.
+template <class ELFT> void Writer<ELFT>::makeMipsGpAbs() {
+  if (ElfSym::MipsGp && ElfSym::MipsGp->Section) {
+    ElfSym::MipsGp->Value += cast<OutputSection>(ElfSym::MipsGp->Section)->Addr;
+    ElfSym::MipsGp->Section = nullptr;
   }
 }
 

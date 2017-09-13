@@ -597,26 +597,21 @@ void Fuzzer::MutateAndTestOne() {
 void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
-  struct SizedFile {
-    std::string File;
-    size_t Size;
-  };
   Vector<SizedFile> SizedFiles;
   size_t MaxSize = 0;
   size_t MinSize = -1;
   size_t TotalSize = 0;
+  size_t LastNumFiles = 0;
   for (auto &Dir : CorpusDirs) {
-    Vector<std::string> Files;
-    ListFilesInDirRecursive(Dir, 0, &Files, /*TopDir*/true);
-    Printf("INFO: % 8zd files found in %s\n", Files.size(), Dir.c_str());
-    for (auto &File : Files) {
-      if (size_t Size = FileSize(File)) {
-        MaxSize = Max(Size, MaxSize);
-        MinSize = Min(Size, MinSize);
-        TotalSize += Size;
-        SizedFiles.push_back({File, Size});
-      }
-    }
+    GetSizedFilesFromDir(Dir, &SizedFiles);
+    Printf("INFO: % 8zd files found in %s\n", SizedFiles.size() - LastNumFiles,
+           Dir.c_str());
+    LastNumFiles = SizedFiles.size();
+  }
+  for (auto &File : SizedFiles) {
+    MaxSize = Max(File.Size, MaxSize);
+    MinSize = Min(File.Size, MinSize);
+    TotalSize += File.Size;
   }
   if (Options.MaxLen == 0)
     SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxSize), kMaxSaneLen));
@@ -633,10 +628,10 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     if (Options.ShuffleAtStartUp)
       std::shuffle(SizedFiles.begin(), SizedFiles.end(), MD.GetRand());
 
-    if (Options.PreferSmall)
-      std::stable_sort(
-          SizedFiles.begin(), SizedFiles.end(),
-          [](const SizedFile &A, const SizedFile &B) { return A.Size < B.Size; });
+    if (Options.PreferSmall) {
+      std::stable_sort(SizedFiles.begin(), SizedFiles.end());
+      assert(SizedFiles.front().Size <= SizedFiles.back().Size);
+    }
 
     // Load and execute inputs one by one.
     for (auto &SF : SizedFiles) {

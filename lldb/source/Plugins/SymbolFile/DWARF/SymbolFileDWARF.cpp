@@ -1640,7 +1640,29 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
             }
             dwo_module_spec.GetArchitecture() =
                 m_obj_file->GetModule()->GetArchitecture();
-            // printf ("Loading dwo = '%s'\n", dwo_path);
+
+            // When LLDB loads "external" modules it looks at the
+            // presence of DW_AT_GNU_dwo_name.
+            // However, when the already created module
+            // (corresponding to .dwo itself) is being processed,
+            // it will see the presence of DW_AT_GNU_dwo_name
+            // (which contains the name of dwo file) and
+            // will try to call ModuleList::GetSharedModule again.
+            // In some cases (i.e. for empty files) Clang 4.0
+            // generates a *.dwo file which has DW_AT_GNU_dwo_name,
+            // but no DW_AT_comp_dir. In this case the method
+            // ModuleList::GetSharedModule will fail and
+            // the warning will be printed. However, as one can notice
+            // in this case we don't actually need to try to load the already
+            // loaded module (corresponding to .dwo) so we simply skip it.
+            if (m_obj_file->GetFileSpec()
+                        .GetFileNameExtension()
+                        .GetStringRef() == "dwo" &&
+                llvm::StringRef(m_obj_file->GetFileSpec().GetPath())
+                    .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
+              continue;
+            }
+
             Status error = ModuleList::GetSharedModule(
                 dwo_module_spec, module_sp, NULL, NULL, NULL);
             if (!module_sp) {

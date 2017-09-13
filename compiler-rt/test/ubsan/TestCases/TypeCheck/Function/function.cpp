@@ -3,9 +3,6 @@
 // Verify that we can disable symbolization if needed:
 // RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
-// -fsanitize=function is unsupported on Darwin yet.
-// XFAIL: darwin
-
 #include <stdint.h>
 
 void f() {}
@@ -18,9 +15,9 @@ void make_valid_call() {
 }
 
 void make_invalid_call() {
-  // CHECK: function.cpp:25:3: runtime error: call to function f() through pointer to incorrect function type 'void (*)(int)'
-  // CHECK-NEXT: function.cpp:11: note: f() defined here
-  // NOSYM: function.cpp:25:3: runtime error: call to function (unknown) through pointer to incorrect function type 'void (*)(int)'
+  // CHECK: function.cpp:[[@LINE+4]]:3: runtime error: call to function f() through pointer to incorrect function type 'void (*)(int)'
+  // CHECK-NEXT: function.cpp:[[@LINE-11]]: note: f() defined here
+  // NOSYM: function.cpp:[[@LINE+2]]:3: runtime error: call to function (unknown) through pointer to incorrect function type 'void (*)(int)'
   // NOSYM-NEXT: ({{.*}}+0x{{.*}}): note: (unknown) defined here
   reinterpret_cast<void (*)(int)>(reinterpret_cast<uintptr_t>(f))(42);
 }

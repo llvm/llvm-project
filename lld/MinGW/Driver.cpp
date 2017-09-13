@@ -121,8 +121,14 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   Add("lld-link");
 
-  if (auto *A = Args.getLastArg(OPT_entry))
-    Add("-entry:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_entry)) {
+    StringRef S = A->getValue();
+    if (Args.getLastArgValue(OPT_m) == "i386pe" && S.startswith("_"))
+      Add("-entry:" + S.substr(1));
+    else
+      Add("-entry:" + S);
+  }
+
   if (auto *A = Args.getLastArg(OPT_subs))
     Add("-subsystem:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_out_implib))
@@ -166,11 +172,27 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   for (auto *A : Args.filtered(OPT_L))
     SearchPaths.push_back(A->getValue());
 
-  for (auto *A : Args.filtered(OPT_INPUT, OPT_l)) {
-    if (A->getOption().getUnaliasedOption().getID() == OPT_INPUT)
-      Add(A->getValue());
-    else
-      Add(searchLibrary(A->getValue(), SearchPaths, Args.hasArg(OPT_Bstatic)));
+  StringRef Prefix = "";
+  for (auto *A : Args.filtered(OPT_INPUT, OPT_l, OPT_whole_archive,
+                               OPT_no_whole_archive)) {
+    switch (A->getOption().getID()) {
+    case OPT_INPUT:
+      if (StringRef(A->getValue()).endswith(".def"))
+        Add("-def:" + StringRef(A->getValue()));
+      else
+        Add(Prefix + StringRef(A->getValue()));
+      break;
+    case OPT_l:
+      Add(Prefix +
+          searchLibrary(A->getValue(), SearchPaths, Args.hasArg(OPT_Bstatic)));
+      break;
+    case OPT_whole_archive:
+      Prefix = "-wholearchive:";
+      break;
+    case OPT_no_whole_archive:
+      Prefix = "";
+      break;
+    }
   }
 
   if (Args.hasArg(OPT_verbose))

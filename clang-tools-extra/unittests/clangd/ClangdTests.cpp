@@ -301,7 +301,8 @@ protected:
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                        /*SnippetCompletions=*/false);
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
@@ -363,7 +364,8 @@ TEST_F(ClangdVFSTest, Reparse) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*SnippetCompletions=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -407,7 +409,8 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*SnippetCompletions=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -454,7 +457,7 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
@@ -487,7 +490,7 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
                               "-stdlib=libstdc++"});
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
 
   // Just a random gcc version string
   SmallString<8> Version("4.9.3");
@@ -535,7 +538,7 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
   // No need to sync reparses, because reparses are performed on the calling
   // thread to true.
 
@@ -593,7 +596,8 @@ TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*SnippetCompletions=*/false);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = R"cpp(
@@ -740,7 +744,8 @@ int d;
   TestDiagConsumer DiagConsumer;
   {
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                        /*SnippetCompletions=*/false);
 
     // Prepare some random distributions for the test.
     std::random_device RandGen;

@@ -315,7 +315,7 @@ basic_filebuf<_CharT, _Traits>::basic_filebuf(basic_filebuf&& __rhs)
         else
             this->setp((char_type*)__extbuf_,
                        (char_type*)__extbuf_ + (__rhs. epptr() - __rhs.pbase()));
-        this->pbump(__rhs. pptr() - __rhs.pbase());
+        this->__pbump(__rhs. pptr() - __rhs.pbase());
     }
     else if (__rhs.eback())
     {
@@ -434,7 +434,7 @@ basic_filebuf<_CharT, _Traits>::swap(basic_filebuf& __rhs)
         ptrdiff_t __e = this->epptr() - this->pbase();
         this->setp((char_type*)__extbuf_min_,
                    (char_type*)__extbuf_min_ + __e);
-        this->pbump(__n);
+        this->__pbump(__n);
     }
     if (__rhs.eback() == (char_type*)__extbuf_min_)
     {
@@ -450,7 +450,7 @@ basic_filebuf<_CharT, _Traits>::swap(basic_filebuf& __rhs)
         ptrdiff_t __e = __rhs.epptr() - __rhs.pbase();
         __rhs.setp((char_type*)__rhs.__extbuf_min_,
                    (char_type*)__rhs.__extbuf_min_ + __e);
-        __rhs.pbump(__n);
+        __rhs.__pbump(__n);
     }
 }
 
@@ -724,7 +724,7 @@ basic_filebuf<_CharT, _Traits>::overflow(int_type __c)
                     if (__r == codecvt_base::partial)
                     {
                         this->setp(const_cast<char_type*>(__e), this->pptr());
-                        this->pbump(this->epptr() - this->pbase());
+                        this->__pbump(this->epptr() - this->pbase());
                     }
                 }
                 else

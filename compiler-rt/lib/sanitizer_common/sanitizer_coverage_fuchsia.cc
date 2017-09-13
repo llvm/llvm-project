@@ -21,7 +21,7 @@
 // Unlike the traditional implementation that uses an atexit hook to write
 // out data files at the end, the results on Fuchsia do not go into a file
 // per se.  The 'coverage_dir' option is ignored.  Instead, they are stored
-// directly into a shared memory object (a Magenta VMO).  At exit, that VMO
+// directly into a shared memory object (a Zircon VMO).  At exit, that VMO
 // is handed over to a system service that's responsible for getting the
 // data out to somewhere that it can be fed into the sancov tool (where and
 // how is not our problem).
@@ -32,9 +32,9 @@
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 
-#include <magenta/process.h>
-#include <magenta/sanitizer.h>
-#include <magenta/syscalls.h>
+#include <zircon/process.h>
+#include <zircon/sanitizer.h>
+#include <zircon/syscalls.h>
 
 using namespace __sanitizer;  // NOLINT
 
@@ -88,19 +88,19 @@ class TracePcGuardController {
   void Dump() {
     BlockingMutexLock locked(&setup_lock_);
     if (array_) {
-      CHECK_NE(vmo_, MX_HANDLE_INVALID);
+      CHECK_NE(vmo_, ZX_HANDLE_INVALID);
 
       // Publish the VMO to the system, where it can be collected and
       // analyzed after this process exits.  This always consumes the VMO
       // handle.  Any failure is just logged and not indicated to us.
       __sanitizer_publish_data(kSancovSinkName, vmo_);
-      vmo_ = MX_HANDLE_INVALID;
+      vmo_ = ZX_HANDLE_INVALID;
 
       // This will route to __sanitizer_log_write, which will ensure that
       // information about shared libraries is written out.  This message
       // uses the `dumpfile` symbolizer markup element to highlight the
       // dump.  See the explanation for this in:
-      // https://fuchsia.googlesource.com/magenta/+/master/docs/symbolizer_markup.md
+      // https://fuchsia.googlesource.com/zircon/+/master/docs/symbolizer_markup.md
       Printf("SanitizerCoverage: {{{dumpfile:%s:%s}}} with up to %u PCs\n",
              kSancovSinkName, vmo_name_, next_index_ - 1);
     }
@@ -116,8 +116,8 @@ class TracePcGuardController {
   BlockingMutex setup_lock_;
   uptr *array_;
   u32 next_index_;
-  mx_handle_t vmo_;
-  char vmo_name_[MX_MAX_NAME_LEN];
+  zx_handle_t vmo_;
+  char vmo_name_[ZX_MAX_NAME_LEN];
 
   size_t DataSize() const { return next_index_ * sizeof(uintptr_t); }
 
@@ -126,19 +126,19 @@ class TracePcGuardController {
     DCHECK(common_flags()->coverage);
 
     if (next_index_ == 0) {
-      CHECK_EQ(vmo_, MX_HANDLE_INVALID);
+      CHECK_EQ(vmo_, ZX_HANDLE_INVALID);
       CHECK_EQ(array_, nullptr);
 
       // The first sample goes at [1] to reserve [0] for the magic number.
       next_index_ = 1 + num_guards;
 
-      mx_status_t status = _mx_vmo_create(DataSize(), 0, &vmo_);
-      CHECK_EQ(status, MX_OK);
+      zx_status_t status = _zx_vmo_create(DataSize(), 0, &vmo_);
+      CHECK_EQ(status, ZX_OK);
 
       // Give the VMO a name including our process KOID so it's easy to spot.
       internal_snprintf(vmo_name_, sizeof(vmo_name_), "%s.%zu", kSancovSinkName,
                         internal_getpid());
-      _mx_object_set_property(vmo_, MX_PROP_NAME, vmo_name_,
+      _zx_object_set_property(vmo_, ZX_PROP_NAME, vmo_name_,
                               internal_strlen(vmo_name_));
 
       // Map the largest possible view we might need into the VMO.  Later
@@ -147,9 +147,9 @@ class TracePcGuardController {
       // any multi-thread synchronization issues with that.
       uintptr_t mapping;
       status =
-          _mx_vmar_map(_mx_vmar_root_self(), 0, vmo_, 0, MappingSize,
-                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &mapping);
-      CHECK_EQ(status, MX_OK);
+          _zx_vmar_map(_zx_vmar_root_self(), 0, vmo_, 0, MappingSize,
+                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapping);
+      CHECK_EQ(status, ZX_OK);
 
       // Hereafter other threads are free to start storing into
       // elements [1, next_index_) of the big array.
@@ -164,14 +164,14 @@ class TracePcGuardController {
       // The VMO is already mapped in, but it's not big enough to use the
       // new indices.  So increase the size to cover the new maximum index.
 
-      CHECK_NE(vmo_, MX_HANDLE_INVALID);
+      CHECK_NE(vmo_, ZX_HANDLE_INVALID);
       CHECK_NE(array_, nullptr);
 
       uint32_t first_index = next_index_;
       next_index_ += num_guards;
 
-      mx_status_t status = _mx_vmo_set_size(vmo_, DataSize());
-      CHECK_EQ(status, MX_OK);
+      zx_status_t status = _zx_vmo_set_size(vmo_, DataSize());
+      CHECK_EQ(status, ZX_OK);
 
       return first_index;
     }
