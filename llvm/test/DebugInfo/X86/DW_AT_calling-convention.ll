@@ -1,5 +1,5 @@
 ; RUN: llc < %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; C++ source to regenerate:
 ; $ cat t.cpp

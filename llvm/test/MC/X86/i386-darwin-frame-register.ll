@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=frames - | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump -debug-frames - | FileCheck %s
 
 ; IR reduced from a dummy:
 ; void foo() {}

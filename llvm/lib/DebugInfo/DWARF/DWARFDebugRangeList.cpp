@@ -33,20 +33,22 @@ bool DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
     return false;
   Offset = *offset_ptr;
   while (true) {
-    RangeListEntry entry;
+    RangeListEntry Entry;
+    Entry.SectionIndex = -1ULL;
+
     uint32_t prev_offset = *offset_ptr;
-    entry.StartAddress =
-        data.getRelocatedAddress(offset_ptr, &entry.SectionIndex);
-    entry.EndAddress = data.getRelocatedAddress(offset_ptr);
+    Entry.StartAddress = data.getRelocatedAddress(offset_ptr);
+    Entry.EndAddress =
+        data.getRelocatedAddress(offset_ptr, &Entry.SectionIndex);
 
     // Check that both values were extracted correctly.
     if (*offset_ptr != prev_offset + 2 * AddressSize) {
       clear();
       return false;
     }
-    if (entry.isEndOfListEntry())
+    if (Entry.isEndOfListEntry())
       break;
-    Entries.push_back(entry);
+    Entries.push_back(Entry);
   }
   return true;
 }
@@ -61,16 +63,29 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
   OS << format("%08x <End of list>\n", Offset);
 }
 
-DWARFAddressRangesVector
-DWARFDebugRangeList::getAbsoluteRanges(uint64_t BaseAddress) const {
+DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
+    llvm::Optional<BaseAddress> BaseAddr) const {
   DWARFAddressRangesVector Res;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
-      BaseAddress = RLE.EndAddress;
-    } else {
-      Res.push_back({BaseAddress + RLE.StartAddress,
-                     BaseAddress + RLE.EndAddress, RLE.SectionIndex});
+      BaseAddr = {RLE.EndAddress, RLE.SectionIndex};
+      continue;
     }
+
+    DWARFAddressRange E;
+    E.LowPC = RLE.StartAddress;
+    E.HighPC = RLE.EndAddress;
+    E.SectionIndex = RLE.SectionIndex;
+    // Base address of a range list entry is determined by the closest preceding
+    // base address selection entry in the same range list. It defaults to the
+    // base address of the compilation unit if there is no such entry.
+    if (BaseAddr) {
+      E.LowPC += BaseAddr->Address;
+      E.HighPC += BaseAddr->Address;
+      if (E.SectionIndex == -1ULL)
+        E.SectionIndex = BaseAddr->SectionIndex;
+    }
+    Res.push_back(E);
   }
   return Res;
 }

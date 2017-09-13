@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=mips-linux-gnu -filetype=asm -asm-verbose=0 -O0 -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -mtriple=mips-linux-gnu -filetype=obj -O0 < %s | llvm-dwarfdump -debug-dump=line - | FileCheck %s --check-prefix=INT
+; RUN: llc -mtriple=mips-linux-gnu -filetype=obj -O0 < %s | llvm-dwarfdump -debug-line - | FileCheck %s --check-prefix=INT
 
 ; Mips used to generate 'jumpy' debug line info around calls. The address
 ; calculation for each call to f1() would share the same line info so it would

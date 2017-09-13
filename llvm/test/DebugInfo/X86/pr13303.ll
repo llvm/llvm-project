@@ -1,5 +1,5 @@
 ; RUN: llc %s -o %t -filetype=obj -mtriple=x86_64-unknown-linux-gnu
-; RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
 ; PR13303
 
 ; Check that the prologue ends with is_stmt here.

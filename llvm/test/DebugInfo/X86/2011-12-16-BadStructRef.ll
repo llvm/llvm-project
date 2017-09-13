@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx10.7 %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; CHECK: b_ref
 ; CHECK-NOT: AT_bit_size

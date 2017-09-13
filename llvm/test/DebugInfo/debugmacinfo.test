@@ -1,6 +1,6 @@
-RUN: llvm-dwarfdump -debug-dump=macro %p/Inputs/dwarfdump-macro.o \
+RUN: llvm-dwarfdump -debug-macro %p/Inputs/dwarfdump-macro.o \
 RUN:   | FileCheck %s -check-prefix TEST_MACINFO
-RUN: llvm-dwarfdump -debug-dump=line %p/Inputs/dwarfdump-macro.o \
+RUN: llvm-dwarfdump -debug-line %p/Inputs/dwarfdump-macro.o \
 RUN:   | FileCheck %s -check-prefix TEST_LINE
 
 

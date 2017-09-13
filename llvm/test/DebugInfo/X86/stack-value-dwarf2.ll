@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -debug-dump=loc - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -debug-loc - | FileCheck %s
 
 ; Note that it would be even better to avoid emitting the empty piece.
 ; CHECK:  {{.*}}: DW_OP_piece 0x8{{$}}

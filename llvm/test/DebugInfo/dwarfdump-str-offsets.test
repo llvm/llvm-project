@@ -1,6 +1,6 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets.x86_64.o | FileCheck --check-prefix=COMMON \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets.x86_64.o | FileCheck --check-prefix=COMMON \
 RUN:   --check-prefix=SPLIT %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-macho.o | FileCheck --check-prefix=COMMON %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-macho.o | FileCheck --check-prefix=COMMON %s
 
 ; We are using a hand-constructed object file and are interest in the correct
 ; diplay of the DW_str_offsetsbase attribute, the correct display of strings

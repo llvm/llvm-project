@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; This was pulled from clang's debug-info-template-recursive.cpp test.
 ; class base { };

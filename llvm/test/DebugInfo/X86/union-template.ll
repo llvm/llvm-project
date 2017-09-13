@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=x86_64-linux-gnu %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; Verify that we've emitted template arguments for the union
 ; CHECK: DW_TAG_union_type

@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -O0 < %s -mtriple sparc64-unknown-linux-gnu | llvm-dwarfdump - | FileCheck %s --check-prefix=SPARC64
-; RUN: llc -filetype=obj -O0 < %s -mtriple sparc-unknown-linux-gnu   | llvm-dwarfdump - | FileCheck %s --check-prefix=SPARC32
+; RUN: llc -filetype=obj -O0 < %s -mtriple sparc64-unknown-linux-gnu | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPARC64
+; RUN: llc -filetype=obj -O0 < %s -mtriple sparc-unknown-linux-gnu   | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPARC32
 
 ; Check for DW_CFA_GNU_Window_save in debug_frame. Also, Ensure that relocations
 ; are performed correctly in debug_info.

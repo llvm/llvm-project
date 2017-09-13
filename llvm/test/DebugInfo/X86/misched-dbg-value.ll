@@ -1,5 +1,5 @@
 ; RUN: llc %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t -enable-misched
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; rdar://13183203
 ; Make sure when misched is enabled, we still have location information for

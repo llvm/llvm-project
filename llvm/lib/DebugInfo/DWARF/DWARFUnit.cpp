@@ -160,7 +160,7 @@ void DWARFUnit::clear() {
   Length = 0;
   Abbrevs = nullptr;
   FormParams = DWARFFormParams({0, 0, DWARF32});
-  BaseAddr = 0;
+  BaseAddr.reset();
   RangeSectionBase = 0;
   AddrOffsetSectionBase = 0;
   clearDIEs(false);
@@ -242,9 +242,10 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
-    auto BaseAddr = toAddress(UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc}));
-    if (BaseAddr)
-      setBaseAddress(*BaseAddr);
+    Optional<DWARFFormValue> PC = UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
+    if (Optional<uint64_t> Addr = toAddress(PC))
+        setBaseAddress({*Addr, PC->getSectionIndex()});
+
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);

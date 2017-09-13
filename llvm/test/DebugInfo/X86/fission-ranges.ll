@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
 
 ; CHECK: .debug_info contents:

@@ -2,7 +2,7 @@
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../Inputs/frame-dw2.ll -o %t/frame-dw2.o
-# RUN: llvm-dsymutil -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-dump=frames - | FileCheck %s
+# RUN: llvm-dsymutil -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-frames - | FileCheck %s
 
 # This test is meant to verify that identical CIEs will get reused
 # in the same file but also inbetween files. For this to happen, we

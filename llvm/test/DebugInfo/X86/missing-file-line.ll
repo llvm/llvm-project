@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=all - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj %s -o - | llvm-dwarfdump -all - | FileCheck %s
 
 ; Test that we accept and generate DWARF entities for DW_TAG_structure_type,
 ; DW_TAG_member and DW_TAG_typedef with no source location. These can come up

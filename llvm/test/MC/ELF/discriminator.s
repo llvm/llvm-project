@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple i386-unknown-unknown %s -filetype=obj -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck %s
-# RUN: llvm-dwarfdump -debug-dump=line %t.o | FileCheck %s -check-prefix=DWARF-DUMP
+# RUN: llvm-dwarfdump -debug-line %t.o | FileCheck %s -check-prefix=DWARF-DUMP
 
     .file 1 "foo.c"
     .text

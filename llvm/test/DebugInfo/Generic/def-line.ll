@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Given the following source, ensure that the decl_line/file is correctly
 ; emitted and omitted on definitions if it mismatches/matches the declaration
