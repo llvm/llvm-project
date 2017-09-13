@@ -562,7 +562,8 @@ void CGDebugInfo::CreateCompileUnit() {
       Producer, LO.Optimize || CGOpts.PrepareForLTO || CGOpts.EmitSummaryIndex,
       CGOpts.DwarfDebugFlags, RuntimeVers,
       CGOpts.EnableSplitDwarf ? "" : CGOpts.SplitDwarfFile, EmissionKind,
-      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling);
+      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
+      CGOpts.GnuPubnames);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {

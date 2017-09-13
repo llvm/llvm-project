@@ -103,8 +103,9 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
     if (!Config->DefineCommon)
       return 0;
     auto DC = cast<DefinedCommon>(Body);
-    return DC.Section->getParent()->Addr + DC.Section->OutSecOff +
-           DC.Offset;
+    if (!DC.Live)
+      return 0;
+    return DC.Section->getParent()->Addr + DC.Section->OutSecOff;
   }
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
@@ -340,7 +341,7 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (body()->isUndefined())
+  if (body()->isUndefined() || body()->isLazy())
     return Config->Shared || !body()->symbol()->isWeak();
   return ExportDynamic || body()->isShared();
 }

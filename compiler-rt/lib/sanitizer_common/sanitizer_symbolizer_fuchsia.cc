@@ -26,7 +26,7 @@ namespace __sanitizer {
 // Fuchsia's logging infrastructure emits enough information about
 // process memory layout that a post-processing filter can do the
 // symbolization and pretty-print the markup.  See the spec at:
-// https://fuchsia.googlesource.com/magenta/+/master/docs/symbolizer_markup.md
+// https://fuchsia.googlesource.com/zircon/+/master/docs/symbolizer_markup.md
 
 // This is used by UBSan for type names, and by ASan for global variable names.
 constexpr const char *kFormatDemangle = "{{{symbol:%s}}}";
@@ -34,7 +34,7 @@ constexpr uptr kFormatDemangleMax = 1024;  // Arbitrary.
 
 // Function name or equivalent from PC location.
 constexpr const char *kFormatFunction = "{{{pc:%p}}}";
-constexpr uptr kFormatFunctionMax = 64; // More than big enough for 64-bit hex.
+constexpr uptr kFormatFunctionMax = 64;  // More than big enough for 64-bit hex.
 
 // Global variable name or equivalent from data memory address.
 constexpr const char *kFormatData = "{{{data:%p}}}";
@@ -97,12 +97,10 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
 }
 
 Symbolizer *Symbolizer::PlatformInit() {
-  return new(symbolizer_allocator_) Symbolizer({});
+  return new (symbolizer_allocator_) Symbolizer({});
 }
 
-void Symbolizer::LateInitialize() {
-  Symbolizer::GetOrInit();
-}
+void Symbolizer::LateInitialize() { Symbolizer::GetOrInit(); }
 
 }  // namespace __sanitizer
 

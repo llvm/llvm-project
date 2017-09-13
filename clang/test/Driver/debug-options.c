@@ -219,7 +219,7 @@
 //
 // GIGNORE-NOT: "argument unused during compilation"
 //
-// GOPT: -generate-gnu-dwarf-pub-sections
+// GOPT: -ggnu-pubnames
 //
 // GARANGE: -generate-arange-section
 //

@@ -215,6 +215,51 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   MaybeInstallSigaction(SIGFPE, handler);
   MaybeInstallSigaction(SIGILL, handler);
 }
+bool IsStackOverflow(int code, const SignalContext &sig) {
+  // Access at a reasonable offset above SP, or slightly below it (to account
+  // for x86_64 or PowerPC redzone, ARM push of multiple registers, etc) is
+  // probably a stack overflow.
+#ifdef __s390__
+  // On s390, the fault address in siginfo points to start of the page, not
+  // to the precise word that was accessed.  Mask off the low bits of sp to
+  // take it into account.
+  bool IsStackAccess =
+      sig.addr >= (sig.sp & ~0xFFF) && sig.addr < sig.sp + 0xFFFF;
+#else
+  bool IsStackAccess = sig.addr + 512 > sig.sp && sig.addr < sig.sp + 0xFFFF;
+#endif
+
+#if __powerpc__
+  // Large stack frames can be allocated with e.g.
+  //   lis r0,-10000
+  //   stdux r1,r1,r0 # store sp to [sp-10000] and update sp by -10000
+  // If the store faults then sp will not have been updated, so test above
+  // will not work, because the fault address will be more than just "slightly"
+  // below sp.
+  if (!IsStackAccess && IsAccessibleMemoryRange(sig.pc, 4)) {
+    u32 inst = *(unsigned *)sig.pc;
+    u32 ra = (inst >> 16) & 0x1F;
+    u32 opcd = inst >> 26;
+    u32 xo = (inst >> 1) & 0x3FF;
+    // Check for store-with-update to sp. The instructions we accept are:
+    //   stbu rs,d(ra)          stbux rs,ra,rb
+    //   sthu rs,d(ra)          sthux rs,ra,rb
+    //   stwu rs,d(ra)          stwux rs,ra,rb
+    //   stdu rs,ds(ra)         stdux rs,ra,rb
+    // where ra is r1 (the stack pointer).
+    if (ra == 1 &&
+        (opcd == 39 || opcd == 45 || opcd == 37 || opcd == 62 ||
+         (opcd == 31 && (xo == 247 || xo == 439 || xo == 183 || xo == 181))))
+      IsStackAccess = true;
+  }
+#endif  // __powerpc__
+
+  // We also check si_code to filter out SEGV caused by something else other
+  // then hitting the guard page or unmapped memory, like, for example,
+  // unaligned memory access.
+  return IsStackAccess && (code == si_SEGV_MAPERR || code == si_SEGV_ACCERR);
+}
+
 #endif  // SANITIZER_GO
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {

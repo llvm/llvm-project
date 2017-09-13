@@ -86,6 +86,15 @@ void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
   }
 }
 
+
+void GetSizedFilesFromDir(const std::string &Dir, Vector<SizedFile> *V) {
+  Vector<std::string> Files;
+  ListFilesInDirRecursive(Dir, 0, &Files, /*TopDir*/true);
+  for (auto &File : Files)
+    if (size_t Size = FileSize(File))
+      V->push_back({File, Size});
+}
+
 std::string DirPlusFile(const std::string &DirPath,
                         const std::string &FileName) {
   return DirPath + GetSeparator() + FileName;

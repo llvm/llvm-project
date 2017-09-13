@@ -1632,7 +1632,7 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root,
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   if (const ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N)) {
     uint64_t ImmVal = CN->getZExtValue();
-    if ((uint32_t)ImmVal != (uint64_t)ImmVal)
+    if (!isUInt<32>(ImmVal))
       return false;
 
     Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), MVT::i64);

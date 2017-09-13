@@ -1140,21 +1140,18 @@ define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %v
   ret <8 x double> %res
 }
 
-; FIXME: The mask bit for each data element is the most significant bit of the mask operand, so a compare isn't needed.
+; The mask bit for each data element is the most significant bit of the mask operand, so a compare isn't needed.
+; FIXME: The AVX512 code should be improved to use 'vpmovd2m'. Add tests for 512-bit vectors when implementing that.
 
 define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x i32> %mask) {
 ; AVX-LABEL: trunc_mask:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
+; AVX-NEXT:    vmaskmovps %xmm0, %xmm2, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_mask:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; AVX512F-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
+; AVX512F-NEXT:    vmaskmovps %xmm0, %xmm2, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_mask:
