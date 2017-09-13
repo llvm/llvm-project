@@ -47,6 +47,7 @@ def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
 def version : P<"version", "Specify a version number in the PE header">;
+def wholearchive_file : P<"wholearchive", "Include all object files from this archive">;
 
 def disallowlib : Joined<["/", "-", "-?"], "disallowlib:">, Alias<nodefaultlib>;
 
@@ -78,6 +79,7 @@ def profile : F<"profile">;
 def swaprun_cd : F<"swaprun:cd">;
 def swaprun_net : F<"swaprun:net">;
 def verbose : F<"verbose">;
+def wholearchive_flag : F<"wholearchive">;
 
 def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
@@ -102,6 +104,7 @@ def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 // LLD extensions
 def nopdb : F<"nopdb">, HelpText<"Disable PDB generation for DWARF users">;
 def nosymtab : F<"nosymtab">;
+def lldmingw : F<"lldmingw">;
 def msvclto : F<"msvclto">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;

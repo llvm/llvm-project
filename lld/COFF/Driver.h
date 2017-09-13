@@ -110,11 +110,11 @@ private:
   void invokeMSVC(llvm::opt::InputArgList &Args);
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> MB);
-  void addBuffer(std::unique_ptr<MemoryBuffer> MB);
+  void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
                         StringRef ParentName);
 
-  void enqueuePath(StringRef Path);
+  void enqueuePath(StringRef Path, bool WholeArchive);
 
   void enqueueTask(std::function<void()> Task);
   bool run();
