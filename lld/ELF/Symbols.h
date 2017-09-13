@@ -70,6 +70,11 @@ public:
     return !isUndefined() && !isShared() && !isLazy();
   }
   bool isLocal() const { return IsLocal; }
+
+  // True is this is an undefined weak symbol. This only works once
+  // all input files have been added.
+  bool isUndefWeak() const;
+
   InputFile *getFile() const;
   bool isPreemptible() const { return IsPreemptible; }
   StringRef getName() const { return Name; }

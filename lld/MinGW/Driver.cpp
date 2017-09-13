@@ -76,7 +76,7 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
     error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + Arg->getSpelling());
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
+  if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
     error("no input files");
   return Args;
 }

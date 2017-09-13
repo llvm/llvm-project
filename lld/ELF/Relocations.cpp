@@ -319,8 +319,8 @@ static uint32_t getMipsPairType(uint32_t Type, const SymbolBody &Sym) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const SymbolBody &Body) {
-  if (Body.isUndefined())
-    return !Body.isLocal() && Body.symbol()->isWeak();
+  if (Body.isUndefWeak())
+    return true;
   if (const auto *DR = dyn_cast<DefinedRegular>(&Body))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
@@ -402,7 +402,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // between start of a function and '_gp' value and defined as absolute just
   // to simplify the code.
   assert(AbsVal && RelE);
-  if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+  if (Body.isUndefWeak())
     return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +

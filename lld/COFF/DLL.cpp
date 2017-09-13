@@ -61,7 +61,7 @@ private:
 // A chunk for the import descriptor table.
 class LookupChunk : public Chunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) { Align = ptrSize(); }
+  explicit LookupChunk(Chunk *C) : HintName(C) { Alignment = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -76,7 +76,7 @@ public:
 // See Microsoft PE/COFF spec 7.1. Import Header for details.
 class OrdinalOnlyChunk : public Chunk {
 public:
-  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) { Align = ptrSize(); }
+  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) { Alignment = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -117,7 +117,6 @@ public:
   explicit NullChunk(size_t N) : Size(N) {}
   bool hasData() const override { return false; }
   size_t getSize() const override { return Size; }
-  void setAlign(size_t N) { Align = N; }
 
 private:
   size_t Size;
@@ -302,7 +301,7 @@ public:
 // A chunk for the import descriptor table.
 class DelayAddressChunk : public Chunk {
 public:
-  explicit DelayAddressChunk(Chunk *C) : Thunk(C) { Align = ptrSize(); }
+  explicit DelayAddressChunk(Chunk *C) : Thunk(C) { Alignment = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -535,7 +534,7 @@ void DelayLoadContents::create(Defined *H) {
     for (int I = 0, E = Syms.size(); I < E; ++I)
       Syms[I]->setLocation(Addresses[Base + I]);
     auto *MH = make<NullChunk>(8);
-    MH->setAlign(8);
+    MH->Alignment = 8;
     ModuleHandles.push_back(MH);
 
     // Fill the delay import table header fields.

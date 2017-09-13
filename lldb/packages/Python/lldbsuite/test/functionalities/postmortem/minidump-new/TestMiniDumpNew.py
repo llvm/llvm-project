@@ -31,6 +31,34 @@ class MiniDumpNewTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(MiniDumpNewTestCase, self).tearDown()
 
+    def check_state(self):
+        with open(os.devnull) as devnul:
+            # sanitize test output
+            self.dbg.SetOutputFileHandle(devnul, False)
+            self.dbg.SetErrorFileHandle(devnul, False)
+
+            self.assertTrue(self.process.is_stopped)
+
+            # Process.Continue
+            error = self.process.Continue()
+            self.assertFalse(error.Success())
+            self.assertTrue(self.process.is_stopped)
+
+            # Thread.StepOut
+            thread = self.process.GetSelectedThread()
+            thread.StepOut()
+            self.assertTrue(self.process.is_stopped)
+
+            # command line
+            self.dbg.HandleCommand('s')
+            self.assertTrue(self.process.is_stopped)
+            self.dbg.HandleCommand('c')
+            self.assertTrue(self.process.is_stopped)
+
+            # restore file handles
+            self.dbg.SetOutputFileHandle(None, False)
+            self.dbg.SetErrorFileHandle(None, False)
+
     def test_process_info_in_minidump(self):
         """Test that lldb can read the process information from the Minidump."""
         # target create -c linux-x86_64.dmp
@@ -40,6 +68,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         self.assertEqual(self.process.GetNumThreads(), 1)
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
+        self.check_state()
 
     def test_thread_info_in_minidump(self):
         """Test that lldb can read the thread information from the Minidump."""
@@ -47,6 +76,7 @@ class MiniDumpNewTestCase(TestBase):
         self.dbg.CreateTarget(None)
         self.target = self.dbg.GetSelectedTarget()
         self.process = self.target.LoadCore("linux-x86_64.dmp")
+        self.check_state()
         # This process crashed due to a segmentation fault in its
         # one and only thread.
         self.assertEqual(self.process.GetNumThreads(), 1)
@@ -61,6 +91,7 @@ class MiniDumpNewTestCase(TestBase):
         self.dbg.CreateTarget("linux-x86_64")
         self.target = self.dbg.GetSelectedTarget()
         self.process = self.target.LoadCore("linux-x86_64.dmp")
+        self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
         thread = self.process.GetThreadAtIndex(0)
@@ -81,6 +112,7 @@ class MiniDumpNewTestCase(TestBase):
         self.dbg.CreateTarget(None)
         self.target = self.dbg.GetSelectedTarget()
         self.process = self.target.LoadCore("linux-x86_64_not_crashed.dmp")
+        self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
@@ -161,9 +193,10 @@ class MiniDumpNewTestCase(TestBase):
         """Test that we can examine local variables in a Minidump."""
         # Launch with the Minidump, and inspect a local variable.
         # target create linux-x86_64_not_crashed -c linux-x86_64_not_crashed.dmp
-        target = self.dbg.CreateTarget("linux-x86_64_not_crashed")
-        process = target.LoadCore("linux-x86_64_not_crashed.dmp")
-        thread = process.GetThreadAtIndex(0)
+        self.target = self.dbg.CreateTarget("linux-x86_64_not_crashed")
+        self.process = self.target.LoadCore("linux-x86_64_not_crashed.dmp")
+        self.check_state()
+        thread = self.process.GetThreadAtIndex(0)
         frame = thread.GetFrameAtIndex(1)
         value = frame.EvaluateExpression('x')
         self.assertEqual(value.GetValueAsSigned(), 3)

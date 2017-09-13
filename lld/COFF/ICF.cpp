@@ -61,12 +61,9 @@ private:
 
 // Returns a hash value for S.
 uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getPermissions(),
-                      hash_value(C->SectionName),
-                      C->NumRelocs,
-                      C->getAlign(),
-                      uint32_t(C->Header->SizeOfRawData),
-                      C->Checksum);
+  return hash_combine(C->getPermissions(), hash_value(C->SectionName),
+                      C->NumRelocs, C->Alignment,
+                      uint32_t(C->Header->SizeOfRawData), C->Checksum);
 }
 
 // Returns true if section S is subject of ICF.
@@ -137,11 +134,9 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
 
   // Compare section attributes and contents.
   return A->getPermissions() == B->getPermissions() &&
-         A->SectionName == B->SectionName &&
-         A->getAlign() == B->getAlign() &&
+         A->SectionName == B->SectionName && A->Alignment == B->Alignment &&
          A->Header->SizeOfRawData == B->Header->SizeOfRawData &&
-         A->Checksum == B->Checksum &&
-         A->getContents() == B->getContents();
+         A->Checksum == B->Checksum && A->getContents() == B->getContents();
 }
 
 // Compare "moving" part of two sections, namely relocation targets.

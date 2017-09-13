@@ -132,6 +132,12 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
       IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
       Name(Name) {}
 
+bool SymbolBody::isUndefWeak() const {
+  if (isLocal())
+    return false;
+  return symbol()->isWeak() && (isUndefined() || isLazy());
+}
+
 InputFile *SymbolBody::getFile() const {
   if (isLocal()) {
     const SectionBase *Sec = cast<DefinedRegular>(this)->Section;
@@ -340,9 +346,11 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (body()->isUndefined() || body()->isLazy())
-    return Config->Shared || !body()->symbol()->isWeak();
-  return ExportDynamic || body()->isShared();
+  if (body()->isUndefWeak())
+    return Config->Shared;
+  if (!body()->isInCurrentDSO())
+    return true;
+  return ExportDynamic;
 }
 
 // Print out a log message for --trace-symbol.

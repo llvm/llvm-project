@@ -115,7 +115,7 @@ void coff::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
       if (!SC)
         continue;
 
-      writeHeader(OS, SC->getRVA(), SC->getSize(), SC->getAlign());
+      writeHeader(OS, SC->getRVA(), SC->getSize(), SC->Alignment);
       OS << indent(1) << SC->File->getName() << ":(" << SC->getSectionName()
          << ")\n";
       for (DefinedRegular *Sym : SectionSyms[SC])
