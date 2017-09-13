@@ -26,6 +26,24 @@ def I64_EXTEND_U_I32 : I<(outs I64:$dst), (ins I32:$src),
                          [(set I64:$dst, (zext I32:$src))],
                          "i64.extend_u/i32\t$dst, $src", 0xad>;
 
+let Predicates = [HasAtomics] in {
+def I32_EXTEND8_S_I32 : I<(outs I32:$dst), (ins I32:$src),
+                          [(set I32:$dst, (sext_inreg I32:$src, i8))],
+                          "i32.extend8_s\t$dst, $src", 0xc0>;
+def I32_EXTEND16_S_I32 : I<(outs I32:$dst), (ins I32:$src),
+                           [(set I32:$dst, (sext_inreg I32:$src, i16))],
+                           "i32.extend16_s\t$dst, $src", 0xc1>;
+def I64_EXTEND8_S_I64 : I<(outs I64:$dst), (ins I64:$src),
+                           [(set I64:$dst, (sext_inreg I64:$src, i8))],
+                           "i64.extend8_s\t$dst, $src", 0xc2>;
+def I64_EXTEND16_S_I64 : I<(outs I64:$dst), (ins I64:$src),
+                           [(set I64:$dst, (sext_inreg I64:$src, i16))],
+                           "i64.extend16_s\t$dst, $src", 0xc3>;
+def I64_EXTEND32_S_I64 : I<(outs I64:$dst), (ins I64:$src),
+                           [(set I64:$dst, (sext_inreg I64:$src, i32))],
+                           "i64.extend32_s\t$dst, $src", 0xc4>;
+} // Predicates = [HasAtomics]
+
 } // defs = [ARGUMENTS]
 
 // Expand a "don't care" extend into zero-extend (chosen over sign-extend

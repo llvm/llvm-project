@@ -189,7 +189,7 @@ private:
   /// Simple Analysis hook. Delete loop L from alias set map.
   void deleteAnalysisLoop(Loop *L) override;
 };
-}
+} // namespace
 
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
@@ -292,10 +292,26 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AliasAnalysis *AA,
       bool Promoted = false;
 
       // Loop over all of the alias sets in the tracker object.
-      for (AliasSet &AS : *CurAST)
-        Promoted |=
-            promoteLoopAccessesToScalars(AS, ExitBlocks, InsertPts, PIC, LI, DT,
-                                         TLI, L, CurAST, &SafetyInfo, ORE);
+      for (AliasSet &AS : *CurAST) {
+        // We can promote this alias set if it has a store, if it is a "Must"
+        // alias set, if the pointer is loop invariant, and if we are not
+        // eliminating any volatile loads or stores.
+        if (AS.isForwardingAliasSet() || !AS.isMod() || !AS.isMustAlias() ||
+            AS.isVolatile() || !L->isLoopInvariant(AS.begin()->getValue()))
+          continue;
+
+        assert(
+            !AS.empty() &&
+            "Must alias set should have at least one pointer element in it!");
+
+        SmallSetVector<Value *, 8> PointerMustAliases;
+        for (const auto &ASI : AS)
+          PointerMustAliases.insert(ASI.getValue());
+
+        Promoted |= promoteLoopAccessesToScalars(PointerMustAliases, ExitBlocks,
+                                                 InsertPts, PIC, LI, DT, TLI, L,
+                                                 CurAST, &SafetyInfo, ORE);
+      }
 
       // Once we have promoted values across the loop body we have to
       // recursively reform LCSSA as any nested loop may now have values defined
@@ -383,8 +399,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     for (BasicBlock::iterator II = BB->end(); II != BB->begin();) {
       Instruction &I = *--II;
 
-      // If the instruction is dead, we would try to sink it because it isn't used
-      // in the loop, instead, just delete it.
+      // If the instruction is dead, we would try to sink it because it isn't
+      // used in the loop, instead, just delete it.
       if (isInstructionTriviallyDead(&I, TLI)) {
         DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
         ++II;
@@ -509,7 +525,8 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   // Iterate over loop instructions and compute safety info.
   // Skip header as it has been computed and stored in HeaderMayThrow.
   // The first block in loopinfo.Blocks is guaranteed to be the header.
-  assert(Header == *CurLoop->getBlocks().begin() && "First block must be header");
+  assert(Header == *CurLoop->getBlocks().begin() &&
+         "First block must be header");
   for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
        (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
@@ -527,9 +544,9 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
 }
 
 // Return true if LI is invariant within scope of the loop. LI is invariant if
-// CurLoop is dominated by an invariant.start representing the same memory location
-// and size as the memory location LI loads from, and also the invariant.start
-// has no uses.
+// CurLoop is dominated by an invariant.start representing the same memory
+// location and size as the memory location LI loads from, and also the
+// invariant.start has no uses.
 static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
   Value *Addr = LI->getOperand(0);
@@ -950,7 +967,7 @@ static bool isSafeToExecuteUnconditionally(Instruction &Inst,
 namespace {
 class LoopPromoter : public LoadAndStorePromoter {
   Value *SomePtr; // Designated pointer to store to.
-  SmallPtrSetImpl<Value *> &PointerMustAliases;
+  const SmallSetVector<Value *, 8> &PointerMustAliases;
   SmallVectorImpl<BasicBlock *> &LoopExitBlocks;
   SmallVectorImpl<Instruction *> &LoopInsertPts;
   PredIteratorCache &PredCache;
@@ -978,7 +995,7 @@ class LoopPromoter : public LoadAndStorePromoter {
 
 public:
   LoopPromoter(Value *SP, ArrayRef<const Instruction *> Insts, SSAUpdater &S,
-               SmallPtrSetImpl<Value *> &PMA,
+               const SmallSetVector<Value *, 8> &PMA,
                SmallVectorImpl<BasicBlock *> &LEB,
                SmallVectorImpl<Instruction *> &LIP, PredIteratorCache &PIC,
                AliasSetTracker &ast, LoopInfo &li, DebugLoc dl, int alignment,
@@ -986,7 +1003,7 @@ public:
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), PredCache(PIC), AST(ast),
         LI(li), DL(std::move(dl)), Alignment(alignment),
-        UnorderedAtomic(UnorderedAtomic),AATags(AATags) {}
+        UnorderedAtomic(UnorderedAtomic), AATags(AATags) {}
 
   bool isInstInList(Instruction *I,
                     const SmallVectorImpl<Instruction *> &) const override {
@@ -1025,7 +1042,7 @@ public:
   }
   void instructionDeleted(Instruction *I) const override { AST.deleteValue(I); }
 };
-} // end anon namespace
+} // namespace
 
 /// Try to promote memory values to scalars by sinking stores out of the
 /// loop and moving loads to before the loop.  We do this by looping over
@@ -1033,7 +1050,8 @@ public:
 /// loop invariant.
 ///
 bool llvm::promoteLoopAccessesToScalars(
-    AliasSet &AS, SmallVectorImpl<BasicBlock *> &ExitBlocks,
+    const SmallSetVector<Value *, 8> &PointerMustAliases,
+    SmallVectorImpl<BasicBlock *> &ExitBlocks,
     SmallVectorImpl<Instruction *> &InsertPts, PredIteratorCache &PIC,
     LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
     Loop *CurLoop, AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo,
@@ -1043,17 +1061,7 @@ bool llvm::promoteLoopAccessesToScalars(
          CurAST != nullptr && SafetyInfo != nullptr &&
          "Unexpected Input to promoteLoopAccessesToScalars");
 
-  // We can promote this alias set if it has a store, if it is a "Must" alias
-  // set, if the pointer is loop invariant, and if we are not eliminating any
-  // volatile loads or stores.
-  if (AS.isForwardingAliasSet() || !AS.isMod() || !AS.isMustAlias() ||
-      AS.isVolatile() || !CurLoop->isLoopInvariant(AS.begin()->getValue()))
-    return false;
-
-  assert(!AS.empty() &&
-         "Must alias set should have at least one pointer element in it!");
-
-  Value *SomePtr = AS.begin()->getValue();
+  Value *SomePtr = *PointerMustAliases.begin();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
 
   // It isn't safe to promote a load/store from the loop if the load/store is
@@ -1082,8 +1090,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // is safe (i.e. proving dereferenceability on all paths through the loop). We
   // can use any access within the alias set to prove dereferenceability,
   // since they're all must alias.
-  // 
-  // There are two ways establish (p2): 
+  //
+  // There are two ways establish (p2):
   // a) Prove the location is thread-local. In this case the memory model
   // requirement does not apply, and stores are safe to insert.
   // b) Prove a store dominates every exit block. In this case, if an exit
@@ -1097,13 +1105,12 @@ bool llvm::promoteLoopAccessesToScalars(
   bool SafeToInsertStore = false;
 
   SmallVector<Instruction *, 64> LoopUses;
-  SmallPtrSet<Value *, 4> PointerMustAliases;
 
   // We start with an alignment of one and try to find instructions that allow
   // us to prove better alignment.
   unsigned Alignment = 1;
   // Keep track of which types of access we see
-  bool SawUnorderedAtomic = false; 
+  bool SawUnorderedAtomic = false;
   bool SawNotAtomic = false;
   AAMDNodes AATags;
 
@@ -1124,15 +1131,16 @@ bool llvm::promoteLoopAccessesToScalars(
     // If this is a base pointer we do not understand, simply bail.
     // We only handle alloca and return value from alloc-like fn right now.
     if (!isa<AllocaInst>(Object)) {
-        if (!isAllocLikeFn(Object, TLI))
-          return false;
-      // If this is an alloc like fn. There are more constraints we need to verify.
-      // More specifically, we must make sure that the pointer can not escape.
+      if (!isAllocLikeFn(Object, TLI))
+        return false;
+      // If this is an alloc like fn. There are more constraints we need to
+      // verify. More specifically, we must make sure that the pointer can not
+      // escape.
       //
-      // NOTE: PointerMayBeCaptured is not enough as the pointer may have escaped
-      // even though its not captured by the enclosing function. Standard allocation
-      // functions like malloc, calloc, and operator new return values which can
-      // be assumed not to have previously escaped.
+      // NOTE: PointerMayBeCaptured is not enough as the pointer may have
+      // escaped even though its not captured by the enclosing function.
+      // Standard allocation functions like malloc, calloc, and operator new
+      // return values which can be assumed not to have previously escaped.
       if (PointerMayBeCaptured(Object, true, true))
         return false;
       IsKnownNonEscapingObject = true;
@@ -1142,10 +1150,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // Check that all of the pointers in the alias set have the same type.  We
   // cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
-  for (const auto &ASI : AS) {
-    Value *ASIV = ASI.getValue();
-    PointerMustAliases.insert(ASIV);
-
+  for (Value *ASIV : PointerMustAliases) {
     // Check that all of the pointers in the alias set have the same type.  We
     // cannot (yet) promote a memory location that is loaded and stored in
     // different sizes.
@@ -1164,7 +1169,7 @@ bool llvm::promoteLoopAccessesToScalars(
         assert(!Load->isVolatile() && "AST broken");
         if (!Load->isUnordered())
           return false;
-        
+
         SawUnorderedAtomic |= Load->isAtomic();
         SawNotAtomic |= !Load->isAtomic();
 
@@ -1257,8 +1262,8 @@ bool llvm::promoteLoopAccessesToScalars(
     else {
       Value *Object = GetUnderlyingObject(SomePtr, MDL);
       SafeToInsertStore =
-        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) && 
-        !PointerMayBeCaptured(Object, true, true);
+          (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
+          !PointerMayBeCaptured(Object, true, true);
     }
   }
 
@@ -1350,7 +1355,7 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
   auto mergeLoop = [&](Loop *L) {
     // Loop over the body of this loop, looking for calls, invokes, and stores.
     for (BasicBlock *BB : L->blocks())
-        CurAST->add(*BB);          // Incorporate the specified basic block
+      CurAST->add(*BB); // Incorporate the specified basic block
   };
 
   // Add everything from the sub loops that are no longer directly available.

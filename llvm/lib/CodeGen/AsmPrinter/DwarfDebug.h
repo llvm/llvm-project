@@ -314,16 +314,6 @@ class DwarfDebug : public DebugHandlerBase {
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
-  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
-  ///
-  /// Returns whether we are "tuning" for a given debugger.
-  /// Should be used only within the constructor, to set feature flags.
-  /// @{
-  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
-  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
-  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
-  /// @}
-
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
@@ -374,21 +364,12 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit type dies into a hashed accelerator table.
   void emitAccelTypes();
 
-  /// Emit visible names into a debug pubnames section.
-  /// \param GnuStyle determines whether or not we want to emit
-  /// additional information into the table ala newer gcc for gdb
-  /// index.
-  void emitDebugPubNames(bool GnuStyle = false);
+  /// Emit visible names and types into debug pubnames and pubtypes sections.
+  void emitDebugPubSections();
 
-  /// Emit visible types into a debug pubtypes section.
-  /// \param GnuStyle determines whether or not we want to emit
-  /// additional information into the table ala newer gcc for gdb
-  /// index.
-  void emitDebugPubTypes(bool GnuStyle = false);
-
-  void emitDebugPubSection(
-      bool GnuStyle, MCSection *PSec, StringRef Name,
-      const StringMap<const DIE *> &(DwarfCompileUnit::*Accessor)() const);
+  void emitDebugPubSection(bool GnuStyle, StringRef Name,
+                           DwarfCompileUnit *TheU,
+                           const StringMap<const DIE *> &Globals);
 
   /// Emit null-terminated strings into a debug str section.
   void emitDebugStr();
@@ -577,7 +558,14 @@ public:
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
 
-  bool hasDwarfPubSections(bool includeMinimalInlineScopes) const;
+  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
+  ///
+  /// Returns whether we are "tuning" for a given debugger.
+  /// @{
+  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
+  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
+  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
+  /// @}
 };
 
 } // end namespace llvm

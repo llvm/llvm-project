@@ -89,11 +89,6 @@ static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
     cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
 
-static cl::opt<bool>
-    GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
-                           cl::desc("Generate GNU-style pubnames and pubtypes"),
-                           cl::init(false));
-
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
                                            cl::desc("Generate dwarf aranges"),
@@ -115,14 +110,6 @@ static cl::opt<DefaultOnOff> UnknownLocations(
 static cl::opt<DefaultOnOff>
 DwarfAccelTables("dwarf-accel-tables", cl::Hidden,
                  cl::desc("Output prototype dwarf accelerator tables."),
-                 cl::values(clEnumVal(Default, "Default for platform"),
-                            clEnumVal(Enable, "Enabled"),
-                            clEnumVal(Disable, "Disabled")),
-                 cl::init(Default));
-
-static cl::opt<DefaultOnOff>
-DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
-                 cl::desc("Generate DWARF pubnames and pubtypes sections"),
                  cl::values(clEnumVal(Default, "Default for platform"),
                             clEnumVal(Enable, "Enabled"),
                             clEnumVal(Disable, "Disabled")),
@@ -414,20 +401,8 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
-bool DwarfDebug::hasDwarfPubSections(bool includeMinimalInlineScopes) const {
-  // Opting in to GNU Pubnames/types overrides the default to ensure these are
-  // generated for things like Gold's gdb_index generation.
-  if (GenerateGnuPubSections)
-    return true;
-
-  if (DwarfPubSections == Default)
-    return tuneForGDB() && !includeMinimalInlineScopes;
-
-  return DwarfPubSections == Enable;
-}
-
 void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
-  if (!hasDwarfPubSections(U.includeMinimalInlineScopes()))
+  if (!U.hasDwarfPubSections())
     return;
 
   U.addFlag(D, dwarf::DW_AT_GNU_pubnames);
@@ -792,12 +767,7 @@ void DwarfDebug::endModule() {
   }
 
   // Emit the pubnames and pubtypes sections if requested.
-  // The condition is optimistically correct - any CU not using GMLT (&
-  // implicit/default pubnames state) might still have pubnames.
-  if (hasDwarfPubSections(/* gmlt */ false)) {
-    emitDebugPubNames(GenerateGnuPubSections);
-    emitDebugPubTypes(GenerateGnuPubSections);
-  }
+  emitDebugPubSections();
 
   // clean up.
   // FIXME: AbstractVariables.clear();
@@ -1493,83 +1463,74 @@ static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
   }
 }
 
-/// emitDebugPubNames - Emit visible names into a debug pubnames section.
-void DwarfDebug::emitDebugPubNames(bool GnuStyle) {
-  MCSection *PSec = GnuStyle
-                        ? Asm->getObjFileLowering().getDwarfGnuPubNamesSection()
-                        : Asm->getObjFileLowering().getDwarfPubNamesSection();
-
-  emitDebugPubSection(GnuStyle, PSec, "Names",
-                      &DwarfCompileUnit::getGlobalNames);
-}
-
-void DwarfDebug::emitDebugPubSection(
-    bool GnuStyle, MCSection *PSec, StringRef Name,
-    const StringMap<const DIE *> &(DwarfCompileUnit::*Accessor)() const) {
+/// emitDebugPubSections - Emit visible names and types into debug pubnames and
+/// pubtypes sections.
+void DwarfDebug::emitDebugPubSections() {
   for (const auto &NU : CUMap) {
     DwarfCompileUnit *TheU = NU.second;
-
-    const auto &Globals = (TheU->*Accessor)();
-
-    if (!hasDwarfPubSections(TheU->includeMinimalInlineScopes()))
+    if (!TheU->hasDwarfPubSections())
       continue;
 
-    if (auto *Skeleton = TheU->getSkeleton())
-      TheU = Skeleton;
+    bool GnuStyle = TheU->getCUNode()->getGnuPubnames();
 
-    // Start the dwarf pubnames section.
-    Asm->OutStreamer->SwitchSection(PSec);
+    Asm->OutStreamer->SwitchSection(
+        GnuStyle ? Asm->getObjFileLowering().getDwarfGnuPubNamesSection()
+                 : Asm->getObjFileLowering().getDwarfPubNamesSection());
+    emitDebugPubSection(GnuStyle, "Names", TheU, TheU->getGlobalNames());
 
-    // Emit the header.
-    Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
-    MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
-    MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
-
-    Asm->OutStreamer->EmitLabel(BeginLabel);
-
-    Asm->OutStreamer->AddComment("DWARF Version");
-    Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
-
-    Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
-    Asm->emitDwarfSymbolReference(TheU->getLabelBegin());
-
-    Asm->OutStreamer->AddComment("Compilation Unit Length");
-    Asm->EmitInt32(TheU->getLength());
-
-    // Emit the pubnames for this compilation unit.
-    for (const auto &GI : Globals) {
-      const char *Name = GI.getKeyData();
-      const DIE *Entity = GI.second;
-
-      Asm->OutStreamer->AddComment("DIE offset");
-      Asm->EmitInt32(Entity->getOffset());
-
-      if (GnuStyle) {
-        dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
-        Asm->OutStreamer->AddComment(
-            Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
-            dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
-        Asm->EmitInt8(Desc.toBits());
-      }
-
-      Asm->OutStreamer->AddComment("External Name");
-      Asm->OutStreamer->EmitBytes(StringRef(Name, GI.getKeyLength() + 1));
-    }
-
-    Asm->OutStreamer->AddComment("End Mark");
-    Asm->EmitInt32(0);
-    Asm->OutStreamer->EmitLabel(EndLabel);
+    Asm->OutStreamer->SwitchSection(
+        GnuStyle ? Asm->getObjFileLowering().getDwarfGnuPubTypesSection()
+                 : Asm->getObjFileLowering().getDwarfPubTypesSection());
+    emitDebugPubSection(GnuStyle, "Types", TheU, TheU->getGlobalTypes());
   }
 }
 
-void DwarfDebug::emitDebugPubTypes(bool GnuStyle) {
-  MCSection *PSec = GnuStyle
-                        ? Asm->getObjFileLowering().getDwarfGnuPubTypesSection()
-                        : Asm->getObjFileLowering().getDwarfPubTypesSection();
+void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
+                                     DwarfCompileUnit *TheU,
+                                     const StringMap<const DIE *> &Globals) {
+  if (auto *Skeleton = TheU->getSkeleton())
+    TheU = Skeleton;
 
-  emitDebugPubSection(GnuStyle, PSec, "Types",
-                      &DwarfCompileUnit::getGlobalTypes);
+  // Emit the header.
+  Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
+  MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
+  MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
+  Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+
+  Asm->OutStreamer->EmitLabel(BeginLabel);
+
+  Asm->OutStreamer->AddComment("DWARF Version");
+  Asm->EmitInt16(dwarf::DW_PUBNAMES_VERSION);
+
+  Asm->OutStreamer->AddComment("Offset of Compilation Unit Info");
+  Asm->emitDwarfSymbolReference(TheU->getLabelBegin());
+
+  Asm->OutStreamer->AddComment("Compilation Unit Length");
+  Asm->EmitInt32(TheU->getLength());
+
+  // Emit the pubnames for this compilation unit.
+  for (const auto &GI : Globals) {
+    const char *Name = GI.getKeyData();
+    const DIE *Entity = GI.second;
+
+    Asm->OutStreamer->AddComment("DIE offset");
+    Asm->EmitInt32(Entity->getOffset());
+
+    if (GnuStyle) {
+      dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
+      Asm->OutStreamer->AddComment(
+          Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
+          dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
+      Asm->EmitInt8(Desc.toBits());
+    }
+
+    Asm->OutStreamer->AddComment("External Name");
+    Asm->OutStreamer->EmitBytes(StringRef(Name, GI.getKeyLength() + 1));
+  }
+
+  Asm->OutStreamer->AddComment("End Mark");
+  Asm->EmitInt32(0);
+  Asm->OutStreamer->EmitLabel(EndLabel);
 }
 
 /// Emit null-terminated strings into a debug str section.

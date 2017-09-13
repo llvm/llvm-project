@@ -189,6 +189,7 @@ clang_getCursorReferenced
 clang_getCursorResultType
 clang_getCursorSemanticParent
 clang_getCursorSpelling
+clang_getCursorTLSKind
 clang_getCursorType
 clang_getCursorUSR
 clang_getCursorVisibility
