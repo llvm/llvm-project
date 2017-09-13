@@ -1,6 +1,6 @@
-// RUN: llvm-cov show -instr-profile %S/Inputs/ifdef.profdata %S/Inputs/ifdef.covmapping -dump -path-equivalence=/tmp,%S %s > %t.out 2>&1
+// RUN: llvm-cov show -instr-profile %S/Inputs/ifdef.profdata %S/Inputs/ifdef.covmapping -dump -path-equivalence=/tmp,%S %s > %t.out 2> %t.err.out
 // RUN: FileCheck %s -input-file %t.out -check-prefix=LINE
-// RUN: FileCheck %s -input-file %t.out -check-prefix=HIGHLIGHT
+// RUN: FileCheck %s -input-file %t.err.out -check-prefix=HIGHLIGHT
 
 
 int main() {
