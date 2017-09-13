@@ -687,7 +687,7 @@ macro(add_llvm_executable name)
     # it forces Xcode to properly link the static library.
     list(APPEND ALL_FILES "${LLVM_MAIN_SRC_DIR}/cmake/dummy.cpp")
   endif()
-  
+
   if( EXCLUDE_FROM_ALL )
     add_executable(${name} EXCLUDE_FROM_ALL ${ALL_FILES})
   else()
@@ -919,6 +919,37 @@ function(canonicalize_tool_name name output)
   string(TOUPPER ${nameUNDERSCORE} nameUPPER)
   set(${output} "${nameUPPER}" PARENT_SCOPE)
 endfunction(canonicalize_tool_name)
+
+macro(find_llvm_enabled_projects base_dir)
+  set(specific_project_list "${ARGN}")
+  if("${specific_project_list}" STREQUAL "")
+    file(GLOB entries "${base_dir}/*")
+    set(list_of_project_dirs "")
+    foreach(entry ${entries})
+      if(IS_DIRECTORY ${entry} AND EXISTS ${entry}/CMakeLists.txt)
+        get_filename_component(filename "${entry}" NAME)
+        list(APPEND specific_project_list "${filename}")
+      endif()
+    endforeach(entry)
+  endif()
+
+  foreach(proj ${specific_project_list})
+    canonicalize_tool_name(${proj} projUPPER)
+
+    if (${LLVM_PROJECT_${projUPPER}_ENABLED})
+      if (EXISTS "${base_dir}/${proj}")
+        message(WARNING "Project ${projUPPER} in ${base_dir}/${proj} previously found in ${LLVM_PROJECT_${projUPPER}_SOURCE_DIR}")
+      endif()
+      continue()
+    elseif(EXISTS "${LLVM_EXTERNAL_${projUPPER}_SOURCE_DIR}")
+      set(LLVM_PROJECT_${projUPPER}_ENABLED ON)
+      set(LLVM_PROJECT_${projUPPER}_SOURCE_DIR "${LLVM_EXTERNAL_${projUPPER}_SOURCE_DIR}")
+    elseif(EXISTS "${base_dir}/${proj}")
+      set(LLVM_PROJECT_${projUPPER}_ENABLED ON)
+      set(LLVM_PROJECT_${projUPPER}_SOURCE_DIR "${base_dir}/${proj}")
+    endif()
+  endforeach()
+endmacro()
 
 # Custom add_subdirectory wrapper
 # Takes in a project name (i.e. LLVM), the subdirectory name, and an optional
@@ -1350,7 +1381,7 @@ function(add_llvm_tool_symlink link_name target)
   # magic. First we grab one of the types, and a type-specific path. Then from
   # the type-specific path we find the last occurrence of the type in the path,
   # and replace it with CMAKE_CFG_INTDIR. This allows the build step to be type
-  # agnostic again. 
+  # agnostic again.
   if(NOT ARG_OUTPUT_DIR)
     # If you're not overriding the OUTPUT_DIR, we can make the link relative in
     # the same directory.

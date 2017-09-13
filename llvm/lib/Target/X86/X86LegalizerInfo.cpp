@@ -170,6 +170,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   if (!Subtarget.hasSSE2())
     return;
 
+  const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT v16s8 = LLT::vector(16, 8);
   const LLT v8s16 = LLT::vector(8, 16);
@@ -185,6 +186,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
       setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v8s16}, Legal);
+
+  setAction({G_FPEXT, s64}, Legal);
+  setAction({G_FPEXT, 1, s32}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE41() {

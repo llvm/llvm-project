@@ -46,3 +46,29 @@ for.body:
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
+
+; We should not choose a VF larger than the constant TC.
+; VF chosen should be atmost 16 (not the max possible vector width = 32 for AVX2)
+define void @not_too_small_tc(i8* noalias nocapture %A, i8* noalias nocapture readonly %B) {
+; CHECK-LABEL: not_too_small_tc
+; CHECK-AVX2: LV: Selecting VF: 16.
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv
+  %l1 = load i8, i8* %arrayidx, align 4, !llvm.mem.parallel_loop_access !3
+  %arrayidx2 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
+  %l2 = load i8, i8* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %add = add i8 %l1, %l2
+  store i8 %add, i8* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
+
+for.end:
+  ret void
+}
+!3 = !{!3}
+!4 = !{!4}

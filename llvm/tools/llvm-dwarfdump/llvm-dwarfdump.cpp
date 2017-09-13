@@ -36,37 +36,58 @@
 using namespace llvm;
 using namespace object;
 
-static cl::list<std::string>
-InputFilenames(cl::Positional, cl::desc("<input object files or .dSYM bundles>"),
-               cl::ZeroOrMore);
+namespace {
+using namespace llvm::cl;
 
-static cl::opt<bool> DumpAll("all", cl::desc("Dump all debug info sections"));
-static cl::alias DumpAllAlias("a", cl::desc("Alias for --all"),
-                              cl::aliasopt(DumpAll));
+OptionCategory DwarfDumpCategory("Specific Options");
+static opt<bool> Help("h", desc("Alias for -help"), Hidden,
+                      cat(DwarfDumpCategory));
+static list<std::string>
+    InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
+                   ZeroOrMore, cat(DwarfDumpCategory));
+
+cl::OptionCategory
+    SectionCategory("Section-specific Dump Options",
+                    "These control which sections are dumped.");
+static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
+                         cat(SectionCategory));
+static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 
 static uint64_t DumpType = DIDT_Null;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  static cl::opt<bool> Dump##ENUM_NAME(                                        \
-      CMDLINE_NAME, cl::desc("Dump the " ELF_NAME " section"));
+  static opt<bool> Dump##ENUM_NAME(CMDLINE_NAME,                               \
+                                   desc("Dump the " ELF_NAME " section"),      \
+                                   cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
-static cl::opt<bool>
+static opt<bool>
     SummarizeTypes("summarize-types",
-                   cl::desc("Abbreviate the description of type unit entries"));
-static cl::opt<bool> Verify("verify", cl::desc("Verify the DWARF debug info"));
-static cl::opt<bool> Quiet("quiet",
-                           cl::desc("Use with -verify to not emit to STDOUT."));
-static cl::opt<bool> Verbose("verbose",
-                             cl::desc("Print more low-level encoding details"));
-static cl::alias VerboseAlias("v", cl::desc("Alias for -verbose"),
-                              cl::aliasopt(Verbose));
+                   desc("Abbreviate the description of type unit entries"));
+static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
+                        cat(DwarfDumpCategory));
+static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
+                       cat(DwarfDumpCategory));
+static opt<bool> Verbose("verbose",
+                         desc("Print more low-level encoding details"),
+                         cat(DwarfDumpCategory));
+static alias VerboseAlias("v", desc("Alias for -verbose"), aliasopt(Verbose),
+                          cat(DwarfDumpCategory));
+} // namespace
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
     return;
   errs() << Filename << ": " << EC.message() << "\n";
   exit(1);
+}
+
+static DIDumpOptions GetDumpOpts() {
+  DIDumpOptions DumpOpts;
+  DumpOpts.DumpType = DumpType;
+  DumpOpts.SummarizeTypes = SummarizeTypes;
+  DumpOpts.Verbose = Verbose;
+  return DumpOpts;
 }
 
 static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
@@ -79,11 +100,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
 
 
   // Dump the complete DWARF structure.
-  DIDumpOptions DumpOpts;
-  DumpOpts.DumpType = DumpType;
-  DumpOpts.SummarizeTypes = SummarizeTypes;
-  DumpOpts.Brief = !Verbose;
-  DICtx->dump(outs(), DumpOpts);
+  DICtx->dump(outs(), GetDumpOpts());
 }
 
 static void DumpInput(StringRef Filename) {
@@ -116,7 +133,7 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType);
+  bool Result = DICtx->verify(stream, DumpType, GetDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -190,7 +207,16 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm dwarf dumper\n");
+  HideUnrelatedOptions({&DwarfDumpCategory, &SectionCategory});
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "pretty-print DWARF debug information in object files"
+      " and debug info archives.\n");
+
+  if (Help) {
+    PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
+    return 0;
+  }
 
   // Defaults to dumping all sections, unless brief mode is specified in which
   // case only the .debug_info section in dumped.

@@ -1555,6 +1555,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(VE.getMetadataOrNullID(N->getMacros().get()));
   Record.push_back(N->getSplitDebugInlining());
   Record.push_back(N->getDebugInfoForProfiling());
+  Record.push_back(N->getGnuPubnames());
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();

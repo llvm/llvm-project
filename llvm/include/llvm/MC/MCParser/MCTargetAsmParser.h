@@ -266,6 +266,8 @@ public:
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label
   virtual bool isLabel(AsmToken &Token) { return true; };
+  // Return whether this parser accept star as start of statement
+  virtual bool starIsStartOfStatement() { return false; };
 
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,

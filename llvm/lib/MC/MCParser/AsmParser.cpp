@@ -1687,6 +1687,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '}' as a valid identifier in this context.
     Lex();
     IDVal = "}";
+  } else if (Lexer.is(AsmToken::Star) &&
+             getTargetParser().starIsStartOfStatement()) {
+    // Accept '*' as a valid start of statement.
+    Lex();
+    IDVal = "*";
   } else if (parseIdentifier(IDVal)) {
     if (!TheCondState.Ignore) {
       Lex(); // always eat a token

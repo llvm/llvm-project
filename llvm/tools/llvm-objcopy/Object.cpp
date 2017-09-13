@@ -90,18 +90,22 @@ void StringTableSection::writeSection(FileOutputBuffer &Out) const {
   StrTabBuilder.write(Out.getBufferStart() + Offset);
 }
 
-static bool isValidReservedSectionIndex(uint16_t Index) {
+static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   switch (Index) {
   case SHN_ABS:
   case SHN_COMMON:
-  case SHN_HEXAGON_SCOMMON:
-  case SHN_HEXAGON_SCOMMON_2:
-  case SHN_HEXAGON_SCOMMON_4:
-  case SHN_HEXAGON_SCOMMON_8:
     return true;
-  default:
-    return false;
   }
+  if (Machine == EM_HEXAGON) {
+    switch (Index) {
+    case SHN_HEXAGON_SCOMMON:
+    case SHN_HEXAGON_SCOMMON_2:
+    case SHN_HEXAGON_SCOMMON_4:
+    case SHN_HEXAGON_SCOMMON_8:
+      return true;
+    }
+  }
+  return false;
 }
 
 uint16_t Symbol::getShndx() const {
@@ -133,7 +137,7 @@ void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
   Sym.Type = Type;
   Sym.DefinedIn = DefinedIn;
   if (DefinedIn == nullptr) {
-    if (isValidReservedSectionIndex(Shndx))
+    if (Shndx >= SHN_LORESERVE)
       Sym.ShndxType = static_cast<SymbolShndxType>(Shndx);
     else
       Sym.ShndxType = SYMBOL_SIMPLE_INDEX;
@@ -289,7 +293,7 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
     SectionBase *DefSection = nullptr;
     StringRef Name = unwrapOrError(Sym.getName(StrTabData));
     if (Sym.st_shndx >= SHN_LORESERVE) {
-      if (!isValidReservedSectionIndex(Sym.st_shndx)) {
+      if (!isValidReservedSectionIndex(Sym.st_shndx, Machine)) {
         error(
             "Symbol '" + Name +
             "' has unsupported value greater than or equal to SHN_LORESERVE: " +

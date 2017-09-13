@@ -182,10 +182,18 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   unsigned NumOperands = MI.getNumOperands();
-
-  // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
   SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
-  getInstrPartialMappingIdxs(MI, MRI, /* isFP */ false, OpRegBankIdx);
+
+  switch (Opc) {
+  case TargetOpcode::G_FPEXT:
+    // Instruction having only floating-point operands (all scalars in VECRReg)
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ true, OpRegBankIdx);
+    break;
+  default:
+    // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
+    getInstrPartialMappingIdxs(MI, MRI, /* isFP */ false, OpRegBankIdx);
+    break;
+  }
 
   // Finally construct the computed mapping.
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);

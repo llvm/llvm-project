@@ -5079,3 +5079,51 @@ define <32 x i8> @sext_32xi1_to_32xi8(<32 x i16> %c1, <32 x i16> %c2)nounwind {
   %b = sext <32 x i1> %a to <32 x i8>
   ret <32 x i8> %b
 }
+
+define <2 x i32> @sext_2i8_to_2i32(<2 x i8>* %addr) {
+; SSE2-LABEL: sext_2i8_to_2i32:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    paddq %xmm0, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: sext_2i8_to_2i32:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movzwl (%rdi), %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSSE3-NEXT:    psrad $24, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSSE3-NEXT:    paddq %xmm0, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: sext_2i8_to_2i32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pmovsxbq (%rdi), %xmm0
+; SSE41-NEXT:    paddq %xmm0, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: sext_2i8_to_2i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpmovsxbq (%rdi), %xmm0
+; AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; X32-SSE41-LABEL: sext_2i8_to_2i32:
+; X32-SSE41:       # BB#0:
+; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE41-NEXT:    pmovsxbq (%eax), %xmm0
+; X32-SSE41-NEXT:    paddq %xmm0, %xmm0
+; X32-SSE41-NEXT:    retl
+  %x = load <2 x i8>, <2 x i8>* %addr, align 1
+  %y = sext <2 x i8> %x to <2 x i32>
+  %z = add <2 x i32>%y, %y
+  ret <2 x i32>%z
+}
+
