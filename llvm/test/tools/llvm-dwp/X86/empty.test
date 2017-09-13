@@ -1,8 +1,8 @@
 RUN: llvm-dwp %p/../Inputs/empty.dwo -o %t
 RUN: llvm-dwarfdump -v %t | FileCheck %s
 
-CHECK-LABEL: .debug_cu_index
+CHECK: file format
+CHECK-NOT: .debug_cu_index
 CHECK-NOT: version
-CHECK-LABEL: .debug_tu_index
+CHECK-NOT: .debug_tu_index
 CHECK-NOT: version
-CHECK: .debug_

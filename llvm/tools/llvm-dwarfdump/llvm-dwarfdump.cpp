@@ -53,7 +53,7 @@ static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
                          cat(SectionCategory));
 static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 
-static uint64_t DumpType = DIDT_Null;
+static unsigned DumpType = DIDT_Null;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
   static opt<bool> Dump##ENUM_NAME(CMDLINE_NAME,                               \
                                    desc("Dump the " ELF_NAME " section"),      \
@@ -99,8 +99,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
                         Filename.str() + ": ");
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
-    outs() << Filename << ":\tfile format " << Obj.getFileFormatName()
-           << "\n\n";
+    outs() << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
 
   // Dump the complete DWARF structure.
   DICtx->dump(outs(), GetDumpOpts());

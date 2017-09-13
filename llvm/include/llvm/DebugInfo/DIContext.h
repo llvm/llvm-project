@@ -122,14 +122,14 @@ enum DIDumpTypeCounter {
   DIDT_ID_UUID,
   DIDT_ID_Count
 };
-static_assert(DIDT_ID_Count <= 64, "section types overflow storage");
+static_assert(DIDT_ID_Count <= 32, "section types overflow storage");
 
 /// Selects which debug sections get dumped.
-enum DIDumpType : uint64_t {
+enum DIDumpType : unsigned {
   DIDT_Null,
-  DIDT_All             = ~0ULL,
+  DIDT_All             = ~0U,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_##ENUM_NAME = 1 << (DIDT_ID_##ENUM_NAME - 1),
+  DIDT_##ENUM_NAME = 1U << (DIDT_ID_##ENUM_NAME - 1),
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
   DIDT_UUID = 1 << (DIDT_ID_UUID - 1),
@@ -138,7 +138,7 @@ enum DIDumpType : uint64_t {
 /// Container for dump options that control which debug information will be
 /// dumped.
 struct DIDumpOptions {
-    uint64_t DumpType = DIDT_All;
+    unsigned DumpType = DIDT_All;
     bool DumpEH = false;
     bool SummarizeTypes = false;
     bool Verbose = false;
@@ -158,7 +158,7 @@ public:
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
-  virtual bool verify(raw_ostream &OS, uint64_t DumpType = DIDT_All,
+  virtual bool verify(raw_ostream &OS, unsigned DumpType = DIDT_All,
                       DIDumpOptions DumpOpts = {}) {
     // No verifier? Just say things went well.
     return true;
