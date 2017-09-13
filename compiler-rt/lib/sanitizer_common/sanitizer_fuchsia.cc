@@ -22,42 +22,42 @@
 #include "sanitizer_stacktrace.h"
 
 #include <limits.h>
-#include <magenta/errors.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <unwind.h>
+#include <zircon/errors.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 namespace __sanitizer {
 
-void NORETURN internal__exit(int exitcode) { _mx_process_exit(exitcode); }
+void NORETURN internal__exit(int exitcode) { _zx_process_exit(exitcode); }
 
 uptr internal_sched_yield() {
-  mx_status_t status = _mx_nanosleep(0);
-  CHECK_EQ(status, MX_OK);
+  zx_status_t status = _zx_nanosleep(0);
+  CHECK_EQ(status, ZX_OK);
   return 0;  // Why doesn't this return void?
 }
 
-static void internal_nanosleep(mx_time_t ns) {
-  mx_status_t status = _mx_nanosleep(_mx_deadline_after(ns));
-  CHECK_EQ(status, MX_OK);
+static void internal_nanosleep(zx_time_t ns) {
+  zx_status_t status = _zx_nanosleep(_zx_deadline_after(ns));
+  CHECK_EQ(status, ZX_OK);
 }
 
 unsigned int internal_sleep(unsigned int seconds) {
-  internal_nanosleep(MX_SEC(seconds));
+  internal_nanosleep(ZX_SEC(seconds));
   return 0;
 }
 
-u64 NanoTime() { return _mx_time_get(MX_CLOCK_UTC); }
+u64 NanoTime() { return _zx_time_get(ZX_CLOCK_UTC); }
 
 uptr internal_getpid() {
-  mx_info_handle_basic_t info;
-  mx_status_t status =
-      _mx_object_get_info(_mx_process_self(), MX_INFO_HANDLE_BASIC, &info,
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      _zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &info,
                           sizeof(info), NULL, NULL);
-  CHECK_EQ(status, MX_OK);
+  CHECK_EQ(status, ZX_OK);
   uptr pid = static_cast<uptr>(info.koid);
   CHECK_EQ(pid, info.koid);
   return pid;
@@ -73,7 +73,7 @@ int Atexit(void (*function)(void)) { return atexit(function); }
 
 void SleepForSeconds(int seconds) { internal_sleep(seconds); }
 
-void SleepForMillis(int millis) { internal_nanosleep(MX_MSEC(millis)); }
+void SleepForMillis(int millis) { internal_nanosleep(ZX_MSEC(millis)); }
 
 void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
   pthread_attr_t attr;
@@ -154,10 +154,10 @@ void BlockingMutex::Lock() {
   if (atomic_exchange(m, MtxLocked, memory_order_acquire) == MtxUnlocked)
     return;
   while (atomic_exchange(m, MtxSleeping, memory_order_acquire) != MtxUnlocked) {
-    mx_status_t status = _mx_futex_wait(reinterpret_cast<mx_futex_t *>(m),
-                                        MtxSleeping, MX_TIME_INFINITE);
-    if (status != MX_ERR_BAD_STATE)  // Normal race.
-      CHECK_EQ(status, MX_OK);
+    zx_status_t status = _zx_futex_wait(reinterpret_cast<zx_futex_t *>(m),
+                                        MtxSleeping, ZX_TIME_INFINITE);
+    if (status != ZX_ERR_BAD_STATE)  // Normal race.
+      CHECK_EQ(status, ZX_OK);
   }
 }
 
@@ -166,8 +166,8 @@ void BlockingMutex::Unlock() {
   u32 v = atomic_exchange(m, MtxUnlocked, memory_order_release);
   CHECK_NE(v, MtxUnlocked);
   if (v == MtxSleeping) {
-    mx_status_t status = _mx_futex_wake(reinterpret_cast<mx_futex_t *>(m), 1);
-    CHECK_EQ(status, MX_OK);
+    zx_status_t status = _zx_futex_wake(reinterpret_cast<zx_futex_t *>(m), 1);
+    CHECK_EQ(status, ZX_OK);
   }
 }
 
@@ -191,26 +191,26 @@ static void *DoAnonymousMmapOrDie(uptr size, const char *mem_type,
                                   bool raw_report, bool die_for_nomem) {
   size = RoundUpTo(size, PAGE_SIZE);
 
-  mx_handle_t vmo;
-  mx_status_t status = _mx_vmo_create(size, 0, &vmo);
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY || die_for_nomem)
-      ReportMmapFailureAndDie(size, mem_type, "mx_vmo_create", status,
+  zx_handle_t vmo;
+  zx_status_t status = _zx_vmo_create(size, 0, &vmo);
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY || die_for_nomem)
+      ReportMmapFailureAndDie(size, mem_type, "zx_vmo_create", status,
                               raw_report);
     return nullptr;
   }
-  _mx_object_set_property(vmo, MX_PROP_NAME, mem_type,
+  _zx_object_set_property(vmo, ZX_PROP_NAME, mem_type,
                           internal_strlen(mem_type));
 
   // TODO(mcgrathr): Maybe allocate a VMAR for all sanitizer heap and use that?
   uintptr_t addr;
-  status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, size,
-                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &addr);
-  _mx_handle_close(vmo);
+  status = _zx_vmar_map(_zx_vmar_root_self(), 0, vmo, 0, size,
+                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &addr);
+  _zx_handle_close(vmo);
 
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY || die_for_nomem)
-      ReportMmapFailureAndDie(size, mem_type, "mx_vmar_map", status,
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY || die_for_nomem)
+      ReportMmapFailureAndDie(size, mem_type, "zx_vmar_map", status,
                               raw_report);
     return nullptr;
   }
@@ -237,22 +237,22 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
 // just allocate a VMAR to reserve the address space.  Then MmapFixedOrDie
 // uses that VMAR instead of the root.
 
-mx_handle_t allocator_vmar = MX_HANDLE_INVALID;
+zx_handle_t allocator_vmar = ZX_HANDLE_INVALID;
 uintptr_t allocator_vmar_base;
 size_t allocator_vmar_size;
 
 void *MmapNoAccess(uptr size) {
   size = RoundUpTo(size, PAGE_SIZE);
-  CHECK_EQ(allocator_vmar, MX_HANDLE_INVALID);
+  CHECK_EQ(allocator_vmar, ZX_HANDLE_INVALID);
   uintptr_t base;
-  mx_status_t status =
-      _mx_vmar_allocate(_mx_vmar_root_self(), 0, size,
-                        MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
-                            MX_VM_FLAG_CAN_MAP_SPECIFIC,
+  zx_status_t status =
+      _zx_vmar_allocate(_zx_vmar_root_self(), 0, size,
+                        ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
+                            ZX_VM_FLAG_CAN_MAP_SPECIFIC,
                         &allocator_vmar, &base);
-  if (status != MX_OK)
+  if (status != ZX_OK)
     ReportMmapFailureAndDie(size, "sanitizer allocator address space",
-                            "mx_vmar_allocate", status);
+                            "zx_vmar_allocate", status);
 
   allocator_vmar_base = base;
   allocator_vmar_size = size;
@@ -264,14 +264,14 @@ constexpr const char kAllocatorVmoName[] = "sanitizer_allocator";
 static void *DoMmapFixedOrDie(uptr fixed_addr, uptr size, bool die_for_nomem) {
   size = RoundUpTo(size, PAGE_SIZE);
 
-  mx_handle_t vmo;
-  mx_status_t status = _mx_vmo_create(size, 0, &vmo);
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY || die_for_nomem)
-      ReportMmapFailureAndDie(size, kAllocatorVmoName, "mx_vmo_create", status);
+  zx_handle_t vmo;
+  zx_status_t status = _zx_vmo_create(size, 0, &vmo);
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY || die_for_nomem)
+      ReportMmapFailureAndDie(size, kAllocatorVmoName, "zx_vmo_create", status);
     return nullptr;
   }
-  _mx_object_set_property(vmo, MX_PROP_NAME, kAllocatorVmoName,
+  _zx_object_set_property(vmo, ZX_PROP_NAME, kAllocatorVmoName,
                           sizeof(kAllocatorVmoName) - 1);
 
   DCHECK_GE(fixed_addr, allocator_vmar_base);
@@ -280,14 +280,14 @@ static void *DoMmapFixedOrDie(uptr fixed_addr, uptr size, bool die_for_nomem) {
   DCHECK_GE(allocator_vmar_size - offset, size);
 
   uintptr_t addr;
-  status = _mx_vmar_map(
+  status = _zx_vmar_map(
       allocator_vmar, offset, vmo, 0, size,
-      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_SPECIFIC,
       &addr);
-  _mx_handle_close(vmo);
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY || die_for_nomem)
-      ReportMmapFailureAndDie(size, kAllocatorVmoName, "mx_vmar_map", status);
+  _zx_handle_close(vmo);
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY || die_for_nomem)
+      ReportMmapFailureAndDie(size, kAllocatorVmoName, "zx_vmar_map", status);
     return nullptr;
   }
 
@@ -315,14 +315,14 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   CHECK(IsPowerOfTwo(size));
   CHECK(IsPowerOfTwo(alignment));
 
-  mx_handle_t vmo;
-  mx_status_t status = _mx_vmo_create(size, 0, &vmo);
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY)
-      ReportMmapFailureAndDie(size, mem_type, "mx_vmo_create", status, false);
+  zx_handle_t vmo;
+  zx_status_t status = _zx_vmo_create(size, 0, &vmo);
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY)
+      ReportMmapFailureAndDie(size, mem_type, "zx_vmo_create", status, false);
     return nullptr;
   }
-  _mx_object_set_property(vmo, MX_PROP_NAME, mem_type,
+  _zx_object_set_property(vmo, ZX_PROP_NAME, mem_type,
                           internal_strlen(mem_type));
 
   // TODO(mcgrathr): Maybe allocate a VMAR for all sanitizer heap and use that?
@@ -333,37 +333,37 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   // beginning of the VMO, and unmap the excess before and after.
   size_t map_size = size + alignment;
   uintptr_t addr;
-  status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, map_size,
-                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &addr);
-  if (status == MX_OK) {
+  status = _zx_vmar_map(_zx_vmar_root_self(), 0, vmo, 0, map_size,
+                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &addr);
+  if (status == ZX_OK) {
     uintptr_t map_addr = addr;
     uintptr_t map_end = map_addr + map_size;
     addr = RoundUpTo(map_addr, alignment);
     uintptr_t end = addr + size;
     if (addr != map_addr) {
-      mx_info_vmar_t info;
-      status = _mx_object_get_info(_mx_vmar_root_self(), MX_INFO_VMAR, &info,
+      zx_info_vmar_t info;
+      status = _zx_object_get_info(_zx_vmar_root_self(), ZX_INFO_VMAR, &info,
                                    sizeof(info), NULL, NULL);
-      if (status == MX_OK) {
+      if (status == ZX_OK) {
         uintptr_t new_addr;
         status =
-            _mx_vmar_map(_mx_vmar_root_self(), addr - info.base, vmo, 0, size,
-                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
-                             MX_VM_FLAG_SPECIFIC_OVERWRITE,
+            _zx_vmar_map(_zx_vmar_root_self(), addr - info.base, vmo, 0, size,
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
+                             ZX_VM_FLAG_SPECIFIC_OVERWRITE,
                          &new_addr);
-        if (status == MX_OK) CHECK_EQ(new_addr, addr);
+        if (status == ZX_OK) CHECK_EQ(new_addr, addr);
       }
     }
-    if (status == MX_OK && addr != map_addr)
-      status = _mx_vmar_unmap(_mx_vmar_root_self(), map_addr, addr - map_addr);
-    if (status == MX_OK && end != map_end)
-      status = _mx_vmar_unmap(_mx_vmar_root_self(), end, map_end - end);
+    if (status == ZX_OK && addr != map_addr)
+      status = _zx_vmar_unmap(_zx_vmar_root_self(), map_addr, addr - map_addr);
+    if (status == ZX_OK && end != map_end)
+      status = _zx_vmar_unmap(_zx_vmar_root_self(), end, map_end - end);
   }
-  _mx_handle_close(vmo);
+  _zx_handle_close(vmo);
 
-  if (status != MX_OK) {
-    if (status != MX_ERR_NO_MEMORY)
-      ReportMmapFailureAndDie(size, mem_type, "mx_vmar_map", status, false);
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_NO_MEMORY)
+      ReportMmapFailureAndDie(size, mem_type, "zx_vmar_map", status, false);
     return nullptr;
   }
 
@@ -376,9 +376,9 @@ void UnmapOrDie(void *addr, uptr size) {
   if (!addr || !size) return;
   size = RoundUpTo(size, PAGE_SIZE);
 
-  mx_status_t status = _mx_vmar_unmap(_mx_vmar_root_self(),
+  zx_status_t status = _zx_vmar_unmap(_zx_vmar_root_self(),
                                       reinterpret_cast<uintptr_t>(addr), size);
-  if (status != MX_OK) {
+  if (status != ZX_OK) {
     Report("ERROR: %s failed to deallocate 0x%zx (%zd) bytes at address %p\n",
            SanitizerToolName, size, size, addr);
     CHECK("unable to unmap" && 0);
@@ -388,7 +388,7 @@ void UnmapOrDie(void *addr, uptr size) {
 }
 
 // This is used on the shadow mapping, which cannot be changed.
-// Magenta doesn't have anything like MADV_DONTNEED.
+// Zircon doesn't have anything like MADV_DONTNEED.
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {}
 
 void DumpProcessMap() {
@@ -397,22 +397,22 @@ void DumpProcessMap() {
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   // TODO(mcgrathr): Figure out a better way.
-  mx_handle_t vmo;
-  mx_status_t status = _mx_vmo_create(size, 0, &vmo);
-  if (status == MX_OK) {
+  zx_handle_t vmo;
+  zx_status_t status = _zx_vmo_create(size, 0, &vmo);
+  if (status == ZX_OK) {
     while (size > 0) {
       size_t wrote;
-      status = _mx_vmo_write(vmo, reinterpret_cast<const void *>(beg), 0, size,
+      status = _zx_vmo_write(vmo, reinterpret_cast<const void *>(beg), 0, size,
                              &wrote);
-      if (status != MX_OK) break;
+      if (status != ZX_OK) break;
       CHECK_GT(wrote, 0);
       CHECK_LE(wrote, size);
       beg += wrote;
       size -= wrote;
     }
-    _mx_handle_close(vmo);
+    _zx_handle_close(vmo);
   }
-  return status == MX_OK;
+  return status == ZX_OK;
 }
 
 // FIXME implement on this platform.
@@ -420,27 +420,27 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) {}
 
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len, error_t *errno_p) {
-  mx_handle_t vmo;
-  mx_status_t status = __sanitizer_get_configuration(file_name, &vmo);
-  if (status == MX_OK) {
+  zx_handle_t vmo;
+  zx_status_t status = __sanitizer_get_configuration(file_name, &vmo);
+  if (status == ZX_OK) {
     uint64_t vmo_size;
-    status = _mx_vmo_get_size(vmo, &vmo_size);
-    if (status == MX_OK) {
+    status = _zx_vmo_get_size(vmo, &vmo_size);
+    if (status == ZX_OK) {
       if (vmo_size < max_len) max_len = vmo_size;
       size_t map_size = RoundUpTo(max_len, PAGE_SIZE);
       uintptr_t addr;
-      status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, map_size,
-                            MX_VM_FLAG_PERM_READ, &addr);
-      if (status == MX_OK) {
+      status = _zx_vmar_map(_zx_vmar_root_self(), 0, vmo, 0, map_size,
+                            ZX_VM_FLAG_PERM_READ, &addr);
+      if (status == ZX_OK) {
         *buff = reinterpret_cast<char *>(addr);
         *buff_size = map_size;
         *read_len = max_len;
       }
     }
-    _mx_handle_close(vmo);
+    _zx_handle_close(vmo);
   }
-  if (status != MX_OK && errno_p) *errno_p = status;
-  return status == MX_OK;
+  if (status != ZX_OK && errno_p) *errno_p = status;
+  return status == ZX_OK;
 }
 
 void RawWrite(const char *buffer) {
@@ -481,9 +481,9 @@ uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
 uptr MainThreadStackBase, MainThreadStackSize;
 
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  CHECK_LE(length, MX_CPRNG_DRAW_MAX_LEN);
+  CHECK_LE(length, ZX_CPRNG_DRAW_MAX_LEN);
   size_t size;
-  CHECK_EQ(_mx_cprng_draw(buffer, length, &size), MX_OK);
+  CHECK_EQ(_zx_cprng_draw(buffer, length, &size), ZX_OK);
   CHECK_EQ(size, length);
   return true;
 }

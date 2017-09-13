@@ -146,14 +146,15 @@ private:
 /// profile information found in that file.
 class SampleProfileLoader {
 public:
-  SampleProfileLoader(StringRef Name = SampleProfileFile)
-      : DT(nullptr), PDT(nullptr), LI(nullptr), ACT(nullptr), Reader(),
-        Samples(nullptr), Filename(Name), ProfileIsValid(false),
+  SampleProfileLoader(
+      StringRef Name,
+      std::function<AssumptionCache &(Function &)> GetAssumptionCache)
+      : DT(nullptr), PDT(nullptr), LI(nullptr), GetAC(GetAssumptionCache),
+        Reader(), Samples(nullptr), Filename(Name), ProfileIsValid(false),
         TotalCollectedSamples(0), ORE(nullptr) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM);
-  void setACT(AssumptionCacheTracker *A) { ACT = A; }
 
   void dump() { Reader->dump(); }
 
@@ -223,7 +224,7 @@ protected:
   std::unique_ptr<PostDomTreeBase<BasicBlock>> PDT;
   std::unique_ptr<LoopInfo> LI;
 
-  AssumptionCacheTracker *ACT;
+  std::function<AssumptionCache &(Function &)> GetAC;
 
   /// \brief Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
@@ -261,7 +262,11 @@ public:
   static char ID;
 
   SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile)
-      : ModulePass(ID), SampleLoader(Name) {
+      : ModulePass(ID), SampleLoader(Name,
+                                     [&](Function &F) -> AssumptionCache & {
+                                       return ACT->getAssumptionCache(F);
+                                     }),
+        ACT(nullptr) {
     initializeSampleProfileLoaderLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -280,6 +285,7 @@ public:
 
 private:
   SampleProfileLoader SampleLoader;
+  AssumptionCacheTracker *ACT;
 };
 
 /// Return true if the given callsite is hot wrt to its caller.
@@ -677,8 +683,6 @@ bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &ImportGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
-      Function &F) -> AssumptionCache & { return ACT->getAssumptionCache(F); };
   while (true) {
     bool LocalChanged = false;
     SmallVector<Instruction *, 10> CIS;
@@ -699,7 +703,7 @@ bool SampleProfileLoader::inlineHotFunctions(
       }
     }
     for (auto I : CIS) {
-      InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
+      InlineFunctionInfo IFI(nullptr, &GetAC);
       Function *CalledFunction = CallSite(I).getCalledFunction();
       // Do not inline recursive calls.
       if (CalledFunction == &F)
@@ -1478,8 +1482,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
 }
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
-  // FIXME: pass in AssumptionCache correctly for the new pass manager.
-  SampleLoader.setACT(&getAnalysis<AssumptionCacheTracker>());
+  ACT = &getAnalysis<AssumptionCacheTracker>();
   return SampleLoader.runOnModule(M, nullptr);
 }
 
@@ -1503,9 +1506,16 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  SampleProfileLoader SampleLoader(
-      ProfileFileName.empty() ? SampleProfileFile : ProfileFileName);
+  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
+
+  SampleProfileLoader SampleLoader(ProfileFileName.empty() ? SampleProfileFile
+                                                           : ProfileFileName,
+                                   GetAssumptionCache);
 
   SampleLoader.doInitialization(M);
 

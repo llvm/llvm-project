@@ -21,9 +21,9 @@
 #include "asan_thread.h"
 
 #include <limits.h>
-#include <magenta/sanitizer.h>
-#include <magenta/syscalls.h>
-#include <magenta/threads.h>
+#include <zircon/sanitizer.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 namespace __asan {
 
@@ -126,13 +126,13 @@ void AsanThread::SetThreadStackAndTls(const AsanThread::InitOptions *options) {
 // Called by __asan::AsanInitInternal (asan_rtl.c).
 AsanThread *CreateMainThread() {
   thrd_t self = thrd_current();
-  char name[MX_MAX_NAME_LEN];
+  char name[ZX_MAX_NAME_LEN];
   CHECK_NE(__sanitizer::MainThreadStackBase, 0);
   CHECK_GT(__sanitizer::MainThreadStackSize, 0);
   AsanThread *t = CreateAsanThread(
       nullptr, 0, reinterpret_cast<uptr>(self), true,
-      _mx_object_get_property(thrd_get_mx_handle(self), MX_PROP_NAME, name,
-                              sizeof(name)) == MX_OK
+      _zx_object_get_property(thrd_get_zx_handle(self), ZX_PROP_NAME, name,
+                              sizeof(name)) == ZX_OK
           ? name
           : nullptr,
       __sanitizer::MainThreadStackBase, __sanitizer::MainThreadStackSize);
@@ -192,7 +192,7 @@ static void ThreadExitHook(void *hook, uptr os_id) {
 
 }  // namespace __asan
 
-// These are declared (in extern "C") by <magenta/sanitizer.h>.
+// These are declared (in extern "C") by <zircon/sanitizer.h>.
 // The system runtime will call our definitions directly.
 
 void *__sanitizer_before_thread_create_hook(thrd_t thread, bool detached,
