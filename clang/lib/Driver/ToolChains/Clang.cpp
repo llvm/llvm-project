@@ -2952,10 +2952,8 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-debug-info-macro");
 
   // -ggnu-pubnames turns on gnu style pubnames in the backend.
-  if (Args.hasArg(options::OPT_ggnu_pubnames)) {
-    CmdArgs.push_back("-backend-option");
-    CmdArgs.push_back("-generate-gnu-dwarf-pub-sections");
-  }
+  if (Args.hasArg(options::OPT_ggnu_pubnames))
+    CmdArgs.push_back("-ggnu-pubnames");
 
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
@@ -3394,6 +3392,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mpie-copy-relocations");
   }
 
+  // -fhosted is default.
+  // TODO: Audit uses of KernelOrKext and see where it'd be more appropriate to
+  // use Freestanding.
+  bool Freestanding =
+      Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
+      KernelOrKext;
+  if (Freestanding)
+    CmdArgs.push_back("-ffreestanding");
+
   // This is a coarse approximation of what llvm-gcc actually does, both
   // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
   // complicated ways.
@@ -3402,7 +3409,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_asynchronous_unwind_tables,
                    (getToolChain().IsUnwindTablesDefault(Args) ||
                     getToolChain().getSanitizerArgs().needsUnwindTables()) &&
-                       !KernelOrKext);
+                       !Freestanding);
   if (Args.hasFlag(options::OPT_funwind_tables, options::OPT_fno_unwind_tables,
                    AsynchronousUnwindTables))
     CmdArgs.push_back("-munwind-tables");
@@ -3811,11 +3818,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden);
 
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
-
-  // -fhosted is default.
-  if (Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
-      KernelOrKext)
-    CmdArgs.push_back("-ffreestanding");
 
   // Forward -f (flag) options which we can pass directly.
   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);

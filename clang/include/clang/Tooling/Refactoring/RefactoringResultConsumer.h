@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -33,6 +34,10 @@ public:
   virtual void handle(AtomicChanges SourceReplacements) {
     defaultResultHandler();
   }
+
+  /// Handles the symbol occurrences that are found by an interactive
+  /// refactoring action.
+  virtual void handle(SymbolOccurrences Occurrences) { defaultResultHandler(); }
 
 private:
   void defaultResultHandler() {

@@ -23,6 +23,12 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST --implicit-check-not=fdepfile-entry
 // CHECK-DEFAULT-BLACKLIST: -fsanitize-blacklist={{.*}}asan_blacklist.txt
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=alignment -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry
+// CHECK-DEFAULT-UBSAN-BLACKLIST: -fsanitize-blacklist={{.*}}ubsan_blacklist.txt
+
 // Ignore -fsanitize-blacklist flag if there is no -fsanitize flag.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-blacklist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SANITIZE --check-prefix=DELIMITERS
 // CHECK-NO-SANITIZE-NOT: -fsanitize-blacklist

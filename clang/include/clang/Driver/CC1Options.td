@@ -257,6 +257,8 @@ def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">,
            "precision">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
   HelpText<"The float ABI to use">;
+def mtp : Separate<["-"], "mtp">,
+  HelpText<"Mode for reading thread pointer">;
 def mlimit_float_precision : Separate<["-"], "mlimit-float-precision">,
   HelpText<"Limit float precision to the given value">;
 def split_stacks : Flag<["-"], "split-stacks">,

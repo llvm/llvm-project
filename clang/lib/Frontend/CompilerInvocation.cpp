@@ -564,6 +564,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SampleProfileFile = Args.getLastArgValue(OPT_fprofile_sample_use_EQ);
   Opts.DebugInfoForProfiling = Args.hasFlag(
       OPT_fdebug_info_for_profiling, OPT_fno_debug_info_for_profiling, false);
+  Opts.GnuPubnames = Args.hasArg(OPT_ggnu_pubnames);
 
   setPGOInstrumentor(Opts, Args, Diags);
   Opts.InstrProfileOutput =
