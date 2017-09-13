@@ -139,7 +139,7 @@ struct DIDumpOptions {
     uint64_t DumpType = DIDT_All;
     bool DumpEH = false;
     bool SummarizeTypes = false;
-    bool Brief = false;
+    bool Verbose = false;
 };
 
 class DIContext {
@@ -156,7 +156,8 @@ public:
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
-  virtual bool verify(raw_ostream &OS, uint64_t DumpType = DIDT_All) {
+  virtual bool verify(raw_ostream &OS, uint64_t DumpType = DIDT_All,
+                      DIDumpOptions DumpOpts = {}) {
     // No verifier? Just say things went well.
     return true;
   }

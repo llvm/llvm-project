@@ -82,6 +82,14 @@ static void error(StringRef Filename, std::error_code EC) {
   exit(1);
 }
 
+static DIDumpOptions GetDumpOpts() {
+  DIDumpOptions DumpOpts;
+  DumpOpts.DumpType = DumpType;
+  DumpOpts.SummarizeTypes = SummarizeTypes;
+  DumpOpts.Verbose = Verbose;
+  return DumpOpts;
+}
+
 static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
@@ -92,11 +100,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
 
 
   // Dump the complete DWARF structure.
-  DIDumpOptions DumpOpts;
-  DumpOpts.DumpType = DumpType;
-  DumpOpts.SummarizeTypes = SummarizeTypes;
-  DumpOpts.Brief = !Verbose;
-  DICtx->dump(outs(), DumpOpts);
+  DICtx->dump(outs(), GetDumpOpts());
 }
 
 static void DumpInput(StringRef Filename) {
@@ -129,7 +133,7 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType);
+  bool Result = DICtx->verify(stream, DumpType, GetDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
