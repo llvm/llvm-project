@@ -547,25 +547,21 @@ void SourceCoverageViewHTML::renderLine(
   // 4. Snippets[1:N+1] correspond to \p Segments[0:N]: use these to generate
   //    sub-line region count tooltips if needed.
 
-  bool HasMultipleRegions = [&] {
-    unsigned RegionCount = 0;
-    for (const auto *S : Segments)
-      if (S->HasCount && S->IsRegionEntry)
-        if (++RegionCount > 1)
-          return true;
-    return false;
-  }();
-
-  if (shouldRenderRegionMarkers(HasMultipleRegions)) {
-    for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
+  if (shouldRenderRegionMarkers(Segments)) {
+    // Just consider the segments which start *and* end on this line.
+    for (unsigned I = 0, E = Segments.size() - 1; I < E; ++I) {
       const auto *CurSeg = Segments[I];
-      if (!CurSeg->IsRegionEntry || !CurSeg->HasCount)
+      if (!CurSeg->IsRegionEntry)
         continue;
 
       Snippets[I + 1] =
           tag("div", Snippets[I + 1] + tag("span", formatCount(CurSeg->Count),
                                            "tooltip-content"),
               "tooltip");
+
+      if (getOptions().Debug)
+        errs() << "Marker at " << CurSeg->Line << ":" << CurSeg->Col << " = "
+               << formatCount(CurSeg->Count) << "\n";
     }
   }
 
