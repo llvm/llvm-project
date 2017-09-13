@@ -152,7 +152,7 @@ const interpose_substitution substitution_##func_name[] \
 // There is no general interception at all on Fuchsia.
 // Sanitizer runtimes just define functions directly to preempt them,
 // and have bespoke ways to access the underlying libc functions.
-# include <magenta/sanitizer.h>
+# include <zircon/sanitizer.h>
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 # define REAL(x) __unsanitized_##x
 # define DECLARE_REAL(ret_type, func, ...)

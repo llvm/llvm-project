@@ -18,7 +18,7 @@
 
 #include "sanitizer_common.h"
 
-#include <magenta/sanitizer.h>
+#include <zircon/sanitizer.h>
 
 namespace __sanitizer {
 

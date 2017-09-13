@@ -229,3 +229,8 @@ COMMON_FLAG(bool, print_cmdline, false, "Print command line on crash "
             "(asan only).")
 COMMON_FLAG(bool, html_cov_report, false, "Generate html coverage report.")
 COMMON_FLAG(const char *, sancov_path, "sancov", "Sancov tool location.")
+COMMON_FLAG(bool, dump_instruction_bytes, false,
+          "If true, dump 16 bytes starting at the instruction that caused SEGV")
+COMMON_FLAG(bool, dump_registers, true,
+          "If true, dump values of CPU registers when SEGV happens. Only "
+          "available on OS X for now.")

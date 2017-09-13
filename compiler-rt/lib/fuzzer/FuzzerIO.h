@@ -58,6 +58,14 @@ size_t FileSize(const std::string &Path);
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir);
 
+struct SizedFile {
+  std::string File;
+  size_t Size;
+  bool operator<(const SizedFile &B) const { return Size < B.Size; }
+};
+
+void GetSizedFilesFromDir(const std::string &Dir, Vector<SizedFile> *V);
+
 char GetSeparator();
 
 FILE* OpenFile(int Fd, const char *Mode);
