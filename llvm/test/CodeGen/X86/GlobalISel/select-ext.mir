@@ -37,6 +37,13 @@
     ret i32 %r
   }
 
+  define void @test_anyext_i1toi8() { ret void }
+  define void @test_anyext_i1toi16() { ret void }
+  define void @test_anyext_i1toi32() { ret void }
+  define void @test_anyext_i8toi16() { ret void }
+  define void @test_anyext_i8toi32() { ret void }
+  define void @test_anyext_i16toi32() { ret void }
+
 ...
 ---
 name:            test_zext_i1toi8
@@ -223,4 +230,203 @@ body:             |
     %eax = COPY %1(s32)
     RET 0, implicit %eax
 
+...
+---
+name:            test_anyext_i1toi8
+# ALL-LABEL: name:  test_anyext_i1toi8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = COPY %1
+# ALL-NEXT:     %al = COPY %2
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s8) = G_ANYEXT %1(s1)
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+...
+---
+name:            test_anyext_i1toi16
+# ALL-LABEL: name:  test_anyext_i1toi16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %ax = COPY %2
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s16) = G_ANYEXT %1(s1)
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+...
+---
+name:            test_anyext_i1toi32
+# ALL-LABEL: name:  test_anyext_i1toi32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s32) = G_ANYEXT %1(s1)
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+...
+---
+name:            test_anyext_i8toi16
+# ALL-LABEL: name:  test_anyext_i8toi16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %ax = COPY %2
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s16) = G_ANYEXT %1(s8)
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+...
+---
+name:            test_anyext_i8toi32
+# ALL-LABEL: name:  test_anyext_i8toi32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X32:      registers:
+# X32-NEXT:   - { id: 0, class: gr32_abcd, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+#
+# X64:      registers:
+# X64-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X64-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = MOVZX32rr8 %1
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s32) = G_ANYEXT %1(s8)
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+...
+---
+name:            test_anyext_i16toi32
+# ALL-LABEL: name:  test_anyext_i16toi32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %edi
+# ALL-NEXT:     %1 = COPY %0.sub_16bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 3
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s16) = G_TRUNC %0(s32)
+    %2(s32) = G_ANYEXT %1(s16)
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
 ...

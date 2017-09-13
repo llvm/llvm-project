@@ -42,10 +42,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
 void X86LegalizerInfo::setLegalizerInfo32bit() {
 
-  if (Subtarget.is64Bit())
-    return;
-
-  const LLT p0 = LLT::pointer(0, 32);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSize() * 8);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -54,6 +51,11 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   for (auto Ty : {p0, s1, s8, s16, s32})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
+
+  for (auto Ty : {s8, s16, s32, p0})
+    setAction({G_PHI, Ty}, Legal);
+
+  setAction({G_PHI, s1}, WidenScalar);
 
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32})
@@ -97,11 +99,13 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   for (auto Ty : {s8, s16, s32}) {
     setAction({G_ZEXT, Ty}, Legal);
     setAction({G_SEXT, Ty}, Legal);
+    setAction({G_ANYEXT, Ty}, Legal);
   }
 
   for (auto Ty : {s1, s8, s16}) {
     setAction({G_ZEXT, 1, Ty}, Legal);
     setAction({G_SEXT, 1, Ty}, Legal);
+    setAction({G_ANYEXT, 1, Ty}, Legal);
   }
 
   // Comparison
@@ -116,65 +120,33 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSize() * 8);
-  const LLT s1 = LLT::scalar(1);
-  const LLT s8 = LLT::scalar(8);
-  const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  for (auto Ty : {p0, s1, s8, s16, s32, s64})
-    setAction({G_IMPLICIT_DEF, Ty}, Legal);
+  setAction({G_IMPLICIT_DEF, s64}, Legal);
+
+  setAction({G_PHI, s64}, Legal);
 
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-    for (auto Ty : {s8, s16, s32, s64})
-      setAction({BinOp, Ty}, Legal);
+    setAction({BinOp, s64}, Legal);
 
-  for (unsigned MemOp : {G_LOAD, G_STORE}) {
-    for (auto Ty : {s8, s16, s32, s64, p0})
-      setAction({MemOp, Ty}, Legal);
-
-    setAction({MemOp, s1}, WidenScalar);
-    // And everything's fine in addrspace 0.
-    setAction({MemOp, 1, p0}, Legal);
-  }
+  for (unsigned MemOp : {G_LOAD, G_STORE})
+    setAction({MemOp, s64}, Legal);
 
   // Pointer-handling
-  setAction({G_FRAME_INDEX, p0}, Legal);
-  setAction({G_GLOBAL_VALUE, p0}, Legal);
-
-  setAction({G_GEP, p0}, Legal);
-  setAction({G_GEP, 1, s32}, Legal);
   setAction({G_GEP, 1, s64}, Legal);
 
-  for (auto Ty : {s1, s8, s16})
-    setAction({G_GEP, 1, Ty}, WidenScalar);
-
-  // Control-flow
-  setAction({G_BRCOND, s1}, Legal);
-
   // Constants
-  for (auto Ty : {s8, s16, s32, s64, p0})
-    setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);
-
-  setAction({TargetOpcode::G_CONSTANT, s1}, WidenScalar);
+  setAction({TargetOpcode::G_CONSTANT, s64}, Legal);
 
   // Extensions
-  for (auto Ty : {s8, s16, s32, s64}) {
-    setAction({G_ZEXT, Ty}, Legal);
-    setAction({G_SEXT, Ty}, Legal);
-  }
-
-  for (auto Ty : {s1, s8, s16, s32}) {
-    setAction({G_ZEXT, 1, Ty}, Legal);
-    setAction({G_SEXT, 1, Ty}, Legal);
+  for (unsigned extOp : {G_ZEXT, G_SEXT, G_ANYEXT}) {
+    setAction({extOp, s64}, Legal);
+    setAction({extOp, 1, s32}, Legal);
   }
 
   // Comparison
-  setAction({G_ICMP, s1}, Legal);
-
-  for (auto Ty : {s8, s16, s32, s64, p0})
-    setAction({G_ICMP, 1, Ty}, Legal);
+  setAction({G_ICMP, 1, s64}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
@@ -198,6 +170,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   if (!Subtarget.hasSSE2())
     return;
 
+  const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT v16s8 = LLT::vector(16, 8);
   const LLT v8s16 = LLT::vector(8, 16);
@@ -213,6 +186,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
       setAction({BinOp, Ty}, Legal);
 
   setAction({G_MUL, v8s16}, Legal);
+
+  setAction({G_FPEXT, s64}, Legal);
+  setAction({G_FPEXT, 1, s32}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE41() {
