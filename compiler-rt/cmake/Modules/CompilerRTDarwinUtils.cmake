@@ -200,10 +200,23 @@ macro(darwin_add_builtin_library name suffix)
   if(DARWIN_${LIB_OS}_SYSROOT)
     set(sysroot_flag -isysroot ${DARWIN_${LIB_OS}_SYSROOT})
   endif()
+
+  # Make a copy of the compilation flags.
+  set(builtin_cflags ${LIB_CFLAGS})
+
+  # Strip out any inappropriate flags for the target.
+  if("${LIB_ARCH}" MATCHES "^(armv7|armv7k|armv7s)$")
+    set(builtin_cflags "")
+    foreach(cflag "${LIB_CFLAGS}")
+      string(REPLACE "-fomit-frame-pointer" "" cflag "${cflag}")
+      list(APPEND builtin_cflags ${cflag})
+    endforeach(cflag)
+  endif()
+
   set_target_compile_flags(${libname}
     ${sysroot_flag}
     ${DARWIN_${LIB_OS}_BUILTIN_MIN_VER_FLAG}
-    ${LIB_CFLAGS})
+    ${builtin_cflags})
   set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
   set_target_properties(${libname} PROPERTIES
