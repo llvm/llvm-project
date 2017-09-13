@@ -1,0 +1,592 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+
+  define zeroext i1 @test_i1(i32 %a, i1 zeroext %f, i1 zeroext %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i1 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i1 %cond
+  }
+
+  define i8 @test_i8(i32 %a, i8 %f, i8 %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i8 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i8 %cond
+  }
+
+  define i16 @test_i16(i32 %a, i16 %f, i16 %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i16 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i16 %cond
+  }
+
+  define i32 @test_i32(i32 %a, i32 %f, i32 %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i32 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i32 %cond
+  }
+
+  define i64 @test_i64(i32 %a, i64 %f, i64 %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i64 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i64 %cond
+  }
+
+  define float @test_float(i32 %a, float %f, float %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi float [ %f, %cond.true ], [ %t, %cond.false ]
+    ret float %cond
+  }
+
+  define double @test_double(i32 %a, double %f, double %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi double [ %f, %cond.true ], [ %t, %cond.false ]
+    ret double %cond
+  }
+
+...
+---
+name:            test_i1
+# ALL-LABEL: name:  test_i1
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %edx, %esi
+
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s1) = COPY %esi
+# ALL-NEXT:     %2(s1) = COPY %edx
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          %8(s8) = G_ANYEXT %1(s1)
+# ALL-NEXT:     G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL:          %9(s8) = G_ANYEXT %2(s1)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %7(s8) = G_PHI %8(s8), %bb.1.cond.true, %9(s8), %bb.2.cond.false
+# ALL-NEXT:     %5(s1) = G_TRUNC %7(s8)
+# ALL-NEXT:     %6(s8) = G_ZEXT %5(s1)
+# ALL-NEXT:     %al = COPY %6(s8)
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %edx, %esi
+
+    %0(s32) = COPY %edi
+    %1(s1) = COPY %esi
+    %2(s1) = COPY %edx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s1) = G_PHI %1(s1), %bb.2.cond.true, %2(s1), %bb.3.cond.false
+    %6(s8) = G_ZEXT %5(s1)
+    %al = COPY %6(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_i8
+# ALL-LABEL: name:  test_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %edx, %esi
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s8) = COPY %esi
+# ALL-NEXT:     %2(s8) = COPY %edx
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s8) = G_PHI %1(s8), %bb.1.cond.true, %2(s8), %bb.2.cond.false
+# ALL-NEXT:     %al = COPY %5(s8)
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %edx, %esi
+
+    %0(s32) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s8) = COPY %edx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s8) = G_PHI %1(s8), %bb.2.cond.true, %2(s8), %bb.3.cond.false
+    %al = COPY %5(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_i16
+# ALL-LABEL: name:  test_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %edx, %esi
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s16) = COPY %esi
+# ALL-NEXT:     %2(s16) = COPY %edx
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s16) = G_PHI %1(s16), %bb.1.cond.true, %2(s16), %bb.2.cond.false
+# ALL-NEXT:     %ax = COPY %5(s16)
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %edx, %esi
+
+    %0(s32) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s16) = COPY %edx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s16) = G_PHI %1(s16), %bb.2.cond.true, %2(s16), %bb.3.cond.false
+    %ax = COPY %5(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_i32
+# ALL-LABEL: name:  test_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %edx, %esi
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s32) = COPY %esi
+# ALL-NEXT:     %2(s32) = COPY %edx
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# ALL-NEXT:     %eax = COPY %5(s32)
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %edx, %esi
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s32) = COPY %edx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s32) = G_PHI %1(s32), %bb.2.cond.true, %2(s32), %bb.3.cond.false
+    %eax = COPY %5(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_i64
+# ALL-LABEL: name:  test_i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %rdx, %rsi
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s64) = COPY %rsi
+# ALL-NEXT:     %2(s64) = COPY %rdx
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s64) = G_PHI %1(s64), %bb.1.cond.true, %2(s64), %bb.2.cond.false
+# ALL-NEXT:     %rax = COPY %5(s64)
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %rdx, %rsi
+
+    %0(s32) = COPY %edi
+    %1(s64) = COPY %rsi
+    %2(s64) = COPY %rdx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s64) = G_PHI %1(s64), %bb.2.cond.true, %2(s64), %bb.3.cond.false
+    %rax = COPY %5(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_float
+# ALL-LABEL: name:  test_float
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %xmm0, %xmm1
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s32) = COPY %xmm0
+# ALL-NEXT:     %2(s32) = COPY %xmm1
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# ALL-NEXT:     %xmm0 = COPY %5(s32)
+# ALL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %xmm0, %xmm1
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %xmm0
+    %2(s32) = COPY %xmm1
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s32) = G_PHI %1(s32), %bb.2.cond.true, %2(s32), %bb.3.cond.false
+    %xmm0 = COPY %5(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_double
+# ALL-LABEL: name:  test_double
+alignment:       4
+legalized:       false
+regBankSelected: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:        bb.0.entry:
+# ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+# ALL-NEXT:     liveins: %edi, %xmm0, %xmm1
+# ALL:          %0(s32) = COPY %edi
+# ALL-NEXT:     %1(s64) = COPY %xmm0
+# ALL-NEXT:     %2(s64) = COPY %xmm1
+# ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
+# ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+# ALL-NEXT:     G_BRCOND %4(s1), %bb.1.cond.true
+# ALL-NEXT:     G_BR %bb.2.cond.false
+
+# ALL-LABEL: bb.1.cond.true:
+# ALL:          G_BR %bb.3.cond.end
+
+# ALL-LABEL: bb.2.cond.false:
+# ALL-NEXT:     successors: %bb.3.cond.end(0x80000000)
+
+# ALL-LABEL: bb.3.cond.end:
+# ALL-NEXT:     %5(s64) = G_PHI %1(s64), %bb.1.cond.true, %2(s64), %bb.2.cond.false
+# ALL-NEXT:     %xmm0 = COPY %5(s64)
+# ALL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1.entry:
+    successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)
+    liveins: %edi, %xmm0, %xmm1
+
+    %0(s32) = COPY %edi
+    %1(s64) = COPY %xmm0
+    %2(s64) = COPY %xmm1
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.2.cond.true
+    G_BR %bb.3.cond.false
+
+  bb.2.cond.true:
+    successors: %bb.4.cond.end(0x80000000)
+
+    G_BR %bb.4.cond.end
+
+  bb.3.cond.false:
+    successors: %bb.4.cond.end(0x80000000)
+
+
+  bb.4.cond.end:
+    %5(s64) = G_PHI %1(s64), %bb.2.cond.true, %2(s64), %bb.3.cond.false
+    %xmm0 = COPY %5(s64)
+    RET 0, implicit %xmm0
+
+...
