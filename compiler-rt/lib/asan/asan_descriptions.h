@@ -69,7 +69,6 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
         return Default();
     }
   }
-  const char *MemoryByte() { return Magenta(); }
 };
 
 enum ShadowKind : u8 {

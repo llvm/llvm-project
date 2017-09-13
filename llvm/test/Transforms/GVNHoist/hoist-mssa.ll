@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -gvn-hoist -newgvn < %s | FileCheck %s
 
 ; Check that store hoisting works: there should be only one store left.
 ; CHECK-LABEL: @getopt

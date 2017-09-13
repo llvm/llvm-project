@@ -15,7 +15,6 @@ add_lld_library(lldMinGW
 
   LINK_LIBS
   lldCOFF
-  ${LLVM_PTHREAD_LIB}
 
   DEPENDS
   MinGWOptionsTableGen

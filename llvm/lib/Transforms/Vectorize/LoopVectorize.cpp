@@ -4526,10 +4526,10 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
 
       for (unsigned Part = 0; Part < UF; ++Part) {
         Value *In0 = getOrCreateVectorValue(P->getIncomingValue(In), Part);
-        // We might have single edge PHIs (blocks) - use an identity
-        // 'select' for the first PHI operand.
+        assert((Cond[Part] || NumIncoming == 1) &&
+               "Multiple predecessors with one predecessor having a full mask");
         if (In == 0)
-          Entry[Part] = Builder.CreateSelect(Cond[Part], In0, In0);
+          Entry[Part] = In0; // Initialize with the first incoming value.
         else
           // Select between the current value and the previous incoming edge
           // based on the incoming mask.
