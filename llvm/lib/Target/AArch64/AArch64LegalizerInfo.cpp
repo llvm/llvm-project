@@ -161,15 +161,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_ANYEXT, 1, Ty}, Legal);
   }
 
-  setAction({G_FPEXT, s64}, Legal);
-  setAction({G_FPEXT, 1, s32}, Legal);
-
-  // Truncations
-  for (auto Ty : { s16, s32 })
+  // FP conversions
+  for (auto Ty : { s16, s32 }) {
     setAction({G_FPTRUNC, Ty}, Legal);
+    setAction({G_FPEXT, 1, Ty}, Legal);
+  }
 
-  for (auto Ty : { s32, s64 })
+  for (auto Ty : { s32, s64 }) {
     setAction({G_FPTRUNC, 1, Ty}, Legal);
+    setAction({G_FPEXT, Ty}, Legal);
+  }
 
   for (auto Ty : { s1, s8, s16, s32 })
     setAction({G_TRUNC, Ty}, Legal);

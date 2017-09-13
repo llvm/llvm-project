@@ -1180,33 +1180,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return selectCopy(I, TII, MRI, TRI, RBI);
     return false;
 
-  case TargetOpcode::G_FPEXT: {
-    if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(64)) {
-      DEBUG(dbgs() << "G_FPEXT to type " << Ty
-                   << ", expected: " << LLT::scalar(64) << '\n');
-      return false;
-    }
-
-    if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(32)) {
-      DEBUG(dbgs() << "G_FPEXT from type " << Ty
-                   << ", expected: " << LLT::scalar(32) << '\n');
-      return false;
-    }
-
-    const unsigned DefReg = I.getOperand(0).getReg();
-    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-    if (RB.getID() != AArch64::FPRRegBankID) {
-      DEBUG(dbgs() << "G_FPEXT on bank: " << RB << ", expected: FPR\n");
-      return false;
-    }
-
-    I.setDesc(TII.get(AArch64::FCVTDSr));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-
-    return true;
-  }
-
   case TargetOpcode::G_SELECT: {
     if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(1)) {
       DEBUG(dbgs() << "G_SELECT cond has type: " << Ty
