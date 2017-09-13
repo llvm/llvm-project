@@ -371,8 +371,22 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
   renderDivider(FileReportColumns, OS);
   OS << "\n";
 
-  for (const FileCoverageSummary &FCS : FileReports)
-    render(FCS, OS);
+  bool EmptyFiles = false;
+  for (const FileCoverageSummary &FCS : FileReports) {
+    if (FCS.FunctionCoverage.NumFunctions)
+      render(FCS, OS);
+    else
+      EmptyFiles = true;
+  }
+
+  if (EmptyFiles) {
+    OS << "\n"
+       << "Files which contain no functions:\n";
+
+    for (const FileCoverageSummary &FCS : FileReports)
+      if (!FCS.FunctionCoverage.NumFunctions)
+        render(FCS, OS);
+  }
 
   renderDivider(FileReportColumns, OS);
   OS << "\n";
