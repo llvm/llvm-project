@@ -16,6 +16,10 @@ struct S {
 // Check that type mismatch handler is not modified by ASan.
 // CHECK-ASAN: private unnamed_addr global { { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }*, i8*, i8 } { {{.*}}, { i16, i16, [4 x i8] }* [[TYPE_DESCR]], {{.*}} }
 
+// CHECK: [[IndirectRTTI_ZTIFvPFviEE:@.+]] = private constant i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*)
+// CHECK-X86: [[IndirectRTTI_ZTIFvPFviEE:@.+]] = private constant i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*)
+// CHECK-X32: [[IndirectRTTI_ZTIFvPFviEE:@.+]] = private constant i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*)
+
 struct T : S {};
 
 // CHECK-LABEL: @_Z17reference_binding
@@ -395,23 +399,30 @@ void downcast_reference(B &b) {
   // CHECK-NEXT: br i1 [[AND]]
 }
 
-// CHECK-LABEL: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i8* }> <{ i32 1413876459, i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*) }>
-// CHECK-X32: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i8* }> <{ i32 1413875435, i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*) }>
-// CHECK-X86: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i8* }> <{ i32 1413875435, i8* bitcast ({ i8*, i8* }* @_ZTIFvPFviEE to i8*) }>
+//
+// CHECK-LABEL: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i32 }> <{ i32 846595819, i32 trunc (i64 sub (i64 ptrtoint (i8** {{.*}} to i64), i64 ptrtoint (void (void (i32)*)* @_Z22indirect_function_callPFviE to i64)) to i32) }>
+// CHECK-X32: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i32 }> <{ i32 846595819, i32 sub (i32 ptrtoint (i8** [[IndirectRTTI_ZTIFvPFviEE]] to i32), i32 ptrtoint (void (void (i32)*)* @_Z22indirect_function_callPFviE to i32)) }>
+// CHECK-X86: @_Z22indirect_function_callPFviE({{.*}} prologue <{ i32, i32 }> <{ i32 846595819, i32 sub (i32 ptrtoint (i8** [[IndirectRTTI_ZTIFvPFviEE]] to i32), i32 ptrtoint (void (void (i32)*)* @_Z22indirect_function_callPFviE to i32)) }>
 void indirect_function_call(void (*p)(int)) {
-  // CHECK: [[PTR:%.+]] = bitcast void (i32)* {{.*}} to <{ i32, i8* }>*
+  // CHECK: [[PTR:%.+]] = bitcast void (i32)* {{.*}} to <{ i32, i32 }>*
 
   // Signature check
-  // CHECK-NEXT: [[SIGPTR:%.+]] = getelementptr <{ i32, i8* }>, <{ i32, i8* }>* [[PTR]], i32 0, i32 0
+  // CHECK-NEXT: [[SIGPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 0, i32 0
   // CHECK-NEXT: [[SIG:%.+]] = load i32, i32* [[SIGPTR]]
-  // CHECK-NEXT: [[SIGCMP:%.+]] = icmp eq i32 [[SIG]], 1413876459
+  // CHECK-NEXT: [[SIGCMP:%.+]] = icmp eq i32 [[SIG]], 846595819
   // CHECK-NEXT: br i1 [[SIGCMP]]
 
   // RTTI pointer check
-  // CHECK: [[RTTIPTR:%.+]] = getelementptr <{ i32, i8* }>, <{ i32, i8* }>* [[PTR]], i32 0, i32 1
-  // CHECK-NEXT: [[RTTI:%.+]] = load i8*, i8** [[RTTIPTR]]
+  // CHECK: [[RTTIPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 0, i32 1
+  // CHECK-NEXT: [[RTTIEncIntTrunc:%.+]] = load i32, i32* [[RTTIPTR]]
+  // CHECK-NEXT: [[RTTIEncInt:%.+]] = sext i32 [[RTTIEncIntTrunc]] to i64
+  // CHECK-NEXT: [[FuncAddrInt:%.+]] = ptrtoint void (i32)* {{.*}} to i64
+  // CHECK-NEXT: [[IndirectGVInt:%.+]] = add i64 [[RTTIEncInt]], [[FuncAddrInt]]
+  // CHECK-NEXT: [[IndirectGV:%.+]] = inttoptr i64 [[IndirectGVInt]] to i8**
+  // CHECK-NEXT: [[RTTI:%.+]] = load i8*, i8** [[IndirectGV]], align 8
   // CHECK-NEXT: [[RTTICMP:%.+]] = icmp eq i8* [[RTTI]], bitcast ({ i8*, i8* }* @_ZTIFviE to i8*)
   // CHECK-NEXT: br i1 [[RTTICMP]]
+
   p(42);
 }
 

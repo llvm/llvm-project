@@ -1070,8 +1070,8 @@ public:
   getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
     unsigned Sig = (0xeb << 0) |  // jmp rel8
                    (0x06 << 8) |  //           .+0x08
-                   ('F' << 16) |
-                   ('T' << 24);
+                   ('v' << 16) |
+                   ('2' << 24);
     return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
   }
 
@@ -2260,17 +2260,10 @@ public:
 
   llvm::Constant *
   getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
-    unsigned Sig;
-    if (getABIInfo().has64BitPointers())
-      Sig = (0xeb << 0) |  // jmp rel8
-            (0x0a << 8) |  //           .+0x0c
-            ('F' << 16) |
-            ('T' << 24);
-    else
-      Sig = (0xeb << 0) |  // jmp rel8
-            (0x06 << 8) |  //           .+0x08
-            ('F' << 16) |
-            ('T' << 24);
+    unsigned Sig = (0xeb << 0) | // jmp rel8
+                   (0x06 << 8) | //           .+0x08
+                   ('v' << 16) |
+                   ('2' << 24);
     return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
   }
 
