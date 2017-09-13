@@ -44,16 +44,24 @@ struct CoverageMappingRecord {
 /// \brief A file format agnostic iterator over coverage mapping data.
 class CoverageMappingIterator
     : public std::iterator<std::input_iterator_tag, CoverageMappingRecord> {
-  CoverageMappingReader *Reader = nullptr;
+  CoverageMappingReader *Reader;
   CoverageMappingRecord Record;
+  coveragemap_error ReadErr;
 
   void increment();
 
 public:
-  CoverageMappingIterator() = default;
+  CoverageMappingIterator()
+      : Reader(nullptr), Record(), ReadErr(coveragemap_error::success) {}
 
-  CoverageMappingIterator(CoverageMappingReader *Reader) : Reader(Reader) {
+  CoverageMappingIterator(CoverageMappingReader *Reader)
+      : Reader(Reader), Record(), ReadErr(coveragemap_error::success) {
     increment();
+  }
+
+  ~CoverageMappingIterator() {
+    if (ReadErr != coveragemap_error::success)
+      llvm_unreachable("Unexpected error in coverage mapping iterator");
   }
 
   CoverageMappingIterator &operator++() {
@@ -66,8 +74,22 @@ public:
   bool operator!=(const CoverageMappingIterator &RHS) {
     return Reader != RHS.Reader;
   }
-  CoverageMappingRecord &operator*() { return Record; }
-  CoverageMappingRecord *operator->() { return &Record; }
+  Expected<CoverageMappingRecord &> operator*() {
+    if (ReadErr != coveragemap_error::success) {
+      auto E = make_error<CoverageMapError>(ReadErr);
+      ReadErr = coveragemap_error::success;
+      return std::move(E);
+    }
+    return Record;
+  }
+  Expected<CoverageMappingRecord *> operator->() {
+    if (ReadErr != coveragemap_error::success) {
+      auto E = make_error<CoverageMapError>(ReadErr);
+      ReadErr = coveragemap_error::success;
+      return std::move(E);
+    }
+    return &Record;
+  }
 };
 
 class CoverageMappingReader {

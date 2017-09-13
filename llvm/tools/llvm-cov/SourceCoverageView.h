@@ -67,25 +67,15 @@ struct InstantiationView {
 /// \brief Coverage statistics for a single line.
 struct LineCoverageStats {
   uint64_t ExecutionCount;
-  unsigned RegionCount;
+  bool HasMultipleRegions;
   bool Mapped;
 
-  LineCoverageStats() : ExecutionCount(0), RegionCount(0), Mapped(false) {}
+  LineCoverageStats(ArrayRef<const coverage::CoverageSegment *> LineSegments,
+                    const coverage::CoverageSegment *WrappedSegment);
 
   bool isMapped() const { return Mapped; }
 
-  bool hasMultipleRegions() const { return RegionCount > 1; }
-
-  void addRegionStartCount(uint64_t Count) {
-    // The max of all region starts is the most interesting value.
-    addRegionCount(RegionCount ? std::max(ExecutionCount, Count) : Count);
-    ++RegionCount;
-  }
-
-  void addRegionCount(uint64_t Count) {
-    Mapped = true;
-    ExecutionCount = Count;
-  }
+  bool hasMultipleRegions() const { return HasMultipleRegions; }
 };
 
 /// \brief A file manager that handles format-aware file creation.
@@ -246,7 +236,7 @@ protected:
   static std::string formatCount(uint64_t N);
 
   /// \brief Check if region marker output is expected for a line.
-  bool shouldRenderRegionMarkers(bool LineHasMultipleRegions) const;
+  bool shouldRenderRegionMarkers(CoverageSegmentArray Segments) const;
 
   /// \brief Check if there are any sub-views attached to this view.
   bool hasSubViews() const;

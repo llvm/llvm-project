@@ -6,7 +6,7 @@
 int main() {                              // TEXT: [[@LINE]]|   161|int main(
   int x = 0;                              // TEXT: [[@LINE]]|   161|  int x
                                           // TEXT: [[@LINE]]|   161|
-  if (x) {                                // TEXT: [[@LINE]]|     0|  if (x)
+  if (x) {                                // TEXT: [[@LINE]]|   161|  if (x)
     x = 0;                                // TEXT: [[@LINE]]|     0|    x = 0
   } else {                                // TEXT: [[@LINE]]|   161|  } else
     x = 1;                                // TEXT: [[@LINE]]|   161|    x = 1
@@ -26,12 +26,12 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // after coverage                   // WHOLE-FILE: [[@LINE]]|      |// after
                                     // FILTER-NOT: [[@LINE-1]]|    |// after
 
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=TEXT,WHOLE-FILE %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefixes=TEXT,FILTER %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT,WHOLE-FILE %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s | FileCheck -check-prefixes=TEXT,FILTER %s
 
 // Test -output-dir.
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
 // RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.dir/functions.txt %s
 //
@@ -40,8 +40,8 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // RUN: cat %t.export.json | %python -c "import json, sys; json.loads(sys.stdin.read())"
 //
 // Test html output.
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.dir/functions.html %s
 //
@@ -50,7 +50,7 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>int main() {
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  int x = 0
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>  if (x) {
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  if (x)
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre><span class='red'>  }</span>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>    x = 1;
@@ -62,7 +62,7 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &lt; 10
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &gt; 10
-// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>        x - 1:
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre> <span class='red'>x - 1</span>:
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>        x + 1;
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  return 0;
@@ -80,16 +80,13 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML-INDEX-LABEL: <table>
 // HTML-INDEX: <td class='column-entry-left'>Filename</td>
 // HTML-INDEX: <td class='column-entry'>Function Coverage</td>
-// HTML-INDEX: <td class='column-entry'>Instantiation Coverage</td>
 // HTML-INDEX: <td class='column-entry'>Line Coverage</td>
 // HTML-INDEX: <td class='column-entry'>Region Coverage</td>
 // HTML-INDEX: <a href='coverage{{.*}}showLineExecutionCounts.cpp.html'{{.*}}showLineExecutionCounts.cpp</a>
 // HTML-INDEX: <td class='column-entry-green'>
 // HTML-INDEX: 100.00% (1/1)
-// HTML-INDEX: <td class='column-entry-green'>
-// HTML-INDEX: 100.00% (1/1)
 // HTML-INDEX: <td class='column-entry-yellow'>
 // HTML-INDEX: 80.00% (16/20)
 // HTML-INDEX: <td class='column-entry-red'>
-// HTML-INDEX: 70.00% (7/10)
+// HTML-INDEX: 72.73% (8/11)
 // HTML-INDEX: TOTALS

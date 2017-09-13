@@ -39,7 +39,8 @@ public:
   /// Prepare file reports for the files specified in \p Files.
   static std::vector<FileCoverageSummary>
   prepareFileReports(const coverage::CoverageMapping &Coverage,
-                     FileCoverageSummary &Totals, ArrayRef<std::string> Files);
+                     FileCoverageSummary &Totals, ArrayRef<std::string> Files,
+                     const CoverageViewOptions &Options);
 
   /// Render file reports for every unique file in the coverage mapping.
   void renderFileReports(raw_ostream &OS) const;

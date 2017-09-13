@@ -1,7 +1,7 @@
 // Check that we combine expansion regions.
 
 // RUN: llvm-profdata merge %S/Inputs/combine_expansions.proftext -o %t.profdata
-// RUN: llvm-cov show %S/Inputs/combine_expansions.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck %s
+// RUN: llvm-cov show %S/Inputs/combine_expansions.covmapping -instr-profile %t.profdata -path-equivalence=/tmp/ec,%S %s | FileCheck %s
 
 #define SIMPLE_OP \
   ++x

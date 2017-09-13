@@ -1,4 +1,4 @@
-// RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -dump -filename-equivalence %s 2>&1 | FileCheck %s -check-prefixes=TEXT,SHARED
+// RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -dump -path-equivalence=/Users/bogner/code/llvm/test/tools,%S/.. %s 2>&1 | FileCheck %s -check-prefixes=TEXT,SHARED
 
 void func() {
   return;
@@ -10,7 +10,7 @@ void func2(int x) {
     while(x >= 9) {
       return;
       --x;                       // SHARED: Highlighted line [[@LINE]], 7 ->
-    }                            // SHARED: Highlighted line [[@LINE]], 1 -> 6
+    }
     int i = 0;                   // SHARED: Highlighted line [[@LINE]], 5 ->
   }                              // SHARED: Highlighted line [[@LINE]], 1 -> 4
 }
@@ -44,5 +44,5 @@ int main() {
   return 0;
 }
 
-// RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -format html -dump -filename-equivalence %s 2>&1 | FileCheck %s -check-prefixes=HTML,SHARED
+// RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -format html -dump -path-equivalence=/Users/bogner/code/llvm/test/tools,%S/.. %s 2>&1 | FileCheck %s -check-prefixes=HTML,SHARED
 // RUN: llvm-cov export %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata 2>&1 | FileCheck %S/Inputs/highlightedRanges.json

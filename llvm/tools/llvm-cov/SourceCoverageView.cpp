@@ -83,6 +83,47 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
   llvm_unreachable("Unknown coverage output format!");
 }
 
+LineCoverageStats::LineCoverageStats(
+    ArrayRef<const coverage::CoverageSegment *> LineSegments,
+    const coverage::CoverageSegment *WrappedSegment) {
+  // Find the minimum number of regions which start in this line.
+  unsigned MinRegionCount = 0;
+  auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
+    return S->HasCount && S->IsRegionEntry;
+  };
+  for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)
+    if (isStartOfRegion(LineSegments[I]))
+      ++MinRegionCount;
+
+  bool StartOfSkippedRegion = !LineSegments.empty() &&
+                              !LineSegments.front()->HasCount &&
+                              LineSegments.front()->IsRegionEntry;
+
+  ExecutionCount = 0;
+  HasMultipleRegions = MinRegionCount > 1;
+  Mapped =
+      !StartOfSkippedRegion &&
+      ((WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0));
+
+  if (!Mapped)
+    return;
+
+  // Pick the max count among regions which start and end on this line, to
+  // avoid erroneously using the wrapped count, and to avoid picking region
+  // counts which come from deferred regions.
+  if (LineSegments.size() > 1) {
+    for (unsigned I = 0; I < LineSegments.size() - 1; ++I)
+      ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
+    return;
+  }
+
+  // Just pick the maximum count.
+  if (WrappedSegment && WrappedSegment->HasCount)
+    ExecutionCount = WrappedSegment->Count;
+  if (!LineSegments.empty())
+    ExecutionCount = std::max(ExecutionCount, LineSegments[0]->Count);
+}
+
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
   auto CheckIfUncovered = [](const coverage::CoverageSegment &S) {
     return S.HasCount && S.Count == 0;
@@ -118,9 +159,17 @@ std::string SourceCoverageView::formatCount(uint64_t N) {
 }
 
 bool SourceCoverageView::shouldRenderRegionMarkers(
-    bool LineHasMultipleRegions) const {
-  return getOptions().ShowRegionMarkers &&
-         (!getOptions().ShowLineStatsOrRegionMarkers || LineHasMultipleRegions);
+    CoverageSegmentArray Segments) const {
+  if (!getOptions().ShowRegionMarkers)
+    return false;
+
+  // Render the region markers if there's more than one count to show.
+  unsigned RegionCount = 0;
+  for (const auto *S : Segments)
+    if (S->IsRegionEntry)
+      if (++RegionCount > 1)
+        return true;
+  return false;
 }
 
 bool SourceCoverageView::hasSubViews() const {
@@ -207,17 +256,11 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
     while (NextSegment != EndSegment && NextSegment->Line == LI.line_number())
       LineSegments.push_back(&*NextSegment++);
 
-    // Calculate a count to be for the line as a whole.
-    LineCoverageStats LineCount;
-    if (WrappedSegment && WrappedSegment->HasCount)
-      LineCount.addRegionCount(WrappedSegment->Count);
-    for (const auto *S : LineSegments)
-      if (S->HasCount && S->IsRegionEntry)
-        LineCount.addRegionStartCount(S->Count);
-
     renderLinePrefix(OS, ViewDepth);
     if (getOptions().ShowLineNumbers)
       renderLineNumberColumn(OS, LI.line_number());
+
+    LineCoverageStats LineCount{LineSegments, WrappedSegment};
     if (getOptions().ShowLineStats)
       renderLineCoverageColumn(OS, LineCount);
 
@@ -232,7 +275,7 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
                ExpansionColumn, ViewDepth);
 
     // Show the region markers.
-    if (shouldRenderRegionMarkers(LineCount.hasMultipleRegions()))
+    if (shouldRenderRegionMarkers(LineSegments))
       renderRegionMarkers(OS, LineSegments, ViewDepth);
 
     // Show the expansions and instantiations for this line.
