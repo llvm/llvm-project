@@ -341,3 +341,13 @@
 // RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -fprofile-instr-use=blah -### -o foo/bar.out 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_HOTNESS %s < %t.log
 // PASS_REMARKS_WITH_HOTNESS: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-with-hotness"
+
+// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
+// RUN: %clang -target i386-apple-darwin9 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
+// RUN: %clang -target arm64-apple-ios5.0 -miphoneos-version-min=5.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
+// LINK_PROFILE_FIRST: {{ld(.exe)?"}} "{{[^"]+}}libclang_rt.profile_{{[a-z]+}}.a"
