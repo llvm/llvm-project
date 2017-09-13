@@ -16,6 +16,8 @@
 #include "sanitizer_allocator_interface.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_procmaps.h"
+#include "sanitizer_report_decorator.h"
 #include "sanitizer_stackdepot.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
@@ -144,6 +146,45 @@ void BackgroundThread(void *arg) {
   }
 }
 #endif
+
+void MaybeReportNonExecRegion(uptr pc) {
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
+  MemoryMappedSegment segment;
+  while (proc_maps.Next(&segment)) {
+    if (pc >= segment.start && pc < segment.end && !segment.IsExecutable())
+      Report("Hint: PC is at a non-executable region. Maybe a wild jump?\n");
+  }
+#endif
+}
+
+static void PrintMemoryByte(InternalScopedString *str, const char *before,
+                            u8 byte) {
+  SanitizerCommonDecorator d;
+  str->append("%s%s%x%x%s ", before, d.MemoryByte(), byte >> 4, byte & 15,
+              d.Default());
+}
+
+void MaybeDumpInstructionBytes(uptr pc) {
+  if (!common_flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
+    return;
+  InternalScopedString str(1024);
+  str.append("First 16 instruction bytes at pc: ");
+  if (IsAccessibleMemoryRange(pc, 16)) {
+    for (int i = 0; i < 16; ++i) {
+      PrintMemoryByte(&str, "", ((u8 *)pc)[i]);
+    }
+    str.append("\n");
+  } else {
+    str.append("unaccessible\n");
+  }
+  Report("%s", str.data());
+}
+
+void MaybeDumpRegisters(void *context) {
+  if (!common_flags()->dump_registers) return;
+  SignalContext::DumpAllRegisters(context);
+}
 
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);

@@ -104,6 +104,14 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
+  StringRef LinkerName = Args.getLastArgValue(options::OPT_fuse_ld_EQ, "ld");
+  if (LinkerName.equals_lower("lld")) {
+    CmdArgs.push_back("-flavor");
+    CmdArgs.push_back("gnu");
+  } else if (!LinkerName.equals_lower("ld")) {
+    D.Diag(diag::err_drv_unsupported_linker) << LinkerName;
+  }
+
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
@@ -233,7 +241,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_static))
         CmdArgs.push_back("--end-group");
-      else
+      else if (!LinkerName.equals_lower("lld"))
         AddLibGCC(Args, CmdArgs);
     }
 
@@ -244,7 +252,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtend.o")));
     }
   }
-  const char *Exec = Args.MakeArgString(TC.GetLinkerPath());
+  const char *Exec = Args.MakeArgString(TC.GetProgramPath(LinkerName.data()));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 

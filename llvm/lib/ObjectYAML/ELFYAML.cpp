@@ -577,6 +577,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_ARM:
 #include "llvm/BinaryFormat/ELFRelocs/ARM.def"
     break;
+  case ELF::EM_ARC:
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+    break;
   case ELF::EM_RISCV:
 #include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
     break;

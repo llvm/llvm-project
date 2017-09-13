@@ -58,6 +58,14 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_ARC_COMPACT:
+  case ELF::EM_ARC_COMPACT2:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+    default:
+      break;
+    }
+    break;
   case ELF::EM_AVR:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/AVR.def"

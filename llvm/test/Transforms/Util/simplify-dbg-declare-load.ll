@@ -1,4 +1,5 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -instcombine -instcombine-lower-dbg-declare=1 -S < %s | FileCheck %s
+; RUN: opt -instcombine -instcombine-lower-dbg-declare=0 -S < %s | FileCheck %s --check-prefix=DECLARE
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
@@ -25,6 +26,11 @@ idxend:                                           ; preds = %top
   store volatile %foo %0, %foo* undef, align 8
   ret void
 }
+
+; Keep the declare if we keep the alloca.
+; DECLARE-LABEL: define void @julia_fastshortest_6256()
+; DECLARE: %cp = alloca %foo, align 8
+; DECLARE: call void @llvm.dbg.declare(metadata %foo* %cp,
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { sspreq }

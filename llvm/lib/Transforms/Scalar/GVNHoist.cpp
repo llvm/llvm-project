@@ -13,45 +13,42 @@
 // 1. To reduce the code size.
 // 2. In some cases reduce critical path (by exposing more ILP).
 //
+// The algorithm factors out the reachability of values such that multiple
+// queries to find reachability of values are fast. This is based on finding the
+// ANTIC points in the CFG which do not change during hoisting. The ANTIC points
+// are basically the dominance-frontiers in the inverse graph. So we introduce a
+// data structure (CHI nodes) to keep track of values flowing out of a basic
+// block. We only do this for values with multiple occurrences in the function
+// as they are the potential hoistable candidates. This approach allows us to
+// hoist instructions to a basic block with more than two successors, as well as
+// deal with infinite loops in a trivial way.
+//
+// Limitations: This pass does not hoist fully redundant expressions because
+// they are already handled by GVN-PRE. It is advisable to run gvn-hoist before
+// and after gvn-pre because gvn-pre creates opportunities for more instructions
+// to be hoisted.
+//
 // Hoisting may affect the performance in some cases. To mitigate that, hoisting
 // is disabled in the following cases.
 // 1. Scalars across calls.
 // 2. geps when corresponding load/store cannot be hoisted.
-//
-// TODO: Hoist from >2 successors. Currently GVNHoist will not hoist stores
-// in this case because it works on two instructions at a time.
-// entry:
-//   switch i32 %c1, label %exit1 [
-//     i32 0, label %sw0
-//     i32 1, label %sw1
-//   ]
-//
-// sw0:
-//   store i32 1, i32* @G
-//   br label %exit
-//
-// sw1:
-//   store i32 1, i32* @G
-//   br label %exit
-//
-// exit1:
-//   store i32 1, i32* @G
-//   ret void
-// exit:
-//   ret void
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils/Local.h"
+
+#include <stack>
 
 using namespace llvm;
 
@@ -87,34 +84,43 @@ static cl::opt<int>
 
 namespace llvm {
 
-// Provides a sorting function based on the execution order of two instructions.
-struct SortByDFSIn {
-private:
-  DenseMap<const Value *, unsigned> &DFSNumber;
+typedef DenseMap<const BasicBlock *, bool> BBSideEffectsSet;
+typedef SmallVector<Instruction *, 4> SmallVecInsn;
+typedef SmallVectorImpl<Instruction *> SmallVecImplInsn;
+// Each element of a hoisting list contains the basic block where to hoist and
+// a list of instructions to be hoisted.
+typedef std::pair<BasicBlock *, SmallVecInsn> HoistingPointInfo;
+typedef SmallVector<HoistingPointInfo, 4> HoistingPointList;
+// A map from a pair of VNs to all the instructions with those VNs.
+typedef std::pair<unsigned, unsigned> VNType;
+typedef DenseMap<VNType, SmallVector<Instruction *, 4>> VNtoInsns;
 
-public:
-  SortByDFSIn(DenseMap<const Value *, unsigned> &D) : DFSNumber(D) {}
-
-  // Returns true when A executes before B.
-  bool operator()(const Instruction *A, const Instruction *B) const {
-    const BasicBlock *BA = A->getParent();
-    const BasicBlock *BB = B->getParent();
-    unsigned ADFS, BDFS;
-    if (BA == BB) {
-      ADFS = DFSNumber.lookup(A);
-      BDFS = DFSNumber.lookup(B);
-    } else {
-      ADFS = DFSNumber.lookup(BA);
-      BDFS = DFSNumber.lookup(BB);
-    }
-    assert(ADFS && BDFS);
-    return ADFS < BDFS;
-  }
+// CHI keeps information about values flowing out of a basic block.  It is
+// similar to PHI but in the inverse graph, and used for outgoing values on each
+// edge. For conciseness, it is computed only for instructions with multiple
+// occurrences in the CFG because they are the only hoistable candidates.
+//     A (CHI[{V, B, I1}, {V, C, I2}]
+//  /     \
+// /       \
+// B(I1)  C (I2)
+// The Value number for both I1 and I2 is V, the CHI node will save the
+// instruction as well as the edge where the value is flowing to.
+struct CHIArg {
+  VNType VN;
+  // Edge destination (shows the direction of flow), may not be where the I is.
+  BasicBlock *Dest;
+  // The instruction (VN) which uses the values flowing out of CHI.
+  Instruction *I;
+  bool operator==(const CHIArg &A) { return VN == A.VN; }
+  bool operator!=(const CHIArg &A) { return !(*this == A); }
 };
 
-// A map from a pair of VNs to all the instructions with those VNs.
-typedef DenseMap<std::pair<unsigned, unsigned>, SmallVector<Instruction *, 4>>
-    VNtoInsns;
+typedef SmallVectorImpl<CHIArg>::iterator CHIIt;
+typedef iterator_range<CHIIt> CHIArgs;
+typedef DenseMap<BasicBlock *, SmallVector<CHIArg, 2>> OutValuesType;
+typedef DenseMap<BasicBlock *, SmallVector<std::pair<VNType, Instruction *>, 2>>
+    InValuesType;
+
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
 enum : unsigned { InvalidVN = ~2U };
@@ -199,10 +205,6 @@ public:
   const VNtoInsns &getStoreVNTable() const { return VNtoCallsStores; }
 };
 
-typedef DenseMap<const BasicBlock *, bool> BBSideEffectsSet;
-typedef SmallVector<Instruction *, 4> SmallVecInsn;
-typedef SmallVectorImpl<Instruction *> SmallVecImplInsn;
-
 static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
@@ -217,15 +219,14 @@ static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
 // cases reduce critical path (by exposing more ILP).
 class GVNHoist {
 public:
-  GVNHoist(DominatorTree *DT, AliasAnalysis *AA, MemoryDependenceResults *MD,
-           MemorySSA *MSSA)
-      : DT(DT), AA(AA), MD(MD), MSSA(MSSA),
+  GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
+           MemoryDependenceResults *MD, MemorySSA *MSSA)
+      : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
         MSSAUpdater(make_unique<MemorySSAUpdater>(MSSA)),
-        HoistingGeps(false),
-        HoistedCtr(0)
-  { }
+        HoistingGeps(false) {}
 
   bool run(Function &F) {
+    NumFuncArgs = F.arg_size();
     VN.setDomTree(DT);
     VN.setAliasAnalysis(AA);
     VN.setMemDep(MD);
@@ -262,18 +263,49 @@ public:
     return Res;
   }
 
+  // Copied from NewGVN.cpp
+  // This function provides global ranking of operations so that we can place
+  // them in a canonical order.  Note that rank alone is not necessarily enough
+  // for a complete ordering, as constants all have the same rank.  However,
+  // generally, we will simplify an operation with all constants so that it
+  // doesn't matter what order they appear in.
+  unsigned int rank(const Value *V) const {
+    // Prefer constants to undef to anything else
+    // Undef is a constant, have to check it first.
+    // Prefer smaller constants to constantexprs
+    if (isa<ConstantExpr>(V))
+      return 2;
+    if (isa<UndefValue>(V))
+      return 1;
+    if (isa<Constant>(V))
+      return 0;
+    else if (auto *A = dyn_cast<Argument>(V))
+      return 3 + A->getArgNo();
+
+    // Need to shift the instruction DFS by number of arguments + 3 to account
+    // for the constant and argument ranking above.
+    auto Result = DFSNumber.lookup(V);
+    if (Result > 0)
+      return 4 + NumFuncArgs + Result;
+    // Unreachable or something else, just return a really large number.
+    return ~0;
+  }
+
 private:
   GVN::ValueTable VN;
   DominatorTree *DT;
+  PostDominatorTree *PDT;
   AliasAnalysis *AA;
   MemoryDependenceResults *MD;
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
-  const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
-  DenseSet<const BasicBlock*> HoistBarrier;
-  int HoistedCtr;
+  DenseSet<const BasicBlock *> HoistBarrier;
+
+  SmallVector<BasicBlock *, 32> IDFBlocks;
+  unsigned NumFuncArgs;
+  const bool HoistingGeps;
 
   enum InsKind { Unknown, Scalar, Load, Store };
 
@@ -304,44 +336,6 @@ private:
         return true;
 
     return false;
-  }
-
-  // Return true when all paths from HoistBB to the end of the function pass
-  // through one of the blocks in WL.
-  bool hoistingFromAllPaths(const BasicBlock *HoistBB,
-                            SmallPtrSetImpl<const BasicBlock *> &WL) {
-
-    // Copy WL as the loop will remove elements from it.
-    SmallPtrSet<const BasicBlock *, 2> WorkList(WL.begin(), WL.end());
-
-    for (auto It = df_begin(HoistBB), E = df_end(HoistBB); It != E;) {
-      // There exists a path from HoistBB to the exit of the function if we are
-      // still iterating in DF traversal and we removed all instructions from
-      // the work list.
-      if (WorkList.empty())
-        return false;
-
-      const BasicBlock *BB = *It;
-      if (WorkList.erase(BB)) {
-        // Stop DFS traversal when BB is in the work list.
-        It.skipChildren();
-        continue;
-      }
-
-      // We reached the leaf Basic Block => not all paths have this instruction.
-      if (!BB->getTerminator()->getNumSuccessors())
-        return false;
-
-      // When reaching the back-edge of a loop, there may be a path through the
-      // loop that does not pass through B or C before exiting the loop.
-      if (successorDominate(BB, HoistBB))
-        return false;
-
-      // Increment DFS traversal when not skipping children.
-      ++It;
-    }
-
-    return true;
   }
 
   /* Return true when I1 appears before I2 in the instructions of BB.  */
@@ -531,141 +525,257 @@ private:
 
   // Return true when it is safe to hoist scalar instructions from all blocks in
   // WL to HoistBB.
-  bool safeToHoistScalar(const BasicBlock *HoistBB,
-                         SmallPtrSetImpl<const BasicBlock *> &WL,
+  bool safeToHoistScalar(const BasicBlock *HoistBB, const BasicBlock *BB,
                          int &NBBsOnAllPaths) {
-    // Check that the hoisted expression is needed on all paths.
-    if (!hoistingFromAllPaths(HoistBB, WL))
-      return false;
+    return !hasEHOnPath(HoistBB, BB, NBBsOnAllPaths);
+  }
 
-    for (const BasicBlock *BB : WL)
-      if (hasEHOnPath(HoistBB, BB, NBBsOnAllPaths))
+  // In the inverse CFG, the dominance frontier of basic block (BB) is the
+  // point where ANTIC needs to be computed for instructions which are going
+  // to be hoisted. Since this point does not change during gvn-hoist,
+  // we compute it only once (on demand).
+  // The ides is inspired from:
+  // "Partial Redundancy Elimination in SSA Form"
+  // ROBERT KENNEDY, SUN CHAN, SHIN-MING LIU, RAYMOND LO, PENG TU and FRED CHOW
+  // They use similar idea in the forward graph to to find fully redundant and
+  // partially redundant expressions, here it is used in the inverse graph to
+  // find fully anticipable instructions at merge point (post-dominator in
+  // the inverse CFG).
+  // Returns the edge via which an instruction in BB will get the values from.
+
+  // Returns true when the values are flowing out to each edge.
+  bool valueAnticipable(CHIArgs C, TerminatorInst *TI) const {
+    if (TI->getNumSuccessors() > std::distance(C.begin(), C.end()))
+      return false; // Not enough args in this CHI.
+
+    for (auto CHI : C) {
+      BasicBlock *Dest = CHI.Dest;
+      // Find if all the edges have values flowing out of BB.
+      bool Found = any_of(TI->successors(), [Dest](const BasicBlock *BB) {
+          return BB == Dest; });
+      if (!Found)
         return false;
-
+    }
     return true;
   }
 
-  // Each element of a hoisting list contains the basic block where to hoist and
-  // a list of instructions to be hoisted.
-  typedef std::pair<BasicBlock *, SmallVecInsn> HoistingPointInfo;
-  typedef SmallVector<HoistingPointInfo, 4> HoistingPointList;
-
-  // Partition InstructionsToHoist into a set of candidates which can share a
-  // common hoisting point. The partitions are collected in HPL. IsScalar is
-  // true when the instructions in InstructionsToHoist are scalars. IsLoad is
-  // true when the InstructionsToHoist are loads, false when they are stores.
-  void partitionCandidates(SmallVecImplInsn &InstructionsToHoist,
-                           HoistingPointList &HPL, InsKind K) {
-    // No need to sort for two instructions.
-    if (InstructionsToHoist.size() > 2) {
-      SortByDFSIn Pred(DFSNumber);
-      std::sort(InstructionsToHoist.begin(), InstructionsToHoist.end(), Pred);
-    }
-
+  // Check if it is safe to hoist values tracked by CHI in the range
+  // [Begin, End) and accumulate them in Safe.
+  void checkSafety(CHIArgs C, BasicBlock *BB, InsKind K,
+                   SmallVectorImpl<CHIArg> &Safe) {
     int NumBBsOnAllPaths = MaxNumberOfBBSInPath;
-
-    SmallVecImplInsn::iterator II = InstructionsToHoist.begin();
-    SmallVecImplInsn::iterator Start = II;
-    Instruction *HoistPt = *II;
-    BasicBlock *HoistBB = HoistPt->getParent();
-    MemoryUseOrDef *UD;
-    if (K != InsKind::Scalar)
-      UD = MSSA->getMemoryAccess(HoistPt);
-
-    for (++II; II != InstructionsToHoist.end(); ++II) {
-      Instruction *Insn = *II;
-      BasicBlock *BB = Insn->getParent();
-      BasicBlock *NewHoistBB;
-      Instruction *NewHoistPt;
-
-      if (BB == HoistBB) { // Both are in the same Basic Block.
-        NewHoistBB = HoistBB;
-        NewHoistPt = firstInBB(Insn, HoistPt) ? Insn : HoistPt;
-      } else {
-        // If the hoisting point contains one of the instructions,
-        // then hoist there, otherwise hoist before the terminator.
-        NewHoistBB = DT->findNearestCommonDominator(HoistBB, BB);
-        if (NewHoistBB == BB)
-          NewHoistPt = Insn;
-        else if (NewHoistBB == HoistBB)
-          NewHoistPt = HoistPt;
-        else
-          NewHoistPt = NewHoistBB->getTerminator();
-      }
-
-      SmallPtrSet<const BasicBlock *, 2> WL;
-      WL.insert(HoistBB);
-      WL.insert(BB);
-
+    for (auto CHI : C) {
+      Instruction *Insn = CHI.I;
+      if (!Insn) // No instruction was inserted in this CHI.
+        continue;
       if (K == InsKind::Scalar) {
-        if (safeToHoistScalar(NewHoistBB, WL, NumBBsOnAllPaths)) {
-          // Extend HoistPt to NewHoistPt.
-          HoistPt = NewHoistPt;
-          HoistBB = NewHoistBB;
-          continue;
-        }
+        if (safeToHoistScalar(BB, Insn->getParent(), NumBBsOnAllPaths))
+          Safe.push_back(CHI);
       } else {
-        // When NewBB already contains an instruction to be hoisted, the
-        // expression is needed on all paths.
-        // Check that the hoisted expression is needed on all paths: it is
-        // unsafe to hoist loads to a place where there may be a path not
-        // loading from the same address: for instance there may be a branch on
-        // which the address of the load may not be initialized.
-        if ((HoistBB == NewHoistBB || BB == NewHoistBB ||
-             hoistingFromAllPaths(NewHoistBB, WL)) &&
-            // Also check that it is safe to move the load or store from HoistPt
-            // to NewHoistPt, and from Insn to NewHoistPt.
-            safeToHoistLdSt(NewHoistPt, HoistPt, UD, K, NumBBsOnAllPaths) &&
-            safeToHoistLdSt(NewHoistPt, Insn, MSSA->getMemoryAccess(Insn),
-                            K, NumBBsOnAllPaths)) {
-          // Extend HoistPt to NewHoistPt.
-          HoistPt = NewHoistPt;
-          HoistBB = NewHoistBB;
-          continue;
-        }
+        MemoryUseOrDef *UD = MSSA->getMemoryAccess(Insn);
+        if (safeToHoistLdSt(BB->getTerminator(), Insn, UD, K, NumBBsOnAllPaths))
+          Safe.push_back(CHI);
       }
-
-      // At this point it is not safe to extend the current hoisting to
-      // NewHoistPt: save the hoisting list so far.
-      if (std::distance(Start, II) > 1)
-        HPL.push_back({HoistBB, SmallVecInsn(Start, II)});
-
-      // Start over from BB.
-      Start = II;
-      if (K != InsKind::Scalar)
-        UD = MSSA->getMemoryAccess(*Start);
-      HoistPt = Insn;
-      HoistBB = BB;
-      NumBBsOnAllPaths = MaxNumberOfBBSInPath;
     }
-
-    // Save the last partition.
-    if (std::distance(Start, II) > 1)
-      HPL.push_back({HoistBB, SmallVecInsn(Start, II)});
   }
 
-  // Initialize HPL from Map.
-  void computeInsertionPoints(const VNtoInsns &Map, HoistingPointList &HPL,
-                              InsKind K) {
-    for (const auto &Entry : Map) {
-      if (MaxHoistedThreshold != -1 && ++HoistedCtr > MaxHoistedThreshold)
-        return;
+  typedef DenseMap<VNType, SmallVector<Instruction *, 2>> RenameStackType;
+  // Push all the VNs corresponding to BB into RenameStack.
+  void fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
+                       RenameStackType &RenameStack) {
+    auto it1 = ValueBBs.find(BB);
+    if (it1 != ValueBBs.end()) {
+      // Iterate in reverse order to keep lower ranked values on the top.
+      for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
+        // Get the value of instruction I
+        DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
+        RenameStack[VI.first].push_back(VI.second);
+      }
+    }
+  }
 
-      const SmallVecInsn &V = Entry.second;
-      if (V.size() < 2)
+  void fillChiArgs(BasicBlock *BB, OutValuesType &CHIBBs,
+                   RenameStackType &RenameStack) {
+    // For each *predecessor* (because Post-DOM) of BB check if it has a CHI
+    for (auto Pred : predecessors(BB)) {
+      auto P = CHIBBs.find(Pred);
+      if (P == CHIBBs.end()) {
+        continue;
+      }
+      DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
+      // A CHI is found (BB -> Pred is an edge in the CFG)
+      // Pop the stack until Top(V) = Ve.
+      auto &VCHI = P->second;
+      for (auto It = VCHI.begin(), E = VCHI.end(); It != E;) {
+        CHIArg &C = *It;
+        if (!C.Dest) {
+          auto si = RenameStack.find(C.VN);
+          // The Basic Block where CHI is must dominate the value we want to
+          // track in a CHI. In the PDom walk, there can be values in the
+          // stack which are not control dependent e.g., nested loop.
+          if (si != RenameStack.end() && si->second.size() &&
+              DT->dominates(Pred, si->second.back()->getParent())) {
+            C.Dest = BB;                     // Assign the edge
+            C.I = si->second.pop_back_val(); // Assign the argument
+            DEBUG(dbgs() << "\nCHI Inserted in BB: " << C.Dest->getName()
+                         << *C.I << ", VN: " << C.VN.first << ", "
+                         << C.VN.second);
+          }
+          // Move to next CHI of a different value
+          It = std::find_if(It, VCHI.end(),
+                            [It](CHIArg &A) { return A != *It; });
+        } else
+          ++It;
+      }
+    }
+  }
+
+  // Walk the post-dominator tree top-down and use a stack for each value to
+  // store the last value you see. When you hit a CHI from a given edge, the
+  // value to use as the argument is at the top of the stack, add the value to
+  // CHI and pop.
+  void insertCHI(InValuesType &ValueBBs, OutValuesType &CHIBBs) {
+    auto Root = PDT->getNode(nullptr);
+    if (!Root)
+      return;
+    // Depth first walk on PDom tree to fill the CHIargs at each PDF.
+    RenameStackType RenameStack;
+    for (auto Node : depth_first(Root)) {
+      BasicBlock *BB = Node->getBlock();
+      if (!BB)
         continue;
 
-      // Compute the insertion point and the list of expressions to be hoisted.
-      SmallVecInsn InstructionsToHoist;
-      for (auto I : V)
-        // We don't need to check for hoist-barriers here because if
-        // I->getParent() is a barrier then I precedes the barrier.
-        if (!hasEH(I->getParent()))
-          InstructionsToHoist.push_back(I);
+      // Collect all values in BB and push to stack.
+      fillRenameStack(BB, ValueBBs, RenameStack);
 
-      if (!InstructionsToHoist.empty())
-        partitionCandidates(InstructionsToHoist, HPL, K);
+      // Fill outgoing values in each CHI corresponding to BB.
+      fillChiArgs(BB, CHIBBs, RenameStack);
     }
+  }
+
+  // Walk all the CHI-nodes to find ones which have a empty-entry and remove
+  // them Then collect all the instructions which are safe to hoist and see if
+  // they form a list of anticipable values. OutValues contains CHIs
+  // corresponding to each basic block.
+  void findHoistableCandidates(OutValuesType &CHIBBs, InsKind K,
+                               HoistingPointList &HPL) {
+    auto cmpVN = [](const CHIArg &A, const CHIArg &B) { return A.VN < B.VN; };
+
+    // CHIArgs now have the outgoing values, so check for anticipability and
+    // accumulate hoistable candidates in HPL.
+    for (std::pair<BasicBlock *, SmallVector<CHIArg, 2>> &A : CHIBBs) {
+      BasicBlock *BB = A.first;
+      SmallVectorImpl<CHIArg> &CHIs = A.second;
+      // Vector of PHIs contains PHIs for different instructions.
+      // Sort the args according to their VNs, such that identical
+      // instructions are together.
+      std::sort(CHIs.begin(), CHIs.end(), cmpVN);
+      auto TI = BB->getTerminator();
+      auto B = CHIs.begin();
+      // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
+      auto PHIIt = std::find_if(CHIs.begin(), CHIs.end(),
+                                 [B](CHIArg &A) { return A != *B; });
+      auto PrevIt = CHIs.begin();
+      while (PrevIt != PHIIt) {
+        // Collect values which satisfy safety checks.
+        SmallVector<CHIArg, 2> Safe;
+        // We check for safety first because there might be multiple values in
+        // the same path, some of which are not safe to be hoisted, but overall
+        // each edge has at least one value which can be hoisted, making the
+        // value anticipable along that path.
+        checkSafety(make_range(PrevIt, PHIIt), BB, K, Safe);
+
+        // List of safe values should be anticipable at TI.
+        if (valueAnticipable(make_range(Safe.begin(), Safe.end()), TI)) {
+          HPL.push_back({BB, SmallVecInsn()});
+          SmallVecInsn &V = HPL.back().second;
+          for (auto B : Safe)
+            V.push_back(B.I);
+        }
+
+        // Check other VNs
+        PrevIt = PHIIt;
+        PHIIt = std::find_if(PrevIt, CHIs.end(),
+                             [PrevIt](CHIArg &A) { return A != *PrevIt; });
+      }
+    }
+  }
+
+  // Compute insertion points for each values which can be fully anticipated at
+  // a dominator. HPL contains all such values.
+  void computeInsertionPoints(const VNtoInsns &Map, HoistingPointList &HPL,
+                              InsKind K) {
+    // Sort VNs based on their rankings
+    std::vector<VNType> Ranks;
+    for (const auto &Entry : Map) {
+      Ranks.push_back(Entry.first);
+    }
+
+    // TODO: Remove fully-redundant expressions.
+    // Get instruction from the Map, assume that all the Instructions
+    // with same VNs have same rank (this is an approximation).
+    std::sort(Ranks.begin(), Ranks.end(),
+              [this, &Map](const VNType &r1, const VNType &r2) {
+                return (rank(*Map.lookup(r1).begin()) <
+                        rank(*Map.lookup(r2).begin()));
+              });
+
+    // - Sort VNs according to their rank, and start with lowest ranked VN
+    // - Take a VN and for each instruction with same VN
+    //   - Find the dominance frontier in the inverse graph (PDF)
+    //   - Insert the chi-node at PDF
+    // - Remove the chi-nodes with missing entries
+    // - Remove values from CHI-nodes which do not truly flow out, e.g.,
+    //   modified along the path.
+    // - Collect the remaining values that are still anticipable
+    SmallVector<BasicBlock *, 2> IDFBlocks;
+    ReverseIDFCalculator IDFs(*PDT);
+    OutValuesType OutValue;
+    InValuesType InValue;
+    for (const auto &R : Ranks) {
+      const SmallVecInsn &V = Map.lookup(R);
+      if (V.size() < 2)
+        continue;
+      const VNType &VN = R;
+      SmallPtrSet<BasicBlock *, 2> VNBlocks;
+      for (auto &I : V) {
+        BasicBlock *BBI = I->getParent();
+        if (!hasEH(BBI))
+          VNBlocks.insert(BBI);
+      }
+      // Compute the Post Dominance Frontiers of each basic block
+      // The dominance frontier of a live block X in the reverse
+      // control graph is the set of blocks upon which X is control
+      // dependent. The following sequence computes the set of blocks
+      // which currently have dead terminators that are control
+      // dependence sources of a block which is in NewLiveBlocks.
+      IDFs.setDefiningBlocks(VNBlocks);
+      IDFs.calculate(IDFBlocks);
+
+      // Make a map of BB vs instructions to be hoisted.
+      for (unsigned i = 0; i < V.size(); ++i) {
+        InValue[V[i]->getParent()].push_back(std::make_pair(VN, V[i]));
+      }
+      // Insert empty CHI node for this VN. This is used to factor out
+      // basic blocks where the ANTIC can potentially change.
+      for (auto IDFB : IDFBlocks) { // TODO: Prune out useless CHI insertions.
+        for (unsigned i = 0; i < V.size(); ++i) {
+          CHIArg C = {VN, nullptr, nullptr};
+          if (DT->dominates(IDFB, V[i]->getParent())) { // Ignore spurious PDFs.
+            // InValue[V[i]->getParent()].push_back(std::make_pair(VN, V[i]));
+            OutValue[IDFB].push_back(C);
+            DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
+                         << ", for Insn: " << *V[i]);
+          }
+        }
+      }
+    }
+
+    // Insert CHI args at each PDF to iterate on factored graph of
+    // control dependence.
+    insertCHI(InValue, OutValue);
+    // Using the CHI args inserted at each PDF, find fully anticipable values.
+    findHoistableCandidates(OutValue, K, HPL);
   }
 
   // Return true when all operands of Instr are available at insertion point
@@ -746,6 +856,88 @@ private:
     Repl->replaceUsesOfWith(Gep, ClonedGep);
   }
 
+  void updateAlignment(Instruction *I, Instruction *Repl) {
+    if (auto *ReplacementLoad = dyn_cast<LoadInst>(Repl)) {
+      ReplacementLoad->setAlignment(
+          std::min(ReplacementLoad->getAlignment(),
+                   cast<LoadInst>(I)->getAlignment()));
+      ++NumLoadsRemoved;
+    } else if (auto *ReplacementStore = dyn_cast<StoreInst>(Repl)) {
+      ReplacementStore->setAlignment(
+          std::min(ReplacementStore->getAlignment(),
+                   cast<StoreInst>(I)->getAlignment()));
+      ++NumStoresRemoved;
+    } else if (auto *ReplacementAlloca = dyn_cast<AllocaInst>(Repl)) {
+      ReplacementAlloca->setAlignment(
+          std::max(ReplacementAlloca->getAlignment(),
+                   cast<AllocaInst>(I)->getAlignment()));
+    } else if (isa<CallInst>(Repl)) {
+      ++NumCallsRemoved;
+    }
+  }
+
+  // Remove all the instructions in Candidates and replace their usage with Repl.
+  // Returns the number of instructions removed.
+  unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl,
+                MemoryUseOrDef *NewMemAcc) {
+    unsigned NR = 0;
+    for (Instruction *I : Candidates) {
+      if (I != Repl) {
+        ++NR;
+        updateAlignment(I, Repl);
+        if (NewMemAcc) {
+          // Update the uses of the old MSSA access with NewMemAcc.
+          MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
+          OldMA->replaceAllUsesWith(NewMemAcc);
+          MSSAUpdater->removeMemoryAccess(OldMA);
+        }
+
+        Repl->andIRFlags(I);
+        combineKnownMetadata(Repl, I);
+        I->replaceAllUsesWith(Repl);
+        // Also invalidate the Alias Analysis cache.
+        MD->removeInstruction(I);
+        I->eraseFromParent();
+      }
+    }
+    return NR;
+  }
+
+  // Replace all Memory PHI usage with NewMemAcc.
+  void raMPHIuw(MemoryUseOrDef *NewMemAcc) {
+    SmallPtrSet<MemoryPhi *, 4> UsePhis;
+    for (User *U : NewMemAcc->users())
+      if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(U))
+        UsePhis.insert(Phi);
+
+    for (MemoryPhi *Phi : UsePhis) {
+      auto In = Phi->incoming_values();
+      if (all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
+        Phi->replaceAllUsesWith(NewMemAcc);
+        MSSAUpdater->removeMemoryAccess(Phi);
+      }
+    }
+  }
+
+  // Remove all other instructions and replace them with Repl.
+  unsigned removeAndReplace(const SmallVecInsn &Candidates, Instruction *Repl,
+                            BasicBlock *DestBB, bool MoveAccess) {
+    MemoryUseOrDef *NewMemAcc = MSSA->getMemoryAccess(Repl);
+    if (MoveAccess && NewMemAcc) {
+        // The definition of this ld/st will not change: ld/st hoisting is
+        // legal when the ld/st is not moved past its current definition.
+        MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::End);
+    }
+
+    // Replace all other instructions with Repl with memory access NewMemAcc.
+    unsigned NR = rauw(Candidates, Repl, NewMemAcc);
+
+    // Remove MemorySSA phi nodes with the same arguments.
+    if (NewMemAcc)
+      raMPHIuw(NewMemAcc);
+    return NR;
+  }
+
   // In the case Repl is a load or a store, we make all their GEPs
   // available: GEPs are not hoisted by default to avoid the address
   // computations to be hoisted without the associated load or store.
@@ -787,11 +979,11 @@ private:
     for (const HoistingPointInfo &HP : HPL) {
       // Find out whether we already have one of the instructions in HoistPt,
       // in which case we do not have to move it.
-      BasicBlock *HoistPt = HP.first;
+      BasicBlock *DestBB = HP.first;
       const SmallVecInsn &InstructionsToHoist = HP.second;
       Instruction *Repl = nullptr;
       for (Instruction *I : InstructionsToHoist)
-        if (I->getParent() == HoistPt)
+        if (I->getParent() == DestBB)
           // If there are two instructions in HoistPt to be hoisted in place:
           // update Repl to be the first one, such that we can rename the uses
           // of the second based on the first.
@@ -803,7 +995,7 @@ private:
       bool MoveAccess = true;
       if (Repl) {
         // Repl is already in HoistPt: it remains in place.
-        assert(allOperandsAvailable(Repl, HoistPt) &&
+        assert(allOperandsAvailable(Repl, DestBB) &&
                "instruction depends on operands that are not available");
         MoveAccess = false;
       } else {
@@ -814,7 +1006,7 @@ private:
         // We can move Repl in HoistPt only when all operands are available.
         // The order in which hoistings are done may influence the availability
         // of operands.
-        if (!allOperandsAvailable(Repl, HoistPt)) {
+        if (!allOperandsAvailable(Repl, DestBB)) {
 
           // When HoistingGeps there is nothing more we can do to make the
           // operands available: just continue.
@@ -822,32 +1014,20 @@ private:
             continue;
 
           // When not HoistingGeps we need to copy the GEPs.
-          if (!makeGepOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
+          if (!makeGepOperandsAvailable(Repl, DestBB, InstructionsToHoist))
             continue;
         }
 
         // Move the instruction at the end of HoistPt.
-        Instruction *Last = HoistPt->getTerminator();
+        Instruction *Last = DestBB->getTerminator();
         MD->removeInstruction(Repl);
         Repl->moveBefore(Last);
 
         DFSNumber[Repl] = DFSNumber[Last]++;
       }
 
-      MemoryAccess *NewMemAcc = MSSA->getMemoryAccess(Repl);
+      NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
 
-      if (MoveAccess) {
-        if (MemoryUseOrDef *OldMemAcc =
-                dyn_cast_or_null<MemoryUseOrDef>(NewMemAcc)) {
-          // The definition of this ld/st will not change: ld/st hoisting is
-          // legal when the ld/st is not moved past its current definition.
-          MemoryAccess *Def = OldMemAcc->getDefiningAccess();
-          NewMemAcc =
-            MSSAUpdater->createMemoryAccessInBB(Repl, Def, HoistPt, MemorySSA::End);
-          OldMemAcc->replaceAllUsesWith(NewMemAcc);
-          MSSAUpdater->removeMemoryAccess(OldMemAcc);
-        }
-      }
 
       if (isa<LoadInst>(Repl))
         ++NL;
@@ -857,59 +1037,6 @@ private:
         ++NC;
       else // Scalar
         ++NI;
-
-      // Remove and rename all other instructions.
-      for (Instruction *I : InstructionsToHoist)
-        if (I != Repl) {
-          ++NR;
-          if (auto *ReplacementLoad = dyn_cast<LoadInst>(Repl)) {
-            ReplacementLoad->setAlignment(
-                std::min(ReplacementLoad->getAlignment(),
-                         cast<LoadInst>(I)->getAlignment()));
-            ++NumLoadsRemoved;
-          } else if (auto *ReplacementStore = dyn_cast<StoreInst>(Repl)) {
-            ReplacementStore->setAlignment(
-                std::min(ReplacementStore->getAlignment(),
-                         cast<StoreInst>(I)->getAlignment()));
-            ++NumStoresRemoved;
-          } else if (auto *ReplacementAlloca = dyn_cast<AllocaInst>(Repl)) {
-            ReplacementAlloca->setAlignment(
-                std::max(ReplacementAlloca->getAlignment(),
-                         cast<AllocaInst>(I)->getAlignment()));
-          } else if (isa<CallInst>(Repl)) {
-            ++NumCallsRemoved;
-          }
-
-          if (NewMemAcc) {
-            // Update the uses of the old MSSA access with NewMemAcc.
-            MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
-            OldMA->replaceAllUsesWith(NewMemAcc);
-            MSSAUpdater->removeMemoryAccess(OldMA);
-          }
-
-          Repl->andIRFlags(I);
-          combineKnownMetadata(Repl, I);
-          I->replaceAllUsesWith(Repl);
-          // Also invalidate the Alias Analysis cache.
-          MD->removeInstruction(I);
-          I->eraseFromParent();
-        }
-
-      // Remove MemorySSA phi nodes with the same arguments.
-      if (NewMemAcc) {
-        SmallPtrSet<MemoryPhi *, 4> UsePhis;
-        for (User *U : NewMemAcc->users())
-          if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(U))
-            UsePhis.insert(Phi);
-
-        for (auto *Phi : UsePhis) {
-          auto In = Phi->incoming_values();
-          if (all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
-            Phi->replaceAllUsesWith(NewMemAcc);
-            MSSAUpdater->removeMemoryAccess(Phi);
-          }
-        }
-      }
     }
 
     NumHoisted += NL + NS + NC + NI;
@@ -933,8 +1060,8 @@ private:
         // If I1 cannot guarantee progress, subsequent instructions
         // in BB cannot be hoisted anyways.
         if (!isGuaranteedToTransferExecutionToSuccessor(&I1)) {
-           HoistBarrier.insert(BB);
-           break;
+          HoistBarrier.insert(BB);
+          break;
         }
         // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
         // deeper may increase the register pressure and compilation time.
@@ -994,16 +1121,18 @@ public:
     if (skipFunction(F))
       return false;
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto &MD = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
     auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
 
-    GVNHoist G(&DT, &AA, &MD, &MSSA);
+    GVNHoist G(&DT, &PDT, &AA, &MD, &MSSA);
     return G.run(F);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<MemorySSAWrapperPass>();
@@ -1012,14 +1141,15 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
-} // namespace
+} // namespace llvm
 
 PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &AA, &MD, &MSSA);
+  GVNHoist G(&DT, &PDT, &AA, &MD, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

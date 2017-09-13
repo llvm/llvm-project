@@ -7412,6 +7412,22 @@ CXLanguageKind clang_getCursorLanguage(CXCursor cursor) {
   return CXLanguage_Invalid;
 }
 
+CXTLSKind clang_getCursorTLSKind(CXCursor cursor) {
+  const Decl *D = cxcursor::getCursorDecl(cursor);
+  if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+    switch (VD->getTLSKind()) {
+    case VarDecl::TLS_None:
+      return CXTLS_None;
+    case VarDecl::TLS_Dynamic:
+      return CXTLS_Dynamic;
+    case VarDecl::TLS_Static:
+      return CXTLS_Static;
+    }
+  }
+
+  return CXTLS_None;
+}
+
  /// \brief If the given cursor is the "templated" declaration
  /// descibing a class or function template, return the class or
  /// function template.
