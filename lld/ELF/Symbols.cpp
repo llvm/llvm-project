@@ -341,7 +341,7 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (body()->isUndefined())
+  if (body()->isUndefined() || body()->isLazy())
     return Config->Shared || !body()->symbol()->isWeak();
   return ExportDynamic || body()->isShared();
 }
