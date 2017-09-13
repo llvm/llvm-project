@@ -437,6 +437,7 @@ static bool isSchedBoundary(MachineBasicBlock::iterator MI,
 }
 
 /// A region of an MBB for scheduling.
+namespace {
 struct SchedRegion {
   /// RegionBegin is the first instruction in the scheduling region, and
   /// RegionEnd is either MBB->end() or the scheduling boundary after the
@@ -451,6 +452,7 @@ struct SchedRegion {
               unsigned N) :
     RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
 };
+} // end anonymous namespace
 
 using MBBRegionsVector = SmallVector<SchedRegion, 16>;
 

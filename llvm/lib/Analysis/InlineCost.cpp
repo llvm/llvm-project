@@ -82,7 +82,7 @@ static cl::opt<int> HotCallSiteRelFreq(
              "entry frequency, for a callsite to be hot in the absence of "
              "profile information."));
 
-static cl::opt<bool> ComputeFullInlineCost(
+static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden, cl::init(false),
     cl::desc("Compute the full inline cost of a call site even when the cost "
              "exceeds the threshold."));
@@ -124,6 +124,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
   int Threshold;
   int Cost;
+  bool ComputeFullInlineCost;
 
   bool IsCallerRecursive;
   bool IsRecursiveCall;
@@ -256,7 +257,9 @@ public:
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
         CandidateCS(CSArg), Params(Params), Threshold(Params.DefaultThreshold),
-        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
+        Cost(0), ComputeFullInlineCost(OptComputeFullInlineCost ||
+                                       Params.ComputeFullInlineCost || ORE),
+        IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
         HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
@@ -1721,9 +1724,6 @@ InlineCost llvm::getInlineCost(
   if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
       CS.isNoInline())
     return llvm::InlineCost::getNever();
-
-  if (ORE)
-    ComputeFullInlineCost = true;
 
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                      << "... (caller:" << Caller->getName() << ")\n");

@@ -5159,8 +5159,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[1];
       unsigned AliaseeID = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      auto AS =
-          llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
+      auto AS = llvm::make_unique<AliasSummary>(Flags);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -5253,7 +5252,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned AliaseeValueId = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      auto AS = llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
+      auto AS = llvm::make_unique<AliasSummary>(Flags);
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 

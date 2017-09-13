@@ -37,10 +37,10 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ScopedDeadlySignal signal_scope(GetCurrentThread());
   StartReportDeadlySignal();
   SignalContext sig = SignalContext::Create(siginfo, context);
-  if (IsStackOverflow(((siginfo_t *)siginfo)->si_code, sig))
+  if (IsStackOverflow(sig))
     ReportStackOverflow(sig);
   else
-    ReportDeadlySignal(signo, sig);
+    ReportDeadlySignal(sig);
 }
 
 // ---------------------- TSD ---------------- {{{1

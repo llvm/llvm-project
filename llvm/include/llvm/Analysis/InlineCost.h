@@ -152,6 +152,9 @@ struct InlineParams {
 
   /// Threshold to use when the callsite is considered cold.
   Optional<int> ColdCallSiteThreshold;
+
+  /// Compute inline cost even when the cost has exceeded the threshold.
+  Optional<bool> ComputeFullInlineCost;
 };
 
 /// Generate the parameters to tune the inline cost analysis based only on the

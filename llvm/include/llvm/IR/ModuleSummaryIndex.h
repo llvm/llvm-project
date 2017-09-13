@@ -185,7 +185,10 @@ private:
 
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
-      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {}
+      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
+    assert((K != AliasKind || Refs.empty()) &&
+           "Expect no references for AliasSummary");
+  }
 
 public:
   virtual ~GlobalValueSummary() = default;
@@ -242,8 +245,8 @@ class AliasSummary : public GlobalValueSummary {
   GlobalValueSummary *AliaseeSummary;
 
 public:
-  AliasSummary(GVFlags Flags, std::vector<ValueInfo> Refs)
-      : GlobalValueSummary(AliasKind, Flags, std::move(Refs)) {}
+  AliasSummary(GVFlags Flags)
+      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {

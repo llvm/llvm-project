@@ -58,7 +58,7 @@ long __asan_unhandled_exception_filter(EXCEPTION_POINTERS *info) {
   // FIXME: Handle EXCEPTION_STACK_OVERFLOW here.
 
   SignalContext sig = SignalContext::Create(exception_record, context);
-  ReportDeadlySignal(exception_record->ExceptionCode, sig);
+  ReportDeadlySignal(sig);
   UNREACHABLE("returned from reporting deadly signal");
 }
 

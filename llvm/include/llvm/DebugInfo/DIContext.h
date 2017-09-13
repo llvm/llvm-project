@@ -116,21 +116,23 @@ struct DILineInfoSpecifier {
 enum DIDumpTypeCounter {
   DIDT_ID_Null = 0,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_ID##ENUM_NAME,
+  DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
-  DIDT_ID_Count,
+  DIDT_ID_UUID,
+  DIDT_ID_Count
 };
-  static_assert(DIDT_ID_Count <= 64, "section types overflow storage");
+static_assert(DIDT_ID_Count <= 64, "section types overflow storage");
 
 /// Selects which debug sections get dumped.
 enum DIDumpType : uint64_t {
   DIDT_Null,
   DIDT_All             = ~0ULL,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_##ENUM_NAME = 1 << (DIDT_ID##ENUM_NAME - 1),
+  DIDT_##ENUM_NAME = 1 << (DIDT_ID_##ENUM_NAME - 1),
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  DIDT_UUID = 1 << (DIDT_ID_UUID - 1),
 };
 
 /// Container for dump options that control which debug information will be

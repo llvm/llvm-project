@@ -642,6 +642,11 @@ def EXTSW_32 : XForm_11<31, 986, (outs gprc:$rA), (ins gprc:$rS),
 defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
                          "sradi", "$rA, $rS, $SH", IIC_IntRotateDI,
                          [(set i64:$rA, (sra i64:$rS, (i32 imm:$SH)))]>, isPPC64;
+
+defm EXTSWSLI : XSForm_1r<31, 445, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
+                          "extswsli", "$rA, $rS, $SH", IIC_IntRotateDI,
+                          []>, isPPC64;
+
 // For fast-isel:
 let isCodeGenOnly = 1, Defs = [CARRY] in
 def SRADI_32  : XSForm_1<31, 413, (outs gprc:$rA), (ins gprc:$rS, u6imm:$SH),
@@ -672,6 +677,9 @@ def CMPB8 : XForm_6<31, 508, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
 def POPCNTW : XForm_11<31, 378, (outs gprc:$rA), (ins gprc:$rS),
                        "popcntw $rA, $rS", IIC_IntGeneral,
                        [(set i32:$rA, (ctpop i32:$rS))]>;
+
+def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
+                       "popcntb $rA, $rS", IIC_IntGeneral, []>;
 
 defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           "divd", "$rT, $rA, $rB", IIC_IntDivD,

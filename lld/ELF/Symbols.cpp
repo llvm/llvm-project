@@ -110,8 +110,7 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
     if (SS.CopyRelSec)
-      return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff +
-             SS.CopyRelSecOff;
+      return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff;
     if (SS.NeedsPltAddr)
       return Body.getPltVA();
     return 0;
@@ -132,6 +131,12 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
       IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
       Name(Name) {}
+
+bool SymbolBody::isUndefWeak() const {
+  if (isLocal())
+    return false;
+  return symbol()->isWeak() && (isUndefined() || isLazy());
+}
 
 InputFile *SymbolBody::getFile() const {
   if (isLocal()) {
@@ -341,9 +346,11 @@ uint8_t Symbol::computeBinding() const {
 bool Symbol::includeInDynsym() const {
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (body()->isUndefined() || body()->isLazy())
-    return Config->Shared || !body()->symbol()->isWeak();
-  return ExportDynamic || body()->isShared();
+  if (body()->isUndefWeak())
+    return Config->Shared;
+  if (!body()->isInCurrentDSO())
+    return true;
+  return ExportDynamic;
 }
 
 // Print out a log message for --trace-symbol.

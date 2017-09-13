@@ -325,8 +325,9 @@ TypeIndex CodeViewDebug::getMemberFunctionType(const DISubprogram *SP,
   // function type, as the complete class type is likely to reference this
   // member function type.
   TypeLoweringScope S(*this);
-  TypeIndex TI =
-      lowerTypeMemberFunction(SP->getType(), Class, SP->getThisAdjustment());
+  const bool IsStaticMethod = (SP->getFlags() & DINode::FlagStaticMember) != 0;
+  TypeIndex TI = lowerTypeMemberFunction(
+      SP->getType(), Class, SP->getThisAdjustment(), IsStaticMethod);
   return recordTypeIndexForDINode(SP, TI, Class);
 }
 
@@ -1221,7 +1222,8 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
       // The member function type of a member function pointer has no
       // ThisAdjustment.
       return lowerTypeMemberFunction(cast<DISubroutineType>(Ty), ClassTy,
-                                     /*ThisAdjustment=*/0);
+                                     /*ThisAdjustment=*/0,
+                                     /*IsStaticMethod=*/false);
     }
     return lowerTypeFunction(cast<DISubroutineType>(Ty));
   case dwarf::DW_TAG_enumeration_type:
@@ -1542,7 +1544,8 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
 
 TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
                                                  const DIType *ClassTy,
-                                                 int ThisAdjustment) {
+                                                 int ThisAdjustment,
+                                                 bool IsStaticMethod) {
   // Lower the containing class type.
   TypeIndex ClassType = getTypeIndex(ClassTy);
 
@@ -1558,7 +1561,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
     ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
   }
   TypeIndex ThisTypeIndex = TypeIndex::Void();
-  if (!ArgTypeIndices.empty()) {
+  if (!IsStaticMethod && !ArgTypeIndices.empty()) {
     ThisTypeIndex = ArgTypeIndices.front();
     ArgTypeIndices = ArgTypeIndices.drop_front();
   }
@@ -1568,9 +1571,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
   CallingConvention CC = dwarfCCToCodeView(Ty->getCC());
 
-  // TODO: Need to use the correct values for:
-  //       FunctionOptions
-  //       ThisPointerAdjustment.
+  // TODO: Need to use the correct values for FunctionOptions.
   MemberFunctionRecord MFR(ReturnTypeIndex, ClassType, ThisTypeIndex, CC,
                            FunctionOptions::None, ArgTypeIndices.size(),
                            ArgListIndex, ThisAdjustment);
@@ -1612,6 +1613,9 @@ static MethodOptions translateMethodOptionFlags(const DISubprogram *SP) {
 
 static MethodKind translateMethodKindFlags(const DISubprogram *SP,
                                            bool Introduced) {
+  if (SP->getFlags() & DINode::FlagStaticMember)
+    return MethodKind::Static;
+
   switch (SP->getVirtuality()) {
   case dwarf::DW_VIRTUALITY_none:
     break;
@@ -1623,8 +1627,6 @@ static MethodKind translateMethodKindFlags(const DISubprogram *SP,
   default:
     llvm_unreachable("unhandled virtuality case");
   }
-
-  // FIXME: Get Clang to mark DISubprogram as static and do something with it.
 
   return MethodKind::Vanilla;
 }

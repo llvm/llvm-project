@@ -139,6 +139,16 @@ raw_ostream &raw_ostream::write_hex(unsigned long long N) {
   return *this;
 }
 
+raw_ostream &raw_ostream::write_uuid(const uuid_t UUID) {
+  for (int Idx = 0; Idx < 16; ++Idx) {
+    *this << format("%02" PRIX32, UUID[Idx]);
+    if (Idx == 3 || Idx == 5 || Idx == 7 || Idx == 9)
+      *this << "-";
+  }
+  return *this;
+}
+
+
 raw_ostream &raw_ostream::write_escaped(StringRef Str,
                                         bool UseHexEscapes) {
   for (unsigned char c : Str) {

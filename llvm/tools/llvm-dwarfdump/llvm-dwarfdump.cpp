@@ -60,6 +60,9 @@ static uint64_t DumpType = DIDT_Null;
                                    cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+                          cat(DwarfDumpCategory));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 
 static opt<bool>
     SummarizeTypes("summarize-types",
@@ -94,10 +97,10 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
-
-  outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
-         << "\n\n";
-
+  // The UUID dump already contains all the same information.
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    outs() << Filename << ":\tfile format " << Obj.getFileFormatName()
+           << "\n\n";
 
   // Dump the complete DWARF structure.
   DICtx->dump(outs(), GetDumpOpts());
@@ -225,6 +228,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_##ENUM_NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  if (DumpUUID)
+    DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {

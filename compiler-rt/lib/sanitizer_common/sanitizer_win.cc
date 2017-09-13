@@ -890,32 +890,6 @@ bool IsHandledDeadlyException(DWORD exceptionCode) {
   return false;
 }
 
-const char *DescribeSignalOrException(int signo) {
-  unsigned code = signo;
-  // Get the string description of the exception if this is a known deadly
-  // exception.
-  switch (code) {
-    case EXCEPTION_ACCESS_VIOLATION: return "access-violation";
-    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "array-bounds-exceeded";
-    case EXCEPTION_STACK_OVERFLOW: return "stack-overflow";
-    case EXCEPTION_DATATYPE_MISALIGNMENT: return "datatype-misalignment";
-    case EXCEPTION_IN_PAGE_ERROR: return "in-page-error";
-    case EXCEPTION_ILLEGAL_INSTRUCTION: return "illegal-instruction";
-    case EXCEPTION_PRIV_INSTRUCTION: return "priv-instruction";
-    case EXCEPTION_BREAKPOINT: return "breakpoint";
-    case EXCEPTION_FLT_DENORMAL_OPERAND: return "flt-denormal-operand";
-    case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "flt-divide-by-zero";
-    case EXCEPTION_FLT_INEXACT_RESULT: return "flt-inexact-result";
-    case EXCEPTION_FLT_INVALID_OPERATION: return "flt-invalid-operation";
-    case EXCEPTION_FLT_OVERFLOW: return "flt-overflow";
-    case EXCEPTION_FLT_STACK_CHECK: return "flt-stack-check";
-    case EXCEPTION_FLT_UNDERFLOW: return "flt-underflow";
-    case EXCEPTION_INT_DIVIDE_BY_ZERO: return "int-divide-by-zero";
-    case EXCEPTION_INT_OVERFLOW: return "int-overflow";
-  }
-  return "unknown exception";
-}
-
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   SYSTEM_INFO si;
   GetNativeSystemInfo(&si);
@@ -966,12 +940,59 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
   case 8: write_flag = SignalContext::UNKNOWN; break;
   }
   bool is_memory_access = write_flag != SignalContext::UNKNOWN;
-  return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
-                       write_flag);
+  return SignalContext(siginfo, context, access_addr, pc, sp, bp,
+                       is_memory_access, write_flag);
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
   // FIXME: Implement this.
+}
+
+int SignalContext::GetType() const {
+  return static_cast<const EXCEPTION_RECORD *>(siginfo)->ExceptionCode;
+}
+
+const char *SignalContext::Describe() const {
+  unsigned code = GetType();
+  // Get the string description of the exception if this is a known deadly
+  // exception.
+  switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION:
+      return "access-violation";
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+      return "array-bounds-exceeded";
+    case EXCEPTION_STACK_OVERFLOW:
+      return "stack-overflow";
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+      return "datatype-misalignment";
+    case EXCEPTION_IN_PAGE_ERROR:
+      return "in-page-error";
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+      return "illegal-instruction";
+    case EXCEPTION_PRIV_INSTRUCTION:
+      return "priv-instruction";
+    case EXCEPTION_BREAKPOINT:
+      return "breakpoint";
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+      return "flt-denormal-operand";
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+      return "flt-divide-by-zero";
+    case EXCEPTION_FLT_INEXACT_RESULT:
+      return "flt-inexact-result";
+    case EXCEPTION_FLT_INVALID_OPERATION:
+      return "flt-invalid-operation";
+    case EXCEPTION_FLT_OVERFLOW:
+      return "flt-overflow";
+    case EXCEPTION_FLT_STACK_CHECK:
+      return "flt-stack-check";
+    case EXCEPTION_FLT_UNDERFLOW:
+      return "flt-underflow";
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+      return "int-divide-by-zero";
+    case EXCEPTION_INT_OVERFLOW:
+      return "int-overflow";
+  }
+  return "unknown exception";
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {

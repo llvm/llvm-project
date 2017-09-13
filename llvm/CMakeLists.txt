@@ -823,25 +823,6 @@ endif()
 include(AddLLVM)
 include(TableGen)
 
-
-# Find all subprojects which are either enabled in a side-by-side layout, or
-# cloned into a non-side-by-side layout.  Do this before adding any
-# subdirectories so that any project can check for the existence of any other
-# project.  Each call takes priority over the next call, so any project which
-# is enabled via LLVM_ENABLE_PROJECTS will not have its location or enabled
-# status overwritten via a subsequent call.
-
-# First look for all projects explicitly enabled at the root.
-find_llvm_enabled_projects("${LLVM_SOURCE_DIR}/.." "${LLVM_ENABLE_PROJECTS}")
-
-# Then pick up any projects explicitly cloned into llvm/projects or llvm/runtimes
-find_llvm_enabled_projects("${LLVM_SOURCE_DIR}/runtimes")
-find_llvm_enabled_projects("${LLVM_SOURCE_DIR}/projects")
-
-# Then pick up a few specific projects which can be explicit cloned into llvm/tools
-find_llvm_enabled_projects("${LLVM_SOURCE_DIR}/tools" "clang;lldb;lld")
-
-
 if( MINGW )
   # People report that -O3 is unreliable on MinGW. The traditional
   # build also uses -O2 for that reason:

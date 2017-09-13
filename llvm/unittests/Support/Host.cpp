@@ -144,8 +144,9 @@ TEST_F(HostTest, getMacOSHostVersion) {
   const char *SwVersPath = "/usr/bin/sw_vers";
   const char *argv[] = {SwVersPath, "-productVersion", nullptr};
   StringRef OutputPath = OutputFile.str();
-  const StringRef *Redirects[] = {/*STDIN=*/nullptr, /*STDOUT=*/&OutputPath,
-                                  /*STDERR=*/nullptr};
+  const Optional<StringRef> Redirects[] = {/*STDIN=*/None,
+                                           /*STDOUT=*/OutputPath,
+                                           /*STDERR=*/None};
   int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/nullptr, Redirects);
   ASSERT_EQ(0, RetCode);
 

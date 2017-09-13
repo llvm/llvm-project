@@ -1,5 +1,4 @@
-//===-- llvm/CodeGen/SelectionDAGAddressAnalysis.cpp ------- DAG Address
-//Analysis ---*- C++ -*-===//
+//==- llvm/CodeGen/SelectionDAGAddressAnalysis.cpp - DAG Address Analysis --==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetLowering.h"
+#include <cstdint>
 
-namespace llvm {
+using namespace llvm;
 
 bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
                                      const SelectionDAG &DAG, int64_t &Off) {
@@ -113,4 +114,3 @@ BaseIndexOffset BaseIndexOffset::match(SDValue Ptr, const SelectionDAG &DAG) {
   }
   return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
 }
-} // end namespace llvm

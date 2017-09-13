@@ -34,10 +34,13 @@ void fi1(atomic_int *i) {
   // CHECK-LABEL: @fi1
   // CHECK: load atomic i32, i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   int x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_work_group);
+
   // CHECK: load atomic i32, i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}} syncscope("agent") seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_device);
+
   // CHECK: load atomic i32, i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}} seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_all_svm_devices);
+
   // CHECK: load atomic i32, i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}} syncscope("subgroup") seq_cst
   x = __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_sub_group);
 }
@@ -48,16 +51,32 @@ void fi2(atomic_int *i) {
   __opencl_atomic_store(i, 1, memory_order_seq_cst, memory_scope_work_group);
 }
 
+void test_addr(global atomic_int *ig, private atomic_int *ip, local atomic_int *il) {
+  // CHECK-LABEL: @test_addr
+  // CHECK: store atomic i32 %{{[.0-9A-Z_a-z]+}}, i32 addrspace(1)* %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
+  __opencl_atomic_store(ig, 1, memory_order_seq_cst, memory_scope_work_group);
+
+  // CHECK: store atomic i32 %{{[.0-9A-Z_a-z]+}}, i32* %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
+  __opencl_atomic_store(ip, 1, memory_order_seq_cst, memory_scope_work_group);
+
+  // CHECK: store atomic i32 %{{[.0-9A-Z_a-z]+}}, i32 addrspace(3)* %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
+  __opencl_atomic_store(il, 1, memory_order_seq_cst, memory_scope_work_group);
+}
+
 void fi3(atomic_int *i, atomic_uint *ui) {
   // CHECK-LABEL: @fi3
   // CHECK: atomicrmw and i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   int x = __opencl_atomic_fetch_and(i, 1, memory_order_seq_cst, memory_scope_work_group);
+
   // CHECK: atomicrmw min i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   x = __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
+
   // CHECK: atomicrmw max i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   x = __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
+
   // CHECK: atomicrmw umin i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   x = __opencl_atomic_fetch_min(ui, 1, memory_order_seq_cst, memory_scope_work_group);
+
   // CHECK: atomicrmw umax i32 addrspace(4)* %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst
   x = __opencl_atomic_fetch_max(ui, 1, memory_order_seq_cst, memory_scope_work_group);
 }

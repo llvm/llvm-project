@@ -98,7 +98,7 @@ void InitTlsSize() {}
 void PrintModuleMap() {}
 
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
-const char *DescribeSignalOrException(int signo) { UNIMPLEMENTED(); }
+const char *SignalContext::Describe() const { UNIMPLEMENTED(); }
 
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
