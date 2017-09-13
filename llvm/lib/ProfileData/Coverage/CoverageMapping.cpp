@@ -250,10 +250,15 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     IndexedInstrProfReader &ProfileReader) {
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
 
-  for (const auto &CoverageReader : CoverageReaders)
-    for (const auto &Record : *CoverageReader)
+  for (const auto &CoverageReader : CoverageReaders) {
+    for (auto RecordOrErr : *CoverageReader) {
+      if (Error E = RecordOrErr.takeError())
+        return std::move(E);
+      const auto &Record = *RecordOrErr;
       if (Error E = Coverage->loadFunctionRecord(Record, ProfileReader))
         return std::move(E);
+    }
+  }
 
   return std::move(Coverage);
 }
