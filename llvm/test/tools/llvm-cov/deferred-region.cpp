@@ -5,7 +5,7 @@ void foo(int x) {
     return; // CHECK: [[@LINE]]|{{ +}}1|
   }
 
-} // CHECK: [[@LINE]]|{{ +}}2|
+} // CHECK: [[@LINE]]|{{ +}}1|
 
 void bar() {
   return;
@@ -103,11 +103,9 @@ int main() {
 // MARKER-NEXT: Highlighted line 47, 14 -> 21
 // MARKER-NEXT: Highlighted line 47, 21 -> 23
 // MARKER-NEXT: Highlighted line 47, 23 -> 25
-// MARKER-NEXT: Highlighted line 47, 25 -> ?
 // MARKER-NEXT: Marker at 47:7 = 0
 // MARKER-NEXT: Marker at 47:14 = 0
 // MARKER-NEXT: Marker at 47:23 = 0
-// MARKER-NEXT: Highlighted line 48, 1 -> 6
 // MARKER-NEXT: Highlighted line 51, 7 -> 20
 // MARKER-NEXT: Marker at 51:7 = 0
 // MARKER-NEXT: Marker at 53:5 = 1

@@ -174,9 +174,12 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
   }
 
   void addCMR(Counter C, StringRef File, unsigned LS, unsigned CS, unsigned LE,
-              unsigned CE) {
-    InputFunctions.back().Regions.push_back(CounterMappingRegion::makeRegion(
-        C, getFileIndexForFunction(File), LS, CS, LE, CE));
+              unsigned CE, bool Skipped = false) {
+    auto &Regions = InputFunctions.back().Regions;
+    unsigned FileID = getFileIndexForFunction(File);
+    Regions.push_back(
+        Skipped ? CounterMappingRegion::makeSkipped(FileID, LS, CS, LE, CE)
+                : CounterMappingRegion::makeRegion(C, FileID, LS, CS, LE, CE));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
@@ -360,6 +363,238 @@ TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
       EXPECT_EQ(CoverageSegment(6, 6, false), Segments[1]);
     }
   }
+}
+
+TEST_P(CoverageMappingTest, create_combined_regions) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1, 2, 3}}, Err);
+  startFunction("func1", 0x1234);
+
+  // Given regions which start at the same location, emit a segment for the
+  // last region.
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 2, 2);
+  addCMR(Counter::getCounter(1), "file1", 1, 1, 2, 2);
+  addCMR(Counter::getCounter(2), "file1", 1, 1, 2, 2);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(2U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 6, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(2, 2, false), Segments[1]);
+}
+
+TEST_P(CoverageMappingTest, skipped_segments_have_no_count) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(0), "file1", 5, 1, 5, 5, /*Skipped=*/true);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(3U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(5, 1, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(5, 5, false), Segments[2]);
+}
+
+TEST_P(CoverageMappingTest, multiple_regions_end_after_parent_ends) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1, 0}}, Err);
+  startFunction("func1", 0x1234);
+
+  // 1| F{ a{
+  // 2|
+  // 3|    a} b{ c{
+  // 4|
+  // 5|    b}
+  // 6|
+  // 7| c} d{   e{
+  // 8|
+  // 9| d}      e} F}
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9); //< F
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 3, 5); //< a
+  addCMR(Counter::getCounter(0), "file1", 3, 5, 5, 4); //< b
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 7, 3); //< c
+  addCMR(Counter::getCounter(1), "file1", 7, 3, 9, 2); //< d
+  addCMR(Counter::getCounter(1), "file1", 7, 7, 9, 7); //< e
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  // Old output (not sorted or unique):
+  //   Segment at 1:1 with count 1
+  //   Segment at 1:1 with count 1
+  //   Segment at 3:5 with count 1
+  //   Segment at 3:5 with count 0
+  //   Segment at 3:5 with count 1
+  //   Segment at 5:4 with count 0
+  //   Segment at 7:3 with count 1
+  //   Segment at 7:3 with count 0
+  //   Segment at 7:7 with count 0
+  //   Segment at 9:7 with count 0
+  //   Segment at 9:2 with count 1
+  //   Top level segment at 9:9
+
+  // New output (sorted and unique):
+  //   Segment at 1:1 (count = 1), RegionEntry
+  //   Segment at 3:5 (count = 1), RegionEntry
+  //   Segment at 5:4 (count = 0)
+  //   Segment at 7:3 (count = 0), RegionEntry
+  //   Segment at 7:7 (count = 0), RegionEntry
+  //   Segment at 9:2 (count = 0)
+  //   Segment at 9:7 (count = 1)
+  //   Segment at 9:9 (count = 0), Skipped
+
+  ASSERT_EQ(8U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(3, 5, 1, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(5, 4, 0, false), Segments[2]);
+  EXPECT_EQ(CoverageSegment(7, 3, 0, true), Segments[3]);
+  EXPECT_EQ(CoverageSegment(7, 7, 0, true), Segments[4]);
+  EXPECT_EQ(CoverageSegment(9, 2, 0, false), Segments[5]);
+  EXPECT_EQ(CoverageSegment(9, 7, 1, false), Segments[6]);
+  EXPECT_EQ(CoverageSegment(9, 9, false), Segments[7]);
+}
+
+TEST_P(CoverageMappingTest, dont_emit_redundant_segments) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1, 1}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 4, 4);
+  addCMR(Counter::getCounter(1), "file1", 2, 2, 5, 5);
+  addCMR(Counter::getCounter(0), "file1", 3, 3, 6, 6);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(5U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(2, 2, 1, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(3, 3, 1, true), Segments[2]);
+  EXPECT_EQ(CoverageSegment(4, 4, 1, false), Segments[3]);
+  // A closing segment starting at 5:5 would be redundant: it would have the
+  // same count as the segment starting at 4:4, and has all the same metadata.
+  EXPECT_EQ(CoverageSegment(6, 6, false), Segments[4]);
+}
+
+TEST_P(CoverageMappingTest, dont_emit_closing_segment_at_new_region_start) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 6, 5);
+  addCMR(Counter::getCounter(0), "file1", 2, 2, 6, 5);
+  addCMR(Counter::getCounter(0), "file1", 3, 3, 6, 5);
+  addCMR(Counter::getCounter(0), "file1", 6, 5, 7, 7);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(5U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(2, 2, 1, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(3, 3, 1, true), Segments[2]);
+  EXPECT_EQ(CoverageSegment(6, 5, 1, true), Segments[3]);
+  // The old segment builder would get this wrong by emitting multiple segments
+  // which start at 6:5 (a few of which were skipped segments). We should just
+  // get a segment for the region entry.
+  EXPECT_EQ(CoverageSegment(7, 7, false), Segments[4]);
+}
+
+TEST_P(CoverageMappingTest, handle_consecutive_regions_with_zero_length) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1, 2}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 1, 1);
+  addCMR(Counter::getCounter(1), "file1", 1, 1, 1, 1);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 1, 1);
+  addCMR(Counter::getCounter(1), "file1", 1, 1, 1, 1);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 1, 1);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(1U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, true), Segments[0]);
+  // We need to get a skipped segment starting at 1:1. In this case there is
+  // also a region entry at 1:1.
+}
+
+TEST_P(CoverageMappingTest, handle_sandwiched_zero_length_region) {
+  ProfileWriter.addRecord({"func1", 0x1234, {2, 1}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 5, 4, 4);
+  addCMR(Counter::getCounter(1), "file1", 1, 9, 1, 50);
+  addCMR(Counter::getCounter(1), "file1", 2, 7, 2, 34);
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 3, 21);
+  addCMR(Counter::getCounter(1), "file1", 3, 21, 3, 21);
+  addCMR(Counter::getCounter(1), "file1", 4, 12, 4, 17);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(10U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 5, 2, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(1, 9, 1, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(1, 50, 2, false), Segments[2]);
+  EXPECT_EQ(CoverageSegment(2, 7, 1, true), Segments[3]);
+  EXPECT_EQ(CoverageSegment(2, 34, 2, false), Segments[4]);
+  EXPECT_EQ(CoverageSegment(3, 5, 1, true), Segments[5]);
+  EXPECT_EQ(CoverageSegment(3, 21, 2, true), Segments[6]);
+  // Handle the zero-length region by creating a segment with its predecessor's
+  // count (i.e the count from 1:5 -> 4:4).
+  EXPECT_EQ(CoverageSegment(4, 4, false), Segments[7]);
+  // The area between 4:4 and 4:12 is skipped.
+  EXPECT_EQ(CoverageSegment(4, 12, 1, true), Segments[8]);
+  EXPECT_EQ(CoverageSegment(4, 17, false), Segments[9]);
+}
+
+TEST_P(CoverageMappingTest, handle_last_completed_region) {
+  ProfileWriter.addRecord({"func1", 0x1234, {1, 2, 3, 4}}, Err);
+  startFunction("func1", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 8, 8);
+  addCMR(Counter::getCounter(1), "file1", 2, 2, 5, 5);
+  addCMR(Counter::getCounter(2), "file1", 3, 3, 4, 4);
+  addCMR(Counter::getCounter(3), "file1", 6, 6, 7, 7);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  ASSERT_EQ(8U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(2, 2, 2, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(3, 3, 3, true), Segments[2]);
+  EXPECT_EQ(CoverageSegment(4, 4, 2, false), Segments[3]);
+  EXPECT_EQ(CoverageSegment(5, 5, 1, false), Segments[4]);
+  EXPECT_EQ(CoverageSegment(6, 6, 4, true), Segments[5]);
+  EXPECT_EQ(CoverageSegment(7, 7, 1, false), Segments[6]);
+  EXPECT_EQ(CoverageSegment(8, 8, false), Segments[7]);
 }
 
 TEST_P(CoverageMappingTest, expansion_gets_first_counter) {
