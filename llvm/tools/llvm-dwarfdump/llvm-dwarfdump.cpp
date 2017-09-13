@@ -122,10 +122,9 @@ static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
   return Result;
 }
 
-static bool handleBuffer(StringRef Filename, MemoryBuffer &Buffer,
+static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          std::function<bool(ObjectFile &, Twine)> HandleObj) {
-  Expected<std::unique_ptr<Binary>> BinOrErr =
-      object::createBinary(Buffer.getMemBufferRef());
+  Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
   if (!BinOrErr)
     error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
