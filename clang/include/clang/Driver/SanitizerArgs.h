@@ -42,6 +42,7 @@ class SanitizerArgs {
   bool TsanMemoryAccess = true;
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
+  bool MinimalRuntime = false;
 
  public:
   /// Parses the sanitizer arguments from an argument list.
@@ -57,6 +58,7 @@ class SanitizerArgs {
            !Sanitizers.has(SanitizerKind::Address);
   }
   bool needsUbsanRt() const;
+  bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const {
     return Sanitizers.has(SanitizerKind::SafeStack);

@@ -133,10 +133,10 @@ Available checks are:
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that it is of
-     the wrong dynamic type, or that its lifetime has not begun or has ended.
-     Incompatible with ``-fno-rtti`` and ``-fno-sanitize=null``. Link must be
-     performed by ``clang++``, not ``clang``, to make sure C++-specific parts of
-     the runtime library and C++ standard libraries are present.
+    the wrong dynamic type, or that its lifetime has not begun or has ended.
+    Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
+    ``clang``, to make sure C++-specific parts of the runtime library and C++
+    standard libraries are present.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
@@ -155,6 +155,19 @@ Volatile
 
 The ``null``, ``alignment``, ``object-size``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
+
+Minimal Runtime
+===============
+
+There is a minimal UBSan runtime available suitable for use in production
+environments. This runtime has a small attack surface. It only provides very
+basic issue logging and deduplication, and does not support ``-fsanitize=vptr``
+checking.
+
+To use the minimal runtime, add ``-fsanitize-minimal-runtime`` to the clang
+command line options. For example, if you're used to compiling with
+``-fsanitize=undefined``, you could enable the minimal runtime with
+``-fsanitize=undefined -fsanitize-minimal-runtime``.
 
 Stack traces and report symbolization
 =====================================

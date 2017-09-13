@@ -542,6 +542,9 @@ private:
     // Initialize the ASTContext
     Context->InitBuiltinTypes(*Target);
 
+    // Adjust printing policy based on language options.
+    Context->setPrintingPolicy(PrintingPolicy(LangOpt));
+
     // We didn't have access to the comment options when the ASTContext was
     // constructed, so register them now.
     Context->getCommentCommandTraits().registerCommentOptions(

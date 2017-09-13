@@ -29,6 +29,7 @@ enum : SanitizerMask {
   NeedsUbsanRt = Undefined | Integer | Nullability | CFI,
   NeedsUbsanCxxRt = Vptr | CFI,
   NotAllowedWithTrap = Vptr,
+  NotAllowedWithMinimalRuntime = Vptr,
   RequiresPIE = DataFlow,
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
   SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
@@ -41,6 +42,7 @@ enum : SanitizerMask {
                       Nullability | LocalBounds | CFI,
   TrappingDefault = CFI,
   CFIClasses = CFIVCall | CFINVCall | CFIDerivedCast | CFIUnrelatedCast,
+  CompatibleWithMinimalRuntime = TrappingSupported,
 };
 
 enum CoverageFeature {
@@ -100,6 +102,8 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
     BlacklistFile = "dfsan_abilist.txt";
   else if (Kinds & CFI)
     BlacklistFile = "cfi_blacklist.txt";
+  else if (Kinds & (Undefined | Integer | Nullability))
+    BlacklistFile = "ubsan_blacklist.txt";
 
   if (BlacklistFile) {
     clang::SmallString<64> Path(D.ResourceDir);
@@ -208,6 +212,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask TrappingKinds = parseSanitizeTrapArgs(D, Args);
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
 
+  MinimalRuntime =
+      Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
+                   options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
+
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
   bool RemoveObjectSizeAtO0 =
@@ -245,6 +253,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnosedKinds |= KindsToDiagnose;
       }
       Add &= ~InvalidTrappingKinds;
+
+      if (MinimalRuntime) {
+        if (SanitizerMask KindsToDiagnose =
+                Add & NotAllowedWithMinimalRuntime & ~DiagnosedKinds) {
+          std::string Desc = describeSanitizeArg(*I, KindsToDiagnose);
+          D.Diag(diag::err_drv_argument_not_allowed_with)
+              << Desc << "-fsanitize-minimal-runtime";
+          DiagnosedKinds |= KindsToDiagnose;
+        }
+        Add &= ~NotAllowedWithMinimalRuntime;
+      }
+
       if (SanitizerMask KindsToDiagnose = Add & ~Supported & ~DiagnosedKinds) {
         std::string Desc = describeSanitizeArg(*I, KindsToDiagnose);
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -281,6 +301,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // Silently discard any unsupported sanitizers implicitly enabled through
       // group expansion.
       Add &= ~InvalidTrappingKinds;
+      if (MinimalRuntime) {
+        Add &= ~NotAllowedWithMinimalRuntime;
+      }
       Add &= Supported;
 
       if (Add & Fuzzer)
@@ -308,13 +331,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       (RTTIMode == ToolChain::RM_DisabledImplicitly ||
        RTTIMode == ToolChain::RM_DisabledExplicitly)) {
     Kinds &= ~Vptr;
-  }
-
-  // Disable -fsanitize=vptr if -fsanitize=null is not enabled (the vptr
-  // instrumentation is broken without run-time null checks).
-  if ((Kinds & Vptr) && !(Kinds & Null)) {
-    Kinds &= ~Vptr;
-    D.Diag(diag::warn_drv_disabling_vptr_no_null_check);
   }
 
   // Check that LTO is enabled if we need it.
@@ -494,6 +510,21 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   Stats = Args.hasFlag(options::OPT_fsanitize_stats,
                        options::OPT_fno_sanitize_stats, false);
+
+  if (MinimalRuntime) {
+    SanitizerMask IncompatibleMask =
+        Kinds & ~setGroupBits(CompatibleWithMinimalRuntime);
+    if (IncompatibleMask)
+      D.Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << "-fsanitize-minimal-runtime"
+          << lastArgumentForMask(D, Args, IncompatibleMask);
+
+    SanitizerMask NonTrappingCfi = Kinds & CFI & ~TrappingKinds;
+    if (NonTrappingCfi)
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << "fsanitize-minimal-runtime"
+          << "fsanitize-trap=cfi";
+  }
 
   // Parse -f(no-)?sanitize-coverage flags if coverage is supported by the
   // enabled sanitizers.
@@ -746,6 +777,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (Stats)
     CmdArgs.push_back("-fsanitize-stats");
+
+  if (MinimalRuntime)
+    CmdArgs.push_back("-fsanitize-minimal-runtime");
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +

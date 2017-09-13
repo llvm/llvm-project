@@ -695,17 +695,17 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   //    -- the [pointer or glvalue] is used to access a non-static data member
   //       or call a non-static member function
   CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-  bool HasNullCheck = IsGuaranteedNonNull || IsNonNull;
   if (SanOpts.has(SanitizerKind::Vptr) &&
-      !SkippedChecks.has(SanitizerKind::Vptr) && HasNullCheck &&
+      !SkippedChecks.has(SanitizerKind::Vptr) &&
       (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
        TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
        TCK == TCK_UpcastToVirtualBase) &&
       RD && RD->hasDefinition() && RD->isDynamicClass()) {
     // Ensure that the pointer is non-null before loading it. If there is no
-    // compile-time guarantee, reuse the run-time null check.
+    // compile-time guarantee, reuse the run-time null check or emit a new one.
     if (!IsGuaranteedNonNull) {
-      assert(IsNonNull && "Missing run-time null check");
+      if (!IsNonNull)
+        IsNonNull = Builder.CreateIsNotNull(Ptr);
       if (!Done)
         Done = createBasicBlock("vptr.null");
       llvm::BasicBlock *VptrNotNull = createBasicBlock("vptr.not.null");
@@ -2723,13 +2723,16 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   assert(IsFatal || RecoverKind != CheckRecoverableKind::Unrecoverable);
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
+  bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
-  std::string FnName =
-      ("__ubsan_handle_" + CheckName +
-       (CheckInfo.Version ? "_v" + llvm::utostr(CheckInfo.Version) : "") +
-       (NeedsAbortSuffix ? "_abort" : ""))
-          .str();
+  std::string FnName = "__ubsan_handle_" + CheckName.str();
+  if (CheckInfo.Version && !MinimalRuntime)
+    FnName += "_v" + llvm::utostr(CheckInfo.Version);
+  if (MinimalRuntime)
+    FnName += "_minimal";
+  if (NeedsAbortSuffix)
+    FnName += "_abort";
   bool MayReturn =
       !IsFatal || RecoverKind == CheckRecoverableKind::AlwaysRecoverable;
 
@@ -2816,24 +2819,26 @@ void CodeGenFunction::EmitCheck(
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
-  Args.reserve(DynamicArgs.size() + 1);
-  ArgTypes.reserve(DynamicArgs.size() + 1);
+  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    Args.reserve(DynamicArgs.size() + 1);
+    ArgTypes.reserve(DynamicArgs.size() + 1);
 
-  // Emit handler arguments and create handler function type.
-  if (!StaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr =
-        new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
-                                 llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-    Args.push_back(Builder.CreateBitCast(InfoPtr, Int8PtrTy));
-    ArgTypes.push_back(Int8PtrTy);
-  }
+    // Emit handler arguments and create handler function type.
+    if (!StaticArgs.empty()) {
+      llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+      auto *InfoPtr =
+          new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
+                                   llvm::GlobalVariable::PrivateLinkage, Info);
+      InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+      CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+      Args.push_back(Builder.CreateBitCast(InfoPtr, Int8PtrTy));
+      ArgTypes.push_back(Int8PtrTy);
+    }
 
-  for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
-    Args.push_back(EmitCheckValue(DynamicArgs[i]));
-    ArgTypes.push_back(IntPtrTy);
+    for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
+      Args.push_back(EmitCheckValue(DynamicArgs[i]));
+      ArgTypes.push_back(IntPtrTy);
+    }
   }
 
   llvm::FunctionType *FnType =

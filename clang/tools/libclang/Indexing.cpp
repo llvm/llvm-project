@@ -272,7 +272,8 @@ public:
   /// SourceRangeSkipped - This hook is called when a source range is skipped.
   /// \param Range The SourceRange that was skipped. The range begins at the
   /// #if/#else directive and ends after the #endif/#else directive.
-  void SourceRangeSkipped(SourceRange Range) override {}
+  void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override {
+  }
 };
 
 //===----------------------------------------------------------------------===//

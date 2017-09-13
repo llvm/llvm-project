@@ -3,10 +3,10 @@
                     // CHECK: foo
 void foo(int i) {   // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+8]]:2 = #0
   switch(i) {
-  case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = #2
+  case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:11 = #2
     return;
   case 2:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = #3
-    break;
+    break;          // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE+2]]:3 = #1
   }
   int x = 0;        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:2 = #1
 }
@@ -48,23 +48,23 @@ void baz() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+5]]:2 = #0
 int main() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+35]]:2 = #0
   int i = 0;
   switch(i) {
-  case 0:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+7]]:10 = #2
+  case 0:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = #2
     i = 1;
     break;
   case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = #3
     i = 2;
     break;
   default:          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = #4
-    break;
+    break;          // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE+2]]:3 = #1
   }
   switch(i) {       // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+23]]:2 = #1
-  case 0:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+6]]:10 = #6
+  case 0:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = #6
     i = 1;
     break;
   case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = #7
     i = 2;
   default:          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:10 = (#7 + #8)
-    break;
+    break;          // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE+3]]:3 = #5
   }
 
   switch(i) {       // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+13]]:2 = #5
@@ -80,4 +80,33 @@ int main() {        // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+35]]:2 = #0
   bar(1);
   baz();
   return 0;
+}
+
+// FIXME: End location for "case 1" shouldn't point at the end of the switch.
+                         // CHECK: fallthrough
+int fallthrough(int i) { // CHECK-NEXT: File 0, [[@LINE]]:24 -> [[@LINE+12]]:2 = #0
+  switch(i) {
+  case 1:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+8]]:10 = #2
+    i = 23;
+  case 2:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#2 + #3)
+    i = 11;
+    break;
+  case 3:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = #4
+  case 4:           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:10 = (#4 + #5)
+    i = 99;
+    break;
+  }
+}
+
+void abort(void) __attribute((noreturn));
+                   // CHECK: noret
+int noret(int x) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+9]]:2
+  switch (x) {
+  default:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:12
+    abort();
+  case 1:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13
+    return 5;
+  case 2:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:14
+    return 10;
+  }
 }
