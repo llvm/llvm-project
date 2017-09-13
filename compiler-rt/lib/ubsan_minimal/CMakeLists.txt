@@ -20,7 +20,7 @@ add_compiler_rt_object_libraries(RTUbsan_minimal
   SOURCES ${UBSAN_MINIMAL_SOURCES} CFLAGS ${UBSAN_CFLAGS})
 
 
-if(COMPILER_RT_HAS_UBSAN)
+if(COMPILER_RT_HAS_UBSAN_MINIMAL)
   # Initializer of standalone UBSan runtime.
 
   # Standalone UBSan runtimes.
