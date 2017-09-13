@@ -880,24 +880,16 @@ template <class ELFT> static void sortBySymbolsOrder() {
 
 template <class ELFT>
 void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
-  for (InputSectionBase *IS : InputSections) {
-    if (!IS->Live)
-      continue;
-    // Scan all relocations. Each relocation goes through a series
-    // of tests to determine if it needs special treatment, such as
-    // creating GOT, PLT, copy relocations, etc.
-    // Note that relocations for non-alloc sections are directly
-    // processed by InputSection::relocateNonAlloc.
-    if (!(IS->Flags & SHF_ALLOC))
-      continue;
-    if (isa<InputSection>(IS) || isa<EhInputSection>(IS))
+  // Scan all relocations. Each relocation goes through a series
+  // of tests to determine if it needs special treatment, such as
+  // creating GOT, PLT, copy relocations, etc.
+  // Note that relocations for non-alloc sections are directly
+  // processed by InputSection::relocateNonAlloc.
+  for (InputSectionBase *IS : InputSections)
+    if (IS->Live && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
       Fn(*IS);
-  }
-
-  if (!Config->Relocatable) {
-    for (EhInputSection *ES : In<ELFT>::EhFrame->Sections)
-      Fn(*ES);
-  }
+  for (EhInputSection *ES : In<ELFT>::EhFrame->Sections)
+    Fn(*ES);
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
@@ -1280,7 +1272,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  forEachRelSec(scanRelocations<ELFT>);
+  if (!Config->Relocatable)
+    forEachRelSec(scanRelocations<ELFT>);
 
   if (InX::Plt && !InX::Plt->empty())
     InX::Plt->addSymbols();
