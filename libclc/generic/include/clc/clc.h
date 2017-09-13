@@ -106,6 +106,7 @@
 #include <clc/math/native_log.h>
 #include <clc/math/native_log2.h>
 #include <clc/math/native_powr.h>
+#include <clc/math/native_recip.h>
 #include <clc/math/native_sin.h>
 #include <clc/math/native_sqrt.h>
 #include <clc/math/native_rsqrt.h>
@@ -126,6 +127,7 @@
 #include <clc/integer/mad_sat.h>
 #include <clc/integer/mul24.h>
 #include <clc/integer/mul_hi.h>
+#include <clc/integer/popcount.h>
 #include <clc/integer/rhadd.h>
 #include <clc/integer/rotate.h>
 #include <clc/integer/sub_sat.h>

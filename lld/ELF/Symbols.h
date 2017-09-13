@@ -172,7 +172,6 @@ public:
 
   // The output offset of this common symbol in the output bss.
   // Computed by the writer.
-  uint64_t Offset;
   uint64_t Size;
   BssSection *Section = nullptr;
 };

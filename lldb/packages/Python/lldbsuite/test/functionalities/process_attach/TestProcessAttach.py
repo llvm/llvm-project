@@ -46,15 +46,18 @@ class ProcessAttachTestCase(TestBase):
         except OSError, e:
             if e.errno != os.errno.EEXIST:
                 raise
-        self.buildProgram('main.cpp',os.path.join(os.getcwd(),'newdir','proc_attach'))
-        exe = os.path.join('.','newdir','proc_attach')
-        self.addTearDownHook(lambda: shutil.rmtree(os.path.join(os.getcwd())))
+        testdir = os.getcwd()
+        newdir = os.path.join(testdir,'newdir')
+        exe = os.path.join(newdir, 'proc_attach')
+        self.buildProgram('main.cpp', exe)
+        self.addTearDownHook(lambda: shutil.rmtree(newdir))
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
         self.addTearDownHook(self.cleanupSubprocesses)
 
         os.chdir('newdir')
+        self.addTearDownHook(lambda: os.chdir(testdir))
         self.runCmd("process attach -p " + str(popen.pid))
 
         target = self.dbg.GetSelectedTarget()
