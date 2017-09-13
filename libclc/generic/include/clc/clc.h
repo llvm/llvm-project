@@ -106,6 +106,7 @@
 #include <clc/math/native_log.h>
 #include <clc/math/native_log2.h>
 #include <clc/math/native_powr.h>
+#include <clc/math/native_recip.h>
 #include <clc/math/native_sin.h>
 #include <clc/math/native_sqrt.h>
 #include <clc/math/native_rsqrt.h>
