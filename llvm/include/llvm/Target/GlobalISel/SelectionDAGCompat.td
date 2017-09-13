@@ -51,7 +51,7 @@ def : GINodeEquiv<G_ASHR, sra>;
 def : GINodeEquiv<G_SELECT, select>;
 def : GINodeEquiv<G_FNEG, fneg>;
 def : GINodeEquiv<G_FPEXT, fpextend>;
-def : GINodeEquiv<G_FPTRUNC, ftrunc>;
+def : GINodeEquiv<G_FPTRUNC, fpround>;
 def : GINodeEquiv<G_FPTOSI, fp_to_sint>;
 def : GINodeEquiv<G_FPTOUI, fp_to_uint>;
 def : GINodeEquiv<G_SITOFP, sint_to_fp>;

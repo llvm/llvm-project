@@ -755,10 +755,19 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   DwarfUnit::emitCommonHeader(UseOffsets, UT);
 }
 
+bool DwarfCompileUnit::hasDwarfPubSections() const {
+  // Opting in to GNU Pubnames/types overrides the default to ensure these are
+  // generated for things like Gold's gdb_index generation.
+  if (CUNode->getGnuPubnames())
+    return true;
+
+  return DD->tuneForGDB() && !includeMinimalInlineScopes();
+}
+
 /// addGlobalName - Add a new global name to the compile unit.
 void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
                                      const DIScope *Context) {
-  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
+  if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   GlobalNames[FullName] = &Die;
@@ -766,7 +775,7 @@ void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
                                                 const DIScope *Context) {
-  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
+  if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   // Insert, allowing the entry to remain as-is if it's already present
@@ -779,7 +788,7 @@ void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
 /// Add a new global type to the unit.
 void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
                                      const DIScope *Context) {
-  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
+  if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   GlobalTypes[FullName] = &Die;
@@ -787,7 +796,7 @@ void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
 
 void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
                                              const DIScope *Context) {
-  if (!DD->hasDwarfPubSections(includeMinimalInlineScopes()))
+  if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   // Insert, allowing the entry to remain as-is if it's already present

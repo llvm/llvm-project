@@ -118,9 +118,9 @@ def main():
         execute_command_verbose([ar_exe, '-x', arc], cwd=temp_directory_root,
                                 verbose=args.verbose)
 
-    files = glob.glob(os.path.join(temp_directory_root, '*.o'))
+    files = glob.glob(os.path.join(temp_directory_root, '*.o*'))
     if not files:
-        print_and_exit('Failed to glob for %s' % glob_path)
+        print_and_exit('Failed to glob for %s' % temp_directory_root)
     cmd = [ar_exe, '-qc', args.output] + files
     execute_command_verbose(cmd, cwd=temp_directory_root, verbose=args.verbose)
 
