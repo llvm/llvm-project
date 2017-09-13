@@ -38,37 +38,6 @@ void ErrorStackOverflow::Print() {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
-static void MaybeDumpInstructionBytes(uptr pc) {
-  if (!flags()->dump_instruction_bytes || (pc < GetPageSizeCached())) return;
-  InternalScopedString str(1024);
-  str.append("First 16 instruction bytes at pc: ");
-  if (IsAccessibleMemoryRange(pc, 16)) {
-    for (int i = 0; i < 16; ++i) {
-      PrintMemoryByte(&str, "", ((u8 *)pc)[i], /*in_shadow*/ false, " ");
-    }
-    str.append("\n");
-  } else {
-    str.append("unaccessible\n");
-  }
-  Report("%s", str.data());
-}
-
-static void MaybeDumpRegisters(void *context) {
-  if (!flags()->dump_registers) return;
-  SignalContext::DumpAllRegisters(context);
-}
-
-static void MaybeReportNonExecRegion(uptr pc) {
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
-  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-  MemoryMappedSegment segment;
-  while (proc_maps.Next(&segment)) {
-    if (pc >= segment.start && pc < segment.end && !segment.IsExecutable())
-      Report("Hint: PC is at a non-executable region. Maybe a wild jump?\n");
-  }
-#endif
-}
-
 void ErrorDeadlySignal::Print() {
   Decorator d;
   Printf("%s", d.Warning());

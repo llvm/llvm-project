@@ -28,6 +28,7 @@ class SanitizerCommonDecorator {
   const char *Bold()    const { return ansi_ ? "\033[1m" : ""; }
   const char *Default() const { return ansi_ ? "\033[1m\033[0m"  : ""; }
   const char *Warning() const { return Red(); }
+  const char *MemoryByte() { return Magenta(); }
 
  protected:
   const char *Black()   const { return ansi_ ? "\033[1m\033[30m" : ""; }

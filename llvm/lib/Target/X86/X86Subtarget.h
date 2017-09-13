@@ -61,7 +61,16 @@ protected:
   };
 
   enum X86ProcFamilyEnum {
-    Others, IntelAtom, IntelSLM, IntelGLM
+    Others, 
+    IntelAtom,
+    IntelSLM,
+    IntelGLM,
+    IntelHaswell,
+    IntelBroadwell,
+    IntelSkylake,
+    IntelKNL,
+    IntelSKX,
+    IntelCannonlake
   };
 
   /// X86 processor family: Intel Atom, and others
@@ -339,6 +348,10 @@ private:
   /// True if compiling for 16-bit, false for 32-bit or 64-bit.
   bool In16BitMode;
 
+  /// Contains the Overhead of gather\scatter instructions
+  int GatherOverhead;
+  int ScatterOverhead;
+
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
   // X86TargetLowering needs.
@@ -481,6 +494,8 @@ public:
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUAMem32Slow; }
+  int getGatherOverhead() const { return GatherOverhead; }
+  int getScatterOverhead() const { return ScatterOverhead; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b; }
   bool useLeaForSP() const { return UseLeaForSP; }
@@ -515,6 +530,9 @@ public:
 
   bool isXRaySupported() const override { return is64Bit(); }
 
+  X86ProcFamilyEnum getProcFamily() const { return X86ProcFamily; }
+
+  /// TODO: to be removed later and replaced with suitable properties
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
   bool useSoftFloat() const { return UseSoftFloat; }

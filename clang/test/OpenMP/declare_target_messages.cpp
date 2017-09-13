@@ -28,16 +28,16 @@ typedef int sint;
 extern int b;
 int g;
 
-struct T { // expected-note {{mappable type cannot be polymorphic}}
+struct T {
   int a;
   virtual int method();
 };
 
-class VC { // expected-note {{mappable type cannot be polymorphic}}
+class VC {
   T member;
   NonT member1;
   public:
-    virtual int method() { T a; return 0; } // expected-error {{type 'T' is not mappable to target}}
+    virtual int method() { T a; return 0; }
 };
 
 struct C {
@@ -56,7 +56,7 @@ void foo() {
   b = 0; // expected-note {{used here}}
   t = 1; // expected-error {{threadprivate variables cannot be used in target constructs}}
   C object;
-  VC object1; // expected-error {{type 'VC' is not mappable to target}}
+  VC object1;
   g = object.method();
   g += object.method1();
   g += object1.method();

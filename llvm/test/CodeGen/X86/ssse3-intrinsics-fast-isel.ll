@@ -15,8 +15,10 @@ define <2 x i64> @test_mm_abs_epi8(<2 x i64> %a0) {
 ; X64-NEXT:    pabsb %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8> %arg)
-  %res = bitcast <16 x i8> %call to <2 x i64>
+  %sub = sub <16 x i8> zeroinitializer, %arg
+  %cmp = icmp sgt <16 x i8> %arg, zeroinitializer 
+  %sel = select <16 x i1> %cmp, <16 x i8> %arg, <16 x i8> %sub
+  %res = bitcast <16 x i8> %sel to <2 x i64>
   ret <2 x i64> %res
 }
 declare <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8>) nounwind readnone
@@ -32,8 +34,10 @@ define <2 x i64> @test_mm_abs_epi16(<2 x i64> %a0) {
 ; X64-NEXT:    pabsw %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg = bitcast <2 x i64> %a0 to <8 x i16>
-  %call = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %arg)
-  %res = bitcast <8 x i16> %call to <2 x i64>
+  %sub = sub <8 x i16> zeroinitializer, %arg
+  %cmp = icmp sgt <8 x i16> %arg, zeroinitializer 
+  %sel = select <8 x i1> %cmp, <8 x i16> %arg, <8 x i16> %sub
+  %res = bitcast <8 x i16> %sel to <2 x i64>
   ret <2 x i64> %res
 }
 declare <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16>) nounwind readnone
@@ -49,8 +53,10 @@ define <2 x i64> @test_mm_abs_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    pabsd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg = bitcast <2 x i64> %a0 to <4 x i32>
-  %call = call <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32> %arg)
-  %res = bitcast <4 x i32> %call to <2 x i64>
+  %sub = sub <4 x i32> zeroinitializer, %arg
+  %cmp = icmp sgt <4 x i32> %arg, zeroinitializer 
+  %sel = select <4 x i1> %cmp, <4 x i32> %arg, <4 x i32> %sub
+  %res = bitcast <4 x i32> %sel to <2 x i64>
   ret <2 x i64> %res
 }
 declare <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32>) nounwind readnone

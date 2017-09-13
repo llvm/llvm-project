@@ -20,7 +20,6 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_posix.h"
-
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
@@ -215,6 +214,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   MaybeInstallSigaction(SIGFPE, handler);
   MaybeInstallSigaction(SIGILL, handler);
 }
+
 bool IsStackOverflow(int code, const SignalContext &sig) {
   // Access at a reasonable offset above SP, or slightly below it (to account
   // for x86_64 or PowerPC redzone, ARM push of multiple registers, etc) is
@@ -258,6 +258,14 @@ bool IsStackOverflow(int code, const SignalContext &sig) {
   // then hitting the guard page or unmapped memory, like, for example,
   // unaligned memory access.
   return IsStackAccess && (code == si_SEGV_MAPERR || code == si_SEGV_ACCERR);
+}
+
+void StartReportDeadlySignal() {
+  // Write the first message using fd=2, just in case.
+  // It may actually fail to write in case stderr is closed.
+  internal_write(2, SanitizerToolName, internal_strlen(SanitizerToolName));
+  static const char kDeadlySignal[] = ":DEADLYSIGNAL\n";
+  internal_write(2, kDeadlySignal, sizeof(kDeadlySignal) - 1);
 }
 
 #endif  // SANITIZER_GO

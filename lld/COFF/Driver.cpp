@@ -110,7 +110,8 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
   return MBRef;
 }
 
-void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
+void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
+                             bool WholeArchive) {
   MemoryBufferRef MBRef = takeBuffer(std::move(MB));
 
   // File type is detected by contents, not by file extension.
@@ -121,10 +122,24 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
   }
 
   FilePaths.push_back(MBRef.getBufferIdentifier());
-  if (Magic == file_magic::archive)
-    return Symtab->addFile(make<ArchiveFile>(MBRef));
-  if (Magic == file_magic::bitcode)
-    return Symtab->addFile(make<BitcodeFile>(MBRef));
+  if (Magic == file_magic::archive) {
+    if (WholeArchive) {
+      std::unique_ptr<Archive> File =
+          check(Archive::create(MBRef),
+                MBRef.getBufferIdentifier() + ": failed to parse archive");
+
+      for (MemoryBufferRef M : getArchiveMembers(File.get()))
+        addArchiveBuffer(M, "<whole-archive>", MBRef.getBufferIdentifier());
+      return;
+    }
+    Symtab->addFile(make<ArchiveFile>(MBRef));
+    return;
+  }
+
+  if (Magic == file_magic::bitcode) {
+    Symtab->addFile(make<BitcodeFile>(MBRef));
+    return;
+  }
 
   if (Magic == file_magic::coff_cl_gl_object)
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
@@ -133,7 +148,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
     Symtab->addFile(make<ObjFile>(MBRef));
 }
 
-void LinkerDriver::enqueuePath(StringRef Path) {
+void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
   auto Future =
       std::make_shared<std::future<MBErrPair>>(createFutureForFile(Path));
   std::string PathStr = Path;
@@ -142,7 +157,7 @@ void LinkerDriver::enqueuePath(StringRef Path) {
     if (MBOrErr.second)
       error("could not open " + PathStr + ": " + MBOrErr.second.message());
     else
-      Driver->addBuffer(std::move(MBOrErr.first));
+      Driver->addBuffer(std::move(MBOrErr.first), WholeArchive);
   });
 }
 
@@ -215,7 +230,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
       break;
     case OPT_defaultlib:
       if (Optional<StringRef> Path = findLib(Arg->getValue()))
-        enqueuePath(*Path);
+        enqueuePath(*Path, false);
       break;
     case OPT_export: {
       Export E = parseExport(Arg->getValue());
@@ -953,19 +968,29 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (ErrorCount)
     return;
 
+  bool WholeArchiveFlag = Args.hasArg(OPT_wholearchive_flag);
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.
   std::vector<MemoryBufferRef> MBs;
-  for (auto *Arg : Args.filtered(OPT_INPUT))
-    if (Optional<StringRef> Path = findFile(Arg->getValue()))
-      enqueuePath(*Path);
+  for (auto *Arg : Args.filtered(OPT_INPUT, OPT_wholearchive_file)) {
+    switch (Arg->getOption().getID()) {
+    case OPT_INPUT:
+      if (Optional<StringRef> Path = findFile(Arg->getValue()))
+        enqueuePath(*Path, WholeArchiveFlag);
+      break;
+    case OPT_wholearchive_file:
+      if (Optional<StringRef> Path = findFile(Arg->getValue()))
+        enqueuePath(*Path, true);
+      break;
+    }
+  }
   for (auto *Arg : Args.filtered(OPT_defaultlib))
     if (Optional<StringRef> Path = findLib(Arg->getValue()))
-      enqueuePath(*Path);
+      enqueuePath(*Path, false);
 
   // Windows specific -- Create a resource file containing a manifest file.
   if (Config->Manifest == Configuration::Embed)
-    addBuffer(createManifestRes());
+    addBuffer(createManifestRes(), false);
 
   // Read all input files given via the command line.
   run();
@@ -981,7 +1006,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // WindowsResource to convert resource files to a regular COFF file,
   // then link the resulting file normally.
   if (!Resources.empty())
-    addBuffer(convertResToCOFF(Resources));
+    addBuffer(convertResToCOFF(Resources), false);
 
   if (Tar)
     Tar->append("response.txt",

@@ -534,3 +534,34 @@ define <16 x i16> @mm256_avg_epu16(<16 x i16> %a0, <16 x i16> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16>, <16 x i16>) nounwind readnone
 
+define <32 x i8> @test_x86_avx2_pabs_b(<32 x i8> %a0) {
+; AVX2-LABEL: test_x86_avx2_pabs_b:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vpabsb %ymm0, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+  %res = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %a0) ; <<32 x i8>> [#uses=1]
+  ret <32 x i8> %res
+}
+declare <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8>) nounwind readnone
+
+define <8 x i32> @test_x86_avx2_pabs_d(<8 x i32> %a0) {
+; AVX2-LABEL: test_x86_avx2_pabs_d:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vpabsd %ymm0, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x1e,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+  %res = call <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32> %a0) ; <<8 x i32>> [#uses=1]
+  ret <8 x i32> %res
+}
+declare <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32>) nounwind readnone
+
+
+define <16 x i16> @test_x86_avx2_pabs_w(<16 x i16> %a0) {
+; AVX2-LABEL: test_x86_avx2_pabs_w:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vpabsw %ymm0, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+  %res = call <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16> %a0) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16>) nounwind readnone
+

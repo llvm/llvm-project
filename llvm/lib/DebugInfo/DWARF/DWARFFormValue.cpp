@@ -481,7 +481,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << Value.uval;
     break;
   case DW_FORM_strp:
-    if (!DumpOpts.Brief)
+    if (DumpOpts.Verbose)
       OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)UValue);
     dumpString(OS);
     break;
@@ -541,7 +541,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   }
 
-  if (CURelativeOffset && !DumpOpts.Brief) {
+  if (CURelativeOffset && DumpOpts.Verbose) {
     OS << " => {";
     WithColor(OS, syntax::Address).get()
         << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));

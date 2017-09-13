@@ -72,7 +72,12 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // like to use this information to remove upgrade code for some older
   // intrinsics. It is currently undecided how we will determine that future
   // point.
-  if (Name.startswith("sse2.pcmpeq.") || // Added in 3.1
+  if (Name=="ssse3.pabs.b.128" || // Added in 6.0
+      Name=="ssse3.pabs.w.128" || // Added in 6.0
+      Name=="ssse3.pabs.d.128" || // Added in 6.0
+      Name.startswith("avx2.pabs.") || // Added in 6.0
+      Name.startswith("avx512.mask.pabs.") || // Added in 6.0
+      Name.startswith("sse2.pcmpeq.") || // Added in 3.1
       Name.startswith("sse2.pcmpgt.") || // Added in 3.1
       Name.startswith("avx2.pcmpeq.") || // Added in 3.1
       Name.startswith("avx2.pcmpgt.") || // Added in 3.1
@@ -793,6 +798,20 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
   return Builder.CreateMaskedLoad(Ptr, Align, Mask, Passthru);
 }
 
+static Value *upgradeAbs(IRBuilder<> &Builder, CallInst &CI) {
+  Value *Op0 = CI.getArgOperand(0);
+  llvm::Type *Ty = Op0->getType();
+  Value *Zero = llvm::Constant::getNullValue(Ty);
+  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Op0, Zero);
+  Value *Neg = Builder.CreateNeg(Op0);
+  Value *Res = Builder.CreateSelect(Cmp, Op0, Neg);
+
+  if (CI.getNumArgOperands() == 3)
+    Res = EmitX86Select(Builder,CI.getArgOperand(2), Res, CI.getArgOperand(1));
+
+  return Res;
+}
+
 static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
                                ICmpInst::Predicate Pred) {
   Value *Op0 = CI.getArgOperand(0);
@@ -1056,6 +1075,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && Name.startswith("avx512.mask.ucmp")) {
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       Rep = upgradeMaskedCompare(Builder, *CI, Imm, false);
+    } else if(IsX86 && (Name == "ssse3.pabs.b.128" ||
+                        Name == "ssse3.pabs.w.128" ||
+                        Name == "ssse3.pabs.d.128" ||
+                        Name.startswith("avx2.pabs") ||
+                        Name.startswith("avx512.mask.pabs"))) {
+      Rep = upgradeAbs(Builder, *CI);
     } else if (IsX86 && (Name == "sse41.pmaxsb" ||
                          Name == "sse2.pmaxs.w" ||
                          Name == "sse41.pmaxsd" ||

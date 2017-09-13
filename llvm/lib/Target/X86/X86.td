@@ -307,6 +307,18 @@ def ProcIntelSLM  : SubtargetFeature<"slm", "X86ProcFamily", "IntelSLM",
                     "Intel Silvermont processors">;
 def ProcIntelGLM  : SubtargetFeature<"glm", "X86ProcFamily", "IntelGLM",
                     "Intel Goldmont processors">;
+def ProcIntelHSW  : SubtargetFeature<"haswell", "X86ProcFamily",
+                    "IntelHaswell", "Intel Haswell processors">;
+def ProcIntelBDW  : SubtargetFeature<"broadwell", "X86ProcFamily",
+                    "IntelBroadwell", "Intel Broadwell processors">;
+def ProcIntelSKL  : SubtargetFeature<"skylake", "X86ProcFamily",
+                    "IntelSkylake", "Intel Skylake processors">;
+def ProcIntelKNL  : SubtargetFeature<"knl", "X86ProcFamily",
+                    "IntelKNL", "Intel Knights Landing processors">;
+def ProcIntelSKX  : SubtargetFeature<"skx", "X86ProcFamily",
+                    "IntelSKX", "Intel Skylake Server processors">;
+def ProcIntelCNL  : SubtargetFeature<"cannonlake", "X86ProcFamily",
+                    "IntelCannonlake", "Intel Cannonlake processors">;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, GenericModel, Features>;
@@ -565,11 +577,14 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
 ]>;
 
 class HaswellProc<string Name> : ProcModel<Name, HaswellModel,
-                                           HSWFeatures.Value, []>;
+                                           HSWFeatures.Value, [
+    ProcIntelHSW
+  ]>;
 def : HaswellProc<"haswell">;
 def : HaswellProc<"core-avx2">; // Legacy alias.
 
 def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
+  ProcIntelBDW,
   FeatureADX,
   FeatureRDSEED
 ]>;
@@ -589,12 +604,15 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
 
 // FIXME: define SKL model
 class SkylakeClientProc<string Name> : ProcModel<Name, HaswellModel,
-                                                 SKLFeatures.Value, []>;
+                                                 SKLFeatures.Value, [
+    ProcIntelSKL
+  ]>;
 def : SkylakeClientProc<"skylake">;
 
 // FIXME: define KNL model
 class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
                                                   IVBFeatures.Value, [
+  ProcIntelKNL,                                                  
   FeatureAVX512,
   FeatureERI,
   FeatureCDI,
@@ -624,7 +642,9 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 
 // FIXME: define SKX model
 class SkylakeServerProc<string Name> : ProcModel<Name, HaswellModel,
-                                                 SKXFeatures.Value, []>;
+                                                 SKXFeatures.Value, [
+    ProcIntelSKX
+  ]>;
 def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
 
@@ -635,7 +655,9 @@ def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
 ]>;
 
 class CannonlakeProc<string Name> : ProcModel<Name, HaswellModel,
-                                              CNLFeatures.Value, []>;
+                                              CNLFeatures.Value, [
+    ProcIntelCNL
+  ]>;
 def : CannonlakeProc<"cannonlake">;
 
 // AMD CPUs.
