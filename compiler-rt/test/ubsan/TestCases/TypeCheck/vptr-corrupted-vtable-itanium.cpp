@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=vptr,null -fno-sanitize-recover=vptr,null -g %s -O3 -o %t
+// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr,null -g %s -O3 -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-CORRUPTED-VTABLE --strict-whitespace
 
 // UNSUPPORTED: win32
