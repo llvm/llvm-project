@@ -480,32 +480,48 @@ __m512i test_mm512_mask_blend_epi16(__mmask32 __U, __m512i __A, __m512i __W) {
 }
 __m512i test_mm512_abs_epi8(__m512i __A) {
   // CHECK-LABEL: @test_mm512_abs_epi8
-  // CHECK: @llvm.x86.avx512.mask.pabs.b.512
+  // CHECK: [[SUB:%.*]] = sub <64 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <64 x i8> [[A]], zeroinitializer
+  // CHECK: select <64 x i1> [[CMP]], <64 x i8> [[A]], <64 x i8> [[SUB]]
   return _mm512_abs_epi8(__A); 
 }
 __m512i test_mm512_mask_abs_epi8(__m512i __W, __mmask64 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_abs_epi8
-  // CHECK: @llvm.x86.avx512.mask.pabs.b.512
+  // CHECK: [[SUB:%.*]] = sub <64 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <64 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <64 x i1> [[CMP]], <64 x i8> [[A]], <64 x i8> [[SUB]]
+  // CHECK: select <64 x i1> %{{.*}}, <64 x i8> [[SEL]], <64 x i8> %{{.*}}
   return _mm512_mask_abs_epi8(__W,__U,__A); 
 }
 __m512i test_mm512_maskz_abs_epi8(__mmask64 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_abs_epi8
-  // CHECK: @llvm.x86.avx512.mask.pabs.b.512
+  // CHECK: [[SUB:%.*]] = sub <64 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <64 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <64 x i1> [[CMP]], <64 x i8> [[A]], <64 x i8> [[SUB]]
+  // CHECK: select <64 x i1> %{{.*}}, <64 x i8> [[SEL]], <64 x i8> %{{.*}}
   return _mm512_maskz_abs_epi8(__U,__A); 
 }
 __m512i test_mm512_abs_epi16(__m512i __A) {
   // CHECK-LABEL: @test_mm512_abs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pabs.w.512
+  // CHECK: [[SUB:%.*]] = sub <32 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i16> [[A]], zeroinitializer
+  // CHECK: select <32 x i1> [[CMP]], <32 x i16> [[A]], <32 x i16> [[SUB]]
   return _mm512_abs_epi16(__A); 
 }
 __m512i test_mm512_mask_abs_epi16(__m512i __W, __mmask32 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_abs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pabs.w.512
+  // CHECK: [[SUB:%.*]] = sub <32 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x i16> [[A]], <32 x i16> [[SUB]]
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> [[SEL]], <32 x i16> %{{.*}}
   return _mm512_mask_abs_epi16(__W,__U,__A); 
 }
 __m512i test_mm512_maskz_abs_epi16(__mmask32 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_abs_epi16
-  // CHECK: @llvm.x86.avx512.mask.pabs.w.512
+  // CHECK: [[SUB:%.*]] = sub <32 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x i16> [[A]], <32 x i16> [[SUB]]
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> [[SEL]], <32 x i16> %{{.*}}
   return _mm512_maskz_abs_epi16(__U,__A); 
 }
 __m512i test_mm512_packs_epi32(__m512i __A, __m512i __B) {

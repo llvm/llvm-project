@@ -405,6 +405,18 @@ define i64 @bextr64c(i64 %x, i32 %y) {
   ret i64 %tmp1
 }
 
+define i64 @bextr64d(i64 %a) {
+; CHECK-LABEL: bextr64d:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movl $8450, %eax # imm = 0x2102
+; CHECK-NEXT:    bextrq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %shr = lshr i64 %a, 2
+  %and = and i64 %shr, 8589934591
+  ret i64 %and
+}
+
 define i32 @non_bextr32(i32 %x) {
 ; CHECK-LABEL: non_bextr32:
 ; CHECK:       # BB#0: # %entry

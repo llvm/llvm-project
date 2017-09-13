@@ -2337,8 +2337,15 @@ bool X86DAGToDAGISel::matchBEXTRFromAnd(SDNode *Node) {
   if (!Subtarget->hasTBM()) {
     ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
     MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
-    SDNode *Move = CurDAG->getMachineNode(X86::MOV32ri, dl, NVT, New);
-    New = SDValue(Move, 0);
+    New = SDValue(CurDAG->getMachineNode(X86::MOV32ri, dl, NVT, New), 0);
+    if (NVT == MVT::i64) {
+      New =
+          SDValue(CurDAG->getMachineNode(
+                      TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
+                      CurDAG->getTargetConstant(0, dl, MVT::i64), New,
+                      CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
+                  0);
+    }
   }
 
   MachineSDNode *NewNode;

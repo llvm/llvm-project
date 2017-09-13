@@ -898,57 +898,73 @@ __m256i test_mm256_mask_blend_epi16(__mmask16 __U, __m256i __A, __m256i __W) {
 
 __m128i test_mm_mask_abs_epi8(__m128i __W, __mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_abs_epi8
-  // CHECK: @llvm.x86.ssse3.pabs.b
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <16 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i8> [[A]], <16 x i8> [[SUB]]
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[SEL]], <16 x i8> %{{.*}}
   return _mm_mask_abs_epi8(__W,__U,__A); 
 }
 
 __m128i test_mm_maskz_abs_epi8(__mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_abs_epi8
-  // CHECK: @llvm.x86.ssse3.pabs.b
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <16 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i8> [[A]], <16 x i8> [[SUB]]
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[SEL]], <16 x i8> %{{.*}}
   return _mm_maskz_abs_epi8(__U,__A); 
 }
 
 __m256i test_mm256_mask_abs_epi8(__m256i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_abs_epi8
-  // CHECK: @llvm.x86.avx2.pabs.b
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <32 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x i8> [[A]], <32 x i8> [[SUB]]
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> [[SEL]], <32 x i8> %{{.*}}
   return _mm256_mask_abs_epi8(__W,__U,__A); 
 }
 
 __m256i test_mm256_maskz_abs_epi8(__mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_abs_epi8
-  // CHECK: @llvm.x86.avx2.pabs.b
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <32 x i8> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i8> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <32 x i1> [[CMP]], <32 x i8> [[A]], <32 x i8> [[SUB]]
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> [[SEL]], <32 x i8> %{{.*}}
   return _mm256_maskz_abs_epi8(__U,__A); 
 }
 
 __m128i test_mm_mask_abs_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_abs_epi16
-  // CHECK: @llvm.x86.ssse3.pabs.w
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <8 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x i16> [[A]], <8 x i16> [[SUB]]
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> [[SEL]], <8 x i16> %{{.*}}
   return _mm_mask_abs_epi16(__W,__U,__A); 
 }
 
 __m128i test_mm_maskz_abs_epi16(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_abs_epi16
-  // CHECK: @llvm.x86.ssse3.pabs.w
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <8 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x i16> [[A]], <8 x i16> [[SUB]]
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> [[SEL]], <8 x i16> %{{.*}}
   return _mm_maskz_abs_epi16(__U,__A); 
 }
 
 __m256i test_mm256_mask_abs_epi16(__m256i __W, __mmask16 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_abs_epi16
-  // CHECK: @llvm.x86.avx2.pabs.w
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <16 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i16> [[A]], <16 x i16> [[SUB]]
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> [[SEL]], <16 x i16> %{{.*}}
   return _mm256_mask_abs_epi16(__W,__U,__A); 
 }
 
 __m256i test_mm256_maskz_abs_epi16(__mmask16 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_abs_epi16
-  // CHECK: @llvm.x86.avx2.pabs.w
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
+  // CHECK: [[SUB:%.*]] = sub <16 x i16> zeroinitializer, [[A:%.*]]
+  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i16> [[A]], zeroinitializer
+  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i16> [[A]], <16 x i16> [[SUB]]
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> [[SEL]], <16 x i16> %{{.*}}
   return _mm256_maskz_abs_epi16(__U,__A); 
 }
 

@@ -12,12 +12,16 @@ def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 def mllvm: S<"mllvm">;
+def no_whole_archive: F<"no-whole-archive">,
+    HelpText<"No longer include all object files for following archives">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 def out_implib: Separate<["--"], "out-implib">, HelpText<"Import library name">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 def subs: Separate<["--"], "subsystem">, HelpText<"Specify subsystem">;
 def stack: Separate<["--"], "stack">;
+def whole_archive: F<"whole-archive">,
+    HelpText<"Include all object files for following archives">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 // LLD specific options

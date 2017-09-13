@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+ssse3    | FileCheck %s --check-prefix=SSE --check-prefix=SSSE3
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx      | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx2     | FileCheck %s --check-prefix=AVX --check-prefix=AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F --check-prefix=AVX512VL
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vl --show-mc-encoding | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F --check-prefix=AVX512VL
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vl,+avx512bw --show-mc-encoding | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
 
 define <4 x i32> @test_abs_gt_v4i32(<4 x i32> %a) nounwind {
 ; SSE2-LABEL: test_abs_gt_v4i32:
@@ -20,10 +20,20 @@ define <4 x i32> @test_abs_gt_v4i32(<4 x i32> %a) nounwind {
 ; SSSE3-NEXT:    pabsd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; AVX-LABEL: test_abs_gt_v4i32:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpabsd %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_abs_gt_v4i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpabsd %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_abs_gt_v4i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpabsd %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_abs_gt_v4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpabsd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <4 x i32> zeroinitializer, %a
   %b = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %abs = select <4 x i1> %b, <4 x i32> %a, <4 x i32> %tmp1neg
@@ -44,10 +54,20 @@ define <4 x i32> @test_abs_ge_v4i32(<4 x i32> %a) nounwind {
 ; SSSE3-NEXT:    pabsd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; AVX-LABEL: test_abs_ge_v4i32:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpabsd %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_abs_ge_v4i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpabsd %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_abs_ge_v4i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpabsd %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_abs_ge_v4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpabsd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <4 x i32> zeroinitializer, %a
   %b = icmp sge <4 x i32> %a, zeroinitializer
   %abs = select <4 x i1> %b, <4 x i32> %a, <4 x i32> %tmp1neg
@@ -68,10 +88,25 @@ define <8 x i16> @test_abs_gt_v8i16(<8 x i16> %a) nounwind {
 ; SSSE3-NEXT:    pabsw %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; AVX-LABEL: test_abs_gt_v8i16:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpabsw %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_abs_gt_v8i16:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpabsw %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_abs_gt_v8i16:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpabsw %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_abs_gt_v8i16:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpabsw %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x79,0x1d,0xc0]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
+;
+; AVX512BW-LABEL: test_abs_gt_v8i16:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpabsw %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1d,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <8 x i16> zeroinitializer, %a
   %b = icmp sgt <8 x i16> %a, zeroinitializer
   %abs = select <8 x i1> %b, <8 x i16> %a, <8 x i16> %tmp1neg
@@ -92,10 +127,25 @@ define <16 x i8> @test_abs_lt_v16i8(<16 x i8> %a) nounwind {
 ; SSSE3-NEXT:    pabsb %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; AVX-LABEL: test_abs_lt_v16i8:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpabsb %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_abs_lt_v16i8:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpabsb %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_abs_lt_v16i8:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpabsb %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_abs_lt_v16i8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpabsb %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x79,0x1c,0xc0]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
+;
+; AVX512BW-LABEL: test_abs_lt_v16i8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpabsb %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1c,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <16 x i8> zeroinitializer, %a
   %b = icmp slt <16 x i8> %a, zeroinitializer
   %abs = select <16 x i1> %b, <16 x i8> %tmp1neg, <16 x i8> %a
@@ -116,10 +166,20 @@ define <4 x i32> @test_abs_le_v4i32(<4 x i32> %a) nounwind {
 ; SSSE3-NEXT:    pabsd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; AVX-LABEL: test_abs_le_v4i32:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpabsd %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_abs_le_v4i32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpabsd %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_abs_le_v4i32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpabsd %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_abs_le_v4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpabsd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <4 x i32> zeroinitializer, %a
   %b = icmp sle <4 x i32> %a, zeroinitializer
   %abs = select <4 x i1> %b, <4 x i32> %tmp1neg, <4 x i32> %a
@@ -160,8 +220,8 @@ define <8 x i32> @test_abs_gt_v8i32(<8 x i32> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_gt_v8i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsd %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsd %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <8 x i32> zeroinitializer, %a
   %b = icmp sgt <8 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %abs = select <8 x i1> %b, <8 x i32> %a, <8 x i32> %tmp1neg
@@ -202,8 +262,8 @@ define <8 x i32> @test_abs_ge_v8i32(<8 x i32> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_ge_v8i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsd %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsd %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <8 x i32> zeroinitializer, %a
   %b = icmp sge <8 x i32> %a, zeroinitializer
   %abs = select <8 x i1> %b, <8 x i32> %a, <8 x i32> %tmp1neg
@@ -242,10 +302,15 @@ define <16 x i16> @test_abs_gt_v16i16(<16 x i16> %a) nounwind {
 ; AVX2-NEXT:    vpabsw %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_abs_gt_v16i16:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsw %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: test_abs_gt_v16i16:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpabsw %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
+;
+; AVX512BW-LABEL: test_abs_gt_v16i16:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpabsw %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <16 x i16> zeroinitializer, %a
   %b = icmp sgt <16 x i16> %a, zeroinitializer
   %abs = select <16 x i1> %b, <16 x i16> %a, <16 x i16> %tmp1neg
@@ -284,10 +349,15 @@ define <32 x i8> @test_abs_lt_v32i8(<32 x i8> %a) nounwind {
 ; AVX2-NEXT:    vpabsb %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_abs_lt_v32i8:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsb %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: test_abs_lt_v32i8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpabsb %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
+;
+; AVX512BW-LABEL: test_abs_lt_v32i8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpabsb %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <32 x i8> zeroinitializer, %a
   %b = icmp slt <32 x i8> %a, zeroinitializer
   %abs = select <32 x i1> %b, <32 x i8> %tmp1neg, <32 x i8> %a
@@ -328,8 +398,8 @@ define <8 x i32> @test_abs_le_v8i32(<8 x i32> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_le_v8i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsd %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsd %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <8 x i32> zeroinitializer, %a
   %b = icmp sle <8 x i32> %a, zeroinitializer
   %abs = select <8 x i1> %b, <8 x i32> %tmp1neg, <8 x i32> %a
@@ -385,8 +455,8 @@ define <16 x i32> @test_abs_le_16i32(<16 x i32> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_le_16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsd %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsd %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x1e,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <16 x i32> zeroinitializer, %a
   %b = icmp sle <16 x i32> %a, zeroinitializer
   %abs = select <16 x i1> %b, <16 x i32> %tmp1neg, <16 x i32> %a
@@ -421,8 +491,8 @@ define <2 x i64> @test_abs_ge_v2i64(<2 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_ge_v2i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsq %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsq %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x1f,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <2 x i64> zeroinitializer, %a
   %b = icmp sge <2 x i64> %a, zeroinitializer
   %abs = select <2 x i1> %b, <2 x i64> %a, <2 x i64> %tmp1neg
@@ -467,8 +537,8 @@ define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_gt_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsq %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsq %ymm0, %ymm0 # encoding: [0x62,0xf2,0xfd,0x28,0x1f,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <4 x i64> zeroinitializer, %a
   %b = icmp sgt <4 x i64> %a, <i64 -1, i64 -1, i64 -1, i64 -1>
   %abs = select <4 x i1> %b, <4 x i64> %a, <4 x i64> %tmp1neg
@@ -534,8 +604,8 @@ define <8 x i64> @test_abs_le_v8i64(<8 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: test_abs_le_v8i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsq %zmm0, %zmm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsq %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x1f,0xc0]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <8 x i64> zeroinitializer, %a
   %b = icmp sle <8 x i64> %a, zeroinitializer
   %abs = select <8 x i1> %b, <8 x i64> %tmp1neg, <8 x i64> %a
@@ -609,8 +679,8 @@ define <8 x i64> @test_abs_le_v8i64_fold(<8 x i64>* %a.ptr) nounwind {
 ;
 ; AVX512-LABEL: test_abs_le_v8i64_fold:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpabsq (%rdi), %zmm0
-; AVX512-NEXT:    retq
+; AVX512-NEXT:    vpabsq (%rdi), %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x1f,0x07]
+; AVX512-NEXT:    retq # encoding: [0xc3]
   %a = load <8 x i64>, <8 x i64>* %a.ptr, align 8
   %tmp1neg = sub <8 x i64> zeroinitializer, %a
   %b = icmp sle <8 x i64> %a, zeroinitializer
@@ -667,14 +737,14 @@ define <64 x i8> @test_abs_lt_v64i8(<64 x i8> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_abs_lt_v64i8:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpabsb %ymm0, %ymm0
-; AVX512F-NEXT:    vpabsb %ymm1, %ymm1
-; AVX512F-NEXT:    retq
+; AVX512F-NEXT:    vpabsb %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
+; AVX512F-NEXT:    vpabsb %ymm1, %ymm1 # encoding: [0xc4,0xe2,0x7d,0x1c,0xc9]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512BW-LABEL: test_abs_lt_v64i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpabsb %zmm0, %zmm0
-; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:    vpabsb %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x1c,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <64 x i8> zeroinitializer, %a
   %b = icmp slt <64 x i8> %a, zeroinitializer
   %abs = select <64 x i1> %b, <64 x i8> %tmp1neg, <64 x i8> %a
@@ -730,14 +800,14 @@ define <32 x i16> @test_abs_gt_v32i16(<32 x i16> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_abs_gt_v32i16:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpabsw %ymm0, %ymm0
-; AVX512F-NEXT:    vpabsw %ymm1, %ymm1
-; AVX512F-NEXT:    retq
+; AVX512F-NEXT:    vpabsw %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
+; AVX512F-NEXT:    vpabsw %ymm1, %ymm1 # encoding: [0xc4,0xe2,0x7d,0x1d,0xc9]
+; AVX512F-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512BW-LABEL: test_abs_gt_v32i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpabsw %zmm0, %zmm0
-; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:    vpabsw %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x48,0x1d,0xc0]
+; AVX512BW-NEXT:    retq # encoding: [0xc3]
   %tmp1neg = sub <32 x i16> zeroinitializer, %a
   %b = icmp sgt <32 x i16> %a, zeroinitializer
   %abs = select <32 x i1> %b, <32 x i16> %a, <32 x i16> %tmp1neg

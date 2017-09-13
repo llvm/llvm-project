@@ -2262,19 +2262,13 @@ define <2 x i32> @zext_2i8_to_2i32(<2 x i8>* %addr) {
 ;
 ; SSE41-LABEL: zext_2i8_to_2i32:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    movzwl (%rdi), %eax
-; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; SSE41-NEXT:    paddq %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: zext_2i8_to_2i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <2 x i8>, <2 x i8>* %addr, align 1

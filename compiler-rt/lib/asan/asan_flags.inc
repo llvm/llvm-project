@@ -147,11 +147,6 @@ ASAN_FLAG(int, detect_odr_violation, 2,
           "If >=2, detect violation of One-Definition-Rule (ODR); "
           "If ==1, detect ODR-violation only if the two variables "
           "have different sizes")
-ASAN_FLAG(bool, dump_instruction_bytes, false,
-          "If true, dump 16 bytes starting at the instruction that caused SEGV")
-ASAN_FLAG(bool, dump_registers, true,
-          "If true, dump values of CPU registers when SEGV happens. Only "
-          "available on OS X for now.")
 ASAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 ASAN_FLAG(bool, halt_on_error, true,
           "Crash the program after printing the first error report "
