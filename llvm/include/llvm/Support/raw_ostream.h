@@ -213,6 +213,10 @@ public:
   /// Output \p N in hexadecimal, without any prefix or padding.
   raw_ostream &write_hex(unsigned long long N);
 
+  /// Output a formatted UUID with dash separators.
+  using uuid_t = uint8_t[16];
+  raw_ostream &write_uuid(const uuid_t UUID);
+
   /// Output \p Str, turning '\\', '\t', '\n', '"', and anything that doesn't
   /// satisfy std::isprint into an escape sequence.
   raw_ostream &write_escaped(StringRef Str, bool UseHexEscapes = false);
