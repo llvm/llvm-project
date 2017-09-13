@@ -3,7 +3,10 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @fptrunc() { ret void }
+  define void @fptrunc_s16_s32_fpr() { ret void }
+  define void @fptrunc_s16_s64_fpr() { ret void }
+  define void @fptrunc_s32_s64_fpr() { ret void }
+
   define void @fpext() { ret void }
 
   define void @sitofp_s32_s32_fpr() { ret void }
@@ -28,8 +31,58 @@
 ...
 
 ---
-# CHECK-LABEL: name: fptrunc
-name:            fptrunc
+# CHECK-LABEL: name: fptrunc_s16_s32_fpr
+name:            fptrunc_s16_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr32, preferred-register: '' }
+# CHECK: - { id: 1, class: fpr16, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = FCVTHSr %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s16) = G_FPTRUNC %0
+    %h0 = COPY %1(s16)
+...
+
+---
+# CHECK-LABEL: name: fptrunc_s16_s64_fpr
+name:            fptrunc_s16_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK: - { id: 0, class: fpr64, preferred-register: '' }
+# CHECK: - { id: 1, class: fpr16, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = FCVTHDr %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s16) = G_FPTRUNC %0
+    %h0 = COPY %1(s16)
+...
+
+---
+# CHECK-LABEL: name: fptrunc_s32_s64_fpr
+name:            fptrunc_s32_s64_fpr
 legalized:       true
 regBankSelected: true
 
