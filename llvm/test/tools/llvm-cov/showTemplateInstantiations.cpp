@@ -87,3 +87,7 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // RUN: FileCheck -check-prefix=HTML-JUMP -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 // HTML-JUMP: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
 // HTML-JUMP-NOT: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
+
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -show-instantiations=false -filename-equivalence %s | FileCheck -check-prefix=NO_INSTS %s
+// NO_INSTS-NOT: {{^ *}}| _Z4funcIbEiT_:
+// NO_INSTS-NOT: {{^ *}}| _Z4funcIiEiT_:
