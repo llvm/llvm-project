@@ -235,6 +235,10 @@ public:
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
 
+  /// If this is an alias summary, returns the summary of the aliased object (a
+  /// global variable or function), otherwise returns itself.
+  GlobalValueSummary *getBaseObject();
+
   friend class ModuleSummaryIndex;
   friend void computeDeadSymbols(class ModuleSummaryIndex &,
                                  const DenseSet<GlobalValue::GUID> &);
@@ -265,6 +269,12 @@ public:
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
 };
+
+inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
+  if (auto *AS = dyn_cast<AliasSummary>(this))
+    return &AS->getAliasee();
+  return this;
+}
 
 /// \brief Function summary information to aid decisions and implementation of
 /// importing.

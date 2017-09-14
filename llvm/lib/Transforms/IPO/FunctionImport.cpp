@@ -324,10 +324,8 @@ static void ComputeImportForModule(
       DEBUG(dbgs() << "Ignores Dead GUID: " << GVSummary.first << "\n");
       continue;
     }
-    auto *Summary = GVSummary.second;
-    if (auto *AS = dyn_cast<AliasSummary>(Summary))
-      Summary = &AS->getAliasee();
-    auto *FuncSummary = dyn_cast<FunctionSummary>(Summary);
+    auto *FuncSummary =
+        dyn_cast<FunctionSummary>(GVSummary.second->getBaseObject());
     if (!FuncSummary)
       // Skip import for global variables
       continue;
@@ -488,17 +486,12 @@ void llvm::computeDeadSymbols(
   while (!Worklist.empty()) {
     auto VI = Worklist.pop_back_val();
     for (auto &Summary : VI.getSummaryList()) {
-      for (auto Ref : Summary->refs())
+      GlobalValueSummary *Base = Summary->getBaseObject();
+      for (auto Ref : Base->refs())
         visit(Ref);
-      if (auto *FS = dyn_cast<FunctionSummary>(Summary.get()))
+      if (auto *FS = dyn_cast<FunctionSummary>(Base))
         for (auto Call : FS->calls())
           visit(Call.first);
-      if (auto *AS = dyn_cast<AliasSummary>(Summary.get())) {
-        auto AliaseeGUID = AS->getAliasee().getOriginalName();
-        ValueInfo AliaseeVI = Index.getValueInfo(AliaseeGUID);
-        if (AliaseeVI)
-          visit(AliaseeVI);
-      }
     }
   }
   Index.setWithGlobalValueDeadStripping();

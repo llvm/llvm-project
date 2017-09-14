@@ -332,6 +332,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
+  T = Triple("mips64el-img-linux-gnuabin32");
+  EXPECT_EQ(Triple::mips64el, T.getArch());
+  EXPECT_EQ(Triple::ImaginationTechnologies, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::GNUABIN32, T.getEnvironment());
+
   T = Triple("mips64el-unknown-linux-gnuabi64");
   EXPECT_EQ(Triple::mips64el, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());

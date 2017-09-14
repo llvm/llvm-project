@@ -28,11 +28,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -150,12 +148,10 @@ class SampleProfileLoader {
 public:
   SampleProfileLoader(
       StringRef Name,
-      std::function<AssumptionCache &(Function &)> GetAssumptionCache,
-      std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
+      std::function<AssumptionCache &(Function &)> GetAssumptionCache)
       : DT(nullptr), PDT(nullptr), LI(nullptr), GetAC(GetAssumptionCache),
-        GetTTI(GetTargetTransformInfo), Reader(), Samples(nullptr),
-        Filename(Name), ProfileIsValid(false), TotalCollectedSamples(0),
-        ORE(nullptr) {}
+        Reader(), Samples(nullptr), Filename(Name), ProfileIsValid(false),
+        TotalCollectedSamples(0), ORE(nullptr) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM);
@@ -229,7 +225,6 @@ protected:
   std::unique_ptr<LoopInfo> LI;
 
   std::function<AssumptionCache &(Function &)> GetAC;
-  std::function<TargetTransformInfo &(Function &)> GetTTI;
 
   /// \brief Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
@@ -270,11 +265,8 @@ public:
       : ModulePass(ID), SampleLoader(Name,
                                      [&](Function &F) -> AssumptionCache & {
                                        return ACT->getAssumptionCache(F);
-                                     },
-                                     [&](Function &F) -> TargetTransformInfo & {
-                                       return TTIWP->getTTI(F);
                                      }),
-        ACT(nullptr), TTIWP(nullptr) {
+        ACT(nullptr) {
     initializeSampleProfileLoaderLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -289,13 +281,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
 private:
   SampleProfileLoader SampleLoader;
   AssumptionCacheTracker *ACT;
-  TargetTransformInfoWrapperPass *TTIWP;
 };
 
 /// Return true if the given callsite is hot wrt to its caller.
@@ -757,25 +747,9 @@ bool SampleProfileLoader::inlineHotFunctions(
             Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
         continue;
       }
-      CallSite CS(DI);
       DebugLoc DLoc = I->getDebugLoc();
       BasicBlock *BB = I->getParent();
-      InlineParams Params;
-      Params.ComputeFullInlineCost = true;
-      // Checks if there is anything in the reachable portion of the callee at
-      // this callsite that makes this inlining potentially illegal. Need to
-      // set ComputeFullInlineCost, otherwise getInlineCost may return early
-      // when cost exceeds threshold without checking all IRs in the callee.
-      // The acutal cost does not matter because we only checks isNever() to
-      // see if it is legal to inline the callsite.
-      InlineCost Cost = getInlineCost(CS, Params, GetTTI(*CalledFunction), GetAC,
-                                      None, nullptr, nullptr);
-      if (Cost.isNever()) {
-        ORE->emit(OptimizationRemark(DEBUG_TYPE, "Not inline", DLoc, BB)
-                  << "incompatible inlining");
-        continue;
-      }
-      if (InlineFunction(CS, IFI)) {
+      if (InlineFunction(CallSite(DI), IFI)) {
         LocalChanged = true;
         // The call to InlineFunction erases DI, so we can't pass it here.
         ORE->emit(OptimizationRemark(DEBUG_TYPE, "HotInline", DLoc, BB)
@@ -1444,7 +1418,6 @@ char SampleProfileLoaderLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SampleProfileLoaderLegacyPass, "sample-profile",
                       "Sample Profile loader", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
                     "Sample Profile loader", false, false)
 
@@ -1510,7 +1483,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
   ACT = &getAnalysis<AssumptionCacheTracker>();
-  TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
   return SampleLoader.runOnModule(M, nullptr);
 }
 
@@ -1540,13 +1512,10 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
-    return FAM.getResult<TargetIRAnalysis>(F);
-  };
 
   SampleProfileLoader SampleLoader(ProfileFileName.empty() ? SampleProfileFile
                                                            : ProfileFileName,
-                                   GetAssumptionCache, GetTTI);
+                                   GetAssumptionCache);
 
   SampleLoader.doInitialization(M);
 

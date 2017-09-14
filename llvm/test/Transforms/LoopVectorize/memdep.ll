@@ -1,5 +1,7 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s -check-prefix=WIDTH
+; RUN: opt -S -loop-vectorize -force-vector-width=4 < %s | FileCheck %s -check-prefix=RIGHTVF
+; RUN: opt -S -loop-vectorize -force-vector-width=8 < %s | FileCheck %s -check-prefix=WRONGVF
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -220,3 +222,52 @@ for.body:
 for.end:
   ret void
 }
+
+
+;Check the new calculation of the maximum safe distance in bits which can be vectorized.
+;The previous behavior did not take account that the stride was 2.
+;Therefore the maxVF was computed as 8 instead of 4, as the dependence distance here is 6 iterations, given by |N-(N-12)|/2.  
+
+;#define M 32
+;#define N 2 * M
+;unsigned int a [N];
+;void pr34283(){
+;	unsigned int j=0;
+;   for (j = 0; j < M - 6; ++j)
+;    {
+;        a[N - 2 * j] = 69;
+;        a[N - 12 - 2 * j] = 7;
+;    }
+;
+;}
+
+; RIGHTVF-LABEL: @pr34283
+; RIGHTVF: <4 x i64>
+
+; WRONGVF-LABLE: @pr34283
+; WRONGVF-NOT: <8 x i64>
+
+@a = common local_unnamed_addr global [64 x i32] zeroinitializer, align 16
+
+; Function Attrs: norecurse nounwind uwtable
+define void @pr34283() local_unnamed_addr {
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %0 = shl i64 %indvars.iv, 1
+  %1 = sub nuw nsw i64 64, %0
+  %arrayidx = getelementptr inbounds [64 x i32], [64 x i32]* @a, i64 0, i64 %1
+  store i32 69, i32* %arrayidx, align 8
+  %2 = sub nuw nsw i64 52, %0
+  %arrayidx4 = getelementptr inbounds [64 x i32], [64 x i32]* @a, i64 0, i64 %2
+  store i32 7, i32* %arrayidx4, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 26
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+

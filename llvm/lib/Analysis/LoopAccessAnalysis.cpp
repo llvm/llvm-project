@@ -1540,10 +1540,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       couldPreventStoreLoadForward(Distance, TypeByteSize))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
+  uint64_t MaxVF = MaxSafeDepDistBytes / (TypeByteSize * Stride);
   DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
-               << " with max VF = "
-               << MaxSafeDepDistBytes / (TypeByteSize * Stride) << '\n');
-
+               << " with max VF = " << MaxVF << '\n');
+  uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+  MaxSafeRegisterWidth = std::min(MaxSafeRegisterWidth, MaxVFInBits);
   return Dependence::BackwardVectorizable;
 }
 
