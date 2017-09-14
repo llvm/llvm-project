@@ -622,6 +622,20 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
   return sb_target;
 }
 
+SBTarget SBDebugger::GetDummyTarget() {
+  SBTarget sb_target;
+  if (m_opaque_sp) {
+      sb_target.SetSP(m_opaque_sp->GetDummyTarget()->shared_from_this());
+  }
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  if (log)
+    log->Printf(
+        "SBDebugger(%p)::GetDummyTarget() => SBTarget(%p)",
+        static_cast<void *>(m_opaque_sp.get()),
+        static_cast<void *>(sb_target.GetSP().get()));
+  return sb_target;
+}
+
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   bool result = false;
   if (m_opaque_sp) {

@@ -1087,11 +1087,38 @@ bool SBTarget::FindBreakpointsByName(const char *name,
   return true;
 }
 
+void SBTarget::GetBreakpointNames(SBStringList &names)
+{
+  names.Clear();
+
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+
+    std::vector<std::string> name_vec;
+    target_sp->GetBreakpointNames(name_vec);
+    for (auto name : name_vec)
+      names.AppendString(name.c_str());
+  }
+}
+
+void SBTarget::DeleteBreakpointName(const char *name)
+{
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+
+    std::vector<std::string> name_vec;
+    target_sp->DeleteBreakpointName(ConstString(name));
+
+  }
+}
+
 bool SBTarget::EnableAllBreakpoints() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->EnableAllBreakpoints();
+    target_sp->EnableAllowedBreakpoints();
     return true;
   }
   return false;
@@ -1101,7 +1128,7 @@ bool SBTarget::DisableAllBreakpoints() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->DisableAllBreakpoints();
+    target_sp->DisableAllowedBreakpoints();
     return true;
   }
   return false;
@@ -1111,7 +1138,7 @@ bool SBTarget::DeleteAllBreakpoints() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->RemoveAllBreakpoints();
+    target_sp->RemoveAllowedBreakpoints();
     return true;
   }
   return false;

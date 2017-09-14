@@ -154,10 +154,19 @@ public:
 
   void SetEnabledAll(bool enabled);
 
+  void SetEnabledAllowed(bool enabled);
+
   //------------------------------------------------------------------
   /// Removes all the breakpoints from this list.
   //------------------------------------------------------------------
   void RemoveAll(bool notify);
+
+  //------------------------------------------------------------------
+  /// Removes all the breakpoints from this list - first checking the
+  /// ePermDelete on the breakpoints.  This call should be used unless you
+  /// are shutting down and need to actually clear them all.
+  //------------------------------------------------------------------
+  void RemoveAllowed(bool notify);
 
   //------------------------------------------------------------------
   /// Tell all the breakpoints to update themselves due to a change in the

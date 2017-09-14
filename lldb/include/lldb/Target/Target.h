@@ -21,6 +21,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointList.h"
+#include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
@@ -651,12 +652,45 @@ public:
   }
 
   WatchpointList &GetWatchpointList() { return m_watchpoint_list; }
-
+  
+  // Manages breakpoint names:
+  void AddNameToBreakpoint(BreakpointID &id, const char *name, Status &error);
+  
+  void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, const char *name, 
+                           Status &error);
+  
+  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, 
+                                const ConstString &name);
+  
+  BreakpointName *FindBreakpointName(const ConstString &name, bool can_create, 
+                                     Status &error);
+                                     
+  void DeleteBreakpointName(const ConstString &name);
+  
+  void ConfigureBreakpointName(BreakpointName &bp_name,
+                               const BreakpointOptions &options,
+                               const BreakpointName::Permissions &permissions);
+ void ApplyNameToBreakpoints(BreakpointName &bp_name);
+   
+  
+  // This takes ownership of the name obj passed in.
+  void AddBreakpointName(BreakpointName *bp_name);
+  
+  void GetBreakpointNames(std::vector<std::string> &names);
+                               
+  //This call removes ALL breakpoints regardless of permission.
   void RemoveAllBreakpoints(bool internal_also = false);
+  
+  // This removes all the breakpoints, but obeys the ePermDelete on them.
+  void RemoveAllowedBreakpoints();
 
   void DisableAllBreakpoints(bool internal_also = false);
+  
+  void DisableAllowedBreakpoints();
 
   void EnableAllBreakpoints(bool internal_also = false);
+  
+  void EnableAllowedBreakpoints();
 
   bool DisableBreakpointByID(lldb::break_id_t break_id);
 
@@ -1218,6 +1252,9 @@ protected:
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
+  using BreakpointNameList = std::map<ConstString, BreakpointName *>;
+  BreakpointNameList m_breakpoint_names;
+  
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;
   lldb::WatchpointSP m_last_created_watchpoint;

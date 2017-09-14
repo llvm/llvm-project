@@ -73,7 +73,7 @@ class BreakpointAutoContinue(TestBase):
         self.assertEqual(bkpt.GetHitCount(), 2, "Should have run through the breakpoint twice")
 
     def auto_continue_with_command(self):
-        bpno = self.make_target_and_bkpt("-N BKPT -d 'break modify --auto-continue 0 BKPT'")
+        bpno = self.make_target_and_bkpt("-N BKPT -C 'break modify --auto-continue 0 BKPT'")
         process = self.launch_it(lldb.eStateStopped)
         state = process.GetState()
         self.assertEqual(state, lldb.eStateStopped, "Process should be stopped")

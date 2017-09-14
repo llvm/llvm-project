@@ -196,6 +196,7 @@ public:
 protected:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
+  friend class SBBreakpointCallbackBaton;
   friend class SBExecutionContext;
   friend class SBFrame;
   friend class SBProcess;

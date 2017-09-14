@@ -248,9 +248,9 @@
 				</div>
 				<div class="postfooter"></div>
 
-    			<div class="post">
-    				<h1 class ="postheader">Setting breakpoints</h1>
-    				<div class="postcontent">
+    	                        <div class="post">
+    				  <h1 class ="postheader">Setting breakpoints</h1>
+    				  <div class="postcontent">
 
                     <p>We've discussed how to set breakpoints above.  You can use <code>help breakpoint set</code>
                     to see all the options for breakpoint setting.  For instance, we might do:</p>
@@ -348,6 +348,67 @@ Current breakpoints:
                      </code>
 
 			    </div>
+				<div class="postfooter"></div>
+
+
+    	                        <div class="post">
+    				  <h1 class ="postheader">Breakpoint Names</h1>
+    				  <div class="postcontent">
+
+                    <p>Breakpoints carry two orthognal sets of information: one specifies where to
+                       set the breakpoint, and the other how to react when the breakpoint is hit.
+                       The latter set of information (e.g. commands, conditions, hit-count, auto-continue...)
+                       we call breakpoint options.</p>
+                       <p>It is fairly common to want to apply one set of options to a number of breakpoints.
+                       For instance, you might want to check that <code>self == nil</code> and if it is, 
+                       print a backtrace and continue, on a number of methods.  
+                       One convenient way to do that would be to make all
+                       the breakpoints, then configure the options with:</p>
+
+                    <code>
+                        (lldb) breakpoint modify -c "self == nil" -C bt --auto-continue 1 2 3
+                    </code>
+
+                    <p>That's not too bad, but you have to repeat this for every new breakpoint you 
+                      make, and if you wanted to change the options, you have to remember all the ones you 
+                      are using this way.</p>
+
+                    <p> Breakpoint names provide a convenient solution to this problem.  The simple solution would
+                      be to use the name to gather the breakpoints you want to affect this way into a group.  So
+                      when you make the breakpoint you would do:</p>
+
+                    <code>
+                        (lldb) breakpoint set <SPECIFICATION> -N SelfNil
+                    </code>
+
+                    <p>Then when you've made all your breakpoints, you can set up or modify the options using
+                       the name to collect all the relevant breakpoints.</p>
+
+                    <code>
+                        (lldb) breakpoint modify -c "self == nil" -C bt --auto-continue SelfNil
+                    </code>
+
+                    <p> That is better, but suffers from the problem that when new breakpoints get added, they
+                      don't pick up these modifications, and the options only exist in the context of actual
+                      breakpoints, so they are hard to store & reuse.  </p>
+                     <p>A even better solution is to make a
+                      fully configured breakpoint name:</p>
+                    <code>
+                        (lldb) breakpoint name configure -c "self == nil" -C bt --auto-continue SelfNil
+                    </code>
+                    <p>Then you can apply the name to your breakpoints, and they will all pick up these
+                    options.  The connection from name to breakpoints remains live, so when you change the
+                    options configured on the name, all the breakpoints pick up those changes.  This makes
+                    it easy to use configured names to experiment with your options.</p>
+                    <p>You can make breakpoint names in your .lldbinit file, so you can use them to
+                    can behaviors that you have found useful and reapply them in future sessions.</p>
+
+                    <p>You can also make a breakpoint name from the options set on a breakpoint:</p>
+                    <code>
+                        (lldb) breakpoint name configure -B 1 SelfNil
+                    </code>
+                    <p>which makes it easy to copy behavior from one breakpoint to a set of others.</p>
+
 				<div class="postfooter"></div>
 
                 <div class="post">
