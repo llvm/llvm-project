@@ -579,7 +579,11 @@ LLVM_DUMP_METHOD void MachineOperand::dump() const {
 /// getAddrSpace - Return the LLVM IR address space number that this pointer
 /// points into.
 unsigned MachinePointerInfo::getAddrSpace() const {
-  if (V.isNull() || V.is<const PseudoSourceValue*>()) return 0;
+  if (V.isNull()) return 0;
+
+  if (V.is<const PseudoSourceValue*>())
+    return V.get<const PseudoSourceValue*>()->getAddressSpace();
+
   return cast<PointerType>(V.get<const Value*>()->getType())->getAddressSpace();
 }
 

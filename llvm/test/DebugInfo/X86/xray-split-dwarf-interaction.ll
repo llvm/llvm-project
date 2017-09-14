@@ -1,9 +1,9 @@
-; RUN: %llc_dwarf -split-dwarf-file=input.dwo -O3 \
+; RUN: llc -mtriple=x86_64-pc-linux -split-dwarf-file=input.dwo -O3 \
 ; RUN:     -function-sections -data-sections \
 ; RUN:     -relocation-model=pic -filetype=asm \
 ; RUN:     -generate-type-units -o - %s | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-ASM
-; RUN: %llc_dwarf -split-dwarf-file=input.dwo -O3 \
+; RUN: llc -mtriple=x86_64-pc-linux -split-dwarf-file=input.dwo -O3 \
 ; RUN:     -function-sections -data-sections \
 ; RUN:     -relocation-model=pic -filetype=obj \
 ; RUN:     -generate-type-units -o - %s | \

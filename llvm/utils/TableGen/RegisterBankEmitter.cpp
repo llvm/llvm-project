@@ -18,6 +18,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include "CodeGenHwModes.h"
 #include "CodeGenRegisters.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
@@ -84,7 +85,8 @@ public:
     //        the VT's reliably due to Untyped.
     if (RCWithLargestRegsSize == nullptr)
       RCWithLargestRegsSize = RC;
-    else if (RCWithLargestRegsSize->SpillSize < RC->SpillSize)
+    else if (RCWithLargestRegsSize->RSI.get(DefaultMode).SpillSize <
+             RC->RSI.get(DefaultMode).SpillSize)
       RCWithLargestRegsSize = RC;
     assert(RCWithLargestRegsSize && "RC was nullptr?");
 
@@ -115,7 +117,7 @@ private:
 
 public:
   RegisterBankEmitter(RecordKeeper &R)
-      : Records(R), RegisterClassHierarchy(Records) {}
+      : Records(R), RegisterClassHierarchy(Records, CodeGenHwModes(R)) {}
 
   void run(raw_ostream &OS);
 };
@@ -241,7 +243,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   for (const auto &Bank : Banks) {
     std::string QualifiedBankID =
         (TargetName + "::" + Bank.getEnumeratorName()).str();
-    unsigned Size = Bank.getRCWithLargestRegsSize()->SpillSize;
+    const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegsSize();
+    unsigned Size = RC.RSI.get(DefaultMode).SpillSize;
     OS << "RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
        << QualifiedBankID << ", /* Name */ \"" << Bank.getName()
        << "\", /* Size */ " << Size << ", "

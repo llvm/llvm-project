@@ -10,28 +10,30 @@
         andi $2, $3, 65536   # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
-        # FIXME: Check various 'pos + size' constraints on dext*
         dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
-        dext $2, $3, 1, 33   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
         dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
         dextm $2, $3, 32, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
         dextm $2, $3, -1, 33 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
         dextm $2, $3, 32, 33 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
         dextm $2, $3, 1, 32  # CHECK: :[[@LINE]]:26: error: expected immediate in range 33 .. 64
         dextm $2, $3, 1, 65  # CHECK: :[[@LINE]]:26: error: expected immediate in range 33 .. 64
+        dextm $3, $4, 31, 34 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
         dextu $2, $3, 31, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
         dextu $2, $3, 64, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
         dextu $2, $3, 32, 0  # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
         dextu $2, $3, 32, 33 # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dextu $3, $4, 33, 32 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
         # FIXME: Check size on dins*
         dins $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dins $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dinsm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
         dinsm $2, $3, 32, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dinsm $4, $5, 31, 34 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
         dinsu $2, $3, 31, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
         dinsu $2, $3, 64, 1  # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dinsu $4, $5, 33, 32 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: size plus position are not in the range 33 .. 64
         drotr $2, $3, -1     # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
         drotr $2, $3, 64     # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
         drotr32 $2, $3, -1   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate

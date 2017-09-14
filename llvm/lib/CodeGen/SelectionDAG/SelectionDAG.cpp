@@ -3124,16 +3124,16 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ROTL:
   case ISD::ROTR:
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      unsigned RotAmt = C->getZExtValue() & (VTBits-1);
+      unsigned RotAmt = C->getAPIntValue().urem(VTBits);
 
       // Handle rotate right by N like a rotate left by 32-N.
       if (Op.getOpcode() == ISD::ROTR)
-        RotAmt = (VTBits-RotAmt) & (VTBits-1);
+        RotAmt = (VTBits - RotAmt) % VTBits;
 
       // If we aren't rotating out all of the known-in sign bits, return the
       // number that are left.  This handles rotl(sext(x), 1) for example.
       Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
-      if (Tmp > RotAmt+1) return Tmp-RotAmt;
+      if (Tmp > (RotAmt + 1)) return (Tmp - RotAmt);
     }
     break;
   case ISD::ADD:

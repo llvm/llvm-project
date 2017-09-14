@@ -2,7 +2,7 @@
 
 # The register r23 is live on the path bb.0->bb.2->bb.3. Make sure we add
 # an implicit use of r23 to the predicated redefinition:
-# CHECK: %r23 = A2_tfrt %p0, killed %r1, implicit %r23
+# CHECK: %r23 = A2_tfrt killed %p0, killed %r1, implicit killed %r23
 
 # LivePhysRegs::addPristines could accidentally remove a callee-saved
 # register, if it determined that it wasn't pristine. Doing that caused

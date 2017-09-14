@@ -1174,6 +1174,13 @@ function(configure_lit_site_cfg input output)
   endif()
 
   configure_file(${input} ${output} @ONLY)
+  get_filename_component(INPUT_DIR ${input} DIRECTORY)
+  if (EXISTS "${INPUT_DIR}/lit.cfg")
+    set(PYTHON_STATEMENT "map_config('${INPUT_DIR}/lit.cfg', '${output}')")
+    get_property(LLVM_LIT_CONFIG_MAP GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP)
+    set(LLVM_LIT_CONFIG_MAP "${LLVM_LIT_CONFIG_MAP}\n${PYTHON_STATEMENT}")
+    set_property(GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP ${LLVM_LIT_CONFIG_MAP})
+  endif()
 endfunction()
 
 # A raw function to create a lit target. This is used to implement the testuite
@@ -1185,12 +1192,16 @@ function(add_lit_target target comment)
   if (NOT CMAKE_CFG_INTDIR STREQUAL ".")
     list(APPEND LIT_ARGS --param build_mode=${CMAKE_CFG_INTDIR})
   endif ()
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-    set (LIT_COMMAND "${PYTHON_EXECUTABLE};${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py"
-         CACHE STRING "Command used to spawn llvm-lit")
-  else()
-    find_program(LIT_COMMAND NAMES llvm-lit lit.py lit)
+
+  if (WIN32 AND NOT CYGWIN)
+    # llvm-lit needs suffix.py for multiprocess to find a main module.
+    set(suffix .py)
   endif ()
+  set(llvm_lit_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lit${suffix})
+
+  set (LIT_COMMAND "${PYTHON_EXECUTABLE};${llvm_lit_path}"
+        CACHE STRING "Command used to spawn llvm-lit" FORCE)
+
   list(APPEND LIT_COMMAND ${LIT_ARGS})
   foreach(param ${ARG_PARAMS})
     list(APPEND LIT_COMMAND --param ${param})

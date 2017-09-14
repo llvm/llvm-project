@@ -11,6 +11,7 @@
 
 %Block = type { [1 x float], i32 }
 %gl_PerVertex = type { <4 x float>, float, [1 x float], [1 x float] }
+%struct = type { i32, i32 }
 
 @block = external addrspace(1) global %Block
 @pv = external addrspace(1) global %gl_PerVertex
@@ -127,5 +128,13 @@ define amdgpu_ps void @promote_double_aggr() #0 {
   %tmp20 = insertelement <4 x float> %tmp19, float %tmp17, i32 2
   %tmp21 = insertelement <4 x float> %tmp20, float %tmp17, i32 3
   store <4 x float> %tmp21, <4 x float> addrspace(1)* @frag_color
+  ret void
+}
+
+; Don't crash on a type that isn't a valid vector element.
+; OPT-LABEL: @alloca_struct(
+define amdgpu_kernel void @alloca_struct() #0 {
+entry:
+  %alloca = alloca [2 x %struct], align 4
   ret void
 }

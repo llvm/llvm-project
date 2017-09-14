@@ -191,7 +191,7 @@ std::string llvm::getQualifiedName(const Record *R) {
 /// getTarget - Return the current instance of the Target class.
 ///
 CodeGenTarget::CodeGenTarget(RecordKeeper &records)
-  : Records(records) {
+  : Records(records), CGH(records) {
   std::vector<Record*> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
     PrintFatalError("ERROR: No 'Target' subclasses defined!");
@@ -266,7 +266,7 @@ Record *CodeGenTarget::getAsmWriter() const {
 
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
-    RegBank = llvm::make_unique<CodeGenRegBank>(Records);
+    RegBank = llvm::make_unique<CodeGenRegBank>(Records, getHwModes());
   return *RegBank;
 }
 
@@ -285,19 +285,19 @@ const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
   return I->second;
 }
 
-std::vector<MVT::SimpleValueType> CodeGenTarget::
-getRegisterVTs(Record *R) const {
+std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
+      const {
   const CodeGenRegister *Reg = getRegBank().getReg(R);
-  std::vector<MVT::SimpleValueType> Result;
+  std::vector<ValueTypeByHwMode> Result;
   for (const auto &RC : getRegBank().getRegClasses()) {
     if (RC.contains(Reg)) {
-      ArrayRef<MVT::SimpleValueType> InVTs = RC.getValueTypes();
+      ArrayRef<ValueTypeByHwMode> InVTs = RC.getValueTypes();
       Result.insert(Result.end(), InVTs.begin(), InVTs.end());
     }
   }
 
   // Remove duplicates.
-  array_pod_sort(Result.begin(), Result.end());
+  std::sort(Result.begin(), Result.end());
   Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
   return Result;
 }
@@ -308,7 +308,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
     LegalValueTypes.insert(LegalValueTypes.end(), RC.VTs.begin(), RC.VTs.end());
 
   // Remove duplicates.
-  array_pod_sort(LegalValueTypes.begin(), LegalValueTypes.end());
+  std::sort(LegalValueTypes.begin(), LegalValueTypes.end());
   LegalValueTypes.erase(std::unique(LegalValueTypes.begin(),
                                     LegalValueTypes.end()),
                         LegalValueTypes.end());

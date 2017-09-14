@@ -308,6 +308,10 @@ inline bool operator!=(const DWARFDie &LHS, const DWARFDie &RHS) {
   return !(LHS == RHS);
 }
 
+inline bool operator<(const DWARFDie &LHS, const DWARFDie &RHS) {
+  return LHS.getOffset() < RHS.getOffset();
+}
+
 class DWARFDie::iterator : public iterator_facade_base<iterator,
                                                       std::forward_iterator_tag,
                                                       const DWARFDie> {

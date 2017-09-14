@@ -2148,10 +2148,12 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
+  SDValue CallerSavedFP;
+
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
   if (!IsSibCall) {
-    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
     unsigned OffsetReg = Info->getScratchWaveOffsetReg();
 
@@ -2164,6 +2166,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue ScratchWaveOffsetReg
       = DAG.getCopyFromReg(Chain, DL, OffsetReg, MVT::i32);
     RegsToPass.emplace_back(AMDGPU::SGPR4, ScratchWaveOffsetReg);
+
+    if (!Info->isEntryFunction()) {
+      // Avoid clobbering this function's FP value. In the current convention
+      // callee will overwrite this, so do save/restore around the call site.
+      CallerSavedFP = DAG.getCopyFromReg(Chain, DL,
+                                         Info->getFrameOffsetReg(), MVT::i32);
+    }
   }
 
   // Stack pointer relative accesses are done by changing the offset SGPR. This
@@ -2344,8 +2353,14 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   Chain = Call.getValue(0);
   InFlag = Call.getValue(1);
 
-  uint64_t CalleePopBytes = 0;
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getTargetConstant(NumBytes, DL, MVT::i32),
+  if (CallerSavedFP) {
+    SDValue FPReg = DAG.getRegister(Info->getFrameOffsetReg(), MVT::i32);
+    Chain = DAG.getCopyToReg(Chain, DL, FPReg, CallerSavedFP, InFlag);
+    InFlag = Chain.getValue(1);
+  }
+
+  uint64_t CalleePopBytes = NumBytes;
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getTargetConstant(0, DL, MVT::i32),
                              DAG.getTargetConstant(CalleePopBytes, DL, MVT::i32),
                              InFlag, DL);
   if (!Ins.empty())

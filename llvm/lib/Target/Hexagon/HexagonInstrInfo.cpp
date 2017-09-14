@@ -1706,8 +1706,8 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
     return false;
 
   // Get the access sizes.
-  unsigned SizeA = (1u << (getMemAccessSize(MIa) - 1));
-  unsigned SizeB = (1u << (getMemAccessSize(MIb) - 1));
+  unsigned SizeA = getMemAccessSize(MIa);
+  unsigned SizeB = getMemAccessSize(MIb);
 
   // Get the offsets. Handle immediates only for now.
   const MachineOperand &OffA = MIa.getOperand(OffsetPosA);
@@ -2964,16 +2964,7 @@ unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
       !isMemOp(MI) && !isPostIncrement(MI))
     return 0;
 
-  // Since it is a memory access instruction, getMemAccessSize() should never
-  // return 0.
-  assert (getMemAccessSize(MI) &&
-          "BaseImmOffset or BaseLongOffset or MemOp without accessSize");
-
-  // Return Values of getMemAccessSize() are
-  // 0 - Checked in the assert above.
-  // 1, 2, 3, 4 & 7, 8 - The statement below is correct for all these.
-  // MemAccessSize is represented as 1+log2(N) where N is size in bits.
-  AccessSize = (1U << (getMemAccessSize(MI) - 1));
+  AccessSize = getMemAccessSize(MI);
 
   unsigned BasePos = 0, OffsetPos = 0;
   if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
@@ -4001,8 +3992,22 @@ int HexagonInstrInfo::getMaxValue(const MachineInstr &MI) const {
 }
 
 unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
+  using namespace HexagonII;
   const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::MemAccessSizePos) & HexagonII::MemAccesSizeMask;
+  unsigned S = (F >> MemAccessSizePos) & MemAccesSizeMask;
+  unsigned Size = getMemAccessSizeInBytes(MemAccessSize(S));
+  if (Size != 0)
+    return Size;
+
+  // Handle vector access sizes.
+  switch (S) {
+    case HexagonII::Vector64Access:
+      return 64;
+    case HexagonII::Vector128Access:
+      return 128;
+    default:
+      llvm_unreachable("Unexpected instruction");
+  }
 }
 
 // Returns the min value that doesn't need to be extended.

@@ -59,16 +59,7 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
 
 const MCPhysReg *
 SIRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
-  // FIXME
-  static MCPhysReg Regs[2];
-
-  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  assert(!MFI->isEntryFunction());
-
-  Regs[0] = MFI->getFrameOffsetReg();
-  Regs[1] = AMDGPU::NoRegister;
-
-  return Regs;
+  return nullptr;
 }
 
 const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,

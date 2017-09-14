@@ -90,5 +90,19 @@ define void @func_call_tail_call() #1 {
   ret void
 }
 
+define void @void_func_void() noinline {
+  ret void
+}
+
+; Make sure we don't get save/restore of FP between calls.
+; GCN-LABEL: {{^}}test_funcx2:
+; GCN-NOT: s5
+; GCN-NOT: s32
+define void @test_funcx2() #0 {
+  call void @void_func_void()
+  call void @void_func_void()
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }

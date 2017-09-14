@@ -24,14 +24,15 @@ class MemAccessSize<bits<4> value> {
   bits<4> Value = value;
 }
 
-// MemAccessSize is represented as 1+log2(N) where N is size in bits.
-def NoMemAccess      : MemAccessSize<0>;// Not a memory access instruction.
-def ByteAccess       : MemAccessSize<1>;// Byte access instruction (memb).
-def HalfWordAccess   : MemAccessSize<2>;// Half word access instruction (memh).
-def WordAccess       : MemAccessSize<3>;// Word access instruction (memw).
-def DoubleWordAccess : MemAccessSize<4>;// Double word access instruction (memd)
-def Vector64Access   : MemAccessSize<7>;// Vector access instruction (memv)
-def Vector128Access  : MemAccessSize<8>;// Vector access instruction (memv)
+// These numbers must match the MemAccessSize enumeration values in
+// HexagonBaseInfo.h.
+def NoMemAccess      : MemAccessSize<0>;
+def ByteAccess       : MemAccessSize<1>;
+def HalfWordAccess   : MemAccessSize<2>;
+def WordAccess       : MemAccessSize<3>;
+def DoubleWordAccess : MemAccessSize<4>;
+def Vector64Access   : MemAccessSize<5>;
+def Vector128Access  : MemAccessSize<6>;
 
 
 //===----------------------------------------------------------------------===//

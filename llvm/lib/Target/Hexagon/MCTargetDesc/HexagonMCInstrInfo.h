@@ -31,12 +31,6 @@ class MCInstrDesc;
 class MCInstrInfo;
 class MCSubtargetInfo;
 
-namespace HexagonII {
-
-enum class MemAccessSize;
-
-} // end namespace HexagonII
-
 class DuplexCandidate {
 public:
   unsigned packetIndexI, packetIndexJ, iClass;
@@ -123,9 +117,9 @@ MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
                     MCInst const &MCI);
 
-// Return memory access size
-HexagonII::MemAccessSize getAccessSize(MCInstrInfo const &MCII,
-                                       MCInst const &MCI);
+// Return memory access size in bytes
+unsigned getMemAccessSize(MCInstrInfo const &MCII, MCInst const &MCI);
+
 MCInstrDesc const &getDesc(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return which duplex group this instruction belongs to
