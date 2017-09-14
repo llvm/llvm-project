@@ -788,6 +788,7 @@
 		4C848E0118D2873500EC6DD0 /* SwiftSILManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFE18D2873500EC6DD0 /* SwiftSILManipulator.cpp */; };
 		4C848E0818D2892900EC6DD0 /* SwiftASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */; };
 		4C848E0B18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */; };
+		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4C8DD9181E4AAD33008241E2 /* RegisterContextMinidump_x86_32.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8DD9131E4AAD2B008241E2 /* RegisterContextMinidump_x86_32.cpp */; };
