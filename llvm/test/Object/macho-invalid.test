@@ -284,6 +284,9 @@ INVALID-DYLIB-WRONG-FILETYPE: macho-invalid-dylib-wrong-filetype': truncated or 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-no-id  2>&1 | FileCheck -check-prefix INVALID-DYLIB-NO-ID %s
 INVALID-DYLIB-NO-ID: macho-invalid-dylib-no-id': truncated or malformed object (no LC_ID_DYLIB load command in dynamic library filetype)
 
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dylib-cmdsize-past-eof 2>&1 | FileCheck -check-prefix INVALID-DYLIB-CMDSIZE %s
+INVALID-DYLIB-CMDSIZE: macho-invalid-dylib-cmdsize-past-eof': truncated or malformed object (load command 0 extends past end of file)
+
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-uuid-more-than-one  2>&1 | FileCheck -check-prefix INVALID-UUID-MORE-THAN-ONE %s
 INVALID-UUID-MORE-THAN-ONE: macho-invalid-uuid-more-than-one': truncated or malformed object (more than one LC_UUID command)
 
