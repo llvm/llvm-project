@@ -63,7 +63,7 @@ public:
   /// Parse the debug_loc section accessible via the 'data' parameter using the
   /// address size also given in 'data' to interpret the address ranges.
   void parse(const DWARFDataExtractor &data);
-
+  
   Optional<LocationList> parseOneLocationList(DWARFDataExtractor Data,
                                               uint32_t *Offset);
 };

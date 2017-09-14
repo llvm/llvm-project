@@ -99,8 +99,8 @@ class Compilation {
   /// only be removed if we crash.
   ArgStringMap FailureResultFiles;
 
-  /// Redirection for stdout, stderr, etc.
-  const StringRef **Redirects;
+  /// Optional redirection for stdin, stdout, stderr.
+  std::vector<Optional<StringRef>> Redirects;
 
   /// Whether we're compiling for diagnostic purposes.
   bool ForDiagnostics;
@@ -283,12 +283,10 @@ public:
 
   /// Redirect - Redirect output of this compilation. Can only be done once.
   ///
-  /// \param Redirects - array of pointers to paths. The array
-  /// should have a size of three. The inferior process's
-  /// stdin(0), stdout(1), and stderr(2) will be redirected to the
-  /// corresponding paths. This compilation instance becomes
-  /// the owner of Redirects and will delete the array and StringRef's.
-  void Redirect(const StringRef** Redirects);
+  /// \param Redirects - array of optional paths. The array should have a size
+  /// of three. The inferior process's stdin(0), stdout(1), and stderr(2) will
+  /// be redirected to the corresponding paths, if provided (not llvm::None).
+  void Redirect(ArrayRef<Optional<StringRef>> Redirects);
 };
 
 } // end namespace driver

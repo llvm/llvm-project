@@ -32,6 +32,7 @@ entry:
 ; GCN: s_mov_b32 s5, s32
 ; GCN-DAG: buffer_store_dword v32
 ; GCN-DAG: buffer_store_dword v33
+; GCN-NOT: v_writelane_b32 v{{[0-9]+}}, s32
 ; GCN: v_writelane_b32
 
 ; GCN-DAG: s_add_u32 s32, s32, 0xb00{{$}}
@@ -48,6 +49,7 @@ entry:
 ; GCN: buffer_store_dword [[ADD1]], off, s[0:3], s5 offset:20{{$}}
 
 ; GCN: v_readlane_b32
+; GCN-NOT: v_readlane_b32 s32
 ; GCN: buffer_load_dword v32,
 ; GCN: buffer_load_dword v33,
 ; GCN: s_sub_u32 s32, s32, 0xb00{{$}}
@@ -69,8 +71,8 @@ entry:
 
 ; GCN-LABEL: {{^}}call_void_func_byval_struct_func:
 ; GCN: s_mov_b32 s5, s32
-; GCN: s_add_u32 s32, s32, 0xc00{{$}}
-; GCN: v_writelane_b32
+; GCN-DAG: s_add_u32 s32, s32, 0xc00{{$}}
+; GCN-DAG: v_writelane_b32
 
 ; GCN-DAG: s_add_u32 s32, s32, 0x800{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
@@ -101,11 +103,12 @@ entry:
 ; GCN-DAG: buffer_store_dword [[LOAD7]], off, s[0:3], s32 offset:32
 
 ; GCN: s_swappc_b64
-; GCN-NEXT: s_sub_u32 s32, s32, 0x800{{$}}
-
+; GCN-NOT: v_readlane_b32 s32
 ; GCN: v_readlane_b32
+; GCN-NOT: v_readlane_b32 s32
 
-; GCN: s_sub_u32 s32, s32, 0xc00{{$}}
+; GCN: s_sub_u32 s32, s32, 0x800{{$}}
+; GCN-NEXT: s_sub_u32 s32, s32, 0xc00{{$}}
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @call_void_func_byval_struct_func() #0 {

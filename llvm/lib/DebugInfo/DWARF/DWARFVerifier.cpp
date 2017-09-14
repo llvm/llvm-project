@@ -24,6 +24,83 @@ using namespace llvm;
 using namespace dwarf;
 using namespace object;
 
+DWARFVerifier::DieRangeInfo::address_range_iterator
+DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
+  auto Begin = Ranges.begin();
+  auto End = Ranges.end();
+  auto Pos = std::lower_bound(Begin, End, R);
+
+  if (Pos != End) {
+    if (Pos->intersects(R))
+      return Pos;
+    if (Pos != Begin) {
+      auto Iter = Pos - 1;
+      if (Iter->intersects(R))
+        return Iter;
+    }
+  }
+
+  Ranges.insert(Pos, R);
+  return Ranges.end();
+}
+
+DWARFVerifier::DieRangeInfo::die_range_info_iterator
+DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
+  auto End = Children.end();
+  auto Iter = Children.begin();
+  while (Iter != End) {
+    if (Iter->intersects(RI))
+      return Iter;
+    ++Iter;
+  }
+  Children.insert(RI);
+  return Children.end();
+}
+
+bool DWARFVerifier::DieRangeInfo::contains(const DieRangeInfo &RHS) const {
+  // Both list of ranges are sorted so we can make this fast.
+
+  if (Ranges.empty() || RHS.Ranges.empty())
+    return false;
+
+  // Since the ranges are sorted we can advance where we start searching with
+  // this object's ranges as we traverse RHS.Ranges.
+  auto End = Ranges.end();
+  auto Iter = findRange(RHS.Ranges.front());
+
+  // Now linearly walk the ranges in this object and see if they contain each
+  // ranges from RHS.Ranges.
+  for (const auto &R : RHS.Ranges) {
+    while (Iter != End) {
+      if (Iter->contains(R))
+        break;
+      ++Iter;
+    }
+    if (Iter == End)
+      return false;
+  }
+  return true;
+}
+
+bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
+  if (Ranges.empty() || RHS.Ranges.empty())
+    return false;
+
+  auto End = Ranges.end();
+  auto Iter = findRange(RHS.Ranges.front());
+  for (const auto &R : RHS.Ranges) {
+    if (R.HighPC <= Iter->LowPC)
+      continue;
+    while (Iter != End) {
+      if (Iter->intersects(R))
+        return true;
+      ++Iter;
+    }
+  }
+
+  return false;
+}
+
 bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
                                      uint32_t *Offset, unsigned UnitIndex,
                                      uint8_t &UnitType, bool &isUnitDWARF64) {
@@ -94,12 +171,15 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
     auto Die = Unit.getDIEAtIndex(I);
     if (Die.getTag() == DW_TAG_null)
       continue;
-    NumUnitErrors += verifyDieRanges(Die);
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
     }
   }
+
+  DieRangeInfo RI;
+  DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
+  NumUnitErrors += verifyDieRanges(Die, RI);
   return NumUnitErrors == 0;
 }
 
@@ -210,16 +290,67 @@ bool DWARFVerifier::handleDebugInfo() {
   return (isHeaderChainValid && NumDebugInfoErrors == 0);
 }
 
-unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die) {
+unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
+                                        DieRangeInfo &ParentRI) {
   unsigned NumErrors = 0;
-  for (auto Range : Die.getAddressRanges()) {
-    if (Range.LowPC >= Range.HighPC) {
+
+  if (!Die.isValid())
+    return NumErrors;
+
+  DWARFAddressRangesVector Ranges = Die.getAddressRanges();
+
+  // Build RI for this DIE and check that ranges within this DIE do not
+  // overlap.
+  DieRangeInfo RI(Die);
+  for (auto Range : Ranges) {
+    if (!Range.valid()) {
       ++NumErrors;
       OS << format("error: Invalid address range [0x%08" PRIx64
                    " - 0x%08" PRIx64 "].\n",
                    Range.LowPC, Range.HighPC);
+      continue;
+    }
+
+    // Verify that ranges don't intersect.
+    const auto IntersectingRange = RI.insert(Range);
+    if (IntersectingRange != RI.Ranges.end()) {
+      ++NumErrors;
+      OS << format("error: DIE has overlapping address ranges: [0x%08" PRIx64
+                   " - 0x%08" PRIx64 "] and [0x%08" PRIx64 " - 0x%08" PRIx64
+                   "].\n",
+                   Range.LowPC, Range.HighPC, IntersectingRange->LowPC,
+                   IntersectingRange->HighPC);
+      break;
     }
   }
+
+  // Verify that children don't intersect.
+  const auto IntersectingChild = ParentRI.insert(RI);
+  if (IntersectingChild != ParentRI.Children.end()) {
+    ++NumErrors;
+    OS << "error: DIEs have overlapping address ranges:";
+    Die.dump(OS, 0);
+    IntersectingChild->Die.dump(OS, 0);
+    OS << "\n";
+  }
+
+  // Verify that ranges are contained within their parent.
+  bool ShouldBeContained = !Ranges.empty() && !ParentRI.Ranges.empty() &&
+                           !(Die.getTag() == DW_TAG_subprogram &&
+                             ParentRI.Die.getTag() == DW_TAG_subprogram);
+  if (ShouldBeContained && !ParentRI.contains(RI)) {
+    ++NumErrors;
+    OS << "error: DIE address ranges are not "
+          "contained in its parent's ranges:";
+    Die.dump(OS, 0);
+    ParentRI.Die.dump(OS, 0);
+    OS << "\n";
+  }
+
+  // Recursively check children.
+  for (DWARFDie Child : Die)
+    NumErrors += verifyDieRanges(Child, RI);
+
   return NumErrors;
 }
 

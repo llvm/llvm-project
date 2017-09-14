@@ -266,9 +266,9 @@ void ReportStackOverflow(const SignalContext &sig) {
   in_report.ReportError(error);
 }
 
-void ReportDeadlySignal(int signo, const SignalContext &sig) {
+void ReportDeadlySignal(const SignalContext &sig) {
   ScopedInErrorReport in_report(/*fatal*/ true);
-  ErrorDeadlySignal error(GetCurrentTidOrInvalid(), sig, signo);
+  ErrorDeadlySignal error(GetCurrentTidOrInvalid(), sig);
   in_report.ReportError(error);
 }
 

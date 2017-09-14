@@ -823,21 +823,16 @@ HANDLE_DW_UT(0x04, skeleton)
 HANDLE_DW_UT(0x05, split_compile)
 HANDLE_DW_UT(0x06, split_type)
 
-// DWARF section types. (enum name, ELF name, cmdline name)
+// DWARF section types. (enum name, ELF name, ELF DWO name, cmdline name)
 // Note that these IDs don't mean anything.
 // TODO: Add Mach-O and COFF names.
 // Official DWARF sections.
 HANDLE_DWARF_SECTION(DebugAbbrev, ".debug_abbrev", "debug-abbrev")
-HANDLE_DWARF_SECTION(DebugAbbrevDwo, ".debug_abbrev.dwo", "debug-abbrev-dwo")
 HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges")
 HANDLE_DWARF_SECTION(DebugInfo, ".debug_info", "debug-info")
-HANDLE_DWARF_SECTION(DebugInfoDwo, ".debug_info.dwo", "debug-info-dwo")
 HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types")
-HANDLE_DWARF_SECTION(DebugTypesDwo, ".debug_types.dwo", "debug-types-dwo")
 HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line")
-HANDLE_DWARF_SECTION(DebugLineDwo, ".debug_line.dwo", "debug-line-dwo")
 HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc")
-HANDLE_DWARF_SECTION(DebugLocDwo, ".debug_loc.dwo", "debug-loc-dwo")
 HANDLE_DWARF_SECTION(DebugFrames, ".debug_frames", "debug-frames")
 HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro")
 HANDLE_DWARF_SECTION(DebugRanges, ".debug_ranges", "debug-ranges")
@@ -847,8 +842,6 @@ HANDLE_DWARF_SECTION(DebugGnuPubnames, ".debug_gnu_pubnames", "debug-gnu-pubname
 HANDLE_DWARF_SECTION(DebugGnuPubtypes, ".debug_gnu_pubtypes", "debug-gnu-pubtypes")
 HANDLE_DWARF_SECTION(DebugStr, ".debug_str", "debug-str")
 HANDLE_DWARF_SECTION(DebugStrOffsets, ".debug_str_offsets", "debug-str-offsets")
-HANDLE_DWARF_SECTION(DebugStrDwo, ".debug_str.dwo", "debug-str-dwo")
-HANDLE_DWARF_SECTION(DebugStrOffsetsDwo, ".debug_str_offsets.dwo", "debug-str-offsets-dwo")
 HANDLE_DWARF_SECTION(DebugCUIndex, ".debug_cu_index", "debug-cu-index")
 HANDLE_DWARF_SECTION(DebugTUIndex, ".debug_tu_index", "debug-tu-index")
 // Vendor extensions.

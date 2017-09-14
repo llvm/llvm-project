@@ -425,7 +425,7 @@ declare fp128 @llvm.powi.f128(fp128, i32) #3
 ; NOT-R2R6-DAG: and    $[[R4:[0-9]+]], $[[R1]], $[[R3]]
 ; ALL-DAG:      ld     $[[R5:[0-9]+]], %got_disp(gld0)
 ; ALL-DAG:      ld     $[[R6:[0-9]+]], 8($[[R5]])
-; R2R6:         dins   $[[R0:[0-9]+]], $[[R1:[0-9]+]], 63, 1
+; R2R6:         dinsu  $[[R0:[0-9]+]], $[[R1:[0-9]+]], 63, 1
 ; NOT-R2R6-DAG: daddiu $[[R7:[0-9]+]], $[[R3]], -1
 ; NOT-R2R6-DAG: and    $[[R8:[0-9]+]], $[[R6]], $[[R7]]
 ; NOT-R2R6-DAG: or     $4, $[[R8]], $[[R4]]

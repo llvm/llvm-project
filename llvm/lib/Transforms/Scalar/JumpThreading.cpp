@@ -14,25 +14,50 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,8 +66,15 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
+#include <utility>
+
 using namespace llvm;
 using namespace jumpthreading;
 
@@ -70,6 +102,7 @@ static cl::opt<bool> PrintLVIAfterJumpThreading(
     cl::Hidden);
 
 namespace {
+
   /// This pass performs 'jump threading', which looks at blocks that have
   /// multiple predecessors and multiple successors.  If one or more of the
   /// predecessors of the block can be proven to always jump to one of the
@@ -85,12 +118,12 @@ namespace {
   ///
   /// In this case, the unconditional branch at the end of the first if can be
   /// revectored to the false side of the second if.
-  ///
   class JumpThreading : public FunctionPass {
     JumpThreadingPass Impl;
 
   public:
     static char ID; // Pass identification
+
     JumpThreading(int T = -1) : FunctionPass(ID), Impl(T) {
       initializeJumpThreadingPass(*PassRegistry::getPassRegistry());
     }
@@ -108,9 +141,11 @@ namespace {
 
     void releaseMemory() override { Impl.releaseMemory(); }
   };
-}
+
+} // end anonymous namespace
 
 char JumpThreading::ID = 0;
+
 INITIALIZE_PASS_BEGIN(JumpThreading, "jump-threading",
                 "Jump Threading", false, false)
 INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
@@ -120,7 +155,9 @@ INITIALIZE_PASS_END(JumpThreading, "jump-threading",
                 "Jump Threading", false, false)
 
 // Public interface to the Jump Threading pass
-FunctionPass *llvm::createJumpThreadingPass(int Threshold) { return new JumpThreading(Threshold); }
+FunctionPass *llvm::createJumpThreadingPass(int Threshold) {
+  return new JumpThreading(Threshold);
+}
 
 JumpThreadingPass::JumpThreadingPass(int T) {
   BBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
@@ -177,7 +214,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
          BasicBlock *PhiBB) -> std::pair<BasicBlock *, BasicBlock *> {
     auto *PredBB = IncomingBB;
     auto *SuccBB = PhiBB;
-    for (;;) {
+    while (true) {
       BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
       if (PredBr && PredBr->isConditional())
         return {PredBB, SuccBB};
@@ -236,7 +273,6 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
 }
 
 /// runOnFunction - Toplevel algorithm.
-///
 bool JumpThreading::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -264,7 +300,6 @@ bool JumpThreading::runOnFunction(Function &F) {
 
 PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
@@ -293,7 +328,6 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
                                 bool HasProfileData_,
                                 std::unique_ptr<BlockFrequencyInfo> BFI_,
                                 std::unique_ptr<BranchProbabilityInfo> BPI_) {
-
   DEBUG(dbgs() << "Jump threading on function '" << F.getName() << "'\n");
   TLI = TLI_;
   LVI = LVI_;
@@ -493,7 +527,6 @@ static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
 /// within the loop (forming a nested loop).  This simple analysis is not rich
 /// enough to track all of these properties and keep it up-to-date as the CFG
 /// mutates, so we don't allow any of these transformations.
-///
 void JumpThreadingPass::FindLoopHeaders(Function &F) {
   SmallVector<std::pair<const BasicBlock*,const BasicBlock*>, 32> Edges;
   FindFunctionBackedges(F, Edges);
@@ -527,7 +560,6 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 /// BB in the result vector.
 ///
 /// This returns true if there were any known values.
-///
 bool JumpThreadingPass::ComputeValueKnownInPredecessors(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
     ConstantPreference Preference, Instruction *CxtI) {
@@ -764,6 +796,7 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
       // x as a live-in.
       {
         using namespace PatternMatch;
+
         Value *AddLHS;
         ConstantInt *AddConst;
         if (isa<ConstantInt>(CmpConst) &&
@@ -860,14 +893,11 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
   return !Result.empty();
 }
 
-
-
 /// GetBestDestForBranchOnUndef - If we determine that the specified block ends
 /// in an undefined jump, decide which block is best to revector to.
 ///
 /// Since we can pick an arbitrary destination, we pick the successor with the
 /// fewest predecessors.  This should reduce the in-degree of the others.
-///
 static unsigned GetBestDestForJumpOnUndef(BasicBlock *BB) {
   TerminatorInst *BBTerm = BB->getTerminator();
   unsigned MinSucc = 0;
@@ -1088,7 +1118,6 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   // for loads that are used by a switch or by the condition for the branch.  If
   // we see one, check to see if it's partially redundant.  If so, insert a PHI
   // which can then be used to thread the values.
-  //
   Value *SimplifyValue = CondInst;
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(SimplifyValue))
     if (isa<Constant>(CondCmp->getOperand(1)))
@@ -1108,7 +1137,6 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   // Handle a variety of cases where we are branching on something derived from
   // a PHI node in the current block.  If we can prove that any predecessors
   // compute a predictable value based on a PHI node, thread those predecessors.
-  //
   if (ProcessThreadableEdges(CondInst, BB, Preference, Terminator))
     return true;
 
@@ -1238,7 +1266,9 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   LI->getAAMetadata(AATags);
 
   SmallPtrSet<BasicBlock*, 8> PredsScanned;
-  typedef SmallVector<std::pair<BasicBlock*, Value*>, 8> AvailablePredsTy;
+
+  using AvailablePredsTy = SmallVector<std::pair<BasicBlock *, Value *>, 8>;
+
   AvailablePredsTy AvailablePreds;
   BasicBlock *OneUnavailablePred = nullptr;
   SmallVector<LoadInst*, 8> CSELoads;
@@ -1397,8 +1427,8 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
 /// the list.
 static BasicBlock *
 FindMostPopularDest(BasicBlock *BB,
-                    const SmallVectorImpl<std::pair<BasicBlock*,
-                                  BasicBlock*> > &PredToDestList) {
+                    const SmallVectorImpl<std::pair<BasicBlock *,
+                                          BasicBlock *>> &PredToDestList) {
   assert(!PredToDestList.empty());
 
   // Determine popularity.  If there are multiple possible destinations, we
@@ -1616,7 +1646,6 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
 /// ProcessBranchOnPHI - We have an otherwise unthreadable conditional branch on
 /// a PHI node in the current block.  See if there are any simplifications we
 /// can do based on inputs to the phi node.
-///
 bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
   BasicBlock *BB = PN->getParent();
 
@@ -1646,7 +1675,6 @@ bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
 /// ProcessBranchOnXOR - We have an otherwise unthreadable conditional branch on
 /// a xor instruction in the current block.  See if there are any
 /// simplifications we can do based on inputs to the xor.
-///
 bool JumpThreadingPass::ProcessBranchOnXOR(BinaryOperator *BO) {
   BasicBlock *BB = BO->getParent();
 
@@ -1750,7 +1778,6 @@ bool JumpThreadingPass::ProcessBranchOnXOR(BinaryOperator *BO) {
   // Try to duplicate BB into PredBB.
   return DuplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);
 }
-
 
 /// AddPHINodeEntriesForMappedBlock - We're adding 'NewPred' as a new
 /// predecessor to the PHIBB block.  If it has PHI nodes, add entries for
@@ -1913,7 +1940,6 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
     DEBUG(dbgs() << "\n");
   }
-
 
   // Ok, NewBB is good to go.  Update the terminator of PredBB to jump to
   // NewBB instead of BB.  This eliminates predecessors from BB, which requires
@@ -2313,7 +2339,7 @@ bool JumpThreadingPass::TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
 ///   %p = phi [0, %bb1], [1, %bb2], [0, %bb3], [1, %bb4], ...
 ///   %c = cmp %p, 0
 ///   %s = select %c, trueval, falseval
-//
+///
 /// And expand the select into a branch structure. This later enables
 /// jump-threading over bb in this pass.
 ///
@@ -2399,6 +2425,7 @@ bool JumpThreadingPass::TryToUnfoldSelectInCurrBB(BasicBlock *BB) {
 /// guard is then threaded to one of them.
 bool JumpThreadingPass::ProcessGuards(BasicBlock *BB) {
   using namespace PatternMatch;
+
   // We only want to deal with two predecessors.
   BasicBlock *Pred1, *Pred2;
   auto PI = pred_begin(BB), PE = pred_end(BB);

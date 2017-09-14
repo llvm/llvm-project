@@ -1280,7 +1280,12 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
   for (const BlockT &BB : *F) {
     OS << " - " << bfi_detail::getBlockName(&BB) << ": float = ";
     getFloatingBlockFreq(&BB).print(OS, 5)
-        << ", int = " << getBlockFreq(&BB).getFrequency() << "\n";
+        << ", int = " << getBlockFreq(&BB).getFrequency();
+    if (Optional<uint64_t> ProfileCount =
+        BlockFrequencyInfoImplBase::getBlockProfileCount(
+            *F->getFunction(), getNode(&BB)))
+      OS << ", count = " << ProfileCount.getValue();
+    OS << "\n";
   }
 
   // Add an extra newline for readability.

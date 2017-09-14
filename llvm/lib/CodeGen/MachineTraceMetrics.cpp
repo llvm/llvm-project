@@ -824,14 +824,6 @@ updateDepth(const MachineBasicBlock *MBB, const MachineInstr &UseMI,
   updateDepth(BlockInfo[MBB->getNumber()], UseMI, RegUnits);
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepths(MachineBasicBlock::iterator Start,
-             MachineBasicBlock::iterator End,
-             SparseSet<LiveRegUnit> &RegUnits) {
-    for (; Start != End; Start++)
-      updateDepth(Start->getParent(), *Start, RegUnits);
-}
-
 /// Compute instruction depths for all instructions above or in MBB in its
 /// trace. This assumes that the trace through MBB has already been computed.
 void MachineTraceMetrics::Ensemble::

@@ -53,13 +53,16 @@ static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
                          cat(SectionCategory));
 static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 
-static uint64_t DumpType = DIDT_Null;
+static unsigned DumpType = DIDT_Null;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
   static opt<bool> Dump##ENUM_NAME(CMDLINE_NAME,                               \
                                    desc("Dump the " ELF_NAME " section"),      \
                                    cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+                          cat(DwarfDumpCategory));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 
 static opt<bool>
     SummarizeTypes("summarize-types",
@@ -82,7 +85,7 @@ static void error(StringRef Filename, std::error_code EC) {
   exit(1);
 }
 
-static DIDumpOptions GetDumpOpts() {
+static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.SummarizeTypes = SummarizeTypes;
@@ -90,42 +93,20 @@ static DIDumpOptions GetDumpOpts() {
   return DumpOpts;
 }
 
-static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
+static bool dumpObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
-
-  outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
-         << "\n\n";
-
+  // The UUID dump already contains all the same information.
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    outs() << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
 
   // Dump the complete DWARF structure.
-  DICtx->dump(outs(), GetDumpOpts());
+  DICtx->dump(outs(), getDumpOpts());
+  return true;
 }
 
-static void DumpInput(StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
-
-  Expected<std::unique_ptr<Binary>> BinOrErr =
-      object::createBinary(Buff->getMemBufferRef());
-  if (!BinOrErr)
-    error(Filename, errorToErrorCode(BinOrErr.takeError()));
-
-  if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
-    DumpObjectFile(*Obj, Filename);
-  else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
-    for (auto &ObjForArch : Fat->objects()) {
-      auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
-      DumpObjectFile(**MachOOrErr,
-                     Filename + " (" + ObjForArch.getArchFlagName() + ")");
-    }
-}
-
-static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
+static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
 
   // Verify the DWARF and exit with non-zero exit status if verification
@@ -133,7 +114,7 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType, GetDumpOpts());
+  bool Result = DICtx->verify(stream, DumpType, getDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -141,28 +122,33 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   return Result;
 }
 
-static bool VerifyInput(StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-  MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
-
-  Expected<std::unique_ptr<Binary>> BinOrErr =
-  object::createBinary(Buff->getMemBufferRef());
+static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
+                         std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
   if (!BinOrErr)
     error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   bool Result = true;
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
-    Result = VerifyObjectFile(*Obj, Filename);
+    Result = HandleObj(*Obj, Filename);
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
       auto MachOOrErr = ObjForArch.getAsObjectFile();
       error(Filename, errorToErrorCode(MachOOrErr.takeError()));
-      if (!VerifyObjectFile(**MachOOrErr, Filename + " (" + ObjForArch.getArchFlagName() + ")"))
+      if (!HandleObj(**MachOOrErr,
+                     Filename + " (" + ObjForArch.getArchFlagName() + ")"))
         Result = false;
     }
   return Result;
+}
+
+static bool handleFile(StringRef Filename,
+                       std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+  MemoryBuffer::getFileOrSTDIN(Filename);
+  error(Filename, BuffOrErr.getError());
+  std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
+  return handleBuffer(Filename, *Buffer, HandleObj);
 }
 
 /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
@@ -225,6 +211,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_##ENUM_NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  if (DumpUUID)
+    DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
@@ -247,10 +235,14 @@ int main(int argc, char **argv) {
 
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
-    if (!std::all_of(Objects.begin(), Objects.end(), VerifyInput))
+    if (!std::all_of(Objects.begin(), Objects.end(), [](std::string Object) {
+          return handleFile(Object, verifyObjectFile);
+        }))
       exit(1);
   } else {
-    std::for_each(Objects.begin(), Objects.end(), DumpInput);
+    std::for_each(Objects.begin(), Objects.end(), [](std::string Object) {
+      handleFile(Object, dumpObjectFile);
+    });
   }
 
   return EXIT_SUCCESS;

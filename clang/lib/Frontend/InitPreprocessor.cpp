@@ -110,9 +110,11 @@ static void AddImplicitIncludePCH(MacroBuilder &Builder, Preprocessor &PP,
 /// PickFP - This is used to pick a value based on the FP semantics of the
 /// specified FP model.
 template <typename T>
-static T PickFP(const llvm::fltSemantics *Sem, T IEEESingleVal,
+static T PickFP(const llvm::fltSemantics *Sem, T IEEEHalfVal, T IEEESingleVal,
                 T IEEEDoubleVal, T X87DoubleExtendedVal, T PPCDoubleDoubleVal,
                 T IEEEQuadVal) {
+  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEhalf())
+    return IEEEHalfVal;
   if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEsingle())
     return IEEESingleVal;
   if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEdouble())
@@ -128,26 +130,26 @@ static T PickFP(const llvm::fltSemantics *Sem, T IEEESingleVal,
 static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
                               const llvm::fltSemantics *Sem, StringRef Ext) {
   const char *DenormMin, *Epsilon, *Max, *Min;
-  DenormMin = PickFP(Sem, "1.40129846e-45", "4.9406564584124654e-324",
-                     "3.64519953188247460253e-4951",
+  DenormMin = PickFP(Sem, "5.9604644775390625e-8", "1.40129846e-45",
+                     "4.9406564584124654e-324", "3.64519953188247460253e-4951",
                      "4.94065645841246544176568792868221e-324",
                      "6.47517511943802511092443895822764655e-4966");
-  int Digits = PickFP(Sem, 6, 15, 18, 31, 33);
-  int DecimalDigits = PickFP(Sem, 9, 17, 21, 33, 36);
-  Epsilon = PickFP(Sem, "1.19209290e-7", "2.2204460492503131e-16",
-                   "1.08420217248550443401e-19",
+  int Digits = PickFP(Sem, 3, 6, 15, 18, 31, 33);
+  int DecimalDigits = PickFP(Sem, 5, 9, 17, 21, 33, 36);
+  Epsilon = PickFP(Sem, "9.765625e-4", "1.19209290e-7",
+                   "2.2204460492503131e-16", "1.08420217248550443401e-19",
                    "4.94065645841246544176568792868221e-324",
                    "1.92592994438723585305597794258492732e-34");
-  int MantissaDigits = PickFP(Sem, 24, 53, 64, 106, 113);
-  int Min10Exp = PickFP(Sem, -37, -307, -4931, -291, -4931);
-  int Max10Exp = PickFP(Sem, 38, 308, 4932, 308, 4932);
-  int MinExp = PickFP(Sem, -125, -1021, -16381, -968, -16381);
-  int MaxExp = PickFP(Sem, 128, 1024, 16384, 1024, 16384);
-  Min = PickFP(Sem, "1.17549435e-38", "2.2250738585072014e-308",
+  int MantissaDigits = PickFP(Sem, 11, 24, 53, 64, 106, 113);
+  int Min10Exp = PickFP(Sem, -13, -37, -307, -4931, -291, -4931);
+  int Max10Exp = PickFP(Sem, 4, 38, 308, 4932, 308, 4932);
+  int MinExp = PickFP(Sem, -14, -125, -1021, -16381, -968, -16381);
+  int MaxExp = PickFP(Sem, 15, 128, 1024, 16384, 1024, 16384);
+  Min = PickFP(Sem, "6.103515625e-5", "1.17549435e-38", "2.2250738585072014e-308",
                "3.36210314311209350626e-4932",
                "2.00416836000897277799610805135016e-292",
                "3.36210314311209350626267781732175260e-4932");
-  Max = PickFP(Sem, "3.40282347e+38", "1.7976931348623157e+308",
+  Max = PickFP(Sem, "6.5504e+4", "3.40282347e+38", "1.7976931348623157e+308",
                "1.18973149535723176502e+4932",
                "1.79769313486231580793728971405301e+308",
                "1.18973149535723176508575932662800702e+4932");
@@ -802,6 +804,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFmt("__UINTPTR", TI.getUIntPtrType(), TI, Builder);
   DefineTypeWidth("__UINTPTR_WIDTH__", TI.getUIntPtrType(), TI, Builder);
 
+  DefineFloatMacros(Builder, "FLT16", &TI.getHalfFormat(), "F16");
   DefineFloatMacros(Builder, "FLT", &TI.getFloatFormat(), "F");
   DefineFloatMacros(Builder, "DBL", &TI.getDoubleFormat(), "");
   DefineFloatMacros(Builder, "LDBL", &TI.getLongDoubleFormat(), "L");

@@ -164,9 +164,12 @@ class DCLZ_MM64R6_DESC {
 }
 
 class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
-                                  uimm5_inssize_plus1, MipsIns>;
-class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
-class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
+                                  uimm5_inssize_plus1, immZExt5Plus32,
+                                  immZExt5Plus1, MipsIns>;
+class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64,
+                                  immZExt5, immZExtRange2To64, MipsIns>;
+class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5_report_uimm6,
+                                 uimm5_inssize_plus1, immZExt5, immZExt5Plus1,
                                  MipsIns>;
 class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd,
                                               II_DMTC0>;
@@ -380,12 +383,14 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DMODU_MM64R6 : R6MMR6Rel, DMODU_MM64R6_DESC, DMODU_MM64R6_ENC,
                      ISA_MICROMIPS64R6;
-  def DINSU_MM64R6: R6MMR6Rel, DINSU_MM64R6_DESC, DINSU_MM64R6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DINSM_MM64R6: R6MMR6Rel, DINSM_MM64R6_DESC, DINSM_MM64R6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
-                   ISA_MICROMIPS64R6;
+  let DecoderMethod = "DecodeDINS" in {
+    def DINSU_MM64R6: R6MMR6Rel, DINSU_MM64R6_DESC, DINSU_MM64R6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DINSM_MM64R6: R6MMR6Rel, DINSM_MM64R6_DESC, DINSM_MM64R6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  }
   def DMTC0_MM64R6 : StdMMR6Rel, DMTC0_MM64R6_ENC, DMTC0_MM64R6_DESC,
                      ISA_MICROMIPS64R6;
   def DMTC1_MM64R6 : StdMMR6Rel, DMTC1_MM64R6_DESC, DMTC1_MM64R6_ENC,
@@ -560,3 +565,10 @@ def : MipsInstAlias<"dsrl $rd, $rt",
 def : MipsInstAlias<"dsll $rd, $rt",
                     (DSLLV_MM64R6 GPR64Opnd:$rd, GPR64Opnd:$rd,
                                   GPR32Opnd:$rt), 0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                    (DINSM_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                                  uimm_range_2_64:$size), 0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                    (DINSU_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                                  uimm5_plus32:$pos, uimm5_plus1:$size), 0>,
+                    ISA_MICROMIPS64R6;

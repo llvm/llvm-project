@@ -36,7 +36,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   // Initialize SectionName.
   File->getCOFFObj()->getSectionName(Header, SectionName);
 
-  Align = Header->getAlignment();
+  Alignment = Header->getAlignment();
 
   // Chunks may be discarded during comdat merging.
   Discarded = false;
@@ -374,11 +374,7 @@ void SectionChunk::replace(SectionChunk *Other) {
 CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   // Common symbols are aligned on natural boundaries up to 32 bytes.
   // This is what MSVC link.exe does.
-  Align = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
-}
-
-void CommonChunk::setAlign(uint32_t NewAlign) {
-  Align = std::max(Align, NewAlign);
+  Alignment = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
 }
 
 uint32_t CommonChunk::getPermissions() const {
@@ -393,7 +389,7 @@ void StringChunk::writeTo(uint8_t *Buf) const {
 ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
   // Intel Optimization Manual says that all branch targets
   // should be 16-byte aligned. MSVC linker does this too.
-  Align = 16;
+  Alignment = 16;
 }
 
 void ImportThunkChunkX64::writeTo(uint8_t *Buf) const {

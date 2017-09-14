@@ -5881,7 +5881,9 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
     if(name != nullptr)
       outs() << name;
     outs() << "\n";
+    xar_iter_free(xp);
   }
+  xar_iter_free(xi);
 }
 
 static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
@@ -6044,7 +6046,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
       char *endptr;
       member_size = strtoul(member_size_string, &endptr, 10);
       if (*endptr == '\0' && member_size != 0) {
-        char *buffer = (char *)::operator new(member_size);
+        char *buffer;
         if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
 #if 0 // Useful for debugging.
 	  outs() << "xar member: " << member_name << " extracted\n";
@@ -6075,12 +6077,13 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
                                  XarMemberName);
           }
           XarMemberName = OldXarMemberName;
+          delete buffer;
         }
-        delete buffer;
       }
     }
     xar_iter_free(xp);
   }
+  xar_iter_free(xi);
   xar_close(xar);
 }
 #endif // defined(HAVE_LIBXAR)

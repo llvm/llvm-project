@@ -91,14 +91,16 @@ void MaybeReexec() {}
 void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
+void StartReportDeadlySignal() {}
 void SetAlternateSignalStack() {}
 void UnsetAlternateSignalStack() {}
 void InitTlsSize() {}
 
 void PrintModuleMap() {}
 
+bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
-const char *DescribeSignalOrException(int signo) { UNIMPLEMENTED(); }
+const char *SignalContext::Describe() const { UNIMPLEMENTED(); }
 
 struct UnwindTraceArg {
   BufferedStackTrace *stack;

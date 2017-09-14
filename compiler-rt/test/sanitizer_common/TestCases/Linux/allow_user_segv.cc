@@ -18,10 +18,10 @@
 // clang-format on
 
 // Remove when fixed: https://github.com/google/sanitizers/issues/637
-// UNSUPPORTED: lsan
-// UNSUPPORTED: msan
-// UNSUPPORTED: tsan
-// UNSUPPORTED: ubsan
+// XFAIL: lsan
+// XFAIL: msan
+// XFAIL: tsan
+// XFAIL: ubsan
 
 #include <signal.h>
 #include <stdio.h>

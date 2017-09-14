@@ -57,7 +57,8 @@ createReplacements(const std::unique_ptr<RefactoringActionRule> &Rule,
 
 TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
   auto ReplaceAWithB =
-      [](std::pair<selection::SourceSelectionRange, int> Selection)
+      [](const RefactoringRuleContext &,
+         std::pair<selection::SourceSelectionRange, int> Selection)
       -> Expected<AtomicChanges> {
     const SourceManager &SM = Selection.first.getSources();
     SourceLocation Loc = Selection.first.getRange().getBegin().getLocWithOffset(
@@ -71,7 +72,8 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
   class SelectionRequirement : public selection::Requirement {
   public:
     std::pair<selection::SourceSelectionRange, int>
-    evaluateSelection(selection::SourceSelectionRange Selection) const {
+    evaluateSelection(const RefactoringRuleContext &,
+                      selection::SourceSelectionRange Selection) const {
       return std::make_pair(Selection, 20);
     }
   };
@@ -127,8 +129,10 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
 }
 
 TEST_F(RefactoringActionRulesTest, ReturnError) {
-  Expected<AtomicChanges> (*Func)(selection::SourceSelectionRange) =
-      [](selection::SourceSelectionRange) -> Expected<AtomicChanges> {
+  Expected<AtomicChanges> (*Func)(const RefactoringRuleContext &,
+                                  selection::SourceSelectionRange) =
+      [](const RefactoringRuleContext &,
+         selection::SourceSelectionRange) -> Expected<AtomicChanges> {
     return llvm::make_error<llvm::StringError>(
         "Error", llvm::make_error_code(llvm::errc::invalid_argument));
   };
@@ -155,13 +159,14 @@ TEST_F(RefactoringActionRulesTest, ReturnInitiationDiagnostic) {
   class SelectionRequirement : public selection::Requirement {
   public:
     Expected<Optional<int>>
-    evaluateSelection(selection::SourceSelectionRange Selection) const {
+    evaluateSelection(const RefactoringRuleContext &,
+                      selection::SourceSelectionRange Selection) const {
       return llvm::make_error<llvm::StringError>(
           "bad selection", llvm::make_error_code(llvm::errc::invalid_argument));
     }
   };
   auto Rule = createRefactoringRule(
-      [](int) -> Expected<AtomicChanges> {
+      [](const RefactoringRuleContext &, int) -> Expected<AtomicChanges> {
         llvm::report_fatal_error("Should not run!");
       },
       requiredSelection(SelectionRequirement()));
@@ -201,7 +206,8 @@ Optional<SymbolOccurrences> findOccurrences(RefactoringActionRule &Rule,
 
 TEST_F(RefactoringActionRulesTest, ReturnSymbolOccurrences) {
   auto Rule = createRefactoringRule(
-      [](selection::SourceSelectionRange Selection)
+      [](const RefactoringRuleContext &,
+         selection::SourceSelectionRange Selection)
           -> Expected<SymbolOccurrences> {
         SymbolOccurrences Occurrences;
         Occurrences.push_back(SymbolOccurrence(

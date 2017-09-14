@@ -1248,7 +1248,13 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Status WillResume() { return Status(); }
+  virtual Status WillResume() {
+    Status error;
+    error.SetErrorStringWithFormat(
+        "error: %s does not support resuming processes",
+        GetPluginName().GetCString());
+    return error;
+  }
 
   //------------------------------------------------------------------
   /// Resumes all of a process's threads as configured using the

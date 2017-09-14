@@ -519,6 +519,10 @@ static DecodeStatus
 DecodeBlezGroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
                           const void *Decoder);
 
+template <typename InsnType>
+static DecodeStatus DecodeDINS(MCInst &MI, InsnType Insn, uint64_t Address,
+                               const void *Decoder);
+
 static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
                                          uint64_t Address,
                                          const void *Decoder);
@@ -1051,6 +1055,60 @@ static DecodeStatus DecodeBlezGroupBranch(MCInst &MI, InsnType insn,
   return MCDisassembler::Success;
 }
 
+// Override the generated disassembler to produce DINS all the time. This is
+// for feature / behaviour parity with binutils.
+template <typename InsnType>
+static DecodeStatus DecodeDINS(MCInst &MI, InsnType Insn, uint64_t Address,
+                               const void *Decoder) {
+  unsigned Msbd = fieldFromInstruction(Insn, 11, 5);
+  unsigned Lsb = fieldFromInstruction(Insn, 6, 5);
+  unsigned Size = 0;
+  unsigned Pos = 0;
+  bool IsMicroMips = false;
+
+  switch (MI.getOpcode()) {
+    case Mips::DINS_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DINS:
+      Pos = Lsb;
+      Size = Msbd + 1 - Pos;
+      break;
+    case Mips::DINSM_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DINSM:
+      Pos = Lsb;
+      Size = Msbd + 33 - Pos;
+      break;
+    case Mips::DINSU_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DINSU:
+      Pos = Lsb + 32;
+      // mbsd = pos + size - 33
+      // mbsd - pos + 33 = size
+      Size = Msbd + 33 - Pos;
+      break;
+    default:
+      llvm_unreachable("Unknown DINS instruction!");
+  }
+
+  // Although the format of the instruction is similar, rs and rt are swapped
+  // for microMIPS64R6.
+  InsnType Rs = fieldFromInstruction(Insn, 21, 5);
+  InsnType Rt = fieldFromInstruction(Insn, 16, 5);
+  if (IsMicroMips)
+    std::swap(Rs, Rt);
+
+  MI.setOpcode(IsMicroMips ? Mips::DINS_MM64R6 : Mips::DINS);
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID, Rt)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID, Rs)));
+  MI.addOperand(MCOperand::createImm(Pos));
+  MI.addOperand(MCOperand::createImm(Size));
+
+  return MCDisassembler::Success;
+}
 /// Read two bytes from the ArrayRef and return 16 bit halfword sorted
 /// according to the given endianness.
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -2260,15 +2318,10 @@ static DecodeStatus DecodeInsSize(MCInst &Inst,
                                   uint64_t Address,
                                   const void *Decoder) {
   // First we need to grab the pos(lsb) from MCInst.
+  // This function only handles the 32 bit variants of ins, as dins
+  // variants are handled differently.
   int Pos = Inst.getOperand(2).getImm();
-  if (Inst.getOpcode() == Mips::DINSU)
-    Pos += 32;
-  int Size;
-  if (Inst.getOpcode() == Mips::DINSM ||
-      Inst.getOpcode() == Mips::DINSU)
-    Size = (int) Insn - Pos + 33;
-  else
-    Size = (int) Insn - Pos + 1;
+  int Size = (int) Insn - Pos + 1;
   Inst.addOperand(MCOperand::createImm(SignExtend32<16>(Size)));
   return MCDisassembler::Success;
 }

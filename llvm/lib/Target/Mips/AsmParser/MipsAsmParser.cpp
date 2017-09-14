@@ -463,6 +463,8 @@ public:
     Match_RequiresSameSrcAndDst,
     Match_NoFCCRegisterForCurrentISA,
     Match_NonZeroOperandForSync,
+    Match_RequiresPosSizeRange0_32,
+    Match_RequiresPosSizeRange33_64,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -4977,6 +4979,28 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;
     return Match_Success;
+   case Mips::DINS:
+   case Mips::DINS_MM64R6: {
+     assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+            "Operands must be immediates for dins!");
+     const signed Pos = Inst.getOperand(2).getImm();
+     const signed Size = Inst.getOperand(3).getImm();
+     if ((0 > (Pos + Size)) || ((Pos + Size) > 32))
+       return Match_RequiresPosSizeRange0_32;
+     return Match_Success;
+   }
+   case Mips::DINSM:
+   case Mips::DINSM_MM64R6:
+   case Mips::DINSU:
+   case Mips::DINSU_MM64R6: {
+     assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+            "Operands must be immediates for dinsm/dinsu!");
+     const signed Pos = Inst.getOperand(2).getImm();
+     const signed Size = Inst.getOperand(3).getImm();
+     if ((32 >= (Pos + Size)) || ((Pos + Size) > 64))
+       return Match_RequiresPosSizeRange33_64;
+     return Match_Success;
+   }
   }
 
   uint64_t TSFlags = getInstDesc(Inst.getOpcode()).TSFlags;
@@ -5169,6 +5193,18 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MemSImm16:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 16-bit signed offset");
+  case Match_RequiresPosSizeRange0_32: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 0 .. 32",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
+  case Match_RequiresPosSizeRange33_64: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 33 .. 64",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
   }
 
   llvm_unreachable("Implement any new match types added!");

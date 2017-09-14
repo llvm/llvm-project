@@ -287,7 +287,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerTypeVFTableShape(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeMemberFunction(const DISubroutineType *Ty,
                                               const DIType *ClassTy,
-                                              int ThisAdjustment);
+                                              int ThisAdjustment,
+                                              bool IsStaticMethod);
   codeview::TypeIndex lowerTypeEnum(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeClass(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeUnion(const DICompositeType *Ty);

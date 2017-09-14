@@ -5595,16 +5595,18 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   }
 
   // fold (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
+  // fold (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
   // Variant of version done on multiply, except mul by a power of 2 is turned
   // into a shift.
-  if (N0.getOpcode() == ISD::ADD && N0.getNode()->hasOneUse() &&
+  if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR) &&
+      N0.getNode()->hasOneUse() &&
       isConstantOrConstantVector(N1, /* No Opaques */ true) &&
       isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true)) {
     SDValue Shl0 = DAG.getNode(ISD::SHL, SDLoc(N0), VT, N0.getOperand(0), N1);
     SDValue Shl1 = DAG.getNode(ISD::SHL, SDLoc(N1), VT, N0.getOperand(1), N1);
     AddToWorklist(Shl0.getNode());
     AddToWorklist(Shl1.getNode());
-    return DAG.getNode(ISD::ADD, SDLoc(N), VT, Shl0, Shl1);
+    return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, Shl0, Shl1);
   }
 
   // fold (shl (mul x, c1), c2) -> (mul x, c1 << c2)

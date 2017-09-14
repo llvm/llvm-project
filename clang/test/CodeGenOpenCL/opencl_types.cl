@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "spir-unknown-unknown" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-SPIR
-// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-AMDGCN
+// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "spir-unknown-unknown" -emit-llvm -o - -O0 | FileCheck %s --check-prefixes=CHECK-COM,CHECK-SPIR
+// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -O0 | FileCheck %s --check-prefixes=CHECK-COM,CHECK-AMDGCN
 
 #define CLK_ADDRESS_CLAMP_TO_EDGE       2
 #define CLK_NORMALIZED_COORDS_TRUE      1
@@ -7,7 +7,7 @@
 #define CLK_FILTER_LINEAR               0x20
 
 constant sampler_t glb_smp = CLK_ADDRESS_CLAMP_TO_EDGE|CLK_NORMALIZED_COORDS_TRUE|CLK_FILTER_NEAREST;
-// CHECK-SPIR-NOT: constant i32
+// CHECK-COM-NOT: constant i32
 
 void fnc1(image1d_t img) {}
 // CHECK-SPIR: @fnc1(%opencl.image1d_ro_t addrspace(1)*
@@ -39,20 +39,23 @@ void fnc4smp(sampler_t s) {}
 
 kernel void foo(image1d_t img) {
   sampler_t smp = CLK_ADDRESS_CLAMP_TO_EDGE|CLK_NORMALIZED_COORDS_TRUE|CLK_FILTER_LINEAR;
-  // CHECK-SPIR: alloca %opencl.sampler_t addrspace(2)*
+  // CHECK-COM: alloca %opencl.sampler_t addrspace(2)*
   event_t evt;
-  // CHECK-SPIR: alloca %opencl.event_t*
+  // CHECK-COM: alloca %opencl.event_t*
   clk_event_t clk_evt;
   // CHECK-SPIR: alloca %opencl.clk_event_t*
+  // CHECK-AMDGCN: alloca %opencl.clk_event_t addrspace(1)*
   queue_t queue;
   // CHECK-SPIR: alloca %opencl.queue_t*
+  // CHECK-AMDGCN: alloca %opencl.queue_t addrspace(1)*
   reserve_id_t rid;
   // CHECK-SPIR: alloca %opencl.reserve_id_t*
-  // CHECK-SPIR: store %opencl.sampler_t addrspace(2)*
+  // CHECK-AMDGCN: alloca %opencl.reserve_id_t addrspace(1)*
+  // CHECK-COM: store %opencl.sampler_t addrspace(2)*
   fnc4smp(smp);
-  // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
+  // CHECK-COM: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
   fnc4smp(glb_smp);
-  // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
+  // CHECK-COM: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
 }
 
 kernel void foo_pipe(read_only pipe int p) {}

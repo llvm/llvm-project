@@ -185,7 +185,10 @@ private:
 
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
-      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {}
+      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
+    assert((K != AliasKind || Refs.empty()) &&
+           "Expect no references for AliasSummary");
+  }
 
 public:
   virtual ~GlobalValueSummary() = default;
@@ -232,6 +235,10 @@ public:
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
 
+  /// If this is an alias summary, returns the summary of the aliased object (a
+  /// global variable or function), otherwise returns itself.
+  GlobalValueSummary *getBaseObject();
+
   friend class ModuleSummaryIndex;
   friend void computeDeadSymbols(class ModuleSummaryIndex &,
                                  const DenseSet<GlobalValue::GUID> &);
@@ -242,8 +249,8 @@ class AliasSummary : public GlobalValueSummary {
   GlobalValueSummary *AliaseeSummary;
 
 public:
-  AliasSummary(GVFlags Flags, std::vector<ValueInfo> Refs)
-      : GlobalValueSummary(AliasKind, Flags, std::move(Refs)) {}
+  AliasSummary(GVFlags Flags)
+      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -262,6 +269,12 @@ public:
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
 };
+
+inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
+  if (auto *AS = dyn_cast<AliasSummary>(this))
+    return &AS->getAliasee();
+  return this;
+}
 
 /// \brief Function summary information to aid decisions and implementation of
 /// importing.
