@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
 #include <type_traits>
 
 namespace clang {
@@ -40,9 +41,10 @@ private:
 
 /// A custom selection requirement.
 class Requirement {
-  /// Subclasses must implement 'T evaluateSelection(SelectionConstraint) const'
-  /// member function. \c T is used to determine the return type that is
-  /// passed to the refactoring rule's function.
+  /// Subclasses must implement
+  /// 'T evaluateSelection(const RefactoringRuleContext &,
+  /// SelectionConstraint) const' member function. \c T is used to determine
+  /// the return type that is passed to the refactoring rule's function.
   /// If T is \c DiagnosticOr<S> , then \c S is passed to the rule's function
   /// using move semantics.
   /// Otherwise, T is passed to the function directly using move semantics.
@@ -64,14 +66,17 @@ namespace internal {
 template <typename T> struct EvaluateSelectionChecker : std::false_type {};
 
 template <typename T, typename R, typename A>
-struct EvaluateSelectionChecker<R (T::*)(A) const> : std::true_type {
+struct EvaluateSelectionChecker<R (T::*)(const RefactoringRuleContext &, A)
+                                    const> : std::true_type {
   using ReturnType = R;
   using ArgType = A;
 };
 
 template <typename T> class Identity : public Requirement {
 public:
-  T evaluateSelection(T Value) const { return std::move(Value); }
+  T evaluateSelection(const RefactoringRuleContext &, T Value) const {
+    return std::move(Value);
+  }
 };
 
 } // end namespace internal

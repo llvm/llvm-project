@@ -30,6 +30,10 @@ public:
   /// consumer to propagate the result of the refactoring action.
   virtual void invoke(RefactoringResultConsumer &Consumer,
                       RefactoringRuleContext &Context) = 0;
+
+  /// Returns true when the rule has a source selection requirement that has
+  /// to be fullfilled before refactoring can be performed.
+  virtual bool hasSelectionRequirement() = 0;
 };
 
 /// A set of refactoring action rules that should have unique initiation

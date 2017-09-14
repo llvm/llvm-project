@@ -141,6 +141,7 @@ module Clang_Tooling {
   exclude header "Tooling/Refactor/USRFinder.h"
 
   textual header "Tooling/Refactor/RefactoringActions.def"
+  textual header "Tooling/Refactoring/RefactoringActionRegistry.def"
 }
 
 module Clang_ToolingCore {

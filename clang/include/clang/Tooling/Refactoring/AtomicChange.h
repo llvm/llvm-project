@@ -52,6 +52,8 @@ public:
   AtomicChange &operator=(AtomicChange &&) = default;
   AtomicChange &operator=(const AtomicChange &) = default;
 
+  bool operator==(const AtomicChange &Other) const;
+
   /// \brief Returns the atomic change as a YAML string.
   std::string toYAMLString();
 
