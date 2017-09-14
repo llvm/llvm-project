@@ -10574,56 +10574,12 @@ OMPClause *Sema::ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
   return new (Context) OMPDeviceClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
-static bool IsCXXRecordForMappable(Sema &SemaRef, SourceLocation Loc,
-                                   DSAStackTy *Stack, CXXRecordDecl *RD) {
-  if (!RD || RD->isInvalidDecl())
-    return true;
-
-  auto QTy = SemaRef.Context.getRecordType(RD);
-  if (RD->isDynamicClass()) {
-    SemaRef.Diag(Loc, diag::err_omp_not_mappable_type) << QTy;
-    SemaRef.Diag(RD->getLocation(), diag::note_omp_polymorphic_in_target);
-    return false;
-  }
-  auto *DC = RD;
-  bool IsCorrect = true;
-  for (auto *I : DC->decls()) {
-    if (I) {
-      if (auto *MD = dyn_cast<CXXMethodDecl>(I)) {
-        if (MD->isStatic()) {
-          SemaRef.Diag(Loc, diag::err_omp_not_mappable_type) << QTy;
-          SemaRef.Diag(MD->getLocation(),
-                       diag::note_omp_static_member_in_target);
-          IsCorrect = false;
-        }
-      } else if (auto *VD = dyn_cast<VarDecl>(I)) {
-        if (VD->isStaticDataMember()) {
-          SemaRef.Diag(Loc, diag::err_omp_not_mappable_type) << QTy;
-          SemaRef.Diag(VD->getLocation(),
-                       diag::note_omp_static_member_in_target);
-          IsCorrect = false;
-        }
-      }
-    }
-  }
-
-  for (auto &I : RD->bases()) {
-    if (!IsCXXRecordForMappable(SemaRef, I.getLocStart(), Stack,
-                                I.getType()->getAsCXXRecordDecl()))
-      IsCorrect = false;
-  }
-  return IsCorrect;
-}
-
 static bool CheckTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,
                               DSAStackTy *Stack, QualType QTy) {
   NamedDecl *ND;
   if (QTy->isIncompleteType(&ND)) {
     SemaRef.Diag(SL, diag::err_incomplete_type) << QTy << SR;
     return false;
-  } else if (CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(ND)) {
-    if (!RD->isInvalidDecl() && !IsCXXRecordForMappable(SemaRef, SL, Stack, RD))
-      return false;
   }
   return true;
 }

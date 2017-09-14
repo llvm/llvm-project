@@ -183,7 +183,7 @@ void OutputSection::addChunk(Chunk *C) {
   Chunks.push_back(C);
   C->setOutputSection(this);
   uint64_t Off = Header.VirtualSize;
-  Off = alignTo(Off, C->getAlign());
+  Off = alignTo(Off, C->Alignment);
   C->setRVA(Off);
   C->OutputSectionOff = Off;
   Off += C->getSize();

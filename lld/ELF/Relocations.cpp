@@ -319,8 +319,8 @@ static uint32_t getMipsPairType(uint32_t Type, const SymbolBody &Sym) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const SymbolBody &Body) {
-  if (Body.isUndefined())
-    return !Body.isLocal() && Body.symbol()->isWeak();
+  if (Body.isUndefWeak())
+    return true;
   if (const auto *DR = dyn_cast<DefinedRegular>(&Body))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
@@ -402,7 +402,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // between start of a function and '_gp' value and defined as absolute just
   // to simplify the code.
   assert(AbsVal && RelE);
-  if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+  if (Body.isUndefWeak())
     return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
@@ -525,8 +525,12 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
-  BssSection *Sec = IsReadOnly ? InX::BssRelRo : InX::Bss;
-  uint64_t Off = Sec->reserveSpace(SymSize, SS->getAlignment<ELFT>());
+  BssSection *Sec = make<BssSection>(IsReadOnly ? ".bss.rel.ro" : ".bss");
+  Sec->reserveSpace(SymSize, SS->getAlignment<ELFT>());
+  if (IsReadOnly)
+    InX::BssRelRo->getParent()->addSection(Sec);
+  else
+    InX::Bss->getParent()->addSection(Sec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
@@ -534,11 +538,10 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->CopyRelSec = Sec;
     Sym->IsPreemptible = false;
-    Sym->CopyRelSecOff = Off;
     Sym->symbol()->IsUsedInRegularObj = true;
   }
 
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, Off, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});
 }
 
 static void errorOrWarn(const Twine &Msg) {

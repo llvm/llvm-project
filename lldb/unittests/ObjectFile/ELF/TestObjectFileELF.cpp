@@ -15,6 +15,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/HostInfo.h"
 #include "unittests/Utility/Helpers/TestUtilities.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -61,7 +62,8 @@ TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
   llvm::FileRemover remover(obj);
   const char *args[] = {YAML2OBJ, yaml.c_str(), nullptr};
   llvm::StringRef obj_ref = obj;
-  const llvm::StringRef *redirects[] = {nullptr, &obj_ref, nullptr};
+  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
+                                                       llvm::None};
   ASSERT_EQ(0, llvm::sys::ExecuteAndWait(YAML2OBJ, args, nullptr, redirects));
   uint64_t size;
   ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));

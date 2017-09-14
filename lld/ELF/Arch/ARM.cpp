@@ -194,8 +194,7 @@ bool ARM::needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
   // If S is an undefined weak symbol in an executable we don't need a Thunk.
   // In a DSO calls to undefined symbols, including weak ones get PLT entries
   // which may need a thunk.
-  if (S.isUndefined() && !S.isLocal() && S.symbol()->isWeak() &&
-      !Config->Shared)
+  if (S.isUndefWeak() && !Config->Shared)
     return false;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or

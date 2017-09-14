@@ -14,8 +14,8 @@ class S2 {
 public:
   S2():a(0) { }
   S2(S2 &s2):a(s2.a) { }
-  static float S2s; // expected-note 4 {{mappable type cannot contain static members}}
-  static const float S2sc; // expected-note 4 {{mappable type cannot contain static members}}
+  static float S2s;
+  static const float S2sc;
 };
 const float S2::S2sc = 0;
 const S2 b;
@@ -94,8 +94,8 @@ T tmain(T argc) {
 #pragma omp target update to(y x) // expected-error {{expected ',' or ')' in 'to' clause}}
 #pragma omp target update to(argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} 
 #pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
-#pragma omp target update to(ba) // expected-error 2 {{type 'S2' is not mappable to target}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
+#pragma omp target update to(ba)
 #pragma omp target update to(h) // expected-error {{threadprivate variables are not allowed in 'to' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(k), from(k) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
 #pragma omp target update to(t), to(t[:5]) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
@@ -147,8 +147,8 @@ int main(int argc, char **argv) {
 #pragma omp target update to(y x) // expected-error {{expected ',' or ')' in 'to' clause}}
 #pragma omp target update to(argc > 0 ? x : y) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
-#pragma omp target update to(ba) // expected-error 2 {{type 'S2' is not mappable to target}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
+#pragma omp target update to(ba)
 #pragma omp target update to(h) // expected-error {{threadprivate variables are not allowed in 'to' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(k), from(k) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
 #pragma omp target update to(t), to(t[:5]) // expected-error {{variable can appear only once in OpenMP 'target update' construct}} expected-note {{used here}}
