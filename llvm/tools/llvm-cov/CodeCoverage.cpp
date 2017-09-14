@@ -458,10 +458,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   for (const std::string &Arg : ViewOpts.DemanglerOpts)
     ArgsV.push_back(Arg.c_str());
   ArgsV.push_back(nullptr);
-  StringRef InputPathRef = InputPath.str();
-  StringRef OutputPathRef = OutputPath.str();
-  StringRef StderrRef;
-  const StringRef *Redirects[] = {&InputPathRef, &OutputPathRef, &StderrRef};
+  Optional<StringRef> Redirects[] = {InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
   int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV.data(),
                                /*env=*/nullptr, Redirects, /*secondsToWait=*/0,

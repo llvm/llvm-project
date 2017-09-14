@@ -1743,8 +1743,11 @@ void DwarfLinker::reportWarning(const Twine &Warning,
   if (!Options.Verbose || !DIE)
     return;
 
+  DIDumpOptions DumpOpts;
+  DumpOpts.Verbose = Options.Verbose;
+
   errs() << "    in DIE:\n";
-  DIE->dump(errs(), 0 /* RecurseDepth */, 6 /* Indent */);
+  DIE->dump(errs(), 0 /* RecurseDepth */, 6 /* Indent */, DumpOpts);
 }
 
 bool DwarfLinker::createStreamer(const Triple &TheTriple,
@@ -2107,8 +2110,11 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
       (Flags & TF_InFunctionScope))
     return Flags;
 
-  if (Options.Verbose)
-    DIE.dump(outs(), 0, 8 /* Indent */);
+  if (Options.Verbose) {
+    DIDumpOptions DumpOpts;
+    DumpOpts.Verbose = Options.Verbose;
+    DIE.dump(outs(), 0, 8 /* Indent */, DumpOpts);
+  }
 
   return Flags | TF_Keep;
 }
@@ -2139,8 +2145,11 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
       !RelocMgr.hasValidRelocation(LowPcOffset, LowPcEndOffset, MyInfo))
     return Flags;
 
-  if (Options.Verbose)
-    DIE.dump(outs(), 0, 8 /* Indent */);
+  if (Options.Verbose) {
+    DIDumpOptions DumpOpts;
+    DumpOpts.Verbose = Options.Verbose;
+    DIE.dump(outs(), 0, 8 /* Indent */, DumpOpts);
+  }
 
   Flags |= TF_Keep;
 
@@ -3476,7 +3485,9 @@ bool DwarfLinker::link(const DebugMap &Map) {
       auto CUDie = CU->getUnitDIE(false);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
-        CUDie.dump(outs(), 0);
+        DIDumpOptions DumpOpts;
+        DumpOpts.Verbose = Options.Verbose;
+        CUDie.dump(outs(), 0, 0, DumpOpts);
       }
 
       if (!registerModuleReference(CUDie, *CU, ModuleMap)) {

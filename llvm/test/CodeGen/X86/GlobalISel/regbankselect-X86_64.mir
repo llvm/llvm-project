@@ -231,7 +231,12 @@
     ret float %cond
   }
 
-  
+  define double @test_fpext(float %a) {
+  entry:
+    %conv = fpext float %a to double
+    ret double %conv
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -1384,3 +1389,26 @@ body:             |
     RET 0, implicit %xmm0
 
 ...
+---
+name:            test_fpext
+# CHECK-LABEL: name:  test_fpext
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+body:             |
+  bb.1.entry:
+    liveins: %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(s64) = G_FPEXT %0(s32)
+    %xmm0 = COPY %1(s64)
+    RET 0, implicit %xmm0
+
+...
+

@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/VirtRegMap.cpp - Virtual Register Map ----------------===//
+//===- llvm/CodeGen/VirtRegMap.cpp - Virtual Register Map -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,24 +18,32 @@
 
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "LiveDebugVariables.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveStackAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -164,9 +172,9 @@ LLVM_DUMP_METHOD void VirtRegMap::dump() const {
 // according to LiveIntervals.
 //
 namespace {
+
 class VirtRegRewriter : public MachineFunctionPass {
   MachineFunction *MF;
-  const TargetMachine *TM;
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
@@ -184,17 +192,22 @@ class VirtRegRewriter : public MachineFunctionPass {
 
 public:
   static char ID;
+
   VirtRegRewriter() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction&) override;
+
   MachineFunctionProperties getSetProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
   }
 };
+
 } // end anonymous namespace
+
+char VirtRegRewriter::ID = 0;
 
 char &llvm::VirtRegRewriterID = VirtRegRewriter::ID;
 
@@ -207,8 +220,6 @@ INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
                     "Virtual Register Rewriter", false, false)
-
-char VirtRegRewriter::ID = 0;
 
 void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -224,7 +235,6 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   MF = &fn;
-  TM = &MF->getTarget();
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
   MRI = &MF->getRegInfo();
@@ -260,8 +270,9 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
   assert(!LI.empty());
   assert(LI.hasSubRanges());
 
-  typedef std::pair<const LiveInterval::SubRange *,
-                    LiveInterval::const_iterator> SubRangeIteratorPair;
+  using SubRangeIteratorPair =
+      std::pair<const LiveInterval::SubRange *, LiveInterval::const_iterator>;
+
   SmallVector<SubRangeIteratorPair, 4> SubRanges;
   SlotIndex First;
   SlotIndex Last;

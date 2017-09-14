@@ -147,6 +147,7 @@ void BackgroundThread(void *arg) {
 }
 #endif
 
+#if !SANITIZER_GO
 void MaybeReportNonExecRegion(uptr pc) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
@@ -185,6 +186,7 @@ void MaybeDumpRegisters(void *context) {
   if (!common_flags()->dump_registers) return;
   SignalContext::DumpAllRegisters(context);
 }
+#endif
 
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);

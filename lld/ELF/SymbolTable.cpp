@@ -301,7 +301,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   }
   if (Binding != STB_WEAK) {
     SymbolBody *B = S->body();
-    if (B->isShared() || B->isLazy() || B->isUndefined())
+    if (!B->isInCurrentDSO())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(B))
       SS->getFile<ELFT>()->IsUsed = true;

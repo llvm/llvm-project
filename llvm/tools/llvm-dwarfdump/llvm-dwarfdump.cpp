@@ -60,6 +60,9 @@ static uint64_t DumpType = DIDT_Null;
                                    cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+                          cat(DwarfDumpCategory));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 
 static opt<bool>
     SummarizeTypes("summarize-types",
@@ -82,21 +85,25 @@ static void error(StringRef Filename, std::error_code EC) {
   exit(1);
 }
 
+static DIDumpOptions GetDumpOpts() {
+  DIDumpOptions DumpOpts;
+  DumpOpts.DumpType = DumpType;
+  DumpOpts.SummarizeTypes = SummarizeTypes;
+  DumpOpts.Verbose = Verbose;
+  return DumpOpts;
+}
+
 static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
-
-  outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
-         << "\n\n";
-
+  // The UUID dump already contains all the same information.
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    outs() << Filename << ":\tfile format " << Obj.getFileFormatName()
+           << "\n\n";
 
   // Dump the complete DWARF structure.
-  DIDumpOptions DumpOpts;
-  DumpOpts.DumpType = DumpType;
-  DumpOpts.SummarizeTypes = SummarizeTypes;
-  DumpOpts.Brief = !Verbose;
-  DICtx->dump(outs(), DumpOpts);
+  DICtx->dump(outs(), GetDumpOpts());
 }
 
 static void DumpInput(StringRef Filename) {
@@ -129,7 +136,7 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType);
+  bool Result = DICtx->verify(stream, DumpType, GetDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -221,6 +228,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_##ENUM_NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  if (DumpUUID)
+    DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {

@@ -202,6 +202,10 @@ public:
   case BuiltinType::Id:                                                        \
     return LangAS::opencl_constant;
 #include "clang/Basic/OpenCLImageTypes.def"
+    case BuiltinType::OCLClkEvent:
+    case BuiltinType::OCLQueue:
+    case BuiltinType::OCLReserveID:
+      return LangAS::opencl_global;
 
     default:
       return TargetInfo::getOpenCLTypeAddrSpace(T);

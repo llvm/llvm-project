@@ -80,6 +80,27 @@ static void dumpAccelSection(raw_ostream &OS, StringRef Name,
   Accel.dump(OS);
 }
 
+/// Dump the UUID load command.
+static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
+  auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
+  if (!MachO)
+    return;
+  for (auto LC : MachO->load_commands()) {
+    raw_ostream::uuid_t UUID;
+    if (LC.C.cmd == MachO::LC_UUID) {
+      if (LC.C.cmdsize < sizeof(UUID) + sizeof(LC.C)) {
+        OS << "error: UUID load command is too short.\n";
+        return;
+      }
+      OS << "UUID: ";
+      memcpy(&UUID, LC.Ptr+sizeof(LC.C), sizeof(UUID));
+      OS.write_uuid(UUID);
+      OS << ' ' << MachO->getFileFormatName();
+      OS << ' ' << MachO->getFileName() << '\n';
+    }
+  }
+}
+
 static void
 dumpDWARFv5StringOffsetsSection(raw_ostream &OS, StringRef SectionName,
                                 const DWARFObject &Obj,
@@ -202,7 +223,13 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
 void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   uint64_t DumpType = DumpOpts.DumpType;
   bool DumpEH = DumpOpts.DumpEH;
-  bool SummarizeTypes = DumpOpts.SummarizeTypes;
+
+  const auto *ObjFile = DObj->getFile();
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    outs() << ObjFile->getFileName() << ":\tfile format "
+           << ObjFile->getFileFormatName() << "\n\n";
+  if (DumpType & DIDT_UUID)
+    dumpUUID(OS, *ObjFile);
 
   if (DumpType & DIDT_DebugAbbrev) {
     OS << ".debug_abbrev contents:\n";
@@ -232,7 +259,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     OS << "\n.debug_types contents:\n";
     for (const auto &TUS : type_unit_sections())
       for (const auto &TU : TUS)
-        TU->dump(OS, SummarizeTypes);
+        TU->dump(OS, DumpOpts);
   }
 
   if ((DumpType & DIDT_DebugTypesDwo) &&
@@ -240,7 +267,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     OS << "\n.debug_types.dwo contents:\n";
     for (const auto &DWOTUS : dwo_type_unit_sections())
       for (const auto &DWOTU : DWOTUS)
-        DWOTU->dump(OS, SummarizeTypes);
+        DWOTU->dump(OS, DumpOpts);
   }
 
   if (DumpType & DIDT_DebugLoc) {
@@ -434,9 +461,10 @@ DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
   return DWARFDie();
 }
 
-bool DWARFContext::verify(raw_ostream &OS, uint64_t DumpType) {
+bool DWARFContext::verify(raw_ostream &OS, uint64_t DumpType,
+                          DIDumpOptions DumpOpts) {
   bool Success = true;
-  DWARFVerifier verifier(OS, *this);
+  DWARFVerifier verifier(OS, *this, DumpOpts);
 
   Success &= verifier.handleDebugAbbrev();
   if (DumpType & DIDT_DebugInfo)
@@ -594,7 +622,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
 
   // Make sure the offset is good before we try to parse.
   if (stmtOffset >= U->getLineSection().Data.size())
-    return nullptr;  
+    return nullptr;
 
   // We have to parse it first.
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),

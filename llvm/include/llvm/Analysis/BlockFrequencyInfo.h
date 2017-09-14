@@ -31,6 +31,8 @@ class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
+enum PGOViewCountsType { PGOVCT_None, PGOVCT_Graph, PGOVCT_Text };
+
 /// BlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation to
 /// estimate IR basic block frequencies.
 class BlockFrequencyInfo {

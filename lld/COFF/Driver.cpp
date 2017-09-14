@@ -234,6 +234,12 @@ void LinkerDriver::parseDirectives(StringRef S) {
       break;
     case OPT_export: {
       Export E = parseExport(Arg->getValue());
+      if (Config->Machine == I386 && Config->MinGW) {
+        if (!isDecorated(E.Name))
+          E.Name = Saver.save("_" + E.Name);
+        if (!E.ExtName.empty() && !isDecorated(E.ExtName))
+          E.ExtName = Saver.save("_" + E.ExtName);
+      }
       E.Directives = true;
       Config->Exports.push_back(E);
       break;
@@ -719,6 +725,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  // Handle /lldmingw early, since it can potentially affect how other
+  // options are handled.
+  Config->MinGW = Args.hasArg(OPT_lldmingw);
+
   if (auto *Arg = Args.getLastArg(OPT_linkrepro)) {
     SmallString<64> Path = StringRef(Arg->getValue());
     sys::path::append(Path, "repro.tar");
@@ -734,8 +744,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Args.hasArgNoClaim(OPT_INPUT)) {
-    if (Args.hasArgNoClaim(OPT_deffile))
+  if (!Args.hasArg(OPT_INPUT)) {
+    if (Args.hasArg(OPT_deffile))
       Config->NoEntry = true;
     else
       fatal("no input files");
@@ -1057,7 +1067,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   // Handle generation of import library from a def file.
-  if (!Args.hasArgNoClaim(OPT_INPUT)) {
+  if (!Args.hasArg(OPT_INPUT)) {
     fixupExports();
     createImportLibrary(/*AsLib=*/true);
     exit(0);
@@ -1191,18 +1201,22 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;
-    int Align = Pair.second;
+    uint32_t Alignment = Pair.second;
+
     Symbol *Sym = Symtab->find(Name);
     if (!Sym) {
       warn("/aligncomm symbol " + Name + " not found");
       continue;
     }
+
     auto *DC = dyn_cast<DefinedCommon>(Sym->body());
     if (!DC) {
       warn("/aligncomm symbol " + Name + " of wrong kind");
       continue;
     }
-    DC->getChunk()->setAlign(Align);
+
+    CommonChunk *C = DC->getChunk();
+    C->Alignment = std::max(C->Alignment, Alignment);
   }
 
   // Windows specific -- Create a side-by-side manifest file.

@@ -312,8 +312,8 @@ class S2 {
 public:
   S2():a(0) { }
   S2(S2 &s2):a(s2.a) { }
-  static float S2s; // expected-note 4 {{mappable type cannot contain static members}}
-  static const float S2sc; // expected-note 4 {{mappable type cannot contain static members}}
+  static float S2s;
+  static const float S2sc;
 };
 const float S2::S2sc = 0;
 const S2 b;
@@ -346,7 +346,7 @@ template <class T>
 struct S6;
 
 template<>
-struct S6<int>  // expected-note {{mappable type cannot be polymorphic}}
+struct S6<int>
 {
    virtual void foo();
 };
@@ -414,8 +414,8 @@ T tmain(T argc) {
 #pragma omp target data map(tofrom: argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
-#pragma omp target data map(ba) // expected-error 2 {{type 'S2' is not mappable to target}}
+#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
+#pragma omp target data map(ba)
 #pragma omp target data map(ca)
 #pragma omp target data map(da)
 #pragma omp target data map(S2::S2s)
@@ -488,9 +488,9 @@ int main(int argc, char **argv) {
 #pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2]) // expected-error {{xpected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
+#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
 #pragma omp target data map(argv[1])
-#pragma omp target data map(ba) // expected-error 2 {{type 'S2' is not mappable to target}}
+#pragma omp target data map(ba)
 #pragma omp target data map(ca)
 #pragma omp target data map(da)
 #pragma omp target data map(S2::S2s)
@@ -530,7 +530,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams firstprivate(j) map(j)  // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams' directive}} expected-note {{defined as firstprivate}}
   {}
 
-#pragma omp target teams map(m) // expected-error {{type 'S6<int>' is not mappable to target}}
+#pragma omp target teams map(m)
   {}
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}

@@ -215,7 +215,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   MaybeInstallSigaction(SIGILL, handler);
 }
 
-bool IsStackOverflow(int code, const SignalContext &sig) {
+bool IsStackOverflow(const SignalContext &sig) {
   // Access at a reasonable offset above SP, or slightly below it (to account
   // for x86_64 or PowerPC redzone, ARM push of multiple registers, etc) is
   // probably a stack overflow.
@@ -257,7 +257,9 @@ bool IsStackOverflow(int code, const SignalContext &sig) {
   // We also check si_code to filter out SEGV caused by something else other
   // then hitting the guard page or unmapped memory, like, for example,
   // unaligned memory access.
-  return IsStackAccess && (code == si_SEGV_MAPERR || code == si_SEGV_ACCERR);
+  auto si = static_cast<const siginfo_t *>(sig.siginfo);
+  return IsStackAccess &&
+         (si->si_code == si_SEGV_MAPERR || si->si_code == si_SEGV_ACCERR);
 }
 
 void StartReportDeadlySignal() {

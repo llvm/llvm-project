@@ -45,7 +45,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
 
   std::string ErrMsg;
   int result =
-      sys::ExecuteAndWait(*Path, Args.data(), nullptr, nullptr, 0, 0, &ErrMsg);
+      sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
   if (result) {
     errs() << "error: lipo: " << ErrMsg << "\n";
     return false;

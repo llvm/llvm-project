@@ -47,7 +47,7 @@
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: int (0x74)
 ; CHECK:     IndexType: unsigned long (0x22)
-; CHECK:     SizeOf: 4
+; CHECK:     SizeOf: 0
 ; CHECK:     Name: 
 ; CHECK:   }
 ; CHECK:   Pointer (0x1004) {

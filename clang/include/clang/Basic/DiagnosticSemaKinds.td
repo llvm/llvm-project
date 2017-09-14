@@ -8837,16 +8837,10 @@ def err_omp_expected_base_var_name : Error<
   "expected variable name as a base of the array %select{subscript|section}0">;
 def err_omp_map_shared_storage : Error<
   "variable already marked as mapped in current construct">;
-def err_omp_not_mappable_type : Error<
-  "type %0 is not mappable to target">;
 def err_omp_invalid_map_type_for_directive : Error<
   "%select{map type '%1' is not allowed|map type must be specified}0 for '#pragma omp %2'">;
 def err_omp_no_clause_for_directive : Error<
   "expected at least one %0 clause for '#pragma omp %1'">;
-def note_omp_polymorphic_in_target : Note<
-  "mappable type cannot be polymorphic">;
-def note_omp_static_member_in_target : Note<
-  "mappable type cannot contain static members">;
 def err_omp_threadprivate_in_clause : Error<
   "threadprivate variables are not allowed in '%0' clause">;
 def err_omp_wrong_ordered_loop_count : Error<
