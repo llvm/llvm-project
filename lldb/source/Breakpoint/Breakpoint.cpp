@@ -210,7 +210,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       llvm::StringRef name;
       Status error;
       success = names_array->GetItemAtIndexAsString(i, name);
-      result_sp->AddName(name, error);
+      target.AddNameToBreakpoint(result_sp, name.str().c_str(), error);
     }
   }
 
@@ -454,6 +454,10 @@ bool Breakpoint::InvokeCallback(StoppointCallbackContext *context,
 }
 
 BreakpointOptions *Breakpoint::GetOptions() { return m_options_up.get(); }
+
+const BreakpointOptions *Breakpoint::GetOptions() const {
+  return m_options_up.get();
+}
 
 void Breakpoint::ResolveBreakpoint() {
   if (m_resolver_sp)
@@ -841,18 +845,8 @@ size_t Breakpoint::GetNumResolvedLocations() const {
 
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
-bool Breakpoint::AddName(llvm::StringRef new_name, Status &error) {
-  if (new_name.empty())
-    return false;
-  if (!BreakpointID::StringIsBreakpointName(new_name, error)) {
-    error.SetErrorStringWithFormatv("input name \"{0}\" not a breakpoint name.",
-                                    new_name);
-    return false;
-  }
-  if (!error.Success())
-    return false;
-
-  m_name_list.insert(new_name);
+bool Breakpoint::AddName(llvm::StringRef new_name) {
+  m_name_list.insert(new_name.str().c_str());
   return true;
 }
 
