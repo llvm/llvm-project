@@ -16,18 +16,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegisterScavenging.h"
-
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/PassSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,6 +42,7 @@
 #include <iterator>
 #include <limits>
 #include <string>
+#include <utility>
 
 using namespace llvm;
 
@@ -769,13 +772,16 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
 }
 
 namespace {
+
 /// This class runs register scavenging independ of the PrologEpilogInserter.
 /// This is used in for testing.
 class ScavengerTest : public MachineFunctionPass {
 public:
   static char ID;
+
   ScavengerTest() : MachineFunctionPass(ID) {}
-  bool runOnMachineFunction(MachineFunction &MF) {
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
     const TargetSubtargetInfo &STI = MF.getSubtarget();
     const TargetFrameLowering &TFL = *STI.getFrameLowering();
 
@@ -792,9 +798,10 @@ public:
     return true;
   }
 };
-char ScavengerTest::ID;
 
 } // end anonymous namespace
+
+char ScavengerTest::ID;
 
 INITIALIZE_PASS(ScavengerTest, "scavenger-test",
                 "Scavenge virtual registers inside basic blocks", false, false)

@@ -128,6 +128,11 @@ public:
   void operator=(const Function&) = delete;
   ~Function();
 
+  // This is here to help easily convert from FunctionT * (Function * or
+  // MachineFunction *) in BlockFrequencyInfoImpl to Function * by calling
+  // FunctionT->getFunction().
+  const Function *getFunction() const { return this; }
+
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
     return new Function(Ty, Linkage, N, M);

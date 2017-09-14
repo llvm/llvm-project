@@ -1,4 +1,4 @@
-//===-- BranchRelaxation.cpp ----------------------------------------------===//
+//===- BranchRelaxation.cpp -----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,14 +10,25 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <memory>
 
 using namespace llvm;
 
@@ -30,6 +41,7 @@ STATISTIC(NumUnconditionalRelaxed, "Number of unconditional branches relaxed");
 #define BRANCH_RELAX_NAME "Branch relaxation pass"
 
 namespace {
+
 class BranchRelaxation : public MachineFunctionPass {
   /// BasicBlockInfo - Information about the offset and size of a single
   /// basic block.
@@ -38,16 +50,16 @@ class BranchRelaxation : public MachineFunctionPass {
     /// of this basic block.
     ///
     /// The offset is always aligned as required by the basic block.
-    unsigned Offset;
+    unsigned Offset = 0;
 
     /// Size - Size of the basic block in bytes.  If the block contains
     /// inline assembly, this is a worst case estimate.
     ///
     /// The size does not include any alignment padding whether from the
     /// beginning of the block, or from an aligned jump table at the end.
-    unsigned Size;
+    unsigned Size = 0;
 
-    BasicBlockInfo() : Offset(0), Size(0) {}
+    BasicBlockInfo() = default;
 
     /// Compute the offset immediately following this block. \p MBB is the next
     /// block.
@@ -95,18 +107,18 @@ class BranchRelaxation : public MachineFunctionPass {
 
 public:
   static char ID;
-  BranchRelaxation() : MachineFunctionPass(ID) { }
+
+  BranchRelaxation() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  StringRef getPassName() const override {
-    return BRANCH_RELAX_NAME;
-  }
+  StringRef getPassName() const override { return BRANCH_RELAX_NAME; }
 };
 
-}
+} // end anonymous namespace
 
 char BranchRelaxation::ID = 0;
+
 char &llvm::BranchRelaxationPassID = BranchRelaxation::ID;
 
 INITIALIZE_PASS(BranchRelaxation, DEBUG_TYPE, BRANCH_RELAX_NAME, false, false)
@@ -196,7 +208,7 @@ void BranchRelaxation::adjustBlockOffsets(MachineBasicBlock &Start) {
   }
 }
 
-  /// Insert a new empty basic block and insert it after \BB
+/// Insert a new empty basic block and insert it after \BB
 MachineBasicBlock *BranchRelaxation::createNewBlockAfter(MachineBasicBlock &BB) {
   // Create a new MBB for the code after the OrigBB.
   MachineBasicBlock *NewBB =
@@ -232,7 +244,6 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
 
   // Insert an entry into BlockInfo to align it properly with the block numbers.
   BlockInfo.insert(BlockInfo.begin() + NewBB->getNumber(), BasicBlockInfo());
-
 
   NewBB->transferSuccessors(OrigBB);
   OrigBB->addSuccessor(NewBB);

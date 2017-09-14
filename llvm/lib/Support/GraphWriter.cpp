@@ -96,7 +96,7 @@ static bool ExecGraphViewer(StringRef ExecPath, std::vector<const char *> &args,
                             std::string &ErrMsg) {
   assert(args.back() == nullptr);
   if (wait) {
-    if (sys::ExecuteAndWait(ExecPath, args.data(), nullptr, nullptr, 0, 0,
+    if (sys::ExecuteAndWait(ExecPath, args.data(), nullptr, {}, 0, 0,
                             &ErrMsg)) {
       errs() << "Error: " << ErrMsg << "\n";
       return true;
@@ -104,7 +104,7 @@ static bool ExecGraphViewer(StringRef ExecPath, std::vector<const char *> &args,
     sys::fs::remove(Filename);
     errs() << " done. \n";
   } else {
-    sys::ExecuteNoWait(ExecPath, args.data(), nullptr, nullptr, 0, &ErrMsg);
+    sys::ExecuteNoWait(ExecPath, args.data(), nullptr, {}, 0, &ErrMsg);
     errs() << "Remember to erase graph file: " << Filename << "\n";
   }
   return false;

@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_PROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/ErrorOr.h"
 #include <system_error>
 
@@ -69,7 +70,7 @@ struct ProcessInfo {
   /// \returns The fully qualified path to the first \p Name in \p Paths if it
   ///   exists. \p Name if \p Name has slashes in it. Otherwise an error.
   ErrorOr<std::string>
-  findProgramByName(StringRef Name, ArrayRef<StringRef> Paths = None);
+  findProgramByName(StringRef Name, ArrayRef<StringRef> Paths = {});
 
   // These functions change the specified standard stream (stdin or stdout) to
   // binary mode. They return errc::success if the specified stream
@@ -84,7 +85,7 @@ struct ProcessInfo {
   /// This function waits for the program to finish, so should be avoided in
   /// library functions that aren't expected to block. Consider using
   /// ExecuteNoWait() instead.
-  /// @returns an integer result code indicating the status of the program.
+  /// \returns an integer result code indicating the status of the program.
   /// A zero or positive value indicates the result code of the program.
   /// -1 indicates failure to execute
   /// -2 indicates a crash during execution or timeout
@@ -97,14 +98,14 @@ struct ProcessInfo {
       const char **Env = nullptr, ///< An optional vector of strings to use for
       ///< the program's environment. If not provided, the current program's
       ///< environment will be used.
-      const StringRef **Redirects = nullptr, ///< An optional array of pointers
-      ///< to paths. If the array is null, no redirection is done. The array
-      ///< should have a size of at least three. The inferior process's
-      ///< stdin(0), stdout(1), and stderr(2) will be redirected to the
-      ///< corresponding paths.
-      ///< When an empty path is passed in, the corresponding file
-      ///< descriptor will be disconnected (ie, /dev/null'd) in a portable
-      ///< way.
+      ArrayRef<Optional<StringRef>> Redirects = {}, ///<
+      ///< An array of optional paths. Should have a size of zero or three.
+      ///< If the array is empty, no redirections are performed.
+      ///< Otherwise, the inferior process's stdin(0), stdout(1), and stderr(2)
+      ///< will be redirected to the corresponding paths, if the optional path
+      ///< is present (not \c llvm::None).
+      ///< When an empty path is passed in, the corresponding file descriptor
+      ///< will be disconnected (ie, /dev/null'd) in a portable way.
       unsigned SecondsToWait = 0, ///< If non-zero, this specifies the amount
       ///< of time to wait for the child process to exit. If the time
       ///< expires, the child is killed and this call returns. If zero,
@@ -122,12 +123,12 @@ struct ProcessInfo {
 
   /// Similar to ExecuteAndWait, but returns immediately.
   /// @returns The \see ProcessInfo of the newly launced process.
-  /// \note On Microsoft Windows systems, users will need to either call \see
-  /// Wait until the process finished execution or win32 CloseHandle() API on
-  /// ProcessInfo.ProcessHandle to avoid memory leaks.
+  /// \note On Microsoft Windows systems, users will need to either call
+  /// \see Wait until the process finished execution or win32 CloseHandle() API
+  /// on ProcessInfo.ProcessHandle to avoid memory leaks.
   ProcessInfo ExecuteNoWait(StringRef Program, const char **Args,
                             const char **Env = nullptr,
-                            const StringRef **Redirects = nullptr,
+                            ArrayRef<Optional<StringRef>> Redirects = {},
                             unsigned MemoryLimit = 0,
                             std::string *ErrMsg = nullptr,
                             bool *ExecutionFailed = nullptr);

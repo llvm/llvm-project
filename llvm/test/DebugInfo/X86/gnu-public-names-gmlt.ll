@@ -24,14 +24,10 @@
 ; GPUB-NEXT: length = 0x0000000e version = 0x0002 unit_offset = 0x00000000
 ; GPUB-NEXT: Name
 
-; NONE: .debug_pubnames contents:
-; NONE: {{^$}}
-; NONE: .debug_pubtypes contents:
-; NONE: {{^$}}
-; NONE: .debug_gnu_pubnames contents:
-; NONE: {{^$}}
-; NONE: .debug_gnu_pubtypes contents:
-; NONE: {{^$}}
+; NONE-NOT: .debug_pubnames contents:
+; NONE-NOT: .debug_pubtypes contents:
+; NONE-NOT: .debug_gnu_pubnames contents:
+; NONE-NOT: .debug_gnu_pubtypes contents:
 
 
 ; Function Attrs: noinline uwtable

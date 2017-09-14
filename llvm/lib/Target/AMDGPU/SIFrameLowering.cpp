@@ -594,6 +594,15 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+void SIFrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                           RegScavenger *RS) const {
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // The SP is specifically managed and we don't want extra spills of it.
+  SavedRegs.reset(MFI->getStackPtrOffsetReg());
+}
+
 MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
   MachineFunction &MF,
   MachineBasicBlock &MBB,

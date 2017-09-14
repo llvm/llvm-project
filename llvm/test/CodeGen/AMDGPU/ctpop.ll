@@ -42,8 +42,10 @@ define amdgpu_kernel void @v_ctpop_i32(i32 addrspace(1)* noalias %out, i32 addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_add_chain_i32:
-; GCN: {{buffer|flat}}_load_dword [[VAL0:v[0-9]+]],
-; GCN: {{buffer|flat}}_load_dword [[VAL1:v[0-9]+]],
+; SI: buffer_load_dword [[VAL0:v[0-9]+]],
+; SI: buffer_load_dword [[VAL1:v[0-9]+]],
+; VI: flat_load_dword [[VAL1:v[0-9]+]],
+; VI: flat_load_dword [[VAL0:v[0-9]+]],
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
@@ -280,8 +282,8 @@ define amdgpu_kernel void @v_ctpop_i32_add_var_inv(i32 addrspace(1)* noalias %ou
 ; SI: buffer_load_dword [[VAR:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
 ; SI: buffer_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAR]], [[VAL]]
-; VI: flat_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
 ; VI: flat_load_dword [[VAR:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
+; VI: flat_load_dword [[VAL:v[0-9]+]], v[{{[0-9]+:[0-9]+}}]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm

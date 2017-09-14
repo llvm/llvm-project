@@ -187,6 +187,21 @@ selectCallee(const ModuleSummaryIndex &Index,
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
                             GlobalValue::GUID>;
 
+static ValueInfo
+updateValueInfoForIndirectCalls(const ModuleSummaryIndex &Index, ValueInfo VI) {
+  if (!VI.getSummaryList().empty())
+    return VI;
+  // For SamplePGO, the indirect call targets for local functions will
+  // have its original name annotated in profile. We try to find the
+  // corresponding PGOFuncName as the GUID.
+  // FIXME: Consider updating the edges in the graph after building
+  // it, rather than needing to perform this mapping on each walk.
+  auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
+  if (GUID == 0)
+    return nullptr;
+  return Index.getValueInfo(GUID);
+}
+
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
@@ -201,17 +216,9 @@ static void computeImportForFunction(
     DEBUG(dbgs() << " edge -> " << VI.getGUID() << " Threshold:" << Threshold
                  << "\n");
 
-    if (VI.getSummaryList().empty()) {
-      // For SamplePGO, the indirect call targets for local functions will
-      // have its original name annotated in profile. We try to find the
-      // corresponding PGOFuncName as the GUID.
-      auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
-      if (GUID == 0)
-        continue;
-      VI = Index.getValueInfo(GUID);
-      if (!VI)
-        continue;
-    }
+    VI = updateValueInfoForIndirectCalls(Index, VI);
+    if (!VI)
+      continue;
 
     if (DefinedGVSummaries.count(VI.getGUID())) {
       DEBUG(dbgs() << "ignored! Target already in destination module.\n");
@@ -461,6 +468,17 @@ void llvm::computeDeadSymbols(
     for (auto &S : VI.getSummaryList())
       if (S->isLive())
         return;
+    // FIXME: If we knew which edges were created for indirect call profiles,
+    // we could skip them here. Any that are live should be reached via
+    // other edges, e.g. reference edges. Otherwise, using a profile collected
+    // on a slightly different binary might provoke preserving, importing
+    // and ultimately promoting calls to functions not linked into this
+    // binary, which increases the binary size unnecessarily. Note that
+    // if this code changes, the importer needs to change so that edges
+    // to functions marked dead are skipped.
+    VI = updateValueInfoForIndirectCalls(Index, VI);
+    if (!VI)
+      return;
     for (auto &S : VI.getSummaryList())
       S->setLive(true);
     ++LiveSymbols;

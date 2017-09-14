@@ -53,6 +53,9 @@ public:
 
   /// Parse the debug_macinfo section accessible via the 'data' parameter.
   void parse(DataExtractor data);
+
+  /// Return whether the section has any entries.
+  bool empty() const { return Macros.empty(); }
 };
 
 } // end namespace llvm

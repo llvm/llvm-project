@@ -331,7 +331,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
              EXT_FM<7>, ISA_MIPS64R2;
   def DINSU : InsBase<"dinsu", GPR64Opnd, uimm5_plus32, uimm5_inssize_plus1>,
               EXT_FM<6>, ISA_MIPS64R2;
-  def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm5_inssize_plus1>,
+  def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>,
               EXT_FM<5>, ISA_MIPS64R2;
 }
 

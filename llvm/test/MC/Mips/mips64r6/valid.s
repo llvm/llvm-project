@@ -114,6 +114,7 @@ a:
         ddivu   $2,$3,$4         # CHECK: ddivu $2, $3, $4 # encoding: [0x00,0x64,0x10,0x9f]
         di                       # CHECK: di               # encoding: [0x41,0x60,0x60,0x00]
         di      $s8              # CHECK: di  $fp          # encoding: [0x41,0x7e,0x60,0x00]
+        dinsm   $2,$3,4,34       # CHECK: dinsm $2, $3, 4, 34    # encoding: [0x7c,0x62,0x29,0x05]
         div     $2,$3,$4         # CHECK: div $2, $3, $4   # encoding: [0x00,0x64,0x10,0x9a]
         divu    $2,$3,$4         # CHECK: divu $2, $3, $4  # encoding: [0x00,0x64,0x10,0x9b]
         dlsa    $2, $3, $4, 3    # CHECK: dlsa $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x95]
