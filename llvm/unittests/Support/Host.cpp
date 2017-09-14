@@ -105,6 +105,12 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x201"),
             "kryo");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
+                                              "CPU part        : 0x800"),
+            "cortex-a73");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
+                                              "CPU part        : 0x801"),
+            "cortex-a73");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
@@ -144,8 +150,9 @@ TEST_F(HostTest, getMacOSHostVersion) {
   const char *SwVersPath = "/usr/bin/sw_vers";
   const char *argv[] = {SwVersPath, "-productVersion", nullptr};
   StringRef OutputPath = OutputFile.str();
-  const StringRef *Redirects[] = {/*STDIN=*/nullptr, /*STDOUT=*/&OutputPath,
-                                  /*STDERR=*/nullptr};
+  const Optional<StringRef> Redirects[] = {/*STDIN=*/None,
+                                           /*STDOUT=*/OutputPath,
+                                           /*STDERR=*/None};
   int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/nullptr, Redirects);
   ASSERT_EQ(0, RetCode);
 

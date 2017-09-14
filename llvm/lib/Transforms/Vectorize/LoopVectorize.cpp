@@ -6241,6 +6241,7 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
   if (MaxVectorSize == 0) {
     DEBUG(dbgs() << "LV: The target has no vector registers.\n");
     MaxVectorSize = 1;
+    return MaxVectorSize;
   } else if (ConstTripCount && ConstTripCount < MaxVectorSize &&
              isPowerOf2_32(ConstTripCount)) {
     // We need to clamp the VF to be the ConstTripCount. There is no point in
@@ -6253,10 +6254,11 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
 
   unsigned MaxVF = MaxVectorSize;
   if (MaximizeBandwidth && !OptForSize) {
-    // Collect all viable vectorization factors.
+    // Collect all viable vectorization factors larger than the default MaxVF
+    // (i.e. MaxVectorSize).
     SmallVector<unsigned, 8> VFs;
     unsigned NewMaxVectorSize = WidestRegister / SmallestType;
-    for (unsigned VS = MaxVectorSize; VS <= NewMaxVectorSize; VS *= 2)
+    for (unsigned VS = MaxVectorSize * 2; VS <= NewMaxVectorSize; VS *= 2)
       VFs.push_back(VS);
 
     // For each VF calculate its register usage.

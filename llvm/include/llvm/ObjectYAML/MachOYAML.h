@@ -266,7 +266,7 @@ template <> struct ScalarTraits<char_16> {
 
 // This trait is used for UUIDs. It reads and writes them matching otool's
 // formatting style.
-using uuid_t = uint8_t[16];
+using uuid_t = raw_ostream::uuid_t;
 
 template <> struct ScalarTraits<uuid_t> {
   static void output(const uuid_t &Val, void *, raw_ostream &Out);

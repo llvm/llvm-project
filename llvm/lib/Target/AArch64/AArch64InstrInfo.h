@@ -242,7 +242,8 @@ public:
   bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
                     int64_t &MinOffset, int64_t &MaxOffset) const;
 
-  bool shouldClusterMemOps(MachineInstr &FirstLdSt, MachineInstr &SecondLdSt,
+  bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
+                           MachineInstr &SecondLdSt, unsigned BaseReg2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

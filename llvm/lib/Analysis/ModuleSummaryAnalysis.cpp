@@ -343,7 +343,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(A.getLinkage(), NonRenamableLocal,
                                     /* Live = */ false);
-  auto AS = llvm::make_unique<AliasSummary>(Flags, ArrayRef<ValueInfo>{});
+  auto AS = llvm::make_unique<AliasSummary>(Flags);
   auto *Aliasee = A.getBaseObject();
   auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
   assert(AliaseeSummary && "Alias expects aliasee summary to be parsed");

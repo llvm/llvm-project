@@ -210,6 +210,14 @@ static void createConcatShuffleMask(int NumElements,
     Mask.push_back(i + Offset + NumElements);
 }
 
+// Changing the scale of the vector type by reducing the number of elements and
+// doubling the scalar size.
+static MVT scaleVectorType(MVT VT) {
+  unsigned ScalarSize = VT.getVectorElementType().getScalarSizeInBits() * 2;
+  return MVT::getVectorVT(MVT::getIntegerVT(ScalarSize),
+                          VT.getVectorNumElements() / 2);
+}
+
 void X86InterleavedAccessGroup::interleave8bitStride4(
     ArrayRef<Instruction *> Matrix, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned numberOfElement) {
@@ -220,49 +228,32 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   // Matrix[2]= y0 y1 y2 y3 y4 ... y31
   // Matrix[3]= k0 k1 k2 k3 k4 ... k31
 
-  Type *VecTyepVt = VectorType::get(Type::getInt8Ty(Shuffles[0]->getContext()),
-                                    numberOfElement);
-  Type *VecTyepVtHalf = VectorType::get(
-      Type::getInt16Ty(Shuffles[0]->getContext()), numberOfElement / 2);
-  MVT VT = MVT::getVT(VecTyepVt);
-  MVT HalfVT = MVT::getVT(VecTyepVtHalf);
+  MVT VT = MVT::getVectorVT(MVT::i8, numberOfElement);
+  MVT HalfVT = scaleVectorType(VT);
 
   TransposedMatrix.resize(4);
-
-  SmallVector<uint32_t, 32> MaskHighTemp;
-  SmallVector<uint32_t, 32> MaskLowTemp;
+  SmallVector<uint32_t, 32> MaskHigh;
+  SmallVector<uint32_t, 32> MaskLow;
   SmallVector<uint32_t, 32> MaskHighTemp1;
   SmallVector<uint32_t, 32> MaskLowTemp1;
-  SmallVector<uint32_t, 32> MaskHighTemp2;
-  SmallVector<uint32_t, 32> MaskLowTemp2;
+  SmallVector<uint32_t, 32> MaskHighWord;
+  SmallVector<uint32_t, 32> MaskLowWord;
   SmallVector<uint32_t, 32> ConcatLow;
   SmallVector<uint32_t, 32> ConcatHigh;
 
   // MaskHighTemp and MaskLowTemp built in the vpunpckhbw and vpunpcklbw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(VT, MaskHighTemp, false, false);
-  createUnpackShuffleMask<uint32_t>(VT, MaskLowTemp, true, false);
-  ArrayRef<uint32_t> MaskHigh = makeArrayRef(MaskHighTemp);
-  ArrayRef<uint32_t> MaskLow = makeArrayRef(MaskLowTemp);
-
-  // ConcatHigh and ConcatLow built in the vperm2i128 and vinserti128 X86
-  // shuffle pattern.
-
-  createConcatShuffleMask(32, ConcatLow, true);
-  createConcatShuffleMask(32, ConcatHigh, false);
-  ArrayRef<uint32_t> MaskConcatLow = makeArrayRef(ConcatLow);
-  ArrayRef<uint32_t> MaskConcatHigh = makeArrayRef(ConcatHigh);
+  createUnpackShuffleMask<uint32_t>(VT, MaskHigh, false, false);
+  createUnpackShuffleMask<uint32_t>(VT, MaskLow, true, false);
 
   // MaskHighTemp1 and MaskLowTemp1 built in the vpunpckhdw and vpunpckldw X86
   // shuffle pattern.
 
   createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp1, true, false);
   createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp1, false, false);
-  scaleShuffleMask<uint32_t>(2, makeArrayRef(MaskHighTemp1), MaskHighTemp2);
-  scaleShuffleMask<uint32_t>(2, makeArrayRef(MaskLowTemp1), MaskLowTemp2);
-  ArrayRef<uint32_t> MaskHighWord = makeArrayRef(MaskHighTemp2);
-  ArrayRef<uint32_t> MaskLowWord = makeArrayRef(MaskLowTemp2);
+  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, MaskHighWord);
+  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, MaskLowWord);
 
   // IntrVec1Low  = c0  m0  c1  m1 ... c7  m7  | c16 m16 c17 m17 ... c23 m23
   // IntrVec1High = c8  m8  c9  m9 ... c15 m15 | c24 m24 c25 m25 ... c31 m31
@@ -299,16 +290,22 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
     TransposedMatrix[3] = High1;
     return;
   }
-  // cmyk0  cmyk1  cmyk2   cmyk3  | cmyk4  cmyk5  cmyk6   cmyk7
-  // cmyk8  cmyk9  cmyk10  cmyk11 | cmyk12 cmyk13 cmyk14  cmyk15
+
+  // cmyk0  cmyk1  cmyk2  cmyk3   | cmyk4  cmyk5  cmyk6  cmyk7
+  // cmyk8  cmyk9  cmyk10 cmyk11  | cmyk12 cmyk13 cmyk14 cmyk15
   // cmyk16 cmyk17 cmyk18 cmyk19  | cmyk20 cmyk21 cmyk22 cmyk23
   // cmyk24 cmyk25 cmyk26 cmyk27  | cmyk28 cmyk29 cmyk30 cmyk31
 
-  TransposedMatrix[0] = Builder.CreateShuffleVector(Low, High, MaskConcatLow);
-  TransposedMatrix[1] = Builder.CreateShuffleVector(Low1, High1, MaskConcatLow);
-  TransposedMatrix[2] = Builder.CreateShuffleVector(Low, High, MaskConcatHigh);
-  TransposedMatrix[3] =
-      Builder.CreateShuffleVector(Low1, High1, MaskConcatHigh);
+  // ConcatHigh and ConcatLow built in the vperm2i128 and vinserti128 X86
+  // shuffle pattern.
+  SmallVector<uint32_t, 32> ConcatHigh12, ConcatHigh13;
+  createConcatShuffleMask(numberOfElement, ConcatLow, true);
+  createConcatShuffleMask(numberOfElement, ConcatHigh, false);
+
+  TransposedMatrix[0] = Builder.CreateShuffleVector(Low, High, ConcatLow);
+  TransposedMatrix[1] = Builder.CreateShuffleVector(Low1, High1, ConcatLow);
+  TransposedMatrix[2] = Builder.CreateShuffleVector(Low, High, ConcatHigh);
+  TransposedMatrix[3] = Builder.CreateShuffleVector(Low1, High1, ConcatHigh);
 }
 
 //  createShuffleStride returns shuffle mask of size N.
@@ -606,3 +603,4 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();
 }
+

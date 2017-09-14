@@ -106,6 +106,7 @@ a:
         deret
         di        $s8                  # CHECK: di  $fp        # encoding: [0x41,0x7e,0x60,0x00]
         di                             # CHECK: di             # encoding: [0x41,0x60,0x60,0x00]
+        dinsm     $2,$3,4,34           # CHECK: dinsm $2, $3, 4, 34    # encoding: [0x7c,0x62,0x29,0x05]
         ddiv      $zero,$k0,$s3
         ddivu     $zero,$s0,$s1
         div       $zero,$25,$11

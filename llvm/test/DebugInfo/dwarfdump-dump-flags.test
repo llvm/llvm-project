@@ -6,10 +6,11 @@
 ; RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test.macho-i386.o --debug-ranges | FileCheck %s -check-prefix DUMP_RANGES
 
 ; DUMP_ALL: .debug_info
-; DUMP_ALL: .debug_ranges
+; DUMP_ALL: .debug_str
 
 ; DUMP_INFO: .debug_info
 ; DUMP_INFO-NOT: .debug_ranges
+; DUMP_INFO-NOT: .debug_str
 
 ; DUMP_RANGES-NOT: .debug_info
 ; DUMP_RANGES: .debug_ranges

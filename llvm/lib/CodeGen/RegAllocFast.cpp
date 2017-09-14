@@ -1,4 +1,4 @@
-//===-- RegAllocFast.cpp - A fast register allocator for debug code -------===//
+//===- RegAllocFast.cpp - A fast register allocator for debug code --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,27 +13,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <algorithm>
+#include <cassert>
+#include <tuple>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -46,9 +61,11 @@ static RegisterRegAlloc
   fastRegAlloc("fast", "fast register allocator", createFastRegisterAllocator);
 
 namespace {
+
   class RegAllocFast : public MachineFunctionPass {
   public:
     static char ID;
+
     RegAllocFast() : MachineFunctionPass(ID), StackSlotForVirtReg(-1) {}
 
   private:
@@ -66,27 +83,26 @@ namespace {
 
     /// Everything we know about a live virtual register.
     struct LiveReg {
-      MachineInstr *LastUse;    ///< Last instr to use reg.
-      unsigned VirtReg;         ///< Virtual register number.
-      MCPhysReg PhysReg;        ///< Currently held here.
-      unsigned short LastOpNum; ///< OpNum on LastUse.
-      bool Dirty;               ///< Register needs spill.
+      MachineInstr *LastUse = nullptr; ///< Last instr to use reg.
+      unsigned VirtReg;                ///< Virtual register number.
+      MCPhysReg PhysReg = 0;           ///< Currently held here.
+      unsigned short LastOpNum = 0;    ///< OpNum on LastUse.
+      bool Dirty = false;              ///< Register needs spill.
 
-      explicit LiveReg(unsigned v)
-        : LastUse(nullptr), VirtReg(v), PhysReg(0), LastOpNum(0), Dirty(false){}
+      explicit LiveReg(unsigned v) : VirtReg(v) {}
 
       unsigned getSparseSetIndex() const {
         return TargetRegisterInfo::virtReg2Index(VirtReg);
       }
     };
 
-    typedef SparseSet<LiveReg> LiveRegMap;
+    using LiveRegMap = SparseSet<LiveReg>;
 
     /// This map contains entries for each virtual register that is currently
     /// available in a physical register.
     LiveRegMap LiveVirtRegs;
 
-    DenseMap<unsigned, SmallVector<MachineInstr *, 4> > LiveDbgValueMap;
+    DenseMap<unsigned, SmallVector<MachineInstr *, 4>> LiveDbgValueMap;
 
     /// Track the state of a physical register.
     enum RegState {
@@ -112,10 +128,10 @@ namespace {
     std::vector<unsigned> PhysRegState;
 
     SmallVector<unsigned, 16> VirtDead;
-    SmallVector<MachineInstr*, 32> Coalesced;
+    SmallVector<MachineInstr *, 32> Coalesced;
 
     /// Set of register units.
-    typedef SparseSet<unsigned> UsedInInstrSet;
+    using UsedInInstrSet = SparseSet<unsigned>;
 
     /// Set of register units that are used in the current instruction, and so
     /// cannot be allocated.
@@ -144,6 +160,7 @@ namespace {
       spillDirty = 100,
       spillImpossible = ~0u
     };
+
   public:
     StringRef getPassName() const override { return "Fast Register Allocator"; }
 
@@ -180,12 +197,15 @@ namespace {
     void definePhysReg(MachineInstr &MI, MCPhysReg PhysReg, RegState NewState);
     unsigned calcSpillCost(MCPhysReg PhysReg) const;
     void assignVirtToPhysReg(LiveReg&, MCPhysReg PhysReg);
+
     LiveRegMap::iterator findLiveVirtReg(unsigned VirtReg) {
       return LiveVirtRegs.find(TargetRegisterInfo::virtReg2Index(VirtReg));
     }
+
     LiveRegMap::const_iterator findLiveVirtReg(unsigned VirtReg) const {
       return LiveVirtRegs.find(TargetRegisterInfo::virtReg2Index(VirtReg));
     }
+
     LiveRegMap::iterator assignVirtToPhysReg(unsigned VReg, MCPhysReg PhysReg);
     LiveRegMap::iterator allocVirtReg(MachineInstr &MI, LiveRegMap::iterator,
                                       unsigned Hint);
@@ -198,8 +218,10 @@ namespace {
 
     void dumpState();
   };
-  char RegAllocFast::ID = 0;
-}
+
+} // end anonymous namespace
+
+char RegAllocFast::ID = 0;
 
 INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
                 false)
@@ -448,7 +470,6 @@ void RegAllocFast::definePhysReg(MachineInstr &MI, MCPhysReg PhysReg,
   }
 }
 
-
 /// \brief Return the cost of spilling clearing out PhysReg and aliases so it is
 /// free for allocation. Returns 0 when PhysReg is free or disabled with all
 /// aliases disabled - it can be allocated directly.
@@ -497,7 +518,6 @@ unsigned RegAllocFast::calcSpillCost(MCPhysReg PhysReg) const {
   }
   return Cost;
 }
-
 
 /// \brief This method updates local state so that we know that PhysReg is the
 /// proper container for VirtReg now.  The physical register must not be used

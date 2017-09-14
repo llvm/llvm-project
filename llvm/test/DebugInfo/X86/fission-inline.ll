@@ -71,6 +71,7 @@
 ; CHECK:     DW_AT_call_file
 ; CHECK-NEXT:     DW_AT_call_line {{.*}} (18)
 ; CHECK-NOT: DW_
+; CHECK: .debug_info.dwo contents:
 
 ; RELOCS-NOT: RELOCATION RECORDS FOR [.rela.debug_ranges]
 

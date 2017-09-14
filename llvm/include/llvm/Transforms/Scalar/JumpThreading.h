@@ -6,41 +6,57 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// See the comments on JumpThreadingPass.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_SCALAR_JUMPTHREADING_H
 #define LLVM_TRANSFORMS_SCALAR_JUMPTHREADING_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LazyValueInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
+#include <memory>
+#include <utility>
 
 namespace llvm {
+
+class BasicBlock;
+class BinaryOperator;
+class BranchInst;
+class CmpInst;
+class Constant;
+class Function;
+class Instruction;
+class IntrinsicInst;
+class LazyValueInfo;
+class LoadInst;
+class PHINode;
+class TargetLibraryInfo;
+class Value;
 
 /// A private "module" namespace for types and utilities used by
 /// JumpThreading.
 /// These are implementation details and should not be used by clients.
 namespace jumpthreading {
+
 // These are at global scope so static functions can use them too.
-typedef SmallVectorImpl<std::pair<Constant *, BasicBlock *>> PredValueInfo;
-typedef SmallVector<std::pair<Constant *, BasicBlock *>, 8> PredValueInfoTy;
+using PredValueInfo = SmallVectorImpl<std::pair<Constant *, BasicBlock *>>;
+using PredValueInfoTy = SmallVector<std::pair<Constant *, BasicBlock *>, 8>;
 
 // This is used to keep track of what kind of constant we're currently hoping
 // to find.
 enum ConstantPreference { WantInteger, WantBlockAddress };
-}
+
+} // end namespace jumpthreading
 
 /// This pass performs 'jump threading', which looks at blocks that have
 /// multiple predecessors and multiple successors.  If one or more of the
@@ -57,7 +73,6 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 ///
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
-///
 class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   TargetLibraryInfo *TLI;
   LazyValueInfo *LVI;
@@ -141,4 +156,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_SCALAR_JUMPTHREADING_H
