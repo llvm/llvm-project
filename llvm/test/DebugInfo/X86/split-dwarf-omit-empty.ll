@@ -15,8 +15,10 @@
 ; will be emitted. This emulates something more like the available_externally
 ; import performed by ThinLTO.
 
+; CHECK: .debug_info contents:
 ; CHECK: Compile Unit
 ; CHECK-NOT: Compile Unit
+; CHECK: .debug_info.dwo contents:
 
 target triple = "x86_64-pc-linux"
 

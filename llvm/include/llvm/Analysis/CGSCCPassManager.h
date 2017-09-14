@@ -429,13 +429,26 @@ public:
             UR.UpdatedC = nullptr;
             PreservedAnalyses PassPA = Pass.run(*C, CGAM, CG, UR);
 
+            // Update the SCC and RefSCC if necessary.
+            C = UR.UpdatedC ? UR.UpdatedC : C;
+            RC = UR.UpdatedRC ? UR.UpdatedRC : RC;
+
+            // If the CGSCC pass wasn't able to provide a valid updated SCC,
+            // the current SCC may simply need to be skipped if invalid.
+            if (UR.InvalidatedSCCs.count(C)) {
+              DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
+              break;
+            }
+            // Check that we didn't miss any update scenario.
+            assert(C->begin() != C->end() && "Cannot have an empty SCC!");
+
             // We handle invalidating the CGSCC analysis manager's information
             // for the (potentially updated) SCC here. Note that any other SCCs
             // whose structure has changed should have been invalidated by
             // whatever was updating the call graph. This SCC gets invalidated
             // late as it contains the nodes that were actively being
             // processed.
-            CGAM.invalidate(*(UR.UpdatedC ? UR.UpdatedC : C), PassPA);
+            CGAM.invalidate(*C, PassPA);
 
             // Then intersect the preserved set so that invalidation of module
             // analyses will eventually occur when the module pass completes.
@@ -450,8 +463,6 @@ public:
             // apart, at most converging on a DAG of single nodes.
             // FIXME: If we ever start having RefSCC passes, we'll want to
             // iterate there too.
-            RC = UR.UpdatedRC ? UR.UpdatedRC : RC;
-            C = UR.UpdatedC ? UR.UpdatedC : C;
             if (UR.UpdatedC)
               DEBUG(dbgs() << "Re-running SCC passes after a refinement of the "
                               "current SCC: "

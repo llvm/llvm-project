@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-cross-cu-references -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
 ; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -v -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
 
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
 ; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -v -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
 
 ; Testing cross-CU references for types, subprograms, and variables
@@ -42,6 +42,7 @@
 ; * debug_info.dwo contains duplicate types, abstract subprograms and abstract
 ;   variables otherwise to avoid the need for cross-cu references
 
+; DWO: .debug_info.dwo contents:
 ; CHECK-NOT: .rel{{a?}}.debug_info.dwo
 ; CHECK: RELOCATION RECORDS FOR [.rel{{a?}}.debug_info]:
 ; CHECK-NOT: RELOCATION RECORDS

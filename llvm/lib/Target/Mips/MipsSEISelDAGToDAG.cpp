@@ -1188,9 +1188,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
         // The obvious "missing" case is when both are zero, but that case is
         // handled by the ldi case.
         if (ResNonZero) {
+          IntegerType *Int32Ty =
+              IntegerType::get(MF->getFunction()->getContext(), 32);
+          const ConstantInt *Const32 = ConstantInt::get(Int32Ty, 32);
           SDValue Ops[4] = {HiResNonZero ? SDValue(HiRes, 0) : Zero64Val,
-                            CurDAG->getTargetConstant(64, DL, MVT::i32),
-                            CurDAG->getTargetConstant(32, DL, MVT::i32),
+                            CurDAG->getConstant(*Const32, DL, MVT::i32),
+                            CurDAG->getConstant(*Const32, DL, MVT::i32),
                             SDValue(Res, 0)};
 
           Res = CurDAG->getMachineNode(Mips::DINSU, DL, MVT::i64, Ops);

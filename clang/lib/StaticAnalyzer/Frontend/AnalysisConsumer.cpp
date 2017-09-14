@@ -854,8 +854,7 @@ UbigraphViz::~UbigraphViz() {
     Ubiviz = *Path;
   const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
-  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, nullptr, 0, 0,
-                                &ErrMsg)) {
+  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, {}, 0, 0, &ErrMsg)) {
     llvm::errs() << "Error viewing graph: " << ErrMsg << "\n";
   }
 

@@ -17,7 +17,7 @@ detection phase.
 Usage
 =====
 
-LeakSanitizer is only supported on x86\_64 Linux. In order to use it,
+LeakSanitizer is supported on x86\_64 Linux and OS X. In order to use it,
 simply build your program with :doc:`AddressSanitizer`:
 
 .. code-block:: console
@@ -30,7 +30,7 @@ simply build your program with :doc:`AddressSanitizer`:
       p = 0; // The memory is leaked here.
       return 0;
     }
-    % clang -fsanitize=address -g memory-leak.c ; ./a.out
+    % clang -fsanitize=address -g memory-leak.c ; ASAN_OPTIONS=detect_leaks=1 ./a.out
     ==23646==ERROR: LeakSanitizer: detected memory leaks
     Direct leak of 7 byte(s) in 1 object(s) allocated from:
         #0 0x4af01b in __interceptor_malloc /projects/compiler-rt/lib/asan/asan_malloc_linux.cc:52:3

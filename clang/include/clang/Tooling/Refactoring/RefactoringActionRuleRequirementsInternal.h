@@ -58,7 +58,7 @@ struct SourceSelectionRequirement
     Optional<InputT> Value = InputT::evaluate(Context);
     if (!Value)
       return None;
-    return std::move(Requirement.evaluateSelection(*Value));
+    return std::move(Requirement.evaluateSelection(Context, *Value));
   }
 
 private:
@@ -81,6 +81,20 @@ template <typename T>
 struct IsRequirement<T>
     : std::conditional<std::is_base_of<internal::RequirementBase, T>::value,
                        std::true_type, std::false_type>::type {};
+
+/// A type trait that returns true when the given type has at least one source
+/// selection requirement.
+template <typename First, typename... Rest>
+struct HasSelectionRequirement
+    : std::conditional<HasSelectionRequirement<First>::value ||
+                           HasSelectionRequirement<Rest...>::value,
+                       std::true_type, std::false_type>::type {};
+
+template <typename I, typename O, typename R>
+struct HasSelectionRequirement<internal::SourceSelectionRequirement<I, O, R>>
+    : std::true_type {};
+
+template <typename T> struct HasSelectionRequirement<T> : std::false_type {};
 
 } // end namespace traits
 } // end namespace refactoring_action_rules

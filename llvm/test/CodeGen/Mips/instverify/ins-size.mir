@@ -1,0 +1,54 @@
+# RUN: not llc -march=mips64 -mcpu=mips64r2 -start-after=expand-isel-pseudos -stop-after=expand-isel-pseudos \
+# RUN:         -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+
+# CHECK: Size operand is out of range!
+
+# Check that the machine verifier checks the size operand is in range 0..32
+---
+name:            f
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+liveins:
+  - { reg: '%a0', virtual-reg: '%0' }
+  - { reg: '%a1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: %a0, %a1
+
+    %1 = COPY %a1
+    %0 = COPY %a0
+    %2 = ANDi %1, 15
+    %3 = INS killed %2, 0, 40, %0
+    %v0 = COPY %3
+    RetRA implicit %v0
+
+...

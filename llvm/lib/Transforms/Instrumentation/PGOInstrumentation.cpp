@@ -167,15 +167,18 @@ static cl::opt<bool>
                    cl::desc("Use this option to turn on/off SELECT "
                             "instruction instrumentation. "));
 
-// Command line option to turn on CFG dot dump of raw profile counts
-static cl::opt<bool>
-    PGOViewRawCounts("pgo-view-raw-counts", cl::init(false), cl::Hidden,
-                     cl::desc("A boolean option to show CFG dag "
-                              "with raw profile counts from "
-                              "profile data. See also option "
-                              "-pgo-view-counts. To limit graph "
-                              "display to only one function, use "
-                              "filtering option -view-bfi-func-name."));
+// Command line option to turn on CFG dot or text dump of raw profile counts
+static cl::opt<PGOViewCountsType> PGOViewRawCounts(
+    "pgo-view-raw-counts", cl::Hidden,
+    cl::desc("A boolean option to show CFG dag or text "
+             "with raw profile counts from "
+             "profile data. See also option "
+             "-pgo-view-counts. To limit graph "
+             "display to only one function, use "
+             "filtering option -view-bfi-func-name."),
+    cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
+               clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
+               clEnumValN(PGOVCT_Text, "text", "show in text.")));
 
 // Command line option to enable/disable memop intrinsic call.size profiling.
 static cl::opt<bool>
@@ -193,7 +196,7 @@ static cl::opt<bool>
 
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
-extern cl::opt<bool> PGOViewCounts;
+extern cl::opt<PGOViewCountsType> PGOViewCounts;
 
 // Command line option to specify the name of the function for CFG dump
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
@@ -831,6 +834,10 @@ public:
 
   Function &getFunc() const { return F; }
 
+  void dumpInfo(std::string Str = "") const {
+    FuncInfo.dumpInfo(Str);
+  }
+
 private:
   Function &F;
   Module *M;
@@ -1386,22 +1393,33 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-    if (PGOViewCounts && (ViewBlockFreqFuncName.empty() ||
-                          F.getName().equals(ViewBlockFreqFuncName))) {
+    if (PGOViewCounts != PGOVCT_None &&
+        (ViewBlockFreqFuncName.empty() ||
+         F.getName().equals(ViewBlockFreqFuncName))) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           llvm::make_unique<BranchProbabilityInfo>(F, LI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
           llvm::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
-
-      NewBFI->view();
+      if (PGOViewCounts == PGOVCT_Graph)
+        NewBFI->view();
+      else if (PGOViewCounts == PGOVCT_Text) {
+        dbgs() << "pgo-view-counts: " << Func.getFunc().getName() << "\n";
+        NewBFI->print(dbgs());
+      }
     }
-    if (PGOViewRawCounts && (ViewBlockFreqFuncName.empty() ||
-                             F.getName().equals(ViewBlockFreqFuncName))) {
-      if (ViewBlockFreqFuncName.empty())
-        WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
-      else
-        ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
+    if (PGOViewRawCounts != PGOVCT_None &&
+        (ViewBlockFreqFuncName.empty() ||
+         F.getName().equals(ViewBlockFreqFuncName))) {
+      if (PGOViewRawCounts == PGOVCT_Graph)
+        if (ViewBlockFreqFuncName.empty())
+          WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
+        else
+          ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
+      else if (PGOViewRawCounts == PGOVCT_Text) {
+        dbgs() << "pgo-view-raw-counts: " << Func.getFunc().getName() << "\n";
+        Func.dumpInfo();
+      }
     }
   }
   M.setProfileSummary(PGOReader->getSummary().getMD(M.getContext()));

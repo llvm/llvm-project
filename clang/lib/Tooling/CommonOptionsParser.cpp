@@ -84,24 +84,26 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
 CommonOptionsParser::CommonOptionsParser(
     int &argc, const char **argv, cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
-  static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+  static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
+                            cl::sub(*cl::AllSubCommands));
 
   static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
-                                        cl::Optional, cl::cat(Category));
+                                        cl::Optional, cl::cat(Category),
+                                        cl::sub(*cl::AllSubCommands));
 
   static cl::list<std::string> SourcePaths(
       cl::Positional, cl::desc("<source0> [... <sourceN>]"), OccurrencesFlag,
-      cl::cat(Category));
+      cl::cat(Category), cl::sub(*cl::AllSubCommands));
 
   static cl::list<std::string> ArgsAfter(
       "extra-arg",
       cl::desc("Additional argument to append to the compiler command line"),
-      cl::cat(Category));
+      cl::cat(Category), cl::sub(*cl::AllSubCommands));
 
   static cl::list<std::string> ArgsBefore(
       "extra-arg-before",
       cl::desc("Additional argument to prepend to the compiler command line"),
-      cl::cat(Category));
+      cl::cat(Category), cl::sub(*cl::AllSubCommands));
 
   cl::HideUnrelatedOptions(Category);
 

@@ -154,6 +154,12 @@ private:
 };
 } // namespace
 
+std::vector<std::string> getUSRsForDeclaration(const NamedDecl *ND,
+                                               ASTContext &Context) {
+  AdditionalUSRFinder Finder(ND, Context);
+  return Finder.Find();
+}
+
 class NamedDeclFindingConsumer : public ASTConsumer {
 public:
   NamedDeclFindingConsumer(ArrayRef<unsigned> SymbolOffsets,

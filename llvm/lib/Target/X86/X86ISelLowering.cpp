@@ -27153,13 +27153,18 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       }
       if (Match) {
         unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
-        SrcVT = MVT::getVectorVT(MaskVT.getScalarType(), SrcSize / MaskEltSize);
-        if (SrcVT != MaskVT)
+        MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType() :
+                                            MVT::getIntegerVT(MaskEltSize);
+        SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
+
+        if (SrcVT.getSizeInBits() != MaskVT.getSizeInBits()) {
           V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
+          Shuffle = unsigned(X86ISD::VZEXT);
+        } else
+          Shuffle = unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
+
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
-        Shuffle = SrcVT != MaskVT ? unsigned(X86ISD::VZEXT)
-                                  : unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
         return true;
       }
     }

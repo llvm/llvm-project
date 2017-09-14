@@ -93,7 +93,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   return errc::no_such_file_or_directory;
 }
 
-static bool RedirectIO(const StringRef *Path, int FD, std::string* ErrMsg) {
+static bool RedirectIO(Optional<StringRef> Path, int FD, std::string* ErrMsg) {
   if (!Path) // Noop
     return false;
   std::string File;
@@ -165,7 +165,7 @@ static void SetMemoryLimits(unsigned size) {
 }
 
 static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
-                    const char **Envp, const StringRef **Redirects,
+                    const char **Envp, ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
@@ -186,7 +186,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
     // so we copy any StringRefs into this variable.
     std::string RedirectsStorage[3];
 
-    if (Redirects) {
+    if (!Redirects.empty()) {
+      assert(Redirects.size() == 3);
       std::string *RedirectsStr[3] = {nullptr, nullptr, nullptr};
       for (int I = 0; I < 3; ++I) {
         if (Redirects[I]) {
@@ -202,8 +203,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
       if (RedirectIO_PS(RedirectsStr[0], 0, ErrMsg, FileActions) ||
           RedirectIO_PS(RedirectsStr[1], 1, ErrMsg, FileActions))
         return false;
-      if (Redirects[1] == nullptr || Redirects[2] == nullptr ||
-          *Redirects[1] != *Redirects[2]) {
+      if (!Redirects[1] || !Redirects[2] || *Redirects[1] != *Redirects[2]) {
         // Just redirect stderr
         if (RedirectIO_PS(RedirectsStr[2], 2, ErrMsg, FileActions))
           return false;
@@ -253,7 +253,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
     // Child process: Execute the program.
     case 0: {
       // Redirect file descriptors...
-      if (Redirects) {
+      if (!Redirects.empty()) {
         // Redirect stdin
         if (RedirectIO(Redirects[0], 0, ErrMsg)) { return false; }
         // Redirect stdout

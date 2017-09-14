@@ -726,7 +726,9 @@
             cmpb 7, 21, 4
 # CHECK-BE: cmpb 7, 21, 4                   # encoding: [0x7e,0xa7,0x23,0xf8]
 # CHECK-LE: cmpb 7, 21, 4                   # encoding: [0xf8,0x23,0xa7,0x7e]
-# FIXME:    popcntb 2, 3
+# CHECK-BE: popcntb 2, 3                    # encoding: [0x7c,0x62,0x00,0xf4]
+# CHECK-LE: popcntb 2, 3                    # encoding: [0xf4,0x00,0x62,0x7c]
+            popcntb 2, 3
 # CHECK-BE: popcntw 2, 3                    # encoding: [0x7c,0x62,0x02,0xf4]
 # CHECK-LE: popcntw 2, 3                    # encoding: [0xf4,0x02,0x62,0x7c]
             popcntw 2, 3
@@ -885,6 +887,13 @@
 # CHECK-BE: srad. 2, 3, 4                   # encoding: [0x7c,0x62,0x26,0x35]
 # CHECK-LE: srad. 2, 3, 4                   # encoding: [0x35,0x26,0x62,0x7c]
             srad. 2, 3, 4
+# CHECK-BE: extswsli 2, 3, 4                # encoding: [0x7c,0x62,0x26,0xf4]
+# CHECK-LE: extswsli 2, 3, 4                # encoding: [0xf4,0x26,0x62,0x7c]
+            extswsli 2, 3, 4
+# CHECK-BE: extswsli. 2, 3, 4               # encoding: [0x7c,0x62,0x26,0xf5]
+# CHECK-LE: extswsli. 2, 3, 4               # encoding: [0xf5,0x26,0x62,0x7c]
+            extswsli. 2, 3, 4
+
 
 # FIXME: BCD assist instructions
 

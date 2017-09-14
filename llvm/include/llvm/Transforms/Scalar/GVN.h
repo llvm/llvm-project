@@ -19,25 +19,45 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
+class AssumptionCache;
+class BasicBlock;
+class BranchInst;
+class CallInst;
+class Constant;
+class ExtractValueInst;
+class Function;
+class FunctionPass;
 class IntrinsicInst;
+class LoadInst;
+class LoopInfo;
 class OptimizationRemarkEmitter;
+class PHINode;
+class TargetLibraryInfo;
+class Value;
 
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace gvn LLVM_LIBRARY_VISIBILITY {
+
 struct AvailableValue;
 struct AvailableValueInBlock;
 class GVNLegacyPass;
-}
+
+} // end namespace gvn
 
 /// The core GVN pass object.
 ///
@@ -45,6 +65,7 @@ class GVNLegacyPass;
 /// this particular pass here.
 class GVN : public PassInfoMixin<GVN> {
 public:
+  struct Expression;
 
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -60,8 +81,6 @@ public:
   AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-  struct Expression;
-
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
   /// two values.
@@ -74,20 +93,23 @@ public:
     // instead of a DenseMap because filling such mapping is faster than
     // filling a DenseMap and the compile time is a little better.
     uint32_t nextExprNumber;
+
     std::vector<Expression> Expressions;
     std::vector<uint32_t> ExprIdx;
+
     // Value number to PHINode mapping. Used for phi-translate in scalarpre.
     DenseMap<uint32_t, PHINode *> NumberingPhi;
+
     // Cache for phi-translate in scalarpre.
-    typedef DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>
-        PhiTranslateMap;
+    using PhiTranslateMap =
+        DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
     PhiTranslateMap PhiTranslateTable;
 
     AliasAnalysis *AA;
     MemoryDependenceResults *MD;
     DominatorTree *DT;
 
-    uint32_t nextValueNumber;
+    uint32_t nextValueNumber = 1;
 
     Expression createExpr(Instruction *I);
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
@@ -150,16 +172,16 @@ private:
   // Block-local map of equivalent values to their leader, does not
   // propagate to any successors. Entries added mid-block are applied
   // to the remaining instructions in the block.
-  SmallMapVector<llvm::Value *, llvm::Constant *, 4> ReplaceWithConstMap;
+  SmallMapVector<Value *, Constant *, 4> ReplaceWithConstMap;
   SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
   DenseMap<const BasicBlock *, uint32_t> BlockRPONumber;
 
-  typedef SmallVector<NonLocalDepResult, 64> LoadDepVect;
-  typedef SmallVector<gvn::AvailableValueInBlock, 64> AvailValInBlkVect;
-  typedef SmallVector<BasicBlock *, 64> UnavailBlkVect;
+  using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
+  using AvailValInBlkVect = SmallVector<gvn::AvailableValueInBlock, 64>;
+  using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
@@ -218,17 +240,20 @@ private:
   bool processLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(IntrinsicInst *II);
+
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.  Returns true if an value is known to be
   /// available and populates Res.  Returns false otherwise.
   bool AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
                                Value *Address, gvn::AvailableValue &Res);
+
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
   void AnalyzeLoadAvailability(LoadInst *LI, LoadDepVect &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
+
   bool PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
@@ -265,12 +290,14 @@ struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
 /// \brief Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
 struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_SCALAR_GVN_H

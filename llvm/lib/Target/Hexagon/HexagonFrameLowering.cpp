@@ -2103,7 +2103,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         }
         if (!Bad) {
           // Check sizes.
-          unsigned S = (1U << (HII.getMemAccessSize(In) - 1));
+          unsigned S = HII.getMemAccessSize(In);
           if (SI.Size != 0 && SI.Size != S)
             Bad = true;
           else
@@ -2312,7 +2312,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           MachineInstr *CopyOut = nullptr;
           if (DstR != FoundR) {
             DebugLoc DL = MI.getDebugLoc();
-            unsigned MemSize = (1U << (HII.getMemAccessSize(MI) - 1));
+            unsigned MemSize = HII.getMemAccessSize(MI);
             assert(HII.getAddrMode(MI) == HexagonII::BaseImmOffset);
             unsigned CopyOpc = TargetOpcode::COPY;
             if (HII.isSignExtendingLoad(MI))

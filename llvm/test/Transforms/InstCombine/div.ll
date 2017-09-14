@@ -532,24 +532,21 @@ define i32 @shrink_no(i8 %x) {
   ret i32 %div
 }
 
+; When the divisor is known larger than the quotient,
+; InstSimplify should kill it before InstCombine sees it.
+
 define i32 @shrink_no2(i8 %x) {
 ; CHECK-LABEL: @shrink_no2(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 %x to i32
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[CONV]], -129
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 0
 ;
   %conv = sext i8 %x to i32
   %div = sdiv i32 %conv, -129
   ret i32 %div
 }
 
-; 17 bits are needed to represent 65535 as a signed value, so this shouldn't fold.
-
 define i32 @shrink_no3(i16 %x) {
 ; CHECK-LABEL: @shrink_no3(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 %x to i32
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[CONV]], 65535
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 0
 ;
   %conv = sext i16 %x to i32
   %div = sdiv i32 %conv, 65535

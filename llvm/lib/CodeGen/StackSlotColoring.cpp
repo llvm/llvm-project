@@ -1,4 +1,4 @@
-//===-- StackSlotColoring.cpp - Stack slot coloring pass. -----------------===//
+//===- StackSlotColoring.cpp - Stack slot coloring pass. ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,22 +14,34 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveStackAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
-#include "llvm/IR/Module.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 #include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-slot-coloring"
@@ -45,6 +57,7 @@ STATISTIC(NumEliminated, "Number of stack slots eliminated due to coloring");
 STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 
 namespace {
+
   class StackSlotColoring : public MachineFunctionPass {
     LiveStacks* LS;
     MachineFrameInfo *MFI;
@@ -73,7 +86,7 @@ namespace {
     BitVector AllColors;
 
     // NextColor - Next "color" that's not yet used.
-    int NextColor;
+    int NextColor = -1;
 
     // UsedColors - "Colors" that have been assigned.
     BitVector UsedColors;
@@ -83,10 +96,10 @@ namespace {
 
   public:
     static char ID; // Pass identification
-    StackSlotColoring() :
-      MachineFunctionPass(ID), NextColor(-1) {
-        initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
-      }
+
+    StackSlotColoring() : MachineFunctionPass(ID) {
+      initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
+    }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
@@ -111,9 +124,11 @@ namespace {
                             MachineFunction &MF);
     bool RemoveDeadStores(MachineBasicBlock* MBB);
   };
+
 } // end anonymous namespace
 
 char StackSlotColoring::ID = 0;
+
 char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
@@ -125,14 +140,16 @@ INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 
 namespace {
-  // IntervalSorter - Comparison predicate that sort live intervals by
-  // their weight.
-  struct IntervalSorter {
-    bool operator()(LiveInterval* LHS, LiveInterval* RHS) const {
-      return LHS->weight > RHS->weight;
-    }
-  };
-}
+
+// IntervalSorter - Comparison predicate that sort live intervals by
+// their weight.
+struct IntervalSorter {
+  bool operator()(LiveInterval* LHS, LiveInterval* RHS) const {
+    return LHS->weight > RHS->weight;
+  }
+};
+
+} // end anonymous namespace
 
 /// ScanForSpillSlotRefs - Scan all the machine instructions for spill slot
 /// references and update spill slot weights.
@@ -185,8 +202,10 @@ void StackSlotColoring::InitializeSlots() {
   UsedColors.resize(LastFI);
   Assignments.resize(LastFI);
 
-  typedef std::iterator_traits<LiveStacks::iterator>::value_type Pair;
+  using Pair = std::iterator_traits<LiveStacks::iterator>::value_type;
+
   SmallVector<Pair *, 16> Intervals;
+
   Intervals.reserve(LS->getNumIntervals());
   for (auto &I : *LS)
     Intervals.push_back(&I);
@@ -229,7 +248,6 @@ StackSlotColoring::OverlapWithAssignments(LiveInterval *li, int Color) const {
 }
 
 /// ColorSlot - Assign a "color" (stack slot) to the specified stack slot.
-///
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
   bool Share = false;
@@ -370,7 +388,6 @@ void StackSlotColoring::RewriteInstruction(MachineInstr &MI,
   // The MachineMemOperands have already been updated.
 }
 
-
 /// RemoveDeadStores - Scan through a basic block and look for loads followed
 /// by stores.  If they're both using the same stack slot, then the store is
 /// definitely dead.  This could obviously be much more aggressive (consider
@@ -431,7 +448,6 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
   return changed;
 }
-
 
 bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({

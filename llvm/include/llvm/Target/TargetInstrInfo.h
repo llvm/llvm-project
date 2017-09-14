@@ -1097,8 +1097,8 @@ public:
   /// or
   ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
-  virtual bool shouldClusterMemOps(MachineInstr &FirstLdSt,
-                                   MachineInstr &SecondLdSt,
+  virtual bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
+                                   MachineInstr &SecondLdSt, unsigned BaseReg2,
                                    unsigned NumLoads) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }

@@ -1,4 +1,4 @@
-//===--- PreISelIntrinsicLowering.h - Pre-ISel intrinsic lowering pass ----===//
+//===- PreISelIntrinsicLowering.h - Pre-ISel intrinsic lowering pass ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,13 @@
 
 namespace llvm {
 
+class Module;
+
 struct PreISelIntrinsicLoweringPass
     : PassInfoMixin<PreISelIntrinsicLoweringPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_CODEGEN_PREISELINTRINSICLOWERING_H

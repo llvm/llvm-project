@@ -1,11 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse -enable-unsafe-fp-math < %s | FileCheck %s --check-prefix=SSE
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx -enable-unsafe-fp-math < %s | FileCheck %s --check-prefix=AVX
 
-; Incremental updates of the instruction depths should be enough for this test
-; case.
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=sse -enable-unsafe-fp-math -machine-combiner-inc-threshold=0 < %s | FileCheck %s --check-prefix=SSE
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mattr=avx -enable-unsafe-fp-math -machine-combiner-inc-threshold=0 < %s | FileCheck %s --check-prefix=AVX
-
 ; Verify that the first two adds are independent regardless of how the inputs are
 ; commuted. The destination registers are used as source registers for the third add.
 
