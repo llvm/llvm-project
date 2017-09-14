@@ -484,6 +484,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
     if (triple.isOSDarwin()) {
       AddPath("/System/Library/Frameworks", System, true);
       AddPath("/Library/Frameworks", System, true);
+      AddPath("/System/Library/PrivateFrameworks", System, true);
     }
   }
 }
