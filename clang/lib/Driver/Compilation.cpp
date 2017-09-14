@@ -26,8 +26,8 @@ Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs,
                          bool ContainsError)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), ActiveOffloadMask(0u),
-      Args(_Args), TranslatedArgs(_TranslatedArgs), Redirects(nullptr),
-      ForDiagnostics(false), ContainsError(ContainsError) {
+      Args(_Args), TranslatedArgs(_TranslatedArgs), ForDiagnostics(false),
+      ContainsError(ContainsError) {
   // The offloading host toolchain is the default tool chain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));
@@ -41,14 +41,6 @@ Compilation::~Compilation() {
   for (auto Arg : TCArgs)
     if (Arg.second != TranslatedArgs)
       delete Arg.second;
-
-  // Free redirections of stdout/stderr.
-  if (Redirects) {
-    delete Redirects[0];
-    delete Redirects[1];
-    delete Redirects[2];
-    delete [] Redirects;
-  }
 }
 
 const DerivedArgList &
@@ -214,16 +206,13 @@ void Compilation::initCompilationForDiagnostics() {
   TranslatedArgs->ClaimAllArgs();
 
   // Redirect stdout/stderr to /dev/null.
-  Redirects = new const StringRef*[3]();
-  Redirects[0] = nullptr;
-  Redirects[1] = new StringRef();
-  Redirects[2] = new StringRef();
+  Redirects = {None, {""}, {""}};
 }
 
 StringRef Compilation::getSysRoot() const {
   return getDriver().SysRoot;
 }
 
-void Compilation::Redirect(const StringRef** Redirects) {
+void Compilation::Redirect(ArrayRef<Optional<StringRef>> Redirects) {
   this->Redirects = Redirects;
 }
