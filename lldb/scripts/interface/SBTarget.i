@@ -711,6 +711,10 @@ public:
   
     bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
 
+    void DeleteBreakpointName(const char *name);
+
+    void GetBreakpointNames(SBStringList &names);
+
     bool
     EnableAllBreakpoints ();
 

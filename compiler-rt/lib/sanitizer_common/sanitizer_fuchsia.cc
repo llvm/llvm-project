@@ -92,6 +92,9 @@ void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void StartReportDeadlySignal() {}
+void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+                        UnwindSignalStackCallbackType unwind,
+                        const void *unwind_context) {}
 void SetAlternateSignalStack() {}
 void UnsetAlternateSignalStack() {}
 void InitTlsSize() {}

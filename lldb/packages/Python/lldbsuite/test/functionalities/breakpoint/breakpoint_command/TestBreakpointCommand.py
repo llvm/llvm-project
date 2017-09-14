@@ -287,7 +287,7 @@ class BreakpointCommandTestCase(TestBase):
         # Add a breakpoint.
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", self.line, num_expected_locations=1, loc_exact=True,
-            extra_options='-d bt -d "thread list" -d continue')
+            extra_options='-C bt -C "thread list" -C continue')
 
         bkpt = target.FindBreakpointByID(1)
         self.assertTrue(bkpt.IsValid(), "Couldn't find breakpoint 1")

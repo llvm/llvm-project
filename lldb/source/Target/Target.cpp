@@ -123,6 +123,13 @@ void Target::PrimeFromDummyTarget(Target *target) {
     BreakpointSP new_bp(new Breakpoint(*this, *breakpoint_sp.get()));
     AddBreakpoint(new_bp, false);
   }
+  
+  for (auto bp_name_entry : target->m_breakpoint_names)
+  {
+    
+    BreakpointName *new_bp_name = new BreakpointName(*bp_name_entry.second);
+    AddBreakpointName(new_bp_name);
+  }
 }
 
 void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
@@ -601,6 +608,112 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   }
 }
 
+void Target::AddNameToBreakpoint(BreakpointID &id,
+                                 const char *name,
+                                 Status &error)
+ {
+   BreakpointSP bp_sp 
+       = m_breakpoint_list.FindBreakpointByID(id.GetBreakpointID());
+   if (!bp_sp)
+   {
+     StreamString s;
+     id.GetDescription(&s, eDescriptionLevelBrief);
+     error.SetErrorStringWithFormat("Could not find breakpoint %s", 
+                                    s.GetData());
+     return;
+   }
+   AddNameToBreakpoint(bp_sp, name, error);
+ }
+
+void Target::AddNameToBreakpoint(BreakpointSP &bp_sp,
+                                 const char *name, 
+                                 Status &error)
+ {
+   if (!bp_sp)
+     return;
+     
+   BreakpointName *bp_name = FindBreakpointName(ConstString(name), true, error);
+   if (!bp_name)
+     return;
+
+   bp_name->ConfigureBreakpoint(bp_sp);
+   bp_sp->AddName(name);
+ }
+
+void Target::AddBreakpointName(BreakpointName *bp_name) {
+  m_breakpoint_names.insert(std::make_pair(bp_name->GetName(), bp_name));
+}
+
+BreakpointName *Target::FindBreakpointName(const ConstString &name, 
+                                           bool can_create, 
+                                           Status &error)
+{
+  BreakpointID::StringIsBreakpointName(name.GetStringRef(), error);
+  if (!error.Success())
+    return nullptr;
+
+  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  if (iter == m_breakpoint_names.end()) {
+    if (!can_create)
+    {
+      error.SetErrorStringWithFormat("Breakpoint name \"%s\" doesn't exist and "
+                                     "can_create is false.", name.AsCString());
+      return nullptr;
+    }
+
+    iter = m_breakpoint_names.insert(std::make_pair(name,
+                                                    new BreakpointName(name)))
+                                                        .first;
+  }
+  return (iter->second);
+}
+
+void
+Target::DeleteBreakpointName(const ConstString &name)
+{
+  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  
+  if (iter != m_breakpoint_names.end()) {
+    const char *name_cstr = name.AsCString();
+    m_breakpoint_names.erase(iter);
+    for (auto bp_sp : m_breakpoint_list.Breakpoints())
+      bp_sp->RemoveName(name_cstr);
+  }
+}
+
+void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
+                                const ConstString &name)
+{
+  bp_sp->RemoveName(name.AsCString());
+}
+
+void Target::ConfigureBreakpointName(BreakpointName &bp_name,
+                               const BreakpointOptions &new_options,
+                               const BreakpointName::Permissions &new_permissions)
+{
+  bp_name.GetOptions().CopyOverSetOptions(new_options);
+  bp_name.GetPermissions().MergeInto(new_permissions);
+  ApplyNameToBreakpoints(bp_name);
+}
+
+void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
+  BreakpointList bkpts_with_name(false);
+  m_breakpoint_list.FindBreakpointsByName(bp_name.GetName().AsCString(), 
+                                          bkpts_with_name);
+
+  for (auto bp_sp : bkpts_with_name.Breakpoints())
+    bp_name.ConfigureBreakpoint(bp_sp);
+}
+
+void Target::GetBreakpointNames(std::vector<std::string> &names)
+{
+  names.clear();
+  for (auto bp_name : m_breakpoint_names) {
+    names.push_back(bp_name.first.AsCString());
+  }
+  std::sort(names.begin(), names.end());
+}
+
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
 }
@@ -703,6 +816,17 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   return wp_sp;
 }
 
+void Target::RemoveAllowedBreakpoints ()
+{
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  if (log)
+    log->Printf("Target::%s \n", __FUNCTION__);
+
+  m_breakpoint_list.RemoveAllowed(true);
+  
+  m_last_created_breakpoint.reset();
+}
+
 void Target::RemoveAllBreakpoints(bool internal_also) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
@@ -727,6 +851,14 @@ void Target::DisableAllBreakpoints(bool internal_also) {
     m_internal_breakpoint_list.SetEnabledAll(false);
 }
 
+void Target::DisableAllowedBreakpoints() {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  if (log)
+    log->Printf("Target::%s", __FUNCTION__);
+
+  m_breakpoint_list.SetEnabledAllowed(false);
+}
+
 void Target::EnableAllBreakpoints(bool internal_also) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
   if (log)
@@ -736,6 +868,14 @@ void Target::EnableAllBreakpoints(bool internal_also) {
   m_breakpoint_list.SetEnabledAll(true);
   if (internal_also)
     m_internal_breakpoint_list.SetEnabledAll(true);
+}
+
+void Target::EnableAllowedBreakpoints() {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  if (log)
+    log->Printf("Target::%s", __FUNCTION__);
+
+  m_breakpoint_list.SetEnabledAllowed(true);
 }
 
 bool Target::RemoveBreakpointByID(break_id_t break_id) {

@@ -73,6 +73,17 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    def test_SBBreakpointName(self):
+        obj = lldb.SBBreakpointName()
+        if self.TraceOn():
+            print(obj)
+        self.assertFalse(obj)
+        # Do fuzz testing on the invalid obj, it should not crash lldb.
+        import sb_breakpointname
+        sb_breakpointname.fuzz_obj(obj)
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
     def test_SBBroadcaster(self):
         obj = lldb.SBBroadcaster()
         if self.TraceOn():

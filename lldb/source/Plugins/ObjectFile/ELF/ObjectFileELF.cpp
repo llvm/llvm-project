@@ -451,7 +451,7 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
     if (ELFHeader::MagicBytesMatch(magic)) {
       unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
       if (address_size == 4 || address_size == 8) {
-        std::auto_ptr<ObjectFileELF> objfile_ap(
+        std::unique_ptr<ObjectFileELF> objfile_ap(
             new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
         ArchSpec spec;
         if (objfile_ap->GetArchitecture(spec) &&

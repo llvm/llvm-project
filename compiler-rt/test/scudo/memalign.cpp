@@ -1,6 +1,7 @@
 // RUN: %clang_scudo %s -o %t
-// RUN: %run %t valid   2>&1
-// RUN: %run %t invalid 2>&1
+// RUN:                                               %run %t valid   2>&1
+// RUN:                                           not %run %t invalid 2>&1
+// RUN: SCUDO_OPTIONS=allocator_may_return_null=1     %run %t invalid 2>&1
 
 // Tests that the various aligned allocation functions work as intended. Also
 // tests for the condition where the alignment is not a power of 2.

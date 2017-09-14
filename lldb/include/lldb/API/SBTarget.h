@@ -716,6 +716,10 @@ public:
   // Finds all breakpoints by name, returning the list in bkpt_list.  Returns
   // false if the name is not a valid breakpoint name, true otherwise.
   bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
+  
+  void GetBreakpointNames(SBStringList &names);
+  
+  void DeleteBreakpointName(const char *name);
 
   bool EnableAllBreakpoints();
 
@@ -810,6 +814,7 @@ protected:
   friend class SBAddress;
   friend class SBBlock;
   friend class SBBreakpointList;
+  friend class SBBreakpointNameImpl;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

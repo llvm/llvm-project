@@ -31,6 +31,7 @@ extern "C" void _ReadWriteBarrier();
 namespace __sanitizer {
 
 struct AddressInfo;
+struct BufferedStackTrace;
 struct SignalContext;
 struct StackTrace;
 
@@ -311,10 +312,13 @@ HandleSignalMode GetHandleSignalMode(int signum);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
 // Signal reporting.
 void StartReportDeadlySignal();
-// FIXME: Hide after moving more signal handling code into common.
-void MaybeReportNonExecRegion(uptr pc);
-void MaybeDumpInstructionBytes(uptr pc);
-void MaybeDumpRegisters(void *context);
+// Each sanitizer uses slightly different implementation of stack unwinding.
+typedef void (*UnwindSignalStackCallbackType)(const SignalContext &sig,
+                                              const void *callback_context,
+                                              BufferedStackTrace *stack);
+void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+                        UnwindSignalStackCallbackType unwind,
+                        const void *unwind_context);
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();

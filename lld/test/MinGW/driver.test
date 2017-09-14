@@ -23,28 +23,43 @@ ARM64-SAME: -alternatename:__image_base__=__ImageBase
 ARM64-SAME: foo.o
 
 RUN: ld.lld -### foo.o -m i386pep -shared | FileCheck -check-prefix=SHARED %s
+RUN: ld.lld -### foo.o -m i386pep --shared | FileCheck -check-prefix=SHARED %s
 SHARED:      -out:a.dll
 SHARED-SAME: -dll
 
-RUN: ld.lld -### foo.o -m i386pep -shared foo.def | FileCheck -check-prefix=DEF %s
-DEF: -def:foo.def
+RUN: ld.lld -### foo.o -m i386pep -shared foo.def | FileCheck -check-prefix=DEF1 %s
+DEF1: -def:foo.def
 
+RUN: ld.lld -### foo.o -m i386pep -shared FOO.DEF | FileCheck -check-prefix=DEF2 %s
+DEF2: -def:FOO.DEF
+
+RUN: ld.lld -### foo.o -m i386pep -obar.exe | FileCheck -check-prefix=OUT %s
 RUN: ld.lld -### foo.o -m i386pep -o bar.exe | FileCheck -check-prefix=OUT %s
 OUT: -out:bar.exe
 
+RUN: ld.lld -### foo.o -m i386pep --out-implib bar | FileCheck -check-prefix=IMPLIB %s
+IMPLIB: -implib:bar
+
+RUN: ld.lld -### foo.o -m i386pep -out-implib bar | FileCheck -check-prefix=NOIMPLIB %s
+NOIMPLIB: -out:ut-implib
+
 RUN: ld.lld -### foo.o -m i386pep -e bar | FileCheck -check-prefix=ENTRY %s
+RUN: ld.lld -### foo.o -m i386pep -entry bar | FileCheck -check-prefix=ENTRY %s
 RUN: ld.lld -### foo.o -m i386pep --entry bar | FileCheck -check-prefix=ENTRY %s
 ENTRY: -entry:bar
 
 RUN: ld.lld -### foo.o -m i386pep -mllvm bar -mllvm baz | FileCheck -check-prefix=MLLVM %s
 MLLVM: -mllvm:bar -mllvm:baz
 
+RUN: ld.lld -### foo.o -m i386pep -subsystem console | FileCheck -check-prefix=SUBSYSTEM %s
 RUN: ld.lld -### foo.o -m i386pep --subsystem console | FileCheck -check-prefix=SUBSYSTEM %s
 SUBSYSTEM: -subsystem:console
 
+RUN: ld.lld -### foo.o -m i386pep -stack 4194304,8192 | FileCheck -check-prefix=STACK %s
 RUN: ld.lld -### foo.o -m i386pep --stack 4194304,8192 | FileCheck -check-prefix=STACK %s
 STACK: -stack:4194304,8192
 
+RUN: ld.lld -### foo.o -m i386pep -verbose | FileCheck -check-prefix=VERBOSE %s
 RUN: ld.lld -### foo.o -m i386pep --verbose | FileCheck -check-prefix=VERBOSE %s
 VERBOSE: -verbose
 
@@ -52,6 +67,7 @@ RUN: ld.lld -### -shared -m i386pe -e _DllMainCRTStartup@12 foo.o | FileCheck -c
 I386-ENTRY: -entry:DllMainCRTStartup@12
 
 RUN: ld.lld -### -m i386pep foo.o --whole-archive bar.a --no-whole-archive baz.a | FileCheck -check-prefix WHOLE-ARCHIVE %s
+RUN: ld.lld -### -m i386pep foo.o -whole-archive bar.a -no-whole-archive baz.a | FileCheck -check-prefix WHOLE-ARCHIVE %s
 WHOLE-ARCHIVE: foo.o -wholearchive:bar.a baz.a
 
 RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix MINGW-FLAG %s

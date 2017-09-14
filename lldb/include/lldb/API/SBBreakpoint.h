@@ -18,9 +18,6 @@ namespace lldb {
 
 class LLDB_API SBBreakpoint {
 public:
-  typedef bool (*BreakpointHitCallback)(void *baton, SBProcess &process,
-                                        SBThread &thread,
-                                        lldb::SBBreakpointLocation &location);
 
   SBBreakpoint();
 
@@ -90,7 +87,7 @@ public:
 
   const char *GetQueueName() const;
 
-  void SetCallback(BreakpointHitCallback callback, void *baton);
+  void SetCallback(SBBreakpointHitCallback callback, void *baton);
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
@@ -133,13 +130,10 @@ public:
 private:
   friend class SBBreakpointList;
   friend class SBBreakpointLocation;
+  friend class SBBreakpointName;
   friend class SBTarget;
 
   SBBreakpoint(const lldb::BreakpointSP &bp_sp);
-
-  static bool PrivateBreakpointHitCallback(
-      void *baton, lldb_private::StoppointCallbackContext *context,
-      lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
   lldb::BreakpointSP GetSP() const;
 
