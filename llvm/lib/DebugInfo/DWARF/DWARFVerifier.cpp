@@ -89,6 +89,8 @@ bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
   auto End = Ranges.end();
   auto Iter = findRange(RHS.Ranges.front());
   for (const auto &R : RHS.Ranges) {
+    if(Iter == End)
+      return false;
     if (R.HighPC <= Iter->LowPC)
       continue;
     while (Iter != End) {
