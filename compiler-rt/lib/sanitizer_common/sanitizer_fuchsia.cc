@@ -91,6 +91,7 @@ void MaybeReexec() {}
 void PrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
+void StartReportDeadlySignal() {}
 void SetAlternateSignalStack() {}
 void UnsetAlternateSignalStack() {}
 void InitTlsSize() {}
