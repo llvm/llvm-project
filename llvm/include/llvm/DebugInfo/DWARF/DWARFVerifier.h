@@ -11,6 +11,8 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 #include <cstdint>
 #include <map>
@@ -30,6 +32,61 @@ struct DWARFSection;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
+public:
+  /// A class that keeps the address range information for a single DIE.
+  struct DieRangeInfo {
+    DWARFDie Die;
+
+    /// Sorted DWARFAddressRanges.
+    std::vector<DWARFAddressRange> Ranges;
+
+    /// Sorted DWARFAddressRangeInfo.
+    std::set<DieRangeInfo> Children;
+
+    DieRangeInfo() = default;
+    DieRangeInfo(DWARFDie Die) : Die(Die) {}
+
+    /// Used for unit testing.
+    DieRangeInfo(std::vector<DWARFAddressRange> Ranges)
+        : Ranges(std::move(Ranges)) {}
+
+    typedef std::vector<DWARFAddressRange>::const_iterator
+        address_range_iterator;
+    typedef std::set<DieRangeInfo>::const_iterator die_range_info_iterator;
+
+    /// Inserts the address range. If the range overlaps with an existing
+    /// range, the range is *not* added and an iterator to the overlapping
+    /// range is returned.
+    ///
+    /// This is used for finding overlapping ranges within the same DIE.
+    address_range_iterator insert(const DWARFAddressRange &R);
+
+    /// Finds an address range in the sorted vector of ranges.
+    address_range_iterator findRange(const DWARFAddressRange &R) const {
+      auto Begin = Ranges.begin();
+      auto End = Ranges.end();
+      auto Iter = std::upper_bound(Begin, End, R);
+      if (Iter != Begin)
+        --Iter;
+      return Iter;
+    }
+
+    /// Inserts the address range info. If any of its ranges overlaps with a
+    /// range in an existing range info, the range info is *not* added and an
+    /// iterator to the overlapping range info.
+    ///
+    /// This is used for finding overlapping children of the same DIE.
+    die_range_info_iterator insert(const DieRangeInfo &RI);
+
+    /// Return true if ranges in this object contains all ranges within RHS.
+    bool contains(const DieRangeInfo &RHS) const;
+
+    /// Return true if any range in this object intersects with any range in
+    /// RHS.
+    bool intersects(const DieRangeInfo &RHS) const;
+  };
+
+private:
   raw_ostream &OS;
   DWARFContext &DCtx;
   DIDumpOptions DumpOpts;
@@ -84,7 +141,7 @@ class DWARFVerifier {
   /// - cases in which lowPC >= highPC
   ///
   /// \returns Number of errors that occured during verification.
-  unsigned verifyDieRanges(const DWARFDie &Die);
+  unsigned verifyDieRanges(const DWARFDie &Die, DieRangeInfo &ParentRI);
 
   /// Verifies the attribute's DWARF attribute and its value.
   ///
@@ -195,6 +252,11 @@ public:
   /// successfully, false otherwise.
   bool handleAccelTables();
 };
+
+static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
+                             const DWARFVerifier::DieRangeInfo &RHS) {
+  return std::tie(LHS.Ranges, LHS.Die) < std::tie(RHS.Ranges, RHS.Die);
+}
 
 } // end namespace llvm
 

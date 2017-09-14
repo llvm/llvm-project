@@ -22,6 +22,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
@@ -37,8 +38,8 @@ class TargetRegisterClass;
 
 class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
 public:
-  explicit AMDGPUImagePseudoSourceValue() :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom) {}
+  explicit AMDGPUImagePseudoSourceValue(const TargetInstrInfo &TII) :
+    PseudoSourceValue(PseudoSourceValue::TargetCustom, TII) { }
 
   bool isConstant(const MachineFrameInfo *) const override {
     // This should probably be true for most images, but we will start by being
@@ -61,8 +62,8 @@ public:
 
 class AMDGPUBufferPseudoSourceValue : public PseudoSourceValue {
 public:
-  explicit AMDGPUBufferPseudoSourceValue() :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom) {}
+  explicit AMDGPUBufferPseudoSourceValue(const TargetInstrInfo &TII) :
+    PseudoSourceValue(PseudoSourceValue::TargetCustom, TII) { }
 
   bool isConstant(const MachineFrameInfo *) const override {
     // This should probably be true for most images, but we will start by being

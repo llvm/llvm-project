@@ -32,7 +32,7 @@ body: |
     ; block bb.1 in the original diamond. After if-conversion, the diamond
     ; became a single block, and so r2 is now live on entry to the instructions
     ; originating from bb.2.
-    ; CHECK: %r2 = C2_cmoveit %p1, 1, implicit %r2
+    ; CHECK: %r2 = C2_cmoveit %p1, 1, implicit killed %r2
         %r2 = A2_tfrsi 1
   bb.3:
     liveins: %r0, %r2

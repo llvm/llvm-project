@@ -111,11 +111,8 @@ class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
   Format Form = FrmR;
   string BaseOpcode = instr_asm;
 }
-// TODO: Add 'pos + size' constraint check to dext* instructions
-//       DEXT: 0 < pos + size <= 63
-//       DEXTM, DEXTU: 32 < pos + size <= 64
 class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm5_report_uimm6,
-                                         uimm5_plus1, MipsExt>;
+                                         uimm5_plus1_report_uimm6, MipsExt>;
 class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm5,
                                           uimm5_plus33, MipsExt>;
 class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm5_plus32,
@@ -164,9 +161,12 @@ class DCLZ_MM64R6_DESC {
 }
 
 class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
-                                  uimm5_inssize_plus1, MipsIns>;
-class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
-class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
+                                  uimm5_inssize_plus1, immZExt5Plus32,
+                                  immZExt5Plus1, MipsIns>;
+class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64,
+                                  immZExt5, immZExtRange2To64, MipsIns>;
+class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5_report_uimm6,
+                                 uimm5_inssize_plus1, immZExt5, immZExt5Plus1,
                                  MipsIns>;
 class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd,
                                               II_DMTC0>;
@@ -364,12 +364,14 @@ let DecoderNamespace = "MicroMipsR6" in {
     def DAHI_MM64R6 : StdMMR6Rel, DAHI_MMR6_DESC, DAHI_MMR6_ENC, ISA_MICROMIPS64R6;
     def DATI_MM64R6 : StdMMR6Rel, DATI_MMR6_DESC, DATI_MMR6_ENC, ISA_MICROMIPS64R6;
   }
-  def DEXT_MM64R6 : StdMMR6Rel, DEXT_MMR6_DESC, DEXT_MMR6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DEXTM_MM64R6 : StdMMR6Rel, DEXTM_MMR6_DESC, DEXTM_MMR6_ENC,
-                     ISA_MICROMIPS64R6;
-  def DEXTU_MM64R6 : StdMMR6Rel, DEXTU_MMR6_DESC, DEXTU_MMR6_ENC,
-                     ISA_MICROMIPS64R6;
+  let DecoderMethod = "DecodeDEXT" in {
+    def DEXT_MM64R6 : StdMMR6Rel, DEXT_MMR6_DESC, DEXT_MMR6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DEXTM_MM64R6 : StdMMR6Rel, DEXTM_MMR6_DESC, DEXTM_MMR6_ENC,
+                       ISA_MICROMIPS64R6;
+    def DEXTU_MM64R6 : StdMMR6Rel, DEXTU_MMR6_DESC, DEXTU_MMR6_ENC,
+                       ISA_MICROMIPS64R6;
+  }
   def DALIGN_MM64R6 : StdMMR6Rel, DALIGN_MMR6_DESC, DALIGN_MMR6_ENC,
                       ISA_MICROMIPS64R6;
   def DDIV_MM64R6 : R6MMR6Rel, DDIV_MM64R6_DESC, DDIV_MM64R6_ENC,
@@ -380,12 +382,14 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DMODU_MM64R6 : R6MMR6Rel, DMODU_MM64R6_DESC, DMODU_MM64R6_ENC,
                      ISA_MICROMIPS64R6;
-  def DINSU_MM64R6: R6MMR6Rel, DINSU_MM64R6_DESC, DINSU_MM64R6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DINSM_MM64R6: R6MMR6Rel, DINSM_MM64R6_DESC, DINSM_MM64R6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
-                   ISA_MICROMIPS64R6;
+  let DecoderMethod = "DecodeDINS" in {
+    def DINSU_MM64R6: R6MMR6Rel, DINSU_MM64R6_DESC, DINSU_MM64R6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DINSM_MM64R6: R6MMR6Rel, DINSM_MM64R6_DESC, DINSM_MM64R6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  }
   def DMTC0_MM64R6 : StdMMR6Rel, DMTC0_MM64R6_ENC, DMTC0_MM64R6_DESC,
                      ISA_MICROMIPS64R6;
   def DMTC1_MM64R6 : StdMMR6Rel, DMTC1_MM64R6_DESC, DMTC1_MM64R6_ENC,
@@ -560,3 +564,19 @@ def : MipsInstAlias<"dsrl $rd, $rt",
 def : MipsInstAlias<"dsll $rd, $rt",
                     (DSLLV_MM64R6 GPR64Opnd:$rd, GPR64Opnd:$rd,
                                   GPR32Opnd:$rt), 0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                    (DINSM_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                                  uimm_range_2_64:$size), 0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                    (DINSU_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                                  uimm5_plus32:$pos, uimm5_plus1:$size), 0>,
+                    ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                    (DEXTM_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                                                 uimm5_plus33:$size), 0>,
+      ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                    (DEXTU_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                                  uimm5_plus32:$pos, uimm5_plus1:$size), 0>,
+      ISA_MICROMIPS64R6;
+

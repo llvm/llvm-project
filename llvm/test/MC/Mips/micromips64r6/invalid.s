@@ -30,11 +30,9 @@
   daui    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
   dati    $4, $4, -1       # CHECK: :[[@LINE]]:19: error: expected 16-bit unsigned immediate
   dati    $4, $5, 1        # CHECK: :[[@LINE]]:3: error: source and destination must match
-  # FIXME: Check various 'pos + size' constraints on dext*
   dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
   dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
   dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:19: error: expected immediate in range 1 .. 32
-  dext $2, $3, 1, 33   # CHECK: :[[@LINE]]:19: error: expected immediate in range 1 .. 32
   dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dextm $2, $3, 32, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dextm $2, $3, -1, 33 # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
@@ -45,9 +43,7 @@
   dextu $2, $3, 64, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
   dextu $2, $3, 32, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
   dextu $2, $3, 32, 33 # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
-  dins $2, $3, 31, 33  # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
   dins $2, $3, 31, 0   # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
-  # FIXME: Check '32 <= pos + size <= 64' constraint on dinsm
   dinsm $2, $3, -1, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dinsm $2, $3, 32, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dinsm $2, $3, 31, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 2 .. 64

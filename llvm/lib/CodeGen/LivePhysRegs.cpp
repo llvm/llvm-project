@@ -40,10 +40,8 @@ void LivePhysRegs::removeRegsInMask(const MachineOperand &MO,
   }
 }
 
-/// Simulates liveness when stepping backwards over an instruction(bundle):
-/// Remove Defs, add uses. This is the recommended way of calculating liveness.
-void LivePhysRegs::stepBackward(const MachineInstr &MI) {
-  // Remove defined registers and regmask kills from the set.
+/// Remove defined registers and regmask kills from the set.
+void LivePhysRegs::removeDefs(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
       if (!O->isDef())
@@ -55,8 +53,10 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
     } else if (O->isRegMask())
       removeRegsInMask(*O);
   }
+}
 
-  // Add uses to the set.
+/// Add uses to the set.
+void LivePhysRegs::addUses(const MachineInstr &MI) {
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->readsReg())
       continue;
@@ -65,6 +65,16 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
       continue;
     addReg(Reg);
   }
+}
+
+/// Simulates liveness when stepping backwards over an instruction(bundle):
+/// Remove Defs, add uses. This is the recommended way of calculating liveness.
+void LivePhysRegs::stepBackward(const MachineInstr &MI) {
+  // Remove defined registers and regmask kills from the set.
+  removeDefs(MI);
+
+  // Add uses to the set.
+  addUses(MI);
 }
 
 /// Simulates liveness when stepping forward over an instruction(bundle): Remove
@@ -262,6 +272,53 @@ void llvm::addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs) {
     if (ContainsSuperReg)
       continue;
     MBB.addLiveIn(Reg);
+  }
+}
+
+void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+
+  // We walk through the block backwards and start with the live outs.
+  LivePhysRegs LiveRegs;
+  LiveRegs.init(TRI);
+  LiveRegs.addLiveOutsNoPristines(MBB);
+
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+    // Recompute dead flags.
+    for (MIBundleOperands MO(MI); MO.isValid(); ++MO) {
+      if (!MO->isReg() || !MO->isDef() || MO->isDebug())
+        continue;
+
+      unsigned Reg = MO->getReg();
+      if (Reg == 0)
+        continue;
+      assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+
+      bool IsNotLive = LiveRegs.available(MRI, Reg);
+      MO->setIsDead(IsNotLive);
+    }
+
+    // Step backward over defs.
+    LiveRegs.removeDefs(MI);
+
+    // Recompute kill flags.
+    for (MIBundleOperands MO(MI); MO.isValid(); ++MO) {
+      if (!MO->isReg() || !MO->readsReg() || MO->isDebug())
+        continue;
+
+      unsigned Reg = MO->getReg();
+      if (Reg == 0)
+        continue;
+      assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+
+      bool IsNotLive = LiveRegs.available(MRI, Reg);
+      MO->setIsKill(IsNotLive);
+    }
+
+    // Complete the stepbackward.
+    LiveRegs.addUses(MI);
   }
 }
 

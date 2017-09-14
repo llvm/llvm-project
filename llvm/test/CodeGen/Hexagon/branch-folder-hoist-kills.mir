@@ -16,7 +16,7 @@
 #         %R1<def> = A2_sxth %R0<kill>               ; hoisted, kills r0
 #         A2_nop %P0<imp-def>
 #         %R0<def> = C2_cmoveit %P0, 2, %R0<imp-use> ; predicated A2_tfrsi
-#         %R0<def> = C2_cmoveif %P0, 1, %R0<imp-use> ; predicated A2_tfrsi
+#         %R0<def> = C2_cmoveif killed %P0, 1, %R0<imp-use> ; predicated A2_tfrsi
 #         %R0<def> = A2_add %R0<kill>, %R1<kill>
 #         J2_jumpr %R31, %PC<imp-def,dead>
 #
@@ -24,7 +24,7 @@
 # CHECK: %r1 = A2_sxth killed %r0
 # CHECK: %r0 = C2_cmoveit %p0, 2
 # CHECK-NOT: implicit-def %r0
-# CHECK: %r0 = C2_cmoveif %p0, 1, implicit %r0
+# CHECK: %r0 = C2_cmoveif killed %p0, 1, implicit killed %r0
 
 ---
 name: fred
