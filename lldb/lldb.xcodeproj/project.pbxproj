@@ -781,7 +781,6 @@
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
 		4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */; };
 		4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */; };
-		4C7D482C1F509CF5005314B4 /* BreakpointName.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4C7D482B1F509CF5005314B4 /* BreakpointName.h */; };
 		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C848DFF18D2873500EC6DD0 /* SwiftASTManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFC18D2873500EC6DD0 /* SwiftASTManipulator.cpp */; };
 		4C848E0018D2873500EC6DD0 /* SwiftExpressionParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFD18D2873500EC6DD0 /* SwiftExpressionParser.cpp */; };
@@ -1378,7 +1377,6 @@
 			files = (
 				9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */,
 				9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */,
-				4C7D482C1F509CF5005314B4 /* BreakpointName.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			name = "Copy Files";
