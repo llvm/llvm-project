@@ -212,10 +212,7 @@ EmulateInstructionMIPS::CreateInstance(const ArchSpec &arch,
           inst_type)) {
     if (arch.GetTriple().getArch() == llvm::Triple::mips ||
         arch.GetTriple().getArch() == llvm::Triple::mipsel) {
-      std::auto_ptr<EmulateInstructionMIPS> emulate_insn_ap(
-          new EmulateInstructionMIPS(arch));
-      if (emulate_insn_ap.get())
-        return emulate_insn_ap.release();
+      return new EmulateInstructionMIPS(arch);
     }
   }
 

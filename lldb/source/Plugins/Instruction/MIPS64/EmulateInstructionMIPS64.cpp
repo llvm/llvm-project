@@ -199,10 +199,7 @@ EmulateInstructionMIPS64::CreateInstance(const ArchSpec &arch,
           inst_type)) {
     if (arch.GetTriple().getArch() == llvm::Triple::mips64 ||
         arch.GetTriple().getArch() == llvm::Triple::mips64el) {
-      std::auto_ptr<EmulateInstructionMIPS64> emulate_insn_ap(
-          new EmulateInstructionMIPS64(arch));
-      if (emulate_insn_ap.get())
-        return emulate_insn_ap.release();
+      return new EmulateInstructionMIPS64(arch);
     }
   }
 
