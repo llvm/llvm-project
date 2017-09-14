@@ -890,32 +890,6 @@ bool IsHandledDeadlyException(DWORD exceptionCode) {
   return false;
 }
 
-const char *DescribeSignalOrException(int signo) {
-  unsigned code = signo;
-  // Get the string description of the exception if this is a known deadly
-  // exception.
-  switch (code) {
-    case EXCEPTION_ACCESS_VIOLATION: return "access-violation";
-    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "array-bounds-exceeded";
-    case EXCEPTION_STACK_OVERFLOW: return "stack-overflow";
-    case EXCEPTION_DATATYPE_MISALIGNMENT: return "datatype-misalignment";
-    case EXCEPTION_IN_PAGE_ERROR: return "in-page-error";
-    case EXCEPTION_ILLEGAL_INSTRUCTION: return "illegal-instruction";
-    case EXCEPTION_PRIV_INSTRUCTION: return "priv-instruction";
-    case EXCEPTION_BREAKPOINT: return "breakpoint";
-    case EXCEPTION_FLT_DENORMAL_OPERAND: return "flt-denormal-operand";
-    case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "flt-divide-by-zero";
-    case EXCEPTION_FLT_INEXACT_RESULT: return "flt-inexact-result";
-    case EXCEPTION_FLT_INVALID_OPERATION: return "flt-invalid-operation";
-    case EXCEPTION_FLT_OVERFLOW: return "flt-overflow";
-    case EXCEPTION_FLT_STACK_CHECK: return "flt-stack-check";
-    case EXCEPTION_FLT_UNDERFLOW: return "flt-underflow";
-    case EXCEPTION_INT_DIVIDE_BY_ZERO: return "int-divide-by-zero";
-    case EXCEPTION_INT_OVERFLOW: return "int-overflow";
-  }
-  return "unknown exception";
-}
-
 bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   SYSTEM_INFO si;
   GetNativeSystemInfo(&si);
@@ -941,37 +915,99 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
-SignalContext SignalContext::Create(void *siginfo, void *context) {
+bool SignalContext::IsStackOverflow() const {
+  return GetType() == EXCEPTION_STACK_OVERFLOW;
+}
+
+void SignalContext::InitPcSpBp() {
   EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
   CONTEXT *context_record = (CONTEXT *)context;
 
-  uptr pc = (uptr)exception_record->ExceptionAddress;
+  pc = (uptr)exception_record->ExceptionAddress;
 #ifdef _WIN64
-  uptr bp = (uptr)context_record->Rbp;
-  uptr sp = (uptr)context_record->Rsp;
+  bp = (uptr)context_record->Rbp;
+  sp = (uptr)context_record->Rsp;
 #else
-  uptr bp = (uptr)context_record->Ebp;
-  uptr sp = (uptr)context_record->Esp;
+  bp = (uptr)context_record->Ebp;
+  sp = (uptr)context_record->Esp;
 #endif
-  uptr access_addr = exception_record->ExceptionInformation[1];
+}
 
+uptr SignalContext::GetAddress() const {
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
+  return exception_record->ExceptionInformation[1];
+}
+
+bool SignalContext::IsMemoryAccess() const {
+  return GetWriteFlag() != SignalContext::UNKNOWN;
+}
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
   // The contents of this array are documented at
   // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363082(v=vs.85).aspx
   // The first element indicates read as 0, write as 1, or execute as 8.  The
   // second element is the faulting address.
-  WriteFlag write_flag = SignalContext::UNKNOWN;
   switch (exception_record->ExceptionInformation[0]) {
-  case 0: write_flag = SignalContext::READ; break;
-  case 1: write_flag = SignalContext::WRITE; break;
-  case 8: write_flag = SignalContext::UNKNOWN; break;
+    case 0:
+      return SignalContext::READ;
+    case 1:
+      return SignalContext::WRITE;
+    case 8:
+      return SignalContext::UNKNOWN;
   }
-  bool is_memory_access = write_flag != SignalContext::UNKNOWN;
-  return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
-                       write_flag);
+  return SignalContext::UNKNOWN;
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
   // FIXME: Implement this.
+}
+
+int SignalContext::GetType() const {
+  return static_cast<const EXCEPTION_RECORD *>(siginfo)->ExceptionCode;
+}
+
+const char *SignalContext::Describe() const {
+  unsigned code = GetType();
+  // Get the string description of the exception if this is a known deadly
+  // exception.
+  switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION:
+      return "access-violation";
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+      return "array-bounds-exceeded";
+    case EXCEPTION_STACK_OVERFLOW:
+      return "stack-overflow";
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+      return "datatype-misalignment";
+    case EXCEPTION_IN_PAGE_ERROR:
+      return "in-page-error";
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+      return "illegal-instruction";
+    case EXCEPTION_PRIV_INSTRUCTION:
+      return "priv-instruction";
+    case EXCEPTION_BREAKPOINT:
+      return "breakpoint";
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+      return "flt-denormal-operand";
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+      return "flt-divide-by-zero";
+    case EXCEPTION_FLT_INEXACT_RESULT:
+      return "flt-inexact-result";
+    case EXCEPTION_FLT_INVALID_OPERATION:
+      return "flt-invalid-operation";
+    case EXCEPTION_FLT_OVERFLOW:
+      return "flt-overflow";
+    case EXCEPTION_FLT_STACK_CHECK:
+      return "flt-stack-check";
+    case EXCEPTION_FLT_UNDERFLOW:
+      return "flt-underflow";
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+      return "int-divide-by-zero";
+    case EXCEPTION_INT_OVERFLOW:
+      return "int-overflow";
+  }
+  return "unknown exception";
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
