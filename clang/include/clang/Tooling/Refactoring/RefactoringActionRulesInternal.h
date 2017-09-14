@@ -39,6 +39,10 @@ public:
                       llvm::index_sequence_for<RequirementTypes...>());
   }
 
+  bool hasSelectionRequirement() override {
+    return traits::HasSelectionRequirement<RequirementTypes...>::value;
+  }
+
 private:
   /// Returns \c T when given \c Expected<Optional<T>>, or \c T otherwise.
   template <typename T>
@@ -79,7 +83,7 @@ private:
   template <size_t... Is>
   void invokeImpl(RefactoringResultConsumer &Consumer,
                   RefactoringRuleContext &Context,
-                  llvm::index_sequence<Is...>) {
+                  llvm::index_sequence<Is...> Seq) {
     // Initiate the operation.
     auto Values =
         std::make_tuple(std::get<Is>(Requirements).evaluate(Context)...);
@@ -96,8 +100,8 @@ private:
       return Consumer.handleError(std::move(Error));
     }
     // Perform the operation.
-    auto Result =
-        Function(unwrapRequirementResult(std::move(std::get<Is>(Values)))...);
+    auto Result = Function(
+        Context, unwrapRequirementResult(std::move(std::get<Is>(Values)))...);
     if (!Result)
       return Consumer.handleError(Result.takeError());
     Consumer.handle(std::move(*Result));
@@ -111,8 +115,9 @@ private:
 /// createRefactoringRule.
 template <typename T> struct LambdaDeducer;
 template <typename T, typename R, typename... Args>
-struct LambdaDeducer<R (T::*)(Args...) const> {
+struct LambdaDeducer<R (T::*)(const RefactoringRuleContext &, Args...) const> {
   using ReturnType = R;
+  using FunctionType = R (*)(const RefactoringRuleContext &, Args...);
 };
 
 } // end namespace internal

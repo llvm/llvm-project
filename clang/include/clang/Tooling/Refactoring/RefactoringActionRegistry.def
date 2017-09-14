@@ -1,0 +1,7 @@
+#ifndef REFACTORING_ACTION
+#define REFACTORING_ACTION(Name)
+#endif
+
+REFACTORING_ACTION(LocalRename)
+
+#undef REFACTORING_ACTION
