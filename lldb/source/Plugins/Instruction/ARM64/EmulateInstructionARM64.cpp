@@ -167,10 +167,7 @@ EmulateInstructionARM64::CreateInstance(const ArchSpec &arch,
   if (EmulateInstructionARM64::SupportsEmulatingInstructionsOfTypeStatic(
           inst_type)) {
     if (arch.GetTriple().getArch() == llvm::Triple::aarch64) {
-      std::auto_ptr<EmulateInstructionARM64> emulate_insn_ap(
-          new EmulateInstructionARM64(arch));
-      if (emulate_insn_ap.get())
-        return emulate_insn_ap.release();
+      return new EmulateInstructionARM64(arch);
     }
   }
 

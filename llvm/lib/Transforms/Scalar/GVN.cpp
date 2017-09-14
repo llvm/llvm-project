@@ -20,39 +20,63 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/VNCoercion.h"
-
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
 #include <vector>
+
 using namespace llvm;
 using namespace llvm::gvn;
 using namespace llvm::VNCoercion;
@@ -80,10 +104,10 @@ MaxRecurseDepth("max-recurse-depth", cl::Hidden, cl::init(1000), cl::ZeroOrMore,
 struct llvm::GVN::Expression {
   uint32_t opcode;
   Type *type;
-  bool commutative;
+  bool commutative = false;
   SmallVector<uint32_t, 4> varargs;
 
-  Expression(uint32_t o = ~2U) : opcode(o), commutative(false) {}
+  Expression(uint32_t o = ~2U) : opcode(o) {}
 
   bool operator==(const Expression &other) const {
     if (opcode != other.opcode)
@@ -105,20 +129,23 @@ struct llvm::GVN::Expression {
 };
 
 namespace llvm {
+
 template <> struct DenseMapInfo<GVN::Expression> {
   static inline GVN::Expression getEmptyKey() { return ~0U; }
-
   static inline GVN::Expression getTombstoneKey() { return ~1U; }
 
   static unsigned getHashValue(const GVN::Expression &e) {
     using llvm::hash_value;
+
     return static_cast<unsigned>(hash_value(e));
   }
+
   static bool isEqual(const GVN::Expression &LHS, const GVN::Expression &RHS) {
     return LHS == RHS;
   }
 };
-} // End llvm namespace.
+
+} // end namespace llvm
 
 /// Represents a particular available value that we know how to materialize.
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
@@ -217,6 +244,7 @@ struct llvm::gvn::AvailableValueInBlock {
                                    unsigned Offset = 0) {
     return get(BB, AvailableValue::get(V, Offset));
   }
+
   static AvailableValueInBlock getUndef(BasicBlock *BB) {
     return get(BB, AvailableValue::getUndef());
   }
@@ -344,7 +372,7 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
 //                     ValueTable External Functions
 //===----------------------------------------------------------------------===//
 
-GVN::ValueTable::ValueTable() : nextValueNumber(1) {}
+GVN::ValueTable::ValueTable() = default;
 GVN::ValueTable::ValueTable(const ValueTable &) = default;
 GVN::ValueTable::ValueTable(ValueTable &&) = default;
 GVN::ValueTable::~ValueTable() = default;
@@ -456,7 +484,6 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
     uint32_t v = lookupOrAdd(cdep);
     valueNumbering[C] = v;
     return v;
-
   } else {
     valueNumbering[C] = nextValueNumber;
     return nextValueNumber++;
@@ -710,9 +737,6 @@ SpeculationFailure:
   return false;
 }
 
-
-
-
 /// Given a set of loads specified by ValuesPerBlock,
 /// construct SSA form, allowing us to eliminate LI.  This returns the value
 /// that should be used at LI's definition site.
@@ -806,6 +830,7 @@ static void reportMayClobberedLoad(LoadInst *LI, MemDepResult DepInfo,
                                    DominatorTree *DT,
                                    OptimizationRemarkEmitter *ORE) {
   using namespace ore;
+
   User *OtherAccess = nullptr;
 
   OptimizationRemarkMissed R(DEBUG_TYPE, "LoadClobbered", LI);
@@ -834,7 +859,6 @@ static void reportMayClobberedLoad(LoadInst *LI, MemDepResult DepInfo,
 
 bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
                                   Value *Address, AvailableValue &Res) {
-
   assert((DepInfo.isDef() || DepInfo.isClobber()) &&
          "expected a local dependence");
   assert(LI->isUnordered() && "rules below are incorrect for ordered access");
@@ -966,7 +990,6 @@ bool GVN::AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
 void GVN::AnalyzeLoadAvailability(LoadInst *LI, LoadDepVect &Deps,
                                   AvailValInBlkVect &ValuesPerBlock,
                                   UnavailBlkVect &UnavailableBlocks) {
-
   // Filter out useless results (non-locals, etc).  Keep track of the blocks
   // where we have a value available in repl, also keep track of whether we see
   // dependencies that produce an unknown value for the load (such as a call
@@ -1232,6 +1255,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 static void reportLoadElim(LoadInst *LI, Value *AvailableValue,
                            OptimizationRemarkEmitter *ORE) {
   using namespace ore;
+
   ORE->emit(OptimizationRemark(DEBUG_TYPE, "LoadElim", LI)
             << "load of type " << NV("Type", LI->getType()) << " eliminated"
             << setExtraArgs() << " in favor of "
@@ -1613,14 +1637,12 @@ static bool isOnlyReachableViaThisEdge(const BasicBlockEdge &E,
   return Pred != nullptr;
 }
 
-
 void GVN::assignBlockRPONumber(Function &F) {
   uint32_t NextBlockNumber = 1;
   ReversePostOrderTraversal<Function *> RPOT(&F);
   for (BasicBlock *BB : RPOT)
     BlockRPONumber[BB] = NextBlockNumber++;
 }
-
 
 // Tries to replace instruction with const, using information from
 // ReplaceWithConstMap.
@@ -2145,7 +2167,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     // when CurInst has operand defined in CurrentBlock (so it may be defined
     // by phi in the loop header).
     if (BlockRPONumber[P] >= BlockRPONumber[CurrentBlock] &&
-        any_of(CurInst->operands(), [&](const Use &U) {
+        llvm::any_of(CurInst->operands(), [&](const Use &U) {
           if (auto *Inst = dyn_cast<Instruction>(U.get()))
             return Inst->getParent() == CurrentBlock;
           return false;
@@ -2205,7 +2227,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
 
   // Either we should have filled in the PRE instruction, or we should
   // not have needed insertions.
-  assert (PREInstr != nullptr || NumWithout == 0);
+  assert(PREInstr != nullptr || NumWithout == 0);
 
   ++NumGVNPRE;
 
@@ -2461,6 +2483,7 @@ void GVN::assignValNumForDeadCode() {
 class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
+
   explicit GVNLegacyPass(bool NoLoads = false)
       : FunctionPass(ID), NoLoads(NoLoads) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -2504,11 +2527,6 @@ private:
 
 char GVNLegacyPass::ID = 0;
 
-// The public interface to this file...
-FunctionPass *llvm::createGVNPass(bool NoLoads) {
-  return new GVNLegacyPass(NoLoads);
-}
-
 INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
@@ -2518,3 +2536,8 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
+
+// The public interface to this file...
+FunctionPass *llvm::createGVNPass(bool NoLoads) {
+  return new GVNLegacyPass(NoLoads);
+}

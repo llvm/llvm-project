@@ -327,12 +327,23 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32, uimm5_plus1,
                       immZExt5Plus32, immZExt5Plus1, MipsExt>, EXT_FM<2>,
                       ISA_MIPS64R2;
-  def DINS : InsBase<"dins", GPR64Opnd, uimm6, uimm5_inssize_plus1, MipsIns>,
-             EXT_FM<7>, ISA_MIPS64R2;
-  def DINSU : InsBase<"dinsu", GPR64Opnd, uimm5_plus32, uimm5_inssize_plus1>,
-              EXT_FM<6>, ISA_MIPS64R2;
-  def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>,
-              EXT_FM<5>, ISA_MIPS64R2;
+  // The 'pos + size' constraints for code generation are enforced by the
+  // code that lowers into MipsISD::Ins.
+  // For assembly parsing, we alias dinsu and dinsm to dins, and match by
+  // operand were possible then check the 'pos + size' in MipsAsmParser.
+  // We override the generated decoder to enforce that dins always comes out
+  // for dinsm and dinsu like binutils.
+  let DecoderMethod = "DecodeDINS" in {
+    def DINS  : InsBase<"dins", GPR64Opnd, uimm6, uimm5_inssize_plus1,
+                        immZExt5, immZExt5Plus1, MipsIns>, EXT_FM<7>,
+                ISA_MIPS64R2;
+    def DINSU : InsBase<"dinsu", GPR64Opnd, uimm5_plus32, uimm5_inssize_plus1,
+                        immZExt5Plus32, immZExt5Plus1, MipsIns>,
+                EXT_FM<6>, ISA_MIPS64R2;
+    def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64,
+                        immZExt5, immZExtRange2To64, MipsIns>,
+                EXT_FM<5>, ISA_MIPS64R2;
+  }
 }
 
 let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
@@ -823,6 +834,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dsll $rd, $rt",
                       (DSLLV GPR64Opnd:$rd, GPR64Opnd:$rd, GPR32Opnd:$rt), 0>,
                       ISA_MIPS3;
+  def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                      (DINSM GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                             uimm_range_2_64:$size), 0>, ISA_MIPS64R2;
+  def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
+                      (DINSU GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5_plus32:$pos,
+                             uimm5_plus1:$size), 0>, ISA_MIPS64R2;
 
 // Two operand (implicit 0 selector) versions:
   def : MipsInstAlias<"dmtc0 $rt, $rd",

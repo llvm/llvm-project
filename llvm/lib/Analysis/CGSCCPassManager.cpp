@@ -72,8 +72,13 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // Update the SCC if necessary.
     C = UR.UpdatedC ? UR.UpdatedC : C;
 
+    // If the CGSCC pass wasn't able to provide a valid updated SCC, the
+    // current SCC may simply need to be skipped if invalid.
+    if (UR.InvalidatedSCCs.count(C)) {
+      DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
+      break;
+    }
     // Check that we didn't miss any update scenario.
-    assert(!UR.InvalidatedSCCs.count(C) && "Processing an invalid SCC!");
     assert(C->begin() != C->end() && "Cannot have an empty SCC!");
 
     // Update the analysis manager as each pass runs and potentially

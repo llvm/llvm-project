@@ -1201,18 +1201,22 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;
-    int Align = Pair.second;
+    uint32_t Alignment = Pair.second;
+
     Symbol *Sym = Symtab->find(Name);
     if (!Sym) {
       warn("/aligncomm symbol " + Name + " not found");
       continue;
     }
+
     auto *DC = dyn_cast<DefinedCommon>(Sym->body());
     if (!DC) {
       warn("/aligncomm symbol " + Name + " of wrong kind");
       continue;
     }
-    DC->getChunk()->setAlign(Align);
+
+    CommonChunk *C = DC->getChunk();
+    C->Alignment = std::max(C->Alignment, Alignment);
   }
 
   // Windows specific -- Create a side-by-side manifest file.

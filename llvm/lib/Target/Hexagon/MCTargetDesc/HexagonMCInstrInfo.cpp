@@ -226,12 +226,11 @@ void HexagonMCInstrInfo::extendIfNeeded(MCContext &Context,
     addConstExtender(Context, MCII, MCB, MCI);
 }
 
-HexagonII::MemAccessSize
-HexagonMCInstrInfo::getAccessSize(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-
-  return (HexagonII::MemAccessSize((F >> HexagonII::MemAccessSizePos) &
-                                   HexagonII::MemAccesSizeMask));
+unsigned HexagonMCInstrInfo::getMemAccessSize(MCInstrInfo const &MCII,
+      MCInst const &MCI) {
+  uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  unsigned S = (F >> HexagonII::MemAccessSizePos) & HexagonII::MemAccesSizeMask;
+  return HexagonII::getMemAccessSizeInBytes(HexagonII::MemAccessSize(S));
 }
 
 MCInstrDesc const &HexagonMCInstrInfo::getDesc(MCInstrInfo const &MCII,

@@ -45,16 +45,14 @@ namespace HexagonII {
     PostInc        = 6   // Post increment addressing mode
   };
 
-  // MemAccessSize is represented as 1+log2(N) where N is size in bits.
-  enum class MemAccessSize {
-    NoMemAccess = 0,            // Not a memory access instruction.
-    ByteAccess = 1,             // Byte access instruction (memb).
-    HalfWordAccess = 2,         // Half word access instruction (memh).
-    WordAccess = 3,             // Word access instruction (memw).
-    DoubleWordAccess = 4,       // Double word access instruction (memd)
-                    // 5,       // We do not have a 16 byte vector access.
-    Vector64Access = 7,         // 64 Byte vector access instruction (vmem).
-    Vector128Access = 8         // 128 Byte vector access instruction (vmem).
+  enum MemAccessSize {
+    NoMemAccess = 0,
+    ByteAccess,
+    HalfWordAccess,
+    WordAccess,
+    DoubleWordAccess,
+    Vector64Access,
+    Vector128Access
   };
 
   // MCInstrDesc TSFlags
@@ -263,6 +261,16 @@ namespace HexagonII {
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
+  LLVM_ATTRIBUTE_UNUSED
+  static unsigned getMemAccessSizeInBytes(MemAccessSize S) {
+    switch (S) {
+      case ByteAccess:        return 1;
+      case HalfWordAccess:    return 2;
+      case WordAccess:        return 4;
+      case DoubleWordAccess:  return 8;
+      default:                return 0;
+    }
+  }
 } // end namespace HexagonII
 
 } // end namespace llvm

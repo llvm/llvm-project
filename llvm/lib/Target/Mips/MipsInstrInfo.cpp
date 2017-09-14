@@ -531,3 +531,90 @@ bool MipsInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   }
   return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
 }
+
+// ins, ext, dext*, dins have the following constraints:
+// 0 <= pos      <  X
+// 0 <  size     <= X
+// 0 <  pos+size <= x
+//
+// dinsm and dinsm have the following contraints:
+// 0 <= pos      <  X
+// 0 <= size     <= X
+// 0 <  pos+size <= x
+
+static bool verifyInsExtInstruction(const MachineInstr &MI, StringRef &ErrInfo,
+                                    const int64_t PosLow, const int64_t PosHigh,
+                                    const int64_t SizeLow,
+                                    const int64_t SizeHigh,
+                                    const int64_t BothLow,
+                                    const int64_t BothHigh) {
+  MachineOperand MOPos = MI.getOperand(2);
+  if (!MOPos.isImm()) {
+    ErrInfo = "Position is not an immediate!";
+    return false;
+  }
+  int64_t Pos = MOPos.getImm();
+  if (!((PosLow <= Pos) && (Pos < PosHigh))) {
+    ErrInfo = "Position operand is out of range!";
+    return false;
+  }
+
+  MachineOperand MOSize = MI.getOperand(3);
+  if (!MOSize.isImm()) {
+    ErrInfo = "Size operand is not an immediate!";
+    return false;
+  }
+  int64_t Size = MOSize.getImm();
+  if (!((SizeLow < Size) && (Size <= SizeHigh))) {
+    ErrInfo = "Size operand is out of range!";
+    return false;
+  }
+
+  if (!((BothLow < (Pos + Size)) && ((Pos + Size) <= BothHigh))) {
+    ErrInfo = "Position + Size is out of range!";
+    return false;
+  }
+
+  return true;
+}
+
+//  Perform target specific instruction verification.
+bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
+                                      StringRef &ErrInfo) const {
+  // Verify that ins and ext instructions are well formed.
+  switch (MI.getOpcode()) {
+    case Mips::EXT:
+    case Mips::EXT_MM:
+    case Mips::INS:
+    case Mips::INS_MM:
+    case Mips::DINS:
+    case Mips::DINS_MM64R6:
+      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
+    case Mips::DINSM:
+    case Mips::DINSM_MM64R6:
+      // The ISA spec has a subtle difference here in that it says:
+      //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
+      // is in line with the rest of instructions.
+      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 1, 64, 32, 64);
+    case Mips::DINSU:
+    case Mips::DINSU_MM64R6:
+      // The ISA spec has a subtle difference here in that it says:
+      //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
+      // is in line with the rest of instructions.
+      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 1, 32, 32, 64);
+    case Mips::DEXT:
+    case Mips::DEXT_MM64R6:
+      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 63);
+    case Mips::DEXTM:
+    case Mips::DEXTM_MM64R6:
+      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 32, 64, 32, 64);
+    case Mips::DEXTU:
+    case Mips::DEXTU_MM64R6:
+      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
+    default:
+      return true;
+  }
+
+  return true;
+}
+

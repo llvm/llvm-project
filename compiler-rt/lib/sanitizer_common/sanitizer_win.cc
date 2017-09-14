@@ -858,6 +858,10 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // FIXME: Decide what to do on Windows.
 }
 
+void StartReportDeadlySignal() {
+  // FIXME: Decide what to do on Windows.
+}
+
 HandleSignalMode GetHandleSignalMode(int signum) {
   // FIXME: Decide what to do on Windows.
   return kHandleSignalNo;
@@ -915,33 +919,48 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
-SignalContext SignalContext::Create(void *siginfo, void *context) {
+bool SignalContext::IsStackOverflow() const {
+  return GetType() == EXCEPTION_STACK_OVERFLOW;
+}
+
+void SignalContext::InitPcSpBp() {
   EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
   CONTEXT *context_record = (CONTEXT *)context;
 
-  uptr pc = (uptr)exception_record->ExceptionAddress;
+  pc = (uptr)exception_record->ExceptionAddress;
 #ifdef _WIN64
-  uptr bp = (uptr)context_record->Rbp;
-  uptr sp = (uptr)context_record->Rsp;
+  bp = (uptr)context_record->Rbp;
+  sp = (uptr)context_record->Rsp;
 #else
-  uptr bp = (uptr)context_record->Ebp;
-  uptr sp = (uptr)context_record->Esp;
+  bp = (uptr)context_record->Ebp;
+  sp = (uptr)context_record->Esp;
 #endif
-  uptr access_addr = exception_record->ExceptionInformation[1];
+}
 
+uptr SignalContext::GetAddress() const {
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
+  return exception_record->ExceptionInformation[1];
+}
+
+bool SignalContext::IsMemoryAccess() const {
+  return GetWriteFlag() != SignalContext::UNKNOWN;
+}
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
   // The contents of this array are documented at
   // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363082(v=vs.85).aspx
   // The first element indicates read as 0, write as 1, or execute as 8.  The
   // second element is the faulting address.
-  WriteFlag write_flag = SignalContext::UNKNOWN;
   switch (exception_record->ExceptionInformation[0]) {
-  case 0: write_flag = SignalContext::READ; break;
-  case 1: write_flag = SignalContext::WRITE; break;
-  case 8: write_flag = SignalContext::UNKNOWN; break;
+    case 0:
+      return SignalContext::READ;
+    case 1:
+      return SignalContext::WRITE;
+    case 8:
+      return SignalContext::UNKNOWN;
   }
-  bool is_memory_access = write_flag != SignalContext::UNKNOWN;
-  return SignalContext(siginfo, context, access_addr, pc, sp, bp,
-                       is_memory_access, write_flag);
+  return SignalContext::UNKNOWN;
 }
 
 void SignalContext::DumpAllRegisters(void *context) {

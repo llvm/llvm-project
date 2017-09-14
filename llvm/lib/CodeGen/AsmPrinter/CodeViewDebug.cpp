@@ -1277,11 +1277,12 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
            "codeview doesn't support subranges with lower bounds");
     int64_t Count = Subrange->getCount();
 
-    // Variable Length Array (VLA) has Count equal to '-1'.
-    // Replace with Count '1', assume it is the minimum VLA length.
-    // FIXME: Make front-end support VLA subrange and emit LF_DIMVARLU.
+    // Forward declarations of arrays without a size and VLAs use a count of -1.
+    // Emit a count of zero in these cases to match what MSVC does for arrays
+    // without a size. MSVC doesn't support VLAs, so it's not clear what we
+    // should do for them even if we could distinguish them.
     if (Count == -1)
-      Count = 1;
+      Count = 0;
 
     // Update the element size and element type index for subsequent subranges.
     ElementSize *= Count;

@@ -13,9 +13,11 @@
 typedef uint64_t semval_t;
 
 // This condition needs to correspond to __HAVE_64B_ATOMICS macro in glibc.
-#elif (defined(__x86_64__) || defined(__aarch64__) || defined(__powerpc64__) || \
-     defined(__s390x__) || defined(__sparc64__) || defined(__alpha__) || \
-     defined(__ia64__) || defined(__m68k__)) && __GLIBC_PREREQ(2, 21)
+#elif (defined(__x86_64__) || defined(__aarch64__) ||                          \
+       defined(__powerpc64__) || defined(__s390x__) || defined(__sparc64__) || \
+       defined(__alpha__) || defined(__ia64__) || defined(__m68k__) ||         \
+       (defined(__mips64) || _MIPS_SIM == _ABI64)) &&                          \
+    __GLIBC_PREREQ(2, 21)
 typedef uint64_t semval_t;
 #else
 typedef unsigned semval_t;

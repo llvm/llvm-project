@@ -2104,8 +2104,13 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
 ///
 /// Only called for LdSt for which getMemOpBaseRegImmOfs returns true.
 bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
+                                           unsigned BaseReg1,
                                            MachineInstr &SecondLdSt,
+                                           unsigned BaseReg2,
                                            unsigned NumLoads) const {
+  if (BaseReg1 != BaseReg2)
+    return false;
+
   // Only cluster up to a single pair.
   if (NumLoads > 1)
     return false;

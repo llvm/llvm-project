@@ -22,7 +22,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT:         nop
 ; CHECK-NEXT:         mtlr 0
 }
-; CHECK-LABEL: xray_instr_map,"awo",@progbits,.text,unique,1
+; CHECK-LABEL: xray_instr_map,"awo",@progbits,foo,unique,1
 ; CHECK:      .Lxray_sleds_start0:
 ; CHECK-NEXT:         .quad   .Ltmp0
 ; CHECK-NEXT:         .quad   foo
@@ -37,7 +37,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT:         .byte   0x00
 ; CHECK-NEXT:         .space  13
 ; CHECK-NEXT: .Lxray_sleds_end0:
-; CHECK-LABEL: xray_fn_idx,"awo",@progbits,.text,unique,1
+; CHECK-LABEL: xray_fn_idx,"awo",@progbits,foo,unique,1
 ; CHECK:              .p2align        4
 ; CHECK-NEXT:         .quad   .Lxray_sleds_start0
 ; CHECK-NEXT:         .quad   .Lxray_sleds_end0

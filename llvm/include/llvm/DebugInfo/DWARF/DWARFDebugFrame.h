@@ -36,6 +36,9 @@ public:
   /// data is assumed to be pointing to the beginning of the section.
   void parse(DataExtractor Data);
 
+  /// Return whether the section has any entries.
+  bool empty() const { return Entries.empty(); }
+
 private:
   std::vector<std::unique_ptr<FrameEntry>> Entries;
 };

@@ -28,12 +28,12 @@ define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality
 }
 
 ; Function Attrs: nounwind uwtable
-define internal void @_ZL3barv() !dbg !12 {
+define internal void @_ZL3barv() #0 !dbg !12 {
   ret void
 }
 
 ; CHECK-LABEL: @recursive
-define void @recursive() !dbg !13 {
+define void @recursive() #0 !dbg !13 {
 ; Recursive calls should not be early-inlined.
 ; CHECK-NOT: call void @recursive
 ; CHECK: call void @recursive

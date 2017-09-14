@@ -239,8 +239,7 @@ bool EEVT::TypeSet::EnforceInteger(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the fp types.
-  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isInteger))),
-                TypeVec.end());
+  erase_if(TypeVec, [](MVT::SimpleValueType VT) { return !isInteger(VT); });
 
   if (TypeVec.empty()) {
     TP.error("Type inference contradiction found, '" +
@@ -264,8 +263,8 @@ bool EEVT::TypeSet::EnforceFloatingPoint(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the integer types.
-  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isFloatingPoint))),
-                TypeVec.end());
+  erase_if(TypeVec,
+           [](MVT::SimpleValueType VT) { return !isFloatingPoint(VT); });
 
   if (TypeVec.empty()) {
     TP.error("Type inference contradiction found, '" +
@@ -290,8 +289,7 @@ bool EEVT::TypeSet::EnforceScalar(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the vector types.
-  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isScalar))),
-                TypeVec.end());
+  erase_if(TypeVec, [](MVT::SimpleValueType VT) { return !isScalar(VT); });
 
   if (TypeVec.empty()) {
     TP.error("Type inference contradiction found, '" +
@@ -314,8 +312,7 @@ bool EEVT::TypeSet::EnforceVector(TreePattern &TP) {
   bool MadeChange = false;
 
   // Filter out all the scalar types.
-  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isVector))),
-                TypeVec.end());
+  erase_if(TypeVec, [](MVT::SimpleValueType VT) { return !isVector(VT); });
 
   if (TypeVec.empty()) {
     TP.error("Type inference contradiction found, '" +

@@ -215,6 +215,15 @@ AtomicChange::AtomicChange(std::string Key, std::string FilePath,
       RemovedHeaders(std::move(RemovedHeaders)), Replaces(std::move(Replaces)) {
 }
 
+bool AtomicChange::operator==(const AtomicChange &Other) const {
+  if (Key != Other.Key || FilePath != Other.FilePath || Error != Other.Error)
+    return false;
+  if (!(Replaces == Other.Replaces))
+    return false;
+  // FXIME: Compare header insertions/removals.
+  return true;
+}
+
 std::string AtomicChange::toYAMLString() {
   std::string YamlContent;
   llvm::raw_string_ostream YamlContentStream(YamlContent);

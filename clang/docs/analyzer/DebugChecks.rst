@@ -74,7 +74,7 @@ inspects expressions.)
 ExprInspection checks
 ---------------------
 
-- void clang_analyzer_eval(bool);
+- ``void clang_analyzer_eval(bool);``
 
   Prints TRUE if the argument is known to have a non-zero value, FALSE if the
   argument is known to have a zero or null value, and UNKNOWN if the argument
@@ -93,7 +93,7 @@ ExprInspection checks
     clang_analyzer_eval(x); // expected-warning{{TRUE}}
 
 
-- void clang_analyzer_checkInlined(bool);
+- ``void clang_analyzer_checkInlined(bool);``
 
   If a call occurs within an inlined function, prints TRUE or FALSE according to
   the value of its argument. If a call occurs outside an inlined function,
@@ -125,7 +125,7 @@ ExprInspection checks
       clang_analyzer_eval(value == 42); // expected-warning{{TRUE}}
     }
 
-- void clang_analyzer_warnIfReached();
+- ``void clang_analyzer_warnIfReached();``
 
   Generate a warning if this line of code gets reached by the analyzer.
 
@@ -138,7 +138,7 @@ ExprInspection checks
       clang_analyzer_warnIfReached();  // no-warning
     }
 
-- void clang_analyzer_numTimesReached();
+- ``void clang_analyzer_numTimesReached();``
 
   Same as above, but include the number of times this call expression
   gets reached by the analyzer during the current analysis.
@@ -149,7 +149,7 @@ ExprInspection checks
       clang_analyzer_numTimesReached(); // expected-warning{{3}}
     }
 
-- void clang_analyzer_warnOnDeadSymbol(int);
+- ``void clang_analyzer_warnOnDeadSymbol(int);``
 
   Subscribe for a delayed warning when the symbol that represents the value of
   the argument is garbage-collected by the analyzer.
@@ -173,7 +173,7 @@ ExprInspection checks
     } while(0);  // expected-warning{{SYMBOL DEAD}}
 
 
-- void clang_analyzer_explain(a single argument of any type);
+- ``void clang_analyzer_explain(a single argument of any type);``
 
   This function explains the value of its argument in a human-readable manner
   in the warning message. You can make as many overrides of its prototype
@@ -197,7 +197,7 @@ ExprInspection checks
         clang_analyzer_explain(ptr); // expected-warning{{memory address '0'}}
     }
 
-- void clang_analyzer_dump(a single argument of any type);
+- ``void clang_analyzer_dump( /* a single argument of any type */);``
 
   Similar to clang_analyzer_explain, but produces a raw dump of the value,
   same as SVal::dump().
@@ -209,7 +209,7 @@ ExprInspection checks
       clang_analyzer_dump(x); // expected-warning{{reg_$0<x>}}
     }
 
-- size_t clang_analyzer_getExtent(void *);
+- ``size_t clang_analyzer_getExtent(void *);``
 
   This function returns the value that represents the extent of a memory region
   pointed to by the argument. This value is often difficult to obtain otherwise,
@@ -226,7 +226,7 @@ ExprInspection checks
       clang_analyzer_explain(ys); // expected-warning{{'8'}}
     }
 
-- void clang_analyzer_printState();
+- ``void clang_analyzer_printState();``
 
   Dumps the current ProgramState to the stderr. Quickly lookup the program state
   at any execution point without ViewExplodedGraph or re-compiling the program.

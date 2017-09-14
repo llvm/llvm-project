@@ -215,7 +215,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   MaybeInstallSigaction(SIGILL, handler);
 }
 
-bool IsStackOverflow(const SignalContext &sig) {
+bool SignalContext::IsStackOverflow() const {
   // Access at a reasonable offset above SP, or slightly below it (to account
   // for x86_64 or PowerPC redzone, ARM push of multiple registers, etc) is
   // probably a stack overflow.
@@ -223,10 +223,9 @@ bool IsStackOverflow(const SignalContext &sig) {
   // On s390, the fault address in siginfo points to start of the page, not
   // to the precise word that was accessed.  Mask off the low bits of sp to
   // take it into account.
-  bool IsStackAccess =
-      sig.addr >= (sig.sp & ~0xFFF) && sig.addr < sig.sp + 0xFFFF;
+  bool IsStackAccess = sig.addr >= (sig.sp & ~0xFFF) && sig.addr < sp + 0xFFFF;
 #else
-  bool IsStackAccess = sig.addr + 512 > sig.sp && sig.addr < sig.sp + 0xFFFF;
+  bool IsStackAccess = addr + 512 > sp && addr < sp + 0xFFFF;
 #endif
 
 #if __powerpc__
@@ -236,8 +235,8 @@ bool IsStackOverflow(const SignalContext &sig) {
   // If the store faults then sp will not have been updated, so test above
   // will not work, because the fault address will be more than just "slightly"
   // below sp.
-  if (!IsStackAccess && IsAccessibleMemoryRange(sig.pc, 4)) {
-    u32 inst = *(unsigned *)sig.pc;
+  if (!IsStackAccess && IsAccessibleMemoryRange(pc, 4)) {
+    u32 inst = *(unsigned *)pc;
     u32 ra = (inst >> 16) & 0x1F;
     u32 opcd = inst >> 26;
     u32 xo = (inst >> 1) & 0x3FF;
@@ -257,7 +256,7 @@ bool IsStackOverflow(const SignalContext &sig) {
   // We also check si_code to filter out SEGV caused by something else other
   // then hitting the guard page or unmapped memory, like, for example,
   // unaligned memory access.
-  auto si = static_cast<const siginfo_t *>(sig.siginfo);
+  auto si = static_cast<const siginfo_t *>(siginfo);
   return IsStackAccess &&
          (si->si_code == si_SEGV_MAPERR || si->si_code == si_SEGV_ACCERR);
 }

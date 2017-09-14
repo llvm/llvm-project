@@ -905,6 +905,68 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   return nullptr;
 }
 
+/// Given a predicate and two operands, return true if the comparison is true.
+/// This is a helper for div/rem simplification where we return some other value
+/// when we can prove a relationship between the operands.
+static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                       const SimplifyQuery &Q, unsigned MaxRecurse) {
+  Value *V = SimplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
+  Constant *C = dyn_cast_or_null<Constant>(V);
+  return (C && C->isAllOnesValue());
+}
+
+/// Return true if we can simplify X / Y to 0. Remainder can adapt that answer
+/// to simplify X % Y to X.
+static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
+                      unsigned MaxRecurse, bool IsSigned) {
+  // Recursion is always used, so bail out at once if we already hit the limit.
+  if (!MaxRecurse--)
+    return false;
+
+  if (IsSigned) {
+    // |X| / |Y| --> 0
+    //
+    // We require that 1 operand is a simple constant. That could be extended to
+    // 2 variables if we computed the sign bit for each.
+    //
+    // Make sure that a constant is not the minimum signed value because taking
+    // the abs() of that is undefined.
+    Type *Ty = X->getType();
+    const APInt *C;
+    if (match(X, m_APInt(C)) && !C->isMinSignedValue()) {
+      // Is the variable divisor magnitude always greater than the constant
+      // dividend magnitude?
+      // |Y| > |C| --> Y < -abs(C) or Y > abs(C)
+      Constant *PosDividendC = ConstantInt::get(Ty, C->abs());
+      Constant *NegDividendC = ConstantInt::get(Ty, -C->abs());
+      if (isICmpTrue(CmpInst::ICMP_SLT, Y, NegDividendC, Q, MaxRecurse) ||
+          isICmpTrue(CmpInst::ICMP_SGT, Y, PosDividendC, Q, MaxRecurse))
+        return true;
+    }
+    if (match(Y, m_APInt(C))) {
+      // Special-case: we can't take the abs() of a minimum signed value. If
+      // that's the divisor, then all we have to do is prove that the dividend
+      // is also not the minimum signed value.
+      if (C->isMinSignedValue())
+        return isICmpTrue(CmpInst::ICMP_NE, X, Y, Q, MaxRecurse);
+
+      // Is the variable dividend magnitude always less than the constant
+      // divisor magnitude?
+      // |X| < |C| --> X > -abs(C) and X < abs(C)
+      Constant *PosDivisorC = ConstantInt::get(Ty, C->abs());
+      Constant *NegDivisorC = ConstantInt::get(Ty, -C->abs());
+      if (isICmpTrue(CmpInst::ICMP_SGT, X, NegDivisorC, Q, MaxRecurse) &&
+          isICmpTrue(CmpInst::ICMP_SLT, X, PosDivisorC, Q, MaxRecurse))
+        return true;
+    }
+    return false;
+  }
+
+  // IsSigned == false.
+  // Is the dividend unsigned less than the divisor?
+  return isICmpTrue(ICmpInst::ICMP_ULT, X, Y, Q, MaxRecurse);
+}
+
 /// These are simplifications common to SDiv and UDiv.
 static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                           const SimplifyQuery &Q, unsigned MaxRecurse) {
@@ -914,7 +976,7 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Value *V = simplifyDivRem(Op0, Op1, true))
     return V;
 
-  bool isSigned = Opcode == Instruction::SDiv;
+  bool IsSigned = Opcode == Instruction::SDiv;
 
   // (X * Y) / Y -> X if the multiplication does not overflow.
   Value *X = nullptr, *Y = nullptr;
@@ -922,8 +984,8 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     if (Y != Op1) std::swap(X, Y); // Ensure expression is (X * Y) / Y, Y = Op1
     OverflowingBinaryOperator *Mul = cast<OverflowingBinaryOperator>(Op0);
     // If the Mul knows it does not overflow, then we are good to go.
-    if ((isSigned && Mul->hasNoSignedWrap()) ||
-        (!isSigned && Mul->hasNoUnsignedWrap()))
+    if ((IsSigned && Mul->hasNoSignedWrap()) ||
+        (!IsSigned && Mul->hasNoUnsignedWrap()))
       return X;
     // If X has the form X = A / Y then X * Y cannot overflow.
     if (BinaryOperator *Div = dyn_cast<BinaryOperator>(X))
@@ -932,13 +994,13 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   }
 
   // (X rem Y) / Y -> 0
-  if ((isSigned && match(Op0, m_SRem(m_Value(), m_Specific(Op1)))) ||
-      (!isSigned && match(Op0, m_URem(m_Value(), m_Specific(Op1)))))
+  if ((IsSigned && match(Op0, m_SRem(m_Value(), m_Specific(Op1)))) ||
+      (!IsSigned && match(Op0, m_URem(m_Value(), m_Specific(Op1)))))
     return Constant::getNullValue(Op0->getType());
 
   // (X /u C1) /u C2 -> 0 if C1 * C2 overflow
   ConstantInt *C1, *C2;
-  if (!isSigned && match(Op0, m_UDiv(m_Value(X), m_ConstantInt(C1))) &&
+  if (!IsSigned && match(Op0, m_UDiv(m_Value(X), m_ConstantInt(C1))) &&
       match(Op1, m_ConstantInt(C2))) {
     bool Overflow;
     (void)C1->getValue().umul_ov(C2->getValue(), Overflow);
@@ -957,6 +1019,9 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
     if (Value *V = ThreadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
       return V;
+
+  if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
+    return Constant::getNullValue(Op0->getType());
 
   return nullptr;
 }
@@ -989,32 +1054,9 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     if (Value *V = ThreadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
       return V;
 
-  return nullptr;
-}
-
-/// Given a predicate and two operands, return true if the comparison is true.
-/// This is a helper for div/rem simplification where we return some other value
-/// when we can prove a relationship between the operands.
-static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
-                       const SimplifyQuery &Q, unsigned MaxRecurse) {
-  Value *V = SimplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
-  Constant *C = dyn_cast_or_null<Constant>(V);
-  return (C && C->isAllOnesValue());
-}
-
-static Value *simplifyUnsignedDivRem(Value *Op0, Value *Op1,
-                                     const SimplifyQuery &Q,
-                                     unsigned MaxRecurse, bool IsDiv) {
-  // Recursion is always used, so bail out at once if we already hit the limit.
-  if (!MaxRecurse--)
-    return nullptr;
-
-  // If we can prove that the quotient is unsigned less than the divisor, then
-  // we know the answer:
-  // X / Y --> 0
-  // X % Y --> X
-  if (isICmpTrue(ICmpInst::ICMP_ULT, Op0, Op1, Q, MaxRecurse))
-    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
+  // If X / Y == 0, then X % Y == X.
+  if (isDivZero(Op0, Op1, Q, MaxRecurse, Opcode == Instruction::SRem))
+    return Op0;
 
   return nullptr;
 }
@@ -1023,10 +1065,7 @@ static Value *simplifyUnsignedDivRem(Value *Op0, Value *Op1,
 /// If not, this returns null.
 static Value *SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = simplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  return nullptr;
+  return simplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse);
 }
 
 Value *llvm::SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
@@ -1037,13 +1076,7 @@ Value *llvm::SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 /// If not, this returns null.
 static Value *SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = simplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  if (Value *V = simplifyUnsignedDivRem(Op0, Op1, Q, MaxRecurse, true))
-    return V;
-
-  return nullptr;
+  return simplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse);
 }
 
 Value *llvm::SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
@@ -1054,10 +1087,7 @@ Value *llvm::SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 /// If not, this returns null.
 static Value *SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = simplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  return nullptr;
+  return simplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse);
 }
 
 Value *llvm::SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
@@ -1068,13 +1098,7 @@ Value *llvm::SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 /// If not, this returns null.
 static Value *SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = simplifyRem(Instruction::URem, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  if (Value *V = simplifyUnsignedDivRem(Op0, Op1, Q, MaxRecurse, false))
-    return V;
-
-  return nullptr;
+  return simplifyRem(Instruction::URem, Op0, Op1, Q, MaxRecurse);
 }
 
 Value *llvm::SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {

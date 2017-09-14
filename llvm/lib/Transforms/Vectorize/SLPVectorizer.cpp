@@ -1459,7 +1459,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check that all of the users of the scalars that we want to vectorize are
   // schedulable.
-  Instruction *VL0 = cast<Instruction>(S.OpValue);
+  auto *VL0 = cast<Instruction>(S.OpValue);
   BasicBlock *BB = VL0->getParent();
 
   if (!DT->isReachableFromEntry(BB)) {
