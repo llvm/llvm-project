@@ -86,6 +86,7 @@ public:
 
 private:
   friend class SBBreakpoint;
+  friend class SBBreakpointCallbackBaton;
 
   void SetLocation(const lldb::BreakpointLocationSP &break_loc_sp);
   BreakpointLocationSP GetSP() const;

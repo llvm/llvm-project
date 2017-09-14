@@ -132,7 +132,7 @@ BreakpointOptions::BreakpointOptions(bool all_flags_set)
       m_baton_is_command_baton(false), m_callback_is_synchronous(false),
       m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_ap(),
       m_condition_text(), m_condition_text_hash(0), m_auto_continue(false),
-      m_set_flags() {
+      m_set_flags(0) {
         if (all_flags_set)
           m_set_flags.Set(~((Flags::ValueType) 0));
       }
@@ -142,11 +142,14 @@ BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
                                      bool auto_continue)
     : m_callback(nullptr), m_baton_is_command_baton(false),
       m_callback_is_synchronous(false), m_enabled(enabled),
-      m_one_shot(one_shot), m_ignore_count(ignore), m_condition_text(condition),
+      m_one_shot(one_shot), m_ignore_count(ignore),
       m_condition_text_hash(0), m_auto_continue(auto_continue)
 {
     m_set_flags.Set(eEnabled | eIgnoreCount | eOneShot 
-                   | eCondition | eAutoContinue);
+                   | eAutoContinue);
+    if (condition && *condition != '\0') {
+      SetCondition(condition);
+    }
 }
 
 //----------------------------------------------------------------------
@@ -185,6 +188,59 @@ operator=(const BreakpointOptions &rhs) {
   m_auto_continue = rhs.m_auto_continue;
   m_set_flags = rhs.m_set_flags;
   return *this;
+}
+
+void BreakpointOptions::CopyOverSetOptions(const BreakpointOptions &incoming)
+{
+  if (incoming.m_set_flags.Test(eEnabled))
+  {
+    m_enabled = incoming.m_enabled;
+    m_set_flags.Set(eEnabled);
+  }
+  if (incoming.m_set_flags.Test(eOneShot))
+  {
+    m_one_shot = incoming.m_one_shot;
+    m_set_flags.Set(eOneShot);
+  }
+  if (incoming.m_set_flags.Test(eCallback))
+  {
+    m_callback = incoming.m_callback;
+    m_callback_baton_sp = incoming.m_callback_baton_sp;
+    m_callback_is_synchronous = incoming.m_callback_is_synchronous;
+    m_baton_is_command_baton = incoming.m_baton_is_command_baton;
+    m_set_flags.Set(eCallback);
+  }
+  if (incoming.m_set_flags.Test(eIgnoreCount))
+  {
+    m_ignore_count = incoming.m_ignore_count;
+    m_set_flags.Set(eIgnoreCount);
+  }
+  if (incoming.m_set_flags.Test(eCondition))
+  {
+    // If we're copying over an empty condition, mark it as unset.
+    if (incoming.m_condition_text.empty()) {
+      m_condition_text.clear();
+      m_condition_text_hash = 0;
+      m_set_flags.Clear(eCondition);
+    } else {
+      m_condition_text = incoming.m_condition_text;
+      m_condition_text_hash = incoming.m_condition_text_hash;
+      m_set_flags.Set(eCondition);
+    }
+  }
+  if (incoming.m_set_flags.Test(eAutoContinue))
+  {
+    m_auto_continue = incoming.m_auto_continue;
+    m_set_flags.Set(eAutoContinue);
+  }
+  if (incoming.m_set_flags.Test(eThreadSpec) && incoming.m_thread_spec_ap)
+  {
+    if (!m_thread_spec_ap)
+      m_thread_spec_ap.reset(new ThreadSpec(*incoming.m_thread_spec_ap.get()));
+    else
+      *m_thread_spec_ap.get() = *incoming.m_thread_spec_ap.get();
+    m_set_flags.Set(eThreadSpec);
+  }
 }
 
 //----------------------------------------------------------------------
@@ -327,23 +383,23 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
 StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
   StructuredData::DictionarySP options_dict_sp(
       new StructuredData::Dictionary());
-  if (m_set_flags.Set(eEnabled))
+  if (m_set_flags.Test(eEnabled))
     options_dict_sp->AddBooleanItem(GetKey(OptionNames::EnabledState),
                                     m_enabled);
-  if (m_set_flags.Set(eOneShot))
+  if (m_set_flags.Test(eOneShot))
     options_dict_sp->AddBooleanItem(GetKey(OptionNames::OneShotState),
                                m_one_shot);
-  if (m_set_flags.Set(eAutoContinue))
+  if (m_set_flags.Test(eAutoContinue))
     options_dict_sp->AddBooleanItem(GetKey(OptionNames::AutoContinue),
                                m_auto_continue);
-  if (m_set_flags.Set(eIgnoreCount))
+  if (m_set_flags.Test(eIgnoreCount))
     options_dict_sp->AddIntegerItem(GetKey(OptionNames::IgnoreCount),
                                     m_ignore_count);
-  if (m_set_flags.Set(eCondition))
+  if (m_set_flags.Test(eCondition))
     options_dict_sp->AddStringItem(GetKey(OptionNames::ConditionText),
                                    m_condition_text);
          
-  if (m_set_flags.Set(eCallback) && m_baton_is_command_baton) {
+  if (m_set_flags.Test(eCallback) && m_baton_is_command_baton) {
     auto cmd_baton =
         std::static_pointer_cast<CommandBaton>(m_callback_baton_sp);
     StructuredData::ObjectSP commands_sp =
@@ -353,7 +409,7 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
           BreakpointOptions::CommandData::GetSerializationKey(), commands_sp);
     }
   }
-  if (m_set_flags.Set(eThreadSpec) && m_thread_spec_ap) {
+  if (m_set_flags.Test(eThreadSpec) && m_thread_spec_ap) {
     StructuredData::ObjectSP thread_spec_sp =
         m_thread_spec_ap->SerializeToStructuredData();
     options_dict_sp->AddItem(ThreadSpec::GetSerializationKey(), thread_spec_sp);
@@ -617,4 +673,19 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
     }
   }
   return ret_value;
+}
+
+void BreakpointOptions::Clear()
+{
+  m_set_flags.Clear();
+  m_thread_spec_ap.release();
+  m_one_shot = false;
+  m_ignore_count = 0;
+  m_auto_continue = false;
+  m_callback = nullptr;
+  m_callback_baton_sp.reset();
+  m_baton_is_command_baton = false;
+  m_callback_is_synchronous = false;
+  m_enabled = false;
+  m_condition_text.clear();
 }

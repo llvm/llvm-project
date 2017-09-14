@@ -18,6 +18,7 @@
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBreakpointName.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"

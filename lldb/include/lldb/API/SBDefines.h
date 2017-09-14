@@ -32,6 +32,8 @@ class LLDB_API SBAddress;
 class LLDB_API SBBlock;
 class LLDB_API SBBreakpoint;
 class LLDB_API SBBreakpointLocation;
+class LLDB_API SBBreakpointName;
+class LLDB_API SBBreakpointNameImpl;
 class LLDB_API SBBroadcaster;
 class LLDB_API SBCommand;
 class LLDB_API SBCommandInterpreter;
@@ -99,6 +101,10 @@ class LLDB_API SBValueList;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
 class LLDB_API SBUnixSignals;
+
+typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,
+                                        SBThread &thread,
+                                        lldb::SBBreakpointLocation &location);
 }
 
 #endif // LLDB_SBDefines_h_

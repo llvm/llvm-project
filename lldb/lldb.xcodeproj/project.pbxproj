@@ -769,15 +769,19 @@
 		49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */; };
 		49FE3ADF1E6770E300839A32 /* ModuleCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2654A67F1E54D59400DA1013 /* ModuleCache.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
+		4C05332B1F62121E00DED368 /* SBBreakpointOptionCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0533291F6211FB00DED368 /* SBBreakpointOptionCommon.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
 		4C4EB7811E6A4DCC002035C0 /* DumpDataExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */; };
+		4C54B27B1F61CE2800D469CA /* SBBreakpointName.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C54B2781F61CE1200D469CA /* SBBreakpointName.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4C54B27E1F61CE6300D469CA /* SBBreakpointName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C54B27C1F61CE5300D469CA /* SBBreakpointName.cpp */; };
 		4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */; };
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
 		4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */; };
 		4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */; };
+		4C7D482C1F509CF5005314B4 /* BreakpointName.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4C7D482B1F509CF5005314B4 /* BreakpointName.h */; };
 		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C848DFF18D2873500EC6DD0 /* SwiftASTManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFC18D2873500EC6DD0 /* SwiftASTManipulator.cpp */; };
 		4C848E0018D2873500EC6DD0 /* SwiftExpressionParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFD18D2873500EC6DD0 /* SwiftExpressionParser.cpp */; };
@@ -786,6 +790,7 @@
 		4C848E0B18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
+		4CAA19E61F5A40040099E692 /* BreakpointName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D48281F509CCD005314B4 /* BreakpointName.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
 		4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */; };
 		4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */; };
@@ -1371,6 +1376,10 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */,
+				9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */,
+				4C7D482C1F509CF5005314B4 /* BreakpointName.h in CopyFiles */,
+				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2674,6 +2683,8 @@
 		4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UtilityFunction.cpp; path = source/Expression/UtilityFunction.cpp; sourceTree = "<group>"; };
 		4C00986F11500B4300F316B0 /* UnixSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UnixSignals.h; path = include/lldb/Target/UnixSignals.h; sourceTree = "<group>"; };
 		4C00987011500B4300F316B0 /* UnixSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UnixSignals.cpp; path = source/Target/UnixSignals.cpp; sourceTree = "<group>"; };
+		4C0533291F6211FB00DED368 /* SBBreakpointOptionCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBBreakpointOptionCommon.cpp; path = source/API/SBBreakpointOptionCommon.cpp; sourceTree = "<group>"; };
+		4C05332C1F63092A00DED368 /* SBBreakpointName.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBBreakpointName.i; sourceTree = "<group>"; };
 		4C08CDE711C81EF8001610A8 /* ThreadSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadSpec.cpp; path = source/Target/ThreadSpec.cpp; sourceTree = "<group>"; };
 		4C08CDEB11C81F1E001610A8 /* ThreadSpec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadSpec.h; path = include/lldb/Target/ThreadSpec.h; sourceTree = "<group>"; };
 		4C09CB73116BD98B00C7A725 /* CommandCompletions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandCompletions.h; path = include/lldb/Interpreter/CommandCompletions.h; sourceTree = "<group>"; };
@@ -2690,6 +2701,9 @@
 		4C43DF8A11069C3200E55CBF /* ThreadPlanStepOverRange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanStepOverRange.cpp; path = source/Target/ThreadPlanStepOverRange.cpp; sourceTree = "<group>"; };
 		4C4EB77F1E6A4DB8002035C0 /* DumpDataExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DumpDataExtractor.cpp; path = source/Core/DumpDataExtractor.cpp; sourceTree = "<group>"; };
 		4C4EB7821E6A4DE7002035C0 /* DumpDataExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DumpDataExtractor.h; path = include/lldb/Core/DumpDataExtractor.h; sourceTree = "<group>"; };
+		4C54B2781F61CE1200D469CA /* SBBreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBBreakpointName.h; path = include/lldb/API/SBBreakpointName.h; sourceTree = "<group>"; };
+		4C54B27C1F61CE5300D469CA /* SBBreakpointName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBBreakpointName.cpp; path = source/API/SBBreakpointName.cpp; sourceTree = "<group>"; };
+		4C54B2811F62081300D469CA /* SBBreakpointOptionCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBBreakpointOptionCommon.h; path = include/lldb/API/SBBreakpointOptionCommon.h; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
 		4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanPython.cpp; path = source/Target/ThreadPlanPython.cpp; sourceTree = "<group>"; };
@@ -2719,6 +2733,8 @@
 		4C7D481D1F509964005314B4 /* SymbolFileDWARFDwoDwp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARFDwoDwp.h; sourceTree = "<group>"; };
 		4C7D481E1F509964005314B4 /* SymbolFileDWARFDwp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARFDwp.h; sourceTree = "<group>"; };
 		4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARFDwoDwp.cpp; sourceTree = "<group>"; };
+		4C7D48281F509CCD005314B4 /* BreakpointName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointName.cpp; path = source/Breakpoint/BreakpointName.cpp; sourceTree = "<group>"; };
+		4C7D482B1F509CF5005314B4 /* BreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointName.h; path = include/lldb/Breakpoint/BreakpointName.h; sourceTree = "<group>"; };
 		4C88BC291BA3722B00AA0964 /* Expression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Expression.cpp; path = source/Expression/Expression.cpp; sourceTree = "<group>"; };
 		4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangFunctionCaller.cpp; path = ExpressionParser/Clang/ClangFunctionCaller.cpp; sourceTree = "<group>"; };
 		4C98D3DB118FB96F00E575D0 /* IRExecutionUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRExecutionUnit.cpp; path = source/Expression/IRExecutionUnit.cpp; sourceTree = "<group>"; };
@@ -2739,6 +2755,7 @@
 		4CB443BC1249920C00C13DC2 /* CPPLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CPPLanguageRuntime.cpp; path = source/Target/CPPLanguageRuntime.cpp; sourceTree = "<group>"; };
 		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguageRuntime.cpp; path = source/Target/ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
 		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjCLanguageRuntime.h; path = include/lldb/Target/ObjCLanguageRuntime.h; sourceTree = "<group>"; };
+		4CBFF0471F579A36004AFA92 /* Flags.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Flags.h; path = include/lldb/Utility/Flags.h; sourceTree = "<group>"; };
 		4CC2A148128C73ED001531C4 /* ThreadPlanTracer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanTracer.cpp; path = source/Target/ThreadPlanTracer.cpp; sourceTree = "<group>"; };
 		4CC2A14C128C7409001531C4 /* ThreadPlanTracer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanTracer.h; path = include/lldb/Target/ThreadPlanTracer.h; sourceTree = "<group>"; };
 		4CC7C64C1D5298E20076FF94 /* OCamlLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlLanguage.h; path = Language/OCaml/OCamlLanguage.h; sourceTree = "<group>"; };
@@ -4126,6 +4143,7 @@
 				2611FEF0142D83060017FEA3 /* SBBlock.i */,
 				2611FEF1142D83060017FEA3 /* SBBreakpoint.i */,
 				2611FEF2142D83060017FEA3 /* SBBreakpointLocation.i */,
+				4C05332C1F63092A00DED368 /* SBBreakpointName.i */,
 				2611FEF3142D83060017FEA3 /* SBBroadcaster.i */,
 				2611FEF4142D83060017FEA3 /* SBCommandInterpreter.i */,
 				2611FEF5142D83060017FEA3 /* SBCommandReturnObject.i */,
@@ -4219,6 +4237,10 @@
 				9AF16A9C11402D5B007A7B3F /* SBBreakpoint.cpp */,
 				9AF16CC611408686007A7B3F /* SBBreakpointLocation.h */,
 				9AF16CC7114086A1007A7B3F /* SBBreakpointLocation.cpp */,
+				4C54B2781F61CE1200D469CA /* SBBreakpointName.h */,
+				4C54B27C1F61CE5300D469CA /* SBBreakpointName.cpp */,
+				4C54B2811F62081300D469CA /* SBBreakpointOptionCommon.h */,
+				4C0533291F6211FB00DED368 /* SBBreakpointOptionCommon.cpp */,
 				9A9830F31125FC5800A56CB0 /* SBBroadcaster.h */,
 				9A9830F21125FC5800A56CB0 /* SBBroadcaster.cpp */,
 				9A9830F71125FC5800A56CB0 /* SBCommandInterpreter.h */,
@@ -4541,6 +4563,7 @@
 				26BC7DD310F1B7D500F91463 /* Endian.h */,
 				AFC2DCE61E6E2ED000283714 /* FastDemangle.cpp */,
 				AFC2DCED1E6E2F9800283714 /* FastDemangle.h */,
+				4CBFF0471F579A36004AFA92 /* Flags.h */,
 				AFC2DCF21E6E30CF00283714 /* History.cpp */,
 				AFC2DCF41E6E30D800283714 /* History.h */,
 				236124A61986B50E004EFC37 /* IOObject.h */,
@@ -5238,6 +5261,8 @@
 				26BC7E0F10F1B83100F91463 /* BreakpointLocationCollection.cpp */,
 				26BC7CF410F1B71400F91463 /* BreakpointLocationList.h */,
 				26BC7E1010F1B83100F91463 /* BreakpointLocationList.cpp */,
+				4C7D48281F509CCD005314B4 /* BreakpointName.cpp */,
+				4C7D482B1F509CF5005314B4 /* BreakpointName.h */,
 				26BC7CF510F1B71400F91463 /* BreakpointOptions.h */,
 				26BC7E1110F1B83100F91463 /* BreakpointOptions.cpp */,
 				26BC7CF610F1B71400F91463 /* BreakpointResolver.h */,
@@ -6954,6 +6979,7 @@
 				26C72C94124322890068DC16 /* SBStream.h in Headers */,
 				9A357671116E7B5200E8ED2F /* SBStringList.h in Headers */,
 				26DE205B11618FF600A093E2 /* SBSymbol.h in Headers */,
+				4C54B27B1F61CE2800D469CA /* SBBreakpointName.h in Headers */,
 				262F12B71835469C00AEB384 /* SBPlatform.h in Headers */,
 				23DCBEA31D63E71F0084C36B /* SBStructuredData.h in Headers */,
 				26DE204111618AB900A093E2 /* SBSymbolContext.h in Headers */,
@@ -7735,6 +7761,7 @@
 				2668032C116005E2008E1FE4 /* SBFrame.cpp in Sources */,
 				2668032D116005E3008E1FE4 /* SBFileSpec.cpp in Sources */,
 				2668032E116005E5008E1FE4 /* SBEvent.cpp in Sources */,
+				4C54B27E1F61CE6300D469CA /* SBBreakpointName.cpp in Sources */,
 				2668032F116005E6008E1FE4 /* SBError.cpp in Sources */,
 				23DCEA461D1C4D0F00A602B4 /* SBMemoryRegionInfo.cpp in Sources */,
 				26680330116005E7008E1FE4 /* SBDebugger.cpp in Sources */,
@@ -7758,6 +7785,7 @@
 				26DE20651161904E00A093E2 /* SBSymbol.cpp in Sources */,
 				9A19A6B01163BBB300E0D453 /* SBValue.cpp in Sources */,
 				261744781168585B005ADD65 /* SBType.cpp in Sources */,
+				4C05332B1F62121E00DED368 /* SBBreakpointOptionCommon.cpp in Sources */,
 				9A35758E116CFE0F00E8ED2F /* SBValueList.cpp in Sources */,
 				9A357673116E7B6400E8ED2F /* SBStringList.cpp in Sources */,
 				9A1E595C1EB2B141002206A5 /* SBTrace.cpp in Sources */,
@@ -8114,6 +8142,7 @@
 				268900C913353E5F00698AC0 /* NameToDIE.cpp in Sources */,
 				AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */,
 				268900CA13353E5F00698AC0 /* SymbolFileDWARF.cpp in Sources */,
+				4CAA19E61F5A40040099E692 /* BreakpointName.cpp in Sources */,
 				268900CB13353E5F00698AC0 /* LogChannelDWARF.cpp in Sources */,
 				268900CC13353E5F00698AC0 /* SymbolFileDWARFDebugMap.cpp in Sources */,
 				268900CD13353E5F00698AC0 /* UniqueDWARFASTType.cpp in Sources */,
