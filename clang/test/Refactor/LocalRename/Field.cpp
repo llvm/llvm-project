@@ -1,4 +1,4 @@
-// RUN: clang-refactor local-rename -selection=test:%s -no-dbs %s | FileCheck %s
+// RUN: clang-refactor local-rename -selection=test:%s %s -- | FileCheck %s
 
 class Baz {
   int /*range=*/Foo; // CHECK: int /*range=*/Bar;

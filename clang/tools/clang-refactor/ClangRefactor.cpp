@@ -15,6 +15,7 @@
 
 #include "TestSupport.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
@@ -32,12 +33,6 @@ namespace cl = llvm::cl;
 namespace opts {
 
 static cl::OptionCategory CommonRefactorOptions("Common refactoring options");
-
-static cl::opt<bool>
-    NoDatabases("no-dbs",
-                cl::desc("Ignore external databases including Clang's "
-                         "compilation database and indexer stores"),
-                cl::cat(CommonRefactorOptions), cl::sub(*cl::AllSubCommands));
 
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
                              cl::cat(CommonRefactorOptions),
@@ -129,10 +124,6 @@ public:
                               cl::OptionCategory &Category)
       : SubCommand(Action->getCommand(), Action->getDescription()),
         Action(std::move(Action)), ActionRules(std::move(ActionRules)) {
-    Sources = llvm::make_unique<cl::list<std::string>>(
-        cl::Positional, cl::ZeroOrMore, cl::desc("<source0> [... <sourceN>]"),
-        cl::cat(Category), cl::sub(*this));
-
     // Check if the selection option is supported.
     bool HasSelection = false;
     for (const auto &Rule : this->ActionRules) {
@@ -169,13 +160,9 @@ public:
     assert(Selection && "selection not supported!");
     return ParsedSelection.get();
   }
-
-  ArrayRef<std::string> getSources() const { return *Sources; }
-
 private:
   std::unique_ptr<RefactoringAction> Action;
   RefactoringActionRules ActionRules;
-  std::unique_ptr<cl::list<std::string>> Sources;
   std::unique_ptr<cl::opt<std::string>> Selection;
   std::unique_ptr<SourceSelectionArgument> ParsedSelection;
 };
@@ -221,20 +208,9 @@ public:
   /// Parses the translation units that were given to the subcommand using
   /// the 'sources' option and invokes the callback for each parsed
   /// translation unit.
-  bool foreachTranslationUnit(RefactoringActionSubcommand &Subcommand,
+  bool foreachTranslationUnit(const CompilationDatabase &DB,
+                              ArrayRef<std::string> Sources,
                               TUCallbackType Callback) {
-    std::unique_ptr<CompilationDatabase> Compilations;
-    if (opts::NoDatabases) {
-      // FIXME (Alex L): Support compilation options.
-      Compilations =
-          llvm::make_unique<clang::tooling::FixedCompilationDatabase>(
-              ".", std::vector<std::string>());
-    } else {
-      // FIXME (Alex L): Support compilation database.
-      llvm::errs() << "compilation databases are not supported yet!\n";
-      return true;
-    }
-
     class ToolASTConsumer : public ASTConsumer {
     public:
       TUCallbackType Callback;
@@ -254,7 +230,7 @@ public:
       }
     };
 
-    ClangTool Tool(*Compilations, Subcommand.getSources());
+    ClangTool Tool(DB, Sources);
     ActionWrapper ToolAction(std::move(Callback));
     std::unique_ptr<tooling::FrontendActionFactory> Factory =
         tooling::newFrontendActionFactory(&ToolAction);
@@ -277,7 +253,9 @@ public:
     }
   }
 
-  bool invokeAction(RefactoringActionSubcommand &Subcommand) {
+  bool invokeAction(RefactoringActionSubcommand &Subcommand,
+                    const CompilationDatabase &DB,
+                    ArrayRef<std::string> Sources) {
     // Find a set of matching rules.
     SmallVector<RefactoringActionRule *, 4> MatchingRules;
     llvm::StringSet<> MissingOptions;
@@ -303,7 +281,7 @@ public:
 
     bool HasFailed = false;
     ClangRefactorConsumer Consumer;
-    if (foreachTranslationUnit(Subcommand, [&](ASTContext &AST) {
+    if (foreachTranslationUnit(DB, Sources, [&](ASTContext &AST) {
           RefactoringRuleContext Context(AST.getSourceManager());
           Context.setASTContext(AST);
 
@@ -347,12 +325,9 @@ public:
 int main(int argc, const char **argv) {
   ClangRefactorTool Tool;
 
-  // FIXME: Use LibTooling's CommonOptions parser when subcommands are supported
-  // by it.
-  cl::HideUnrelatedOptions(opts::CommonRefactorOptions);
-  cl::ParseCommandLineOptions(
-      argc, argv, "Clang-based refactoring tool for C, C++ and Objective-C");
-  cl::PrintOptionValues();
+  CommonOptionsParser Options(
+      argc, argv, opts::CommonRefactorOptions, cl::ZeroOrMore,
+      "Clang-based refactoring tool for C, C++ and Objective-C");
 
   // Figure out which action is specified by the user. The user must specify
   // the action using a command-line subcommand, e.g. the invocation
@@ -374,17 +349,10 @@ int main(int argc, const char **argv) {
   }
   RefactoringActionSubcommand &ActionCommand = **It;
 
-  ArrayRef<std::string> Sources = ActionCommand.getSources();
-  // When -no-dbs is used, at least one file (TU) must be given to any
-  // subcommand.
-  if (opts::NoDatabases && Sources.empty()) {
-    llvm::errs() << "error: must provide paths to the source files when "
-                    "'-no-dbs' is used\n";
-    return 1;
-  }
   if (ActionCommand.parseArguments())
     return 1;
-  if (Tool.invokeAction(ActionCommand))
+  if (Tool.invokeAction(ActionCommand, Options.getCompilations(),
+                        Options.getSourcePathList()))
     return 1;
 
   return 0;
