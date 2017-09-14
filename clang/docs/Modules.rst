@@ -664,22 +664,21 @@ Note that, if ``Derived.h`` includes ``Base.h``, one can simply use a wildcard e
 
 Re-export Declaration
 ~~~~~~~~~~~~~~~~~~
-An *export-as-declaration* specifies that the current module is a private
-module whose interface will be re-exported by the named public module.
+An *export-as-declaration* specifies that the current module will have
+its interface re-exported by the named module.
 
 .. parsed-literal::
 
   *export-as-declaration*:
     ``export_as`` *identifier*
 
-The *export-as-declaration* names the public module that the current
-(private) module will be re-exported through. Only top-level modules
+The *export-as-declaration* names the module that the current
+module will be re-exported through. Only top-level modules
 can be re-exported, and any given module may only be re-exported
-through a single public module.
+through a single module.
 
-**Example:** In the following example, the (private) module
-``MyFrameworkCore`` will be re-exported via the public module
-``MyFramework``:
+**Example:** In the following example, the module ``MyFrameworkCore``
+will be re-exported via the module ``MyFramework``:
 
 .. parsed-literal::
 
