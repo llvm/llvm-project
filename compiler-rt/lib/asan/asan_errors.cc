@@ -22,56 +22,21 @@
 
 namespace __asan {
 
-void ErrorStackOverflow::Print() {
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report(
-      "ERROR: AddressSanitizer: %s on address %p"
-      " (pc %p bp %p sp %p T%d)\n",
-      scariness.GetDescription(), (void *)signal.addr, (void *)signal.pc,
-      (void *)signal.bp, (void *)signal.sp, tid);
-  Printf("%s", d.Default());
-  scariness.Print();
-  BufferedStackTrace stack;
-  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, signal.pc, signal.bp,
-                                  signal.context,
+static void OnStackUnwind(const SignalContext &sig,
+                          const void *callback_context,
+                          BufferedStackTrace *stack) {
+  // Tests and maybe some users expect that scariness is going to be printed
+  // just before the stack. As only asan has scariness score we have no
+  // corresponding code in the sanitizer_common and we use this callback to
+  // print it.
+  static_cast<const ScarinessScoreBase *>(callback_context)->Print();
+  GetStackTraceWithPcBpAndContext(stack, kStackTraceMax, sig.pc, sig.bp,
+                                  sig.context,
                                   common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-  ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
 void ErrorDeadlySignal::Print() {
-  Decorator d;
-  Printf("%s", d.Warning());
-  const char *description = signal.Describe();
-  Report(
-      "ERROR: AddressSanitizer: %s on unknown address %p (pc %p bp %p sp %p "
-      "T%d)\n",
-      description, (void *)signal.addr, (void *)signal.pc, (void *)signal.bp,
-      (void *)signal.sp, tid);
-  Printf("%s", d.Default());
-  if (signal.pc < GetPageSizeCached())
-    Report("Hint: pc points to the zero page.\n");
-  if (signal.is_memory_access) {
-    const char *access_type =
-        signal.write_flag == SignalContext::WRITE
-            ? "WRITE"
-            : (signal.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
-    Report("The signal is caused by a %s memory access.\n", access_type);
-    if (signal.addr < GetPageSizeCached())
-      Report("Hint: address points to the zero page.\n");
-  }
-  MaybeReportNonExecRegion(signal.pc);
-  scariness.Print();
-  BufferedStackTrace stack;
-  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, signal.pc, signal.bp,
-                                  signal.context,
-                                  common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-  MaybeDumpInstructionBytes(signal.pc);
-  MaybeDumpRegisters(signal.context);
-  Printf("AddressSanitizer can not provide additional info.\n");
-  ReportErrorSummary(description, &stack);
+  ReportDeadlySignal(signal, tid, &OnStackUnwind, &scariness);
 }
 
 void ErrorDoubleFree::Print() {
