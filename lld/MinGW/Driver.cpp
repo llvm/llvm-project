@@ -76,7 +76,7 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
     error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + Arg->getSpelling());
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
+  if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
     error("no input files");
   return Args;
 }
@@ -120,6 +120,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   auto Add = [&](const Twine &S) { LinkArgs.push_back(S.str()); };
 
   Add("lld-link");
+  Add("-lldmingw");
 
   if (auto *A = Args.getLastArg(OPT_entry)) {
     StringRef S = A->getValue();
@@ -145,6 +146,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   if (Args.hasArg(OPT_shared))
     Add("-dll");
+  if (Args.hasArg(OPT_verbose))
+    Add("-verbose");
 
   if (auto *A = Args.getLastArg(OPT_m)) {
     StringRef S = A->getValue();
@@ -172,15 +175,33 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   for (auto *A : Args.filtered(OPT_L))
     SearchPaths.push_back(A->getValue());
 
-  for (auto *A : Args.filtered(OPT_INPUT, OPT_l)) {
-    if (A->getOption().getUnaliasedOption().getID() == OPT_INPUT)
-      Add(A->getValue());
-    else
-      Add(searchLibrary(A->getValue(), SearchPaths, Args.hasArg(OPT_Bstatic)));
+  StringRef Prefix = "";
+  bool Static = false;
+  for (auto *A : Args) {
+    switch (A->getOption().getUnaliasedOption().getID()) {
+    case OPT_INPUT:
+      if (StringRef(A->getValue()).endswith(".def"))
+        Add("-def:" + StringRef(A->getValue()));
+      else
+        Add(Prefix + StringRef(A->getValue()));
+      break;
+    case OPT_l:
+      Add(Prefix + searchLibrary(A->getValue(), SearchPaths, Static));
+      break;
+    case OPT_whole_archive:
+      Prefix = "-wholearchive:";
+      break;
+    case OPT_no_whole_archive:
+      Prefix = "";
+      break;
+    case OPT_Bstatic:
+      Static = true;
+      break;
+    case OPT_Bdynamic:
+      Static = false;
+      break;
+    }
   }
-
-  if (Args.hasArg(OPT_verbose))
-    Add("-verbose");
 
   if (Args.hasArg(OPT_verbose) || Args.hasArg(OPT__HASH_HASH_HASH))
     outs() << llvm::join(LinkArgs, " ") << "\n";

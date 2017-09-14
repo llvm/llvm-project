@@ -244,12 +244,42 @@ class LinuxCoreTestCase(TestBase):
             end_region.GetRegionBase())
         self.assertEqual(end_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
 
+    def check_state(self, process):
+        with open(os.devnull) as devnul:
+            # sanitize test output
+            self.dbg.SetOutputFileHandle(devnul, False)
+            self.dbg.SetErrorFileHandle(devnul, False)
+
+            self.assertTrue(process.is_stopped)
+
+            # Process.Continue
+            error = process.Continue()
+            self.assertFalse(error.Success())
+            self.assertTrue(process.is_stopped)
+
+            # Thread.StepOut
+            thread = process.GetSelectedThread()
+            thread.StepOut()
+            self.assertTrue(process.is_stopped)
+
+            # command line
+            self.dbg.HandleCommand('s')
+            self.assertTrue(process.is_stopped)
+            self.dbg.HandleCommand('c')
+            self.assertTrue(process.is_stopped)
+
+            # restore file handles
+            self.dbg.SetOutputFileHandle(None, False)
+            self.dbg.SetErrorFileHandle(None, False)
+
     def do_test(self, filename, pid, region_count):
         target = self.dbg.CreateTarget(filename + ".out")
         process = target.LoadCore(filename + ".core")
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetNumThreads(), 1)
         self.assertEqual(process.GetProcessID(), pid)
+
+        self.check_state(process)
 
         thread = process.GetSelectedThread()
         self.assertTrue(thread)
