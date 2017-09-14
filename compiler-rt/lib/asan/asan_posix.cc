@@ -36,11 +36,11 @@ namespace __asan {
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ScopedDeadlySignal signal_scope(GetCurrentThread());
   StartReportDeadlySignal();
-  SignalContext sig = SignalContext::Create(siginfo, context);
-  if (IsStackOverflow(((siginfo_t *)siginfo)->si_code, sig))
+  SignalContext sig(siginfo, context);
+  if (sig.IsStackOverflow())
     ReportStackOverflow(sig);
   else
-    ReportDeadlySignal(signo, sig);
+    ReportDeadlySignal(sig);
 }
 
 // ---------------------- TSD ---------------- {{{1

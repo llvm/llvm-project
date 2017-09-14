@@ -97,8 +97,9 @@ void InitTlsSize() {}
 
 void PrintModuleMap() {}
 
+bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
-const char *DescribeSignalOrException(int signo) { UNIMPLEMENTED(); }
+const char *SignalContext::Describe() const { UNIMPLEMENTED(); }
 
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
