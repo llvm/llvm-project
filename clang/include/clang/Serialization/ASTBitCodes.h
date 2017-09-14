@@ -716,6 +716,9 @@ namespace clang {
       /// \brief Specifies some declarations with initializers that must be
       /// emitted to initialize the module.
       SUBMODULE_INITIALIZERS = 16,
+      /// \brief Specifies the name of the module that will eventually
+      /// re-export the entities in this module.
+      SUBMODULE_EXPORT_AS = 17,
     };
 
     /// \brief Record types used within a comments block.
