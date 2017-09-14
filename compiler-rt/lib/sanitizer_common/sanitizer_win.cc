@@ -858,6 +858,10 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // FIXME: Decide what to do on Windows.
 }
 
+void StartReportDeadlySignal() {
+  // FIXME: Decide what to do on Windows.
+}
+
 HandleSignalMode GetHandleSignalMode(int signum) {
   // FIXME: Decide what to do on Windows.
   return kHandleSignalNo;
