@@ -127,6 +127,7 @@ struct Configuration {
   bool GdbIndex;
   bool GnuHash;
   bool HasDynamicList = false;
+  bool HasDynSymTab;
   bool ICF;
   bool MipsN32Abi = false;
   bool NoGnuUnique;
