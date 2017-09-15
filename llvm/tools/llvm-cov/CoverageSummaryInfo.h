@@ -21,13 +21,14 @@
 namespace llvm {
 
 /// \brief Provides information about region coverage for a function/file.
-struct RegionCoverageInfo {
+class RegionCoverageInfo {
   /// \brief The number of regions that were executed at least once.
   size_t Covered;
 
   /// \brief The total number of regions in a function/file.
   size_t NumRegions;
 
+public:
   RegionCoverageInfo() : Covered(0), NumRegions(0) {}
 
   RegionCoverageInfo(size_t Covered, size_t NumRegions)
@@ -39,6 +40,14 @@ struct RegionCoverageInfo {
     return *this;
   }
 
+  void merge(const RegionCoverageInfo &RHS) {
+    Covered = std::max(Covered, RHS.Covered);
+  }
+
+  size_t getCovered() const { return Covered; }
+
+  size_t getNumRegions() const { return NumRegions; }
+
   bool isFullyCovered() const { return Covered == NumRegions; }
 
   double getPercentCovered() const {
@@ -49,13 +58,14 @@ struct RegionCoverageInfo {
 };
 
 /// \brief Provides information about line coverage for a function/file.
-struct LineCoverageInfo {
+class LineCoverageInfo {
   /// \brief The number of lines that were executed at least once.
   size_t Covered;
 
   /// \brief The total number of lines in a function/file.
   size_t NumLines;
 
+public:
   LineCoverageInfo() : Covered(0), NumLines(0) {}
 
   LineCoverageInfo(size_t Covered, size_t NumLines)
@@ -67,6 +77,14 @@ struct LineCoverageInfo {
     return *this;
   }
 
+  void merge(const LineCoverageInfo &RHS) {
+    Covered = std::max(Covered, RHS.Covered);
+  }
+
+  size_t getCovered() const { return Covered; }
+
+  size_t getNumLines() const { return NumLines; }
+
   bool isFullyCovered() const { return Covered == NumLines; }
 
   double getPercentCovered() const {
@@ -77,13 +95,14 @@ struct LineCoverageInfo {
 };
 
 /// \brief Provides information about function coverage for a file.
-struct FunctionCoverageInfo {
+class FunctionCoverageInfo {
   /// \brief The number of functions that were executed.
   size_t Executed;
 
   /// \brief The total number of functions in this file.
   size_t NumFunctions;
 
+public:
   FunctionCoverageInfo() : Executed(0), NumFunctions(0) {}
 
   FunctionCoverageInfo(size_t Executed, size_t NumFunctions)
@@ -94,6 +113,10 @@ struct FunctionCoverageInfo {
       ++Executed;
     ++NumFunctions;
   }
+
+  size_t getExecuted() const { return Executed; }
+
+  size_t getNumFunctions() const { return NumFunctions; }
 
   bool isFullyCovered() const { return Executed == NumFunctions; }
 
