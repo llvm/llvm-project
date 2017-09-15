@@ -5,6 +5,9 @@
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 # RELOCS:      Relocations [
+# RELOCS-NEXT:   Section ({{.*}}) .rela.dyn {
+# RELOCS-NEXT:     R_X86_64_GLOB_DAT foo 0x0
+# RELOCS-NEXT:   }
 # RELOCS-NEXT: ]
 
 .weak foo
@@ -12,6 +15,6 @@
 .globl _start
 _start:
 # DISASM: _start:
-# DISASM-NEXT: 1000: 48 8b 05 69 10 00 00 movq 4201(%rip), %rax
+# DISASM-NEXT: 1000: 48 8b 05 99 10 00 00 movq 4249(%rip), %rax
 #                                              ^ .got - (.text + 7)
 mov foo@gotpcrel(%rip), %rax
