@@ -60,6 +60,9 @@ bool BreakpointName::Permissions::GetDescription(Stream *s,
 
 bool BreakpointName::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   bool printed_any = false;
+  if (!m_help.empty())
+    s->Printf("Help: %s\n", m_help.c_str());
+
   if (GetOptions().AnySet())
   {
     s->PutCString("Options: \n");
