@@ -395,7 +395,9 @@ class CoverageExporterJson {
     emitDictStart();
     emitDictElement("count", Summary.RegionCoverage.NumRegions);
     emitDictElement("covered", Summary.RegionCoverage.Covered);
-    emitDictElement("notcovered", Summary.RegionCoverage.NotCovered);
+    emitDictElement("notcovered",
+                    Summary.RegionCoverage.NumRegions -
+                        Summary.RegionCoverage.Covered);
     emitDictElement("percent", Summary.RegionCoverage.getPercentCovered());
     // End Region Coverage Summary.
     emitDictEnd();
