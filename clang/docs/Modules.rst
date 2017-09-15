@@ -669,7 +669,7 @@ Note that, if ``Derived.h`` includes ``Base.h``, one can simply use a wildcard e
   all of them).
 
 Re-export Declaration
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 An *export-as-declaration* specifies that the current module will have
 its interface re-exported by the named module.
 
