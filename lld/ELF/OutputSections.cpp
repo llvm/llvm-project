@@ -205,46 +205,8 @@ void elf::reportDiscarded(InputSectionBase *IS) {
           IS->File->getName() + "'");
 }
 
-void OutputSectionFactory::addInputSec(InputSectionBase *IS,
-                                       StringRef OutsecName) {
-  // Sections with the SHT_GROUP attribute reach here only when the - r option
-  // is given. Such sections define "section groups", and InputFiles.cpp has
-  // dedup'ed section groups by their signatures. For the -r, we want to pass
-  // through all SHT_GROUP sections without merging them because merging them
-  // creates broken section contents.
-  if (IS->Type == SHT_GROUP) {
-    OutputSection *Out = nullptr;
-    addInputSec(IS, OutsecName, Out);
-    return;
-  }
-
-  // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
-  // relocation sections .rela.foo and .rela.bar for example. Most tools do
-  // not allow multiple REL[A] sections for output section. Hence we
-  // should combine these relocation sections into single output.
-  // We skip synthetic sections because it can be .rela.dyn/.rela.plt or any
-  // other REL[A] sections created by linker itself.
-  if (!isa<SyntheticSection>(IS) &&
-      (IS->Type == SHT_REL || IS->Type == SHT_RELA)) {
-    auto *Sec = cast<InputSection>(IS);
-    OutputSection *Out = Sec->getRelocatedSection()->getOutputSection();
-    addInputSec(IS, OutsecName, Out->RelocationSection);
-    return;
-  }
-
-  SectionKey Key = createKey(IS, OutsecName);
-  OutputSection *&Sec = Map[Key];
-  addInputSec(IS, OutsecName, Sec);
-}
-
-void OutputSectionFactory::addInputSec(InputSectionBase *IS,
-                                       StringRef OutsecName,
-                                       OutputSection *&Sec) {
-  if (!IS->Live) {
-    reportDiscarded(IS);
-    return;
-  }
-
+static OutputSection *addSection(InputSectionBase *IS, StringRef OutsecName,
+                                 OutputSection *Sec) {
   if (Sec && Sec->Live) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name + "\n>>> " +
@@ -272,6 +234,50 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
   }
 
   Sec->addSection(cast<InputSection>(IS));
+  return Sec;
+}
+
+void OutputSectionFactory::addInputSec(InputSectionBase *IS,
+                                       StringRef OutsecName,
+                                       OutputSection *OS) {
+  if (!IS->Live) {
+    reportDiscarded(IS);
+    return;
+  }
+
+  // If we have destination output section - use it directly.
+  if (OS) {
+    addSection(IS, OutsecName, OS);
+    return;
+  }
+
+  // Sections with the SHT_GROUP attribute reach here only when the - r option
+  // is given. Such sections define "section groups", and InputFiles.cpp has
+  // dedup'ed section groups by their signatures. For the -r, we want to pass
+  // through all SHT_GROUP sections without merging them because merging them
+  // creates broken section contents.
+  if (IS->Type == SHT_GROUP) {
+    addSection(IS, OutsecName, nullptr);
+    return;
+  }
+
+  // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
+  // relocation sections .rela.foo and .rela.bar for example. Most tools do
+  // not allow multiple REL[A] sections for output section. Hence we
+  // should combine these relocation sections into single output.
+  // We skip synthetic sections because it can be .rela.dyn/.rela.plt or any
+  // other REL[A] sections created by linker itself.
+  if (!isa<SyntheticSection>(IS) &&
+      (IS->Type == SHT_REL || IS->Type == SHT_RELA)) {
+    auto *Sec = cast<InputSection>(IS);
+    OutputSection *Out = Sec->getRelocatedSection()->getOutputSection();
+    Out->RelocationSection = addSection(IS, OutsecName, Out->RelocationSection);
+    return;
+  }
+
+  SectionKey Key = createKey(IS, OutsecName);
+  OutputSection *&Sec = Map[Key];
+  Sec = addSection(IS, OutsecName, Sec);
 }
 
 OutputSectionFactory::~OutputSectionFactory() {}

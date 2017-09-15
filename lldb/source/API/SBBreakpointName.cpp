@@ -77,15 +77,15 @@ public:
   // For now we take a simple approach and only keep the name, and relook
   // up the location when we need it.
   
-  TargetSP GetTarget() {
+  TargetSP GetTarget() const {
     return m_target_wp.lock();
   }
   
-  const char *GetName() {
+  const char *GetName() const {
     return m_name.c_str();
   }
   
-  bool IsValid() {
+  bool IsValid() const {
     return !m_name.empty() && m_target_wp.lock();
   }
   
@@ -102,7 +102,13 @@ public:
   
   const lldb_private::BreakpointName *GetBreakpointName() const
   {
-    return GetBreakpointName();
+    if (!IsValid())
+      return nullptr;
+    TargetSP target_sp = GetTarget();
+    if (!target_sp)
+      return nullptr;
+    Status error;
+    return target_sp->FindBreakpointName(ConstString(m_name), true, error);    
   }
   
 private:
@@ -339,7 +345,7 @@ bool SBBreakpointName::GetAutoContinue() {
   
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
-    return nullptr;
+    return false;
  
   LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
   std::lock_guard<std::recursive_mutex> guard(
