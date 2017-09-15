@@ -1704,7 +1704,42 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                    Style));
 }
 
-TEST_F(FormatTest, FormatsExternC) { verifyFormat("extern \"C\" {\nint a;"); }
+TEST_F(FormatTest, FormatsExternC) {
+  verifyFormat("extern \"C\" {\nint a;");
+  verifyFormat("extern \"C\" {}");
+  verifyFormat("extern \"C\" {\n"
+               "int foo();\n"
+               "}");
+  verifyFormat("extern \"C\" int foo() {}");
+  verifyFormat("extern \"C\" int foo();");
+  verifyFormat("extern \"C\" int foo() {\n"
+               "  int i = 42;\n"
+               "  return i;\n"
+               "}");
+
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("extern \"C\" int foo() {}", Style);
+  verifyFormat("extern \"C\" int foo();", Style);
+  verifyFormat("extern \"C\" int foo()\n"
+               "{\n"
+               "  int i = 42;\n"
+               "  return i;\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterExternBlock = true;
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("extern \"C\"\n"
+               "{}",
+               Style);
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "  int foo();\n"
+               "}",
+               Style);
+}
 
 TEST_F(FormatTest, FormatsInlineASM) {
   verifyFormat("asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));");
@@ -9979,6 +10014,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterObjCDeclaration);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterStruct);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterUnion);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExternBlock);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeCatch);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeElse);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBraces);

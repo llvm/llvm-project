@@ -40,10 +40,10 @@ define i32 @test2(i32 %a, i32 %b) nounwind readnone {
 ; X64-NEXT:    leal (%rdi,%rdi), %eax
 ; X64-NEXT:    retq
 entry:
-	%tmp0 = add i32 %b, %a
-	%tmp1 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %tmp0, i32 2)
-	%tmp2 = extractvalue { i32, i1 } %tmp1, 0
-	ret i32 %tmp2
+        %tmp0 = add i32 %b, %a
+        %tmp1 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %tmp0, i32 2)
+        %tmp2 = extractvalue { i32, i1 } %tmp1, 0
+        ret i32 %tmp2
 }
 
 define i32 @test3(i32 %a, i32 %b) nounwind readnone {
@@ -64,8 +64,8 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ; X64-NEXT:    mull %ecx
 ; X64-NEXT:    retq
 entry:
-	%tmp0 = add i32 %b, %a
-	%tmp1 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %tmp0, i32 4)
-	%tmp2 = extractvalue { i32, i1 } %tmp1, 0
-	ret i32 %tmp2
+        %tmp0 = add i32 %b, %a
+        %tmp1 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %tmp0, i32 4)
+        %tmp2 = extractvalue { i32, i1 } %tmp1, 0
+        ret i32 %tmp2
 }

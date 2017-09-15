@@ -40,6 +40,10 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The ``Redirects`` argument of ``llvm::sys::ExecuteAndWait`` and
+  ``llvm::sys::ExecuteNoWait`` was changed to an ``ArrayRef`` of optional
+  ``StringRef``'s to make it safer and more convenient to use.
+
 * Note..
 
 .. NOTE
