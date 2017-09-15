@@ -32,7 +32,9 @@ public:
   RegionCoverageInfo() : Covered(0), NumRegions(0) {}
 
   RegionCoverageInfo(size_t Covered, size_t NumRegions)
-      : Covered(Covered), NumRegions(NumRegions) {}
+      : Covered(Covered), NumRegions(NumRegions) {
+    assert(Covered <= NumRegions && "Covered regions over-counted");
+  }
 
   RegionCoverageInfo &operator+=(const RegionCoverageInfo &RHS) {
     Covered += RHS.Covered;
@@ -42,6 +44,7 @@ public:
 
   void merge(const RegionCoverageInfo &RHS) {
     Covered = std::max(Covered, RHS.Covered);
+    NumRegions = std::max(NumRegions, RHS.NumRegions);
   }
 
   size_t getCovered() const { return Covered; }
@@ -51,6 +54,7 @@ public:
   bool isFullyCovered() const { return Covered == NumRegions; }
 
   double getPercentCovered() const {
+    assert(Covered <= NumRegions && "Covered regions over-counted");
     if (NumRegions == 0)
       return 0.0;
     return double(Covered) / double(NumRegions) * 100.0;
@@ -69,7 +73,9 @@ public:
   LineCoverageInfo() : Covered(0), NumLines(0) {}
 
   LineCoverageInfo(size_t Covered, size_t NumLines)
-      : Covered(Covered), NumLines(NumLines) {}
+      : Covered(Covered), NumLines(NumLines) {
+    assert(Covered <= NumLines && "Covered lines over-counted");
+  }
 
   LineCoverageInfo &operator+=(const LineCoverageInfo &RHS) {
     Covered += RHS.Covered;
@@ -79,6 +85,7 @@ public:
 
   void merge(const LineCoverageInfo &RHS) {
     Covered = std::max(Covered, RHS.Covered);
+    NumLines = std::max(NumLines, RHS.NumLines);
   }
 
   size_t getCovered() const { return Covered; }
@@ -88,6 +95,7 @@ public:
   bool isFullyCovered() const { return Covered == NumLines; }
 
   double getPercentCovered() const {
+    assert(Covered <= NumLines && "Covered lines over-counted");
     if (NumLines == 0)
       return 0.0;
     return double(Covered) / double(NumLines) * 100.0;
@@ -121,6 +129,7 @@ public:
   bool isFullyCovered() const { return Executed == NumFunctions; }
 
   double getPercentCovered() const {
+    assert(Executed <= NumFunctions && "Covered functions over-counted");
     if (NumFunctions == 0)
       return 0.0;
     return double(Executed) / double(NumFunctions) * 100.0;
@@ -135,7 +144,7 @@ struct FunctionCoverageSummary {
   LineCoverageInfo LineCoverage;
 
   FunctionCoverageSummary(const std::string &Name)
-      : Name(Name), ExecutionCount(0) {}
+      : Name(Name), ExecutionCount(0), RegionCoverage(), LineCoverage() {}
 
   FunctionCoverageSummary(const std::string &Name, uint64_t ExecutionCount,
                           const RegionCoverageInfo &RegionCoverage,
@@ -163,7 +172,9 @@ struct FileCoverageSummary {
   FunctionCoverageInfo FunctionCoverage;
   FunctionCoverageInfo InstantiationCoverage;
 
-  FileCoverageSummary(StringRef Name) : Name(Name) {}
+  FileCoverageSummary(StringRef Name)
+      : Name(Name), RegionCoverage(), LineCoverage(), FunctionCoverage(),
+        InstantiationCoverage() {}
 
   void addFunction(const FunctionCoverageSummary &Function) {
     RegionCoverage += Function.RegionCoverage;
