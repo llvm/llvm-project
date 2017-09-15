@@ -97,7 +97,7 @@ class _LIBCPP_EXCEPTION_ABI type_info
       const char __decorated_name[1];
     } __data;
 
-    int __compare(const struct type_info &__rhs) const _NOEXCEPT;
+    int __compare(const type_info &__rhs) const _NOEXCEPT;
 #endif // _LIBCPP_ABI_MICROSOFT
 
 protected:
