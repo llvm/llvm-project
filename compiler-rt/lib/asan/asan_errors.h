@@ -27,19 +27,6 @@ struct ErrorBase {
   u32 tid;
 };
 
-struct ErrorStackOverflow : ErrorBase {
-  SignalContext signal;
-  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
-  // constructor
-  ErrorStackOverflow() = default;
-  ErrorStackOverflow(u32 tid, const SignalContext &sig)
-      : ErrorBase(tid), signal(sig) {
-    scariness.Clear();
-    scariness.Scare(10, "stack-overflow");
-  }
-  void Print();
-};
-
 struct ErrorDeadlySignal : ErrorBase {
   SignalContext signal;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
@@ -48,20 +35,20 @@ struct ErrorDeadlySignal : ErrorBase {
   ErrorDeadlySignal(u32 tid, const SignalContext &sig)
       : ErrorBase(tid), signal(sig) {
     scariness.Clear();
-    if (signal.is_memory_access) {
-      if (signal.addr < GetPageSizeCached()) {
-        scariness.Scare(10, "null-deref");
-      } else if (signal.addr == signal.pc) {
-        scariness.Scare(60, "wild-jump");
-      } else if (signal.write_flag == SignalContext::WRITE) {
-        scariness.Scare(30, "wild-addr-write");
-      } else if (signal.write_flag == SignalContext::READ) {
-        scariness.Scare(20, "wild-addr-read");
-      } else {
-        scariness.Scare(25, "wild-addr");
-      }
-    } else {
+    if (signal.IsStackOverflow()) {
+      scariness.Scare(10, "stack-overflow");
+    } else if (!signal.is_memory_access) {
       scariness.Scare(10, "signal");
+    } else if (signal.addr < GetPageSizeCached()) {
+      scariness.Scare(10, "null-deref");
+    } else if (signal.addr == signal.pc) {
+      scariness.Scare(60, "wild-jump");
+    } else if (signal.write_flag == SignalContext::WRITE) {
+      scariness.Scare(30, "wild-addr-write");
+    } else if (signal.write_flag == SignalContext::READ) {
+      scariness.Scare(20, "wild-addr-read");
+    } else {
+      scariness.Scare(25, "wild-addr");
     }
   }
   void Print();
@@ -304,7 +291,6 @@ struct ErrorGeneric : ErrorBase {
 
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro)         \
-  macro(StackOverflow)                          \
   macro(DeadlySignal)                           \
   macro(DoubleFree)                             \
   macro(NewDeleteSizeMismatch)                  \

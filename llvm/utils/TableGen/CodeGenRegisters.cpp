@@ -731,7 +731,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     if (!Type->isSubClassOf("ValueType"))
       PrintFatalError("RegTypes list member '" + Type->getName() +
         "' does not derive from the ValueType class!");
-    VTs.push_back(getValueType(Type));
+    VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
   }
   assert(!VTs.empty() && "RegisterClass must contain at least one ValueType!");
 
@@ -764,12 +764,22 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     }
   }
 
-  // Allow targets to override the size in bits of the RegisterClass.
-  unsigned Size = R->getValueAsInt("Size");
-
   Namespace = R->getValueAsString("Namespace");
-  SpillSize = Size ? Size : MVT(VTs[0]).getSizeInBits();
-  SpillAlignment = R->getValueAsInt("Alignment");
+
+  if (const RecordVal *RV = R->getValue("RegInfos"))
+    if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
+      RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
+  unsigned Size = R->getValueAsInt("Size");
+  assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
+         "Impossible to determine register size");
+  if (!RSI.hasDefault()) {
+    RegSizeInfo RI;
+    RI.RegSize = RI.SpillSize = Size ? Size
+                                     : VTs[0].getSimple().getSizeInBits();
+    RI.SpillAlignment = R->getValueAsInt("Alignment");
+    RSI.Map.insert({DefaultMode, RI});
+  }
+
   CopyCost = R->getValueAsInt("CopyCost");
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
@@ -789,8 +799,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     Name(Name),
     TopoSigs(RegBank.getNumTopoSigs()),
     EnumValue(-1),
-    SpillSize(Props.SpillSize),
-    SpillAlignment(Props.SpillAlignment),
+    RSI(Props.RSI),
     CopyCost(0),
     Allocatable(true),
     AllocationPriority(0) {
@@ -832,7 +841,7 @@ bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
 namespace llvm {
 
   raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
-    OS << "{ S=" << K.SpillSize << ", A=" << K.SpillAlignment;
+    OS << "{ " << K.RSI.getAsString();
     for (const auto R : *K.Members)
       OS << ", " << R->getName();
     return OS << " }";
@@ -845,8 +854,7 @@ namespace llvm {
 bool CodeGenRegisterClass::Key::
 operator<(const CodeGenRegisterClass::Key &B) const {
   assert(Members && B.Members);
-  return std::tie(*Members, SpillSize, SpillAlignment) <
-         std::tie(*B.Members, B.SpillSize, B.SpillAlignment);
+  return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
 }
 
 // Returns true if RC is a strict subclass.
@@ -860,8 +868,7 @@ operator<(const CodeGenRegisterClass::Key &B) const {
 //
 static bool testSubClass(const CodeGenRegisterClass *A,
                          const CodeGenRegisterClass *B) {
-  return A->SpillAlignment && B->SpillAlignment % A->SpillAlignment == 0 &&
-         A->SpillSize <= B->SpillSize &&
+  return A->RSI.isSubClassOf(B->RSI) &&
          std::includes(A->getMembers().begin(), A->getMembers().end(),
                        B->getMembers().begin(), B->getMembers().end(),
                        deref<llvm::less>());
@@ -880,16 +887,9 @@ static bool TopoOrderRC(const CodeGenRegisterClass &PA,
   if (A == B)
     return false;
 
-  // Order by ascending spill size.
-  if (A->SpillSize < B->SpillSize)
+  if (A->RSI < B->RSI)
     return true;
-  if (A->SpillSize > B->SpillSize)
-    return false;
-
-  // Order by ascending spill alignment.
-  if (A->SpillAlignment < B->SpillAlignment)
-    return true;
-  if (A->SpillAlignment > B->SpillAlignment)
+  if (A->RSI != B->RSI)
     return false;
 
   // Order by descending set size.  Note that the classes' allocation order may
@@ -1062,7 +1062,8 @@ void CodeGenRegisterClass::buildRegUnitSet(
 //                               CodeGenRegBank
 //===----------------------------------------------------------------------===//
 
-CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records) {
+CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
+                               const CodeGenHwModes &Modes) : CGH(Modes) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
@@ -1202,7 +1203,7 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
                                     const CodeGenRegister::Vec *Members,
                                     StringRef Name) {
   // Synthetic sub-class has the same size and alignment as RC.
-  CodeGenRegisterClass::Key K(Members, RC->SpillSize, RC->SpillAlignment);
+  CodeGenRegisterClass::Key K(Members, RC->RSI);
   RCKeyMap::const_iterator FoundI = Key2RC.find(K);
   if (FoundI != Key2RC.end())
     return FoundI->second;
@@ -2050,10 +2051,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
       continue;
 
     // If RC1 and RC2 have different spill sizes or alignments, use the
-    // larger size for sub-classing.  If they are equal, prefer RC1.
-    if (RC2->SpillSize > RC1->SpillSize ||
-        (RC2->SpillSize == RC1->SpillSize &&
-         RC2->SpillAlignment > RC1->SpillAlignment))
+    // stricter one for sub-classing.  If they are equal, prefer RC1.
+    if (RC2->RSI.hasStricterSpillThan(RC1->RSI))
       std::swap(RC1, RC2);
 
     getOrCreateSubClass(RC1, &Intersection,

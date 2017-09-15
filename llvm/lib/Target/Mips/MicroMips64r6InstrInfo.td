@@ -111,11 +111,8 @@ class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
   Format Form = FrmR;
   string BaseOpcode = instr_asm;
 }
-// TODO: Add 'pos + size' constraint check to dext* instructions
-//       DEXT: 0 < pos + size <= 63
-//       DEXTM, DEXTU: 32 < pos + size <= 64
 class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm5_report_uimm6,
-                                         uimm5_plus1, MipsExt>;
+                                         uimm5_plus1_report_uimm6, MipsExt>;
 class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm5,
                                           uimm5_plus33, MipsExt>;
 class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm5_plus32,
@@ -367,12 +364,14 @@ let DecoderNamespace = "MicroMipsR6" in {
     def DAHI_MM64R6 : StdMMR6Rel, DAHI_MMR6_DESC, DAHI_MMR6_ENC, ISA_MICROMIPS64R6;
     def DATI_MM64R6 : StdMMR6Rel, DATI_MMR6_DESC, DATI_MMR6_ENC, ISA_MICROMIPS64R6;
   }
-  def DEXT_MM64R6 : StdMMR6Rel, DEXT_MMR6_DESC, DEXT_MMR6_ENC,
-                    ISA_MICROMIPS64R6;
-  def DEXTM_MM64R6 : StdMMR6Rel, DEXTM_MMR6_DESC, DEXTM_MMR6_ENC,
-                     ISA_MICROMIPS64R6;
-  def DEXTU_MM64R6 : StdMMR6Rel, DEXTU_MMR6_DESC, DEXTU_MMR6_ENC,
-                     ISA_MICROMIPS64R6;
+  let DecoderMethod = "DecodeDEXT" in {
+    def DEXT_MM64R6 : StdMMR6Rel, DEXT_MMR6_DESC, DEXT_MMR6_ENC,
+                      ISA_MICROMIPS64R6;
+    def DEXTM_MM64R6 : StdMMR6Rel, DEXTM_MMR6_DESC, DEXTM_MMR6_ENC,
+                       ISA_MICROMIPS64R6;
+    def DEXTU_MM64R6 : StdMMR6Rel, DEXTU_MMR6_DESC, DEXTU_MMR6_ENC,
+                       ISA_MICROMIPS64R6;
+  }
   def DALIGN_MM64R6 : StdMMR6Rel, DALIGN_MMR6_DESC, DALIGN_MMR6_ENC,
                       ISA_MICROMIPS64R6;
   def DDIV_MM64R6 : R6MMR6Rel, DDIV_MM64R6_DESC, DDIV_MM64R6_ENC,
@@ -572,3 +571,12 @@ def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
                     (DINSU_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs,
                                   uimm5_plus32:$pos, uimm5_plus1:$size), 0>,
                     ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                    (DEXTM_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                                                 uimm5_plus33:$size), 0>,
+      ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                    (DEXTU_MM64R6 GPR64Opnd:$rt, GPR64Opnd:$rs,
+                                  uimm5_plus32:$pos, uimm5_plus1:$size), 0>,
+      ISA_MICROMIPS64R6;
+

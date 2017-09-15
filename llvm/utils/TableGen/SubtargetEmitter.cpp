@@ -68,6 +68,7 @@ class SubtargetEmitter {
     }
   };
 
+  const CodeGenTarget &TGT;
   RecordKeeper &Records;
   CodeGenSchedModels &SchedModels;
   std::string Target;
@@ -106,12 +107,14 @@ class SubtargetEmitter {
   void EmitProcessorLookup(raw_ostream &OS);
   void EmitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void EmitSchedModel(raw_ostream &OS);
+  void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS, unsigned NumFeatures,
                              unsigned NumProcs);
 
 public:
-  SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT):
-    Records(R), SchedModels(TGT.getSchedModels()), Target(TGT.getName()) {}
+  SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
+    : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
+      Target(TGT.getName()) {}
 
   void run(raw_ostream &o);
 };
@@ -1329,6 +1332,22 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
      << "} // " << ClassName << "::resolveSchedClass\n";
 }
 
+void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
+                                       raw_ostream &OS) {
+  const CodeGenHwModes &CGH = TGT.getHwModes();
+  assert(CGH.getNumModeIds() > 0);
+  if (CGH.getNumModeIds() == 1)
+    return;
+
+  OS << "unsigned " << ClassName << "::getHwMode() const {\n";
+  for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
+    const HwMode &HM = CGH.getMode(M);
+    OS << "  if (checkFeatures(\"" << HM.Features
+       << "\")) return " << M << ";\n";
+  }
+  OS << "  return 0;\n}\n";
+}
+
 //
 // ParseFeaturesFunction - Produces a subtarget specific function for parsing
 // the subtarget features string.
@@ -1462,9 +1481,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
-     << " const;\n"
-     << "};\n";
-  OS << "} // end namespace llvm\n\n";
+     << " const;\n";
+  if (TGT.getHwModes().getNumModeIds() > 1)
+    OS << "  unsigned getHwMode() const override;\n";
+  OS << "};\n"
+     << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_HEADER\n\n";
 
@@ -1515,6 +1536,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << ") {}\n\n";
 
   EmitSchedModelHelpers(ClassName, OS);
+  EmitHwModeCheck(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";
 

@@ -42,7 +42,7 @@
 #                    ^-- loc
 
 # CHECK: 00020004      .text   00000000 loc
-# CHECK: 00037ff0      *ABS*   00000000 .hidden _gp
+# CHECK: 00037ff0      .got    00000000 .hidden _gp
 # CHECK: 00020000 g  F .text   00000000 __start
 
 # ELF:      Format: ELF32-mips

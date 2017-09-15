@@ -12,6 +12,8 @@ define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality
   %1 = alloca i8*
   %2 = alloca i32
   %3 = alloca i32, align 4
+; CHECK: call void @no_inline
+  call void @no_inline(), !dbg !16
 ; CHECK-NOT: call
   call void @_ZL3barv(), !dbg !9
 ; CHECK-NOT: invoke
@@ -45,7 +47,15 @@ define void @recursive() #0 !dbg !13 {
   ret void
 }
 
+; The callee has mismatch attributes to the caller, it should not be inlined
+define void @no_inline() #1 !dbg !17 {
+  ret void
+}
+
 declare i32 @__gxx_personality_v0(...)
+
+attributes #0 = {"target-features"="+sse4.1"}
+attributes #1 = {"target-features"="+sse4.2"}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
@@ -62,3 +72,5 @@ declare i32 @__gxx_personality_v0(...)
 !13 = distinct !DISubprogram(linkageName: "recursive", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
 !14 = !DILocation(line: 21, column: 3, scope: !13)
 !15 = !DILocation(line: 22, column: 3, scope: !13)
+!16 = !DILocation(line: 7, column: 3, scope: !6)
+!17 = distinct !DISubprogram(linkageName: "no_inline", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)

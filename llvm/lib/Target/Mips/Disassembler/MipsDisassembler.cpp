@@ -523,6 +523,10 @@ template <typename InsnType>
 static DecodeStatus DecodeDINS(MCInst &MI, InsnType Insn, uint64_t Address,
                                const void *Decoder);
 
+template <typename InsnType>
+static DecodeStatus DecodeDEXT(MCInst &MI, InsnType Insn, uint64_t Address,
+                               const void *Decoder);
+
 static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
                                          uint64_t Address,
                                          const void *Decoder);
@@ -1051,6 +1055,60 @@ static DecodeStatus DecodeBlezGroupBranch(MCInst &MI, InsnType insn,
                                      Rt)));
 
   MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+// Override the generated disassembler to produce DEXT all the time. This is
+// for feature / behaviour parity with  binutils.
+template <typename InsnType>
+static DecodeStatus DecodeDEXT(MCInst &MI, InsnType Insn, uint64_t Address,
+                               const void *Decoder) {
+  unsigned Msbd = fieldFromInstruction(Insn, 11, 5);
+  unsigned Lsb = fieldFromInstruction(Insn, 6, 5);
+  unsigned Size = 0;
+  unsigned Pos = 0;
+  bool IsMicroMips = false;
+
+  switch (MI.getOpcode()) {
+    case Mips::DEXT_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DEXT:
+      Pos = Lsb;
+      Size = Msbd + 1;
+      break;
+    case Mips::DEXTM_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DEXTM:
+      Pos = Lsb;
+      Size = Msbd + 1 + 32;
+      break;
+    case Mips::DEXTU_MM64R6:
+      IsMicroMips = true;
+      LLVM_FALLTHROUGH;
+    case Mips::DEXTU:
+      Pos = Lsb + 32;
+      Size = Msbd + 1;
+      break;
+    default:
+      llvm_unreachable("Unknown DEXT instruction!");
+  }
+
+  MI.setOpcode(IsMicroMips ? Mips::DEXT_MM64R6 : Mips::DEXT);
+
+  // Although the format of the instruction is similar, rs and rt are swapped
+  // for microMIPS64R6.
+  InsnType Rs = fieldFromInstruction(Insn, 21, 5);
+  InsnType Rt = fieldFromInstruction(Insn, 16, 5);
+  if (IsMicroMips)
+    std::swap(Rs, Rt);
+
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID, Rt)));
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR64RegClassID, Rs)));
+  MI.addOperand(MCOperand::createImm(Pos));
+  MI.addOperand(MCOperand::createImm(Size));
 
   return MCDisassembler::Success;
 }

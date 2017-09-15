@@ -230,9 +230,6 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 
   // Print UUID header.
   const auto *ObjFile = DObj->getFile();
-  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
-    outs() << ObjFile->getFileName() << ":\tfile format "
-           << ObjFile->getFileFormatName() << "\n\n";
   if (DumpType & DIDT_UUID)
     dumpUUID(OS, *ObjFile);
 

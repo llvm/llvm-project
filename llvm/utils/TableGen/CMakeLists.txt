@@ -8,6 +8,7 @@ add_tablegen(llvm-tblgen LLVM
   CallingConvEmitter.cpp
   CodeEmitterGen.cpp
   CodeGenDAGPatterns.cpp
+  CodeGenHwModes.cpp
   CodeGenInstruction.cpp
   CodeGenMapTable.cpp
   CodeGenRegisters.cpp
@@ -23,6 +24,7 @@ add_tablegen(llvm-tblgen LLVM
   FastISelEmitter.cpp
   FixedLenDecoderEmitter.cpp
   GlobalISelEmitter.cpp
+  InfoByHwMode.cpp
   InstrInfoEmitter.cpp
   IntrinsicEmitter.cpp
   OptParserEmitter.cpp

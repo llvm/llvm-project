@@ -57,7 +57,6 @@ Error readBinaryFormatHeader(StringRef Data, XRayFileHeader &FileHeader) {
 
 Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
                          std::vector<XRayRecord> &Records) {
-  // Check that there is at least a header
   if (Data.size() < 32)
     return make_error<StringError>(
         "Not enough bytes for an XRay log.",
@@ -325,8 +324,7 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
       Record.Type = RecordTypes::EXIT;
       break;
     default:
-      // When initializing the error, convert to uint16_t so that the record
-      // type isn't interpreted as a char.
+      // Cast to an unsigned integer to not interpret the record type as a char.
       return make_error<StringError>(
           Twine("Illegal function record type: ")
               .concat(Twine(static_cast<unsigned>(RecordType))),
@@ -347,9 +345,9 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
     // FunctionRecords have a 32 bit delta from the previous absolute TSC
     // or TSC delta. If this would overflow, we should read a TSCWrap record
     // with an absolute TSC reading.
-    uint64_t new_tsc = State.BaseTSC + RecordExtractor.getU32(&OffsetPtr);
-    State.BaseTSC = new_tsc;
-    Record.TSC = new_tsc;
+    uint64_t NewTSC = State.BaseTSC + RecordExtractor.getU32(&OffsetPtr);
+    State.BaseTSC = NewTSC;
+    Record.TSC = NewTSC;
   }
   return Error::success();
 }
@@ -361,7 +359,7 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
 ///
 /// The following is an attempt to document the grammar of the format, which is
 /// parsed by this function for little-endian machines. Since the format makes
-/// use of BitFields, when we support big-Endian architectures, we will need to
+/// use of BitFields, when we support big-endian architectures, we will need to
 /// adjust not only the endianness parameter to llvm's RecordExtractor, but also
 /// the bit twiddling logic, which is consistent with the little-endian
 /// convention that BitFields within a struct will first be packed into the
@@ -416,11 +414,10 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
     uint32_t OffsetPtr = 0;
     if (State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF) {
       RecordSize = State.CurrentBufferSize - State.CurrentBufferConsumed;
-      if (S.size() < State.CurrentBufferSize - State.CurrentBufferConsumed) {
+      if (S.size() < RecordSize) {
         return make_error<StringError>(
-            Twine("Incomplete thread buffer. Expected ") +
-                Twine(State.CurrentBufferSize - State.CurrentBufferConsumed) +
-                " remaining bytes but found " + Twine(S.size()),
+            Twine("Incomplete thread buffer. Expected at least ") +
+                Twine(RecordSize) + " bytes but found " + Twine(S.size()),
             make_error_code(std::errc::invalid_argument));
       }
       State.CurrentBufferConsumed = 0;
@@ -434,19 +431,20 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
       if (auto E = processFDRMetadataRecord(State, BitField, RecordExtractor,
                                             RecordSize))
         return E;
-      State.CurrentBufferConsumed += RecordSize;
     } else { // Process Function Record
       RecordSize = 8;
       if (auto E = processFDRFunctionRecord(State, BitField, RecordExtractor,
                                             Records))
         return E;
-      State.CurrentBufferConsumed += RecordSize;
     }
+    State.CurrentBufferConsumed += RecordSize;
   }
-  // There are two conditions
-  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF &&
-      !(State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF &&
-        State.CurrentBufferSize == State.CurrentBufferConsumed))
+
+  // Having iterated over everything we've been given, we've either consumed
+  // everything and ended up in the end state, or were told to skip the rest.
+  bool Finished = State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF &&
+        State.CurrentBufferSize == State.CurrentBufferConsumed;
+  if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF && !Finished)
     return make_error<StringError>(
         Twine("Encountered EOF with unexpected state expectation ") +
             fdrStateToTwine(State.Expects) +
@@ -459,7 +457,6 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
 
 Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
                   std::vector<XRayRecord> &Records) {
-  // Load the documents from the MappedFile.
   YAMLXRayTrace Trace;
   Input In(Data);
   In >> Trace;
@@ -494,7 +491,6 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
         Twine("Cannot read log from '") + Filename + "'", EC);
   }
 
-  // Attempt to get the filesize.
   uint64_t FileSize;
   if (auto EC = sys::fs::file_size(Filename, FileSize)) {
     return make_error<StringError>(
@@ -506,7 +502,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
         std::make_error_code(std::errc::executable_format_error));
   }
 
-  // Attempt to mmap the file.
+  // Map the opened file into memory and use a StringRef to access it later.
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
       Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
@@ -514,16 +510,17 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
     return make_error<StringError>(
         Twine("Cannot read log from '") + Filename + "'", EC);
   }
+  auto Data = StringRef(MappedFile.data(), MappedFile.size());
 
   // Attempt to detect the file type using file magic. We have a slight bias
   // towards the binary format, and we do this by making sure that the first 4
   // bytes of the binary file is some combination of the following byte
-  // patterns:
+  // patterns: (observe the code loading them assumes they're little endian)
   //
-  //   0x0001 0x0000 - version 1, "naive" format
-  //   0x0001 0x0001 - version 1, "flight data recorder" format
+  //   0x01 0x00 0x00 0x00 - version 1, "naive" format
+  //   0x01 0x00 0x01 0x00 - version 1, "flight data recorder" format
   //
-  // YAML files dont' typically have those first four bytes as valid text so we
+  // YAML files don't typically have those first four bytes as valid text so we
   // try loading assuming YAML if we don't find these bytes.
   //
   // Only if we can't load either the binary or the YAML format will we yield an
@@ -539,16 +536,13 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   Trace T;
   if (Version == 1 && Type == NAIVE_FORMAT) {
     if (auto E =
-            loadNaiveFormatLog(StringRef(MappedFile.data(), MappedFile.size()),
-                               T.FileHeader, T.Records))
+            loadNaiveFormatLog(Data, T.FileHeader, T.Records))
       return std::move(E);
   } else if (Version == 1 && Type == FLIGHT_DATA_RECORDER_FORMAT) {
-    if (auto E = loadFDRLog(StringRef(MappedFile.data(), MappedFile.size()),
-                            T.FileHeader, T.Records))
+    if (auto E = loadFDRLog(Data, T.FileHeader, T.Records))
       return std::move(E);
   } else {
-    if (auto E = loadYAMLLog(StringRef(MappedFile.data(), MappedFile.size()),
-                             T.FileHeader, T.Records))
+    if (auto E = loadYAMLLog(Data, T.FileHeader, T.Records))
       return std::move(E);
   }
 

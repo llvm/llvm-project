@@ -465,6 +465,7 @@ public:
     Match_NonZeroOperandForSync,
     Match_RequiresPosSizeRange0_32,
     Match_RequiresPosSizeRange33_64,
+    Match_RequiresPosSizeUImm6,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -4979,28 +4980,50 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;
     return Match_Success;
-   case Mips::DINS:
-   case Mips::DINS_MM64R6: {
-     assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
-            "Operands must be immediates for dins!");
-     const signed Pos = Inst.getOperand(2).getImm();
-     const signed Size = Inst.getOperand(3).getImm();
-     if ((0 > (Pos + Size)) || ((Pos + Size) > 32))
-       return Match_RequiresPosSizeRange0_32;
-     return Match_Success;
-   }
-   case Mips::DINSM:
-   case Mips::DINSM_MM64R6:
-   case Mips::DINSU:
-   case Mips::DINSU_MM64R6: {
-     assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
-            "Operands must be immediates for dinsm/dinsu!");
-     const signed Pos = Inst.getOperand(2).getImm();
-     const signed Size = Inst.getOperand(3).getImm();
-     if ((32 >= (Pos + Size)) || ((Pos + Size) > 64))
-       return Match_RequiresPosSizeRange33_64;
-     return Match_Success;
-   }
+  case Mips::DINS:
+  case Mips::DINS_MM64R6: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dins!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((0 > (Pos + Size)) || ((Pos + Size) > 32))
+      return Match_RequiresPosSizeRange0_32;
+    return Match_Success;
+  }
+  case Mips::DINSM:
+  case Mips::DINSM_MM64R6:
+  case Mips::DINSU:
+  case Mips::DINSU_MM64R6: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dinsm/dinsu!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((32 >= (Pos + Size)) || ((Pos + Size) > 64))
+      return Match_RequiresPosSizeRange33_64;
+    return Match_Success;
+  }
+  case Mips::DEXT:
+  case Mips::DEXT_MM64R6: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for DEXTM!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((1 > (Pos + Size)) || ((Pos + Size) > 63))
+      return Match_RequiresPosSizeUImm6;
+    return Match_Success;
+  }
+  case Mips::DEXTM:
+  case Mips::DEXTU:
+  case Mips::DEXTM_MM64R6:
+  case Mips::DEXTU_MM64R6: {
+    assert(Inst.getOperand(2).isImm() && Inst.getOperand(3).isImm() &&
+           "Operands must be immediates for dextm/dextu!");
+    const signed Pos = Inst.getOperand(2).getImm();
+    const signed Size = Inst.getOperand(3).getImm();
+    if ((32 > (Pos + Size)) || ((Pos + Size) > 64))
+      return Match_RequiresPosSizeRange33_64;
+    return Match_Success;
+  }
   }
 
   uint64_t TSFlags = getInstDesc(Inst.getOpcode()).TSFlags;
@@ -5197,6 +5220,12 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorStart = Operands[3]->getStartLoc();
     SMLoc ErrorEnd = Operands[4]->getEndLoc();
     return Error(ErrorStart, "size plus position are not in the range 0 .. 32",
+                 SMRange(ErrorStart, ErrorEnd));
+    }
+  case Match_RequiresPosSizeUImm6: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    SMLoc ErrorEnd = Operands[4]->getEndLoc();
+    return Error(ErrorStart, "size plus position are not in the range 1 .. 63",
                  SMRange(ErrorStart, ErrorEnd));
     }
   case Match_RequiresPosSizeRange33_64: {

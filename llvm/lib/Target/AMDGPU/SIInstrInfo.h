@@ -259,6 +259,9 @@ public:
                           unsigned DstReg, ArrayRef<MachineOperand> Cond,
                           unsigned TrueReg, unsigned FalseReg) const;
 
+  unsigned getAddressSpaceForPseudoSourceKind(
+             PseudoSourceValue::PSVKind Kind) const override;
+
   bool
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;

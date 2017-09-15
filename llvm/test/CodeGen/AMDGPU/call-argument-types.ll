@@ -385,10 +385,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_v32i32_i32:
 ; HSA-DAG: s_mov_b32 s33, s9
-; HSA-DAG: s_add_u32 [[SP_REG:s[0-9]+]], s33, 0x100{{$}}
+; HSA-NOT: s_add_u32 s32
 
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
-; MESA-DAG: s_add_u32 [[SP_REG:s[0-9]+]], s33, 0x100{{$}}
+; MESA-NOT: s_add_u32 s32
 
 ; GCN-DAG: buffer_load_dword [[VAL1:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0{{$}}
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
@@ -400,7 +400,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_load_dwordx4 v[28:31], off
 
-; GCN: buffer_store_dword [[VAL1]], off, s[{{[0-9]+}}:{{[0-9]+}}], [[SP_REG]] offset:4{{$}}
+; GCN: buffer_store_dword [[VAL1]], off, s[{{[0-9]+}}:{{[0-9]+}}], s32 offset:4{{$}}
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_swappc_b64
 ; GCN-NEXT: s_endpgm
@@ -447,7 +447,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; HSA-DAG: buffer_store_byte [[VAL0]], off, s[0:3], s33 offset:8
 ; HSA-DAG: buffer_store_dword [[VAL1]], off, s[0:3], s33 offset:12
 
-; GCN: s_add_u32 [[SP]], [[SP]], 0x200
+; GCN-NOT: s_add_u32 [[SP]],
 
 ; HSA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[0:3], s33 offset:8
 ; HSA: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s[0:3], s33 offset:12
@@ -463,7 +463,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; MESA: buffer_store_dword [[RELOAD_VAL1]], off, s[36:39], [[SP]] offset:8
 
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_sub_u32 [[SP]], [[SP]], 0x200
+; GCN-NOT: [[SP]]
 define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0 {
   %val = alloca { i8, i32 }, align 4
   %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %val, i32 0, i32 0
@@ -486,13 +486,13 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GCN-DAG: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:8
 ; GCN-DAG: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:12
 
-; GCN-DAG: s_add_u32 [[SP]], [[SP]], 0x200
+; GCN-NOT: s_add_u32 [[SP]]
 ; GCN: buffer_store_dword [[RELOAD_VAL0]], off, s{{\[[0-9]+:[0-9]+\]}}, [[SP]] offset:4
 ; GCN: buffer_store_dword [[RELOAD_VAL1]], off, s{{\[[0-9]+:[0-9]+\]}}, [[SP]] offset:8
 ; GCN-NEXT: s_swappc_b64
 ; GCN-DAG: buffer_load_ubyte [[LOAD_OUT_VAL0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:16
 ; GCN-DAG: buffer_load_dword [[LOAD_OUT_VAL1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:20
-; GCN: s_sub_u32 [[SP]], [[SP]], 0x200
+; GCN-NOT: s_sub_u32 [[SP]]
 
 ; GCN: buffer_store_byte [[LOAD_OUT_VAL0]], off
 ; GCN: buffer_store_dword [[LOAD_OUT_VAL1]], off

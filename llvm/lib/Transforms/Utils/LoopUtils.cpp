@@ -1116,6 +1116,27 @@ Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
   return None;
 }
 
+/// Does a BFS from a given node to all of its children inside a given loop.
+/// The returned vector of nodes includes the starting point.
+SmallVector<DomTreeNode *, 16>
+llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
+  SmallVector<DomTreeNode *, 16> Worklist;
+  auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
+    // Only include subregions in the top level loop.
+    BasicBlock *BB = DTN->getBlock();
+    if (CurLoop->contains(BB))
+      Worklist.push_back(DTN);
+  };
+
+  AddRegionToWorklist(N);
+
+  for (size_t I = 0; I < Worklist.size(); I++)
+    for (DomTreeNode *Child : Worklist[I]->getChildren())
+      AddRegionToWorklist(Child);
+
+  return Worklist;
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
 bool llvm::isGuaranteedToExecute(const Instruction &Inst,

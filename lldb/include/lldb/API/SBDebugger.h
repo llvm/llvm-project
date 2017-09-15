@@ -109,6 +109,8 @@ public:
                                              const char *archname);
 
   lldb::SBTarget CreateTarget(const char *filename);
+  
+  lldb::SBTarget GetDummyTarget();
 
   // Return true if target is deleted from the target list of the debugger.
   bool DeleteTarget(lldb::SBTarget &target);

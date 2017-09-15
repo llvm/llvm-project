@@ -12,24 +12,60 @@
 ; A *p = new A;
 ; $ clang t.cpp -S -emit-llvm -g -gcodeview -o t.ll
 
+; CHECK:       MemberFunction ([[STATIC_VOID:0x.*]]) {
+; CHECK-NEXT:    TypeLeafKind: LF_MFUNCTION (0x1009)
+; CHECK-NEXT:    ReturnType: void (0x3)
+; CHECK-NEXT:    ClassType: A ({{.*}})
+; CHECK-NEXT:    ThisType: 0x0
+; CHECK-NEXT:    CallingConvention: NearC (0x0)
+; CHECK-NEXT:    FunctionOptions [ (0x0)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    NumParameters: 0
+; CHECK-NEXT:    ArgListType: () ({{.*}})
+; CHECK-NEXT:    ThisAdjustment: 0
+; CHECK-NEXT:  }
+; CHECK:       MemberFunction ([[INSTANCE_VOID:0x.*]]) {
+; CHECK-NEXT:    TypeLeafKind: LF_MFUNCTION (0x1009)
+; CHECK-NEXT:    ReturnType: void (0x3)
+; CHECK-NEXT:    ClassType: A ({{.*}})
+; CHECK-NEXT:    ThisType: A* ({{.*}})
+; CHECK-NEXT:    CallingConvention: ThisCall (0xB)
+; CHECK-NEXT:    FunctionOptions [ (0x0)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    NumParameters: 0
+; CHECK-NEXT:    ArgListType: () ({{.*}})
+; CHECK-NEXT:    ThisAdjustment: 0
+; CHECK-NEXT:  }
+; CHECK:       MemberFunction ([[STATIC_TWO:0x.*]]) {
+; CHECK-NEXT:    TypeLeafKind: LF_MFUNCTION (0x1009)
+; CHECK-NEXT:    ReturnType: void (0x3)
+; CHECK-NEXT:    ClassType: A ({{.*}})
+; CHECK-NEXT:    ThisType: 0x0
+; CHECK-NEXT:    CallingConvention: NearC (0x0)
+; CHECK-NEXT:    FunctionOptions [ (0x0)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    NumParameters: 2
+; CHECK-NEXT:    ArgListType: (int, int) ({{.*}}
+; CHECK-NEXT:    ThisAdjustment: 0
+; CHECK-NEXT:  }
 ; CHECK:      OneMethod {
 ; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: Static (0x2)
-; CHECK-NEXT:   Type: void A::() ({{.*}})
+; CHECK-NEXT:   Type: void A::() ([[STATIC_VOID]])
 ; CHECK-NEXT:   Name: f
 ; CHECK-NEXT: }
 ; CHECK-NEXT: OneMethod {
 ; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
-; CHECK-NEXT:   Type: void A::() ({{.*}})
+; CHECK-NEXT:   Type: void A::() ([[INSTANCE_VOID]])
 ; CHECK-NEXT:   Name: g
 ; CHECK-NEXT: }
 ; CHECK-NEXT: OneMethod {
 ; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: Static (0x2)
-; CHECK-NEXT:   Type: void A::(int, int) ({{.*}})
+; CHECK-NEXT:   Type: void A::(int, int) ([[STATIC_TWO]])
 ; CHECK-NEXT:   Name: h
 ; CHECK-NEXT: }
 

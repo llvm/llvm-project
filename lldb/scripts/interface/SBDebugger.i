@@ -214,6 +214,11 @@ public:
     CreateTarget (const char *filename);
 
     %feature("docstring",
+    "The dummy target holds breakpoints and breakpoint names that will prime newly created targets."
+    ) GetDummyTarget;
+    lldb::SBTarget GetDummyTarget();
+
+    %feature("docstring",
     "Return true if target is deleted from the target list of the debugger."
     ) DeleteTarget;
     bool

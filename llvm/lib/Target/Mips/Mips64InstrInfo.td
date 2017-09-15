@@ -317,16 +317,22 @@ let isCodeGenOnly = 1 in
 def RDHWR64 : ReadHardware<GPR64Opnd, HWRegsOpnd>, RDHWR_FM;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  // The 'pos + size' constraints are enforced by the code that lowers into
-  // MipsISD::Ext.
-  def DEXT : ExtBase<"dext", GPR64Opnd, uimm5_report_uimm6, uimm5_plus1,
-                     immZExt5, immZExt5Plus1, MipsExt>, EXT_FM<3>,
-                     ISA_MIPS64R2;
-  def DEXTM : ExtBase<"dextm", GPR64Opnd, uimm5, uimm5_plus33, immZExt5,
-                      immZExt5Plus33, MipsExt>, EXT_FM<1>, ISA_MIPS64R2;
-  def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32, uimm5_plus1,
-                      immZExt5Plus32, immZExt5Plus1, MipsExt>, EXT_FM<2>,
-                      ISA_MIPS64R2;
+  // The 'pos + size' constraints for code generation are enforced by the
+  // code that lowers into MipsISD::Ext.
+  // For assembly parsing, we alias dextu and dextm to dext, and match by
+  // operand were possible then check the 'pos + size' in MipsAsmParser.
+  // We override the generated decoder to enforce that dext always comes out
+  // for dextm and dextu like binutils.
+  let DecoderMethod = "DecodeDEXT" in {
+    def DEXT : ExtBase<"dext", GPR64Opnd, uimm5_report_uimm6,
+                       uimm5_plus1_report_uimm6, immZExt5, immZExt5Plus1,
+                       MipsExt>, EXT_FM<3>, ISA_MIPS64R2;
+    def DEXTM : ExtBase<"dextm", GPR64Opnd, uimm5, uimm5_plus33, immZExt5,
+                        immZExt5Plus33, MipsExt>, EXT_FM<1>, ISA_MIPS64R2;
+    def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32, uimm5_plus1,
+                        immZExt5Plus32, immZExt5Plus1, MipsExt>, EXT_FM<2>,
+                        ISA_MIPS64R2;
+  }
   // The 'pos + size' constraints for code generation are enforced by the
   // code that lowers into MipsISD::Ins.
   // For assembly parsing, we alias dinsu and dinsm to dins, and match by
@@ -839,6 +845,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
                              uimm_range_2_64:$size), 0>, ISA_MIPS64R2;
   def : MipsInstAlias<"dins $rt, $rs, $pos, $size",
                       (DINSU GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5_plus32:$pos,
+                             uimm5_plus1:$size), 0>, ISA_MIPS64R2;
+  def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                      (DEXTM GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5:$pos,
+                             uimm5_plus33:$size), 0>, ISA_MIPS64R2;
+  def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
+                      (DEXTU GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5_plus32:$pos,
                              uimm5_plus1:$size), 0>, ISA_MIPS64R2;
 
 // Two operand (implicit 0 selector) versions:
