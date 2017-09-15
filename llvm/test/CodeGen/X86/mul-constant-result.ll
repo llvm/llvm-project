@@ -163,8 +163,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:  .LBB0_35:
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
-; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    leal (%ecx,%eax,2), %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_36:
@@ -322,14 +321,15 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_31:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
 ; X64-HSW-NEXT:    leal (%rcx,%rcx,2), %ecx
-; X64-HSW-NEXT:    jmp .LBB0_17
-; X64-HSW-NEXT:  .LBB0_32:
-; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
-; X64-HSW-NEXT:    leal (%rcx,%rcx,2), %ecx
-; X64-HSW-NEXT:    addl %eax, %ecx
 ; X64-HSW-NEXT:  .LBB0_17:
 ; X64-HSW-NEXT:    addl %eax, %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax
+; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    retq
+; X64-HSW-NEXT:  .LBB0_32:
+; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
+; X64-HSW-NEXT:    leal (%rcx,%rcx,2), %ecx
+; X64-HSW-NEXT:    leal (%rcx,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_33:

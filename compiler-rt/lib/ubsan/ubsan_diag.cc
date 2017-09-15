@@ -26,21 +26,25 @@
 
 using namespace __ubsan;
 
+void __ubsan::GetStackTraceWithPcBpAndContext(BufferedStackTrace *stack,
+                                              uptr max_depth, uptr pc, uptr bp,
+                                              void *context, bool fast) {
+  uptr top = 0;
+  uptr bottom = 0;
+  if (fast)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  stack->Unwind(max_depth, pc, bp, context, top, bottom, fast);
+}
+
 static void MaybePrintStackTrace(uptr pc, uptr bp) {
   // We assume that flags are already parsed, as UBSan runtime
   // will definitely be called when we print the first diagnostics message.
   if (!flags()->print_stacktrace)
     return;
 
-  uptr top = 0;
-  uptr bottom = 0;
-  bool request_fast_unwind = common_flags()->fast_unwind_on_fatal;
-  if (request_fast_unwind)
-    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
-
   BufferedStackTrace stack;
-  stack.Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom,
-               request_fast_unwind);
+  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, pc, bp, nullptr,
+                                  common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }
 
