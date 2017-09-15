@@ -87,10 +87,8 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
   Summary.RegionCoverage = Summaries[0].RegionCoverage;
   Summary.LineCoverage = Summaries[0].LineCoverage;
   for (const auto &FCS : Summaries.drop_front()) {
-    Summary.RegionCoverage.Covered =
-        std::max(FCS.RegionCoverage.Covered, Summary.RegionCoverage.Covered);
-    Summary.LineCoverage.Covered =
-        std::max(FCS.LineCoverage.Covered, Summary.LineCoverage.Covered);
+    Summary.RegionCoverage.merge(FCS.RegionCoverage);
+    Summary.LineCoverage.merge(FCS.LineCoverage);
   }
   return Summary;
 }

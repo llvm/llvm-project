@@ -362,8 +362,8 @@ class CoverageExporterJson {
 
     // Start Line Coverage Summary.
     emitDictStart();
-    emitDictElement("count", Summary.LineCoverage.NumLines);
-    emitDictElement("covered", Summary.LineCoverage.Covered);
+    emitDictElement("count", Summary.LineCoverage.getNumLines());
+    emitDictElement("covered", Summary.LineCoverage.getCovered());
     emitDictElement("percent", Summary.LineCoverage.getPercentCovered());
     // End Line Coverage Summary.
     emitDictEnd();
@@ -372,8 +372,8 @@ class CoverageExporterJson {
 
     // Start Function Coverage Summary.
     emitDictStart();
-    emitDictElement("count", Summary.FunctionCoverage.NumFunctions);
-    emitDictElement("covered", Summary.FunctionCoverage.Executed);
+    emitDictElement("count", Summary.FunctionCoverage.getNumFunctions());
+    emitDictElement("covered", Summary.FunctionCoverage.getExecuted());
     emitDictElement("percent", Summary.FunctionCoverage.getPercentCovered());
     // End Function Coverage Summary.
     emitDictEnd();
@@ -382,8 +382,8 @@ class CoverageExporterJson {
 
     // Start Instantiation Coverage Summary.
     emitDictStart();
-    emitDictElement("count", Summary.InstantiationCoverage.NumFunctions);
-    emitDictElement("covered", Summary.InstantiationCoverage.Executed);
+    emitDictElement("count", Summary.InstantiationCoverage.getNumFunctions());
+    emitDictElement("covered", Summary.InstantiationCoverage.getExecuted());
     emitDictElement("percent",
                     Summary.InstantiationCoverage.getPercentCovered());
     // End Function Coverage Summary.
@@ -393,11 +393,11 @@ class CoverageExporterJson {
 
     // Start Region Coverage Summary.
     emitDictStart();
-    emitDictElement("count", Summary.RegionCoverage.NumRegions);
-    emitDictElement("covered", Summary.RegionCoverage.Covered);
+    emitDictElement("count", Summary.RegionCoverage.getNumRegions());
+    emitDictElement("covered", Summary.RegionCoverage.getCovered());
     emitDictElement("notcovered",
-                    Summary.RegionCoverage.NumRegions -
-                        Summary.RegionCoverage.Covered);
+                    Summary.RegionCoverage.getNumRegions() -
+                        Summary.RegionCoverage.getCovered());
     emitDictElement("percent", Summary.RegionCoverage.getPercentCovered());
     // End Region Coverage Summary.
     emitDictEnd();

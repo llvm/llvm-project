@@ -185,11 +185,12 @@ void CoverageReport::render(const FileCoverageSummary &File,
 
   if (Options.ShowRegionSummary) {
     OS << format("%*u", FileReportColumns[1],
-                 (unsigned)File.RegionCoverage.NumRegions);
-    Options.colored_ostream(OS, FileCoverageColor) << format(
-        "%*u", FileReportColumns[2], (unsigned)(File.RegionCoverage.NumRegions -
-                                                File.RegionCoverage.Covered));
-    if (File.RegionCoverage.NumRegions)
+                 (unsigned)File.RegionCoverage.getNumRegions());
+    Options.colored_ostream(OS, FileCoverageColor)
+        << format("%*u", FileReportColumns[2],
+                  (unsigned)(File.RegionCoverage.getNumRegions() -
+                             File.RegionCoverage.getCovered()));
+    if (File.RegionCoverage.getNumRegions())
       Options.colored_ostream(OS, FileCoverageColor)
           << format("%*.2f", FileReportColumns[3] - 1,
                     File.RegionCoverage.getPercentCovered())
@@ -199,11 +200,11 @@ void CoverageReport::render(const FileCoverageSummary &File,
   }
 
   OS << format("%*u", FileReportColumns[4],
-               (unsigned)File.FunctionCoverage.NumFunctions);
+               (unsigned)File.FunctionCoverage.getNumFunctions());
   OS << format("%*u", FileReportColumns[5],
-               (unsigned)(File.FunctionCoverage.NumFunctions -
-                          File.FunctionCoverage.Executed));
-  if (File.FunctionCoverage.NumFunctions)
+               (unsigned)(File.FunctionCoverage.getNumFunctions() -
+                          File.FunctionCoverage.getExecuted()));
+  if (File.FunctionCoverage.getNumFunctions())
     Options.colored_ostream(OS, FuncCoverageColor)
         << format("%*.2f", FileReportColumns[6] - 1,
                   File.FunctionCoverage.getPercentCovered())
@@ -213,11 +214,11 @@ void CoverageReport::render(const FileCoverageSummary &File,
 
   if (Options.ShowInstantiationSummary) {
     OS << format("%*u", FileReportColumns[7],
-                 (unsigned)File.InstantiationCoverage.NumFunctions);
+                 (unsigned)File.InstantiationCoverage.getNumFunctions());
     OS << format("%*u", FileReportColumns[8],
-                 (unsigned)(File.InstantiationCoverage.NumFunctions -
-                            File.InstantiationCoverage.Executed));
-    if (File.InstantiationCoverage.NumFunctions)
+                 (unsigned)(File.InstantiationCoverage.getNumFunctions() -
+                            File.InstantiationCoverage.getExecuted()));
+    if (File.InstantiationCoverage.getNumFunctions())
       Options.colored_ostream(OS, InstantiationCoverageColor)
           << format("%*.2f", FileReportColumns[9] - 1,
                     File.InstantiationCoverage.getPercentCovered())
@@ -227,11 +228,11 @@ void CoverageReport::render(const FileCoverageSummary &File,
   }
 
   OS << format("%*u", FileReportColumns[10],
-               (unsigned)File.LineCoverage.NumLines);
+               (unsigned)File.LineCoverage.getNumLines());
   Options.colored_ostream(OS, LineCoverageColor) << format(
-      "%*u", FileReportColumns[11],
-      (unsigned)(File.LineCoverage.NumLines - File.LineCoverage.Covered));
-  if (File.LineCoverage.NumLines)
+      "%*u", FileReportColumns[11], (unsigned)(File.LineCoverage.getNumLines() -
+                                               File.LineCoverage.getCovered()));
+  if (File.LineCoverage.getNumLines())
     Options.colored_ostream(OS, LineCoverageColor)
         << format("%*.2f", FileReportColumns[12] - 1,
                   File.LineCoverage.getPercentCovered())
@@ -251,22 +252,22 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
   OS << column(DC.demangle(Function.Name), FunctionReportColumns[0],
                Column::RightTrim)
      << format("%*u", FunctionReportColumns[1],
-               (unsigned)Function.RegionCoverage.NumRegions);
+               (unsigned)Function.RegionCoverage.getNumRegions());
   Options.colored_ostream(OS, FuncCoverageColor)
       << format("%*u", FunctionReportColumns[2],
-                (unsigned)(Function.RegionCoverage.NumRegions -
-                           Function.RegionCoverage.Covered));
+                (unsigned)(Function.RegionCoverage.getNumRegions() -
+                           Function.RegionCoverage.getCovered()));
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.RegionCoverage))
       << format("%*.2f", FunctionReportColumns[3] - 1,
                 Function.RegionCoverage.getPercentCovered())
       << '%';
   OS << format("%*u", FunctionReportColumns[4],
-               (unsigned)Function.LineCoverage.NumLines);
+               (unsigned)Function.LineCoverage.getNumLines());
   Options.colored_ostream(OS, LineCoverageColor)
       << format("%*u", FunctionReportColumns[5],
-                (unsigned)(Function.LineCoverage.NumLines -
-                           Function.LineCoverage.Covered));
+                (unsigned)(Function.LineCoverage.getNumLines() -
+                           Function.LineCoverage.getCovered()));
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.LineCoverage))
       << format("%*.2f", FunctionReportColumns[6] - 1,
@@ -391,7 +392,7 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
 
   bool EmptyFiles = false;
   for (const FileCoverageSummary &FCS : FileReports) {
-    if (FCS.FunctionCoverage.NumFunctions)
+    if (FCS.FunctionCoverage.getNumFunctions())
       render(FCS, OS);
     else
       EmptyFiles = true;
@@ -402,7 +403,7 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
        << "Files which contain no functions:\n";
 
     for (const FileCoverageSummary &FCS : FileReports)
-      if (!FCS.FunctionCoverage.NumFunctions)
+      if (!FCS.FunctionCoverage.getNumFunctions())
         render(FCS, OS);
   }
 
