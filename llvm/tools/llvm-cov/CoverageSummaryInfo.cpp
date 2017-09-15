@@ -68,9 +68,9 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
       for (unsigned I = CR.LineStart; I <= CR.LineEnd; ++I)
         ExecutionCounts[I - LineStart] = ExecutionCount;
     }
-    unsigned UncoveredLines =
-        std::min(std::count(ExecutionCounts.begin(), ExecutionCounts.end(), 0),
-                 (long)LinesNotSkipped);
+    unsigned UncoveredLines = std::min(
+        (unsigned)std::count(ExecutionCounts.begin(), ExecutionCounts.end(), 0),
+        (unsigned)LinesNotSkipped);
     CoveredLines += LinesNotSkipped - UncoveredLines;
     NumLines += LinesNotSkipped;
   }
