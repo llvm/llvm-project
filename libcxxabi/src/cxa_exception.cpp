@@ -20,7 +20,7 @@
 #include "fallback_malloc.h"
 
 #if __has_feature(address_sanitizer)
-#include <sanitizer/asan_interface.h>
+extern "C" void __asan_handle_no_return(void);
 #endif
 
 // +---------------------------+-----------------------------+---------------+
@@ -222,8 +222,7 @@ __cxa_throw(void *thrown_object, std::type_info *tinfo, void (*dest)(void *)) {
 
     exception_header->unwindHeader.exception_cleanup = exception_cleanup_func;
 
-#if __has_feature(address_sanitizer) && \
-  defined(SANITIZER_ASAN_INTERFACE_HAS_HANDLE_NO_RETURN)
+#if __has_feature(address_sanitizer)
     // Inform the ASan runtime that now might be a good time to clean stuff up.
     __asan_handle_no_return();
 #endif

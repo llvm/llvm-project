@@ -1107,10 +1107,7 @@ void SBTarget::DeleteBreakpointName(const char *name)
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-
-    std::vector<std::string> name_vec;
     target_sp->DeleteBreakpointName(ConstString(name));
-
   }
 }
 

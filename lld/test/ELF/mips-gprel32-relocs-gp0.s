@@ -29,7 +29,7 @@
 # DUMP: SYMBOL TABLE:
 # DUMP: 00010008         .text          00000000 bar
 # DUMP: 00010004         .text          00000000 foo
-# DUMP: 00027ff0         *ABS*          00000000 .hidden _gp
+# DUMP: 00027ff0         .got           00000000 .hidden _gp
 
 # ERR: error: {{.*}}mips-gp0-non-zero.o: unsupported non-zero ri_gp_value
 
