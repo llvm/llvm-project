@@ -1687,9 +1687,10 @@ private:
 
 static OptionDefinition g_breakpoint_name_options[] = {
     // clang-format off
-  {LLDB_OPT_SET_1,   false, "name",              'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName, "Specifies a breakpoint name to use."},
-  {LLDB_OPT_SET_2,   false, "breakpoint-id",     'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointID,   "Specify a breakpoint ID to use."},
+  {LLDB_OPT_SET_1, false, "name",              'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName, "Specifies a breakpoint name to use."},
+  {LLDB_OPT_SET_2, false, "breakpoint-id",     'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointID,   "Specify a breakpoint ID to use."},
   {LLDB_OPT_SET_3, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,           "Operate on Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  {LLDB_OPT_SET_4, false, "help-string",  'H', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone, "A help string describing the purpose of this name."},
     // clang-format on
 };
 class BreakpointNameOptionGroup : public OptionGroup {
@@ -1715,7 +1716,6 @@ public:
           error.Success())
         m_name.SetValueFromString(option_arg);
       break;
-
     case 'B':
       if (m_breakpoint.SetValueFromString(option_arg).Fail())
         error.SetErrorStringWithFormat(
@@ -1727,6 +1727,9 @@ public:
         error.SetErrorStringWithFormat(
             "unrecognized value \"%s\" for use-dummy",
             option_arg.str().c_str());
+      break;
+    case 'H':
+      m_help_string.SetValueFromString(option_arg);
       break;
 
     default:
@@ -1742,11 +1745,13 @@ public:
     m_breakpoint.Clear();
     m_use_dummy.Clear();
     m_use_dummy.SetDefaultValue(false);
+    m_help_string.Clear();
   }
 
   OptionValueString m_name;
   OptionValueUInt64 m_breakpoint;
   OptionValueBoolean m_use_dummy;
+  OptionValueString m_help_string;
 };
 
 static OptionDefinition g_breakpoint_access_options[] = {
@@ -1849,7 +1854,9 @@ public:
     m_option_group.Append(&m_access_options, 
                           LLDB_OPT_SET_ALL, 
                           LLDB_OPT_SET_ALL);
-    m_option_group.Append(&m_bp_id, LLDB_OPT_SET_2, LLDB_OPT_SET_2);
+    m_option_group.Append(&m_bp_id, 
+                          LLDB_OPT_SET_2|LLDB_OPT_SET_4, 
+                          LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
   }
 
@@ -1912,6 +1919,9 @@ protected:
       BreakpointName *bp_name = target->FindBreakpointName(name, true, error);
       if (!bp_name)
         continue;
+      if (m_bp_id.m_help_string.OptionWasSet())
+        bp_name->SetHelp(m_bp_id.m_help_string.GetStringValue().str().c_str());
+      
       if (bp_sp)
         target->ConfigureBreakpointName(*bp_name,
                                        *bp_sp->GetOptions(),

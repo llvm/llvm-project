@@ -63,7 +63,6 @@ private:
   void assignFileOffsetsBinary();
   void setPhdrs();
   void fixSectionAlignments();
-  void makeMipsGpAbs();
   void openFile();
   void writeTrapInstr();
   void writeHeader();
@@ -216,8 +215,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     for (OutputSection *Sec : OutputSections)
       Sec->Addr = 0;
-  } else {
-    makeMipsGpAbs();
   }
 
   // It does not make sense try to open the file if we have error already.
@@ -1772,14 +1769,6 @@ static uint16_t getELFType() {
   if (Config->Relocatable)
     return ET_REL;
   return ET_EXEC;
-}
-
-// For some reason we have to make the mips gp symbol absolute.
-template <class ELFT> void Writer<ELFT>::makeMipsGpAbs() {
-  if (ElfSym::MipsGp && ElfSym::MipsGp->Section) {
-    ElfSym::MipsGp->Value += cast<OutputSection>(ElfSym::MipsGp->Section)->Addr;
-    ElfSym::MipsGp->Section = nullptr;
-  }
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {

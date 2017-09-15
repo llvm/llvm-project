@@ -92,6 +92,7 @@ class BreakpointNames(TestBase):
         self.cmd_list = lldb.SBStringList()
         self.cmd_list.AppendString("frame var")
         self.cmd_list.AppendString("bt")
+        self.help_string = "I do something interesting"
 
 
     def do_check_names(self):
@@ -256,7 +257,7 @@ class BreakpointNames(TestBase):
         self.assertEqual(bkpt.GetAutoContinue(), new_auto_continue, "Option didn't propagate to the breakpoint.")
         
         # Now make this same breakpoint name - but from the command line
-        cmd_str = "breakpoint name configure %s -o %d -i %d -c '%s' -G %d -t %d -x %d -T '%s' -q '%s'"%(cl_bp_name_string, 
+        cmd_str = "breakpoint name configure %s -o %d -i %d -c '%s' -G %d -t %d -x %d -T '%s' -q '%s' -H '%s'"%(cl_bp_name_string, 
                                                                              self.is_one_shot, 
                                                                              self.ignore_count, 
                                                                              self.condition, 
@@ -264,22 +265,36 @@ class BreakpointNames(TestBase):
                                                                              self.tid,
                                                                              self.tidx,
                                                                              self.thread_name,
-                                                                             self.queue_name)
+                                                                             self.queue_name,
+                                                                             self.help_string)
         for cmd in self.cmd_list:
             cmd_str += " -C '%s'"%(cmd)
         
-        result = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand(cmd_str, result)
-        self.assertTrue(result.Succeeded())
+        self.runCmd(cmd_str, check=True)
         # Now look up this name again and check its options:
         cl_name = lldb.SBBreakpointName(self.target, cl_bp_name_string)
         self.check_option_values(cl_name)
+        # Also check the help string:
+        self.assertEqual(self.help_string, cl_name.GetHelpString(), "Help string didn't match")
+        # Change the name and make sure that works:
+        new_help = "I do something even more interesting"
+        cl_name.SetHelpString(new_help)
+        self.assertEqual(new_help, cl_name.GetHelpString(), "SetHelpString didn't")
         
         # We should have three names now, make sure the target can list them:
         name_list = lldb.SBStringList()
         self.target.GetBreakpointNames(name_list)
         for name_string in [self.bp_name_string, other_bp_name_string, cl_bp_name_string]:
             self.assertTrue(name_string in name_list, "Didn't find %s in names"%(name_string))
+
+        # Delete the name from the current target.  Make sure that works and deletes the 
+        # name from the breakpoint as well:
+        self.target.DeleteBreakpointName(self.bp_name_string)
+        name_list.Clear()
+        self.target.GetBreakpointNames(name_list)
+        self.assertTrue(self.bp_name_string not in name_list, "Didn't delete %s from a real target"%(self.bp_name_string))
+        # Also make sure the name got removed from breakpoints holding it:
+        self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
 
         # Test that deleting the name we injected into the dummy target works (there's also a
         # cleanup that will do this, but that won't test the result...
@@ -288,6 +303,8 @@ class BreakpointNames(TestBase):
         name_list.Clear()
         dummy_target.GetBreakpointNames(name_list)
         self.assertTrue(self.bp_name_string not in name_list, "Didn't delete %s from the dummy target"%(self.bp_name_string))
+        # Also make sure the name got removed from breakpoints holding it:
+        self.assertFalse(bkpt.MatchesName(self.bp_name_string), "Didn't remove the name from the breakpoint.")
         
     def check_permission_results(self, bp_name):
         self.assertEqual(bp_name.GetAllowDelete(), False, "Didn't set allow delete.")

@@ -503,6 +503,30 @@ bool SBBreakpointName::GetCommandLineCommands(SBStringList &commands) {
   return has_commands;
 }
 
+const char *SBBreakpointName::GetHelpString() const {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  
+  BreakpointName *bp_name = GetBreakpointName();
+  if (!bp_name)
+    return "";
+ 
+  LLDB_LOG(log, "Help: {0}\n", bp_name->GetHelp());
+  return bp_name->GetHelp();
+}
+
+void SBBreakpointName::SetHelpString(const char *help_string) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  BreakpointName *bp_name = GetBreakpointName();
+  if (!bp_name)
+    return;
+
+  LLDB_LOG(log, "Name: {0} help: {1}\n", bp_name->GetName(), help_string);
+
+  std::lock_guard<std::recursive_mutex> guard(
+        m_impl_up->GetTarget()->GetAPIMutex());
+  bp_name->SetHelp(help_string);
+}
+
 bool SBBreakpointName::GetDescription(SBStream &s) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   
