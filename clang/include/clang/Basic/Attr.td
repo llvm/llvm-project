@@ -1746,7 +1746,8 @@ def SwiftVersioned : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
-  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">];
+  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">,
+              BoolArgument<"IsReplacedByActive">];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
 }
@@ -1755,7 +1756,8 @@ def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
-  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
+              BoolArgument<"IsReplacedByActive">];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
   let AdditionalMembers = [{
