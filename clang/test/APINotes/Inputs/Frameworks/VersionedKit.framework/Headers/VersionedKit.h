@@ -1,5 +1,7 @@
 void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));
 
+void unversionedRenameDUMP(void) __attribute__((swift_name("unversionedRename_HEADER()")));
+
 void acceptClosure(void (^ __attribute__((noescape)) block)(void));
 
 void privateFunc(void) __attribute__((swift_private));
@@ -43,6 +45,10 @@ __attribute__((swift_bridge("MyValueType")))
 __attribute__((swift_name("Swift4Name")))
 @interface Swift3RenamedAlsoDUMP
 @end
+
+@interface Swift4RenamedDUMP
+@end
+
 #endif
 
 
