@@ -187,7 +187,8 @@ void CoverageReport::render(const FileCoverageSummary &File,
     OS << format("%*u", FileReportColumns[1],
                  (unsigned)File.RegionCoverage.NumRegions);
     Options.colored_ostream(OS, FileCoverageColor) << format(
-        "%*u", FileReportColumns[2], (unsigned)File.RegionCoverage.NotCovered);
+        "%*u", FileReportColumns[2], (unsigned)(File.RegionCoverage.NumRegions -
+                                                File.RegionCoverage.Covered));
     if (File.RegionCoverage.NumRegions)
       Options.colored_ostream(OS, FileCoverageColor)
           << format("%*.2f", FileReportColumns[3] - 1,
@@ -228,7 +229,8 @@ void CoverageReport::render(const FileCoverageSummary &File,
   OS << format("%*u", FileReportColumns[10],
                (unsigned)File.LineCoverage.NumLines);
   Options.colored_ostream(OS, LineCoverageColor) << format(
-      "%*u", FileReportColumns[11], (unsigned)File.LineCoverage.NotCovered);
+      "%*u", FileReportColumns[11],
+      (unsigned)(File.LineCoverage.NumLines - File.LineCoverage.Covered));
   if (File.LineCoverage.NumLines)
     Options.colored_ostream(OS, LineCoverageColor)
         << format("%*.2f", FileReportColumns[12] - 1,
@@ -252,7 +254,8 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
                (unsigned)Function.RegionCoverage.NumRegions);
   Options.colored_ostream(OS, FuncCoverageColor)
       << format("%*u", FunctionReportColumns[2],
-                (unsigned)Function.RegionCoverage.NotCovered);
+                (unsigned)(Function.RegionCoverage.NumRegions -
+                           Function.RegionCoverage.Covered));
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.RegionCoverage))
       << format("%*.2f", FunctionReportColumns[3] - 1,
@@ -262,7 +265,8 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
                (unsigned)Function.LineCoverage.NumLines);
   Options.colored_ostream(OS, LineCoverageColor)
       << format("%*u", FunctionReportColumns[5],
-                (unsigned)Function.LineCoverage.NotCovered);
+                (unsigned)(Function.LineCoverage.NumLines -
+                           Function.LineCoverage.Covered));
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(Function.LineCoverage))
       << format("%*.2f", FunctionReportColumns[6] - 1,

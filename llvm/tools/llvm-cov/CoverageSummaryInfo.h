@@ -25,21 +25,16 @@ struct RegionCoverageInfo {
   /// \brief The number of regions that were executed at least once.
   size_t Covered;
 
-  /// \brief The number of regions that weren't executed.
-  size_t NotCovered;
-
   /// \brief The total number of regions in a function/file.
   size_t NumRegions;
 
-  RegionCoverageInfo() : Covered(0), NotCovered(0), NumRegions(0) {}
+  RegionCoverageInfo() : Covered(0), NumRegions(0) {}
 
   RegionCoverageInfo(size_t Covered, size_t NumRegions)
-      : Covered(Covered), NotCovered(NumRegions - Covered),
-        NumRegions(NumRegions) {}
+      : Covered(Covered), NumRegions(NumRegions) {}
 
   RegionCoverageInfo &operator+=(const RegionCoverageInfo &RHS) {
     Covered += RHS.Covered;
-    NotCovered += RHS.NotCovered;
     NumRegions += RHS.NumRegions;
     return *this;
   }
@@ -58,20 +53,16 @@ struct LineCoverageInfo {
   /// \brief The number of lines that were executed at least once.
   size_t Covered;
 
-  /// \brief The number of lines that weren't executed.
-  size_t NotCovered;
-
   /// \brief The total number of lines in a function/file.
   size_t NumLines;
 
-  LineCoverageInfo() : Covered(0), NotCovered(0), NumLines(0) {}
+  LineCoverageInfo() : Covered(0), NumLines(0) {}
 
   LineCoverageInfo(size_t Covered, size_t NumLines)
-      : Covered(Covered), NotCovered(NumLines - Covered), NumLines(NumLines) {}
+      : Covered(Covered), NumLines(NumLines) {}
 
   LineCoverageInfo &operator+=(const LineCoverageInfo &RHS) {
     Covered += RHS.Covered;
-    NotCovered += RHS.NotCovered;
     NumLines += RHS.NumLines;
     return *this;
   }
