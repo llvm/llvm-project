@@ -90,6 +90,9 @@ public:
 
   SBError SetScriptCallbackBody(const char *script_body_text);
   
+  const char *GetHelpString() const;
+  void SetHelpString(const char *help_string);
+  
   bool GetAllowList() const;
   void SetAllowList(bool value);
     
