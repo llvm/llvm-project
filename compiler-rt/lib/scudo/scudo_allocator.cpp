@@ -620,6 +620,11 @@ struct ScudoAllocator {
     BackendAllocator.getStats(stats);
     return stats[StatType];
   }
+
+  void *handleBadRequest() {
+    initThreadMaybe();
+    return FailureHandler::OnBadRequest();
+  }
 };
 
 static ScudoAllocator Instance(LINKER_INITIALIZED);
@@ -677,7 +682,7 @@ void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
     errno = errno_ENOMEM;
-    return ScudoAllocator::FailureHandler::OnBadRequest();
+    return Instance.handleBadRequest();
   }
   // pvalloc(0) should allocate one page.
   Size = Size ? RoundUpTo(Size, PageSize) : PageSize;
@@ -687,14 +692,14 @@ void *scudoPvalloc(uptr Size) {
 void *scudoMemalign(uptr Alignment, uptr Size) {
   if (UNLIKELY(!IsPowerOfTwo(Alignment))) {
     errno = errno_EINVAL;
-    return ScudoAllocator::FailureHandler::OnBadRequest();
+    return Instance.handleBadRequest();
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMemalign));
 }
 
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(Alignment))) {
-    ScudoAllocator::FailureHandler::OnBadRequest();
+    Instance.handleBadRequest();
     return errno_EINVAL;
   }
   void *Ptr = Instance.allocate(Size, Alignment, FromMemalign);
@@ -707,7 +712,7 @@ int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(Alignment, Size))) {
     errno = errno_EINVAL;
-    return ScudoAllocator::FailureHandler::OnBadRequest();
+    return Instance.handleBadRequest();
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMalloc));
 }

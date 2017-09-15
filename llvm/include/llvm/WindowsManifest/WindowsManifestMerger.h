@@ -26,7 +26,6 @@
 #ifndef LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
 #define LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
 
-#include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

@@ -80,11 +80,11 @@ struct PatternSortingPredicate {
   CodeGenDAGPatterns &CGP;
 
   bool operator()(const PatternToMatch *LHS, const PatternToMatch *RHS) {
-    const TreePatternNode *LHSSrc = LHS->getSrcPattern();
-    const TreePatternNode *RHSSrc = RHS->getSrcPattern();
+    const TreePatternNode *LT = LHS->getSrcPattern();
+    const TreePatternNode *RT = RHS->getSrcPattern();
 
-    MVT LHSVT = (LHSSrc->getNumTypes() != 0 ? LHSSrc->getType(0) : MVT::Other);
-    MVT RHSVT = (RHSSrc->getNumTypes() != 0 ? RHSSrc->getType(0) : MVT::Other);
+    MVT LHSVT = LT->getNumTypes() != 0 ? LT->getSimpleType(0) : MVT::Other;
+    MVT RHSVT = RT->getNumTypes() != 0 ? RT->getSimpleType(0) : MVT::Other;
     if (LHSVT.isVector() != RHSVT.isVector())
       return RHSVT.isVector();
 

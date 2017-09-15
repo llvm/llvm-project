@@ -5123,13 +5123,18 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
     }
 
-    case SUBMODULE_INITIALIZERS:
+    case SUBMODULE_INITIALIZERS: {
       if (!ContextObj)
         break;
       SmallVector<uint32_t, 16> Inits;
       for (auto &ID : Record)
         Inits.push_back(getGlobalDeclID(F, ID));
       ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
+      break;
+    }
+
+    case SUBMODULE_EXPORT_AS:
+      CurrentModule->ExportAsModule = Blob.str();
       break;
     }
   }

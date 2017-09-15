@@ -13,8 +13,8 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32_stack_object:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN: s_mov_b32 s5, s32
 ; GCN: v_add_i32_e32 v0, vcc, v1, v
+; GCN: s_mov_b32 s5, s32
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:24
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64

@@ -37,27 +37,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
+#include "SBBreakpointOptionCommon.h"
+
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
-
-struct CallbackData {
-  SBBreakpoint::BreakpointHitCallback callback;
-  void *callback_baton;
-};
-
-class SBBreakpointCallbackBaton : public TypedBaton<CallbackData> {
-public:
-  SBBreakpointCallbackBaton(SBBreakpoint::BreakpointHitCallback callback,
-                            void *baton)
-      : TypedBaton(llvm::make_unique<CallbackData>()) {
-    getItem()->callback = callback;
-    getItem()->callback_baton = baton;
-  }
-};
 
 SBBreakpoint::SBBreakpoint() {}
 
@@ -500,37 +487,9 @@ bool SBBreakpoint::GetDescription(SBStream &s, bool include_locations) {
   return false;
 }
 
-bool SBBreakpoint::PrivateBreakpointHitCallback(void *baton,
-                                                StoppointCallbackContext *ctx,
-                                                lldb::user_id_t break_id,
-                                                lldb::user_id_t break_loc_id) {
-  ExecutionContext exe_ctx(ctx->exe_ctx_ref);
-  BreakpointSP bp_sp(
-      exe_ctx.GetTargetRef().GetBreakpointList().FindBreakpointByID(break_id));
-  if (baton && bp_sp) {
-    CallbackData *data = (CallbackData *)baton;
-    lldb_private::Breakpoint *bp = bp_sp.get();
-    if (bp && data->callback) {
-      Process *process = exe_ctx.GetProcessPtr();
-      if (process) {
-        SBProcess sb_process(process->shared_from_this());
-        SBThread sb_thread;
-        SBBreakpointLocation sb_location;
-        assert(bp_sp);
-        sb_location.SetLocation(bp_sp->FindLocationByID(break_loc_id));
-        Thread *thread = exe_ctx.GetThreadPtr();
-        if (thread)
-          sb_thread.SetThread(thread->shared_from_this());
-
-        return data->callback(data->callback_baton, sb_process, sb_thread,
-                              sb_location);
-      }
-    }
-  }
-  return true; // Return true if we should stop at this breakpoint
-}
-
-void SBBreakpoint::SetCallback(BreakpointHitCallback callback, void *baton) {
+void SBBreakpoint
+  ::SetCallback(SBBreakpointHitCallback callback,
+  void *baton) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointSP bkpt_sp = GetSP();
   LLDB_LOG(log, "breakpoint = {0}, callback = {1}, baton = {2}", bkpt_sp.get(),
@@ -540,7 +499,8 @@ void SBBreakpoint::SetCallback(BreakpointHitCallback callback, void *baton) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
     BatonSP baton_sp(new SBBreakpointCallbackBaton(callback, baton));
-    bkpt_sp->SetCallback(SBBreakpoint::PrivateBreakpointHitCallback, baton_sp,
+    bkpt_sp->SetCallback(SBBreakpointCallbackBaton
+      ::PrivateBreakpointHitCallback, baton_sp,
                          false);
   }
 }
@@ -599,10 +559,17 @@ bool SBBreakpoint::AddName(const char *new_name) {
         bkpt_sp->GetTarget().GetAPIMutex());
     Status error; // Think I'm just going to swallow the error here, it's
                   // probably more annoying to have to provide it.
-    return bkpt_sp->AddName(new_name, error);
+    bkpt_sp->GetTarget().AddNameToBreakpoint(bkpt_sp, new_name, error);
+    if (error.Fail())
+    {
+      if (log)
+        log->Printf("Failed to add name: '%s' to breakpoint: %s", 
+            new_name, error.AsCString());
+      return false;
+    }
   }
 
-  return false;
+  return true;
 }
 
 void SBBreakpoint::RemoveName(const char *name_to_remove) {
@@ -613,7 +580,8 @@ void SBBreakpoint::RemoveName(const char *name_to_remove) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->RemoveName(name_to_remove);
+    bkpt_sp->GetTarget().RemoveNameFromBreakpoint(bkpt_sp, 
+                                                 ConstString(name_to_remove));
   }
 }
 

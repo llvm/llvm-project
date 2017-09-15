@@ -6,7 +6,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 namespace lldb {
 
 %feature("docstring",
@@ -80,11 +79,6 @@ to compare two breakpoints for equality."
 class SBBreakpoint
 {
 public:
-
-    typedef bool (*BreakpointHitCallback) (void *baton, 
-                                           SBProcess &process,
-                                           SBThread &thread, 
-                                           lldb::SBBreakpointLocation &location);
 
     SBBreakpoint ();
 

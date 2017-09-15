@@ -99,6 +99,10 @@ public:
 
   /// \brief The name of the umbrella entry, as written in the module map.
   std::string UmbrellaAsWritten;
+
+  /// \brief The module through which entities defined in this module will
+  /// eventually be exposed, for use in "private" modules.
+  std::string ExportAsModule;
   
 private:
   /// \brief The submodules of this module, indexed by name.

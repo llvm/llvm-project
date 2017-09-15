@@ -736,7 +736,6 @@ void PDBLinker::addObjectsToPDB() {
 static void addCommonLinkerModuleSymbols(StringRef Path,
                                          pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
-  SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
   ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
   Compile3Sym CS(SymbolRecordKind::Compile3Sym);
   EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);

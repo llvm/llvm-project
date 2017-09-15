@@ -20,7 +20,7 @@
 #include "fallback_malloc.h"
 
 #if __has_feature(address_sanitizer)
-#include <sanitizer/asan_interface.h>
+extern "C" void __asan_handle_no_return(void);
 #endif
 
 // +---------------------------+-----------------------------+---------------+

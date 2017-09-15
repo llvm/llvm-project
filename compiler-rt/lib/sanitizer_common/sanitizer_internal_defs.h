@@ -261,8 +261,8 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 
 #define CHECK_IMPL(c1, op, c2) \
   do { \
-    __sanitizer::u64 v1 = (u64)(c1); \
-    __sanitizer::u64 v2 = (u64)(c2); \
+    __sanitizer::u64 v1 = (__sanitizer::u64)(c1); \
+    __sanitizer::u64 v2 = (__sanitizer::u64)(c2); \
     if (UNLIKELY(!(v1 op v2))) \
       __sanitizer::CheckFailed(__FILE__, __LINE__, \
         "(" #c1 ") " #op " (" #c2 ")", v1, v2); \

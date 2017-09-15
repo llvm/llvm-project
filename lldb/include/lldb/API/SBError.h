@@ -67,6 +67,7 @@ protected:
   friend class SBWatchpoint;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
+  friend class SBBreakpointName;
 
   lldb_private::Status *get();
 

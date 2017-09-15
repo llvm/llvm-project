@@ -33,12 +33,18 @@ static MVT::SimpleValueType getRegisterValueType(Record *R,
 
     if (!FoundRC) {
       FoundRC = true;
-      VT = RC.getValueTypeNum(0);
+      ValueTypeByHwMode VVT = RC.getValueTypeNum(0);
+      if (VVT.isSimple())
+        VT = VVT.getSimple().SimpleTy;
       continue;
     }
 
     // If this occurs in multiple register classes, they all have to agree.
-    assert(VT == RC.getValueTypeNum(0));
+#ifndef NDEBUG
+    ValueTypeByHwMode T = RC.getValueTypeNum(0);
+    assert((!T.isSimple() || T.getSimple().SimpleTy == VT) &&
+           "ValueType mismatch between register classes for this register");
+#endif
   }
   return VT;
 }
@@ -105,13 +111,15 @@ namespace {
     Matcher *GetMatcher() const { return TheMatcher; }
   private:
     void AddMatcher(Matcher *NewNode);
-    void InferPossibleTypes();
+    void InferPossibleTypes(unsigned ForceMode);
 
     // Matcher Generation.
-    void EmitMatchCode(const TreePatternNode *N, TreePatternNode *NodeNoTypes);
+    void EmitMatchCode(const TreePatternNode *N, TreePatternNode *NodeNoTypes,
+                       unsigned ForceMode);
     void EmitLeafMatchCode(const TreePatternNode *N);
     void EmitOperatorMatchCode(const TreePatternNode *N,
-                               TreePatternNode *NodeNoTypes);
+                               TreePatternNode *NodeNoTypes,
+                               unsigned ForceMode);
 
     /// If this is the first time a node with unique identifier Name has been
     /// seen, record it. Otherwise, emit a check to make sure this is the same
@@ -164,17 +172,19 @@ MatcherGen::MatcherGen(const PatternToMatch &pattern,
   PatWithNoTypes->RemoveAllTypes();
 
   // If there are types that are manifestly known, infer them.
-  InferPossibleTypes();
+  InferPossibleTypes(Pattern.ForceMode);
 }
 
 /// InferPossibleTypes - As we emit the pattern, we end up generating type
 /// checks and applying them to the 'PatWithNoTypes' tree.  As we do this, we
 /// want to propagate implied types as far throughout the tree as possible so
 /// that we avoid doing redundant type checks.  This does the type propagation.
-void MatcherGen::InferPossibleTypes() {
+void MatcherGen::InferPossibleTypes(unsigned ForceMode) {
   // TP - Get *SOME* tree pattern, we don't care which.  It is only used for
   // diagnostics, which we know are impossible at this point.
   TreePattern &TP = *CGP.pf_begin()->second;
+  TP.getInfer().CodeGen = true;
+  TP.getInfer().ForceMode = ForceMode;
 
   bool MadeChange = true;
   while (MadeChange)
@@ -281,7 +291,8 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
 }
 
 void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
-                                       TreePatternNode *NodeNoTypes) {
+                                       TreePatternNode *NodeNoTypes,
+                                       unsigned ForceMode) {
   assert(!N->isLeaf() && "Not an operator?");
 
   if (N->getOperator()->isSubClassOf("ComplexPattern")) {
@@ -334,7 +345,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
 
         // Match the LHS of the AND as appropriate.
         AddMatcher(new MoveChildMatcher(0));
-        EmitMatchCode(N->getChild(0), NodeNoTypes->getChild(0));
+        EmitMatchCode(N->getChild(0), NodeNoTypes->getChild(0), ForceMode);
         AddMatcher(new MoveParentMatcher());
         return;
       }
@@ -433,7 +444,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
     // Get the code suitable for matching this child.  Move to the child, check
     // it then move back to the parent.
     AddMatcher(new MoveChildMatcher(OpNo));
-    EmitMatchCode(N->getChild(i), NodeNoTypes->getChild(i));
+    EmitMatchCode(N->getChild(i), NodeNoTypes->getChild(i), ForceMode);
     AddMatcher(new MoveParentMatcher());
   }
 }
@@ -456,7 +467,8 @@ bool MatcherGen::recordUniqueNode(const std::string &Name) {
 }
 
 void MatcherGen::EmitMatchCode(const TreePatternNode *N,
-                               TreePatternNode *NodeNoTypes) {
+                               TreePatternNode *NodeNoTypes,
+                               unsigned ForceMode) {
   // If N and NodeNoTypes don't agree on a type, then this is a case where we
   // need to do a type check.  Emit the check, apply the type to NodeNoTypes and
   // reinfer any correlated types.
@@ -465,7 +477,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode *N,
   for (unsigned i = 0, e = NodeNoTypes->getNumTypes(); i != e; ++i) {
     if (NodeNoTypes->getExtType(i) == N->getExtType(i)) continue;
     NodeNoTypes->setType(i, N->getExtType(i));
-    InferPossibleTypes();
+    InferPossibleTypes(ForceMode);
     ResultsToTypeCheck.push_back(i);
   }
 
@@ -478,14 +490,14 @@ void MatcherGen::EmitMatchCode(const TreePatternNode *N,
   if (N->isLeaf())
     EmitLeafMatchCode(N);
   else
-    EmitOperatorMatchCode(N, NodeNoTypes);
+    EmitOperatorMatchCode(N, NodeNoTypes, ForceMode);
 
   // If there are node predicates for this node, generate their checks.
   for (unsigned i = 0, e = N->getPredicateFns().size(); i != e; ++i)
     AddMatcher(new CheckPredicateMatcher(N->getPredicateFns()[i]));
 
   for (unsigned i = 0, e = ResultsToTypeCheck.size(); i != e; ++i)
-    AddMatcher(new CheckTypeMatcher(N->getType(ResultsToTypeCheck[i]),
+    AddMatcher(new CheckTypeMatcher(N->getSimpleType(ResultsToTypeCheck[i]),
                                     ResultsToTypeCheck[i]));
 }
 
@@ -509,7 +521,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   }
 
   // Emit the matcher for the pattern structure and types.
-  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes);
+  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes, Pattern.ForceMode);
 
   // If the pattern has a predicate on it (e.g. only enabled when a subtarget
   // feature is around, do the check).
@@ -606,7 +618,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
   assert(N->isLeaf() && "Must be a leaf");
 
   if (IntInit *II = dyn_cast<IntInit>(N->getLeafValue())) {
-    AddMatcher(new EmitIntegerMatcher(II->getValue(), N->getType(0)));
+    AddMatcher(new EmitIntegerMatcher(II->getValue(), N->getSimpleType(0)));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
   }
@@ -617,13 +629,13 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg =
         CGP.getTargetInfo().getRegBank().getReg(Def);
-      AddMatcher(new EmitRegisterMatcher(Reg, N->getType(0)));
+      AddMatcher(new EmitRegisterMatcher(Reg, N->getSimpleType(0)));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "zero_reg") {
-      AddMatcher(new EmitRegisterMatcher(nullptr, N->getType(0)));
+      AddMatcher(new EmitRegisterMatcher(nullptr, N->getSimpleType(0)));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -834,7 +846,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   // Determine the result types.
   SmallVector<MVT::SimpleValueType, 4> ResultVTs;
   for (unsigned i = 0, e = N->getNumTypes(); i != e; ++i)
-    ResultVTs.push_back(N->getType(i));
+    ResultVTs.push_back(N->getSimpleType(i));
 
   // If this is the root instruction of a pattern that has physical registers in
   // its result pattern, add output VTs for them.  For example, X86 has:

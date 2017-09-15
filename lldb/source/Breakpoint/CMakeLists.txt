@@ -6,6 +6,7 @@ add_lldb_library(lldbBreakpoint
   BreakpointLocation.cpp
   BreakpointLocationCollection.cpp
   BreakpointLocationList.cpp
+  BreakpointName.cpp
   BreakpointOptions.cpp
   BreakpointResolver.cpp
   BreakpointResolverAddress.cpp

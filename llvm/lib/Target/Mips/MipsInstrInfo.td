@@ -690,9 +690,14 @@ def ConstantUImm5Plus32NormalizeAsmOperandClass
   // We must also subtract 32 when we render the operand.
   let RenderMethod = "addConstantUImmOperands<5, 32, -32>";
 }
+def ConstantUImm5Plus1ReportUImm6AsmOperandClass
+    : ConstantUImmAsmOperandClass<
+          5, [ConstantUImm5Plus32NormalizeAsmOperandClass], 1>{
+  let Name = "ConstantUImm5_Plus1_Report_UImm6";
+}
 def ConstantUImm5Plus1AsmOperandClass
     : ConstantUImmAsmOperandClass<
-          5, [ConstantUImm5Plus32NormalizeAsmOperandClass], 1>;
+          5, [ConstantUImm5Plus1ReportUImm6AsmOperandClass], 1>;
 def ConstantUImm5AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm5Plus1AsmOperandClass]>;
 def ConstantSImm5AsmOperandClass
@@ -797,6 +802,13 @@ def uimm5_plus1 : Operand<i32> {
   let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
   let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
+}
+
+def uimm5_plus1_report_uimm6 : Operand<i32> {
+  let PrintMethod = "printUImm<6, 1>";
+  let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
+  let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
+  let ParserMatchClass = ConstantUImm5Plus1ReportUImm6AsmOperandClass;
 }
 
 def uimm5_plus32 : Operand<i32> {

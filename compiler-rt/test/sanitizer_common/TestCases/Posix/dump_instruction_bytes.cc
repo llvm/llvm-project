@@ -1,9 +1,12 @@
 // Check that sanitizer prints the faulting instruction bytes on
 // dump_instruction_bytes=1
+
+// clang-format off
 // RUN: %clangxx  %s -o %t
 // RUN: %env_tool_opts=dump_instruction_bytes=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUMP
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NODUMP
-//
+// clang-format on
+
 // REQUIRES: x86-target-arch
 // XFAIL: lsan, msan, tsan, ubsan
 

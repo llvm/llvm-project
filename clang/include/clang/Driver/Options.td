@@ -851,6 +851,9 @@ def fno_sanitize_memory_track_origins : Flag<["-"], "fno-sanitize-memory-track-o
 def fsanitize_memory_use_after_dtor : Flag<["-"], "fsanitize-memory-use-after-dtor">,
                                      Group<f_clang_Group>,
                                      HelpText<"Enable use-after-destroy detection in MemorySanitizer">;
+def fno_sanitize_memory_use_after_dtor : Flag<["-"], "fno-sanitize-memory-use-after-dtor">,
+                                     Group<f_clang_Group>,
+                                     HelpText<"Disable use-after-destroy detection in MemorySanitizer">;
 def fsanitize_address_field_padding : Joined<["-"], "fsanitize-address-field-padding=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Level of field padding for AddressSanitizer">;

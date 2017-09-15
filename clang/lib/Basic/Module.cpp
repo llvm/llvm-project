@@ -440,6 +440,11 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
     }
   }
 
+  if (!ExportAsModule.empty()) {
+    OS.indent(Indent + 2);
+    OS << "export_as" << ExportAsModule << "\n";
+  }
+  
   for (submodule_const_iterator MI = submodule_begin(), MIEnd = submodule_end();
        MI != MIEnd; ++MI)
     // Print inferred subframework modules so that we don't need to re-infer

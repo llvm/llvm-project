@@ -13296,8 +13296,20 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       llvm::raw_svector_ostream Msg(MsgBuffer);
       if (AssertMessage)
         AssertMessage->printPretty(Msg, nullptr, getPrintingPolicy());
-      Diag(StaticAssertLoc, diag::err_static_assert_failed)
-        << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
+
+      Expr *InnerCond = nullptr;
+      std::string InnerCondDescription;
+      std::tie(InnerCond, InnerCondDescription) =
+        findFailedBooleanCondition(Converted.get(),
+                                   /*AllowTopLevelCond=*/false);
+      if (InnerCond) {
+        Diag(StaticAssertLoc, diag::err_static_assert_requirement_failed)
+          << InnerCondDescription << !AssertMessage
+          << Msg.str() << InnerCond->getSourceRange();
+      } else {
+        Diag(StaticAssertLoc, diag::err_static_assert_failed)
+          << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
+      }
       Failed = true;
     }
   }

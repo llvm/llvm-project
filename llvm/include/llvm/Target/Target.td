@@ -21,6 +21,56 @@ include "llvm/IR/Intrinsics.td"
 
 class RegisterClass; // Forward def
 
+class HwMode<string FS> {
+  // A string representing subtarget features that turn on this HW mode.
+  // For example, "+feat1,-feat2" will indicate that the mode is active
+  // when "feat1" is enabled and "feat2" is disabled at the same time.
+  // Any other features are not checked.
+  // When multiple modes are used, they should be mutually exclusive,
+  // otherwise the results are unpredictable.
+  string Features = FS;
+}
+
+// A special mode recognized by tablegen. This mode is considered active
+// when no other mode is active. For targets that do not use specific hw
+// modes, this is the only mode.
+def DefaultMode : HwMode<"">;
+
+// A class used to associate objects with HW modes. It is only intended to
+// be used as a base class, where the derived class should contain a member
+// "Objects", which is a list of the same length as the list of modes.
+// The n-th element on the Objects list will be associated with the n-th
+// element on the Modes list.
+class HwModeSelect<list<HwMode> Ms> {
+  list<HwMode> Modes = Ms;
+}
+
+// A common class that implements a counterpart of ValueType, which is
+// dependent on a HW mode. This class inherits from ValueType itself,
+// which makes it possible to use objects of this class where ValueType
+// objects could be used. This is specifically applicable to selection
+// patterns.
+class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
+    : HwModeSelect<Ms>, ValueType<0, 0> {
+  // The length of this list must be the same as the length of Ms.
+  list<ValueType> Objects = Ts;
+}
+
+// A class representing the register size, spill size and spill alignment
+// in bits of a register.
+class RegInfo<int RS, int SS, int SA> {
+  int RegSize = RS;         // Register size in bits.
+  int SpillSize = SS;       // Spill slot size in bits.
+  int SpillAlignment = SA;  // Spill slot alignment in bits.
+}
+
+// The register size/alignment information, parameterized by a HW mode.
+class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
+    : HwModeSelect<Ms> {
+  // The length of this list must be the same as the length of Ms.
+  list<RegInfo> Objects = Ts;
+}
+
 // SubRegIndex - Use instances of SubRegIndex to identify subregisters.
 class SubRegIndex<int size, int offset = 0> {
   string Namespace = "";
@@ -155,6 +205,9 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
                     dag regList, RegAltNameIndex idx = NoRegAltName>
   : DAGOperand {
   string Namespace = namespace;
+
+  // The register size/alignment information, parameterized by a HW mode.
+  RegInfoByHwMode RegInfos;
 
   // RegType - Specify the list ValueType of the registers in this register
   // class.  Note that all registers in a register class must have the same

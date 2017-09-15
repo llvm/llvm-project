@@ -180,7 +180,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   for (auto *A : Args) {
     switch (A->getOption().getUnaliasedOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(A->getValue()).endswith(".def"))
+      if (StringRef(A->getValue()).endswith_lower(".def"))
         Add("-def:" + StringRef(A->getValue()));
       else
         Add(Prefix + StringRef(A->getValue()));
