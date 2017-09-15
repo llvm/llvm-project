@@ -14,6 +14,7 @@ file(GLOB cl_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/media/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/pipes/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/relational/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/subgroup/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/vldst/*.cl
