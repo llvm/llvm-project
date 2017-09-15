@@ -43,11 +43,17 @@ private:
   // itself and does not include the size of the section header.
   uint64_t SectionOffset;
 
+  // For data sections, this is the offset of the corresponding wasm data
+  // segment
+  uint64_t MemoryOffset;
+
   friend class MCContext;
   MCSectionWasm(StringRef Section, unsigned type, SectionKind K,
                 const MCSymbolWasm *group, unsigned UniqueID, MCSymbol *Begin)
       : MCSection(SV_Wasm, K, Begin), SectionName(Section), Type(type),
-        UniqueID(UniqueID), Group(group), SectionOffset(0) {}
+        UniqueID(UniqueID), Group(group), SectionOffset(0) {
+    assert(type == wasm::WASM_SEC_CODE || type == wasm::WASM_SEC_DATA);
+  }
 
   void setSectionName(StringRef Name) { SectionName = Name; }
 
@@ -73,6 +79,9 @@ public:
 
   uint64_t getSectionOffset() const { return SectionOffset; }
   void setSectionOffset(uint64_t Offset) { SectionOffset = Offset; }
+
+  uint32_t getMemoryOffset() const { return MemoryOffset; }
+  void setMemoryOffset(uint32_t Offset) { MemoryOffset = Offset; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_Wasm; }
 };

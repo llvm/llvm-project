@@ -31,8 +31,7 @@ def ByteAccess       : MemAccessSize<1>;
 def HalfWordAccess   : MemAccessSize<2>;
 def WordAccess       : MemAccessSize<3>;
 def DoubleWordAccess : MemAccessSize<4>;
-def Vector64Access   : MemAccessSize<5>;
-def Vector128Access  : MemAccessSize<6>;
+def HVXVectorAccess  : MemAccessSize<5>;
 
 
 //===----------------------------------------------------------------------===//

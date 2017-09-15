@@ -13928,6 +13928,12 @@ CreateNewDecl:
     Invalid = true;
   }
 
+  if (!Invalid && TUK == TUK_Definition && DC->getDeclKind() == Decl::Enum) {
+    Diag(New->getLocation(), diag::err_type_defined_in_enum)
+      << Context.getTagDeclType(New);
+    Invalid = true;
+  }
+
   // Maybe add qualifier info.
   if (SS.isNotEmpty()) {
     if (SS.isSet()) {

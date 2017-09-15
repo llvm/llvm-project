@@ -94,14 +94,17 @@ include(config-ix)
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
-  set(use_cxxabi_default OFF)
-elseif(MSVC)
-  set(use_cxxabi_default OFF)
+  set(cxxabi_supported OFF)
 else()
-  set(use_cxxabi_default ON)
+  set(cxxabi_supported ON)
 endif()
 
-option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
+option(SANITIZER_ALLOW_CXXABI "Allow use of C++ ABI details in ubsan" ON)
+
+set(SANITIZE_CAN_USE_CXXABI OFF)
+if (cxxabi_supported AND SANITIZER_ALLOW_CXXABI)
+  set(SANITIZER_CAN_USE_CXXABI ON)
+endif()
 pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 set(SANITIZER_CXX_ABI "default" CACHE STRING

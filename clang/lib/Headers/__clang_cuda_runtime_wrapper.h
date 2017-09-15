@@ -254,7 +254,17 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 #pragma push_macro("__GNUC__")
 #undef __GNUC__
 #define signbit __ignored_cuda_signbit
+
+// CUDA-9 omits device-side definitions of some math functions if it sees
+// include guard from math.h wrapper from libstdc++. We have to undo the header
+// guard temporarily to get the definitions we need.
+#pragma push_macro("_GLIBCXX_MATH_H")
+#if CUDA_VERSION >= 9000
+#undef _GLIBCXX_MATH_H
+#endif
+
 #include "math_functions.hpp"
+#pragma pop_macro("_GLIBCXX_MATH_H")
 #pragma pop_macro("__GNUC__")
 #pragma pop_macro("signbit")
 

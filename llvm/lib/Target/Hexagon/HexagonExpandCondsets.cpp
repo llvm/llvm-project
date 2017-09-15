@@ -87,6 +87,7 @@
 // to be added, and updating the live ranges will be more involved.
 
 #include "HexagonInstrInfo.h"
+#include "HexagonRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"

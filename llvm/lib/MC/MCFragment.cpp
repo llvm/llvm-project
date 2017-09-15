@@ -80,7 +80,7 @@ uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
   return F->Offset;
 }
 
-// Simple getSymbolOffset helper for the non-varibale case.
+// Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAsmLayout &Layout, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
   if (!S.getFragment()) {

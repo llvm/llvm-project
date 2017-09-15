@@ -478,13 +478,14 @@ void EHStreamer::emitExceptionTable() {
     sizeof(int8_t) +                            // TType format
     (HaveTTData ? TTypeBaseOffsetSize : 0) +    // TType base offset size
     TTypeBaseOffset;                            // TType base offset
-  unsigned SizeAlign = (4 - TotalSize) & 3;
+  unsigned PadBytes = (4 - TotalSize) & 3;
 
   if (HaveTTData) {
     // Account for any extra padding that will be added to the call site table
     // length.
-    Asm->EmitULEB128(TTypeBaseOffset, "@TType base offset", SizeAlign);
-    SizeAlign = 0;
+    Asm->EmitPaddedULEB128(TTypeBaseOffset, TTypeBaseOffsetSize + PadBytes,
+                           "@TType base offset");
+    PadBytes = 0;
   }
 
   bool VerboseAsm = Asm->OutStreamer->isVerboseAsm();
@@ -494,7 +495,9 @@ void EHStreamer::emitExceptionTable() {
     Asm->EmitEncodingByte(dwarf::DW_EH_PE_udata4, "Call site");
 
     // Add extra padding if it wasn't added to the TType base offset.
-    Asm->EmitULEB128(CallSiteTableLength, "Call site table length", SizeAlign);
+    Asm->EmitPaddedULEB128(CallSiteTableLength,
+                           CallSiteTableLengthSize + PadBytes,
+                           "Call site table length");
 
     // Emit the landing pad site information.
     unsigned idx = 0;
@@ -547,7 +550,9 @@ void EHStreamer::emitExceptionTable() {
     Asm->EmitEncodingByte(dwarf::DW_EH_PE_udata4, "Call site");
 
     // Add extra padding if it wasn't added to the TType base offset.
-    Asm->EmitULEB128(CallSiteTableLength, "Call site table length", SizeAlign);
+    Asm->EmitPaddedULEB128(CallSiteTableLength,
+                           CallSiteTableLengthSize + PadBytes,
+                           "Call site table length");
 
     unsigned Entry = 0;
     for (SmallVectorImpl<CallSiteEntry>::const_iterator

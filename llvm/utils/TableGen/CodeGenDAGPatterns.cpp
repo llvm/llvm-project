@@ -804,20 +804,14 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
   }
 }
 
-
 TypeSetByHwMode TypeInfer::getLegalTypes() {
   TypeSetByHwMode VTS;
   TypeSetByHwMode::SetType &DS = VTS.getOrCreate(DefaultMode);
   const TypeSetByHwMode &LTS = TP.getDAGPatterns().getLegalTypes();
 
-  if (!CodeGen) {
-    assert(LTS.hasDefault());
-    const TypeSetByHwMode::SetType &S = LTS.get(DefaultMode);
-    DS.insert(S.begin(), S.end());
-  } else {
-    for (const auto &I : LTS)
-      DS.insert(I.second.begin(), I.second.end());
-  }
+  // Stuff all types from all modes into the default mode.
+  for (const auto &I : LTS)
+    DS.insert(I.second.begin(), I.second.end());
   return VTS;
 }
 

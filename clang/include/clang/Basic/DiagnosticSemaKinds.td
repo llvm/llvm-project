@@ -1335,6 +1335,8 @@ def err_type_defined_in_alias_template : Error<
   "%0 cannot be defined in a type alias template">;
 def err_type_defined_in_condition : Error<
   "%0 cannot be defined in a condition">;
+def err_type_defined_in_enum : Error<
+  "%0 cannot be defined in an enumeration">;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;

@@ -161,8 +161,8 @@ public:
   ~CodeViewContext();
 
   bool isValidFileNumber(unsigned FileNumber) const;
-  bool addFile(unsigned FileNumber, StringRef Filename);
-  ArrayRef<StringRef> getFilenames() { return Filenames; }
+  bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
+               StringRef Checksum, uint8_t ChecksumKind);
 
   /// Records the function id of a normal function. Returns false if the
   /// function id has already been used, and true otherwise.
@@ -273,6 +273,9 @@ public:
   /// Emits the file checksum substream.
   void emitFileChecksums(MCObjectStreamer &OS);
 
+  /// Emits the offset into the checksum table of the given file number.
+  void emitFileChecksumOffset(MCObjectStreamer &OS, unsigned FileNo);
+
 private:
   /// The current CodeView line information from the last .cv_loc directive.
   MCCVLoc CurrentCVLoc = MCCVLoc(0, 0, 0, 0, false, true);
@@ -287,14 +290,30 @@ private:
 
   MCDataFragment *getStringTableFragment();
 
-  /// Add something to the string table.
-  StringRef addToStringTable(StringRef S);
+  /// Add something to the string table.  Returns the final string as well as
+  /// offset into the string table.
+  std::pair<StringRef, unsigned> addToStringTable(StringRef S);
 
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);
 
-  /// An array of absolute paths. Eventually this may include the file checksum.
-  SmallVector<StringRef, 4> Filenames;
+  struct FileInfo {
+    unsigned StringTableOffset;
+
+    // Checksum offset stored as a symbol because it might be requested
+    // before it has been calculated, so a fixup may be needed.
+    MCSymbol *ChecksumTableOffset;
+
+    // Indicates if this FileInfo corresponds to an actual file, or hasn't been
+    // set yet.
+    bool Assigned = false;
+
+    std::string Checksum;
+    uint8_t ChecksumKind;
+  };
+
+  /// Array storing added file information.
+  SmallVector<FileInfo, 4> Files;
 
   /// The offset of the first and last .cv_loc directive for a given function
   /// id.
@@ -305,6 +324,10 @@ private:
 
   /// All known functions and inlined call sites, indexed by function id.
   std::vector<MCCVFunctionInfo> Functions;
+
+  /// Indicate whether we have already laid out the checksum table addresses or
+  /// not.
+  bool ChecksumOffsetsAssigned = false;
 };
 
 } // end namespace llvm

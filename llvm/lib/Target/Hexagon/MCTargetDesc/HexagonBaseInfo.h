@@ -51,8 +51,7 @@ namespace HexagonII {
     HalfWordAccess,
     WordAccess,
     DoubleWordAccess,
-    Vector64Access,
-    Vector128Access
+    HVXVectorAccess
   };
 
   // MCInstrDesc TSFlags

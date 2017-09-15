@@ -26,6 +26,7 @@
 // RUN: %env_ubsan_opts=suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
 
 // REQUIRES: stable-runtime, cxxabi
+// UNSUPPORTED: win32
 #include <new>
 #include <assert.h>
 #include <stdio.h>

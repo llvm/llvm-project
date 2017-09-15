@@ -17,7 +17,7 @@
 
 ; X86-LABEL: _f:
 ; X86:      # BB
-; X86:      .cv_file 1 "D:\\test.c"
+; X86:      .cv_file 1 "D:\\test.c" "f310ab26998ca831cbdf169e4eecacfa" 1
 ; X86:      .cv_loc 0 1 4 2 is_stmt 0 # test.c:4:2
 ; X86:      calll   _g
 ; X86:      .cv_loc 0 1 5 0 # test.c:5:0
@@ -85,6 +85,19 @@
 ; OBJ32-NEXT:   ProcEnd {
 ; OBJ32:        }
 ; OBJ32-NEXT: ]
+; OBJ32:       Subsection [
+; OBJ32:         SubSectionType: FileChecksums (0xF4)
+; OBJ32-NEXT:    SubSectionSize: 0x28
+; OBJ32-NEXT:    FileChecksum {
+; OBJ32-NEXT:      Filename: D:\test.c (0x1)
+; OBJ32-NEXT:      ChecksumSize: 0x20
+; OBJ32-NEXT:      ChecksumKind: MD5 (0x1)
+; OBJ32-NEXT:      ChecksumBytes (
+; OBJ32-NEXT:        0000: 66333130 61623236 39393863 61383331  |f310ab26998ca831|
+; OBJ32-NEXT:        0010: 63626466 31363965 34656563 61636661  |cbdf169e4eecacfa|
+; OBJ32-NEXT:      )
+; OBJ32-NEXT:    }
+; OBJ32-NEXT:  ]
 ; OBJ32:      FunctionLineTable [
 ; OBJ32-NEXT:   Name: _f
 ; OBJ32-NEXT:   Flags: 0x1
@@ -110,7 +123,7 @@
 
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:{{$}}
-; X64:      .cv_file 1 "D:\\test.c"
+; X64:      .cv_file 1 "D:\\test.c" "f310ab26998ca831cbdf169e4eecacfa" 1
 ; X64:      .cv_loc 0 1 3 0 is_stmt 0 # test.c:3:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
@@ -182,6 +195,19 @@
 ; OBJ64-NEXT:   ProcEnd {
 ; OBJ64:        }
 ; OBJ64-NEXT: ]
+; OBJ64:       Subsection [
+; OBJ64:         SubSectionType: FileChecksums (0xF4)
+; OBJ64-NEXT:    SubSectionSize: 0x28
+; OBJ64-NEXT:    FileChecksum {
+; OBJ64-NEXT:      Filename: D:\test.c (0x1)
+; OBJ64-NEXT:      ChecksumSize: 0x20
+; OBJ64-NEXT:      ChecksumKind: MD5 (0x1)
+; OBJ64-NEXT:      ChecksumBytes (
+; OBJ64-NEXT:        0000: 66333130 61623236 39393863 61383331  |f310ab26998ca831|
+; OBJ64-NEXT:        0010: 63626466 31363965 34656563 61636661  |cbdf169e4eecacfa|
+; OBJ64-NEXT:      )
+; OBJ64-NEXT:    }
+; OBJ64-NEXT:  ]
 ; OBJ64:      FunctionLineTable [
 ; OBJ64-NEXT:   Name: f
 ; OBJ64-NEXT:   Flags: 0x1
@@ -232,8 +258,8 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !1 = !DIFile(filename: "<unknown>", directory: "D:\5C")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "f", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !2)
-!5 = !DIFile(filename: "test.c", directory: "D:\5C")
-!6 = !DIFile(filename: "test.c", directory: "D:C")
+!5 = !DIFile(filename: "test.c", directory: "D:\5C", checksumkind: CSK_MD5, checksum: "f310ab26998ca831cbdf169e4eecacfa")
+!6 = !DIFile(filename: "test.c", directory: "D:C", checksumkind: CSK_MD5, checksum: "f310ab26998ca831cbdf169e4eecacfa")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !{i32 2, !"CodeView", i32 1}

@@ -44,6 +44,9 @@ def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
 def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVX">;
 
+def Hvx64   : HwMode<"+hvx,-hvx-double">;
+def Hvx128  : HwMode<"+hvx,+hvx-double">;
+
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.
 //===----------------------------------------------------------------------===//

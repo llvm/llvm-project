@@ -78,10 +78,9 @@ public:
   /// use the extra analysis (1) to filter trivial false positives or (2) to
   /// provide more context so that non-trivial false positives can be quickly
   /// detected by the user.
-  bool allowExtraAnalysis() const {
-    // For now, only allow this with -fsave-optimization-record since the -Rpass
-    // options are handled in the front-end.
-    return F->getContext().getDiagnosticsOutputFile();
+  bool allowExtraAnalysis(StringRef PassName) const {
+    return (F->getContext().getDiagnosticsOutputFile() ||
+            F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
   }
 
 private:

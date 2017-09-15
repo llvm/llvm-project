@@ -2388,7 +2388,7 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
       if (const RecordType *Record = NewBaseType->getAs<RecordType>()) {
         const CXXRecordDecl *RD = cast<CXXRecordDecl>(Record->getDecl());
         if (Class->isInterface() &&
-              (!RD->isInterface() ||
+              (!RD->isInterfaceLike() ||
                KnownBase->getAccessSpecifier() != AS_public)) {
           // The Microsoft extension __interface does not permit bases that
           // are not themselves public interfaces.
