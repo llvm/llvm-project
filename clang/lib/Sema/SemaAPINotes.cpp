@@ -21,14 +21,21 @@ namespace {
     IsNotActive,
     IsActive
   };
+  enum IsReplacement_t : bool {
+    IsNotReplacement,
+    IsReplacement
+  };
 
   struct VersionedInfoMetadata {
     /// An empty version refers to unversioned metadata.
     VersionTuple Version;
-    bool IsActive;
+    unsigned IsActive: 1;
+    unsigned IsReplacement: 1;
 
-    VersionedInfoMetadata(VersionTuple version, IsActive_t active)
-        : Version(version), IsActive(active == IsActive_t::IsActive) {}
+    VersionedInfoMetadata(VersionTuple version, IsActive_t active,
+                          IsReplacement_t replacement)
+      : Version(version), IsActive(active == IsActive_t::IsActive),
+        IsReplacement(replacement == IsReplacement_t::IsReplacement) {}
   };
 } // end anonymous namespace
 
@@ -148,9 +155,8 @@ namespace {
       if (existing != end) {
         // Remove the existing attribute, and treat it as a superseded
         // non-versioned attribute.
-        auto *versioned =
-            SwiftVersionedAttr::CreateImplicit(S.Context, clang::VersionTuple(),
-                                               *existing);
+        auto *versioned = SwiftVersionedAttr::CreateImplicit(
+            S.Context, metadata.Version, *existing, /*IsReplacedByActive*/true);
 
         D->getAttrs().erase(existing.getCurrent());
         D->addAttr(versioned);
@@ -166,19 +172,18 @@ namespace {
     } else {
       if (shouldAddAttribute) {
         if (auto attr = createAttr()) {
-          auto *versioned =
-              SwiftVersionedAttr::CreateImplicit(S.Context, metadata.Version, 
-                                                 attr);
+          auto *versioned = SwiftVersionedAttr::CreateImplicit(
+              S.Context, metadata.Version, attr,
+              /*IsReplacedByActive*/metadata.IsReplacement);
           D->addAttr(versioned);
         }
       } else {
         // FIXME: This isn't preserving enough information for things like
         // availability, where we're trying to remove a /specific/ kind of
         // attribute.
-        auto *versioned =
-            SwiftVersionedRemovalAttr::CreateImplicit(S.Context, 
-                                                      metadata.Version,
-                                                      AttrKindFor<A>::value);
+        auto *versioned = SwiftVersionedRemovalAttr::CreateImplicit(
+            S.Context,  metadata.Version, AttrKindFor<A>::value,
+            /*IsReplacedByActive*/metadata.IsReplacement);
         D->addAttr(versioned);
       }
     }
@@ -684,7 +689,8 @@ static void maybeAttachUnversionedSwiftName(
   }
 
   // Then explicitly call that out with a removal attribute.
-  VersionedInfoMetadata DummyFutureMetadata(VersionTuple(), IsNotActive);
+  VersionedInfoMetadata DummyFutureMetadata(SelectedVersion, IsNotActive,
+                                            IsReplacement);
   handleAPINotedAttribute<SwiftNameAttr>(S, D, /*add*/false,
                                          DummyFutureMetadata,
                                          []() -> SwiftNameAttr * {
@@ -709,7 +715,13 @@ static void ProcessVersionedAPINotes(
   for (unsigned i = 0, e = Info.size(); i != e; ++i) {
     std::tie(Version, InfoSlice) = Info[i];
     auto Active = (i == Selected) ? IsActive : IsNotActive;
-    ProcessAPINotes(S, D, InfoSlice, VersionedInfoMetadata(Version, Active));
+    auto Replacement = IsNotReplacement;
+    if (Active == IsNotActive && Version.empty()) {
+      Replacement = IsReplacement;
+      Version = Info[Selected].first;
+    }
+    ProcessAPINotes(S, D, InfoSlice, VersionedInfoMetadata(Version, Active,
+                                                           Replacement));
   }
 }
 
