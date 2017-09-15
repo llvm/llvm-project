@@ -51,3 +51,23 @@ __attribute__ (( __objc_root_class__ ))
 }
 @end
 
+// rdar://problem/33102722
+// Typo correction for a property when it has as correction candidates
+// synthesized ivar and a class name, both at the same edit distance.
+@class TypoCandidate;
+
+__attribute__ (( __objc_root_class__ ))
+@interface PropertyType
+@property int x;
+@end
+
+__attribute__ (( __objc_root_class__ ))
+@interface InterfaceC
+@property(assign) PropertyType *typoCandidate; // expected-note {{'_typoCandidate' declared here}}
+@end
+
+@implementation InterfaceC
+-(void)method {
+  typoCandidate.x = 0; // expected-error {{use of undeclared identifier 'typoCandidate'; did you mean '_typoCandidate'?}}
+}
+@end
