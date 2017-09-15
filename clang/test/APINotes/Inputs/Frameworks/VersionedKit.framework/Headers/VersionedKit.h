@@ -1,7 +1,14 @@
 void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));
 
+void unversionedRenameDUMP(void) __attribute__((swift_name("unversionedRename_HEADER()")));
+
 void acceptClosure(void (^ __attribute__((noescape)) block)(void));
 
+void privateFunc(void) __attribute__((swift_private));
+
+typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
+
+#if __OBJC__
 @class NSString;
 
 extern NSString *MyErrorDomain;
@@ -13,10 +20,6 @@ enum __attribute__((ns_error_domain(MyErrorDomain))) MyErrorCode {
 __attribute__((swift_bridge("MyValueType")))
 @interface MyReferenceType
 @end
-
-void privateFunc(void) __attribute__((swift_private));
-
-typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
 
 @interface TestProperties
 @property (nonatomic, readwrite, retain) id accessorsOnly;
@@ -42,6 +45,11 @@ typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
 __attribute__((swift_name("Swift4Name")))
 @interface Swift3RenamedAlsoDUMP
 @end
+
+@interface Swift4RenamedDUMP
+@end
+
+#endif
 
 
 enum __attribute__((flag_enum)) FlagEnum {
@@ -110,3 +118,20 @@ enum SoonToBeNSClosedEnum {
 enum UndoAllThatHasBeenDoneToMe {
   UndoAllThatHasBeenDoneToMeA = 1
 } __attribute__((flag_enum)) __attribute__((enum_extensibility(closed)));
+
+
+typedef int MultiVersionedTypedef4;
+typedef int MultiVersionedTypedef4Notes;
+typedef int MultiVersionedTypedef4Header __attribute__((swift_name("MultiVersionedTypedef4Header_NEW")));
+
+typedef int MultiVersionedTypedef34;
+typedef int MultiVersionedTypedef34Notes;
+typedef int MultiVersionedTypedef34Header __attribute__((swift_name("MultiVersionedTypedef34Header_NEW")));
+
+typedef int MultiVersionedTypedef45;
+typedef int MultiVersionedTypedef45Notes;
+typedef int MultiVersionedTypedef45Header __attribute__((swift_name("MultiVersionedTypedef45Header_NEW")));
+
+typedef int MultiVersionedTypedef345;
+typedef int MultiVersionedTypedef345Notes;
+typedef int MultiVersionedTypedef345Header __attribute__((swift_name("MultiVersionedTypedef345Header_NEW")));

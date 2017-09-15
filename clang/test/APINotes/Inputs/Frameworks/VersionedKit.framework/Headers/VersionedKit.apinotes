@@ -15,6 +15,9 @@ Classes:
       - Name: accessorsOnlyForClassExceptInVersion3
         PropertyKind:    Class
         SwiftImportAsAccessors: true
+Functions:
+  - Name: unversionedRenameDUMP
+    SwiftName: 'unversionedRename_NOTES()'
 Tags:
   - Name: APINotedFlagEnum
     FlagEnum: true
@@ -36,6 +39,15 @@ Tags:
     EnumKind: NSClosedEnum
   - Name: UndoAllThatHasBeenDoneToMe
     EnumKind: none
+Typedefs:
+  - Name: MultiVersionedTypedef34Notes
+    SwiftName: MultiVersionedTypedef34Notes_NEW
+  - Name: MultiVersionedTypedef345Notes
+    SwiftName: MultiVersionedTypedef345Notes_NEW
+  - Name: MultiVersionedTypedef4Notes
+    SwiftName: MultiVersionedTypedef4Notes_NEW
+  - Name: MultiVersionedTypedef45Notes
+    SwiftName: MultiVersionedTypedef45Notes_NEW
 SwiftVersions:
   - Version: 3.0
     Classes:
@@ -87,6 +99,58 @@ SwiftVersions:
     Typedefs:
       - Name: MyDoubleWrapper
         SwiftWrapper: none
-
-
-  
+      - Name: MultiVersionedTypedef34
+        SwiftName: MultiVersionedTypedef34_3
+      - Name: MultiVersionedTypedef34Header
+        SwiftName: MultiVersionedTypedef34Header_3
+      - Name: MultiVersionedTypedef34Notes
+        SwiftName: MultiVersionedTypedef34Notes_3
+      - Name: MultiVersionedTypedef345
+        SwiftName: MultiVersionedTypedef345_3
+      - Name: MultiVersionedTypedef345Header
+        SwiftName: MultiVersionedTypedef345Header_3
+      - Name: MultiVersionedTypedef345Notes
+        SwiftName: MultiVersionedTypedef345Notes_3
+  - Version: 5
+    Typedefs:
+      - Name: MultiVersionedTypedef345
+        SwiftName: MultiVersionedTypedef345_5
+      - Name: MultiVersionedTypedef345Header
+        SwiftName: MultiVersionedTypedef345Header_5
+      - Name: MultiVersionedTypedef345Notes
+        SwiftName: MultiVersionedTypedef345Notes_5
+      - Name: MultiVersionedTypedef45
+        SwiftName: MultiVersionedTypedef45_5
+      - Name: MultiVersionedTypedef45Header
+        SwiftName: MultiVersionedTypedef45Header_5
+      - Name: MultiVersionedTypedef45Notes
+        SwiftName: MultiVersionedTypedef45Notes_5
+  - Version: 4 # Versions are deliberately ordered as "3, 5, 4" to catch bugs.
+    Classes:
+      - Name: Swift4RenamedDUMP
+        SwiftName: SpecialSwift4Name
+    Typedefs:
+      - Name: MultiVersionedTypedef34
+        SwiftName: MultiVersionedTypedef34_4
+      - Name: MultiVersionedTypedef34Header
+        SwiftName: MultiVersionedTypedef34Header_4
+      - Name: MultiVersionedTypedef34Notes
+        SwiftName: MultiVersionedTypedef34Notes_4
+      - Name: MultiVersionedTypedef345
+        SwiftName: MultiVersionedTypedef345_4
+      - Name: MultiVersionedTypedef345Header
+        SwiftName: MultiVersionedTypedef345Header_4
+      - Name: MultiVersionedTypedef345Notes
+        SwiftName: MultiVersionedTypedef345Notes_4
+      - Name: MultiVersionedTypedef4
+        SwiftName: MultiVersionedTypedef4_4
+      - Name: MultiVersionedTypedef4Header
+        SwiftName: MultiVersionedTypedef4Header_4
+      - Name: MultiVersionedTypedef4Notes
+        SwiftName: MultiVersionedTypedef4Notes_4
+      - Name: MultiVersionedTypedef45
+        SwiftName: MultiVersionedTypedef45_4
+      - Name: MultiVersionedTypedef45Header
+        SwiftName: MultiVersionedTypedef45Header_4
+      - Name: MultiVersionedTypedef45Notes
+        SwiftName: MultiVersionedTypedef45Notes_4
