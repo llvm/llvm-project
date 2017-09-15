@@ -661,6 +661,21 @@ the configuration (without a prefix: ``Auto``).
         int x;
       }
 
+  * ``bool AfterExternBlock`` Wrap extern blocks.
+
+    .. code-block:: c++
+
+      true:
+      extern "C"
+      {
+        int foo();
+      }
+
+      false:
+      extern "C" {
+      int foo();
+      }
+
   * ``bool BeforeCatch`` Wrap before ``catch``.
 
     .. code-block:: c++

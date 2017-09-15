@@ -1289,11 +1289,12 @@ public:
   /// Add all implicit def and use operands to this instruction.
   void addImplicitDefUseOperands(MachineFunction &MF);
 
-private:
   /// If this instruction is embedded into a MachineFunction, return the
   /// MachineRegisterInfo object for the current function, otherwise
   /// return null.
   MachineRegisterInfo *getRegInfo();
+
+private:
 
   /// Unlink all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands already be on their

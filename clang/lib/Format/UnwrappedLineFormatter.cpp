@@ -233,9 +233,10 @@ private:
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              Keywords.kw_interface))
+                              tok::kw_extern, Keywords.kw_interface))
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
-            ? tryMergeSimpleBlock(I, E, Limit) : 0;
+                   ? tryMergeSimpleBlock(I, E, Limit)
+                   : 0;
     }
 
     // FIXME: TheLine->Level != 0 might or might not be the right check to do.
