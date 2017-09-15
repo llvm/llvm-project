@@ -29,6 +29,9 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
       ++CoveredRegions;
   }
 
+  // TODO: This logic is incorrect and needs to be removed (PR34615). We need
+  // to use the segment builder to get accurate line execution counts.
+  //
   // Compute the line coverage
   size_t NumLines = 0, CoveredLines = 0;
   for (unsigned FileID = 0, E = Function.Filenames.size(); FileID < E;
@@ -43,26 +46,33 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
       LineStart = std::min(LineStart, CR.LineStart);
       LineEnd = std::max(LineEnd, CR.LineEnd);
     }
+    assert(LineStart <= LineEnd && "Function contains spurious file");
     unsigned LineCount = LineEnd - LineStart + 1;
 
     // Get counters
     llvm::SmallVector<uint64_t, 16> ExecutionCounts;
     ExecutionCounts.resize(LineCount, 0);
+    unsigned LinesNotSkipped = LineCount;
     for (auto &CR : Function.CountedRegions) {
       if (CR.FileID != FileID)
         continue;
       // Ignore the lines that were skipped by the preprocessor.
       auto ExecutionCount = CR.ExecutionCount;
       if (CR.Kind == CounterMappingRegion::SkippedRegion) {
-        LineCount -= CR.LineEnd - CR.LineStart + 1;
+        unsigned SkippedLines = CR.LineEnd - CR.LineStart + 1;
+        assert((SkippedLines <= LinesNotSkipped) &&
+               "Skipped region larger than file containing it");
+        LinesNotSkipped -= SkippedLines;
         ExecutionCount = 1;
       }
       for (unsigned I = CR.LineStart; I <= CR.LineEnd; ++I)
         ExecutionCounts[I - LineStart] = ExecutionCount;
     }
-    CoveredLines += LineCount - std::count(ExecutionCounts.begin(),
-                                           ExecutionCounts.end(), 0);
-    NumLines += LineCount;
+    unsigned UncoveredLines =
+        std::min(std::count(ExecutionCounts.begin(), ExecutionCounts.end(), 0),
+                 (long)LinesNotSkipped);
+    CoveredLines += LinesNotSkipped - UncoveredLines;
+    NumLines += LinesNotSkipped;
   }
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,
