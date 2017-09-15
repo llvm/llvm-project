@@ -1,40 +1,46 @@
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT   --check-prefix=CHECK
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16  --check-prefix=CHECK
 
 define <8 x half> @add_h(<8 x half> %a, <8 x half> %b) {
 entry:
-; CHECK-LABEL: add_h:
-; CHECK: fcvt
-; CHECK: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fadd
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK: fcvt
+; CHECK-CVT-LABEL: add_h:
+; CHECK-CVT:     fcvt
+; CHECK-CVT:     fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fadd
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT-DAG: fcvt
+; CHECK-CVT:     fcvt
+
+; CHECK-FP16-LABEL: add_h:
+; CHECK-FP16:       fadd  v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:  ret
+
   %0 = fadd <8 x half> %a, %b
   ret <8 x half> %0
 }
@@ -42,39 +48,44 @@ entry:
 
 define <8 x half> @sub_h(<8 x half> %a, <8 x half> %b) {
 entry:
-; CHECK-LABEL: sub_h:
-; CHECK: fcvt
-; CHECK: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fsub
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK: fcvt
+; CHECK-CVT-LABEL: sub_h:
+; CHECK-CVT:       fcvt
+; CHECK-CVT:       fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fsub
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT:       fcvt
+
+; CHECK-FP16-LABEL: sub_h:
+; CHECK-FP16:       fsub  v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:  ret
+
   %0 = fsub <8 x half> %a, %b
   ret <8 x half> %0
 }
@@ -82,39 +93,44 @@ entry:
 
 define <8 x half> @mul_h(<8 x half> %a, <8 x half> %b) {
 entry:
-; CHECK-LABEL: mul_h:
-; CHECK: fcvt
-; CHECK: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fmul
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK: fcvt
+; CHECK-CVT-LABEL: mul_h:
+; CHECK-CVT:       fcvt
+; CHECK-CVT:       fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fmul
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT:       fcvt
+
+; CHECK-FP16-LABEL: mul_h:
+; CHECK-FP16:       fmul  v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:  ret
+
   %0 = fmul <8 x half> %a, %b
   ret <8 x half> %0
 }
@@ -122,39 +138,44 @@ entry:
 
 define <8 x half> @div_h(<8 x half> %a, <8 x half> %b) {
 entry:
-; CHECK-LABEL: div_h:
-; CHECK: fcvt
-; CHECK: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fdiv
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK-DAG: fcvt
-; CHECK: fcvt
+; CHECK-CVT-LABEL: div_h:
+; CHECK-CVT:       fcvt
+; CHECK-CVT:       fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fdiv
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT-DAG:   fcvt
+; CHECK-CVT:       fcvt
+
+; CHECK-FP16-LABEL: div_h:
+; CHECK-FP16:       fdiv  v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:  ret
+
   %0 = fdiv <8 x half> %a, %b
   ret <8 x half> %0
 }
@@ -421,86 +442,254 @@ define <8 x i16> @fptoui_i16(<8 x half> %a) #0 {
   ret <8 x i16> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_une(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_une:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp une <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 16 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ueq(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ueq:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ueq <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ugt(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ugt:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ugt <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_uge(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_uge:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp uge <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ult(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ult:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ult <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ule(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ule:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ule <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_uno(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_uno:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp uno <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_one(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_one:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp one <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_oeq(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_oeq:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp oeq <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ogt(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ogt:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ogt <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_oge(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_oge:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp oge <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_olt(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_olt:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp olt <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ole(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ole:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ole <8 x half> %a, %b
   ret <8 x i1> %1
 }
 
-; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
 define <8 x i1> @test_fcmp_ord(<8 x half> %a, <8 x half> %b) #0 {
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests, so skipped for -fullfp16.
+
+; CHECK-FP16-LABEL: test_fcmp_ord:
+; CHECK-FP16-NOT:   fcvt
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+; CHECK-FP16-DAG:   fcmp  h{{[0-9]}}, h{{[0-9]}}
+
   %1 = fcmp ord <8 x half> %a, %b
   ret <8 x i1> %1
 }

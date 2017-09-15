@@ -1561,7 +1561,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
     ReturnTypeIndex = ReturnAndArgTypesRef.front();
     ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
   }
-  TypeIndex ThisTypeIndex = TypeIndex::Void();
+  TypeIndex ThisTypeIndex;
   if (!IsStaticMethod && !ArgTypeIndices.empty()) {
     ThisTypeIndex = ArgTypeIndices.front();
     ArgTypeIndices = ArgTypeIndices.drop_front();

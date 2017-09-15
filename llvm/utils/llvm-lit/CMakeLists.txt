@@ -4,8 +4,6 @@ if (WIN32 AND NOT CYGWIN)
 endif ()
 set(llvm_lit_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lit${suffix})
 
-get_property(LLVM_LIT_CONFIG_MAP GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP)
-
 if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
   foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
     string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} bi ${llvm_lit_path})
