@@ -32,11 +32,13 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN: v_writelane_b32 v32, s37, 4
 
 ; GCN: s_mov_b32 s33, s5
-; GCN: s_swappc_b64
+; GCN-NEXT: s_swappc_b64
+; GCN-NEXT: s_mov_b32 s5, s33
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
+; GCN-NEXT: s_mov_b32 s33, s5
 ; GCN-NEXT: s_swappc_b64
-; GCN: s_mov_b32 s5, s33
+; GCN-NEXT: s_mov_b32 s5, s33
 ; GCN: v_readlane_b32 s37, v32, 4
 ; GCN: v_readlane_b32 s36, v32, 3
 ; GCN: v_readlane_b32 s35, v32, 2
@@ -46,6 +48,20 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 define void @test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
   call void @external_void_func_void()
   call void asm sideeffect "", ""() #0
+  call void @external_void_func_void()
+  ret void
+}
+
+; FIXME: Avoid extra restore of FP in between calls.
+; GCN-LABEL: {{^}}test_func_call_external_void_funcx2:
+; GCN: s_mov_b32 s33, s5
+; GCN-NEXT: s_swappc_b64
+; GCN-NEXT: s_mov_b32 s5, s33
+; GCN-NEXT: s_mov_b32 s33, s5
+; GCN-NEXT: s_swappc_b64
+; GCN-NEXT: s_mov_b32 s5, s33
+define void @test_func_call_external_void_funcx2() #0 {
+  call void @external_void_func_void()
   call void @external_void_func_void()
   ret void
 }

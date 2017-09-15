@@ -118,6 +118,10 @@ public:
   /// all feature bits implied by the flag.
   FeatureBitset ApplyFeatureFlag(StringRef FS);
 
+  /// Check whether the subtarget features are enabled/disabled as per
+  /// the provided string, ignoring all other features.
+  bool checkFeatures(StringRef FS) const;
+
   /// getSchedModelForCPU - Get the machine model of a CPU.
   ///
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;

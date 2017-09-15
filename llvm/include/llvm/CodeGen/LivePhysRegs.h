@@ -108,6 +108,12 @@ public:
   /// Returns true if register \p Reg and no aliasing register is in the set.
   bool available(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
+  /// Remove defined registers and regmask kills from the set.
+  void removeDefs(const MachineInstr &MI);
+
+  /// Add uses to the set.
+  void addUses(const MachineInstr &MI);
+
   /// Simulates liveness when stepping backwards over an instruction(bundle).
   /// Remove Defs, add uses. This is the recommended way of calculating
   /// liveness.
@@ -167,6 +173,9 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
 /// live-in lists are up-to-date. Puts the result into the given LivePhysReg
 /// instance \p LiveRegs.
 void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
+
+/// Recomputes dead and kill flags in \p MBB.
+void recomputeLivenessFlags(MachineBasicBlock &MBB);
 
 /// Adds registers contained in \p LiveRegs to the block live-in list of \p MBB.
 /// Does not add reserved registers.

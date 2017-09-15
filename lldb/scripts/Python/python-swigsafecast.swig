@@ -115,6 +115,13 @@ SBTypeToSWIGWrapper (lldb::SBBreakpointLocation* breakpoint_location_sb)
 
 template <>
 PyObject*
+SBTypeToSWIGWrapper (lldb::SBBreakpointName* breakpoint_name_sb)
+{
+    return SWIG_NewPointerObj((void *) breakpoint_name_sb, SWIGTYPE_p_lldb__SBBreakpointName, 0);
+}
+
+template <>
+PyObject*
 SBTypeToSWIGWrapper (lldb::SBValue* value_sb)
 {
     return SWIG_NewPointerObj((void *) value_sb, SWIGTYPE_p_lldb__SBValue, 0);

@@ -2863,11 +2863,9 @@ static Expr *lookThroughRangesV3Condition(Preprocessor &PP, Expr *Cond) {
   return Cond;
 }
 
-/// Find the failed subexpression within enable_if, and describe it
-/// with a string.
-static std::pair<Expr *, std::string>
-findFailedEnableIfCondition(Sema &S, Expr *Cond) {
-  Cond = lookThroughRangesV3Condition(S.PP, Cond);
+std::pair<Expr *, std::string>
+Sema::findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond) {
+  Cond = lookThroughRangesV3Condition(PP, Cond);
 
   // Separate out all of the terms in a conjunction.
   SmallVector<Expr *, 4> Terms;
@@ -2876,27 +2874,37 @@ findFailedEnableIfCondition(Sema &S, Expr *Cond) {
   // Determine which term failed.
   Expr *FailedCond = nullptr;
   for (Expr *Term : Terms) {
+    Expr *TermAsWritten = Term->IgnoreParenImpCasts();
+
+    // Literals are uninteresting.
+    if (isa<CXXBoolLiteralExpr>(TermAsWritten) ||
+        isa<IntegerLiteral>(TermAsWritten))
+      continue;
+
     // The initialization of the parameter from the argument is
     // a constant-evaluated context.
     EnterExpressionEvaluationContext ConstantEvaluated(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
     bool Succeeded;
-    if (Term->EvaluateAsBooleanCondition(Succeeded, S.Context) &&
+    if (Term->EvaluateAsBooleanCondition(Succeeded, Context) &&
         !Succeeded) {
-      FailedCond = Term->IgnoreParenImpCasts();
+      FailedCond = TermAsWritten;
       break;
     }
   }
 
-  if (!FailedCond)
+  if (!FailedCond) {
+    if (!AllowTopLevelCond)
+      return { nullptr, "" };
+
     FailedCond = Cond->IgnoreParenImpCasts();
+  }
 
   std::string Description;
   {
     llvm::raw_string_ostream Out(Description);
-    FailedCond->printPretty(Out, nullptr,
-                            PrintingPolicy(S.Context.getLangOpts()));
+    FailedCond->printPretty(Out, nullptr, getPrintingPolicy());
   }
   return { FailedCond, Description };
 }
@@ -2980,8 +2988,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
             Expr *FailedCond;
             std::string FailedDescription;
             std::tie(FailedCond, FailedDescription) =
-              findFailedEnableIfCondition(
-                *this, TemplateArgs[0].getSourceExpression());
+              findFailedBooleanCondition(
+                TemplateArgs[0].getSourceExpression(),
+                /*AllowTopLevelCond=*/true);
 
             // Remove the old SFINAE diagnostic.
             PartialDiagnosticAt OldDiag =
@@ -9513,7 +9522,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
         Expr *FailedCond;
         std::string FailedDescription;
         std::tie(FailedCond, FailedDescription) =
-          findFailedEnableIfCondition(*this, Cond);
+          findFailedBooleanCondition(Cond, /*AllowTopLevelCond=*/true);
 
         Diag(FailedCond->getExprLoc(),
              diag::err_typename_nested_not_found_requirement)

@@ -34,6 +34,8 @@ namespace lldb_private {
 
 class BreakpointOptions {
 friend class BreakpointLocation;
+friend class BreakpointName;
+friend class lldb_private::BreakpointOptionGroup;
 friend class Breakpoint;
 
 public:
@@ -44,7 +46,9 @@ public:
     eIgnoreCount  = 1 << 3,
     eThreadSpec   = 1 << 4,
     eCondition    = 1 << 5,
-    eAutoContinue = 1 << 6
+    eAutoContinue = 1 << 6,
+    eAllOptions   = (eCallback | eEnabled | eOneShot | eIgnoreCount | eThreadSpec
+                     | eCondition | eAutoContinue)
   };
   struct CommandData {
     CommandData()
@@ -98,6 +102,10 @@ public:
   typedef std::shared_ptr<CommandBaton> CommandBatonSP;
 
   //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+
+  //------------------------------------------------------------------
   /// This constructor allows you to specify all the breakpoint options
   /// except the callback.  That one is more complicated, and better
   /// to do by hand.
@@ -116,6 +124,13 @@ public:
                     int32_t ignore = 0, bool one_shot = false,
                     bool auto_continue = false);
 
+  //------------------------------------------------------------------
+  /// Breakpoints make options with all flags set.  Locations and Names make options
+  /// with no flags set.
+  //------------------------------------------------------------------
+  BreakpointOptions(bool all_flags_set);
+  BreakpointOptions(const BreakpointOptions &rhs);
+
   virtual ~BreakpointOptions();
 
   static std::unique_ptr<BreakpointOptions>
@@ -131,6 +146,11 @@ public:
   // Operators
   //------------------------------------------------------------------
   const BreakpointOptions &operator=(const BreakpointOptions &rhs);
+  
+  //------------------------------------------------------------------
+  /// Copy over only the options set in the incoming BreakpointOptions.
+  //------------------------------------------------------------------
+  void CopyOverSetOptions(const BreakpointOptions &rhs);
 
   //------------------------------------------------------------------
   // Callbacks
@@ -387,17 +407,13 @@ public:
   //------------------------------------------------------------------
   void SetCommandDataCallback(std::unique_ptr<CommandData> &cmd_data);
   
+  void Clear();
+  
+  bool AnySet() const {
+    return m_set_flags.AnySet(eAllOptions);
+  }
+  
 protected:
-  //------------------------------------------------------------------
-  // Constructors and Destructors
-  //------------------------------------------------------------------
-  //------------------------------------------------------------------
-  /// Breakpoints make options with all flags set.  Locations make options
-  /// with no flags set.  Nobody else should make breakpoint options.
-  //------------------------------------------------------------------
-  BreakpointOptions(bool all_flags_set);
-  BreakpointOptions(const BreakpointOptions &rhs);
-
 //------------------------------------------------------------------
   // Classes that inherit from BreakpointOptions can see and modify these
   //------------------------------------------------------------------

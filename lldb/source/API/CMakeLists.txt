@@ -24,6 +24,8 @@ add_lldb_library(liblldb SHARED
   SBBlock.cpp
   SBBreakpoint.cpp
   SBBreakpointLocation.cpp
+  SBBreakpointName.cpp
+  SBBreakpointOptionCommon.cpp
   SBBroadcaster.cpp
   SBCommandInterpreter.cpp
   SBCommandReturnObject.cpp

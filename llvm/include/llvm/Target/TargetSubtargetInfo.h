@@ -110,6 +110,8 @@ public:
     return nullptr;
   }
 
+  virtual unsigned getHwMode() const { return 0; }
+
   /// Target can subclass this hook to select a different DAG scheduler.
   virtual RegisterScheduler::FunctionPassCtor
       getDAGScheduler(CodeGenOpt::Level) const {

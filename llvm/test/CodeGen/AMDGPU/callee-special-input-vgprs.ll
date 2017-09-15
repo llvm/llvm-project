@@ -425,7 +425,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN: s_mov_b32 s33, s7
 ; GCN: s_add_u32 s32, s33, 0x200{{$}}
 
-; GCN-DAG: s_add_u32 s32, s32, 0x100{{$}}
+; GCN-NOT: s32
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; GCN: buffer_store_dword [[K]], off, s[0:3], s33 offset:4
 ; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:12

@@ -260,12 +260,6 @@ StaticSpinMutex ScopedInErrorReport::lock_;
 u32 ScopedInErrorReport::reporting_thread_tid_ = kInvalidTid;
 ErrorDescription ScopedInErrorReport::current_error_;
 
-void ReportStackOverflow(const SignalContext &sig) {
-  ScopedInErrorReport in_report(/*fatal*/ true);
-  ErrorStackOverflow error(GetCurrentTidOrInvalid(), sig);
-  in_report.ReportError(error);
-}
-
 void ReportDeadlySignal(const SignalContext &sig) {
   ScopedInErrorReport in_report(/*fatal*/ true);
   ErrorDeadlySignal error(GetCurrentTidOrInvalid(), sig);

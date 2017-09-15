@@ -15,6 +15,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocVisitor.h"
@@ -123,22 +124,51 @@ static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
 }
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
+                         std::function<bool(ObjectFile &, Twine)> HandleObj);
+
+static bool handleArchive(StringRef Filename, Archive &Arch,
+                          std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  bool Result = true;
+  Error Err = Error::success();
+  for (auto Child : Arch.children(Err)) {
+    auto BuffOrErr = Child.getMemoryBufferRef();
+    error(Filename, errorToErrorCode(BuffOrErr.takeError()));
+    auto NameOrErr = Child.getName();
+    error(Filename, errorToErrorCode(NameOrErr.takeError()));
+    std::string Name = (Filename + "(" + NameOrErr.get() + ")").str();
+    Result &= handleBuffer(Name, BuffOrErr.get(), HandleObj);
+  }
+  error(Filename, errorToErrorCode(std::move(Err)));
+
+  return Result;
+}
+
+static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          std::function<bool(ObjectFile &, Twine)> HandleObj) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
-  if (!BinOrErr)
-    error(Filename, errorToErrorCode(BinOrErr.takeError()));
+  error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   bool Result = true;
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
     Result = HandleObj(*Obj, Filename);
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
-      auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
-      if (!HandleObj(**MachOOrErr,
-                     Filename + " (" + ObjForArch.getArchFlagName() + ")"))
-        Result = false;
+      std::string ObjName =
+          (Filename + "(" + ObjForArch.getArchFlagName() + ")").str();
+      if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
+        Result &= HandleObj(**MachOOrErr, ObjName);
+        continue;
+      } else
+        consumeError(MachOOrErr.takeError());
+      if (auto ArchiveOrErr = ObjForArch.getAsArchive()) {
+        error(ObjName, errorToErrorCode(ArchiveOrErr.takeError()));
+        Result &= handleArchive(ObjName, *ArchiveOrErr.get(), HandleObj);
+        continue;
+      } else
+        consumeError(ArchiveOrErr.takeError());
     }
+  else if (auto *Arch = dyn_cast<Archive>(BinOrErr->get()))
+    Result = handleArchive(Filename, *Arch, HandleObj);
   return Result;
 }
 

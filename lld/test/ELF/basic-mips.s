@@ -228,7 +228,7 @@ __start:
 # CHECK-NEXT:     Other [ (0x2)
 # CHECK-NEXT:       STV_HIDDEN (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Section: Absolute
+# CHECK-NEXT:     Section: .got
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: __start

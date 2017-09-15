@@ -198,7 +198,7 @@ a:
         tlbinv                   # CHECK: tlbinv                  # encoding: [0x00,0x00,0x43,0x7c]
         tlbinvf                  # CHECK: tlbinvf                 # encoding: [0x00,0x00,0x53,0x7c]
         dinsu $4, $2, 32, 5      # CHECK: dinsu $4, $2, 32, 5     # encoding: [0x58,0x82,0x20,0x34]
-        dinsm $4, $2, 3, 5       # CHECK: dinsm $4, $2, 3, 5      # encoding: [0x58,0x82,0x38,0xc4]
+        dinsm $4, $2, 31, 5      # CHECK: dinsm $4, $2, 31, 5     # encoding: [0x58,0x82,0x1f,0xc4]
         dins $4, $2, 3, 5        # CHECK: dins $4, $2, 3, 5       # encoding: [0x58,0x82,0x38,0xcc]
         lh $2, 8($4)             # CHECK: lh $2, 8($4)            # encoding: [0x3c,0x44,0x00,0x08]
         lhe $4, 8($2)            # CHECK: lhe $4, 8($2)           # encoding: [0x60,0x82,0x6a,0x08]

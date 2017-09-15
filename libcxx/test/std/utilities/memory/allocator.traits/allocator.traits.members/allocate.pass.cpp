@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "incomplete_type_helper.h"
+
 template <class T>
 struct A
 {
@@ -34,6 +36,14 @@ struct A
 
 int main()
 {
+  {
     A<int> a;
     assert(std::allocator_traits<A<int> >::allocate(a, 10) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
+  }
+  {
+    typedef IncompleteHolder* VT;
+    typedef A<VT> Alloc;
+    Alloc a;
+    assert(std::allocator_traits<Alloc >::allocate(a, 10) == reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
+  }
 }

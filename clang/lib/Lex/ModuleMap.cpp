@@ -1201,6 +1201,7 @@ namespace clang {
       ExcludeKeyword,
       ExplicitKeyword,
       ExportKeyword,
+      ExportAsKeyword,
       ExternKeyword,
       FrameworkKeyword,
       LinkKeyword,
@@ -1312,6 +1313,7 @@ namespace clang {
                          SourceLocation LeadingLoc);
     void parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
     void parseExportDecl();
+    void parseExportAsDecl();
     void parseUseDecl();
     void parseLinkDecl();
     void parseConfigMacros();
@@ -1363,6 +1365,7 @@ retry:
                  .Case("exclude", MMToken::ExcludeKeyword)
                  .Case("explicit", MMToken::ExplicitKeyword)
                  .Case("export", MMToken::ExportKeyword)
+                 .Case("export_as", MMToken::ExportAsKeyword)
                  .Case("extern", MMToken::ExternKeyword)
                  .Case("framework", MMToken::FrameworkKeyword)
                  .Case("header", MMToken::HeaderKeyword)
@@ -1590,6 +1593,7 @@ namespace {
 ///     header-declaration
 ///     submodule-declaration
 ///     export-declaration
+///     export-as-declaration
 ///     link-declaration
 ///
 ///   submodule-declaration:
@@ -1822,6 +1826,10 @@ void ModuleMapParser::parseModuleDecl() {
 
     case MMToken::ExportKeyword:
       parseExportDecl();
+      break;
+
+    case MMToken::ExportAsKeyword:
+      parseExportAsDecl();
       break;
 
     case MMToken::UseKeyword:
@@ -2284,6 +2292,41 @@ void ModuleMapParser::parseExportDecl() {
   ActiveModule->UnresolvedExports.push_back(Unresolved);
 }
 
+/// \brief Parse a module export_as declaration.
+///
+///   export-as-declaration:
+///     'export_as' identifier
+void ModuleMapParser::parseExportAsDecl() {
+  assert(Tok.is(MMToken::ExportAsKeyword));
+  consumeToken();
+
+  if (!Tok.is(MMToken::Identifier)) {
+    Diags.Report(Tok.getLocation(), diag::err_mmap_module_id);
+    HadError = true;
+    return;
+  }
+
+  if (ActiveModule->Parent) {
+    Diags.Report(Tok.getLocation(), diag::err_mmap_submodule_export_as);
+    consumeToken();
+    return;
+  }
+  
+  if (!ActiveModule->ExportAsModule.empty()) {
+    if (ActiveModule->ExportAsModule == Tok.getString()) {
+      Diags.Report(Tok.getLocation(), diag::warn_mmap_redundant_export_as)
+        << ActiveModule->Name << Tok.getString();
+    } else {
+      Diags.Report(Tok.getLocation(), diag::err_mmap_conflicting_export_as)
+        << ActiveModule->Name << ActiveModule->ExportAsModule
+        << Tok.getString();
+    }
+  }
+  
+  ActiveModule->ExportAsModule = Tok.getString();
+  consumeToken();
+}
+
 /// \brief Parse a module use declaration.
 ///
 ///   use-declaration:
@@ -2689,6 +2732,7 @@ bool ModuleMapParser::parseModuleMapFile() {
     case MMToken::Exclaim:
     case MMToken::ExcludeKeyword:
     case MMToken::ExportKeyword:
+    case MMToken::ExportAsKeyword:
     case MMToken::HeaderKeyword:
     case MMToken::Identifier:
     case MMToken::LBrace:

@@ -615,9 +615,10 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
+set(site_config_path "${LIBCXX_BINARY_DIR}/__config_site")
 if (LIBCXX_NEEDS_SITE_CONFIG)
   configure_file("include/__config_site.in"
-                 "${LIBCXX_BINARY_DIR}/__config_site"
+                 "${site_config_path}"
                  @ONLY)
 
   # Provide the config definitions by included the generated __config_site
@@ -626,6 +627,11 @@ if (LIBCXX_NEEDS_SITE_CONFIG)
     add_compile_flags("/FI\"${LIBCXX_BINARY_DIR}/__config_site\"")
   else()
     add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  endif()
+else()
+  if (EXISTS "${site_config_path}")
+    message(STATUS "Removing stale site configuration ${site_config_path}")
+    file(REMOVE "${site_config_path}")
   endif()
 endif()
 
