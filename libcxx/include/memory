@@ -1302,7 +1302,7 @@ struct __allocator_traits_rebind<_Alloc<_Tp, _A0, _A1, _A2>, _Up, false>
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 auto
 __has_allocate_hint_test(_Alloc&& __a, _SizeType&& __sz, _ConstVoidPtr&& __p)
-    -> decltype(__a.allocate(__sz, __p), true_type());
+    -> decltype((void)__a.allocate(__sz, __p), true_type());
 
 template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 auto
@@ -1313,7 +1313,7 @@ template <class _Alloc, class _SizeType, class _ConstVoidPtr>
 struct __has_allocate_hint
     : integral_constant<bool,
         is_same<
-            decltype(__has_allocate_hint_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_allocate_hint_test(declval<_Alloc>(),
                                           declval<_SizeType>(),
                                           declval<_ConstVoidPtr>())),
             true_type>::value>
@@ -1346,7 +1346,7 @@ template <class _Alloc, class _Pointer, class ..._Args>
 struct __has_construct
     : integral_constant<bool,
         is_same<
-            decltype(__has_construct_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_construct_test(declval<_Alloc>(),
                                           declval<_Pointer>(),
                                           declval<_Args>()...)),
             true_type>::value>
@@ -1367,7 +1367,7 @@ template <class _Alloc, class _Pointer>
 struct __has_destroy
     : integral_constant<bool,
         is_same<
-            decltype(__has_destroy_test(declval<_Alloc>(),
+            decltype(_VSTD::__has_destroy_test(declval<_Alloc>(),
                                         declval<_Pointer>())),
             true_type>::value>
 {
@@ -1387,7 +1387,7 @@ template <class _Alloc>
 struct __has_max_size
     : integral_constant<bool,
         is_same<
-            decltype(__has_max_size_test(declval<_Alloc&>())),
+            decltype(_VSTD::__has_max_size_test(declval<_Alloc&>())),
             true_type>::value>
 {
 };
@@ -1406,7 +1406,7 @@ template <class _Alloc>
 struct __has_select_on_container_copy_construction
     : integral_constant<bool,
         is_same<
-            decltype(__has_select_on_container_copy_construction_test(declval<_Alloc&>())),
+            decltype(_VSTD::__has_select_on_container_copy_construction_test(declval<_Alloc&>())),
             true_type>::value>
 {
 };

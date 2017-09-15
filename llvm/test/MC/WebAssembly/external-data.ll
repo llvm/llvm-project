@@ -7,16 +7,21 @@
 @foo = global i64 7, align 4
 @bar = hidden global i32* @myimport, align 4
 
-; CHECK:   - Type:            DATA
-; CHECK:     Relocations:
-; CHECK:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK:         Index:           0
-; CHECK:         Offset:          0x0000000E
-; CHECK:     Segments:
-; CHECK:       - SectionOffset:   6
-; CHECK:         MemoryIndex:     0
-; CHECK:         Offset:
-; CHECK:           Opcode:          I32_CONST
-; CHECK:           Value:           0
-; CHECK:         Content:         0700000000000000FFFFFFFF
-
+; CHECK:        - Type:            DATA
+; CHECK-NEXT:     Relocations:
+; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
+; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Offset:          0x00000013
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - SectionOffset:   6
+; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         Offset:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           0
+; CHECK-NEXT:         Content:         '0700000000000000'
+; CHECK-NEXT:       - SectionOffset:   19
+; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           8
+; CHECK-NEXT:         Content:         FFFFFFFF

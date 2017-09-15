@@ -101,33 +101,6 @@ static void LowerLargeShift(MCInst& Inst) {
   }
 }
 
-// Pick a DINS instruction variant based on the pos and size operands
-static void LowerDins(MCInst& InstIn) {
-  assert(InstIn.getNumOperands() == 5 &&
-         "Invalid no. of machine operands for DINS!");
-
-  assert(InstIn.getOperand(2).isImm());
-  int64_t pos = InstIn.getOperand(2).getImm();
-  assert(InstIn.getOperand(3).isImm());
-  int64_t size = InstIn.getOperand(3).getImm();
-
-  assert((pos + size) <= 64 &&
-         "DINS cannot have position plus size over 64");
-  if (pos < 32) {
-    if ((pos + size) > 0 && (pos + size) <= 32)
-      return; // DINS, do nothing
-    else if ((pos + size) > 32) {
-      //DINSM
-      InstIn.getOperand(3).setImm(size - 32);
-      InstIn.setOpcode(Mips::DINSM);
-    }
-  } else if ((pos + size) > 32 && (pos + size) <= 64) {
-    // DINSU
-    InstIn.getOperand(2).setImm(pos - 32);
-    InstIn.setOpcode(Mips::DINSU);
-  }
-}
-
 // Fix a bad compact branch encoding for beqc/bnec.
 void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   // Encoding may be illegal !(rs < rt), but this situation is
@@ -210,10 +183,6 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case Mips::DSRA_MM64R6:
   case Mips::DROTR_MM64R6:
     LowerLargeShift(TmpInst);
-    break;
-    // Double extract instruction is chosen by pos and size operands
-  case Mips::DINS:
-    LowerDins(TmpInst);
     break;
   // Compact branches, enforce encoding restrictions.
   case Mips::BEQC:

@@ -147,7 +147,9 @@ void MachineFunction::init() {
          "Can't create a MachineFunction using a Module with a "
          "Target-incompatible DataLayout attached\n");
 
-  PSVManager = llvm::make_unique<PseudoSourceValueManager>();
+  PSVManager =
+    llvm::make_unique<PseudoSourceValueManager>(*(getSubtarget().
+                                                  getInstrInfo()));
 }
 
 MachineFunction::~MachineFunction() {

@@ -27,6 +27,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -356,15 +357,52 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
   return false;
 }
 
+static bool memOpsHaveSameBasePtr(const MachineInstr &MI1, unsigned BaseReg1,
+                                  const MachineInstr &MI2, unsigned BaseReg2) {
+  if (BaseReg1 == BaseReg2)
+    return true;
+
+  if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
+    return false;
+
+  auto MO1 = *MI1.memoperands_begin();
+  auto MO2 = *MI2.memoperands_begin();
+  if (MO1->getAddrSpace() != MO2->getAddrSpace())
+    return false;
+
+  auto Base1 = MO1->getValue();
+  auto Base2 = MO2->getValue();
+  if (!Base1 || !Base2)
+    return false;
+  const MachineFunction &MF = *MI1.getParent()->getParent();
+  const DataLayout &DL = MF.getFunction()->getParent()->getDataLayout();
+  Base1 = GetUnderlyingObject(Base1, DL);
+  Base2 = GetUnderlyingObject(Base1, DL);
+
+  if (isa<UndefValue>(Base1) || isa<UndefValue>(Base2))
+    return false;
+
+  return Base1 == Base2;
+}
+
 bool SIInstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
+                                      unsigned BaseReg1,
                                       MachineInstr &SecondLdSt,
+                                      unsigned BaseReg2,
                                       unsigned NumLoads) const {
+  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseReg1, SecondLdSt, BaseReg2))
+    return false;
+
   const MachineOperand *FirstDst = nullptr;
   const MachineOperand *SecondDst = nullptr;
 
   if ((isMUBUF(FirstLdSt) && isMUBUF(SecondLdSt)) ||
       (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt)) ||
       (isFLAT(FirstLdSt) && isFLAT(SecondLdSt))) {
+    const unsigned MaxGlobalLoadCluster = 6;
+    if (NumLoads > MaxGlobalLoadCluster)
+      return false;
+
     FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdata);
     if (!FirstDst)
       FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
@@ -779,6 +817,10 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
+
+  assert(SrcReg != MFI->getStackPtrOffsetReg() &&
+         SrcReg != MFI->getFrameOffsetReg() &&
+         SrcReg != MFI->getScratchWaveOffsetReg());
 
   unsigned Size = FrameInfo.getObjectSize(FrameIndex);
   unsigned Align = FrameInfo.getObjectAlignment(FrameIndex);
@@ -1831,6 +1873,23 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
   }
 }
 
+unsigned SIInstrInfo::getAddressSpaceForPseudoSourceKind(
+    PseudoSourceValue::PSVKind Kind) const {
+  switch(Kind) {
+  case PseudoSourceValue::Stack:
+  case PseudoSourceValue::FixedStack:
+    return AMDGPUASI.PRIVATE_ADDRESS;
+  case PseudoSourceValue::ConstantPool:
+  case PseudoSourceValue::GOT:
+  case PseudoSourceValue::JumpTable:
+  case PseudoSourceValue::GlobalValueCallEntry:
+  case PseudoSourceValue::ExternalSymbolCallEntry:
+  case PseudoSourceValue::TargetCustom:
+    return AMDGPUASI.CONSTANT_ADDRESS;
+  }
+  return AMDGPUASI.FLAT_ADDRESS;
+}
+
 static void removeModOperands(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   int Src0ModIdx = AMDGPU::getNamedOperandIdx(Opc,
@@ -2089,9 +2148,8 @@ static int64_t getFoldableImm(const MachineOperand* MO) {
   const MachineFunction *MF = MO->getParent()->getParent()->getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   auto Def = MRI.getUniqueVRegDef(MO->getReg());
-  if (Def && (Def->getOpcode() == AMDGPU::S_MOV_B32 ||
-              Def->getOpcode() == AMDGPU::V_MOV_B32_e32) &&
-     Def->getOperand(1).isImm())
+  if (Def && Def->getOpcode() == AMDGPU::V_MOV_B32_e32 &&
+      Def->getOperand(1).isImm())
     return Def->getOperand(1).getImm();
   return AMDGPU::NoRegister;
 }
@@ -2133,7 +2191,9 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
 
-  if (!Src0Mods && !Src1Mods && !Clamp && !Omod) {
+  if (!Src0Mods && !Src1Mods && !Clamp && !Omod &&
+      // If we have an SGPR input, we will violate the constant bus restriction.
+      !RI.isSGPRReg(MBB->getParent()->getRegInfo(), Src0->getReg())) {
     if (auto Imm = getFoldableImm(Src2)) {
       return BuildMI(*MBB, MI, MI.getDebugLoc(),
                      get(IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32))

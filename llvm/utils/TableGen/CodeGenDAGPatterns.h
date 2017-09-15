@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENDAGPATTERNS_H
 
+#include "CodeGenHwModes.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/SmallVector.h"
@@ -36,134 +37,148 @@ namespace llvm {
   class CodeGenDAGPatterns;
   class ComplexPattern;
 
-/// EEVT::DAGISelGenValueType - These are some extended forms of
-/// MVT::SimpleValueType that we use as lattice values during type inference.
-/// The existing MVT iAny, fAny and vAny types suffice to represent
-/// arbitrary integer, floating-point, and vector types, so only an unknown
-/// value is needed.
-namespace EEVT {
-  /// TypeSet - This is either empty if it's completely unknown, or holds a set
-  /// of types.  It is used during type inference because register classes can
-  /// have multiple possible types and we don't know which one they get until
-  /// type inference is complete.
-  ///
-  /// TypeSet can have three states:
-  ///    Vector is empty: The type is completely unknown, it can be any valid
-  ///       target type.
-  ///    Vector has multiple constrained types: (e.g. v4i32 + v4f32) it is one
-  ///       of those types only.
-  ///    Vector has one concrete type: The type is completely known.
-  ///
-  class TypeSet {
-    SmallVector<MVT::SimpleValueType, 4> TypeVec;
-  public:
-    TypeSet() {}
-    TypeSet(MVT::SimpleValueType VT, TreePattern &TP);
-    TypeSet(ArrayRef<MVT::SimpleValueType> VTList);
+struct TypeSetByHwMode : public InfoByHwMode<std::set<MVT>> {
+  typedef std::set<MVT> SetType;
 
-    bool isCompletelyUnknown() const { return TypeVec.empty(); }
+  TypeSetByHwMode() = default;
+  TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
+  TypeSetByHwMode(MVT::SimpleValueType VT)
+    : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+  TypeSetByHwMode(ValueTypeByHwMode VT)
+    : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
+  TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
-    bool isConcrete() const {
-      if (TypeVec.size() != 1) return false;
-      unsigned char T = TypeVec[0]; (void)T;
-      assert(T < MVT::LAST_VALUETYPE || T == MVT::iPTR || T == MVT::iPTRAny);
-      return true;
-    }
+  SetType &getOrCreate(unsigned Mode) {
+    if (hasMode(Mode))
+      return get(Mode);
+    return Map.insert({Mode,SetType()}).first->second;
+  }
 
-    MVT::SimpleValueType getConcrete() const {
-      assert(isConcrete() && "Type isn't concrete yet");
-      return (MVT::SimpleValueType)TypeVec[0];
-    }
+  bool isValueTypeByHwMode(bool AllowEmpty) const;
+  ValueTypeByHwMode getValueTypeByHwMode() const;
+  bool isMachineValueType() const {
+    return isDefaultOnly() && Map.begin()->second.size() == 1;
+  }
 
-    bool isDynamicallyResolved() const {
-      return getConcrete() == MVT::iPTR || getConcrete() == MVT::iPTRAny;
-    }
+  MVT getMachineValueType() const {
+    assert(isMachineValueType());
+    return *Map.begin()->second.begin();
+  }
 
-    const SmallVectorImpl<MVT::SimpleValueType> &getTypeList() const {
-      assert(!TypeVec.empty() && "Not a type list!");
-      return TypeVec;
-    }
+  bool isPossible() const;
+  bool isDefaultOnly() const {
+    return Map.size() == 1 &&
+           Map.begin()->first == DefaultMode;
+  }
 
-    bool isVoid() const {
-      return TypeVec.size() == 1 && TypeVec[0] == MVT::isVoid;
-    }
+  bool insert(const ValueTypeByHwMode &VVT);
+  bool constrain(const TypeSetByHwMode &VTS);
+  template <typename Predicate> bool constrain(Predicate P);
+  template <typename Predicate> bool assign_if(const TypeSetByHwMode &VTS,
+                                               Predicate P);
 
-    /// hasIntegerTypes - Return true if this TypeSet contains any integer value
-    /// types.
-    bool hasIntegerTypes() const;
+  std::string getAsString() const;
+  static std::string getAsString(const SetType &S);
 
-    /// hasFloatingPointTypes - Return true if this TypeSet contains an fAny or
-    /// a floating point value type.
-    bool hasFloatingPointTypes() const;
+  bool operator==(const TypeSetByHwMode &VTS) const;
+  bool operator!=(const TypeSetByHwMode &VTS) const { return !(*this == VTS); }
 
-    /// hasScalarTypes - Return true if this TypeSet contains a scalar value
-    /// type.
-    bool hasScalarTypes() const;
+  void dump() const;
+  void validate() const;
 
-    /// hasVectorTypes - Return true if this TypeSet contains a vector value
-    /// type.
-    bool hasVectorTypes() const;
+private:
+  /// Intersect two sets. Return true if anything has changed.
+  bool intersect(SetType &Out, const SetType &In);
+};
 
-    /// getName() - Return this TypeSet as a string.
-    std::string getName() const;
+struct TypeInfer {
+  TypeInfer(TreePattern &T) : TP(T), ForceMode(0) {}
 
-    /// MergeInTypeInfo - This merges in type information from the specified
-    /// argument.  If 'this' changes, it returns true.  If the two types are
-    /// contradictory (e.g. merge f32 into i32) then this flags an error.
-    bool MergeInTypeInfo(const EEVT::TypeSet &InVT, TreePattern &TP);
+  bool isConcrete(const TypeSetByHwMode &VTS, bool AllowEmpty) const {
+    return VTS.isValueTypeByHwMode(AllowEmpty);
+  }
+  ValueTypeByHwMode getConcrete(const TypeSetByHwMode &VTS,
+                                bool AllowEmpty) const {
+    assert(VTS.isValueTypeByHwMode(AllowEmpty));
+    return VTS.getValueTypeByHwMode();
+  }
 
-    bool MergeInTypeInfo(MVT::SimpleValueType InVT, TreePattern &TP) {
-      return MergeInTypeInfo(EEVT::TypeSet(InVT, TP), TP);
-    }
+  /// The protocol in the following functions (Merge*, force*, Enforce*,
+  /// expand*) is to return "true" if a change has been made, "false"
+  /// otherwise.
 
-    /// Force this type list to only contain integer types.
-    bool EnforceInteger(TreePattern &TP);
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In);
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) {
+    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
+  }
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) {
+    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
+  }
 
-    /// Force this type list to only contain floating point types.
-    bool EnforceFloatingPoint(TreePattern &TP);
+  /// Reduce the set \p Out to have at most one element for each mode.
+  bool forceArbitrary(TypeSetByHwMode &Out);
 
-    /// EnforceScalar - Remove all vector types from this type list.
-    bool EnforceScalar(TreePattern &TP);
+  /// The following four functions ensure that upon return the set \p Out
+  /// will only contain types of the specified kind: integer, floating-point,
+  /// scalar, or vector.
+  /// If \p Out is empty, all legal types of the specified kind will be added
+  /// to it. Otherwise, all types that are not of the specified kind will be
+  /// removed from \p Out.
+  bool EnforceInteger(TypeSetByHwMode &Out);
+  bool EnforceFloatingPoint(TypeSetByHwMode &Out);
+  bool EnforceScalar(TypeSetByHwMode &Out);
+  bool EnforceVector(TypeSetByHwMode &Out);
 
-    /// EnforceVector - Remove all non-vector types from this type list.
-    bool EnforceVector(TreePattern &TP);
+  /// If \p Out is empty, fill it with all legal types. Otherwise, leave it
+  /// unchanged.
+  bool EnforceAny(TypeSetByHwMode &Out);
+  /// Make sure that for each type in \p Small, there exists a larger type
+  /// in \p Big.
+  bool EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big);
+  /// 1. Ensure that for each type T in \p Vec, T is a vector type, and that
+  ///    for each type U in \p Elem, U is a scalar type.
+  /// 2. Ensure that for each (scalar) type U in \p Elem, there exists a
+  ///    (vector) type T in \p Vec, such that U is the element type of T.
+  bool EnforceVectorEltTypeIs(TypeSetByHwMode &Vec, TypeSetByHwMode &Elem);
+  bool EnforceVectorEltTypeIs(TypeSetByHwMode &Vec,
+                              const ValueTypeByHwMode &VVT);
+  /// Ensure that for each type T in \p Sub, T is a vector type, and there
+  /// exists a type U in \p Vec such that U is a vector type with the same
+  /// element type as T and at least as many elements as T.
+  bool EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
+                                    TypeSetByHwMode &Sub);
+  /// 1. Ensure that \p V has a scalar type iff \p W has a scalar type.
+  /// 2. Ensure that for each vector type T in \p V, there exists a vector
+  ///    type U in \p W, such that T and U have the same number of elements.
+  /// 3. Ensure that for each vector type U in \p W, there exists a vector
+  ///    type T in \p V, such that T and U have the same number of elements
+  ///    (reverse of 2).
+  bool EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W);
+  /// 1. Ensure that for each type T in \p A, there exists a type U in \p B,
+  ///    such that T and U have equal size in bits.
+  /// 2. Ensure that for each type U in \p B, there exists a type T in \p A
+  ///    such that T and U have equal size in bits (reverse of 1).
+  bool EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B);
 
-    /// EnforceSmallerThan - 'this' must be a smaller VT than Other.  Update
-    /// this an other based on this information.
-    bool EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP);
+  /// For each overloaded type (i.e. of form *Any), replace it with the
+  /// corresponding subset of legal, specific types.
+  void expandOverloads(TypeSetByHwMode &VTS);
+  void expandOverloads(TypeSetByHwMode::SetType &Out,
+                       const TypeSetByHwMode::SetType &Legal);
 
-    /// EnforceVectorEltTypeIs - 'this' is now constrained to be a vector type
-    /// whose element is VT.
-    bool EnforceVectorEltTypeIs(EEVT::TypeSet &VT, TreePattern &TP);
-
-    /// EnforceVectorEltTypeIs - 'this' is now constrained to be a vector type
-    /// whose element is VT.
-    bool EnforceVectorEltTypeIs(MVT::SimpleValueType VT, TreePattern &TP);
-
-    /// EnforceVectorSubVectorTypeIs - 'this' is now constrained to
-    /// be a vector type VT.
-    bool EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VT, TreePattern &TP);
-
-    /// EnforceSameNumElts - If VTOperand is a scalar, then 'this' is a scalar.
-    /// If VTOperand is a vector, then 'this' must have the same number of
-    /// elements.
-    bool EnforceSameNumElts(EEVT::TypeSet &VT, TreePattern &TP);
-
-    /// EnforceSameSize - 'this' is now constrained to be the same size as VT.
-    bool EnforceSameSize(EEVT::TypeSet &VT, TreePattern &TP);
-
-    bool operator!=(const TypeSet &RHS) const { return TypeVec != RHS.TypeVec; }
-    bool operator==(const TypeSet &RHS) const { return TypeVec == RHS.TypeVec; }
-
-  private:
-    /// FillWithPossibleTypes - Set to all legal types and return true, only
-    /// valid on completely unknown type sets.  If Pred is non-null, only MVTs
-    /// that pass the predicate are added.
-    bool FillWithPossibleTypes(TreePattern &TP,
-                               bool (*Pred)(MVT::SimpleValueType) = nullptr,
-                               const char *PredicateName = nullptr);
+  struct ValidateOnExit {
+    ValidateOnExit(TypeSetByHwMode &T) : VTS(T) {}
+    ~ValidateOnExit() { VTS.validate(); }
+    TypeSetByHwMode &VTS;
   };
-}
+
+  TreePattern &TP;
+  unsigned ForceMode;     // Mode to use when set.
+  bool CodeGen = false;   // Set during generation of matcher code.
+
+private:
+  TypeSetByHwMode getLegalTypes();
+};
 
 /// Set type used to track multiply used variables in patterns
 typedef std::set<std::string> MultipleUseVarSet;
@@ -171,7 +186,7 @@ typedef std::set<std::string> MultipleUseVarSet;
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
 struct SDTypeConstraint {
-  SDTypeConstraint(Record *R);
+  SDTypeConstraint(Record *R, const CodeGenHwModes &CGH);
 
   unsigned OperandNo;   // The operand # this constraint applies to.
   enum {
@@ -181,9 +196,6 @@ struct SDTypeConstraint {
   } ConstraintType;
 
   union {   // The discriminated union.
-    struct {
-      MVT::SimpleValueType VT;
-    } SDTCisVT_Info;
     struct {
       unsigned OtherOperandNum;
     } SDTCisSameAs_Info;
@@ -200,15 +212,16 @@ struct SDTypeConstraint {
       unsigned OtherOperandNum;
     } SDTCisSubVecOfVec_Info;
     struct {
-      MVT::SimpleValueType VT;
-    } SDTCVecEltisVT_Info;
-    struct {
       unsigned OtherOperandNum;
     } SDTCisSameNumEltsAs_Info;
     struct {
       unsigned OtherOperandNum;
     } SDTCisSameSizeAs_Info;
   } x;
+
+  // The VT for SDTCisVT and SDTCVecEltisVT.
+  // Must not be in the union because it has a non-trivial destructor.
+  ValueTypeByHwMode VVT;
 
   /// ApplyTypeConstraint - Given a node in a pattern, apply this type
   /// constraint to the nodes operands.  This returns true if it makes a
@@ -230,7 +243,8 @@ class SDNodeInfo {
   int NumOperands;
   std::vector<SDTypeConstraint> TypeConstraints;
 public:
-  SDNodeInfo(Record *R);  // Parse the specified record.
+  // Parse the specified record.
+  SDNodeInfo(Record *R, const CodeGenHwModes &CGH);
 
   unsigned getNumResults() const { return NumResults; }
 
@@ -258,12 +272,7 @@ public:
   /// constraints for this node to the operands of the node.  This returns
   /// true if it makes a change, false otherwise.  If a type contradiction is
   /// found, an error is flagged.
-  bool ApplyTypeConstraints(TreePatternNode *N, TreePattern &TP) const {
-    bool MadeChange = false;
-    for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
-      MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
-    return MadeChange;
-  }
+  bool ApplyTypeConstraints(TreePatternNode *N, TreePattern &TP) const;
 };
   
 /// TreePredicateFn - This is an abstraction that represents the predicates on
@@ -324,7 +333,7 @@ class TreePatternNode {
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.
-  SmallVector<EEVT::TypeSet, 1> Types;
+  std::vector<TypeSetByHwMode> Types;
 
   /// Operator - The Record for the operator if this is an interior node (not
   /// a leaf).
@@ -367,22 +376,24 @@ public:
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
-  MVT::SimpleValueType getType(unsigned ResNo) const {
-    return Types[ResNo].getConcrete();
+  ValueTypeByHwMode getType(unsigned ResNo) const {
+    return Types[ResNo].getValueTypeByHwMode();
   }
-  const SmallVectorImpl<EEVT::TypeSet> &getExtTypes() const { return Types; }
-  const EEVT::TypeSet &getExtType(unsigned ResNo) const { return Types[ResNo]; }
-  EEVT::TypeSet &getExtType(unsigned ResNo) { return Types[ResNo]; }
-  void setType(unsigned ResNo, const EEVT::TypeSet &T) { Types[ResNo] = T; }
+  const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
+  const TypeSetByHwMode &getExtType(unsigned ResNo) const {
+    return Types[ResNo];
+  }
+  TypeSetByHwMode &getExtType(unsigned ResNo) { return Types[ResNo]; }
+  void setType(unsigned ResNo, const TypeSetByHwMode &T) { Types[ResNo] = T; }
+  MVT::SimpleValueType getSimpleType(unsigned ResNo) const {
+    return Types[ResNo].getMachineValueType().SimpleTy;
+  }
 
-  bool hasTypeSet(unsigned ResNo) const {
-    return Types[ResNo].isConcrete();
+  bool hasConcreteType(unsigned ResNo) const {
+    return Types[ResNo].isValueTypeByHwMode(false);
   }
-  bool isTypeCompletelyUnknown(unsigned ResNo) const {
-    return Types[ResNo].isCompletelyUnknown();
-  }
-  bool isTypeDynamicallyResolved(unsigned ResNo) const {
-    return Types[ResNo].isDynamicallyResolved();
+  bool isTypeCompletelyUnknown(unsigned ResNo, TreePattern &TP) const {
+    return Types[ResNo].empty();
   }
 
   Init *getLeafValue() const { assert(isLeaf()); return Val; }
@@ -400,6 +411,10 @@ public:
       if (Children[i] == N) return true;
     return false;
   }
+
+  bool hasProperTypeByHwMode() const;
+  bool hasPossibleType() const;
+  bool setDefaultMode(unsigned Mode);
 
   bool hasAnyPredicate() const { return !PredicateFns.empty(); }
   
@@ -484,15 +499,12 @@ public:   // Higher level manipulation routines.
   /// information.  If N already contains a conflicting type, then flag an
   /// error.  This returns true if any information was updated.
   ///
-  bool UpdateNodeType(unsigned ResNo, const EEVT::TypeSet &InTy,
-                      TreePattern &TP) {
-    return Types[ResNo].MergeInTypeInfo(InTy, TP);
-  }
-
+  bool UpdateNodeType(unsigned ResNo, const TypeSetByHwMode &InTy,
+                      TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
-                      TreePattern &TP) {
-    return Types[ResNo].MergeInTypeInfo(EEVT::TypeSet(InTy, TP), TP);
-  }
+                      TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy,
+                      TreePattern &TP);
 
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
@@ -501,14 +513,7 @@ public:   // Higher level manipulation routines.
 
   /// ContainsUnresolvedType - Return true if this tree contains any
   /// unresolved types.
-  bool ContainsUnresolvedType() const {
-    for (unsigned i = 0, e = Types.size(); i != e; ++i)
-      if (!Types[i].isConcrete()) return true;
-
-    for (unsigned i = 0, e = getNumChildren(); i != e; ++i)
-      if (getChild(i)->ContainsUnresolvedType()) return true;
-    return false;
-  }
+  bool ContainsUnresolvedType(TreePattern &TP) const;
 
   /// canPatternMatch - If it is impossible for this pattern to match on this
   /// target, fill in Reason and return false.  Otherwise, return true.
@@ -560,6 +565,9 @@ class TreePattern {
   /// number for each operand encountered in a ComplexPattern to aid in that
   /// check.
   StringMap<std::pair<Record *, unsigned>> ComplexPatternOperands;
+
+  TypeInfer Infer;
+
 public:
 
   /// TreePattern constructor - Parse the specified DagInits into the
@@ -625,6 +633,8 @@ public:
     HasError = false;
   }
 
+  TypeInfer &getInfer() { return Infer; }
+
   void print(raw_ostream &OS) const;
   void dump() const;
 
@@ -633,6 +643,32 @@ private:
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode *N);
 };
+
+
+inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
+                                            const TypeSetByHwMode &InTy,
+                                            TreePattern &TP) {
+  TypeSetByHwMode VTS(InTy);
+  TP.getInfer().expandOverloads(VTS);
+  return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
+}
+
+inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
+                                            MVT::SimpleValueType InTy,
+                                            TreePattern &TP) {
+  TypeSetByHwMode VTS(InTy);
+  TP.getInfer().expandOverloads(VTS);
+  return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
+}
+
+inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
+                                            ValueTypeByHwMode InTy,
+                                            TreePattern &TP) {
+  TypeSetByHwMode VTS(InTy);
+  TP.getInfer().expandOverloads(VTS);
+  return TP.getInfer().MergeInTypeInfo(Types[ResNo], VTS);
+}
+
 
 /// DAGDefaultOperand - One of these is created for each OperandWithDefaultOps
 /// that has a set ExecuteAlways / DefaultOps field.
@@ -680,31 +716,89 @@ public:
   TreePatternNode *getResultPattern() const { return ResultPattern; }
 };
 
+/// This class represents a condition that has to be satisfied for a pattern
+/// to be tried. It is a generalization of a class "Pattern" from Target.td:
+/// in addition to the Target.td's predicates, this class can also represent
+/// conditions associated with HW modes. Both types will eventually become
+/// strings containing C++ code to be executed, the difference is in how
+/// these strings are generated.
+class Predicate {
+public:
+  Predicate(Record *R, bool C = true) : Def(R), IfCond(C), IsHwMode(false) {
+    assert(R->isSubClassOf("Predicate") &&
+           "Predicate objects should only be created for records derived"
+           "from Predicate class");
+  }
+  Predicate(StringRef FS, bool C = true) : Def(nullptr), Features(FS.str()),
+    IfCond(C), IsHwMode(true) {}
+
+  /// Return a string which contains the C++ condition code that will serve
+  /// as a predicate during instruction selection.
+  std::string getCondString() const {
+    // The string will excute in a subclass of SelectionDAGISel.
+    // Cast to std::string explicitly to avoid ambiguity with StringRef.
+    std::string C = IsHwMode
+        ? std::string("MF->getSubtarget().checkFeatures(\"" + Features + "\")")
+        : std::string(Def->getValueAsString("CondString"));
+    return IfCond ? C : "!("+C+')';
+  }
+  bool operator==(const Predicate &P) const {
+    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def;
+  }
+  bool operator<(const Predicate &P) const {
+    if (IsHwMode != P.IsHwMode)
+      return IsHwMode < P.IsHwMode;
+    assert(!Def == !P.Def && "Inconsistency between Def and IsHwMode");
+    if (IfCond != P.IfCond)
+      return IfCond < P.IfCond;
+    if (Def)
+      return LessRecord()(Def, P.Def);
+    return Features < P.Features;
+  }
+  Record *Def;            ///< Predicate definition from .td file, null for
+                          ///< HW modes.
+  std::string Features;   ///< Feature string for HW mode.
+  bool IfCond;            ///< The boolean value that the condition has to
+                          ///< evaluate to for this predicate to be true.
+  bool IsHwMode;          ///< Does this predicate correspond to a HW mode?
+};
+
 /// PatternToMatch - Used by CodeGenDAGPatterns to keep tab of patterns
 /// processed to produce isel.
 class PatternToMatch {
 public:
-  PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNode *src,
-                 TreePatternNode *dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid)
-      : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
-        DstPattern(dst), Dstregs(std::move(dstregs)),
-        AddedComplexity(complexity), ID(uid) {}
+  PatternToMatch(Record *srcrecord, const std::vector<Predicate> &preds,
+                 TreePatternNode *src, TreePatternNode *dst,
+                 const std::vector<Record*> &dstregs,
+                 int complexity, unsigned uid, unsigned setmode = 0)
+    : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
+      Predicates(preds), Dstregs(std::move(dstregs)),
+      AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
+
+  PatternToMatch(Record *srcrecord, std::vector<Predicate> &&preds,
+                 TreePatternNode *src, TreePatternNode *dst,
+                 std::vector<Record*> &&dstregs,
+                 int complexity, unsigned uid, unsigned setmode = 0)
+    : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
+      Predicates(preds), Dstregs(std::move(dstregs)),
+      AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
 
   Record          *SrcRecord;   // Originating Record for the pattern.
-  ListInit        *Predicates;  // Top level predicate conditions to match.
   TreePatternNode *SrcPattern;  // Source pattern to match.
   TreePatternNode *DstPattern;  // Resulting pattern.
+  std::vector<Predicate> Predicates;  // Top level predicate conditions
+                                      // to match.
   std::vector<Record*> Dstregs; // Physical register defs being matched.
   int              AddedComplexity; // Add to matching pattern complexity.
   unsigned         ID;          // Unique ID for the record.
+  unsigned         ForceMode;   // Force this mode in type inference when set.
 
   Record          *getSrcRecord()  const { return SrcRecord; }
-  ListInit        *getPredicates() const { return Predicates; }
   TreePatternNode *getSrcPattern() const { return SrcPattern; }
   TreePatternNode *getDstPattern() const { return DstPattern; }
   const std::vector<Record*> &getDstRegs() const { return Dstregs; }
   int         getAddedComplexity() const { return AddedComplexity; }
+  const std::vector<Predicate> &getPredicates() const { return Predicates; }
 
   std::string getPredicateCheck() const;
 
@@ -736,11 +830,15 @@ class CodeGenDAGPatterns {
   /// value is the pattern to match, the second pattern is the result to
   /// emit.
   std::vector<PatternToMatch> PatternsToMatch;
+
+  TypeSetByHwMode LegalVTS;
+
 public:
   CodeGenDAGPatterns(RecordKeeper &R);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
+  const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
 
   Record *getSDNodeNamed(const std::string &Name) const;
 
@@ -850,9 +948,12 @@ private:
   void ParseDefaultOperands();
   void ParseInstructions();
   void ParsePatterns();
+  void ExpandHwModeBasedTypes();
   void InferInstructionFlags();
   void GenerateVariants();
   void VerifyInstructionFlags();
+
+  std::vector<Predicate> makePredList(ListInit *L);
 
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(TreePattern *I, TreePatternNode *Pat,
@@ -862,6 +963,15 @@ private:
                                    TreePatternNode*> &InstResults,
                                    std::vector<Record*> &InstImpResults);
 };
+
+
+inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode *N,
+                                             TreePattern &TP) const {
+    bool MadeChange = false;
+    for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
+      MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
+    return MadeChange;
+  }
 } // end namespace llvm
 
 #endif

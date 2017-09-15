@@ -295,15 +295,14 @@ bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
   return false;
 }
 
-SignalContext SignalContext::Create(void *siginfo, void *context) {
+uptr SignalContext::GetAddress() const {
   auto si = static_cast<const siginfo_t *>(siginfo);
-  uptr addr = (uptr)si->si_addr;
-  uptr pc, sp, bp;
-  GetPcSpBp(context, &pc, &sp, &bp);
-  WriteFlag write_flag = GetWriteFlag(context);
-  bool is_memory_access = si->si_signo == SIGSEGV;
-  return SignalContext(siginfo, context, addr, pc, sp, bp, is_memory_access,
-                       write_flag);
+  return (uptr)si->si_addr;
+}
+
+bool SignalContext::IsMemoryAccess() const {
+  auto si = static_cast<const siginfo_t *>(siginfo);
+  return si->si_signo == SIGSEGV;
 }
 
 int SignalContext::GetType() const {

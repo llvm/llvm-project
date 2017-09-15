@@ -140,8 +140,7 @@ CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
 
 CHECK:    NULL
 
-CHECK: .debug_loc contents
-CHECK-NOT: Location
+CHECK-NOT: .debug_loc contents
 
 CHECK:.debug_aranges contents:
 CHECK-NEXT:Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00

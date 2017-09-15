@@ -22,6 +22,10 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/RefactoringAction.h"
+#include "clang/Tooling/Refactoring/RefactoringActionRules.h"
+#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
+#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,6 +36,63 @@ using namespace llvm;
 
 namespace clang {
 namespace tooling {
+
+namespace {
+
+class LocalRename : public RefactoringAction {
+public:
+  StringRef getCommand() const override { return "local-rename"; }
+
+  StringRef getDescription() const override {
+    return "Finds and renames symbols in code with no indexer support";
+  }
+
+  /// Returns a set of refactoring actions rules that are defined by this
+  /// action.
+  RefactoringActionRules createActionRules() const override {
+    using namespace refactoring_action_rules;
+    RefactoringActionRules Rules;
+    Rules.push_back(createRefactoringRule(
+        renameOccurrences, requiredSelection(SymbolSelectionRequirement())));
+    return Rules;
+  }
+
+private:
+  static Expected<AtomicChanges>
+  renameOccurrences(const RefactoringRuleContext &Context,
+                    const NamedDecl *ND) {
+    std::vector<std::string> USRs =
+        getUSRsForDeclaration(ND, Context.getASTContext());
+    std::string PrevName = ND->getNameAsString();
+    auto Occurrences = getOccurrencesOfUSRs(
+        USRs, PrevName, Context.getASTContext().getTranslationUnitDecl());
+
+    // FIXME: This is a temporary workaround that's needed until the refactoring
+    // options are implemented.
+    StringRef NewName = "Bar";
+    return createRenameReplacements(
+        Occurrences, Context.getASTContext().getSourceManager(), NewName);
+  }
+
+  class SymbolSelectionRequirement : public selection::Requirement {
+  public:
+    Expected<Optional<const NamedDecl *>>
+    evaluateSelection(const RefactoringRuleContext &Context,
+                      selection::SourceSelectionRange Selection) const {
+      const NamedDecl *ND = getNamedDeclAt(Context.getASTContext(),
+                                           Selection.getRange().getBegin());
+      if (!ND)
+        return None;
+      return getCanonicalSymbolDeclaration(ND);
+    }
+  };
+};
+
+} // end anonymous namespace
+
+std::unique_ptr<RefactoringAction> createLocalRenameAction() {
+  return llvm::make_unique<LocalRename>();
+}
 
 Expected<std::vector<AtomicChange>>
 createRenameReplacements(const SymbolOccurrences &Occurrences,

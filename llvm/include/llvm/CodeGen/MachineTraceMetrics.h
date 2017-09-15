@@ -366,12 +366,6 @@ public:
                      SparseSet<LiveRegUnit> &RegUnits);
     void updateDepth(const MachineBasicBlock *, const MachineInstr&,
                      SparseSet<LiveRegUnit> &RegUnits);
-
-    /// Updates the depth of the instructions from Start to End.
-    void updateDepths(MachineBasicBlock::iterator Start,
-                      MachineBasicBlock::iterator End,
-                      SparseSet<LiveRegUnit> &RegUnits);
-
   };
 
   /// Strategies for selecting traces.

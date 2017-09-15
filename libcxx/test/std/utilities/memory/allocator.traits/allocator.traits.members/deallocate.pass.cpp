@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <cassert>
 
+#include "incomplete_type_helper.h"
+
 int called = 0;
 
 template <class T>
@@ -37,7 +39,17 @@ struct A
 
 int main()
 {
+  {
     A<int> a;
     std::allocator_traits<A<int> >::deallocate(a, reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)), 10);
     assert(called == 1);
+  }
+  called = 0;
+  {
+    typedef IncompleteHolder* VT;
+    typedef A<VT> Alloc;
+    Alloc a;
+    std::allocator_traits<Alloc >::deallocate(a, reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xDEADBEEF)), 10);
+    assert(called == 1);
+  }
 }

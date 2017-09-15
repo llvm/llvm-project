@@ -1628,7 +1628,7 @@ static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
 }
 #endif
 
-SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
+SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   ucontext_t *ucontext = (ucontext_t *)context;
 #if defined(__x86_64__) || defined(__i386__)
   static const uptr PF_WRITE = 1U << 1;
@@ -1659,7 +1659,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   // FIXME: Implement this.
 }
 
-void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
+static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #if defined(__arm__)
   ucontext_t *ucontext = (ucontext_t*)context;
   *pc = ucontext->uc_mcontext.arm_pc;
@@ -1749,6 +1749,8 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # error "Unsupported arch"
 #endif
 }
+
+void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
 void MaybeReexec() {
   // No need to re-exec on Linux.

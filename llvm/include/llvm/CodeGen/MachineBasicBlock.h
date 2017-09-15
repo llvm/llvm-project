@@ -762,8 +762,8 @@ private:
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
 
 // This is useful when building IndexedMaps keyed on basic block pointers.
-struct MBB2NumberFunctor :
-  public std::unary_function<const MachineBasicBlock*, unsigned> {
+struct MBB2NumberFunctor {
+  using argument_type = const MachineBasicBlock *;
   unsigned operator()(const MachineBasicBlock *MBB) const {
     return MBB->getNumber();
   }

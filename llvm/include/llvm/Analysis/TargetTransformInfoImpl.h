@@ -775,7 +775,9 @@ public:
   }
 
   int getInstructionLatency(const Instruction *I) {
-    if (isa<PHINode>(I))
+    SmallVector<const Value *, 4> Operands(I->value_op_begin(),
+                                           I->value_op_end());
+    if (getUserCost(I, Operands) == TTI::TCC_Free)
       return 0;
 
     if (isa<CallInst>(I))

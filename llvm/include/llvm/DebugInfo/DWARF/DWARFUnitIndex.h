@@ -87,6 +87,7 @@ public:
 
   bool parse(DataExtractor IndexData);
   void dump(raw_ostream &OS) const;
+
   const Entry *getFromOffset(uint32_t Offset) const;
   const Entry *getFromHash(uint64_t Offset) const;
 

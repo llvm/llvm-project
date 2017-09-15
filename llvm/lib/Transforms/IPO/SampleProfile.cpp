@@ -760,7 +760,7 @@ bool SampleProfileLoader::inlineHotFunctions(
       CallSite CS(DI);
       DebugLoc DLoc = I->getDebugLoc();
       BasicBlock *BB = I->getParent();
-      InlineParams Params;
+      InlineParams Params = getInlineParams();
       Params.ComputeFullInlineCost = true;
       // Checks if there is anything in the reachable portion of the callee at
       // this callsite that makes this inlining potentially illegal. Need to

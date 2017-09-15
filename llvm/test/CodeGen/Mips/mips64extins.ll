@@ -41,7 +41,7 @@ entry:
 define i64 @dinsm(i64 %i, i64 %j) nounwind readnone {
 entry:
 ; CHECK-LABEL: dinsm:
-; CHECK: dins ${{[0-9]+}}, ${{[0-9]+}}, 10, 33
+; CHECK: dinsm ${{[0-9]+}}, ${{[0-9]+}}, 10, 33
   %shl4 = shl i64 %j, 10
   %and = and i64 %shl4, 8796093021184
   %and5 = and i64 %i, -8796093021185
@@ -52,7 +52,7 @@ entry:
 define i64 @dinsu(i64 %i, i64 %j) nounwind readnone {
 entry:
 ; CHECK-LABEL: dinsu:
-; CHECK: dins ${{[0-9]+}}, ${{[0-9]+}}, 40, 13
+; CHECK: dinsu ${{[0-9]+}}, ${{[0-9]+}}, 40, 13
   %shl4 = shl i64 %j, 40
   %and = and i64 %shl4, 9006099743113216
   %and5 = and i64 %i, -9006099743113217

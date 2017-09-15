@@ -1146,7 +1146,7 @@ public:
       const char *text = m_delegate_sp->WindowDelegateGetHelpText();
       KeyHelp *key_help = m_delegate_sp->WindowDelegateGetKeyHelp();
       if ((text && text[0]) || key_help) {
-        std::auto_ptr<HelpDialogDelegate> help_delegate_ap(
+        std::unique_ptr<HelpDialogDelegate> help_delegate_ap(
             new HelpDialogDelegate(text, key_help));
         const size_t num_lines = help_delegate_ap->GetNumLines();
         const size_t max_length = help_delegate_ap->GetMaxLineLength();

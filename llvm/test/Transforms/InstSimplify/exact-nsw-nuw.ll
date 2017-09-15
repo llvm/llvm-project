@@ -60,9 +60,7 @@ define i32 @div1(i32 %V) {
 
 define i32 @div2(i32 %V) {
 ; CHECK-LABEL: @div2(
-; CHECK-NEXT:    [[A:%.*]] = sdiv i32 %V, -1
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[A]], -2147483648
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    ret i32 0
 ;
   %A = sdiv i32 %V, -1
   %B = sdiv i32 %A, -2147483648

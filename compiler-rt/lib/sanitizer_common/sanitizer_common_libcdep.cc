@@ -148,7 +148,7 @@ void BackgroundThread(void *arg) {
 #endif
 
 #if !SANITIZER_GO
-void MaybeReportNonExecRegion(uptr pc) {
+static void MaybeReportNonExecRegion(uptr pc) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   MemoryMappedSegment segment;
@@ -166,7 +166,7 @@ static void PrintMemoryByte(InternalScopedString *str, const char *before,
               d.Default());
 }
 
-void MaybeDumpInstructionBytes(uptr pc) {
+static void MaybeDumpInstructionBytes(uptr pc) {
   if (!common_flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
     return;
   InternalScopedString str(1024);
@@ -182,11 +182,71 @@ void MaybeDumpInstructionBytes(uptr pc) {
   Report("%s", str.data());
 }
 
-void MaybeDumpRegisters(void *context) {
+static void MaybeDumpRegisters(void *context) {
   if (!common_flags()->dump_registers) return;
   SignalContext::DumpAllRegisters(context);
 }
-#endif
+
+static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
+                                    UnwindSignalStackCallbackType unwind,
+                                    const void *unwind_context) {
+  SanitizerCommonDecorator d;
+  Printf("%s", d.Warning());
+  static const char kDescription[] = "stack-overflow";
+  Report("ERROR: %s: %s on address %p (pc %p bp %p sp %p T%d)\n",
+         SanitizerToolName, kDescription, (void *)sig.addr, (void *)sig.pc,
+         (void *)sig.bp, (void *)sig.sp, tid);
+  Printf("%s", d.Default());
+  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  BufferedStackTrace *stack = stack_buffer.data();
+  stack->Reset();
+  unwind(sig, unwind_context, stack);
+  stack->Print();
+  ReportErrorSummary(kDescription, stack);
+}
+
+static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
+                                   UnwindSignalStackCallbackType unwind,
+                                   const void *unwind_context) {
+  SanitizerCommonDecorator d;
+  Printf("%s", d.Warning());
+  const char *description = sig.Describe();
+  Report("ERROR: %s: %s on unknown address %p (pc %p bp %p sp %p T%d)\n",
+         SanitizerToolName, description, (void *)sig.addr, (void *)sig.pc,
+         (void *)sig.bp, (void *)sig.sp, tid);
+  Printf("%s", d.Default());
+  if (sig.pc < GetPageSizeCached())
+    Report("Hint: pc points to the zero page.\n");
+  if (sig.is_memory_access) {
+    const char *access_type =
+        sig.write_flag == SignalContext::WRITE
+            ? "WRITE"
+            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+    Report("The signal is caused by a %s memory access.\n", access_type);
+    if (sig.addr < GetPageSizeCached())
+      Report("Hint: address points to the zero page.\n");
+  }
+  MaybeReportNonExecRegion(sig.pc);
+  InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
+  BufferedStackTrace *stack = stack_buffer.data();
+  stack->Reset();
+  unwind(sig, unwind_context, stack);
+  stack->Print();
+  MaybeDumpInstructionBytes(sig.pc);
+  MaybeDumpRegisters(sig.context);
+  Printf("%s can not provide additional info.\n", SanitizerToolName);
+  ReportErrorSummary(description, stack);
+}
+
+void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+                        UnwindSignalStackCallbackType unwind,
+                        const void *unwind_context) {
+  if (sig.IsStackOverflow())
+    ReportStackOverflowImpl(sig, tid, unwind, unwind_context);
+  else
+    ReportDeadlySignalImpl(sig, tid, unwind, unwind_context);
+}
+#endif  // !SANITIZER_GO
 
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);

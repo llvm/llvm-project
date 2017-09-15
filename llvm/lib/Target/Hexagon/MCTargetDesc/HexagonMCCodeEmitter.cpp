@@ -290,14 +290,14 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
            ++ImpUses) {
         if (*ImpUses != Hexagon::GP)
           continue;
-        switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
-        case HexagonII::MemAccessSize::ByteAccess:
+        switch (HexagonMCInstrInfo::getMemAccessSize(MCII, MI)) {
+        case 1:
           return fixup_Hexagon_GPREL16_0;
-        case HexagonII::MemAccessSize::HalfWordAccess:
+        case 2:
           return fixup_Hexagon_GPREL16_1;
-        case HexagonII::MemAccessSize::WordAccess:
+        case 4:
           return fixup_Hexagon_GPREL16_2;
-        case HexagonII::MemAccessSize::DoubleWordAccess:
+        case 8:
           return fixup_Hexagon_GPREL16_3;
         default:
           raise_relocation_error(0, kind);
@@ -491,17 +491,17 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
                  ++ImpUses) {
               if (*ImpUses != Hexagon::GP)
                 continue;
-              switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
-              case HexagonII::MemAccessSize::ByteAccess:
+              switch (HexagonMCInstrInfo::getMemAccessSize(MCII, MI)) {
+              case 1:
                 FixupKind = fixup_Hexagon_GPREL16_0;
                 break;
-              case HexagonII::MemAccessSize::HalfWordAccess:
+              case 2:
                 FixupKind = fixup_Hexagon_GPREL16_1;
                 break;
-              case HexagonII::MemAccessSize::WordAccess:
+              case 4:
                 FixupKind = fixup_Hexagon_GPREL16_2;
                 break;
-              case HexagonII::MemAccessSize::DoubleWordAccess:
+              case 8:
                 FixupKind = fixup_Hexagon_GPREL16_3;
                 break;
               default:

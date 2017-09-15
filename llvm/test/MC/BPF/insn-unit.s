@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple bpf -filetype=obj -o %t %s
+# RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
 # RUN: llvm-objdump -d -r %t | FileCheck %s
 
 // ======== BPF_LD Class ========

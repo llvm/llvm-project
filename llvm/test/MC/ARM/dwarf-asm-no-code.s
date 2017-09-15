@@ -8,17 +8,9 @@
 a:
 .long 42
 
-// DWARF: .debug_abbrev contents:
-// DWARF-NEXT: < EMPTY >
-
-// DWARF: .debug_info contents:
-
-// DWARF: .debug_aranges contents:
-
+// DWARF: ELF32-arm-little
+// DWARF-NOT: contents:
 // DWARF: .debug_line contents:
-
-// DWARF: .debug_ranges contents:
-
 
 // RELOC-NOT: RELOCATION RECORDS FOR [.rel.debug_info]:
 

@@ -9,6 +9,7 @@ RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-dwp.x86_64.o | FileCheck %s
 ;   bar b() {
 ;   }
 
+; CHECK-NOT: .debug_info contents:
 ; CHECK-LABEL: .debug_info.dwo contents:
 ; CHECK: Compile Unit
 

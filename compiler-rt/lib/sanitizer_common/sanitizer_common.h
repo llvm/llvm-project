@@ -31,6 +31,7 @@ extern "C" void _ReadWriteBarrier();
 namespace __sanitizer {
 
 struct AddressInfo;
+struct BufferedStackTrace;
 struct SignalContext;
 struct StackTrace;
 
@@ -311,11 +312,13 @@ HandleSignalMode GetHandleSignalMode(int signum);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
 // Signal reporting.
 void StartReportDeadlySignal();
-bool IsStackOverflow(const SignalContext &sig);
-// FIXME: Hide after moving more signal handling code into common.
-void MaybeReportNonExecRegion(uptr pc);
-void MaybeDumpInstructionBytes(uptr pc);
-void MaybeDumpRegisters(void *context);
+// Each sanitizer uses slightly different implementation of stack unwinding.
+typedef void (*UnwindSignalStackCallbackType)(const SignalContext &sig,
+                                              const void *callback_context,
+                                              BufferedStackTrace *stack);
+void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+                        UnwindSignalStackCallbackType unwind,
+                        const void *unwind_context);
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
@@ -801,41 +804,42 @@ struct SignalContext {
   uptr sp;
   uptr bp;
   bool is_memory_access;
-
   enum WriteFlag { UNKNOWN, READ, WRITE } write_flag;
 
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   SignalContext() = default;
-  // SignalContext is going to keep pointers to siginfo and context without
-  // owning them.
-  SignalContext(void *siginfo, void *context, uptr addr, uptr pc, uptr sp,
-                uptr bp, bool is_memory_access, WriteFlag write_flag)
-      : siginfo(siginfo),
-        context(context),
-        addr(addr),
-        pc(pc),
-        sp(sp),
-        bp(bp),
-        is_memory_access(is_memory_access),
-        write_flag(write_flag) {}
-
-  static void DumpAllRegisters(void *context);
 
   // Creates signal context in a platform-specific manner.
-  static SignalContext Create(void *siginfo, void *context);
+  // SignalContext is going to keep pointers to siginfo and context without
+  // owning them.
+  SignalContext(void *siginfo, void *context)
+      : siginfo(siginfo),
+        context(context),
+        addr(GetAddress()),
+        is_memory_access(IsMemoryAccess()),
+        write_flag(GetWriteFlag()) {
+    InitPcSpBp();
+  }
 
-  // Returns true if the "context" indicates a memory write.
-  static WriteFlag GetWriteFlag(void *context);
+  static void DumpAllRegisters(void *context);
 
   // Type of signal e.g. SIGSEGV or EXCEPTION_ACCESS_VIOLATION.
   int GetType() const;
 
   // String description of the signal.
   const char *Describe() const;
-};
 
-void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
+  // Returns true if signal is stack overflow.
+  bool IsStackOverflow() const;
+
+ private:
+  // Platform specific initialization.
+  void InitPcSpBp();
+  uptr GetAddress() const;
+  WriteFlag GetWriteFlag() const;
+  bool IsMemoryAccess() const;
+};
 
 void MaybeReexec();
 

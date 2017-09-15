@@ -690,9 +690,14 @@ def ConstantUImm5Plus32NormalizeAsmOperandClass
   // We must also subtract 32 when we render the operand.
   let RenderMethod = "addConstantUImmOperands<5, 32, -32>";
 }
+def ConstantUImm5Plus1ReportUImm6AsmOperandClass
+    : ConstantUImmAsmOperandClass<
+          5, [ConstantUImm5Plus32NormalizeAsmOperandClass], 1>{
+  let Name = "ConstantUImm5_Plus1_Report_UImm6";
+}
 def ConstantUImm5Plus1AsmOperandClass
     : ConstantUImmAsmOperandClass<
-          5, [ConstantUImm5Plus32NormalizeAsmOperandClass], 1>;
+          5, [ConstantUImm5Plus1ReportUImm6AsmOperandClass], 1>;
 def ConstantUImm5AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm5Plus1AsmOperandClass]>;
 def ConstantSImm5AsmOperandClass
@@ -799,6 +804,13 @@ def uimm5_plus1 : Operand<i32> {
   let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
 }
 
+def uimm5_plus1_report_uimm6 : Operand<i32> {
+  let PrintMethod = "printUImm<6, 1>";
+  let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
+  let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
+  let ParserMatchClass = ConstantUImm5Plus1ReportUImm6AsmOperandClass;
+}
+
 def uimm5_plus32 : Operand<i32> {
   let PrintMethod = "printUImm<5, 32>";
   let ParserMatchClass = ConstantUImm5Plus32AsmOperandClass;
@@ -883,7 +895,7 @@ def uimm16_altrelaxed : Operand<i32> {
 // Like uimm5 but reports a less confusing error for 32-63 when
 // an instruction alias permits that.
 def uimm5_report_uimm6 : Operand<i32> {
-  let PrintMethod = "printUImm<5>";
+  let PrintMethod = "printUImm<6>";
   let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
 }
 
@@ -1203,6 +1215,11 @@ def immZExt5To31 : SDNodeXForm<imm, [{
 // True if (N + 1) fits in 16-bit field.
 def immSExt16Plus1 : PatLeaf<(imm), [{
   return isInt<17>(N->getSExtValue()) && isInt<16>(N->getSExtValue() + 1);
+}]>;
+
+def immZExtRange2To64 : PatLeaf<(imm), [{
+  return isUInt<7>(N->getZExtValue()) && (N->getZExtValue() >= 2) &&
+         (N->getZExtValue() <= 64);
 }]>;
 
 // Mips Address Mode! SDNode frameindex could possibily be a match
@@ -1676,10 +1693,11 @@ class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
          FrmR, opstr>, ISA_MIPS32R2;
 
 class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
-              Operand SizeOpnd, SDPatternOperator Op = null_frag>:
+              Operand SizeOpnd, PatFrag PosImm, PatFrag SizeImm,
+              SDPatternOperator Op = null_frag>:
   InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size, RO:$src),
          !strconcat(opstr, " $rt, $rs, $pos, $size"),
-         [(set RO:$rt, (Op RO:$rs, imm:$pos, imm:$size, RO:$src))],
+         [(set RO:$rt, (Op RO:$rs, PosImm:$pos, SizeImm:$size, RO:$src))],
          II_INS, FrmR, opstr>, ISA_MIPS32R2 {
   let Constraints = "$src = $rt";
 }
@@ -2183,7 +2201,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
                                        immZExt5, immZExt5Plus1, MipsExt>,
             EXT_FM<0>;
   def INS : MMRel, StdMMR6Rel, InsBase<"ins", GPR32Opnd, uimm5,
-                                       uimm5_inssize_plus1, MipsIns>,
+                                       uimm5_inssize_plus1, immZExt5,
+                                       immZExt5Plus1, MipsIns>,
             EXT_FM<4>;
 }
 /// Move Control Registers From/To CPU Registers

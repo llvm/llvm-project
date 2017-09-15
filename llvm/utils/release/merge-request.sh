@@ -14,7 +14,7 @@
 
 dryrun=""
 stable_version=""
-revision=""
+revisions=""
 BUGZILLA_BIN=""
 BUGZILLA_CMD=""
 release_metabug=""
@@ -31,6 +31,7 @@ function usage() {
   echo " -user EMAIL             Your email address for logging into bugzilla."
   echo " -stable-version X.Y     The stable release version (e.g. 4.0, 5.0)."
   echo " -r NUM                  Revision number to merge (e.g. 1234567)."
+  echo "                         This option can be specified multiple times."
   echo " -bugzilla-bin PATH      Path to bugzilla binary (optional)."
   echo " -assign-to EMAIL        Assign bug to user with EMAIL (optional)."
   echo " -dry-run                Print commands instead of executing them."
@@ -48,7 +49,7 @@ while [ $# -gt 0 ]; do
       ;;
     -r)
       shift
-      revision="$1"
+      revisions="$revisions $1"
       ;;
     -project)
       shift
@@ -91,14 +92,17 @@ case $stable_version in
   4.0)
     release_metabug="32061"
     ;;
+  5.0)
+    release_metabug="34492"
+    ;;
   *)
     echo "error: invalid stable version"
     exit 1
 esac
 bugzilla_version=$stable_version
 
-if [ -z "$revision" ]; then
-  echo "error: revision not specified"
+if [ -z "$revisions" ]; then
+  echo "error: no revisions specified"
   exit 1
 fi
 
@@ -124,25 +128,23 @@ BUGZILLA_MAJOR_VERSION=`$BUGZILLA_BIN --version 2>&1 | cut -d . -f 1`
 
 if [ $BUGZILLA_MAJOR_VERSION -eq 1 ]; then
 
-  echo "***************************** Warning *******************************"
-  echo "You are using an older version of the bugzilla cli tool.  You will be "
-  echo "able to create bugs, but this script will crash with the following "
-  echo "error when trying to read back information about the bug you created:"
-  echo ""
-  echo "KeyError: 'internals'"
-  echo ""
-  echo "To avoid this error, use version 2.0.0 or higher"
-  echo "https://pypi.python.org/pypi/python-bugzilla"
-  echo "*********************************************************************"
+  echo "***************************** Error ** ********************************"
+  echo "You are using an older version of the bugzilla cli tool, which is not "
+  echo "supported.  You need to use bugzilla cli version 2.0.0 or higher:"
+  echo "***********************************************************************"
+  exit 1
 fi
 
 BUGZILLA_CMD="$BUGZILLA_BIN --bugzilla=$bugzilla_url"
 
-bug_url="https://reviews.llvm.org/rL$revision"
+rev_string=""
+for r in $revisions; do
+  rev_string="$rev_string r$r"
+done
 
 echo "Checking for duplicate bugs..."
 
-check_duplicates=`$BUGZILLA_CMD query --url $bug_url`
+check_duplicates=`$BUGZILLA_CMD query --blocked=$release_metabug --field="cf_fixed_by_commits=$rev_string"`
 
 if [ -n "$check_duplicates" ]; then
   echo "Duplicate bug found:"
@@ -152,47 +154,55 @@ fi
 
 echo "Done"
 
-# Get short commit summary
+# Get short commit summary.  To avoid having a huge summary, we just
+# use the commit message for the first commit.
 commit_summary=''
-commit_msg=`svn log -r $revision https://llvm.org/svn/llvm-project/`
-if [ $? -ne 0 ]; then
-  echo "warning: failed to get commit message."
-  commit_msg=""
-fi
+for r in $revisions; do
+  commit_msg=`svn log -r $r https://llvm.org/svn/llvm-project/`
+  if [ $? -ne 0 ]; then
+    echo "warning: failed to get commit message."
+    commit_msg=""
+  fi
+  break
+done
 
 if [ -n "$commit_msg" ]; then
   commit_summary=`echo "$commit_msg" | sed '4q;d' | cut -c1-80`
   commit_summary=" : ${commit_summary}"
 fi
 
-bug_summary="Merge r$revision into the $stable_version branch${commit_summary}"
+bug_summary="Merge${rev_string} into the $stable_version branch${commit_summary}"
 
-if [ -z "$dryrun" ]; then
-  set -x
-fi
+set -x
 
-${dryrun} $BUGZILLA_CMD --login --user=$bugzilla_user new \
+# Login to bugzilla
+$BUGZILLA_CMD login $bugzilla_user
+
+bug_id=`${dryrun} $BUGZILLA_CMD --ensure-logged-in new \
   -p "$bugzilla_product" \
-  -c "$bugzilla_component" -u $bug_url --blocked=$release_metabug \
+  -c "$bugzilla_component" --blocked=$release_metabug \
   -o All --priority=P --arch All -v $bugzilla_version \
+  --field="cf_fixed_by_commits=$rev_string" \
   --summary "${bug_summary}" \
-  -l "Is this patch OK to merge to the $stable_version branch?" \
+  -l "Is it OK to merge the following revision(s) to the $stable_version branch?" \
   $bugzilla_assigned_to \
-  --oneline
-
-set +x
+  -i`
 
 if [ -n "$dryrun" ]; then
   exit 0
 fi
 
-if [ $BUGZILLA_MAJOR_VERSION -eq 1 ]; then
-  success=`$BUGZILLA_CMD query --url $bug_url`
-  if [ -z "$success" ]; then
-    echo "Failed to create bug."
-    exit 1
-  fi
+set +x
 
-  echo " Created new bug:"
-  echo $success
+if [ -z "$bug_id" ]; then
+  echo "Failed to create bug."
+  exit 1
 fi
+
+echo " Created new bug:"
+echo https://llvm.org/PR$bug_id
+
+# Add links to revisions
+for r in $revisions; do
+  $BUGZILLA_CMD --ensure-logged-in modify -l "https://reviews.llvm.org/rL$r" $bug_id
+done

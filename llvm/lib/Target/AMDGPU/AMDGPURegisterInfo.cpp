@@ -47,6 +47,7 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   switch (CC) {
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Cold:
     return CSR_AMDGPU_HighRegs_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
@@ -58,16 +59,7 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
 
 const MCPhysReg *
 SIRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
-  // FIXME
-  static MCPhysReg Regs[2];
-
-  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  assert(!MFI->isEntryFunction());
-
-  Regs[0] = MFI->getFrameOffsetReg();
-  Regs[1] = AMDGPU::NoRegister;
-
-  return Regs;
+  return nullptr;
 }
 
 const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
@@ -75,6 +67,7 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   switch (CC) {
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::Cold:
     return CSR_AMDGPU_HighRegs_RegMask;
   default:
     return nullptr;

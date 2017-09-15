@@ -24,7 +24,7 @@
 #                    ^-- 0x20004 - 0x37ff0 = 0xfffffffffffe8014
 
 # CHECK: 0000000000020004   .text   00000000 loc
-# CHECK: 0000000000037ff0   *ABS*   00000000 .hidden _gp
+# CHECK: 0000000000037ff0   .got    00000000 .hidden _gp
 # CHECK: 0000000000020000   .text   00000000 __start
 
 # REL:      Relocations [

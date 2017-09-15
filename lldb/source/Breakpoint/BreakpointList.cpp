@@ -71,6 +71,13 @@ void BreakpointList::SetEnabledAll(bool enabled) {
     bp_sp->SetEnabled(enabled);
 }
 
+void BreakpointList::SetEnabledAllowed(bool enabled) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  for (const auto &bp_sp : m_breakpoints)
+    if (bp_sp->AllowDisable())
+      bp_sp->SetEnabled(enabled);
+}
+
 void BreakpointList::RemoveAll(bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ClearAllBreakpointSites();
@@ -88,6 +95,32 @@ void BreakpointList::RemoveAll(bool notify) {
     }
   }
   m_breakpoints.erase(m_breakpoints.begin(), m_breakpoints.end());
+}
+
+void BreakpointList::RemoveAllowed(bool notify) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  
+  bp_collection::iterator pos, end = m_breakpoints.end();
+  if (notify) {
+    for (pos = m_breakpoints.begin(); pos != end; ++pos) {
+      if(!(*pos)->AllowDelete())
+        continue;
+      if ((*pos)->GetTarget().EventTypeHasListeners(
+              Target::eBroadcastBitBreakpointChanged)) {
+        (*pos)->GetTarget().BroadcastEvent(
+            Target::eBroadcastBitBreakpointChanged,
+            new Breakpoint::BreakpointEventData(eBreakpointEventTypeRemoved,
+                                                *pos));
+      }
+    }
+  }
+  pos = m_breakpoints.begin();
+  while ( pos != end) {
+      if((*pos)->AllowDelete())
+        pos = m_breakpoints.erase(pos);
+      else
+        pos++;
+  }
 }
 
 class BreakpointIDMatches {
