@@ -15,6 +15,9 @@ Classes:
       - Name: accessorsOnlyForClassExceptInVersion3
         PropertyKind:    Class
         SwiftImportAsAccessors: true
+Functions:
+  - Name: unversionedRenameDUMP
+    SwiftName: 'unversionedRename_NOTES()'
 Tags:
   - Name: APINotedFlagEnum
     FlagEnum: true
@@ -123,6 +126,9 @@ SwiftVersions:
       - Name: MultiVersionedTypedef45Notes
         SwiftName: MultiVersionedTypedef45Notes_5
   - Version: 4 # Versions are deliberately ordered as "3, 5, 4" to catch bugs.
+    Classes:
+      - Name: Swift4RenamedDUMP
+        SwiftName: SpecialSwift4Name
     Typedefs:
       - Name: MultiVersionedTypedef34
         SwiftName: MultiVersionedTypedef34_4
