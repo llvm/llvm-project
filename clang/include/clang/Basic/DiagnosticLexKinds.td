@@ -674,6 +674,13 @@ def err_mmap_invalid_header_attribute_value : Error<
   "expected integer literal as value for header attribute '%0'">;
 def err_mmap_expected_header_attribute : Error<
   "expected a header attribute name ('size' or 'mtime')">;
+def err_mmap_conflicting_export_as : Error<
+  "conflicting re-export of module '%0' as '%1' or '%2'">;
+def warn_mmap_redundant_export_as : Warning<
+  "module '%0' already re-exported as '%1'">,
+  InGroup<PrivateModule>;
+def err_mmap_submodule_export_as : Error<
+  "only top-level modules can be re-exported as public">;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "

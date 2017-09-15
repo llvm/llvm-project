@@ -1130,6 +1130,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
+  RECORD(SUBMODULE_EXPORT_AS);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -2790,6 +2791,11 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Message
   unsigned ConflictAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_EXPORT_AS));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
+  unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
   // Write the submodule metadata block.
   RecordData::value_type Record[] = {
       getNumberOfModules(WritingModule),
@@ -2925,6 +2931,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
+    // Emit the name of the re-exported module, if any.
+    if (!Mod->ExportAsModule.empty()) {
+      RecordData::value_type Record[] = {SUBMODULE_EXPORT_AS};
+      Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
+    }
+    
     // Queue up the submodules of this module.
     for (auto *M : Mod->submodules())
       Q.push(M);
