@@ -54,7 +54,7 @@
 # FIXME-EL-NEXT:      20028:       00 00 00 00     nop
 # FIXME-EL-NEXT:      2002c:       00 94 e8 ff     b       -44
 
-# SYM: 00037ff0         *ABS*           00000000 .hidden _gp
+# SYM: 00037ff0         .got            00000000 .hidden _gp
 # SYM: 00020000 g F     .text           00000000 foo
 # SYM: 00020010         .text           00000000 __start
 
