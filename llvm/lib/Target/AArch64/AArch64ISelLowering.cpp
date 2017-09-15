@@ -328,25 +328,35 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FREM,    MVT::f16,   Promote);
   setOperationAction(ISD::FREM,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FREM,    MVT::v8f16, Promote);
   setOperationAction(ISD::FPOW,    MVT::f16,   Promote);
   setOperationAction(ISD::FPOW,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FPOW,    MVT::v8f16, Promote);
   setOperationAction(ISD::FPOWI,   MVT::f16,   Promote);
   setOperationAction(ISD::FCOS,    MVT::f16,   Promote);
   setOperationAction(ISD::FCOS,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FCOS,    MVT::v8f16, Promote);
   setOperationAction(ISD::FSIN,    MVT::f16,   Promote);
   setOperationAction(ISD::FSIN,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FSIN,    MVT::v8f16, Promote);
   setOperationAction(ISD::FSINCOS, MVT::f16,   Promote);
   setOperationAction(ISD::FSINCOS, MVT::v4f16, Promote);
+  setOperationAction(ISD::FSINCOS, MVT::v8f16, Promote);
   setOperationAction(ISD::FEXP,    MVT::f16,   Promote);
   setOperationAction(ISD::FEXP,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FEXP,    MVT::v8f16, Promote);
   setOperationAction(ISD::FEXP2,   MVT::f16,   Promote);
   setOperationAction(ISD::FEXP2,   MVT::v4f16, Promote);
+  setOperationAction(ISD::FEXP2,   MVT::v8f16, Promote);
   setOperationAction(ISD::FLOG,    MVT::f16,   Promote);
   setOperationAction(ISD::FLOG,    MVT::v4f16, Promote);
+  setOperationAction(ISD::FLOG,    MVT::v8f16, Promote);
   setOperationAction(ISD::FLOG2,   MVT::f16,   Promote);
   setOperationAction(ISD::FLOG2,   MVT::v4f16, Promote);
+  setOperationAction(ISD::FLOG2,   MVT::v8f16, Promote);
   setOperationAction(ISD::FLOG10,  MVT::f16,   Promote);
   setOperationAction(ISD::FLOG10,  MVT::v4f16, Promote);
+  setOperationAction(ISD::FLOG10,  MVT::v8f16, Promote);
 
   if (!Subtarget->hasFullFP16()) {
     setOperationAction(ISD::SELECT,      MVT::f16,  Promote);
@@ -401,40 +411,28 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FRINT,       MVT::v4f16, Expand);
     setOperationAction(ISD::FNEARBYINT,  MVT::v4f16, Expand);
     setOperationAction(ISD::FSQRT,       MVT::v4f16, Expand);
-  }
 
-  
-  // v8f16 is also a storage-only type, so expand it.
-  setOperationAction(ISD::FABS, MVT::v8f16, Expand);
-  setOperationAction(ISD::FADD, MVT::v8f16, Expand);
-  setOperationAction(ISD::FCEIL, MVT::v8f16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Expand);
-  setOperationAction(ISD::FCOS, MVT::v8f16, Expand);
-  setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
-  setOperationAction(ISD::FFLOOR, MVT::v8f16, Expand);
-  setOperationAction(ISD::FMA, MVT::v8f16, Expand);
-  setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
-  setOperationAction(ISD::FNEARBYINT, MVT::v8f16, Expand);
-  setOperationAction(ISD::FNEG, MVT::v8f16, Expand);
-  setOperationAction(ISD::FPOW, MVT::v8f16, Expand);
-  setOperationAction(ISD::FREM, MVT::v8f16, Expand);
-  setOperationAction(ISD::FROUND, MVT::v8f16, Expand);
-  setOperationAction(ISD::FRINT, MVT::v8f16, Expand);
-  setOperationAction(ISD::FSIN, MVT::v8f16, Expand);
-  setOperationAction(ISD::FSINCOS, MVT::v8f16, Expand);
-  setOperationAction(ISD::FSQRT, MVT::v8f16, Expand);
-  setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
-  setOperationAction(ISD::FTRUNC, MVT::v8f16, Expand);
-  setOperationAction(ISD::SETCC, MVT::v8f16, Expand);
-  setOperationAction(ISD::BR_CC, MVT::v8f16, Expand);
-  setOperationAction(ISD::SELECT, MVT::v8f16, Expand);
-  setOperationAction(ISD::SELECT_CC, MVT::v8f16, Expand);
-  setOperationAction(ISD::FP_EXTEND, MVT::v8f16, Expand);
-  setOperationAction(ISD::FEXP, MVT::v8f16, Expand);
-  setOperationAction(ISD::FEXP2, MVT::v8f16, Expand);
-  setOperationAction(ISD::FLOG, MVT::v8f16, Expand);
-  setOperationAction(ISD::FLOG2, MVT::v8f16, Expand);
-  setOperationAction(ISD::FLOG10, MVT::v8f16, Expand);
+    setOperationAction(ISD::FABS,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FADD,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FCEIL,       MVT::v8f16, Expand);
+    setOperationAction(ISD::FCOPYSIGN,   MVT::v8f16, Expand);
+    setOperationAction(ISD::FDIV,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FFLOOR,      MVT::v8f16, Expand);
+    setOperationAction(ISD::FMA,         MVT::v8f16, Expand);
+    setOperationAction(ISD::FMUL,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEARBYINT,  MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FROUND,      MVT::v8f16, Expand);
+    setOperationAction(ISD::FRINT,       MVT::v8f16, Expand);
+    setOperationAction(ISD::FSQRT,       MVT::v8f16, Expand);
+    setOperationAction(ISD::FSUB,        MVT::v8f16, Expand);
+    setOperationAction(ISD::FTRUNC,      MVT::v8f16, Expand);
+    setOperationAction(ISD::SETCC,       MVT::v8f16, Expand);
+    setOperationAction(ISD::BR_CC,       MVT::v8f16, Expand);
+    setOperationAction(ISD::SELECT,      MVT::v8f16, Expand);
+    setOperationAction(ISD::SELECT_CC,   MVT::v8f16, Expand);
+    setOperationAction(ISD::FP_EXTEND,   MVT::v8f16, Expand);
+  }
 
   // AArch64 has implementations of a lot of rounding-like FP operations.
   for (MVT Ty : {MVT::f32, MVT::f64}) {

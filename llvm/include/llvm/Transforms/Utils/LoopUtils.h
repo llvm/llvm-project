@@ -455,6 +455,11 @@ bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
                                   Loop *, AliasSetTracker *, LoopSafetyInfo *,
                                   OptimizationRemarkEmitter *);
 
+/// Does a BFS from a given node to all of its children inside a given loop.
+/// The returned vector of nodes includes the starting point.
+SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
+                                                     const Loop *CurLoop);
+
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw
 /// exception, it takes LoopSafetyInfo and loop as argument.

@@ -345,29 +345,6 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AliasAnalysis *AA,
   return Changed;
 }
 
-// Does a BFS from a given node to all of its children inside a given loop.
-// The returned vector of nodes includes the starting point.
-static SmallVector<DomTreeNode *, 16>
-collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
-  SmallVector<DomTreeNode *, 16> Worklist;
-  auto add_region_to_worklist = [&](DomTreeNode *DTN) {
-    // Only include subregions in the top level loop.
-    BasicBlock *BB = DTN->getBlock();
-    if (CurLoop->contains(BB))
-      Worklist.push_back(DTN);
-  };
-
-  add_region_to_worklist(N);
-
-  for (size_t I = 0; I < Worklist.size(); I++) {
-    DomTreeNode *DTN = Worklist[I];
-    for (DomTreeNode *Child : DTN->getChildren())
-      add_region_to_worklist(Child);
-  }
-
-  return Worklist;
-}
-
 /// Walk the specified region of the CFG (defined by all blocks dominated by
 /// the specified block, and that are in the current loop) in reverse depth
 /// first order w.r.t the DominatorTree.  This allows us to visit uses before
