@@ -344,10 +344,10 @@ uint8_t Symbol::computeBinding() const {
 }
 
 bool Symbol::includeInDynsym() const {
+  if (!Config->HasDynSymTab)
+    return false;
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (body()->isUndefWeak())
-    return Config->Shared;
   if (!body()->isInCurrentDSO())
     return true;
   return ExportDynamic;
