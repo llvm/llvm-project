@@ -389,8 +389,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
         continue;
       switch (MRI->getRegClass(R)->getID()) {
         case Hexagon::PredRegsRegClassID:
-        case Hexagon::VecPredRegsRegClassID:
-        case Hexagon::VecPredRegs128BRegClassID:
+        case Hexagon::HvxQRRegClassID:
           break;
         default:
           continue;
@@ -771,17 +770,11 @@ unsigned HexagonEarlyIfConversion::buildMux(MachineBasicBlock *B,
     case Hexagon::DoubleRegsRegClassID:
       Opc = Hexagon::PS_pselect;
       break;
-    case Hexagon::VectorRegsRegClassID:
+    case Hexagon::HvxVRRegClassID:
       Opc = Hexagon::PS_vselect;
       break;
-    case Hexagon::VecDblRegsRegClassID:
+    case Hexagon::HvxWRRegClassID:
       Opc = Hexagon::PS_wselect;
-      break;
-    case Hexagon::VectorRegs128BRegClassID:
-      Opc = Hexagon::PS_vselect_128B;
-      break;
-    case Hexagon::VecDblRegs128BRegClassID:
-      Opc = Hexagon::PS_wselect_128B;
       break;
     default:
       llvm_unreachable("unexpected register type");

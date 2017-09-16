@@ -2449,7 +2449,7 @@ define <4 x i64> @test_mm256_permute2x128_si256(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64:       # BB#0:
 ; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; X64-NEXT:    retq
-  %res = call <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64> %a0, <4 x i64> %a1, i8 49)
+  %res = shufflevector <4 x i64> %a0, <4 x i64> %a1, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x i64> %res
 }
 declare <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64>, <4 x i64>, i8) nounwind readonly

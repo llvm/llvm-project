@@ -102,8 +102,7 @@ BT::BitMask HexagonEvaluator::mask(unsigned Reg, unsigned Sub) const {
   bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
   switch (ID) {
     case DoubleRegsRegClassID:
-    case VecDblRegsRegClassID:
-    case VecDblRegs128BRegClassID:
+    case HvxWRRegClassID:
       return IsSubLo ? BT::BitMask(0, RW-1)
                      : BT::BitMask(RW, 2*RW-1);
     default:
@@ -703,7 +702,6 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case A4_combineri:
     case A2_combinew:
     case V6_vcombine:
-    case V6_vcombine_128B:
       assert(W0 % 2 == 0);
       return rr0(cop(2, W0/2).cat(cop(1, W0/2)), Outputs);
     case A2_combine_ll:

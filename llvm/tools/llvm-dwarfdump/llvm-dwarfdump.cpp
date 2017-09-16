@@ -37,8 +37,63 @@
 using namespace llvm;
 using namespace object;
 
+/// Parser for options that take an optional offest argument.
+/// @{
+struct OffsetOption {
+  uint64_t Val = 0;
+  bool HasValue = false;
+  bool IsRequested = false;
+};
+
+namespace llvm {
+namespace cl {
+template <>
+class parser<OffsetOption> final : public basic_parser<OffsetOption> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  /// Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, OffsetOption &Val) {
+    if (Arg == "") {
+      Val.Val = 0;
+      Val.HasValue = false;
+      Val.IsRequested = true;
+      return false;
+    }
+    if (Arg.getAsInteger(0, Val.Val))
+      return O.error("'" + Arg + "' value invalid for integer argument!");
+    Val.HasValue = true;
+    Val.IsRequested = true;
+    return false;
+  }
+
+  enum ValueExpected getValueExpectedFlagDefault() const {
+    return ValueOptional;
+  }
+
+  void printOptionInfo(const Option &O, size_t GlobalWidth) const {
+    outs() << "  -" << O.ArgStr;
+    Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
+  }
+
+  void printOptionDiff(const Option &O, OffsetOption V, OptVal Default,
+                       size_t GlobalWidth) const {
+    printOptionName(O, GlobalWidth);
+    outs() << "[=offset]";
+  }
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override {};
+};
+} // cl
+} // llvm
+
+/// @}
+/// Command line options.
+/// @{
+
 namespace {
-using namespace llvm::cl;
+using namespace cl;
 
 OptionCategory DwarfDumpCategory("Specific Options");
 static opt<bool> Help("h", desc("Alias for -help"), Hidden,
@@ -47,20 +102,26 @@ static list<std::string>
     InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
                    ZeroOrMore, cat(DwarfDumpCategory));
 
-cl::OptionCategory
-    SectionCategory("Section-specific Dump Options",
-                    "These control which sections are dumped.");
+cl::OptionCategory SectionCategory("Section-specific Dump Options",
+                                   "These control which sections are dumped. "
+                                   "Where applicable these parameters take an "
+                                   "optional =<offset> argument to dump only "
+                                   "the entry at the specified offset.");
+
 static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
                          cat(SectionCategory));
 static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 
+// Options for dumping specific sections.
 static unsigned DumpType = DIDT_Null;
+static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  static opt<bool> Dump##ENUM_NAME(CMDLINE_NAME,                               \
-                                   desc("Dump the " ELF_NAME " section"),      \
-                                   cat(SectionCategory));
+  static opt<OffsetOption> Dump##ENUM_NAME(                                    \
+      CMDLINE_NAME, desc("Dump the " ELF_NAME " section"),                     \
+      cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
@@ -78,6 +139,9 @@ static opt<bool> Verbose("verbose",
 static alias VerboseAlias("v", desc("Alias for -verbose"), aliasopt(Verbose),
                           cat(DwarfDumpCategory));
 } // namespace
+/// @}
+//===----------------------------------------------------------------------===//
+
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
@@ -103,7 +167,7 @@ static bool dumpObjectFile(ObjectFile &Obj, Twine Filename) {
     outs() << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
 
   // Dump the complete DWARF structure.
-  DICtx->dump(outs(), getDumpOpts());
+  DICtx->dump(outs(), getDumpOpts(), DumpOffsets);
   return true;
 }
 
@@ -237,8 +301,11 @@ int main(int argc, char **argv) {
   // Defaults to dumping all sections, unless brief mode is specified in which
   // case only the .debug_info section in dumped.
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  if (Dump##ENUM_NAME)                                                         \
-    DumpType |= DIDT_##ENUM_NAME;
+  if (Dump##ENUM_NAME.IsRequested) {                                           \
+    DumpType |= DIDT_##ENUM_NAME;                                              \
+    if (Dump##ENUM_NAME.HasValue)                                              \
+      DumpOffsets[DIDT_ID_##ENUM_NAME] = Dump##ENUM_NAME.Val;                  \
+  }
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
   if (DumpUUID)

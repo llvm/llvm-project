@@ -38,6 +38,9 @@ Available options:
                         Can be specified multiple times.
     -i|--install-target name of a cmake install target to build and include in
                         the resulting archive. Can be specified multiple times.
+    -c|--checksums      name of a file, containing checksums of llvm checkout.
+                        Script will fail if checksums of the checkout do not
+                        match.
 
 Required options: --source and --docker-repository, at least one
   --install-target.
@@ -66,6 +69,7 @@ $ ./build_docker_image.sh -s debian8 -d mydocker/clang-debian8 -t "latest" \
 EOF
 }
 
+CHECKSUMS_FILE=""
 SEEN_INSTALL_TARGET=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -94,6 +98,11 @@ while [[ $# -gt 0 ]]; do
       fi
       BUILDSCRIPT_ARGS="$BUILDSCRIPT_ARGS $1 $2"
       shift 2
+      ;;
+    -c|--checksums)
+      shift
+      CHECKSUMS_FILE="$1"
+      shift
       ;;
     --)
       shift
@@ -140,6 +149,11 @@ echo "Using a temporary directory for the build: $BUILD_DIR"
 
 cp -r "$SOURCE_DIR/$IMAGE_SOURCE" "$BUILD_DIR/$IMAGE_SOURCE"
 cp -r "$SOURCE_DIR/scripts" "$BUILD_DIR/scripts"
+
+mkdir "$BUILD_DIR/checksums"
+if [ "$CHECKSUMS_FILE" != "" ]; then
+  cp "$CHECKSUMS_FILE" "$BUILD_DIR/checksums/checksums.txt"
+fi
 
 if [ "$DOCKER_TAG" != "" ]; then
   DOCKER_TAG=":$DOCKER_TAG"

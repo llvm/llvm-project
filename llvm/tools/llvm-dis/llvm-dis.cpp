@@ -122,25 +122,29 @@ public:
   }
 };
 
-} // end anon namespace
+struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
+  char *Prefix;
+  LLVMDisDiagnosticHandler(char *PrefixPtr) : Prefix(PrefixPtr) {}
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    raw_ostream &OS = errs();
+    OS << Prefix << ": ";
+    switch (DI.getSeverity()) {
+      case DS_Error: OS << "error: "; break;
+      case DS_Warning: OS << "warning: "; break;
+      case DS_Remark: OS << "remark: "; break;
+      case DS_Note: OS << "note: "; break;
+    }
 
-static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
-  raw_ostream &OS = errs();
-  OS << (char *)Context << ": ";
-  switch (DI.getSeverity()) {
-  case DS_Error: OS << "error: "; break;
-  case DS_Warning: OS << "warning: "; break;
-  case DS_Remark: OS << "remark: "; break;
-  case DS_Note: OS << "note: "; break;
+    DiagnosticPrinterRawOStream DP(OS);
+    DI.print(DP);
+    OS << '\n';
+
+    if (DI.getSeverity() == DS_Error)
+      exit(1);
+    return true;
   }
-
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  OS << '\n';
-
-  if (DI.getSeverity() == DS_Error)
-    exit(1);
-}
+};
+} // end anon namespace
 
 static ExitOnError ExitOnErr;
 
@@ -166,9 +170,8 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
-
-  Context.setDiagnosticHandler(diagnosticHandler, argv[0]);
-
+  Context.setDiagnosticHandler(
+      llvm::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   std::unique_ptr<Module> M = openInputFile(Context);

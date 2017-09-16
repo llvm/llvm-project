@@ -182,25 +182,30 @@ Module &ModuleLazyLoaderCache::operator()(const char *argv0,
 }
 } // anonymous namespace
 
-static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
-  unsigned Severity = DI.getSeverity();
-  switch (Severity) {
-  case DS_Error:
-    errs() << "ERROR: ";
-    break;
-  case DS_Warning:
-    if (SuppressWarnings)
-      return;
-    errs() << "WARNING: ";
-    break;
-  case DS_Remark:
-  case DS_Note:
-    llvm_unreachable("Only expecting warnings and errors");
-  }
+namespace {
+struct LLVMLinkDiagnosticHandler : public DiagnosticHandler {
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    unsigned Severity = DI.getSeverity();
+    switch (Severity) {
+    case DS_Error:
+      errs() << "ERROR: ";
+      break;
+    case DS_Warning:
+      if (SuppressWarnings)
+        return true;
+      errs() << "WARNING: ";
+      break;
+    case DS_Remark:
+    case DS_Note:
+      llvm_unreachable("Only expecting warnings and errors");
+    }
 
-  DiagnosticPrinterRawOStream DP(errs());
-  DI.print(DP);
-  errs() << '\n';
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
+    return true;
+  }
+};
 }
 
 /// Import any functions requested via the -import option.
@@ -347,8 +352,8 @@ int main(int argc, char **argv) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandler, nullptr, true);
-
+  Context.setDiagnosticHandler(
+    llvm::make_unique<LLVMLinkDiagnosticHandler>(), true);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 

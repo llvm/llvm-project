@@ -7,6 +7,14 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i64 @foo(i64 %arg) {
 
+  ; LATENCY:  cost of 0 {{.*}} alloca i32
+  ; CODESIZE: cost of 0 {{.*}} alloca i32
+  %A1 = alloca i32, align 8
+
+  ; LATENCY:  cost of 1 {{.*}} alloca i64, i64 undef
+  ; CODESIZE: cost of 1 {{.*}} alloca i64, i64 undef
+  %A2 = alloca i64, i64 undef, align 8
+
   ; LATENCY:  cost of 1 {{.*}} %I64 = add
   ; CODESIZE: cost of 1 {{.*}} %I64 = add
   %I64 = add i64 undef, undef
