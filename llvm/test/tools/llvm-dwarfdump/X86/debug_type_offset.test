@@ -6,3 +6,12 @@ CHECK: .debug_types contents:
 CHECK: 0x00000019: DW_TAG_structure_type
 CHECK:               DW_AT_visibility
 CHECK-NOT: {{:}}
+
+RUN: llvm-mc %S/../../../DebugInfo/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -c -debug-types=0x0000017 - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN
+CHILDREN: .debug_types contents:
+CHILDREN: 0x00000017: DW_TAG_type_unit
+CHILDREN: 0x00000019:   DW_TAG_structure_type
+CHECK-NOT: {{:}}
