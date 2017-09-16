@@ -79,8 +79,7 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
 }
 
 /// \brief Read and discard all tokens remaining on the current line until
-/// the tok::eod token is found. If the discarded tokens are in a skipped range,
-/// complete the range and pass it to the \c SourceRangeSkipped callback.
+/// the tok::eod token is found.
 void Preprocessor::DiscardUntilEndOfDirective() {
   Token Tmp;
   do {

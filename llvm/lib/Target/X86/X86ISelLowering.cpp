@@ -12174,6 +12174,10 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   // If either input operand is a zero vector, use VPERM2X128 because its mask
   // allows us to replace the zero input with an implicit zero.
   if (!IsV1Zero && !IsV2Zero) {
+    // With AVX2, use VPERMQ/VPERMPD to allow memory folding.
+    if (Subtarget.hasAVX2() && V2.isUndef())
+      return SDValue();
+
     // Check for patterns which can be matched with a single insert of a 128-bit
     // subvector.
     bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1});

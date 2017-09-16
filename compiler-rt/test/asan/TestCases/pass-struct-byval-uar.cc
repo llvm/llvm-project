@@ -9,7 +9,7 @@
 // instead creates a copy in main() and gives foo() a pointer to the copy.  In
 // that case, ASAN has nothing to poison on return from foo() and will not
 // detect the UAR.
-// REQUIRES: x86_64-target-arch, linux, not-android
+// REQUIRES: x86_64-target-arch, linux, !android
 
 #include <cstdio>
 
