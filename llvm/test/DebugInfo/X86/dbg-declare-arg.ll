@@ -1,12 +1,26 @@
 ; RUN: llc -O0 -fast-isel=true  -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-macosx10.6.7"
 ; rdar://problem/9321650
-;
+
+; C++ source:
+; class A { public: int x; int y; int z; int o; ~A() { x = 1; }};
+; 
+; A foo(int i) {
+;   int j = 0;
+;   if (i == 42) {
+;     j = i + 1;
+;   };
+;   A my_a;
+;   my_a.x = j;
+;   return my_a;
+; }
+
 ; CHECK: DW_AT_name {{.*}}"j"
 ; CHECK: DW_TAG_variable  
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (
-; CHECK-NEXT:     0x{{.*}} - 0x{{.*}}: DW_OP_breg7 RSP+8)
+; CHECK-NEXT:     0x{{.*}} - 0x{{.*}}: DW_OP_breg7 RSP+8, DW_OP_deref)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"my_a"
 
 %class.A = type { i32, i32, i32, i32 }

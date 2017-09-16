@@ -962,6 +962,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   // Handle miscellaneous boolean flags.
+  if (Args.hasArg(OPT_allowbind_no))
+    Config->AllowBind = false;
   if (Args.hasArg(OPT_allowisolation_no))
     Config->AllowIsolation = false;
   if (Args.hasArg(OPT_dynamicbase_no))

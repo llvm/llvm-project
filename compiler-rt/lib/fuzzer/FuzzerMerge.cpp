@@ -221,6 +221,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
          M.Files.size() - M.FirstNotProcessedFile);
 
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
+  Set<size_t> AllFeatures;
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     auto U = FileToVector(M.Files[i].Name);
     if (U.size() > MaxInputLen) {
@@ -234,18 +235,22 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     // Run.
     TPC.ResetMaps();
     ExecuteCallback(U.data(), U.size());
-    // Collect coverage.
-    Set<size_t> Features;
-    TPC.CollectFeatures([&](size_t Feature) -> bool {
-      Features.insert(Feature);
-      return true;
+    // Collect coverage. We are iterating over the files in this order:
+    // * First, files in the initial corpus ordered by size, smallest first.
+    // * Then, all other files, smallest first.
+    // So it makes no sense to record all features for all files, instead we
+    // only record features that were not seen before.
+    Set<size_t> UniqFeatures;
+    TPC.CollectFeatures([&](size_t Feature) {
+      if (AllFeatures.insert(Feature).second)
+        UniqFeatures.insert(Feature);
     });
     // Show stats.
     if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)))
       PrintStats("pulse ");
     // Write the post-run marker and the coverage.
     OF << "DONE " << i;
-    for (size_t F : Features)
+    for (size_t F : UniqFeatures)
       OF << " " << std::hex << F;
     OF << "\n";
   }
@@ -260,11 +265,13 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
     Printf("Merge requires two or more corpus dirs\n");
     return;
   }
-  Vector<std::string> AllFiles;
-  ListFilesInDirRecursive(Corpora[0], nullptr, &AllFiles, /*TopDir*/true);
+  Vector<SizedFile> AllFiles;
+  GetSizedFilesFromDir(Corpora[0], &AllFiles);
   size_t NumFilesInFirstCorpus = AllFiles.size();
+  std::sort(AllFiles.begin(), AllFiles.end());
   for (size_t i = 1; i < Corpora.size(); i++)
-    ListFilesInDirRecursive(Corpora[i], nullptr, &AllFiles, /*TopDir*/true);
+    GetSizedFilesFromDir(Corpora[i], &AllFiles);
+  std::sort(AllFiles.begin() + NumFilesInFirstCorpus, AllFiles.end());
   Printf("MERGE-OUTER: %zd files, %zd in the initial corpus\n",
          AllFiles.size(), NumFilesInFirstCorpus);
   auto CFPath = DirPlusFile(TmpDir(),
@@ -274,8 +281,8 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
   std::ofstream ControlFile(CFPath);
   ControlFile << AllFiles.size() << "\n";
   ControlFile << NumFilesInFirstCorpus << "\n";
-  for (auto &Path: AllFiles)
-    ControlFile << Path << "\n";
+  for (auto &SF: AllFiles)
+    ControlFile << SF.File << "\n";
   if (!ControlFile) {
     Printf("MERGE-OUTER: failed to write to the control file: %s\n",
            CFPath.c_str());

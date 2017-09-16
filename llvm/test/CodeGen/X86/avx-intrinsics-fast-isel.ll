@@ -1695,7 +1695,7 @@ define <4 x double> @test_mm256_permute2f128_pd(<4 x double> %a0, <4 x double> %
 ; X64:       # BB#0:
 ; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm1[0,1]
 ; X64-NEXT:    retq
-  %res = call <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double> %a0, <4 x double> %a1, i8 44)
+  %res = shufflevector <4 x double> zeroinitializer, <4 x double> %a1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x double> %res
 }
 declare <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
@@ -1711,7 +1711,7 @@ define <8 x float> @test_mm256_permute2f128_ps(<8 x float> %a0, <8 x float> %a1)
 ; X64:       # BB#0:
 ; X64-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %res = call <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float> %a0, <8 x float> %a1, i8 50)
+  %res = shufflevector <8 x float> %a1, <8 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
   ret <8 x float> %res
 }
 declare <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
@@ -1728,7 +1728,7 @@ define <4 x i64> @test_mm256_permute2f128_si256(<4 x i64> %a0, <4 x i64> %a1) no
 ; X64-NEXT:    retq
   %1 = bitcast <4 x i64> %a0 to <8 x i32>
   %2 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32> %1, <8 x i32> %2, i8 35)
+  %res = shufflevector <8 x i32> %2, <8 x i32> %2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %bc = bitcast <8 x i32> %res to <4 x i64>
   ret <4 x i64> %bc
 }

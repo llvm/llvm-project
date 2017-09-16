@@ -456,7 +456,7 @@ template <class ELFT> void OutputSection::finalize() {
         Sections.push_back(IS);
       }
 
-  if ((Flags & SHF_LINK_ORDER)) {
+  if (Flags & SHF_LINK_ORDER) {
     std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
