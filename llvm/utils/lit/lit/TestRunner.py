@@ -251,6 +251,7 @@ def executeBuiltinEcho(cmd, shenv):
     # Some tests have un-redirected echo commands to help debug test failures.
     # Buffer our output and return it to the caller.
     is_redirected = True
+    encode = lambda x : x
     if stdout == subprocess.PIPE:
         is_redirected = False
         stdout = StringIO()
@@ -258,6 +259,9 @@ def executeBuiltinEcho(cmd, shenv):
         # Reopen stdout in binary mode to avoid CRLF translation. The versions
         # of echo we are replacing on Windows all emit plain LF, and the LLVM
         # tests now depend on this.
+        # When we open as binary, however, this also means that we have to write
+        # 'bytes' objects to stdout instead of 'str' objects.
+        encode = lit.util.to_bytes
         stdout = open(stdout.name, stdout.mode + 'b')
         opened_files.append((None, None, stdout, None))
 
@@ -278,17 +282,18 @@ def executeBuiltinEcho(cmd, shenv):
     def maybeUnescape(arg):
         if not interpret_escapes:
             return arg
-        # Python string escapes and "echo" escapes are obviously different, but
-        # this should be enough for the LLVM test suite.
-        return arg.decode('string_escape')
+
+        arg = lit.util.to_bytes(arg)
+        codec = 'string_escape' if sys.version_info < (3,0) else 'unicode_escape'
+        return arg.decode(codec)
 
     if args:
         for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg))
-            stdout.write(' ')
-        stdout.write(maybeUnescape(args[-1]))
+            stdout.write(encode(maybeUnescape(arg)))
+            stdout.write(encode(' '))
+        stdout.write(encode(maybeUnescape(args[-1])))
     if write_newline:
-        stdout.write('\n')
+        stdout.write(encode('\n'))
 
     for (name, mode, f, path) in opened_files:
         f.close()
