@@ -289,9 +289,10 @@ def main_with_tmp(builtinParameters):
     debug_group.add_argument("--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
-    debug_group.add_argument("--use-processes", dest="executionStrategy",
-                      help="Run tests in parallel with processes (not threads)",
-                      action="store_const", const="PROCESSES")
+    debug_group.add_argument("--single-process", dest="singleProcess",
+                      help="Don't run tests in parallel.  Intended for debugging "
+                      "single test failures",
+                      action="store_true", default=False)
 
     opts = parser.parse_args()
     args = opts.test_paths
@@ -341,6 +342,7 @@ def main_with_tmp(builtinParameters):
         valgrindLeakCheck = opts.valgrindLeakCheck,
         valgrindArgs = opts.valgrindArgs,
         noExecute = opts.noExecute,
+        singleProcess = opts.singleProcess,
         debug = opts.debug,
         isWindows = isWindows,
         params = userParams,

@@ -1094,72 +1094,6 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
 }
 
-/// The shuffle mask for a perm2*128 selects any two halves of two 256-bit
-/// source vectors, unless a zero bit is set. If a zero bit is set,
-/// then ignore that half of the mask and clear that half of the vector.
-static Value *simplifyX86vperm2(const IntrinsicInst &II,
-                                InstCombiner::BuilderTy &Builder) {
-  auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
-  if (!CInt)
-    return nullptr;
-
-  VectorType *VecTy = cast<VectorType>(II.getType());
-  ConstantAggregateZero *ZeroVector = ConstantAggregateZero::get(VecTy);
-
-  // The immediate permute control byte looks like this:
-  //    [1:0] - select 128 bits from sources for low half of destination
-  //    [2]   - ignore
-  //    [3]   - zero low half of destination
-  //    [5:4] - select 128 bits from sources for high half of destination
-  //    [6]   - ignore
-  //    [7]   - zero high half of destination
-
-  uint8_t Imm = CInt->getZExtValue();
-
-  bool LowHalfZero = Imm & 0x08;
-  bool HighHalfZero = Imm & 0x80;
-
-  // If both zero mask bits are set, this was just a weird way to
-  // generate a zero vector.
-  if (LowHalfZero && HighHalfZero)
-    return ZeroVector;
-
-  // If 0 or 1 zero mask bits are set, this is a simple shuffle.
-  unsigned NumElts = VecTy->getNumElements();
-  unsigned HalfSize = NumElts / 2;
-  SmallVector<uint32_t, 8> ShuffleMask(NumElts);
-
-  // The high bit of the selection field chooses the 1st or 2nd operand.
-  bool LowInputSelect = Imm & 0x02;
-  bool HighInputSelect = Imm & 0x20;
-
-  // The low bit of the selection field chooses the low or high half
-  // of the selected operand.
-  bool LowHalfSelect = Imm & 0x01;
-  bool HighHalfSelect = Imm & 0x10;
-
-  // Determine which operand(s) are actually in use for this instruction.
-  Value *V0 = LowInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
-  Value *V1 = HighInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
-
-  // If needed, replace operands based on zero mask.
-  V0 = LowHalfZero ? ZeroVector : V0;
-  V1 = HighHalfZero ? ZeroVector : V1;
-
-  // Permute low half of result.
-  unsigned StartIndex = LowHalfSelect ? HalfSize : 0;
-  for (unsigned i = 0; i < HalfSize; ++i)
-    ShuffleMask[i] = StartIndex + i;
-
-  // Permute high half of result.
-  StartIndex = HighHalfSelect ? HalfSize : 0;
-  StartIndex += NumElts;
-  for (unsigned i = 0; i < HalfSize; ++i)
-    ShuffleMask[i + HalfSize] = StartIndex + i;
-
-  return Builder.CreateShuffleVector(V0, V1, ShuffleMask);
-}
-
 /// Decode XOP integer vector comparison intrinsics.
 static Value *simplifyX86vpcom(const IntrinsicInst &II,
                                InstCombiner::BuilderTy &Builder,
@@ -3016,14 +2950,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                             Builder);
       return replaceInstUsesWith(*II, V);
     }
-    break;
-
-  case Intrinsic::x86_avx_vperm2f128_pd_256:
-  case Intrinsic::x86_avx_vperm2f128_ps_256:
-  case Intrinsic::x86_avx_vperm2f128_si_256:
-  case Intrinsic::x86_avx2_vperm2i128:
-    if (Value *V = simplifyX86vperm2(*II, Builder))
-      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_avx_maskload_ps:

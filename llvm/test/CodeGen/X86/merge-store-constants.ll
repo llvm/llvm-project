@@ -6,18 +6,14 @@ define void @big_nonzero_16_bytes(i32* nocapture %a) {
 ; X32-LABEL: big_nonzero_16_bytes:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl $1, (%eax)
-; X32-NEXT:    movl $2, 4(%eax)
-; X32-NEXT:    movl $3, 8(%eax)
-; X32-NEXT:    movl $4, 12(%eax)
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
+; X32-NEXT:    vmovups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_16_bytes:
 ; X64:       # BB#0:
-; X64-NEXT:    movabsq $8589934593, %rax # imm = 0x200000001
-; X64-NEXT:    movq %rax, (%rdi)
-; X64-NEXT:    movabsq $17179869187, %rax # imm = 0x400000003
-; X64-NEXT:    movq %rax, 8(%rdi)
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
+; X64-NEXT:    vmovups %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %arrayidx1 = getelementptr inbounds i32, i32* %a, i64 1
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 2
@@ -30,29 +26,48 @@ define void @big_nonzero_16_bytes(i32* nocapture %a) {
   ret void
 }
 
+; TODO: We assumed that two 64-bit stores were better than 1 vector load and 1 vector store.
+; But if the 64-bit constants can't be represented as sign-extended 32-bit constants, then
+; it takes extra instructions to do this in scalar.
+
+define void @big_nonzero_16_bytes_big64bit_constants(i64* nocapture %a) {
+; X32-LABEL: big_nonzero_16_bytes_big64bit_constants:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,3]
+; X32-NEXT:    vmovups %xmm0, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: big_nonzero_16_bytes_big64bit_constants:
+; X64:       # BB#0:
+; X64-NEXT:    movabsq $4294967297, %rax # imm = 0x100000001
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    movabsq $12884901889, %rax # imm = 0x300000001
+; X64-NEXT:    movq %rax, 8(%rdi)
+; X64-NEXT:    retq
+  %arrayidx1 = getelementptr inbounds i64, i64* %a, i64 1
+
+  store i64 4294967297, i64* %a
+  store i64 12884901889, i64* %arrayidx1
+  ret void
+}
+
 ; Splats may be an opportunity to use a broadcast op.
 
 define void @big_nonzero_32_bytes_splat(i32* nocapture %a) {
 ; X32-LABEL: big_nonzero_32_bytes_splat:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl $42, (%eax)
-; X32-NEXT:    movl $42, 4(%eax)
-; X32-NEXT:    movl $42, 8(%eax)
-; X32-NEXT:    movl $42, 12(%eax)
-; X32-NEXT:    movl $42, 16(%eax)
-; X32-NEXT:    movl $42, 20(%eax)
-; X32-NEXT:    movl $42, 24(%eax)
-; X32-NEXT:    movl $42, 28(%eax)
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_32_bytes_splat:
 ; X64:       # BB#0:
-; X64-NEXT:    movabsq $180388626474, %rax # imm = 0x2A0000002A
-; X64-NEXT:    movq %rax, (%rdi)
-; X64-NEXT:    movq %rax, 8(%rdi)
-; X64-NEXT:    movq %rax, 16(%rdi)
-; X64-NEXT:    movq %rax, 24(%rdi)
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
+; X64-NEXT:    vmovups %ymm0, (%rdi)
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %arrayidx1 = getelementptr inbounds i32, i32* %a, i64 1
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 2
@@ -79,37 +94,29 @@ define void @big_nonzero_63_bytes(i8* nocapture %a) {
 ; X32-LABEL: big_nonzero_63_bytes:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl $0, 4(%eax)
-; X32-NEXT:    movl $1, (%eax)
-; X32-NEXT:    movl $0, 12(%eax)
-; X32-NEXT:    movl $2, 8(%eax)
-; X32-NEXT:    movl $0, 20(%eax)
-; X32-NEXT:    movl $3, 16(%eax)
-; X32-NEXT:    movl $0, 28(%eax)
-; X32-NEXT:    movl $4, 24(%eax)
-; X32-NEXT:    movl $0, 36(%eax)
-; X32-NEXT:    movl $5, 32(%eax)
-; X32-NEXT:    movl $0, 44(%eax)
-; X32-NEXT:    movl $6, 40(%eax)
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [1,0,2,0,3,0,4,0]
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [5,0,6,0]
+; X32-NEXT:    vmovups %xmm0, 32(%eax)
 ; X32-NEXT:    movl $0, 52(%eax)
 ; X32-NEXT:    movl $7, 48(%eax)
 ; X32-NEXT:    movl $8, 56(%eax)
 ; X32-NEXT:    movw $9, 60(%eax)
 ; X32-NEXT:    movb $10, 62(%eax)
+; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_63_bytes:
 ; X64:       # BB#0:
-; X64-NEXT:    movq $1, (%rdi)
-; X64-NEXT:    movq $2, 8(%rdi)
-; X64-NEXT:    movq $3, 16(%rdi)
-; X64-NEXT:    movq $4, 24(%rdi)
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [1,2,3,4]
+; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    movq $5, 32(%rdi)
 ; X64-NEXT:    movq $6, 40(%rdi)
 ; X64-NEXT:    movq $7, 48(%rdi)
 ; X64-NEXT:    movl $8, 56(%rdi)
 ; X64-NEXT:    movw $9, 60(%rdi)
 ; X64-NEXT:    movb $10, 62(%rdi)
+; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %a8 = bitcast i8* %a to i64*
   %arrayidx8 = getelementptr inbounds i64, i64* %a8, i64 1

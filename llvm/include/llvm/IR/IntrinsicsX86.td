@@ -965,17 +965,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
         GCCBuiltin<"__builtin_ia32_vpermilvarps256">,
         Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8i32_ty], [IntrNoMem]>;
 
-  // TODO: Remove and autoupgrade using implementation in CGBuiltins.cpp
-  def int_x86_avx_vperm2f128_pd_256 :
-        Intrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty,
-                  llvm_v4f64_ty, llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx_vperm2f128_ps_256 :
-        Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty,
-                  llvm_v8f32_ty, llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx_vperm2f128_si_256 :
-        Intrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty,
-                  llvm_v8i32_ty, llvm_i8_ty], [IntrNoMem]>;
-
   def int_x86_avx512_mask_vpermi2var_d_128 :
        GCCBuiltin<"__builtin_ia32_vpermi2vard128_mask">,
         Intrinsic<[llvm_v4i32_ty],
@@ -1950,10 +1939,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_permps : GCCBuiltin<"__builtin_ia32_permvarsf256">,
               Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8i32_ty],
                         [IntrNoMem]>;
-  // TODO: Remove and autoupgrade using implementation in CGBuiltins.cpp
-  def int_x86_avx2_vperm2i128 :
-              Intrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty,
-                         llvm_v4i64_ty, llvm_i8_ty], [IntrNoMem]>;
 }
 
 // Conditional load ops

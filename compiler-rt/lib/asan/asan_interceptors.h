@@ -68,12 +68,6 @@ void InitializePlatformInterceptors();
 #endif
 
 #if !SANITIZER_WINDOWS
-# define ASAN_INTERCEPT_SIGNAL_AND_SIGACTION 1
-#else
-# define ASAN_INTERCEPT_SIGNAL_AND_SIGACTION 0
-#endif
-
-#if !SANITIZER_WINDOWS
 # define ASAN_INTERCEPT_SIGLONGJMP 1
 #else
 # define ASAN_INTERCEPT_SIGLONGJMP 0
