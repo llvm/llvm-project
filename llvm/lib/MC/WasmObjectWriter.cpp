@@ -163,7 +163,8 @@ struct WasmRelocationEntry {
 
   void print(raw_ostream &Out) const {
     Out << "Off=" << Offset << ", Sym=" << *Symbol << ", Addend=" << Addend
-        << ", Type=" << Type << ", FixupSection=" << FixupSection;
+        << ", Type=" << Type
+        << ", FixupSection=" << FixupSection->getSectionName();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -262,19 +263,19 @@ private:
     encodeSLEB128(int32_t(Ty), getStream());
   }
 
-  void writeTypeSection(const SmallVector<WasmFunctionType, 4> &FunctionTypes);
-  void writeImportSection(const SmallVector<WasmImport, 4> &Imports);
-  void writeFunctionSection(const SmallVector<WasmFunction, 4> &Functions);
+  void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
+  void writeImportSection(ArrayRef<WasmImport> Imports);
+  void writeFunctionSection(ArrayRef<WasmFunction> Functions);
   void writeTableSection(uint32_t NumElements);
   void writeMemorySection(uint32_t DataSize);
   void writeGlobalSection();
-  void writeExportSection(const SmallVector<WasmExport, 4> &Exports);
-  void writeElemSection(const SmallVector<uint32_t, 4> &TableElems);
+  void writeExportSection(ArrayRef<WasmExport> Exports);
+  void writeElemSection(ArrayRef<uint32_t> TableElems);
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const SmallVector<WasmFunction, 4> &Functions);
-  void writeDataSection(const SmallVector<WasmDataSegment, 4> &Segments);
-  void writeNameSection(const SmallVector<WasmFunction, 4> &Functions,
-                        const SmallVector<WasmImport, 4> &Imports,
+                        ArrayRef<WasmFunction> Functions);
+  void writeDataSection(ArrayRef<WasmDataSegment> Segments);
+  void writeNameSection(ArrayRef<WasmFunction> Functions,
+                        ArrayRef<WasmImport> Imports,
                         uint32_t NumFuncImports);
   void writeCodeRelocSection();
   void writeDataRelocSection();
@@ -296,16 +297,6 @@ private:
 } // end anonymous namespace
 
 WasmObjectWriter::~WasmObjectWriter() {}
-
-// Return the padding size to write a 32-bit value into a 5-byte ULEB128.
-static unsigned PaddingFor5ByteULEB128(uint32_t X) {
-  return X == 0 ? 4 : (4u - (31u - countLeadingZeros(X)) / 7u);
-}
-
-// Return the padding size to write a 32-bit value into a 5-byte SLEB128.
-static unsigned PaddingFor5ByteSLEB128(int32_t X) {
-  return 5 - getSLEB128Size(X);
-}
 
 // Write out a section header and a patchable section size field.
 void WasmObjectWriter::startSection(SectionBookkeeping &Section,
@@ -341,12 +332,11 @@ void WasmObjectWriter::endSection(SectionBookkeeping &Section) {
     report_fatal_error("section size does not fit in a uint32_t");
 
   DEBUG(dbgs() << "endSection size=" << Size << "\n");
-  unsigned Padding = PaddingFor5ByteULEB128(Size);
 
   // Write the final section size to the payload_len field, which follows
   // the section id byte.
   uint8_t Buffer[16];
-  unsigned SizeLen = encodeULEB128(Size, Buffer, Padding);
+  unsigned SizeLen = encodeULEB128(Size, Buffer, 5);
   assert(SizeLen == 5);
   getStream().pwrite((char *)Buffer, SizeLen, Section.SizeOffset);
 }
@@ -453,8 +443,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 static void
 WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   uint8_t Buffer[5];
-  unsigned Padding = PaddingFor5ByteULEB128(X);
-  unsigned SizeLen = encodeULEB128(X, Buffer, Padding);
+  unsigned SizeLen = encodeULEB128(X, Buffer, 5);
   assert(SizeLen == 5);
   Stream.pwrite((char *)Buffer, SizeLen, Offset);
 }
@@ -464,8 +453,7 @@ WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
 static void
 WritePatchableSLEB(raw_pwrite_stream &Stream, int32_t X, uint64_t Offset) {
   uint8_t Buffer[5];
-  unsigned Padding = PaddingFor5ByteSLEB128(X);
-  unsigned SizeLen = encodeSLEB128(X, Buffer, Padding);
+  unsigned SizeLen = encodeSLEB128(X, Buffer, 5);
   assert(SizeLen == 5);
   Stream.pwrite((char *)Buffer, SizeLen, Offset);
 }
@@ -477,13 +465,22 @@ static void WriteI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
 }
 
+static const MCSymbolWasm* ResolveSymbol(const MCSymbolWasm& Symbol) {
+  if (Symbol.isVariable()) {
+    const MCExpr *Expr = Symbol.getVariableValue();
+    auto *Inner = cast<MCSymbolRefExpr>(Expr);
+    return cast<MCSymbolWasm>(&Inner->getSymbol());
+  }
+  return &Symbol;
+}
+
 // Compute a value to write into the code at the location covered
 // by RelEntry. This value isn't used by the static linker, since
 // we have addends; it just serves to make the code more readable
 // and to make standalone wasm modules directly usable.
 uint32_t
 WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
-  const MCSymbolWasm *Sym = RelEntry.Symbol;
+  const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
 
   // For undefined symbols, use a hopefully invalid value.
   if (!Sym->isDefined(/*SetUsed=*/false))
@@ -497,6 +494,39 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   uint32_t Value = Address;
 
   return Value;
+}
+
+static void addData(SmallVectorImpl<char> &DataBytes,
+                    MCSectionWasm &DataSection, uint32_t &DataAlignment) {
+  DataBytes.resize(alignTo(DataBytes.size(), DataSection.getAlignment()));
+  DataAlignment = std::max(DataAlignment, DataSection.getAlignment());
+  DEBUG(errs() << "addData: " << DataSection.getSectionName() << "\n");
+
+  for (const MCFragment &Frag : DataSection) {
+    if (Frag.hasInstructions())
+      report_fatal_error("only data supported in data sections");
+
+    if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
+      if (Align->getValueSize() != 1)
+        report_fatal_error("only byte values supported for alignment");
+      // If nops are requested, use zeros, as this is the data section.
+      uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
+      uint64_t Size = std::min<uint64_t>(alignTo(DataBytes.size(),
+                                                 Align->getAlignment()),
+                                         DataBytes.size() +
+                                             Align->getMaxBytesToEmit());
+      DataBytes.resize(Size, Value);
+    } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
+      DataBytes.insert(DataBytes.end(), Fill->getSize(), Fill->getValue());
+    } else {
+      const auto &DataFrag = cast<MCDataFragment>(Frag);
+      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+
+      DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
+    }
+  }
+
+  DEBUG(dbgs() << "addData -> " << DataBytes.size() << "\n");
 }
 
 uint32_t WasmObjectWriter::getRelocationIndexValue(
@@ -593,7 +623,7 @@ void WasmObjectWriter::writeRelocations(
 }
 
 void WasmObjectWriter::writeTypeSection(
-    const SmallVector<WasmFunctionType, 4> &FunctionTypes) {
+    ArrayRef<WasmFunctionType> FunctionTypes) {
   if (FunctionTypes.empty())
     return;
 
@@ -615,9 +645,7 @@ void WasmObjectWriter::writeTypeSection(
   endSection(Section);
 }
 
-
-void WasmObjectWriter::writeImportSection(
-    const SmallVector<WasmImport, 4> &Imports) {
+void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
   if (Imports.empty())
     return;
 
@@ -647,8 +675,7 @@ void WasmObjectWriter::writeImportSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeFunctionSection(
-    const SmallVector<WasmFunction, 4> &Functions) {
+void WasmObjectWriter::writeFunctionSection(ArrayRef<WasmFunction> Functions) {
   if (Functions.empty())
     return;
 
@@ -722,8 +749,7 @@ void WasmObjectWriter::writeGlobalSection() {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeExportSection(
-    const SmallVector<WasmExport, 4> &Exports) {
+void WasmObjectWriter::writeExportSection(ArrayRef<WasmExport> Exports) {
   if (Exports.empty())
     return;
 
@@ -740,8 +766,7 @@ void WasmObjectWriter::writeExportSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeElemSection(
-    const SmallVector<uint32_t, 4> &TableElems) {
+void WasmObjectWriter::writeElemSection(ArrayRef<uint32_t> TableElems) {
   if (TableElems.empty())
     return;
 
@@ -763,9 +788,9 @@ void WasmObjectWriter::writeElemSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeCodeSection(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    const SmallVector<WasmFunction, 4> &Functions) {
+void WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
+                                        const MCAsmLayout &Layout,
+                                        ArrayRef<WasmFunction> Functions) {
   if (Functions.empty())
     return;
 
@@ -782,9 +807,7 @@ void WasmObjectWriter::writeCodeSection(
       report_fatal_error(".size expression must be evaluatable");
 
     encodeULEB128(Size, getStream());
-
     FuncSection.setSectionOffset(getStream().tell() - Section.ContentsOffset);
-
     Asm.writeSectionData(&FuncSection, Layout);
   }
 
@@ -794,8 +817,7 @@ void WasmObjectWriter::writeCodeSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeDataSection(
-    const SmallVector<WasmDataSegment, 4> &Segments) {
+void WasmObjectWriter::writeDataSection(ArrayRef<WasmDataSegment> Segments) {
   if (Segments.empty())
     return;
 
@@ -821,8 +843,8 @@ void WasmObjectWriter::writeDataSection(
 }
 
 void WasmObjectWriter::writeNameSection(
-    const SmallVector<WasmFunction, 4> &Functions,
-    const SmallVector<WasmImport, 4> &Imports,
+    ArrayRef<WasmFunction> Functions,
+    ArrayRef<WasmImport> Imports,
     unsigned NumFuncImports) {
   uint32_t TotalFunctions = NumFuncImports + Functions.size();
   if (TotalFunctions == 0)
@@ -934,16 +956,9 @@ uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm& Symbol) {
   assert(Symbol.isFunction());
 
   WasmFunctionType F;
-  if (Symbol.isVariable()) {
-    const MCExpr *Expr = Symbol.getVariableValue();
-    auto *Inner = cast<MCSymbolRefExpr>(Expr);
-    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
-    F.Returns = ResolvedSym->getReturns();
-    F.Params = ResolvedSym->getParams();
-  } else {
-    F.Returns = Symbol.getReturns();
-    F.Params = Symbol.getParams();
-  }
+  const MCSymbolWasm* ResolvedSym = ResolveSymbol(Symbol);
+  F.Returns = ResolvedSym->getReturns();
+  F.Params = ResolvedSym->getParams();
 
   auto Pair =
       FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
@@ -1033,7 +1048,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // In the special .global_variables section, we've encoded global
   // variables used by the function. Translate them into the Globals
   // list.
-  MCSectionWasm *GlobalVars = Ctx.getWasmSection(".global_variables", 0, 0);
+  MCSectionWasm *GlobalVars = Ctx.getWasmSection(".global_variables", wasm::WASM_SEC_DATA);
   if (!GlobalVars->getFragmentList().empty()) {
     if (GlobalVars->getFragmentList().size() != 1)
       report_fatal_error("only one .global_variables fragment supported");
@@ -1089,7 +1104,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
   // In the special .stack_pointer section, we've encoded the stack pointer
   // index.
-  MCSectionWasm *StackPtr = Ctx.getWasmSection(".stack_pointer", 0, 0);
+  MCSectionWasm *StackPtr = Ctx.getWasmSection(".stack_pointer", wasm::WASM_SEC_DATA);
   if (!StackPtr->getFragmentList().empty()) {
     if (StackPtr->getFragmentList().size() != 1)
       report_fatal_error("only one .stack_pointer fragment supported");
@@ -1104,6 +1119,21 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       report_fatal_error("only one entry supported in .stack_pointer");
     HasStackPointer = true;
     StackPointerGlobal = NumGlobalImports + *(const int32_t *)Contents.data();
+  }
+
+  for (MCSection &Sec : Asm) {
+    auto &Section = static_cast<MCSectionWasm &>(Sec);
+    if (Section.getType() != wasm::WASM_SEC_DATA)
+      continue;
+
+    DataSize = alignTo(DataSize, Section.getAlignment());
+    DataSegments.emplace_back();
+    WasmDataSegment &Segment = DataSegments.back();
+    Segment.Offset = DataSize;
+    Segment.Section = &Section;
+    addData(Segment.Data, Section, DataAlignment);
+    DataSize += Segment.Data.size();
+    Section.setMemoryOffset(Segment.Offset);
   }
 
   // Handle regular defined and undefined symbols.
@@ -1168,9 +1198,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (!WS.isDefined(/*SetUsed=*/false))
         continue;
 
-      if (WS.getOffset() != 0)
-        report_fatal_error("data sections must contain one variable each: " +
-                           WS.getName());
       if (!WS.getSize())
         report_fatal_error("data symbols must have a size set with .size: " +
                            WS.getName());
@@ -1179,58 +1206,20 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
         report_fatal_error(".size expression must be evaluatable");
 
-      auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
-
-      if (uint64_t(Size) != Layout.getSectionFileSize(&DataSection))
-        report_fatal_error("data sections must contain at most one variable");
-
-      DataAlignment = std::max(DataAlignment, DataSection.getAlignment());
-
-      DataSegments.emplace_back();
-      WasmDataSegment &Segment = DataSegments.back();
-
-      DataSize = alignTo(DataSize, DataSection.getAlignment());
-      Segment.Offset = DataSize;
-      Segment.Section = &DataSection;
-
       // For each global, prepare a corresponding wasm global holding its
       // address.  For externals these will also be named exports.
       Index = NumGlobalImports + Globals.size();
+      auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
 
       WasmGlobal Global;
       Global.Type = PtrType;
       Global.IsMutable = false;
       Global.HasImport = false;
-      Global.InitialValue = DataSize;
+      Global.InitialValue = DataSection.getMemoryOffset() + Layout.getSymbolOffset(WS);
       Global.ImportIndex = 0;
       SymbolIndices[&WS] = Index;
       DEBUG(dbgs() << "  -> global index: " << Index << "\n");
       Globals.push_back(Global);
-
-      for (const MCFragment &Frag : DataSection) {
-        if (Frag.hasInstructions())
-          report_fatal_error("only data supported in data sections");
-
-        if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
-          if (Align->getValueSize() != 1)
-            report_fatal_error("only byte values supported for alignment");
-          // If nops are requested, use zeros, as this is the data section.
-          uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
-          uint64_t Size = std::min<uint64_t>(
-              alignTo(Segment.Data.size(), Align->getAlignment()),
-              Segment.Data.size() + Align->getMaxBytesToEmit());
-          Segment.Data.resize(Size, Value);
-        } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
-          Segment.Data.insert(Segment.Data.end(), Fill->getSize(), Fill->getValue());
-        } else {
-          const auto &DataFrag = cast<MCDataFragment>(Frag);
-          const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-
-          Segment.Data.insert(Segment.Data.end(), Contents.begin(),
-                              Contents.end());
-        }
-      }
-      DataSize += Segment.Data.size();
     }
 
     // If the symbol is visible outside this translation unit, export it.
@@ -1255,11 +1244,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
     assert(S.isDefined(/*SetUsed=*/false));
 
-    const auto &WS = static_cast<const MCSymbolWasm &>(S);
     // Find the target symbol of this weak alias and export that index
-    const MCExpr *Expr = WS.getVariableValue();
-    auto *Inner = cast<MCSymbolRefExpr>(Expr);
-    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+    const MCSymbolWasm *ResolvedSym = ResolveSymbol(WS);
     DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym << "'\n");
     assert(SymbolIndices.count(ResolvedSym) > 0);
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;

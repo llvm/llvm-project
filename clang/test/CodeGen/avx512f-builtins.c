@@ -7935,6 +7935,13 @@ __m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
     //CHECK: @llvm.x86.avx512.mask.pbroadcast.q.gpr.512
   return _mm512_mask_set1_epi64 (__O, __M, __A);
 }
+
+__m512i test_mm512_maskz_set1_epi64 (__mmask8 __M, long long __A)
+{
+    //CHECK-LABEL: @test_mm512_maskz_set1_epi64
+    //CHECK: @llvm.x86.avx512.mask.pbroadcast.q.gpr.512
+  return _mm512_maskz_set1_epi64 (__M, __A);
+}
 #endif
 
 __m512i test_mm512_set_epi64 (long long __A, long long __B, long long __C,

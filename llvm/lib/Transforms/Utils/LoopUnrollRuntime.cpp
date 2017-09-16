@@ -487,9 +487,41 @@ static bool canProfitablyUnrollMultiExitLoop(
                                       PreserveLCSSA, UseEpilogRemainder) &&
          "Should be safe to unroll before checking profitability!");
 #endif
+
   // Priority goes to UnrollRuntimeMultiExit if it's supplied.
-  return UnrollRuntimeMultiExit.getNumOccurrences() ? UnrollRuntimeMultiExit
-                                                    : false;
+  if (UnrollRuntimeMultiExit.getNumOccurrences())
+    return UnrollRuntimeMultiExit;
+
+  // The main pain point with multi-exit loop unrolling is that once unrolled,
+  // we will not be able to merge all blocks into a straight line code.
+  // There are branches within the unrolled loop that go to the OtherExits.
+  // The second point is the increase in code size, but this is true
+  // irrespective of multiple exits.
+
+  // Note: Both the heuristics below are coarse grained. We are essentially
+  // enabling unrolling of loops that have a single side exit other than the
+  // normal LatchExit (i.e. exiting into a deoptimize block).
+  // The heuristics considered are:
+  // 1. low number of branches in the unrolled version.
+  // 2. high predictability of these extra branches.
+  // We avoid unrolling loops that have more than two exiting blocks. This
+  // limits the total number of branches in the unrolled loop to be atmost
+  // the unroll factor (since one of the exiting blocks is the latch block).
+  SmallVector<BasicBlock*, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  if (ExitingBlocks.size() > 2)
+    return false;
+
+  // The second heuristic is that L has one exit other than the latchexit and
+  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
+  // taken, which also implies the branch leading to the deoptimize block is
+  // highly predictable.
+  return (OtherExits.size() == 1 &&
+          OtherExits[0]->getTerminatingDeoptimizeCall());
+  // TODO: These can be fine-tuned further to consider code size or deopt states
+  // that are captured by the deoptimize exit block.
+  // Also, we can extend this to support more cases, if we actually
+  // know of kinds of multiexit loops that would benefit from unrolling.
 }
 
 /// Insert code in the prolog/epilog code when unrolling a loop with a
@@ -782,11 +814,15 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
      // Add the incoming values from the remainder code to the end of the phi
      // node.
      for (unsigned i =0; i < oldNumOperands; i++){
-       Value *newVal = VMap[Phi->getIncomingValue(i)];
+       Value *newVal = VMap.lookup(Phi->getIncomingValue(i));
        // newVal can be a constant or derived from values outside the loop, and
-       // hence need not have a VMap value.
-       if (!newVal)
+       // hence need not have a VMap value. Also, since lookup already generated
+       // a default "null" VMap entry for this value, we need to populate that
+       // VMap entry correctly, with the mapped entry being itself.
+       if (!newVal) {
          newVal = Phi->getIncomingValue(i);
+         VMap[Phi->getIncomingValue(i)] = Phi->getIncomingValue(i);
+       }
        Phi->addIncoming(newVal,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }

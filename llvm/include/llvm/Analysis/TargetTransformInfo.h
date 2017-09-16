@@ -764,7 +764,7 @@ public:
   ///
   /// Pairwise:
   ///  (v0, v1, v2, v3)
-  ///  ((v0+v1), (v2, v3), undef, undef)
+  ///  ((v0+v1), (v2+v3), undef, undef)
   /// Split:
   ///  (v0, v1, v2, v3)
   ///  ((v0+v2), (v1+v3), undef, undef)

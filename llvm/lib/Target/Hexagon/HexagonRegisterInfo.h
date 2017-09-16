@@ -29,7 +29,7 @@ namespace Hexagon {
 
 class HexagonRegisterInfo : public HexagonGenRegisterInfo {
 public:
-  HexagonRegisterInfo();
+  HexagonRegisterInfo(unsigned HwMode);
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF)

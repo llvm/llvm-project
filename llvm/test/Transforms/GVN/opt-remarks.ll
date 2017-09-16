@@ -11,7 +11,7 @@
 ; CHECK:      remark: <unknown>:0:0: load of type i32 eliminated{{$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: load of type i32 eliminated{{$}}
 ; CHECK-NEXT: remark: <unknown>:0:0: load of type i32 eliminated{{$}}
-; CHECK-NOT:  remark:
+; CHECK-NEXT: remark: /tmp/s.c:3:3: load of type i32 not eliminated
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            gvn
