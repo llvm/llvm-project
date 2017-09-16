@@ -568,8 +568,17 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
 
-  // This relocation would require the dynamic linker to write a value to read
-  // only memory. We can hack around it if we are producing an executable and
+  // If we got here we know that this relocation would require the dynamic
+  // linker to write a value to read only memory.
+
+  // If the relocation is to a weak undef, give up on it and produce a
+  // non preemptible 0.
+  if (Body.isUndefWeak()) {
+    Body.IsPreemptible = false;
+    return Expr;
+  }
+
+  // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     error("can't create dynamic relocation " + toString(Type) + " against " +

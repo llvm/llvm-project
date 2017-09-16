@@ -138,8 +138,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
   if (Function->isExternallyVisible() ||
       !Result.SourceManager->isInMainFile(Function->getLocation()) ||
       !Indexer->getOtherRefs(Function).empty() || isOverrideMethod(Function)) {
-    SourceRange RemovalRange(Param->getLocation(),
-                             Param->DeclaratorDecl::getSourceRange().getEnd());
+    SourceRange RemovalRange(Param->getLocation());
     // Note: We always add a space before the '/*' to not accidentally create a
     // '*/*' for pointer types, which doesn't start a comment. clang-format will
     // clean this up afterwards.

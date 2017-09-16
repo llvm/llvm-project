@@ -1470,6 +1470,53 @@ bool CXXRecordDecl::isAnyDestructorNoReturn() const {
   return false;
 }
 
+bool CXXRecordDecl::isInterfaceLike() const {
+  assert(hasDefinition() && "checking for interface-like without a definition");
+  // All __interfaces are inheritently interface-like.
+  if (isInterface())
+    return true;
+
+  // Interface-like types cannot have a user declared constructor, destructor,
+  // friends, VBases, conversion functions, or fields.  Additionally, lambdas
+  // cannot be interface types.
+  if (isLambda() || hasUserDeclaredConstructor() ||
+      hasUserDeclaredDestructor() || !field_empty() || hasFriends() ||
+      getNumVBases() > 0 || conversion_end() - conversion_begin() > 0)
+    return false;
+
+  // No interface-like type can have a method with a definition.
+  for (const auto *const Method : methods())
+    if (Method->isDefined())
+      return false;
+
+  // Check "Special" types.
+  const auto *Uuid = getAttr<UuidAttr>();
+  if (Uuid && isStruct() && getDeclContext()->isTranslationUnit() &&
+      ((getName() == "IUnknown" &&
+        Uuid->getGuid() == "00000000-0000-0000-C000-000000000046") ||
+       (getName() == "IDispatch" &&
+        Uuid->getGuid() == "00020400-0000-0000-C000-000000000046"))) {
+    if (getNumBases() > 0)
+      return false;
+    return true;
+  }
+
+  // FIXME: Any access specifiers is supposed to make this no longer interface
+  // like.
+
+  // If this isn't a 'special' type, it must have a single interface-like base.
+  if (getNumBases() != 1)
+    return false;
+
+  const auto BaseSpec = *bases_begin();
+  if (BaseSpec.isVirtual() || BaseSpec.getAccessSpecifier() != AS_public)
+    return false;
+  const auto *Base = BaseSpec.getType()->getAsCXXRecordDecl();
+  if (Base->isInterface() || !Base->isInterfaceLike())
+    return false;
+  return true;
+}
+
 void CXXRecordDecl::completeDefinition() {
   completeDefinition(nullptr);
 }
