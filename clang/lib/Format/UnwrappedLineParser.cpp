@@ -1039,7 +1039,12 @@ void UnwrappedLineParser::parseStructuralElement() {
     if (FormatTok->Tok.is(tok::string_literal)) {
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
-        parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/false);
+        if (Style.BraceWrapping.AfterExternBlock) {
+          addUnwrappedLine();
+          parseBlock(/*MustBeDeclaration=*/true);
+        } else {
+          parseBlock(/*MustBeDeclaration=*/true, /*AddLevel=*/false);
+        }
         addUnwrappedLine();
         return;
       }

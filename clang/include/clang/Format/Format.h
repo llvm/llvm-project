@@ -681,6 +681,20 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// \brief Wrap extern blocks.
+    /// \code
+    ///   true:
+    ///   extern "C"
+    ///   {
+    ///     int foo();
+    ///   }
+    ///
+    ///   false:
+    ///   extern "C" {
+    ///   int foo();
+    ///   }
+    /// \endcode
+    bool AfterExternBlock;
     /// \brief Wrap before ``catch``.
     /// \code
     ///   true:
