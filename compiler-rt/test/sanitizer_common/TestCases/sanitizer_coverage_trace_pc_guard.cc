@@ -1,9 +1,10 @@
 // Tests trace pc guard coverage collection.
-//
+
 // REQUIRES: has_sancovcc,stable-runtime
 // UNSUPPORTED: ubsan,i386-darwin
 // XFAIL: tsan,powerpc64,s390x,mips
-//
+// XFAIL: android && i386-target-arch && asan
+
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR
 // RUN: mkdir -p $DIR
@@ -15,9 +16,7 @@
 // RUN: %env_tool_opts=coverage=0 %t 2>&1 | FileCheck --check-prefix=CHECK-NOCOV %s
 // RUN: rm -rf $DIR
 // Make some room to stabilize line numbers
-//
-//
-//
+
 #include <stdio.h>
 
 int foo() {

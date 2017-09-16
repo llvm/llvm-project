@@ -29,7 +29,7 @@
 #define PT_TRACE_ME PTRACE_TRACEME
 #endif
 
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 21
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 15
 #include <linux/personality.h>
 #elif defined(__linux__)
 #include <sys/personality.h>

@@ -1,5 +1,7 @@
 // RUN: %clangxx -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 
+// XFAIL: android
+
 #include <stdio.h>
 
 // getauxval() used instead of sysconf() in GetPageSize() is defined starting
