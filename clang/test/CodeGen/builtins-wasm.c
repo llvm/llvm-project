@@ -20,9 +20,3 @@ void f3(unsigned int tag, void *obj) {
 // WEBASSEMBLY32: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})
 // WEBASSEMBLY64: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})
 }
-
-void f4() {
-  return __builtin_wasm_rethrow();
-// WEBASSEMBLY32: call void @llvm.wasm.rethrow()
-// WEBASSEMBLY64: call void @llvm.wasm.rethrow()
-}

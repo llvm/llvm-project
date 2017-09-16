@@ -208,7 +208,7 @@ unsigned CounterToFeature(T Counter) {
     return Bit;
 }
 
-template <class Callback>  // bool Callback(size_t Feature)
+template <class Callback>  // void Callback(size_t Feature)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 __attribute__((noinline))
 void TracePC::CollectFeatures(Callback HandleFeature) const {
