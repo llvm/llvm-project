@@ -501,7 +501,6 @@ private:
     DK_CV_DEF_RANGE,
     DK_CV_STRINGTABLE,
     DK_CV_FILECHECKSUMS,
-    DK_CV_FILECHECKSUM_OFFSET,
     DK_CFI_SECTIONS,
     DK_CFI_STARTPROC,
     DK_CFI_ENDPROC,
@@ -577,7 +576,6 @@ private:
   bool parseDirectiveCVDefRange();
   bool parseDirectiveCVStringTable();
   bool parseDirectiveCVFileChecksums();
-  bool parseDirectiveCVFileChecksumOffset();
 
   // .cfi directives
   bool parseDirectiveCFIRegister(SMLoc DirectiveLoc);
@@ -2032,8 +2030,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCVStringTable();
     case DK_CV_FILECHECKSUMS:
       return parseDirectiveCVFileChecksums();
-    case DK_CV_FILECHECKSUM_OFFSET:
-      return parseDirectiveCVFileChecksumOffset();
     case DK_CFI_SECTIONS:
       return parseDirectiveCFISections();
     case DK_CFI_STARTPROC:
@@ -3461,34 +3457,25 @@ bool AsmParser::parseDirectiveStabs() {
 }
 
 /// parseDirectiveCVFile
-/// ::= .cv_file number filename [checksum] [checksumkind]
+/// ::= .cv_file number filename
 bool AsmParser::parseDirectiveCVFile() {
   SMLoc FileNumberLoc = getTok().getLoc();
   int64_t FileNumber;
   std::string Filename;
-  std::string Checksum;
-  int64_t ChecksumKind = 0;
 
   if (parseIntToken(FileNumber,
                     "expected file number in '.cv_file' directive") ||
       check(FileNumber < 1, FileNumberLoc, "file number less than one") ||
       check(getTok().isNot(AsmToken::String),
             "unexpected token in '.cv_file' directive") ||
-      parseEscapedString(Filename))
+      // Usually directory and filename are together, otherwise just
+      // directory. Allow the strings to have escaped octal character sequence.
+      parseEscapedString(Filename) ||
+      parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.cv_file' directive"))
     return true;
-  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
-    if (check(getTok().isNot(AsmToken::String),
-              "unexpected token in '.cv_file' directive") ||
-        parseEscapedString(Checksum) ||
-        parseIntToken(ChecksumKind,
-                      "expected checksum kind in '.cv_file' directive") ||
-        parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in '.cv_file' directive"))
-      return true;
-  }
 
-  if (!getStreamer().EmitCVFileDirective(FileNumber, Filename, Checksum,
-                                         static_cast<uint8_t>(ChecksumKind)))
+  if (!getStreamer().EmitCVFileDirective(FileNumber, Filename))
     return Error(FileNumberLoc, "file number already allocated");
 
   return false;
@@ -3764,18 +3751,6 @@ bool AsmParser::parseDirectiveCVStringTable() {
 /// ::= .cv_filechecksums
 bool AsmParser::parseDirectiveCVFileChecksums() {
   getStreamer().EmitCVFileChecksumsDirective();
-  return false;
-}
-
-/// parseDirectiveCVFileChecksumOffset
-/// ::= .cv_filechecksumoffset fileno
-bool AsmParser::parseDirectiveCVFileChecksumOffset() {
-  int64_t FileNo;
-  if (parseIntToken(FileNo, "expected identifier in directive"))
-    return true;
-  if (parseToken(AsmToken::EndOfStatement, "Expected End of Statement"))
-    return true;
-  getStreamer().EmitCVFileChecksumOffsetDirective(FileNo);
   return false;
 }
 
@@ -5161,7 +5136,6 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cv_def_range"] = DK_CV_DEF_RANGE;
   DirectiveKindMap[".cv_stringtable"] = DK_CV_STRINGTABLE;
   DirectiveKindMap[".cv_filechecksums"] = DK_CV_FILECHECKSUMS;
-  DirectiveKindMap[".cv_filechecksumoffset"] = DK_CV_FILECHECKSUM_OFFSET;
   DirectiveKindMap[".sleb128"] = DK_SLEB128;
   DirectiveKindMap[".uleb128"] = DK_ULEB128;
   DirectiveKindMap[".cfi_sections"] = DK_CFI_SECTIONS;

@@ -2408,26 +2408,36 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
   return MachineInstrBuilder(MF, MI);
 }
 
+/// Compute the new DIExpression to use with a DBG_VALUE for a spill slot.
+/// This prepends DW_OP_deref when spilling an indirect DBG_VALUE.
+static const DIExpression *computeExprForSpill(const MachineInstr &MI) {
+  assert(MI.getOperand(0).isReg() && "can't spill non-register");
+  assert(MI.getDebugVariable()->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
+         "Expected inlined-at fields to agree");
+
+  const DIExpression *Expr = MI.getDebugExpression();
+  if (MI.isIndirectDebugValue()) {
+    assert(MI.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
+    Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
+  }
+  return Expr;
+}
+
 MachineInstr *llvm::buildDbgValueForSpill(MachineBasicBlock &BB,
                                           MachineBasicBlock::iterator I,
                                           const MachineInstr &Orig,
                                           int FrameIndex) {
-  const MDNode *Var = Orig.getDebugVariable();
-  const auto *Expr = cast_or_null<DIExpression>(Orig.getDebugExpression());
-  bool IsIndirect = Orig.isIndirectDebugValue();
-  if (IsIndirect)
-    assert(Orig.getOperand(1).getImm() == 0 && "DBG_VALUE with nonzero offset");
-  DebugLoc DL = Orig.getDebugLoc();
-  assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
-         "Expected inlined-at fields to agree");
-  // If the DBG_VALUE already was a memory location, add an extra
-  // DW_OP_deref. Otherwise just turning this from a register into a
-  // memory/indirect location is sufficient.
-  if (IsIndirect)
-    Expr = DIExpression::prepend(Expr, DIExpression::WithDeref);
-  return BuildMI(BB, I, DL, Orig.getDesc())
+  const DIExpression *Expr = computeExprForSpill(Orig);
+  return BuildMI(BB, I, Orig.getDebugLoc(), Orig.getDesc())
       .addFrameIndex(FrameIndex)
       .addImm(0U)
-      .addMetadata(Var)
+      .addMetadata(Orig.getDebugVariable())
       .addMetadata(Expr);
+}
+
+void llvm::updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex) {
+  const DIExpression *Expr = computeExprForSpill(Orig);
+  Orig.getOperand(0).ChangeToFrameIndex(FrameIndex);
+  Orig.getOperand(1).ChangeToImmediate(0U);
+  Orig.getOperand(3).setMetadata(Expr);
 }

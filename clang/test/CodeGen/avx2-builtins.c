@@ -907,8 +907,8 @@ __m256i test_mm256_packs_epu32(__m256i a, __m256i b) {
 
 __m256i test_mm256_permute2x128_si256(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_permute2x128_si256
-  // CHECK: call <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 49)
-  return _mm256_permute2x128_si256(a, b, 0x31);
+  // CHECK: shufflevector <4 x i64> zeroinitializer, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  return _mm256_permute2x128_si256(a, b, 0x38);
 }
 
 __m256i test_mm256_permute4x64_epi64(__m256i a) {

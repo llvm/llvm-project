@@ -103,7 +103,7 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:     SubSectionType: FileChecksums (0xF4)
 ; CHECK:     FileChecksum {
 ; CHECK:       ChecksumSize: 0x0
-; CHECK:       ChecksumKind: MD5 (0x1)
+; CHECK:       ChecksumKind: None (0x0)
 ; CHECK:       ChecksumBytes: ()
 ; CHECK:     }
 ; CHECK:   ]

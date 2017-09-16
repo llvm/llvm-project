@@ -687,7 +687,7 @@ macro(add_llvm_executable name)
     # it forces Xcode to properly link the static library.
     list(APPEND ALL_FILES "${LLVM_MAIN_SRC_DIR}/cmake/dummy.cpp")
   endif()
-  
+
   if( EXCLUDE_FROM_ALL )
     add_executable(${name} EXCLUDE_FROM_ALL ${ALL_FILES})
   else()
@@ -1174,6 +1174,60 @@ function(configure_lit_site_cfg input output)
   endif()
 
   configure_file(${input} ${output} @ONLY)
+  get_filename_component(INPUT_DIR ${input} DIRECTORY)
+  if (EXISTS "${INPUT_DIR}/lit.cfg")
+    set(PYTHON_STATEMENT "map_config('${INPUT_DIR}/lit.cfg', '${output}')")
+    get_property(LLVM_LIT_CONFIG_MAP GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP)
+    set(LLVM_LIT_CONFIG_MAP "${LLVM_LIT_CONFIG_MAP}\n${PYTHON_STATEMENT}")
+    set_property(GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP ${LLVM_LIT_CONFIG_MAP})
+  endif()
+endfunction()
+
+function(get_llvm_lit_path base_dir file_name)
+  cmake_parse_arguments(ARG "ALLOW_EXTERNAL" "" "" ${ARGN})
+
+  if (ARG_ALLOW_EXTERNAL)
+    set (LLVM_EXTERNAL_LIT "" CACHE STRING "Command used to spawn lit")
+    if (NOT "${LLVM_EXTERNAL_LIT}" STREQUAL "")
+      if (EXISTS ${LLVM_EXTERNAL_LIT})
+        get_filename_component(LIT_FILE_NAME ${LLVM_EXTERNAL_LIT} NAME)
+        get_filename_component(LIT_BASE_DIR ${LLVM_EXTERNAL_LIT} DIRECTORY)
+        set(${file_name} ${LIT_FILE_NAME} PARENT_SCOPE)
+        set(${base_dir} ${LIT_BASE_DIR} PARENT_SCOPE)
+        return()
+      else()
+        message(WARN "LLVM_EXTERNAL_LIT set to ${LLVM_EXTERNAL_LIT}, but the path does not exist.")
+      endif()
+    endif()
+  endif()
+
+  set(lit_file_name "llvm-lit")
+  if (WIN32 AND NOT CYGWIN)
+    # llvm-lit needs suffix.py for multiprocess to find a main module.
+    set(lit_file_name "${lit_file_name}.py")
+  endif ()
+  set(${file_name} ${lit_file_name} PARENT_SCOPE)
+
+  get_property(LLVM_LIT_BASE_DIR GLOBAL PROPERTY LLVM_LIT_BASE_DIR)
+  if (NOT "${LLVM_LIT_BASE_DIR}" STREQUAL "")
+    set(${base_dir} ${LLVM_LIT_BASE_DIR} PARENT_SCOPE)
+  endif()
+
+  # Allow individual projects to provide an override
+  if (NOT "${LLVM_LIT_OUTPUT_DIR}" STREQUAL "")
+    set(LLVM_LIT_BASE_DIR ${LLVM_LIT_OUTPUT_DIR})
+  elseif(NOT "${LLVM_RUNTIME_OUTPUT_INTDIR}" STREQUAL "")
+    set(LLVM_LIT_BASE_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  else()
+    message(WARNING "Could not find suitable output location for llvm-lit."
+                    "Using default ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit")
+    set(LLVM_LIT_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
+
+  # Cache this so we don't have to do it again and have subsequent calls
+  # potentially disagree on the value.
+  set_property(GLOBAL PROPERTY LLVM_LIT_BASE_DIR ${LLVM_LIT_BASE_DIR})
+  set(${base_dir} ${LLVM_LIT_BASE_DIR} PARENT_SCOPE)
 endfunction()
 
 # A raw function to create a lit target. This is used to implement the testuite
@@ -1185,12 +1239,16 @@ function(add_lit_target target comment)
   if (NOT CMAKE_CFG_INTDIR STREQUAL ".")
     list(APPEND LIT_ARGS --param build_mode=${CMAKE_CFG_INTDIR})
   endif ()
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-    set (LIT_COMMAND "${PYTHON_EXECUTABLE};${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py"
-         CACHE STRING "Command used to spawn llvm-lit")
-  else()
-    find_program(LIT_COMMAND NAMES llvm-lit lit.py lit)
-  endif ()
+
+  # Get the path to the lit to *run* tests with.  This can be overriden by
+  # the user by specifying -DLLVM_EXTERNAL_LIT=<path-to-lit.py>
+  get_llvm_lit_path(
+    lit_base_dir
+    lit_file_name
+    ALLOW_EXTERNAL
+    )
+
+  set(LIT_COMMAND "${PYTHON_EXECUTABLE};${lit_base_dir}/${lit_file_name}")
   list(APPEND LIT_COMMAND ${LIT_ARGS})
   foreach(param ${ARG_PARAMS})
     list(APPEND LIT_COMMAND --param ${param})
@@ -1350,7 +1408,7 @@ function(add_llvm_tool_symlink link_name target)
   # magic. First we grab one of the types, and a type-specific path. Then from
   # the type-specific path we find the last occurrence of the type in the path,
   # and replace it with CMAKE_CFG_INTDIR. This allows the build step to be type
-  # agnostic again. 
+  # agnostic again.
   if(NOT ARG_OUTPUT_DIR)
     # If you're not overriding the OUTPUT_DIR, we can make the link relative in
     # the same directory.

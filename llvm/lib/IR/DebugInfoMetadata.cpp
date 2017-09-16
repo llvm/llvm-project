@@ -354,8 +354,6 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
-// FIXME: Implement this string-enum correspondence with a .def file and macros,
-// so that the association is explicit rather than implied.
 static const char *ChecksumKindName[DIFile::CSK_Last + 1] = {
   "CSK_None",
   "CSK_MD5",

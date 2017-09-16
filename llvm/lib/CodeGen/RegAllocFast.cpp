@@ -871,56 +871,40 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
 
     // Debug values are not allowed to change codegen in any way.
     if (MI.isDebugValue()) {
-      bool ScanDbgValue = true;
       MachineInstr *DebugMI = &MI;
-      while (ScanDbgValue) {
-        ScanDbgValue = false;
-        for (unsigned I = 0, E = DebugMI->getNumOperands(); I != E; ++I) {
-          MachineOperand &MO = DebugMI->getOperand(I);
-          if (!MO.isReg()) continue;
-          unsigned Reg = MO.getReg();
-          if (!TargetRegisterInfo::isVirtualRegister(Reg)) continue;
-          LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
-          if (LRI != LiveVirtRegs.end())
-            setPhysReg(*DebugMI, I, LRI->PhysReg);
-          else {
-            int SS = StackSlotForVirtReg[Reg];
-            if (SS == -1) {
-              // We can't allocate a physreg for a DebugValue, sorry!
-              DEBUG(dbgs() << "Unable to allocate vreg used by DBG_VALUE");
-              MO.setReg(0);
-            }
-            else {
-              // Modify DBG_VALUE now that the value is in a spill slot.
-              bool IsIndirect = DebugMI->isIndirectDebugValue();
-              if (IsIndirect)
-                assert(DebugMI->getOperand(1).getImm() == 0 &&
-                       "DBG_VALUE with nonzero offset");
-              const MDNode *Var = DebugMI->getDebugVariable();
-              const MDNode *Expr = DebugMI->getDebugExpression();
-              DebugLoc DL = DebugMI->getDebugLoc();
-              MachineBasicBlock *MBB = DebugMI->getParent();
-              assert(
-                  cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
-                  "Expected inlined-at fields to agree");
-              MachineInstr *NewDV = BuildMI(*MBB, MBB->erase(DebugMI), DL,
-                                            TII->get(TargetOpcode::DBG_VALUE))
-                                        .addFrameIndex(SS)
-                                        .addImm(0U)
-                                        .addMetadata(Var)
-                                        .addMetadata(Expr);
-              DEBUG(dbgs() << "Modifying debug info due to spill:"
-                           << "\t" << *NewDV);
-              // Scan NewDV operands from the beginning.
-              DebugMI = NewDV;
-              ScanDbgValue = true;
-              break;
-            }
-          }
-          LiveDbgValueMap[Reg].push_back(DebugMI);
+      MachineOperand &MO = DebugMI->getOperand(0);
+
+      // Ignore DBG_VALUEs that aren't based on virtual registers. These are
+      // mostly constants and frame indices.
+      if (!MO.isReg())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(Reg))
+        continue;
+
+      // See if this virtual register has already been allocated to a physical
+      // register or spilled to a stack slot.
+      LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
+      if (LRI != LiveVirtRegs.end())
+        setPhysReg(*DebugMI, 0, LRI->PhysReg);
+      else {
+        int SS = StackSlotForVirtReg[Reg];
+        if (SS != -1) {
+          // Modify DBG_VALUE now that the value is in a spill slot.
+          updateDbgValueForSpill(*DebugMI, SS);
+          DEBUG(dbgs() << "Modifying debug info due to spill:"
+                       << "\t" << *DebugMI);
+          continue;
         }
+
+        // We can't allocate a physreg for a DebugValue, sorry!
+        DEBUG(dbgs() << "Unable to allocate vreg used by DBG_VALUE");
+        MO.setReg(0);
       }
-      // Next instruction.
+
+      // If Reg hasn't been spilled, put this DBG_VALUE in LiveDbgValueMap so
+      // that future spills of Reg will have DBG_VALUEs.
+      LiveDbgValueMap[Reg].push_back(DebugMI);
       continue;
     }
 

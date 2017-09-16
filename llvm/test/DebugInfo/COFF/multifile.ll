@@ -18,10 +18,10 @@
 
 ; X86-LABEL: _f:
 ; X86:      # BB
-; X86:      .cv_file 1 "D:\\one.c" "70b51f534d80639d033ae92c6a856af6" 1
+; X86:      .cv_file 1 "D:\\one.c"
 ; X86:      .cv_loc 0 1 1 0 is_stmt 0 # one.c:1:0
 ; X86:      calll   _g
-; X86:      .cv_file 2 "D:\\two.c" "70b51f534d80639d033ae92c6a856af6" 1
+; X86:      .cv_file 2 "D:\\two.c"
 ; X86:      .cv_loc 0 2 2 0 # two.c:2:0
 ; X86:      calll   _g
 ; X86:      .cv_loc 0 1 7 0 # one.c:7:0
@@ -51,28 +51,6 @@
 ; OBJ32-NEXT:   ProcEnd {
 ; OBJ32:        }
 ; OBJ32-NEXT: ]
-; OBJ32:	  Subsection [
-; OBJ32:        SubSectionType: FileChecksums (0xF4)
-; OBJ32-NEXT:   SubSectionSize: 0x50
-; OBJ32-NEXT:   FileChecksum {
-; OBJ32-NEXT:     Filename: D:\one.c (0x1)
-; OBJ32-NEXT:     ChecksumSize: 0x20
-; OBJ32-NEXT:     ChecksumKind: MD5 (0x1)
-; OBJ32-NEXT:     ChecksumBytes (
-; OBJ32-NEXT:       0000: 37306235 31663533 34643830 36333964  |70b51f534d80639d|
-; OBJ32-NEXT:       0010: 30333361 65393263 36613835 36616636  |033ae92c6a856af6|
-; OBJ32-NEXT:     )
-; OBJ32-NEXT:   }
-; OBJ32-NEXT:   FileChecksum {
-; OBJ32-NEXT:     Filename: D:\two.c (0xA)
-; OBJ32-NEXT:     ChecksumSize: 0x20
-; OBJ32-NEXT:     ChecksumKind: MD5 (0x1)
-; OBJ32-NEXT:     ChecksumBytes (
-; OBJ32-NEXT:       0000: 37306235 31663533 34643830 36333964  |70b51f534d80639d|
-; OBJ32-NEXT:       0010: 30333361 65393263 36613835 36616636  |033ae92c6a856af6|
-; OBJ32-NEXT:     )
-; OBJ32-NEXT:   }
-; OBJ32-NEXT:  ]
 ; OBJ32:      FunctionLineTable [
 ; OBJ32-NEXT:   Name: _f
 ; OBJ32-NEXT:   Flags: 0x0
@@ -110,14 +88,14 @@
 
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:{{$}}
-; X64:      .cv_file 1 "D:\\input.c" "70b51f534d80639d033ae92c6a856af6" 1
+; X64:      .cv_file 1 "D:\\input.c"
 ; X64:      .cv_loc 0 1 3 0 is_stmt 0 # input.c:3:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
-; X64:      .cv_file 2 "D:\\one.c" "70b51f534d80639d033ae92c6a856af6" 1
+; X64:      .cv_file 2 "D:\\one.c"
 ; X64:      .cv_loc 0 2 1 0 # one.c:1:0
 ; X64:      callq   g
-; X64:      .cv_file 3 "D:\\two.c" "70b51f534d80639d033ae92c6a856af6" 1
+; X64:      .cv_file 3 "D:\\two.c"
 ; X64:      .cv_loc 0 3 2 0 # two.c:2:0
 ; X64:      callq   g
 ; X64:      .cv_loc 0 2 7 0 # one.c:7:0
@@ -145,37 +123,6 @@
 ; OBJ64-NEXT:   ProcEnd {
 ; OBJ64:        }
 ; OBJ64-NEXT: ]
-; OBJ64:	  Subsection [
-; OBJ64:        SubSectionType: FileChecksums (0xF4)
-; OBJ64-NEXT:   SubSectionSize: 0x78
-; OBJ64-NEXT:   FileChecksum {
-; OBJ64-NEXT:     Filename: D:\input.c (0x1)
-; OBJ64-NEXT:     ChecksumSize: 0x20
-; OBJ64-NEXT:     ChecksumKind: MD5 (0x1)
-; OBJ64-NEXT:     ChecksumBytes (
-; OBJ64-NEXT:       0000: 37306235 31663533 34643830 36333964  |70b51f534d80639d|
-; OBJ64-NEXT:       0010: 30333361 65393263 36613835 36616636  |033ae92c6a856af6|
-; OBJ64-NEXT:     )
-; OBJ64-NEXT:   }
-; OBJ64-NEXT:   FileChecksum {
-; OBJ64-NEXT:     Filename: D:\one.c (0xC)
-; OBJ64-NEXT:     ChecksumSize: 0x20
-; OBJ64-NEXT:     ChecksumKind: MD5 (0x1)
-; OBJ64-NEXT:     ChecksumBytes (
-; OBJ64-NEXT:       0000: 37306235 31663533 34643830 36333964  |70b51f534d80639d|
-; OBJ64-NEXT:       0010: 30333361 65393263 36613835 36616636  |033ae92c6a856af6|
-; OBJ64-NEXT:     )
-; OBJ64-NEXT:   }
-; OBJ64-NEXT:   FileChecksum {
-; OBJ64-NEXT:     Filename: D:\two.c (0x15)
-; OBJ64-NEXT:     ChecksumSize: 0x20
-; OBJ64-NEXT:     ChecksumKind: MD5 (0x1)
-; OBJ64-NEXT:     ChecksumBytes (
-; OBJ64-NEXT:       0000: 37306235 31663533 34643830 36333964  |70b51f534d80639d|
-; OBJ64-NEXT:       0010: 30333361 65393263 36613835 36616636  |033ae92c6a856af6|
-; OBJ64-NEXT:     )
-; OBJ64-NEXT:   }
-; OBJ64-NEXT:  ]
 ; OBJ64:      FunctionLineTable [
 ; OBJ64-NEXT:   Name: f
 ; OBJ64-NEXT:   Flags: 0x0
@@ -238,11 +185,11 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !llvm.ident = !{!11}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
-!1 = !DIFile(filename: "<unknown>", directory: "D:\5C", checksumkind: CSK_MD5, checksum:"70b51f534d80639d033ae92c6a856af6")
+!1 = !DIFile(filename: "<unknown>", directory: "D:\5C")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "f", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !2)
-!5 = !DIFile(filename: "input.c", directory: "D:\5C", checksumkind: CSK_MD5, checksum:"70b51f534d80639d033ae92c6a856af6")
-!6 = !DIFile(filename: "input.c", directory: "D:C", checksumkind: CSK_MD5, checksum:"70b51f534d80639d033ae92c6a856af6")
+!5 = !DIFile(filename: "input.c", directory: "D:\5C")
+!6 = !DIFile(filename: "input.c", directory: "D:C")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !{i32 2, !"CodeView", i32 1}
@@ -250,9 +197,9 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 !11 = !{!"clang version 3.5 "}
 !12 = !DILocation(line: 1, scope: !13)
 !13 = !DILexicalBlockFile(discriminator: 0, file: !14, scope: !4)
-!14 = !DIFile(filename: "one.c", directory: "D:\5C", checksumkind: CSK_MD5, checksum:"70b51f534d80639d033ae92c6a856af6")
+!14 = !DIFile(filename: "one.c", directory: "D:\5C")
 !15 = !DILocation(line: 2, scope: !16)
 !16 = !DILexicalBlockFile(discriminator: 0, file: !17, scope: !4)
-!17 = !DIFile(filename: "two.c", directory: "D:\5C", checksumkind: CSK_MD5, checksum:"70b51f534d80639d033ae92c6a856af6")
+!17 = !DIFile(filename: "two.c", directory: "D:\5C")
 !18 = !DILocation(line: 7, scope: !13)
 !19 = !DILocation(line: 8, scope: !13)
