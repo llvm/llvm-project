@@ -62,12 +62,14 @@ if (COMPILER_RT_STANDALONE_BUILD)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+  set(LLVM_LIT_OUTPUT_DIR "${COMPILER_RT_EXEC_OUTPUT_DIR}")
 endif()
 
 construct_compiler_rt_default_triple()
 if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" STREQUAL "androideabi")
   set(ANDROID 1)
 endif()
+pythonize_bool(ANDROID)
 
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -94,14 +96,17 @@ include(config-ix)
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
-  set(use_cxxabi_default OFF)
-elseif(MSVC)
-  set(use_cxxabi_default OFF)
+  set(cxxabi_supported OFF)
 else()
-  set(use_cxxabi_default ON)
+  set(cxxabi_supported ON)
 endif()
 
-option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
+option(SANITIZER_ALLOW_CXXABI "Allow use of C++ ABI details in ubsan" ON)
+
+set(SANITIZE_CAN_USE_CXXABI OFF)
+if (cxxabi_supported AND SANITIZER_ALLOW_CXXABI)
+  set(SANITIZER_CAN_USE_CXXABI ON)
+endif()
 pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 set(SANITIZER_CXX_ABI "default" CACHE STRING
@@ -225,7 +230,7 @@ append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.
 if (NOT MSVC)
 
-  # Build with optimization, unless we're in debug mode. 
+  # Build with optimization, unless we're in debug mode.
   if(COMPILER_RT_DEBUG)
     list(APPEND SANITIZER_COMMON_CFLAGS -O0)
   else()
@@ -345,4 +350,15 @@ add_subdirectory(lib)
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
+  if (COMPILER_RT_STANDALONE_BUILD)
+    # If we have a valid source tree, generate llvm-lit into the bin directory.
+    # The user can still choose to have the check targets *use* a different lit
+    # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.
+    if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+      add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+    elseif(NOT EXISTS ${LLVM_EXTERNAL_LIT})
+      message(WARNING "Could not find LLVM source directory and LLVM_EXTERNAL_LIT does not"
+                       "point to a valid file.  You will not be able to run tests.")
+    endif()
+  endif()
 endif()

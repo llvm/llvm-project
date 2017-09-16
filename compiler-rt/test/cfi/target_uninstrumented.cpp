@@ -3,6 +3,7 @@
 // RUN: %t 2>&1 | FileCheck %s
 
 // REQUIRES: cxxabi
+// UNSUPPORTED: win32
 
 #include <stdio.h>
 #include <string.h>
