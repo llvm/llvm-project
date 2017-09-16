@@ -105,11 +105,15 @@ void MCStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
 
 /// EmitULEB128Value - Special case of EmitULEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.
-void MCStreamer::EmitULEB128IntValue(uint64_t Value, unsigned Padding) {
+void MCStreamer::EmitPaddedULEB128IntValue(uint64_t Value, unsigned PadTo) {
   SmallString<128> Tmp;
   raw_svector_ostream OSE(Tmp);
-  encodeULEB128(Value, OSE, Padding);
+  encodeULEB128(Value, OSE, PadTo);
   EmitBytes(OSE.str());
+}
+
+void MCStreamer::EmitULEB128IntValue(uint64_t Value) {
+  EmitPaddedULEB128IntValue(Value, 0);
 }
 
 /// EmitSLEB128Value - Special case of EmitSLEB128Value that avoids the
@@ -224,8 +228,11 @@ void MCStreamer::EnsureValidDwarfFrame() {
     report_fatal_error("No open frame");
 }
 
-bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
-  return getContext().getCVContext().addFile(FileNo, Filename);
+bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+                                     StringRef Checksum,
+                                     unsigned ChecksumKind) {
+  return getContext().getCVContext().addFile(*this, FileNo, Filename, Checksum,
+                                             ChecksumKind);
 }
 
 bool MCStreamer::EmitCVFuncIdDirective(unsigned FunctionId) {

@@ -48,12 +48,19 @@ void AsmPrinter::EmitSLEB128(int64_t Value, const char *Desc) const {
 }
 
 /// EmitULEB128 - emit the specified unsigned leb128 value.
-void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc,
-                             unsigned PadTo) const {
+void AsmPrinter::EmitPaddedULEB128(uint64_t Value, unsigned PadTo,
+                                   const char *Desc) const {
   if (isVerbose() && Desc)
     OutStreamer->AddComment(Desc);
 
-  OutStreamer->EmitULEB128IntValue(Value, PadTo);
+  OutStreamer->EmitPaddedULEB128IntValue(Value, PadTo);
+}
+
+void AsmPrinter::EmitULEB128(uint64_t Value, const char *Desc) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->EmitULEB128IntValue(Value);
 }
 
 static const char *DecodeDWARFEncoding(unsigned Encoding) {

@@ -1211,7 +1211,8 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
 
     // Check for release functions, the only kind of functions that we care
     // about that don't return a pointer type.
-    if (FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
+    if (FName.size() >= 2 &&
+        FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
       // Test for 'CGCF'.
       FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
 

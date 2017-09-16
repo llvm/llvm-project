@@ -578,7 +578,11 @@ public:
 
   /// \brief Special case of EmitULEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
-  void EmitULEB128IntValue(uint64_t Value, unsigned Padding = 0);
+  void EmitULEB128IntValue(uint64_t Value);
+
+  /// \brief Like EmitULEB128Value but pads the output to specific number of
+  /// bytes.
+  void EmitPaddedULEB128IntValue(uint64_t Value, unsigned PadTo);
 
   /// \brief Special case of EmitSLEB128Value that avoids the client having to
   /// pass in a MCExpr for constant integers.
@@ -729,10 +733,11 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
-  /// \brief Associate a filename with a specified logical file number.  This
-  /// implements the '.cv_file 4 "foo.c"' assembler directive. Returns true on
-  /// success.
-  virtual bool EmitCVFileDirective(unsigned FileNo, StringRef Filename);
+  /// Associate a filename with a specified logical file number, and also
+  /// specify that file's checksum information.  This implements the '.cv_file 4
+  /// "foo.c"' assembler directive. Returns true on success.
+  virtual bool EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+                                   StringRef Checksum, unsigned ChecksumKind);
 
   /// \brief Introduces a function id for use with .cv_loc.
   virtual bool EmitCVFuncIdDirective(unsigned FunctionId);
@@ -773,6 +778,10 @@ public:
 
   /// \brief This implements the CodeView '.cv_filechecksums' assembler directive.
   virtual void EmitCVFileChecksumsDirective() {}
+
+  /// This implements the CodeView '.cv_filechecksumoffset' assembler
+  /// directive.
+  virtual void EmitCVFileChecksumOffsetDirective(unsigned FileNo) {}
 
   /// Emit the absolute difference between two symbols.
   ///

@@ -301,7 +301,8 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, FS), CPUString(CPU),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      RegInfo(getHwMode()), TLInfo(TM, *this) {
   initializeEnvironment();
 
   // Initialize scheduling itinerary for the specified CPU.

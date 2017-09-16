@@ -281,10 +281,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   MCInst &MappedInst = static_cast <MCInst &>(Inst);
   const MCRegisterInfo *RI = OutStreamer->getContext().getRegisterInfo();
   const MachineFunction &MF = *MI.getParent()->getParent();
-  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
-  const auto &VecRC = HST.useHVXSglOps() ? Hexagon::VectorRegsRegClass
-                                         : Hexagon::VectorRegs128BRegClass;
-  unsigned VectorSize = HST.getRegisterInfo()->getSpillSize(VecRC);
+  auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  unsigned VectorSize = HRI.getRegSizeInBits(Hexagon::HvxVRRegClass) / 8;
 
   switch (Inst.getOpcode()) {
   default: return;
@@ -605,8 +603,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     return;
   }
 
-  case Hexagon::V6_vd0:
-  case Hexagon::V6_vd0_128B: {
+  case Hexagon::V6_vd0: {
     MCInst TmpInst;
     assert(Inst.getOperand(0).isReg() &&
            "Expected register and none was found");
@@ -626,13 +623,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vL32b_nt_pi:
   case Hexagon::V6_vL32b_nt_tmp_pi:
   case Hexagon::V6_vL32b_tmp_pi:
-  case Hexagon::V6_vL32Ub_pi_128B:
-  case Hexagon::V6_vL32b_cur_pi_128B:
-  case Hexagon::V6_vL32b_nt_cur_pi_128B:
-  case Hexagon::V6_vL32b_pi_128B:
-  case Hexagon::V6_vL32b_nt_pi_128B:
-  case Hexagon::V6_vL32b_nt_tmp_pi_128B:
-  case Hexagon::V6_vL32b_tmp_pi_128B:
     MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
     return;
 
@@ -643,13 +633,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vL32b_nt_cur_ai:
   case Hexagon::V6_vL32b_nt_tmp_ai:
   case Hexagon::V6_vL32b_tmp_ai:
-  case Hexagon::V6_vL32Ub_ai_128B:
-  case Hexagon::V6_vL32b_ai_128B:
-  case Hexagon::V6_vL32b_cur_ai_128B:
-  case Hexagon::V6_vL32b_nt_ai_128B:
-  case Hexagon::V6_vL32b_nt_cur_ai_128B:
-  case Hexagon::V6_vL32b_nt_tmp_ai_128B:
-  case Hexagon::V6_vL32b_tmp_ai_128B:
     MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
     return;
 
@@ -658,11 +641,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_nt_new_pi:
   case Hexagon::V6_vS32b_nt_pi:
   case Hexagon::V6_vS32b_pi:
-  case Hexagon::V6_vS32Ub_pi_128B:
-  case Hexagon::V6_vS32b_new_pi_128B:
-  case Hexagon::V6_vS32b_nt_new_pi_128B:
-  case Hexagon::V6_vS32b_nt_pi_128B:
-  case Hexagon::V6_vS32b_pi_128B:
     MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
     return;
 
@@ -671,11 +649,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_new_ai:
   case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vS32b_nt_new_ai:
-  case Hexagon::V6_vS32Ub_ai_128B:
-  case Hexagon::V6_vS32b_ai_128B:
-  case Hexagon::V6_vS32b_new_ai_128B:
-  case Hexagon::V6_vS32b_nt_ai_128B:
-  case Hexagon::V6_vS32b_nt_new_ai_128B:
     MappedInst = ScaleVectorOffset(Inst, 1, VectorSize, OutContext);
     return;
 
@@ -691,18 +664,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vL32b_pred_pi:
   case Hexagon::V6_vL32b_tmp_npred_pi:
   case Hexagon::V6_vL32b_tmp_pred_pi:
-  case Hexagon::V6_vL32b_cur_npred_pi_128B:
-  case Hexagon::V6_vL32b_cur_pred_pi_128B:
-  case Hexagon::V6_vL32b_npred_pi_128B:
-  case Hexagon::V6_vL32b_nt_cur_npred_pi_128B:
-  case Hexagon::V6_vL32b_nt_cur_pred_pi_128B:
-  case Hexagon::V6_vL32b_nt_npred_pi_128B:
-  case Hexagon::V6_vL32b_nt_pred_pi_128B:
-  case Hexagon::V6_vL32b_nt_tmp_npred_pi_128B:
-  case Hexagon::V6_vL32b_nt_tmp_pred_pi_128B:
-  case Hexagon::V6_vL32b_pred_pi_128B:
-  case Hexagon::V6_vL32b_tmp_npred_pi_128B:
-  case Hexagon::V6_vL32b_tmp_pred_pi_128B:
     MappedInst = ScaleVectorOffset(Inst, 4, VectorSize, OutContext);
     return;
 
@@ -718,18 +679,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vL32b_pred_ai:
   case Hexagon::V6_vL32b_tmp_npred_ai:
   case Hexagon::V6_vL32b_tmp_pred_ai:
-  case Hexagon::V6_vL32b_cur_npred_ai_128B:
-  case Hexagon::V6_vL32b_cur_pred_ai_128B:
-  case Hexagon::V6_vL32b_npred_ai_128B:
-  case Hexagon::V6_vL32b_nt_cur_npred_ai_128B:
-  case Hexagon::V6_vL32b_nt_cur_pred_ai_128B:
-  case Hexagon::V6_vL32b_nt_npred_ai_128B:
-  case Hexagon::V6_vL32b_nt_pred_ai_128B:
-  case Hexagon::V6_vL32b_nt_tmp_npred_ai_128B:
-  case Hexagon::V6_vL32b_nt_tmp_pred_ai_128B:
-  case Hexagon::V6_vL32b_pred_ai_128B:
-  case Hexagon::V6_vL32b_tmp_npred_ai_128B:
-  case Hexagon::V6_vL32b_tmp_pred_ai_128B:
     MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
     return;
 
@@ -747,20 +696,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_nt_qpred_pi:
   case Hexagon::V6_vS32b_pred_pi:
   case Hexagon::V6_vS32b_qpred_pi:
-  case Hexagon::V6_vS32Ub_npred_pi_128B:
-  case Hexagon::V6_vS32Ub_pred_pi_128B:
-  case Hexagon::V6_vS32b_new_npred_pi_128B:
-  case Hexagon::V6_vS32b_new_pred_pi_128B:
-  case Hexagon::V6_vS32b_npred_pi_128B:
-  case Hexagon::V6_vS32b_nqpred_pi_128B:
-  case Hexagon::V6_vS32b_nt_new_npred_pi_128B:
-  case Hexagon::V6_vS32b_nt_new_pred_pi_128B:
-  case Hexagon::V6_vS32b_nt_npred_pi_128B:
-  case Hexagon::V6_vS32b_nt_nqpred_pi_128B:
-  case Hexagon::V6_vS32b_nt_pred_pi_128B:
-  case Hexagon::V6_vS32b_nt_qpred_pi_128B:
-  case Hexagon::V6_vS32b_pred_pi_128B:
-  case Hexagon::V6_vS32b_qpred_pi_128B:
     MappedInst = ScaleVectorOffset(Inst, 3, VectorSize, OutContext);
     return;
 
@@ -778,20 +713,6 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_nt_qpred_ai:
   case Hexagon::V6_vS32b_pred_ai:
   case Hexagon::V6_vS32b_qpred_ai:
-  case Hexagon::V6_vS32Ub_npred_ai_128B:
-  case Hexagon::V6_vS32Ub_pred_ai_128B:
-  case Hexagon::V6_vS32b_new_npred_ai_128B:
-  case Hexagon::V6_vS32b_new_pred_ai_128B:
-  case Hexagon::V6_vS32b_npred_ai_128B:
-  case Hexagon::V6_vS32b_nqpred_ai_128B:
-  case Hexagon::V6_vS32b_nt_new_npred_ai_128B:
-  case Hexagon::V6_vS32b_nt_new_pred_ai_128B:
-  case Hexagon::V6_vS32b_nt_npred_ai_128B:
-  case Hexagon::V6_vS32b_nt_nqpred_ai_128B:
-  case Hexagon::V6_vS32b_nt_pred_ai_128B:
-  case Hexagon::V6_vS32b_nt_qpred_ai_128B:
-  case Hexagon::V6_vS32b_pred_ai_128B:
-  case Hexagon::V6_vS32b_qpred_ai_128B:
     MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
     return;
   }

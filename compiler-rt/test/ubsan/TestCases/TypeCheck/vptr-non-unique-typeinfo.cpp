@@ -3,6 +3,7 @@
 // RUN: %run %t
 //
 // REQUIRES: cxxabi
+// UNSUPPORTED: win32
 
 struct X {
   virtual ~X() {}

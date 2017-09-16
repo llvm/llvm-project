@@ -116,10 +116,9 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     } else if (MO.isExpr()) {
       const MCOperandInfo &Info = Desc.OpInfo[i];
       llvm::MCFixupKind FixupKind;
-      size_t PaddedSize;
+      size_t PaddedSize = 5;
       if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
-        PaddedSize = 5;
       } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
         PaddedSize = 10;
@@ -127,10 +126,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                  Info.OperandType == WebAssembly::OPERAND_OFFSET32 ||
                  Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
-        PaddedSize = 5;
       } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
         FixupKind = MCFixupKind(WebAssembly::fixup_code_global_index);
-        PaddedSize = 5;
       } else {
         llvm_unreachable("unexpected symbolic operand kind");
       }
@@ -138,7 +135,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           OS.tell() - Start, MO.getExpr(),
           FixupKind, MI.getLoc()));
       ++MCNumFixups;
-      encodeULEB128(0, OS, PaddedSize - 1);
+      encodeULEB128(0, OS, PaddedSize);
     } else {
       llvm_unreachable("unexpected operand kind");
     }

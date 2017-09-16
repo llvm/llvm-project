@@ -453,7 +453,7 @@ bool HexagonPacketizerList::useCallersSP(MachineInstr &MI) {
   unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI.getOperand(1);
   int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
-  if (HII->isValidOffset(Opc, NewOff)) {
+  if (HII->isValidOffset(Opc, NewOff, HRI)) {
     Off.setImm(NewOff);
     return true;
   }
@@ -801,7 +801,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 
   const MCInstrDesc& MCID = PI.getDesc();
   const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0, HRI, MF);
-  if (DisableVecDblNVStores && VecRC == &Hexagon::VecDblRegsRegClass)
+  if (DisableVecDblNVStores && VecRC == &Hexagon::HvxWRRegClass)
     return false;
 
   // predicate .new

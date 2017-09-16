@@ -153,30 +153,30 @@ else()
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
-    add_compiler_rt_runtime(clang_rt.ubsan_standalone
-      SHARED
-      ARCHS ${UBSAN_SUPPORTED_ARCH}
-      OBJECT_LIBS RTSanitizerCommon
-              RTSanitizerCommonLibc
-              RTUbsan
-      CFLAGS ${UBSAN_CFLAGS}
-      LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
-      LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
-      PARENT_TARGET ubsan)
-
-    add_compiler_rt_runtime(clang_rt.ubsan_standalone_cxx
-      SHARED
-      ARCHS ${UBSAN_SUPPORTED_ARCH}
-      OBJECT_LIBS RTSanitizerCommon
-              RTSanitizerCommonLibc
-              RTUbsan
-              RTUbsan_cxx
-      CFLAGS ${UBSAN_CXXFLAGS}
-      LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
-      LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
-      PARENT_TARGET ubsan)
-
     if (UNIX)
+      add_compiler_rt_runtime(clang_rt.ubsan_standalone
+        SHARED
+        ARCHS ${UBSAN_SUPPORTED_ARCH}
+        OBJECT_LIBS RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTUbsan
+        CFLAGS ${UBSAN_CFLAGS}
+        LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
+        LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
+        PARENT_TARGET ubsan)
+
+      add_compiler_rt_runtime(clang_rt.ubsan_standalone_cxx
+        SHARED
+        ARCHS ${UBSAN_SUPPORTED_ARCH}
+        OBJECT_LIBS RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTUbsan
+                RTUbsan_cxx
+        CFLAGS ${UBSAN_CXXFLAGS}
+        LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
+        LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
+        PARENT_TARGET ubsan)
+
       set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
       list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386)
       add_sanitizer_rt_symbols(clang_rt.ubsan_standalone

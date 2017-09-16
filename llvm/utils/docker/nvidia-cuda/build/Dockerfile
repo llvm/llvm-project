@@ -17,10 +17,15 @@ ARG buildscript_args
 
 # Install llvm build dependencies.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates cmake python2.7 \
+    apt-get install -y --no-install-recommends ca-certificates cmake python \
 		    subversion ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
+ADD checksums /tmp/checksums
+ADD scripts /tmp/scripts
+
+# Arguments passed to build_install_clang.sh.
+ARG buildscript_args
+
 # Run the build. Results of the build will be available as /tmp/clang.tar.gz.
-ADD scripts/build_install_llvm.sh /tmp
-RUN /tmp/build_install_llvm.sh ${buildscript_args}
+RUN /tmp/scripts/build_install_llvm.sh ${buildscript_args}

@@ -125,6 +125,10 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  if __GLIBC_PREREQ(2, 10)
 #    define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
 #  endif
+#elif defined(_LIBCPP_MSVCRT)
+#  if defined(_CRT_CONST_CORRECT_OVERLOADS)
+#    define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1
+#  endif
 #endif
 
 #if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)

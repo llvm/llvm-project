@@ -138,10 +138,10 @@ enum DIDumpType : unsigned {
 /// Container for dump options that control which debug information will be
 /// dumped.
 struct DIDumpOptions {
-    unsigned DumpType = DIDT_All;
-    bool DumpEH = false;
-    bool SummarizeTypes = false;
-    bool Verbose = false;
+  unsigned DumpType = DIDT_All;
+  bool DumpEH = false;
+  bool SummarizeTypes = false;
+  bool Verbose = false;
 };
 
 class DIContext {

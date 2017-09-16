@@ -3676,7 +3676,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         // 2) There is a static variable with the  OriginalGUID identical
         // to the GUID of the library function in 1);
         // When this happens, the logic for SamplePGO kicks in and
-        // the static varible in 2) will be found, which needs to be
+        // the static variable in 2) will be found, which needs to be
         // filtered out.
         auto *GVSum = Index.getGlobalValueSummary(GUID, false);
         if (GVSum &&

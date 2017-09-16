@@ -241,6 +241,10 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   case MVT::v32i16:
   case MVT::v16i32:
   case MVT::v8i64:
+  case MVT::v128i8:
+  case MVT::v64i16:
+  case MVT::v32i32:
+  case MVT::v16i64:
     if (isAlignedMemNode(LD)) {
       if (LD->isNonTemporal())
         Opcode = IsValidInc ? Hexagon::V6_vL32b_nt_pi : Hexagon::V6_vL32b_nt_ai;
@@ -248,23 +252,6 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
         Opcode = IsValidInc ? Hexagon::V6_vL32b_pi : Hexagon::V6_vL32b_ai;
     } else {
       Opcode = IsValidInc ? Hexagon::V6_vL32Ub_pi : Hexagon::V6_vL32Ub_ai;
-    }
-    break;
-  // 128B
-  case MVT::v128i8:
-  case MVT::v64i16:
-  case MVT::v32i32:
-  case MVT::v16i64:
-    if (isAlignedMemNode(LD)) {
-      if (LD->isNonTemporal())
-        Opcode = IsValidInc ? Hexagon::V6_vL32b_nt_pi_128B
-                            : Hexagon::V6_vL32b_nt_ai_128B;
-      else
-        Opcode = IsValidInc ? Hexagon::V6_vL32b_pi_128B
-                            : Hexagon::V6_vL32b_ai_128B;
-    } else {
-      Opcode = IsValidInc ? Hexagon::V6_vL32Ub_pi_128B
-                          : Hexagon::V6_vL32Ub_ai_128B;
     }
     break;
   default:
@@ -533,11 +520,14 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
   case MVT::i64:
     Opcode = IsValidInc ? Hexagon::S2_storerd_pi : Hexagon::S2_storerd_io;
     break;
-  // 64B
   case MVT::v64i8:
   case MVT::v32i16:
   case MVT::v16i32:
   case MVT::v8i64:
+  case MVT::v128i8:
+  case MVT::v64i16:
+  case MVT::v32i32:
+  case MVT::v16i64:
     if (isAlignedMemNode(ST)) {
       if (ST->isNonTemporal())
         Opcode = IsValidInc ? Hexagon::V6_vS32b_nt_pi : Hexagon::V6_vS32b_nt_ai;
@@ -545,23 +535,6 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
         Opcode = IsValidInc ? Hexagon::V6_vS32b_pi : Hexagon::V6_vS32b_ai;
     } else {
       Opcode = IsValidInc ? Hexagon::V6_vS32Ub_pi : Hexagon::V6_vS32Ub_ai;
-    }
-    break;
-  // 128B
-  case MVT::v128i8:
-  case MVT::v64i16:
-  case MVT::v32i32:
-  case MVT::v16i64:
-    if (isAlignedMemNode(ST)) {
-      if (ST->isNonTemporal())
-        Opcode = IsValidInc ? Hexagon::V6_vS32b_nt_pi_128B
-                            : Hexagon::V6_vS32b_nt_ai_128B;
-      else
-        Opcode = IsValidInc ? Hexagon::V6_vS32b_pi_128B
-                            : Hexagon::V6_vS32b_ai_128B;
-    } else {
-      Opcode = IsValidInc ? Hexagon::V6_vS32Ub_pi_128B
-                          : Hexagon::V6_vS32Ub_ai_128B;
     }
     break;
   default:
