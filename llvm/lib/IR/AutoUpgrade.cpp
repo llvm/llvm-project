@@ -83,6 +83,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx2.pcmpgt.") || // Added in 3.1
       Name.startswith("avx512.mask.pcmpeq.") || // Added in 3.9
       Name.startswith("avx512.mask.pcmpgt.") || // Added in 3.9
+      Name.startswith("avx.vperm2f128.") || // Added in 6.0
+      Name == "avx2.vperm2i128" || // Added in 6.0
       Name == "sse.add.ss" || // Added in 4.0
       Name == "sse2.add.sd" || // Added in 4.0
       Name == "sse.sub.ss" || // Added in 4.0
@@ -1426,6 +1428,42 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 4)
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
+    } else if (IsX86 && (Name.startswith("avx.vperm2f128.") ||
+                         Name == "avx2.vperm2i128")) {
+      // The immediate permute control byte looks like this:
+      //    [1:0] - select 128 bits from sources for low half of destination
+      //    [2]   - ignore
+      //    [3]   - zero low half of destination
+      //    [5:4] - select 128 bits from sources for high half of destination
+      //    [6]   - ignore
+      //    [7]   - zero high half of destination
+
+      uint8_t Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+
+      unsigned NumElts = CI->getType()->getVectorNumElements();
+      unsigned HalfSize = NumElts / 2;
+      SmallVector<uint32_t, 8> ShuffleMask(NumElts);
+
+      // Determine which operand(s) are actually in use for this instruction.
+      Value *V0 = (Imm & 0x02) ? CI->getArgOperand(1) : CI->getArgOperand(0);
+      Value *V1 = (Imm & 0x20) ? CI->getArgOperand(1) : CI->getArgOperand(0);
+
+      // If needed, replace operands based on zero mask.
+      V0 = (Imm & 0x08) ? ConstantAggregateZero::get(CI->getType()) : V0;
+      V1 = (Imm & 0x80) ? ConstantAggregateZero::get(CI->getType()) : V1;
+
+      // Permute low half of result.
+      unsigned StartIndex = (Imm & 0x01) ? HalfSize : 0;
+      for (unsigned i = 0; i < HalfSize; ++i)
+        ShuffleMask[i] = StartIndex + i;
+
+      // Permute high half of result.
+      StartIndex = (Imm & 0x10) ? HalfSize : 0;
+      for (unsigned i = 0; i < HalfSize; ++i)
+        ShuffleMask[i + HalfSize] = NumElts + StartIndex + i;
+
+      Rep = Builder.CreateShuffleVector(V0, V1, ShuffleMask);
+
     } else if (IsX86 && (Name.startswith("avx.vpermil.") ||
                          Name == "sse2.pshuf.d" ||
                          Name.startswith("avx512.mask.vpermil.p") ||
@@ -2358,6 +2396,24 @@ bool llvm::UpgradeModuleFlags(Module &M) {
               ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Max)),
               MDString::get(M.getContext(), ID->getString()),
               Op->getOperand(2)};
+          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
+    // Upgrade Objective-C Image Info Section. Removed the whitespce in the
+    // section name so that llvm-lto will not complain about mismatching
+    // module flags that is functionally the same.
+    if (ID->getString() == "Objective-C Image Info Section") {
+      if (auto *Value = dyn_cast_or_null<MDString>(Op->getOperand(2))) {
+        SmallVector<StringRef, 4> ValueComp;
+        Value->getString().split(ValueComp, " ");
+        if (ValueComp.size() != 1) {
+          std::string NewValue;
+          for (auto &S : ValueComp)
+            NewValue += S.str();
+          Metadata *Ops[3] = {Op->getOperand(0), Op->getOperand(1),
+                              MDString::get(M.getContext(), NewValue)};
           ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
           Changed = true;
         }

@@ -1590,8 +1590,8 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     }
   }
   OS << "]";
-  // If we are not going to add fixup or schedul comments after this point then
-  // we have to end the current comment line with "\n".
+  // If we are not going to add fixup or schedule comments after this point
+  // then we have to end the current comment line with "\n".
   if (Fixups.size() || !PrintSchedInfo)
     OS << "\n";
 

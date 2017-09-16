@@ -1348,17 +1348,11 @@ def: T_stc_pat<S2_storerd_pci, int_hexagon_circ_std,   s4_3ImmPred, I64>;
 def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
 
 multiclass MaskedStore <InstHexagon MI, Intrinsic IntID> {
-  def : Pat<(IntID VecPredRegs:$src1, IntRegs:$src2, VectorRegs:$src3),
-            (MI VecPredRegs:$src1, IntRegs:$src2, #0, VectorRegs:$src3)>,
-        Requires<[UseHVXSgl]>;
-
-  def : Pat<(!cast<Intrinsic>(IntID#"_128B") VecPredRegs128B:$src1,
-                                             IntRegs:$src2,
-                                             VectorRegs128B:$src3),
-            (!cast<InstHexagon>(MI#"_128B") VecPredRegs128B:$src1,
-                                            IntRegs:$src2, #0,
-                                            VectorRegs128B:$src3)>,
-        Requires<[UseHVXDbl]>;
+  def : Pat<(IntID HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),
+            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>;
+  def : Pat<(!cast<Intrinsic>(IntID#"_128B") HvxQR:$src1, IntRegs:$src2,
+                                             HvxVR:$src3),
+            (MI HvxQR:$src1, IntRegs:$src2, #0, HvxVR:$src3)>;
 }
 
 defm : MaskedStore <V6_vS32b_qpred_ai, int_hexagon_V6_vmaskedstoreq>;

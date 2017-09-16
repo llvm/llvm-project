@@ -5024,8 +5024,8 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
 
   // If the input is a buildvector just emit a smaller one.
   if (Vec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getBuildVector(
-        ResultVT, dl, makeArrayRef(Vec->op_begin() + IdxVal, ElemsPerChunk));
+    return DAG.getBuildVector(ResultVT, dl,
+                              Vec->ops().slice(IdxVal, ElemsPerChunk));
 
   SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, dl);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResultVT, Vec, VecIdx);
@@ -7016,6 +7016,18 @@ X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getTargetConstant(1, dl, VT);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+      // Split the pieces.
+      SDValue Lower =
+          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(0, 32));
+      SDValue Upper =
+          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(32, 32));
+      // We have to manually lower both halves so getNode doesn't try to
+      // reassemble the build_vector.
+      Lower = LowerBUILD_VECTORvXi1(Lower, DAG);
+      Upper = LowerBUILD_VECTORvXi1(Upper, DAG);
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lower, Upper);
+    }
     SDValue Imm = ConvertI1VectorToInteger(Op, DAG);
     if (Imm.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, Imm);
@@ -12139,6 +12151,10 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
                                         const APInt &Zeroable,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
+  // With AVX2, use VPERMQ/VPERMPD for unary shuffles to allow memory folding.
+  if (Subtarget.hasAVX2() && V2.isUndef())
+    return SDValue();
+
   SmallVector<int, 4> WidenedMask;
   if (!canWidenShuffleElements(Mask, WidenedMask))
     return SDValue();
@@ -12158,13 +12174,14 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   // If either input operand is a zero vector, use VPERM2X128 because its mask
   // allows us to replace the zero input with an implicit zero.
   if (!IsV1Zero && !IsV2Zero) {
+    // With AVX2, use VPERMQ/VPERMPD to allow memory folding.
+    if (Subtarget.hasAVX2() && V2.isUndef())
+      return SDValue();
+
     // Check for patterns which can be matched with a single insert of a 128-bit
     // subvector.
     bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1});
     if (OnlyUsesV1 || isShuffleEquivalent(V1, V2, Mask, {0, 1, 4, 5})) {
-      // With AVX2, use VPERMQ/VPERMPD to allow memory folding.
-      if (Subtarget.hasAVX2() && V2.isUndef())
-        return SDValue();
 
       // With AVX1, use vperm2f128 (below) to allow load folding. Otherwise,
       // this will likely become vinsertf128 which can't fold a 256-bit memop.
@@ -35789,9 +35806,9 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
   }
 
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getBuildVector(OpVT, SDLoc(N),
-                              makeArrayRef(InVec.getNode()->op_begin() + IdxVal,
-                                           OpVT.getVectorNumElements()));
+    return DAG.getBuildVector(
+        OpVT, SDLoc(N),
+        InVec.getNode()->ops().slice(IdxVal, OpVT.getVectorNumElements()));
 
   return SDValue();
 }

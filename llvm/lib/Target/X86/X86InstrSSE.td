@@ -7659,37 +7659,39 @@ let isCommutable = 1 in
 def VPERM2F128rr : AVXAIi8<0x06, MRMSrcReg, (outs VR256:$dst),
           (ins VR256:$src1, VR256:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (v8f32 (X86VPerm2x128 VR256:$src1, VR256:$src2,
+          [(set VR256:$dst, (v4f64 (X86VPerm2x128 VR256:$src1, VR256:$src2,
                               (i8 imm:$src3))))]>, VEX_4V, VEX_L,
           Sched<[WriteFShuffle]>;
 def VPERM2F128rm : AVXAIi8<0x06, MRMSrcMem, (outs VR256:$dst),
           (ins VR256:$src1, f256mem:$src2, u8imm:$src3),
           "vperm2f128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-          [(set VR256:$dst, (X86VPerm2x128 VR256:$src1, (loadv8f32 addr:$src2),
+          [(set VR256:$dst, (X86VPerm2x128 VR256:$src1, (loadv4f64 addr:$src2),
                              (i8 imm:$src3)))]>, VEX_4V, VEX_L,
           Sched<[WriteFShuffleLd, ReadAfterLd]>;
 }
 
+// Immediate transform to help with commuting.
+def Perm2XCommuteImm : SDNodeXForm<imm, [{
+  return getI8Imm(N->getZExtValue() ^ 0x22, SDLoc(N));
+}]>;
+
 let Predicates = [HasAVX] in {
-def : Pat<(v4f64 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v4f64 (X86VPerm2x128 VR256:$src1,
-                  (loadv4f64 addr:$src2), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
+// Pattern with load in other operand.
+def : Pat<(v4f64 (X86VPerm2x128 (loadv4f64 addr:$src2),
+                                VR256:$src1, (i8 imm:$imm))),
+          (VPERM2F128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm imm:$imm))>;
 }
 
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-
-def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1,
-                  (bc_v8i32 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1,
                   (loadv4i64 addr:$src2), (i8 imm:$imm))),
           (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
+// Pattern with load in other operand.
+def : Pat<(v4i64 (X86VPerm2x128 (loadv4i64 addr:$src2),
+                                VR256:$src1, (i8 imm:$imm))),
+          (VPERM2F128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm imm:$imm))>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8097,14 +8099,10 @@ def VPERM2I128rm : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
                              (i8 imm:$src3)))]>,
           Sched<[WriteShuffle256Ld, ReadAfterLd]>, VEX_4V, VEX_L;
 
-let Predicates = [HasAVX2] in {
-def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-
-def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, (bc_v8i32 (loadv4i64 addr:$src2)),
-                  (i8 imm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
-}
+let Predicates = [HasAVX2] in
+def : Pat<(v4i64 (X86VPerm2x128 (loadv4i64 addr:$src2),
+                                VR256:$src1, (i8 imm:$imm))),
+          (VPERM2I128rm VR256:$src1, addr:$src2, (Perm2XCommuteImm imm:$imm))>;
 
 
 //===----------------------------------------------------------------------===//

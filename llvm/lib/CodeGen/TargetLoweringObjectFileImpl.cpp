@@ -1248,8 +1248,8 @@ static const Comdat *getWasmComdat(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  llvm_unreachable("getExplicitSectionGlobal not yet implemented");
-  return nullptr;
+  StringRef Name = GO->getSection();
+  return getContext().getWasmSection(Name, wasm::WASM_SEC_DATA);
 }
 
 static MCSectionWasm *selectWasmSectionForGlobal(
@@ -1262,10 +1262,12 @@ static MCSectionWasm *selectWasmSectionForGlobal(
   bool UniqueSectionNames = TM.getUniqueSectionNames();
   SmallString<128> Name = getSectionPrefixForGlobal(Kind);
 
+  uint32_t Type = wasm::WASM_SEC_DATA;
   if (const auto *F = dyn_cast<Function>(GO)) {
     const auto &OptionalPrefix = F->getSectionPrefix();
     if (OptionalPrefix)
       Name += *OptionalPrefix;
+    Type = wasm::WASM_SEC_CODE;
   }
 
   if (EmitUniqueSection && UniqueSectionNames) {
@@ -1277,7 +1279,7 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
   }
-  return Ctx.getWasmSection(Name, /*Type=*/0, Group, UniqueID);
+  return Ctx.getWasmSection(Name, Type, Group, UniqueID);
 }
 
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(

@@ -463,7 +463,7 @@ template <class ELFT>
 void Object<ELFT>::writeSectionHeaders(FileOutputBuffer &Out) const {
   uint8_t *Buf = Out.getBufferStart() + SHOffset;
   // This reference serves to write the dummy section header at the begining
-  // of the file.
+  // of the file. It is not used for anything else
   Elf_Shdr &Shdr = *reinterpret_cast<Elf_Shdr *>(Buf);
   Shdr.sh_name = 0;
   Shdr.sh_type = SHT_NULL;

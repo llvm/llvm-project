@@ -19,7 +19,7 @@ RUN grep deb /etc/apt/sources.list | \
 # Install compiler, python and subversion.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates gnupg \
-    	    build-essential python2.7 wget subversion ninja-build && \
+           build-essential python wget subversion ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # Import public key required for verifying signature of cmake download.
@@ -37,9 +37,11 @@ RUN mkdir /tmp/cmake-install && cd /tmp/cmake-install && \
     tar xzf cmake-3.7.2-Linux-x86_64.tar.gz -C /usr/local --strip-components=1 && \
     cd / && rm -rf /tmp/cmake-install
 
+ADD checksums /tmp/checksums
+ADD scripts /tmp/scripts
+
 # Arguments passed to build_install_clang.sh.
 ARG buildscript_args
 
 # Run the build. Results of the build will be available as /tmp/clang.tar.gz.
-ADD scripts/build_install_llvm.sh /tmp
-RUN /tmp/build_install_llvm.sh ${buildscript_args}
+RUN /tmp/scripts/build_install_llvm.sh ${buildscript_args}

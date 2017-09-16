@@ -762,3 +762,51 @@ define <8 x float> @test_x86_avx_vpermil_ps_256(<8 x float> %a0) {
   ret <8 x float> %res
 }
 declare <8 x float> @llvm.x86.avx.vpermil.ps.256(<8 x float>, i8) nounwind readnone
+
+
+define <4 x double> @test_x86_avx_vperm2f128_pd_256(<4 x double> %a0, <4 x double> %a1) {
+; X86-LABEL: test_x86_avx_vperm2f128_pd_256:
+; X86:       # BB#0:
+; X86-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_x86_avx_vperm2f128_pd_256:
+; X64:       # BB#0:
+; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X64-NEXT:    retq
+  %res = call <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double> %a0, <4 x double> %a1, i8 3) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
+declare <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
+
+
+define <8 x float> @test_x86_avx_vperm2f128_ps_256(<8 x float> %a0, <8 x float> %a1) {
+; X86-LABEL: test_x86_avx_vperm2f128_ps_256:
+; X86:       # BB#0:
+; X86-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_x86_avx_vperm2f128_ps_256:
+; X64:       # BB#0:
+; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X64-NEXT:    retq
+  %res = call <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float> %a0, <8 x float> %a1, i8 3) ; <<8 x float>> [#uses=1]
+  ret <8 x float> %res
+}
+declare <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
+
+
+define <8 x i32> @test_x86_avx_vperm2f128_si_256(<8 x i32> %a0, <8 x i32> %a1) {
+; X86-LABEL: test_x86_avx_vperm2f128_si_256:
+; X86:       # BB#0:
+; X86-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_x86_avx_vperm2f128_si_256:
+; X64:       # BB#0:
+; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
+; X64-NEXT:    retq
+  %res = call <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32> %a0, <8 x i32> %a1, i8 3) ; <<8 x i32>> [#uses=1]
+  ret <8 x i32> %res
+}
+declare <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32>, <8 x i32>, i8) nounwind readnone
