@@ -1831,6 +1831,10 @@ public:
     return getLambdaData().MethodTyInfo;
   }
 
+  // \brief Determine whether this type is an Interface Like type for
+  // __interface inheritence purposes.
+  bool isInterfaceLike() const;
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {
     return K >= firstCXXRecord && K <= lastCXXRecord;

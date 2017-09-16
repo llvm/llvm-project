@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONINSTRINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONINSTRINFO_H
 
-#include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,10 +31,9 @@ namespace llvm {
 
 struct EVT;
 class HexagonSubtarget;
+class HexagonRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
-  const HexagonRegisterInfo RI;
-
   virtual void anchor();
 
 public:
@@ -327,8 +325,6 @@ public:
   /// HexagonInstrInfo specifics.
   ///
 
-  const HexagonRegisterInfo &getRegisterInfo() const { return RI; }
-
   unsigned createVR(MachineFunction* MF, MVT VT) const;
 
   bool isAbsoluteSet(const MachineInstr &MI) const;
@@ -387,7 +383,8 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset,
+                     const TargetRegisterInfo *TRI, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,

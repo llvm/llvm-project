@@ -40,7 +40,6 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
 ; AVX2-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
-; AVX2-NEXT:    vmovdqa %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    addq $8, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
@@ -65,7 +64,6 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
 ; AVX512-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqa %xmm1, %xmm1
 ; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    addq $8, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
@@ -314,7 +312,6 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm1
 ; AVX512-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm2
 ; AVX512-NEXT:    vpmaddwd %ymm1, %ymm2, %ymm1
-; AVX512-NEXT:    vmovdqa %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax

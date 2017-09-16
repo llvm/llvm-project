@@ -262,19 +262,19 @@ private:
     encodeSLEB128(int32_t(Ty), getStream());
   }
 
-  void writeTypeSection(const SmallVector<WasmFunctionType, 4> &FunctionTypes);
-  void writeImportSection(const SmallVector<WasmImport, 4> &Imports);
-  void writeFunctionSection(const SmallVector<WasmFunction, 4> &Functions);
+  void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
+  void writeImportSection(ArrayRef<WasmImport> Imports);
+  void writeFunctionSection(ArrayRef<WasmFunction> Functions);
   void writeTableSection(uint32_t NumElements);
   void writeMemorySection(uint32_t DataSize);
   void writeGlobalSection();
-  void writeExportSection(const SmallVector<WasmExport, 4> &Exports);
-  void writeElemSection(const SmallVector<uint32_t, 4> &TableElems);
+  void writeExportSection(ArrayRef<WasmExport> Exports);
+  void writeElemSection(ArrayRef<uint32_t> TableElems);
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const SmallVector<WasmFunction, 4> &Functions);
-  void writeDataSection(const SmallVector<WasmDataSegment, 4> &Segments);
-  void writeNameSection(const SmallVector<WasmFunction, 4> &Functions,
-                        const SmallVector<WasmImport, 4> &Imports,
+                        ArrayRef<WasmFunction> Functions);
+  void writeDataSection(ArrayRef<WasmDataSegment> Segments);
+  void writeNameSection(ArrayRef<WasmFunction> Functions,
+                        ArrayRef<WasmImport> Imports,
                         uint32_t NumFuncImports);
   void writeCodeRelocSection();
   void writeDataRelocSection();
@@ -477,13 +477,22 @@ static void WriteI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
 }
 
+static const MCSymbolWasm* ResolveSymbol(const MCSymbolWasm& Symbol) {
+  if (Symbol.isVariable()) {
+    const MCExpr *Expr = Symbol.getVariableValue();
+    auto *Inner = cast<MCSymbolRefExpr>(Expr);
+    return cast<MCSymbolWasm>(&Inner->getSymbol());
+  }
+  return &Symbol;
+}
+
 // Compute a value to write into the code at the location covered
 // by RelEntry. This value isn't used by the static linker, since
 // we have addends; it just serves to make the code more readable
 // and to make standalone wasm modules directly usable.
 uint32_t
 WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
-  const MCSymbolWasm *Sym = RelEntry.Symbol;
+  const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
 
   // For undefined symbols, use a hopefully invalid value.
   if (!Sym->isDefined(/*SetUsed=*/false))
@@ -593,7 +602,7 @@ void WasmObjectWriter::writeRelocations(
 }
 
 void WasmObjectWriter::writeTypeSection(
-    const SmallVector<WasmFunctionType, 4> &FunctionTypes) {
+    ArrayRef<WasmFunctionType> FunctionTypes) {
   if (FunctionTypes.empty())
     return;
 
@@ -615,9 +624,7 @@ void WasmObjectWriter::writeTypeSection(
   endSection(Section);
 }
 
-
-void WasmObjectWriter::writeImportSection(
-    const SmallVector<WasmImport, 4> &Imports) {
+void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
   if (Imports.empty())
     return;
 
@@ -647,8 +654,7 @@ void WasmObjectWriter::writeImportSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeFunctionSection(
-    const SmallVector<WasmFunction, 4> &Functions) {
+void WasmObjectWriter::writeFunctionSection(ArrayRef<WasmFunction> Functions) {
   if (Functions.empty())
     return;
 
@@ -722,8 +728,7 @@ void WasmObjectWriter::writeGlobalSection() {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeExportSection(
-    const SmallVector<WasmExport, 4> &Exports) {
+void WasmObjectWriter::writeExportSection(ArrayRef<WasmExport> Exports) {
   if (Exports.empty())
     return;
 
@@ -740,8 +745,7 @@ void WasmObjectWriter::writeExportSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeElemSection(
-    const SmallVector<uint32_t, 4> &TableElems) {
+void WasmObjectWriter::writeElemSection(ArrayRef<uint32_t> TableElems) {
   if (TableElems.empty())
     return;
 
@@ -763,9 +767,9 @@ void WasmObjectWriter::writeElemSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeCodeSection(
-    const MCAssembler &Asm, const MCAsmLayout &Layout,
-    const SmallVector<WasmFunction, 4> &Functions) {
+void WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
+                                        const MCAsmLayout &Layout,
+                                        ArrayRef<WasmFunction> Functions) {
   if (Functions.empty())
     return;
 
@@ -794,8 +798,7 @@ void WasmObjectWriter::writeCodeSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeDataSection(
-    const SmallVector<WasmDataSegment, 4> &Segments) {
+void WasmObjectWriter::writeDataSection(ArrayRef<WasmDataSegment> Segments) {
   if (Segments.empty())
     return;
 
@@ -821,8 +824,8 @@ void WasmObjectWriter::writeDataSection(
 }
 
 void WasmObjectWriter::writeNameSection(
-    const SmallVector<WasmFunction, 4> &Functions,
-    const SmallVector<WasmImport, 4> &Imports,
+    ArrayRef<WasmFunction> Functions,
+    ArrayRef<WasmImport> Imports,
     unsigned NumFuncImports) {
   uint32_t TotalFunctions = NumFuncImports + Functions.size();
   if (TotalFunctions == 0)
@@ -934,16 +937,9 @@ uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm& Symbol) {
   assert(Symbol.isFunction());
 
   WasmFunctionType F;
-  if (Symbol.isVariable()) {
-    const MCExpr *Expr = Symbol.getVariableValue();
-    auto *Inner = cast<MCSymbolRefExpr>(Expr);
-    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
-    F.Returns = ResolvedSym->getReturns();
-    F.Params = ResolvedSym->getParams();
-  } else {
-    F.Returns = Symbol.getReturns();
-    F.Params = Symbol.getParams();
-  }
+  const MCSymbolWasm* ResolvedSym = ResolveSymbol(Symbol);
+  F.Returns = ResolvedSym->getReturns();
+  F.Params = ResolvedSym->getParams();
 
   auto Pair =
       FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
@@ -1255,11 +1251,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
     assert(S.isDefined(/*SetUsed=*/false));
 
-    const auto &WS = static_cast<const MCSymbolWasm &>(S);
     // Find the target symbol of this weak alias and export that index
-    const MCExpr *Expr = WS.getVariableValue();
-    auto *Inner = cast<MCSymbolRefExpr>(Expr);
-    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+    const MCSymbolWasm *ResolvedSym = ResolveSymbol(WS);
     DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym << "'\n");
     assert(SymbolIndices.count(ResolvedSym) > 0);
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;

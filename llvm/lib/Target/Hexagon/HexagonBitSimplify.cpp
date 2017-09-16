@@ -420,8 +420,7 @@ bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
 
   switch (RC->getID()) {
     case Hexagon::DoubleRegsRegClassID:
-    case Hexagon::VecDblRegsRegClassID:
-    case Hexagon::VecDblRegs128BRegClassID:
+    case Hexagon::HvxWRRegClassID:
       Width = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 2;
       if (RR.Sub == Hexagon::isub_hi || RR.Sub == Hexagon::vsub_hi)
         Begin = Width;
@@ -918,12 +917,9 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
     case Hexagon::DoubleRegsRegClassID:
       VerifySR(RC, RR.Sub);
       return &Hexagon::IntRegsRegClass;
-    case Hexagon::VecDblRegsRegClassID:
+    case Hexagon::HvxWRRegClassID:
       VerifySR(RC, RR.Sub);
-      return &Hexagon::VectorRegsRegClass;
-    case Hexagon::VecDblRegs128BRegClassID:
-      VerifySR(RC, RR.Sub);
-      return &Hexagon::VectorRegs128BRegClass;
+      return &Hexagon::HvxVRRegClass;
   }
   return nullptr;
 }
@@ -1627,8 +1623,7 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
       }
 
       if (FRC == &Hexagon::DoubleRegsRegClass ||
-          FRC == &Hexagon::VecDblRegsRegClass ||
-          FRC == &Hexagon::VecDblRegs128BRegClass) {
+          FRC == &Hexagon::HvxWRRegClass) {
         // Try to generate REG_SEQUENCE.
         unsigned SubLo = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_lo);
         unsigned SubHi = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_hi);
@@ -1665,7 +1660,6 @@ bool CopyPropagation::isCopyReg(unsigned Opc, bool NoConv) {
     case Hexagon::A2_tfrp:
     case Hexagon::A2_combinew:
     case Hexagon::V6_vcombine:
-    case Hexagon::V6_vcombine_128B:
       return NoConv;
     default:
       break;
@@ -1704,8 +1698,7 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
       break;
     }
     case Hexagon::A2_combinew:
-    case Hexagon::V6_vcombine:
-    case Hexagon::V6_vcombine_128B: {
+    case Hexagon::V6_vcombine: {
       const TargetRegisterClass *RC = MRI.getRegClass(RD.Reg);
       unsigned SubLo = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo);
       unsigned SubHi = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi);

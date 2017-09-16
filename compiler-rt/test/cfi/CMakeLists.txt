@@ -33,8 +33,8 @@ if (APPLE)
   # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32741
   add_cfi_test_suites(False False)
 elseif(WIN32)
-  # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32770
   add_cfi_test_suites(True False)
+  add_cfi_test_suites(True True)
 else()
   if (CFI_SUPPORTED_ARCH)
     add_cfi_test_suites(False False)

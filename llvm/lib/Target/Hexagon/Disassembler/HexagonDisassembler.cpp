@@ -106,7 +106,7 @@ static DecodeStatus DecodeGeneralSubRegsRegisterClass(MCInst &Inst,
 static DecodeStatus DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo,
                                                    uint64_t Address,
                                                    const void *Decoder);
-static DecodeStatus DecodeVectorRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
                                                   uint64_t Address,
                                                   const void *Decoder);
 static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -115,13 +115,13 @@ static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus
 DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeVecDblRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                                   uint64_t Address,
                                                   const void *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
-static DecodeStatus DecodeVecPredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
                                                    uint64_t Address,
                                                    const void *Decoder);
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -481,10 +481,10 @@ static DecodeStatus DecodeGeneralSubRegsRegisterClass(MCInst &Inst,
   return DecodeRegisterClass(Inst, RegNo, GeneralSubRegDecoderTable);
 }
 
-static DecodeStatus DecodeVectorRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t /*Address*/,
-                                                  const void *Decoder) {
-  static const MCPhysReg VecRegDecoderTable[] = {
+static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t /*Address*/,
+                                             const void *Decoder) {
+  static const MCPhysReg HvxVRDecoderTable[] = {
       Hexagon::V0,  Hexagon::V1,  Hexagon::V2,  Hexagon::V3,  Hexagon::V4,
       Hexagon::V5,  Hexagon::V6,  Hexagon::V7,  Hexagon::V8,  Hexagon::V9,
       Hexagon::V10, Hexagon::V11, Hexagon::V12, Hexagon::V13, Hexagon::V14,
@@ -493,7 +493,7 @@ static DecodeStatus DecodeVectorRegsRegisterClass(MCInst &Inst, unsigned RegNo,
       Hexagon::V25, Hexagon::V26, Hexagon::V27, Hexagon::V28, Hexagon::V29,
       Hexagon::V30, Hexagon::V31};
 
-  return DecodeRegisterClass(Inst, RegNo, VecRegDecoderTable);
+  return DecodeRegisterClass(Inst, RegNo, HvxVRDecoderTable);
 }
 
 static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -517,16 +517,16 @@ static DecodeStatus DecodeGeneralDoubleLow8RegsRegisterClass(
   return DecodeRegisterClass(Inst, RegNo, GeneralDoubleLow8RegDecoderTable);
 }
 
-static DecodeStatus DecodeVecDblRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t /*Address*/,
-                                                  const void *Decoder) {
-  static const MCPhysReg VecDblRegDecoderTable[] = {
+static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t /*Address*/,
+                                             const void *Decoder) {
+  static const MCPhysReg HvxWRDecoderTable[] = {
       Hexagon::W0,  Hexagon::W1,  Hexagon::W2,  Hexagon::W3,
       Hexagon::W4,  Hexagon::W5,  Hexagon::W6,  Hexagon::W7,
       Hexagon::W8,  Hexagon::W9,  Hexagon::W10, Hexagon::W11,
       Hexagon::W12, Hexagon::W13, Hexagon::W14, Hexagon::W15};
 
-  return (DecodeRegisterClass(Inst, RegNo >> 1, VecDblRegDecoderTable));
+  return (DecodeRegisterClass(Inst, RegNo >> 1, HvxWRDecoderTable));
 }
 
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -538,13 +538,13 @@ static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, PredRegDecoderTable);
 }
 
-static DecodeStatus DecodeVecPredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t /*Address*/,
-                                                   const void *Decoder) {
-  static const MCPhysReg VecPredRegDecoderTable[] = {Hexagon::Q0, Hexagon::Q1,
-                                                     Hexagon::Q2, Hexagon::Q3};
+static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t /*Address*/,
+                                             const void *Decoder) {
+  static const MCPhysReg HvxQRDecoderTable[] = {Hexagon::Q0, Hexagon::Q1,
+                                                Hexagon::Q2, Hexagon::Q3};
 
-  return DecodeRegisterClass(Inst, RegNo, VecPredRegDecoderTable);
+  return DecodeRegisterClass(Inst, RegNo, HvxQRDecoderTable);
 }
 
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,

@@ -181,6 +181,16 @@ if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
     "$CLANG_BUILD_DIR/src/clang/tools/extra"
 fi
 
+CHECKSUMS_FILE="/tmp/checksums/checksums.txt"
+
+if [ -f "$CHECKSUMS_FILE" ]; then
+  echo "Validating checksums for LLVM checkout..."
+  python "$(dirname $0)/llvm_checksum/llvm_checksum.py" -c "$CHECKSUMS_FILE" \
+    --partial --multi_dir "$CLANG_BUILD_DIR/src"
+else
+  echo "Skipping checksumming checks..."
+fi
+
 mkdir "$CLANG_BUILD_DIR/build"
 pushd "$CLANG_BUILD_DIR/build"
 

@@ -16,12 +16,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
 #include <system_error>
 
 namespace llvm {
-class StringRef;
-
 namespace sys {
 
   /// This is the OS-specific separator for PATH like environment variables:

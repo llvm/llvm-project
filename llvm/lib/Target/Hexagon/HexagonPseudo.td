@@ -295,7 +295,7 @@ let isTerminator = 1, hasSideEffects = 0, isReturn = 1, isCodeGenOnly = 1,
   def PS_jmpretfnewpt : T_JMPr_c<1, 1, 1, J2_jumprfnewpt>, PredNewRel;
 }
 
-//defm V6_vtran2x2_map : HexagonMapping<(outs VectorRegs:$Vy32, VectorRegs:$Vx32), (ins VectorRegs:$Vx32in, IntRegs:$Rt32), "vtrans2x2(${Vy32},${Vx32},${Rt32})", (V6_vshuff VectorRegs:$Vy32, VectorRegs:$Vx32, VectorRegs:$Vx32in, IntRegs:$Rt32)>;
+//defm V6_vtran2x2_map : HexagonMapping<(outs HvxVR:$Vy32, HvxVR:$Vx32), (ins HvxVR:$Vx32in, IntRegs:$Rt32), "vtrans2x2(${Vy32},${Vx32},${Rt32})", (V6_vshuff HvxVR:$Vy32, HvxVR:$Vx32, HvxVR:$Vx32in, IntRegs:$Rt32)>;
 
 // The reason for the custom inserter is to record all ALLOCA instructions
 // in MachineFunctionInfo.
@@ -397,84 +397,53 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 
 // Vector store pseudos
 let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
-    mayStore = 1, hasSideEffects = 0 in
+    mayStore = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class STrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-let accessSize = Vector64Access, Predicates = [HasV60T,UseHVXSgl] in {
-  def PS_vstorerw_ai: STrivv_template<VecDblRegs, V6_vS32b_ai>;
-  def PS_vstorerw_nt_ai: STrivv_template<VecDblRegs, V6_vS32b_nt_ai>;
-  def PS_vstorerwu_ai: STrivv_template<VecDblRegs, V6_vS32Ub_ai>;
-}
+def PS_vstorerw_ai: STrivv_template<HvxWR, V6_vS32b_ai>,
+      Requires<[HasV60T,UseHVX]>;
+def PS_vstorerw_nt_ai: STrivv_template<HvxWR, V6_vS32b_nt_ai>,
+      Requires<[HasV60T,UseHVX]>;
+def PS_vstorerwu_ai: STrivv_template<HvxWR, V6_vS32Ub_ai>,
+      Requires<[HasV60T,UseHVX]>;
 
-let accessSize = Vector128Access, Predicates = [HasV60T,UseHVXDbl] in {
-  def PS_vstorerw_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32b_ai_128B>;
-  def PS_vstorerw_nt_ai_128B: STrivv_template<VecDblRegs128B,
-                                              V6_vS32b_nt_ai_128B>;
-  def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32Ub_ai_128B>;
-}
-
-let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in {
-  let accessSize = Vector64Access in
-  def PS_vstorerq_ai: Pseudo<(outs),
-        (ins IntRegs:$Rs, s32_0Imm:$Off, VecPredRegs:$Qt), "", []>,
-        Requires<[HasV60T,UseHVXSgl]>;
-  let accessSize = Vector128Access in
-  def PS_vstorerq_ai_128B: Pseudo<(outs),
-        (ins IntRegs:$Rs, s32_0Imm:$Off, VecPredRegs128B:$Qt), "", []>,
-        Requires<[HasV60T,UseHVXDbl]>;
-}
+let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in
+def PS_vstorerq_ai: Pseudo<(outs),
+      (ins IntRegs:$Rs, s32_0Imm:$Off, HvxQR:$Qt), "", []>,
+      Requires<[HasV60T,UseHVX]>;
 
 // Vector load pseudos
 let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
-    mayLoad = 1, hasSideEffects = 0 in
+    mayLoad = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-let accessSize = Vector64Access, Predicates = [HasV60T,UseHVXSgl] in {
-  def PS_vloadrw_ai: LDrivv_template<VecDblRegs, V6_vL32b_ai>;
-  def PS_vloadrw_nt_ai: LDrivv_template<VecDblRegs, V6_vL32b_nt_ai>;
-  def PS_vloadrwu_ai: LDrivv_template<VecDblRegs, V6_vL32Ub_ai>;
-}
+def PS_vloadrw_ai: LDrivv_template<HvxWR, V6_vL32b_ai>,
+      Requires<[HasV60T,UseHVX]>;
+def PS_vloadrw_nt_ai: LDrivv_template<HvxWR, V6_vL32b_nt_ai>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrwu_ai: LDrivv_template<HvxWR, V6_vL32Ub_ai>,
+      Requires<[HasV60T,UseHVX]>;
 
-let accessSize = Vector128Access, Predicates = [HasV60T,UseHVXDbl] in {
-  def PS_vloadrw_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32b_ai_128B>;
-  def PS_vloadrw_nt_ai_128B: LDrivv_template<VecDblRegs128B,
-                                             V6_vL32b_nt_ai_128B>;
-  def PS_vloadrwu_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32Ub_ai_128B>;
-}
-
-let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
-  let accessSize = Vector64Access in
-  def PS_vloadrq_ai: Pseudo<(outs VecPredRegs:$Qd),
-        (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
-        Requires<[HasV60T,UseHVXSgl]>;
-  let accessSize = Vector128Access in
-  def PS_vloadrq_ai_128B: Pseudo<(outs VecPredRegs128B:$Qd),
-        (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
-        Requires<[HasV60T,UseHVXDbl]>;
-}
+let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in
+def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
+      (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
+      Requires<[HasV60T,UseHVX]>;
 
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>
   : InstHexagon<outs, ins, "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-def PS_vselect: VSELInst<(outs VectorRegs:$dst),
-      (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3),
-      V6_vcmov>, Requires<[HasV60T,UseHVXSgl]>;
-def PS_vselect_128B: VSELInst<(outs VectorRegs128B:$dst),
-      (ins PredRegs:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
-      V6_vcmov>, Requires<[HasV60T,UseHVXDbl]>;
-
-def PS_wselect: VSELInst<(outs VecDblRegs:$dst),
-      (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3),
-      V6_vccombine>, Requires<[HasV60T,UseHVXSgl]>;
-def PS_wselect_128B: VSELInst<(outs VecDblRegs128B:$dst),
-      (ins PredRegs:$src1, VecDblRegs128B:$src2, VecDblRegs128B:$src3),
-      V6_vccombine>, Requires<[HasV60T,UseHVXDbl]>;
+def PS_vselect: VSELInst<(outs HvxVR:$dst),
+      (ins PredRegs:$src1, HvxVR:$src2, HvxVR:$src3), V6_vcmov>,
+      Requires<[HasV60T,UseHVX]>;
+def PS_wselect: VSELInst<(outs HvxWR:$dst),
+      (ins PredRegs:$src1, HvxWR:$src2, HvxWR:$src3), V6_vccombine>,
+      Requires<[HasV60T,UseHVX]>;
 
 // Store predicate.
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 13,

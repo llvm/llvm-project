@@ -110,3 +110,13 @@ enum { overflow = 123456 * 234567 };
 // expected-warning@-2 {{not an integral constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
 #endif
+
+// PR28903
+struct PR28903 {
+  enum {
+    PR28903_A = (enum { // expected-error-re {{'PR28903::(anonymous enum at {{.*}})' cannot be defined in an enumeration}}
+      PR28903_B,
+      PR28903_C = PR28903_B
+    })
+  };
+};
