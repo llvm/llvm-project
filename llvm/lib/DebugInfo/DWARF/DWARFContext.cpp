@@ -270,19 +270,22 @@ void DWARFContext::dump(
   dumpDebugInfo(ExplicitDWO, ".debug_info.dwo", DObj->getInfoDWOSection(),
                 dwo_compile_units());
 
-  if ((DumpType & DIDT_DebugTypes)) {
-    if (Explicit || getNumTypeUnits()) {
-      OS << "\n.debug_types contents:\n";
-      for (const auto &TUS : type_unit_sections())
-        for (const auto &TU : TUS)
+  auto dumpDebugType = [&](const char *Name,
+                           tu_section_iterator_range TUSections) {
+    OS << '\n' << Name << " contents:\n";
+    DumpOffset = DumpOffsets[DIDT_ID_DebugTypes];
+    for (const auto &TUS : TUSections)
+      for (const auto &TU : TUS)
+        if (DumpOffset)
+          TU->getDIEForOffset(*DumpOffset).dump(OS, 0);
+        else
           TU->dump(OS, DumpOpts);
-    }
-    if (ExplicitDWO || getNumDWOTypeUnits()) {
-      OS << "\n.debug_types.dwo contents:\n";
-      for (const auto &DWOTUS : dwo_type_unit_sections())
-        for (const auto &DWOTU : DWOTUS)
-          DWOTU->dump(OS, DumpOpts);
-    }
+  };
+  if ((DumpType & DIDT_DebugTypes)) {
+    if (Explicit || getNumTypeUnits())
+      dumpDebugType(".debug_types", type_unit_sections());
+    if (ExplicitDWO || getNumDWOTypeUnits())
+      dumpDebugType(".debug_types.dwo", dwo_type_unit_sections());
   }
 
   if (shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
