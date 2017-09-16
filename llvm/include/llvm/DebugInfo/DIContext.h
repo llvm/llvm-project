@@ -139,6 +139,7 @@ enum DIDumpType : unsigned {
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
   bool DumpEH = false;
+  bool ShowChildren = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
 };
