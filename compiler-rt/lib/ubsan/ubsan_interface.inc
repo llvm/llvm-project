@@ -11,6 +11,7 @@
 INTERFACE_FUNCTION(__ubsan_handle_add_overflow)
 INTERFACE_FUNCTION(__ubsan_handle_add_overflow_abort)
 INTERFACE_FUNCTION(__ubsan_handle_builtin_unreachable)
+INTERFACE_FUNCTION(__ubsan_handle_cfi_bad_type)
 INTERFACE_FUNCTION(__ubsan_handle_cfi_check_fail)
 INTERFACE_FUNCTION(__ubsan_handle_cfi_check_fail_abort)
 INTERFACE_FUNCTION(__ubsan_handle_divrem_overflow)

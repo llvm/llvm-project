@@ -2062,9 +2062,20 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Type *Ty = GetElementPtrInst::getIndexedType(PointeeTy, Idxs);
 
       assert(Ty && "Invalid indices for GEP!");
+      Type *OrigGEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
       Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
       if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-        GEPTy = VectorType::get(GEPTy, VT->getNumElements());
+        GEPTy = VectorType::get(OrigGEPTy, VT->getNumElements());
+
+      // The GEP returns a vector of pointers when one of more of
+      // its arguments is a vector.
+      for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
+        if (auto *VT = dyn_cast<VectorType>(Idxs[i]->getType())) {
+          GEPTy = VectorType::get(OrigGEPTy, VT->getNumElements());
+          break;
+        }
+      }
+
       return Constant::getNullValue(GEPTy);
     }
   }

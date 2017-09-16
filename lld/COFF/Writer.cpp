@@ -683,19 +683,14 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   PE->SizeOfStackCommit = Config->StackCommit;
   PE->SizeOfHeapReserve = Config->HeapReserve;
   PE->SizeOfHeapCommit = Config->HeapCommit;
-
-  // Import Descriptor Tables and Import Address Tables are merged
-  // in our output. That's not compatible with the Binding feature
-  // that is sort of prelinking. Setting this flag to make it clear
-  // that our outputs are not for the Binding.
-  PE->DLLCharacteristics = IMAGE_DLL_CHARACTERISTICS_NO_BIND;
-
   if (Config->AppContainer)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_APPCONTAINER;
   if (Config->DynamicBase)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE;
   if (Config->HighEntropyVA)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA;
+  if (!Config->AllowBind)
+    PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_BIND;
   if (Config->NxCompat)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NX_COMPAT;
   if (!Config->AllowIsolation)
