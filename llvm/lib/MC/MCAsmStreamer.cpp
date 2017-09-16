@@ -225,8 +225,7 @@ public:
                              StringRef FileName) override;
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
-  bool EmitCVFileDirective(unsigned FileNo, StringRef Filename,
-                           StringRef Checksum, unsigned ChecksumKind) override;
+  bool EmitCVFileDirective(unsigned FileNo, StringRef Filename) override;
   bool EmitCVFuncIdDirective(unsigned FuncId) override;
   bool EmitCVInlineSiteIdDirective(unsigned FunctionId, unsigned IAFunc,
                                    unsigned IAFile, unsigned IALine,
@@ -246,7 +245,6 @@ public:
       StringRef FixedSizePortion) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
-  void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
 
   void EmitIdent(StringRef IdentString) override;
   void EmitCFISections(bool EH, bool Debug) override;
@@ -1122,25 +1120,13 @@ MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   return MCStreamer::getDwarfLineTableSymbol(0);
 }
 
-bool MCAsmStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename,
-                                        StringRef Checksum,
-                                        unsigned ChecksumKind) {
-  if (!getContext().getCVContext().addFile(*this, FileNo, Filename, Checksum,
-                                           ChecksumKind))
+bool MCAsmStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
+  if (!getContext().getCVContext().addFile(FileNo, Filename))
     return false;
 
   OS << "\t.cv_file\t" << FileNo << ' ';
+
   PrintQuotedString(Filename, OS);
-
-  if (!ChecksumKind) {
-    EmitEOL();
-    return true;
-  }
-
-  OS << ' ';
-  PrintQuotedString(Checksum, OS);
-  OS << ' ' << ChecksumKind;
-
   EmitEOL();
   return true;
 }
@@ -1239,11 +1225,6 @@ void MCAsmStreamer::EmitCVStringTableDirective() {
 
 void MCAsmStreamer::EmitCVFileChecksumsDirective() {
   OS << "\t.cv_filechecksums";
-  EmitEOL();
-}
-
-void MCAsmStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
-  OS << "\t.cv_filechecksumoffset\t" << FileNo;
   EmitEOL();
 }
 

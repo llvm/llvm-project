@@ -426,9 +426,6 @@ void MCObjectStreamer::EmitCVFileChecksumsDirective() {
   getContext().getCVContext().emitFileChecksums(*this);
 }
 
-void MCObjectStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
-  getContext().getCVContext().emitFileChecksumOffset(*this, FileNo);
-}
 
 void MCObjectStreamer::EmitBytes(StringRef Data) {
   MCCVLineEntry::Make(this);

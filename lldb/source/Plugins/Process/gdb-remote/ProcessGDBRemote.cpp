@@ -4168,7 +4168,6 @@ struct GdbServerTargetInfo {
   std::string osabi;
   stringVec includes;
   RegisterSetMap reg_set_map;
-  XMLNode feature_node;
 };
 
 bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
@@ -4374,8 +4373,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
 
     XMLNode target_node = xml_document.GetRootElement("target");
     if (target_node) {
-      XMLNode feature_node;
-      target_node.ForEachChildElement([&target_info, &feature_node](
+      std::vector<XMLNode> feature_nodes;
+      target_node.ForEachChildElement([&target_info, &feature_nodes](
                                           const XMLNode &node) -> bool {
         llvm::StringRef name = node.GetName();
         if (name == "architecture") {
@@ -4387,7 +4386,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
           if (!href.empty())
             target_info.includes.push_back(href.str());
         } else if (name == "feature") {
-          feature_node = node;
+          feature_nodes.push_back(node);
         } else if (name == "groups") {
           node.ForEachChildElementWithName(
               "group", [&target_info](const XMLNode &node) -> bool {
@@ -4423,7 +4422,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       // set the Target's architecture yet, so the ABI is also potentially
       // incorrect.
       ABISP abi_to_use_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
-      if (feature_node) {
+      for (auto &feature_node : feature_nodes) {
         ParseRegisters(feature_node, target_info, this->m_register_info,
                        abi_to_use_sp, cur_reg_num, reg_offset);
       }

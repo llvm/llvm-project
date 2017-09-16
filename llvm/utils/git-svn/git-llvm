@@ -107,7 +107,7 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
 
     start = time.time()
     p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=err_pipe,
-                         stdin=subprocess.PIPE)
+                         stdin=subprocess.PIPE, universal_newlines=True)
     stdout, stderr = p.communicate(input=stdin)
     elapsed = time.time() - start
 

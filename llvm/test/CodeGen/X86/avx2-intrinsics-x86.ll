@@ -1369,7 +1369,7 @@ declare <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double>, i8*,
 define <4 x float> @test_x86_avx2_gather_d_ps(<4 x float> %a0, i8* %a1, <4 x i32> %idx, <4 x float> %mask) {
 ; CHECK-LABEL: test_x86_avx2_gather_d_ps:
 ; CHECK:       ## BB#0:
-; /CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; CHECK-NEXT:    vgatherdps %xmm2, (%eax,%xmm1,2), %xmm0 ## encoding: [0xc4,0xe2,0x69,0x92,0x04,0x48]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> %a0,

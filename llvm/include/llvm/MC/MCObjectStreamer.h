@@ -140,7 +140,6 @@ public:
       StringRef FixedSizePortion) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
-  void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
   void EmitDTPRel32Value(const MCExpr *Value) override;
   void EmitDTPRel64Value(const MCExpr *Value) override;
   void EmitTPRel32Value(const MCExpr *Value) override;
