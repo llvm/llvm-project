@@ -6,5 +6,17 @@ CHECK:               DW_AT_name
 CHECK-NOT: {{:}}
 
 RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
-RUN:   | llvm-dwarfdump -debug-info=0 - | FileCheck --allow-empty --check-prefix=EMPTY %s
+RUN:   | llvm-dwarfdump -debug-info=0 - \
+RUN:   | FileCheck --allow-empty --check-prefix=EMPTY %s
 EMPTY-NOT: DW_TAG
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -debug-info=0x0000000b -c - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN
+
+UN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+UN:   | llvm-dwarfdump -debug-info=0x0000000b --show-children - \
+UN:   | FileCheck %s --check-prefix=CHILDREN
+CHILDREN: .debug_info contents:
+CHILDREN: 0x0000000b: DW_TAG_compile_unit
+CHILDREN: DW_TAG_subprogram

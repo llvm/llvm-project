@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -55,7 +56,7 @@ private:
   bool selectImpl(MachineInstr &I) const;
 
   // TODO: remove after supported by Tablegen-erated instruction selection.
-  unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
+  unsigned getLoadStoreOp(const LLT &Ty, const RegisterBank &RB, unsigned Opc,
                           uint64_t Alignment) const;
 
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -87,6 +88,8 @@ private:
                      MachineFunction &MF) const;
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
+  bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
+                     MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
@@ -336,13 +339,16 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
     return true;
   if (selectCondBranch(I, MRI, MF))
     return true;
+  if (materializeFP(I, MRI, MF))
+    return true;
   if (selectImplicitDefOrPHI(I, MRI))
     return true;
 
   return false;
 }
 
-unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
+unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
+                                                const RegisterBank &RB,
                                                 unsigned Opc,
                                                 uint64_t Alignment) const {
   bool Isload = (Opc == TargetOpcode::G_LOAD);
@@ -740,11 +746,11 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
   const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  assert (DstRB.getID() == SrcRB.getID() &&
-      "G_ANYEXT input/output on different banks\n");
+  assert(DstRB.getID() == SrcRB.getID() &&
+         "G_ANYEXT input/output on different banks\n");
 
-  assert (DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
-      "G_ANYEXT incorrect operand size");
+  assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+         "G_ANYEXT incorrect operand size");
 
   if (DstRB.getID() != X86::GPRRegBankID)
     return false;
@@ -1179,6 +1185,73 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
 
   constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
 
+  I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::materializeFP(MachineInstr &I,
+                                           MachineRegisterInfo &MRI,
+                                           MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_FCONSTANT)
+    return false;
+
+  // Can't handle alternate code models yet.
+  CodeModel::Model CM = TM.getCodeModel();
+  if (CM != CodeModel::Small && CM != CodeModel::Large)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+  unsigned Align = DstTy.getSizeInBits();
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+
+  unsigned Opc = getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Align);
+
+  // Create the load from the constant pool.
+  const ConstantFP *CFP = I.getOperand(1).getFPImm();
+  unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CFP, Align);
+  MachineInstr *LoadInst = nullptr;
+  unsigned char OpFlag = STI.classifyLocalReference(nullptr);
+
+  if (CM == CodeModel::Large && STI.is64Bit()) {
+    // Under X86-64 non-small code model, GV (and friends) are 64-bits, so
+    // they cannot be folded into immediate fields.
+
+    unsigned AddrReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*I.getParent(), I, DbgLoc, TII.get(X86::MOV64ri), AddrReg)
+        .addConstantPoolIndex(CPI, 0, OpFlag);
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+        MF.getDataLayout().getPointerSize(), Align);
+
+    LoadInst =
+        addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),
+                     AddrReg)
+            .addMemOperand(MMO);
+
+  } else if(CM == CodeModel::Small || !STI.is64Bit()){
+    // Handle the case when globals fit in our immediate field.
+    // This is true for X86-32 always and X86-64 when in -mcmodel=small mode.
+
+    // x86-32 PIC requires a PIC base register for constant pools.
+    unsigned PICBase = 0;
+    if (OpFlag == X86II::MO_PIC_BASE_OFFSET || OpFlag == X86II::MO_GOTOFF) {
+      // PICBase can be allocated by TII.getGlobalBaseReg(&MF).
+      // In DAGISEL the code that initialize it generated by the CGBR pass.
+      return false; // TODO support the mode.
+    }
+    else if (STI.is64Bit() && TM.getCodeModel() == CodeModel::Small)
+      PICBase = X86::RIP;
+
+    LoadInst = addConstantPoolReference(
+        BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg), CPI, PICBase,
+        OpFlag);
+  } else
+    return false;
+
+  constrainSelectedInstRegOperands(*LoadInst, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }
