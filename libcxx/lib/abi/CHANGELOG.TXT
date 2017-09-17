@@ -16,6 +16,16 @@ New entries should be added directly below the "Version" header.
 Version 5.0
 -----------
 
+* rTBD - Fix undefined "___cxa_deleted_virtual" symbol in macosx
+
+  x86_64-linux-gnu
+  ----------------
+  No changes
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol added: ___cxa_deleted_virtual
+
 * r296729 - Remove std::num_get template methods which should be inline
 
   These functions should never have had visible definitions in the dylib but
