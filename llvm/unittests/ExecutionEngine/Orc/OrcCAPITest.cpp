@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/OrcBindings.h"
 #include "llvm-c/Target.h"
@@ -35,6 +36,15 @@ protected:
     B.CreateRet(Result);
 
     return MB.takeModule();
+  }
+
+  std::shared_ptr<object::OwningBinary<object::ObjectFile>>
+  createTestObject() {
+    orc::SimpleCompiler IRCompiler(*TM);
+    auto M = createTestModule(TM->getTargetTriple());
+    M->setDataLayout(TM->createDataLayout());
+    return std::make_shared<object::OwningBinary<object::ObjectFile>>(
+      IRCompiler(*M));
   }
 
   typedef int (*MainFnTy)();
@@ -121,6 +131,36 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
   LLVMOrcModuleHandle H;
   LLVMOrcAddLazilyCompiledIR(JIT, &H, SM, myResolver, nullptr);
   LLVMOrcDisposeSharedModuleRef(SM);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
+  int Result = MainFn();
+  EXPECT_EQ(Result, 42)
+    << "Lazily JIT'd code did not return expected result";
+
+  LLVMOrcRemoveModule(JIT, H);
+
+  LLVMOrcDisposeMangledSymbol(testFuncName);
+  LLVMOrcDisposeInstance(JIT);
+}
+
+TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
+  if (!TM)
+    return;
+
+  std::unique_ptr<MemoryBuffer> ObjBuffer;
+  {
+    auto OwningObj = createTestObject();
+    auto ObjAndBuffer = OwningObj->takeBinary();
+    ObjBuffer = std::move(ObjAndBuffer.second);
+  }
+
+  LLVMOrcJITStackRef JIT =
+    LLVMOrcCreateInstance(wrap(TM.get()));
+  LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
+
+  LLVMOrcModuleHandle H;
+  LLVMOrcAddObjectFile(JIT, &H, wrap(ObjBuffer.release()), myResolver, nullptr);
   LLVMOrcTargetAddress MainAddr;
   LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
   MainFnTy MainFn = (MainFnTy)MainAddr;

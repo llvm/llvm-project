@@ -839,18 +839,18 @@ class AVX512<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AES8I<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag>pattern, InstrItinClass itin = IIC_AES>
       : I<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, T8PD,
-        Requires<[HasAES]>;
+        Requires<[NoAVX, HasAES]>;
 
 class AESAI<bits<8> o, Format F, dag outs, dag ins, string asm,
             list<dag> pattern, InstrItinClass itin = NoItinerary>
       : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[HasAES]>;
+        Requires<[NoAVX, HasAES]>;
 
 // PCLMUL Instruction Templates
 class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag>pattern, InstrItinClass itin = NoItinerary>
       : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[HasPCLMUL]>;
+        Requires<[NoAVX, HasPCLMUL]>;
 
 class AVXPCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                   list<dag>pattern, InstrItinClass itin = NoItinerary>
