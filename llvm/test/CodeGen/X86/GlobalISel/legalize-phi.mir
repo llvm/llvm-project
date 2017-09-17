@@ -210,7 +210,7 @@ constants:
 # ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
 # ALL-NEXT:     liveins: %edi, %edx, %esi
 # ALL:          %0(s32) = COPY %edi
-# ALL-NEXT:     %1(s8) = COPY %esi
+# ALL-NEXT:     %1(s8) = COPY %sil
 # ALL-NEXT:     %2(s8) = COPY %edx
 # ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
 # ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
@@ -233,7 +233,7 @@ body:             |
     liveins: %edi, %edx, %esi
 
     %0(s32) = COPY %edi
-    %1(s8) = COPY %esi
+    %1(s8) = COPY %sil
     %2(s8) = COPY %edx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
@@ -277,7 +277,7 @@ constants:
 # ALL-NEXT:     successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
 # ALL-NEXT:     liveins: %edi, %edx, %esi
 # ALL:          %0(s32) = COPY %edi
-# ALL-NEXT:     %1(s16) = COPY %esi
+# ALL-NEXT:     %1(s16) = COPY %si
 # ALL-NEXT:     %2(s16) = COPY %edx
 # ALL-NEXT:     %3(s32) = G_CONSTANT i32 0
 # ALL-NEXT:     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
@@ -300,7 +300,7 @@ body:             |
     liveins: %edi, %edx, %esi
 
     %0(s32) = COPY %edi
-    %1(s16) = COPY %esi
+    %1(s16) = COPY %si
     %2(s16) = COPY %edx
     %3(s32) = G_CONSTANT i32 0
     %4(s1) = G_ICMP intpred(sgt), %0(s32), %3

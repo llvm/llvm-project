@@ -2416,50 +2416,6 @@ let Constraints = "$src1 = $dst" in {
                     memopv2f64, SSEPackedDouble>, PD;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4i32 (X86Shufp VR128:$src1,
-                       (bc_v4i32 (loadv2i64 addr:$src2)), (i8 imm:$imm))),
-            (VSHUFPSrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v4i32 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (VSHUFPSrri VR128:$src1, VR128:$src2, imm:$imm)>;
-
-  def : Pat<(v2i64 (X86Shufp VR128:$src1,
-                       (loadv2i64 addr:$src2), (i8 imm:$imm))),
-            (VSHUFPDrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v2i64 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (VSHUFPDrri VR128:$src1, VR128:$src2, imm:$imm)>;
-
-  // 256-bit patterns
-  def : Pat<(v8i32 (X86Shufp VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-            (VSHUFPSYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-  def : Pat<(v8i32 (X86Shufp VR256:$src1,
-                      (bc_v8i32 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-            (VSHUFPSYrmi VR256:$src1, addr:$src2, imm:$imm)>;
-
-  def : Pat<(v4i64 (X86Shufp VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-            (VSHUFPDYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-  def : Pat<(v4i64 (X86Shufp VR256:$src1,
-                              (loadv4i64 addr:$src2), (i8 imm:$imm))),
-            (VSHUFPDYrmi VR256:$src1, addr:$src2, imm:$imm)>;
-}
-
-let Predicates = [UseSSE1] in {
-  def : Pat<(v4i32 (X86Shufp VR128:$src1,
-                       (bc_v4i32 (memopv2i64 addr:$src2)), (i8 imm:$imm))),
-            (SHUFPSrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v4i32 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (SHUFPSrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Generic SHUFPD patterns
-  def : Pat<(v2i64 (X86Shufp VR128:$src1,
-                       (memopv2i64 addr:$src2), (i8 imm:$imm))),
-            (SHUFPDrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v2i64 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (SHUFPDrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Unpack FP Instructions
 //===----------------------------------------------------------------------===//
