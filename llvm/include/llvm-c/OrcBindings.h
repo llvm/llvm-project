@@ -30,7 +30,6 @@ extern "C" {
 #endif
 
 typedef struct LLVMOpaqueSharedModule *LLVMSharedModuleRef;
-typedef struct LLVMOpaqueSharedObjectBuffer *LLVMSharedObjectBufferRef;
 typedef struct LLVMOrcOpaqueJITStack *LLVMOrcJITStackRef;
 typedef uint32_t LLVMOrcModuleHandle;
 typedef uint64_t LLVMOrcTargetAddress;
@@ -66,18 +65,6 @@ LLVMSharedModuleRef LLVMOrcMakeSharedModule(LLVMModuleRef Mod);
  */
 
 void LLVMOrcDisposeSharedModuleRef(LLVMSharedModuleRef SharedMod);
-
-/**
- * Get an LLVMSharedObjectBufferRef from an LLVMMemoryBufferRef.
- */
-LLVMSharedObjectBufferRef
-LLVMOrcMakeSharedObjectBuffer(LLVMMemoryBufferRef ObjBuffer);
-
-/**
- * Dispose of a shared object buffer.
- */
-void
-LLVMOrcDisposeSharedObjectBufferRef(LLVMSharedObjectBufferRef SharedObjBuffer);
 
 /**
  * Create an ORC JIT stack.
@@ -155,10 +142,15 @@ LLVMOrcAddLazilyCompiledIR(LLVMOrcJITStackRef JITStack,
 
 /**
  * Add an object file.
+ *
+ * This method takes ownership of the given memory buffer and attempts to add
+ * it to the JIT as an object file.
+ * Clients should *not* dispose of the 'Obj' argument: the JIT will manage it
+ * from this call onwards.
  */
 LLVMOrcErrorCode LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
                                       LLVMOrcModuleHandle *RetHandle,
-                                      LLVMSharedObjectBufferRef Obj,
+                                      LLVMMemoryBufferRef Obj,
                                       LLVMOrcSymbolResolverFn SymbolResolver,
                                       void *SymbolResolverCtx);
 

@@ -123,40 +123,14 @@ bool X86TargetInfo::initFeatureMap(
   case CK_PentiumPro:
   case CK_Lakemont:
     break;
+
   case CK_PentiumMMX:
   case CK_Pentium2:
   case CK_K6:
   case CK_WinChipC6:
     setFeatureEnabledImpl(Features, "mmx", true);
     break;
-  case CK_Pentium3:
-  case CK_C3_2:
-    setFeatureEnabledImpl(Features, "sse", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_PentiumM:
-  case CK_Pentium4:
-  case CK_x86_64:
-    setFeatureEnabledImpl(Features, "sse2", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_Yonah:
-  case CK_Prescott:
-  case CK_Nocona:
-    setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
-  case CK_Core2:
-    setFeatureEnabledImpl(Features, "ssse3", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
-  case CK_Penryn:
-    setFeatureEnabledImpl(Features, "sse4.1", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
+
   case CK_Cannonlake:
     setFeatureEnabledImpl(Features, "avx512ifma", true);
     setFeatureEnabledImpl(Features, "avx512vbmi", true);
@@ -207,9 +181,30 @@ bool X86TargetInfo::initFeatureMap(
     LLVM_FALLTHROUGH;
   case CK_Nehalem:
     setFeatureEnabledImpl(Features, "sse4.2", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
+    LLVM_FALLTHROUGH;
+  case CK_Penryn:
+    setFeatureEnabledImpl(Features, "sse4.1", true);
+    LLVM_FALLTHROUGH;
+  case CK_Core2:
+    setFeatureEnabledImpl(Features, "ssse3", true);
+    LLVM_FALLTHROUGH;
+  case CK_Yonah:
+  case CK_Prescott:
+  case CK_Nocona:
+    setFeatureEnabledImpl(Features, "sse3", true);
     setFeatureEnabledImpl(Features, "cx16", true);
+    LLVM_FALLTHROUGH;
+  case CK_PentiumM:
+  case CK_Pentium4:
+  case CK_x86_64:
+    setFeatureEnabledImpl(Features, "sse2", true);
+    LLVM_FALLTHROUGH;
+  case CK_Pentium3:
+  case CK_C3_2:
+    setFeatureEnabledImpl(Features, "sse", true);
+    setFeatureEnabledImpl(Features, "fxsr", true);
     break;
+
   case CK_Goldmont:
     setFeatureEnabledImpl(Features, "sha", true);
     setFeatureEnabledImpl(Features, "rdrnd", true);
@@ -232,6 +227,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     break;
+
   case CK_KNL:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
@@ -256,26 +252,14 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsave", true);
     setFeatureEnabledImpl(Features, "movbe", true);
     break;
+
   case CK_K6_2:
   case CK_K6_3:
   case CK_WinChip2:
   case CK_C3:
     setFeatureEnabledImpl(Features, "3dnow", true);
     break;
-  case CK_Athlon:
-  case CK_Geode:
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    break;
-  case CK_AthlonXP:
-    setFeatureEnabledImpl(Features, "sse", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_K8:
-    setFeatureEnabledImpl(Features, "sse2", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
+
   case CK_AMDFAM10:
     setFeatureEnabledImpl(Features, "sse4a", true);
     setFeatureEnabledImpl(Features, "lzcnt", true);
@@ -283,9 +267,19 @@ bool X86TargetInfo::initFeatureMap(
     LLVM_FALLTHROUGH;
   case CK_K8SSE3:
     setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
+    LLVM_FALLTHROUGH;
+  case CK_K8:
+    setFeatureEnabledImpl(Features, "sse2", true);
+    LLVM_FALLTHROUGH;
+  case CK_AthlonXP:
+    setFeatureEnabledImpl(Features, "sse", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
+    LLVM_FALLTHROUGH;
+  case CK_Athlon:
+  case CK_Geode:
+    setFeatureEnabledImpl(Features, "3dnowa", true);
     break;
+
   case CK_BTVER2:
     setFeatureEnabledImpl(Features, "avx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -304,6 +298,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     break;
+
   case CK_ZNVER1:
     setFeatureEnabledImpl(Features, "adx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -332,6 +327,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     break;
+
   case CK_BDVER4:
     setFeatureEnabledImpl(Features, "avx2", true);
     setFeatureEnabledImpl(Features, "bmi2", true);

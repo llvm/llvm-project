@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -55,7 +56,7 @@ private:
   bool selectImpl(MachineInstr &I) const;
 
   // TODO: remove after supported by Tablegen-erated instruction selection.
-  unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
+  unsigned getLoadStoreOp(const LLT &Ty, const RegisterBank &RB, unsigned Opc,
                           uint64_t Alignment) const;
 
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -87,6 +88,8 @@ private:
                      MachineFunction &MF) const;
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
+  bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
+                     MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
@@ -308,41 +311,51 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
 
   // TODO: This should be implemented by tblgen.
-  if (selectLoadStoreOp(I, MRI, MF))
-    return true;
-  if (selectFrameIndexOrGep(I, MRI, MF))
-    return true;
-  if (selectGlobalValue(I, MRI, MF))
-    return true;
-  if (selectConstant(I, MRI, MF))
-    return true;
-  if (selectTrunc(I, MRI, MF))
-    return true;
-  if (selectZext(I, MRI, MF))
-    return true;
-  if (selectAnyext(I, MRI, MF))
-    return true;
-  if (selectCmp(I, MRI, MF))
-    return true;
-  if (selectUadde(I, MRI, MF))
-    return true;
-  if (selectUnmergeValues(I, MRI, MF))
-    return true;
-  if (selectMergeValues(I, MRI, MF))
-    return true;
-  if (selectExtract(I, MRI, MF))
-    return true;
-  if (selectInsert(I, MRI, MF))
-    return true;
-  if (selectCondBranch(I, MRI, MF))
-    return true;
-  if (selectImplicitDefOrPHI(I, MRI))
-    return true;
+  switch (I.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_STORE:
+  case TargetOpcode::G_LOAD:
+    return selectLoadStoreOp(I, MRI, MF);
+  case TargetOpcode::G_GEP:
+  case TargetOpcode::G_FRAME_INDEX:
+    return selectFrameIndexOrGep(I, MRI, MF);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return selectGlobalValue(I, MRI, MF);
+  case TargetOpcode::G_CONSTANT:
+    return selectConstant(I, MRI, MF);
+  case TargetOpcode::G_FCONSTANT:
+    return materializeFP(I, MRI, MF);
+  case TargetOpcode::G_TRUNC:
+    return selectTrunc(I, MRI, MF);
+  case TargetOpcode::G_ZEXT:
+    return selectZext(I, MRI, MF);
+  case TargetOpcode::G_ANYEXT:
+    return selectAnyext(I, MRI, MF);
+  case TargetOpcode::G_ICMP:
+    return selectCmp(I, MRI, MF);
+  case TargetOpcode::G_UADDE:
+    return selectUadde(I, MRI, MF);
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return selectUnmergeValues(I, MRI, MF);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(I, MRI, MF);
+  case TargetOpcode::G_EXTRACT:
+    return selectExtract(I, MRI, MF);
+  case TargetOpcode::G_INSERT:
+    return selectInsert(I, MRI, MF);
+  case TargetOpcode::G_BRCOND:
+    return selectCondBranch(I, MRI, MF);
+  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_PHI:
+    return selectImplicitDefOrPHI(I, MRI);
+  }
 
   return false;
 }
 
-unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
+unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
+                                                const RegisterBank &RB,
                                                 unsigned Opc,
                                                 uint64_t Alignment) const {
   bool Isload = (Opc == TargetOpcode::G_LOAD);
@@ -450,8 +463,8 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
 
   unsigned Opc = I.getOpcode();
 
-  if (Opc != TargetOpcode::G_STORE && Opc != TargetOpcode::G_LOAD)
-    return false;
+  assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
+         "unexpected instruction");
 
   const unsigned DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -498,8 +511,8 @@ bool X86InstructionSelector::selectFrameIndexOrGep(MachineInstr &I,
                                                    MachineFunction &MF) const {
   unsigned Opc = I.getOpcode();
 
-  if (Opc != TargetOpcode::G_FRAME_INDEX && Opc != TargetOpcode::G_GEP)
-    return false;
+  assert((Opc == TargetOpcode::G_FRAME_INDEX || Opc == TargetOpcode::G_GEP) &&
+         "unexpected instruction");
 
   const unsigned DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -524,10 +537,9 @@ bool X86InstructionSelector::selectFrameIndexOrGep(MachineInstr &I,
 bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
                                                MachineRegisterInfo &MRI,
                                                MachineFunction &MF) const {
-  unsigned Opc = I.getOpcode();
 
-  if (Opc != TargetOpcode::G_GLOBAL_VALUE)
-    return false;
+  assert((I.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) &&
+         "unexpected instruction");
 
   auto GV = I.getOperand(1).getGlobal();
   if (GV->isThreadLocal()) {
@@ -572,8 +584,9 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
 bool X86InstructionSelector::selectConstant(MachineInstr &I,
                                             MachineRegisterInfo &MRI,
                                             MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_CONSTANT)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_CONSTANT) &&
+         "unexpected instruction");
 
   const unsigned DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -620,8 +633,8 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
 bool X86InstructionSelector::selectTrunc(MachineInstr &I,
                                          MachineRegisterInfo &MRI,
                                          MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_TRUNC)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_TRUNC) && "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -679,8 +692,8 @@ bool X86InstructionSelector::selectTrunc(MachineInstr &I,
 bool X86InstructionSelector::selectZext(MachineInstr &I,
                                         MachineRegisterInfo &MRI,
                                         MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_ZEXT)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_ZEXT) && "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -728,8 +741,7 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
                                           MachineRegisterInfo &MRI,
                                           MachineFunction &MF) const {
 
-  if (I.getOpcode() != TargetOpcode::G_ANYEXT)
-    return false;
+  assert((I.getOpcode() == TargetOpcode::G_ANYEXT) && "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -740,11 +752,11 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
   const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  assert (DstRB.getID() == SrcRB.getID() &&
-      "G_ANYEXT input/output on different banks\n");
+  assert(DstRB.getID() == SrcRB.getID() &&
+         "G_ANYEXT input/output on different banks\n");
 
-  assert (DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
-      "G_ANYEXT incorrect operand size");
+  assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+         "G_ANYEXT incorrect operand size");
 
   if (DstRB.getID() != X86::GPRRegBankID)
     return false;
@@ -778,8 +790,8 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
 bool X86InstructionSelector::selectCmp(MachineInstr &I,
                                        MachineRegisterInfo &MRI,
                                        MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_ICMP)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_ICMP) && "unexpected instruction");
 
   X86::CondCode CC;
   bool SwapArgs;
@@ -831,8 +843,8 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
 bool X86InstructionSelector::selectUadde(MachineInstr &I,
                                          MachineRegisterInfo &MRI,
                                          MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_UADDE)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_UADDE) && "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned CarryOutReg = I.getOperand(1).getReg();
@@ -892,8 +904,8 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
                                            MachineRegisterInfo &MRI,
                                            MachineFunction &MF) const {
 
-  if (I.getOpcode() != TargetOpcode::G_EXTRACT)
-    return false;
+  assert((I.getOpcode() == TargetOpcode::G_EXTRACT) &&
+         "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -1028,8 +1040,7 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
                                           MachineRegisterInfo &MRI,
                                           MachineFunction &MF) const {
 
-  if (I.getOpcode() != TargetOpcode::G_INSERT)
-    return false;
+  assert((I.getOpcode() == TargetOpcode::G_INSERT) && "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
   const unsigned SrcReg = I.getOperand(1).getReg();
@@ -1087,8 +1098,9 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
                                                  MachineRegisterInfo &MRI,
                                                  MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES) &&
+         "unexpected instruction");
 
   // Split to extracts.
   unsigned NumDefs = I.getNumOperands() - 1;
@@ -1114,8 +1126,9 @@ bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
 bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
                                                MachineRegisterInfo &MRI,
                                                MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_MERGE_VALUES)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
+         "unexpected instruction");
 
   // Split to inserts.
   unsigned DstReg = I.getOperand(0).getReg();
@@ -1164,8 +1177,8 @@ bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
 bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
                                               MachineRegisterInfo &MRI,
                                               MachineFunction &MF) const {
-  if (I.getOpcode() != TargetOpcode::G_BRCOND)
-    return false;
+
+  assert((I.getOpcode() == TargetOpcode::G_BRCOND) && "unexpected instruction");
 
   const unsigned CondReg = I.getOperand(0).getReg();
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
@@ -1183,12 +1196,79 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
   return true;
 }
 
+bool X86InstructionSelector::materializeFP(MachineInstr &I,
+                                           MachineRegisterInfo &MRI,
+                                           MachineFunction &MF) const {
+
+  assert((I.getOpcode() == TargetOpcode::G_FCONSTANT) &&
+         "unexpected instruction");
+
+  // Can't handle alternate code models yet.
+  CodeModel::Model CM = TM.getCodeModel();
+  if (CM != CodeModel::Small && CM != CodeModel::Large)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+  unsigned Align = DstTy.getSizeInBits();
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+
+  unsigned Opc = getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Align);
+
+  // Create the load from the constant pool.
+  const ConstantFP *CFP = I.getOperand(1).getFPImm();
+  unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CFP, Align);
+  MachineInstr *LoadInst = nullptr;
+  unsigned char OpFlag = STI.classifyLocalReference(nullptr);
+
+  if (CM == CodeModel::Large && STI.is64Bit()) {
+    // Under X86-64 non-small code model, GV (and friends) are 64-bits, so
+    // they cannot be folded into immediate fields.
+
+    unsigned AddrReg = MRI.createVirtualRegister(&X86::GR64RegClass);
+    BuildMI(*I.getParent(), I, DbgLoc, TII.get(X86::MOV64ri), AddrReg)
+        .addConstantPoolIndex(CPI, 0, OpFlag);
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+        MF.getDataLayout().getPointerSize(), Align);
+
+    LoadInst =
+        addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),
+                     AddrReg)
+            .addMemOperand(MMO);
+
+  } else if (CM == CodeModel::Small || !STI.is64Bit()) {
+    // Handle the case when globals fit in our immediate field.
+    // This is true for X86-32 always and X86-64 when in -mcmodel=small mode.
+
+    // x86-32 PIC requires a PIC base register for constant pools.
+    unsigned PICBase = 0;
+    if (OpFlag == X86II::MO_PIC_BASE_OFFSET || OpFlag == X86II::MO_GOTOFF) {
+      // PICBase can be allocated by TII.getGlobalBaseReg(&MF).
+      // In DAGISEL the code that initialize it generated by the CGBR pass.
+      return false; // TODO support the mode.
+    } else if (STI.is64Bit() && TM.getCodeModel() == CodeModel::Small)
+      PICBase = X86::RIP;
+
+    LoadInst = addConstantPoolReference(
+        BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg), CPI, PICBase,
+        OpFlag);
+  } else
+    return false;
+
+  constrainSelectedInstRegOperands(*LoadInst, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
+}
+
 bool X86InstructionSelector::selectImplicitDefOrPHI(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
 
-  if (I.getOpcode() != TargetOpcode::G_IMPLICIT_DEF &&
-      I.getOpcode() != TargetOpcode::G_PHI)
-    return false;
+  assert((I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+          I.getOpcode() == TargetOpcode::G_PHI) &&
+         "unexpected instruction");
 
   unsigned DstReg = I.getOperand(0).getReg();
 

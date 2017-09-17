@@ -127,6 +127,12 @@ static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 
 static opt<bool>
+    ShowChildren("show-children",
+                 desc("Show a debug info entry's children when selectively "
+                      "printing with the =<Offset> option"));
+static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
+                               aliasopt(ShowChildren));
+static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
@@ -153,6 +159,7 @@ static void error(StringRef Filename, std::error_code EC) {
 static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
+  DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
   return DumpOpts;
