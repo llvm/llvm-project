@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 5.0
 -----------
 
-* rTBD - Fix undefined "___cxa_deleted_virtual" symbol in macosx
+* r313500 - Fix undefined "___cxa_deleted_virtual" symbol in macosx
 
   x86_64-linux-gnu
   ----------------
