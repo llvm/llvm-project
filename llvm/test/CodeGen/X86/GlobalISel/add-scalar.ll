@@ -78,3 +78,26 @@ define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
   %ret = add i8 %arg1, %arg2
   ret i8 %ret
 }
+
+define i32 @test_add_i1(i32 %arg1, i32 %arg2) {
+; X64-LABEL: test_add_i1:
+; X64:       # BB#0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    sete %al
+; X64-NEXT:    addb %al, %al
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_add_i1:
+; X32:       # BB#0:
+; X32-NEXT:    movl 8(%esp), %eax
+; X32-NEXT:    cmpl %eax, 4(%esp)
+; X32-NEXT:    sete %al
+; X32-NEXT:    addb %al, %al
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    retl
+  %c = icmp eq i32 %arg1, %arg2
+  %x = add i1 %c , %c
+  %ret = zext i1 %x to i32
+  ret i32 %ret
+}
