@@ -96,34 +96,21 @@ define x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> 
 }
 
 ; X32-LABEL:  caller_argv64i1:
-; X32:        movl    $2, %eax
-; X32:        movl    $1, %ecx
-; X32:        movl    $2, %edx
-; X32:        movl    $1, %edi
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        pushl    ${{1|2}}
-; X32:        call{{.*}}   _test_argv64i1
-        
+; X32:  pushl %edi
+; X32:  subl  $88, %esp
+; X32:  vmovaps __xmm@00000001000000020000000100000002, %xmm0 # xmm0 = [2,1,2,1]
+; X32:  vmovups %xmm0, 64(%esp)
+; X32:  vmovaps LCPI1_1, %zmm0          # zmm0 = [2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1]
+; X32:  vmovups %zmm0, (%esp)
+; X32:  movl  $1, 84(%esp)
+; X32:  movl  $2, 80(%esp)
+; X32:  movl  $2, %eax
+; X32:  movl  $1, %ecx
+; X32:  movl  $2, %edx
+; X32:  movl  $1, %edi
+; X32:  vzeroupper
+; X32:  calll _test_argv64i1
+ 
 ; WIN64-LABEL: caller_argv64i1:
 ; WIN64:       movabsq    $4294967298, %rax
 ; WIN64:       movq   %rax, (%rsp)

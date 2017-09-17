@@ -2416,50 +2416,6 @@ let Constraints = "$src1 = $dst" in {
                     memopv2f64, SSEPackedDouble>, PD;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4i32 (X86Shufp VR128:$src1,
-                       (bc_v4i32 (loadv2i64 addr:$src2)), (i8 imm:$imm))),
-            (VSHUFPSrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v4i32 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (VSHUFPSrri VR128:$src1, VR128:$src2, imm:$imm)>;
-
-  def : Pat<(v2i64 (X86Shufp VR128:$src1,
-                       (loadv2i64 addr:$src2), (i8 imm:$imm))),
-            (VSHUFPDrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v2i64 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (VSHUFPDrri VR128:$src1, VR128:$src2, imm:$imm)>;
-
-  // 256-bit patterns
-  def : Pat<(v8i32 (X86Shufp VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-            (VSHUFPSYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-  def : Pat<(v8i32 (X86Shufp VR256:$src1,
-                      (bc_v8i32 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-            (VSHUFPSYrmi VR256:$src1, addr:$src2, imm:$imm)>;
-
-  def : Pat<(v4i64 (X86Shufp VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-            (VSHUFPDYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-  def : Pat<(v4i64 (X86Shufp VR256:$src1,
-                              (loadv4i64 addr:$src2), (i8 imm:$imm))),
-            (VSHUFPDYrmi VR256:$src1, addr:$src2, imm:$imm)>;
-}
-
-let Predicates = [UseSSE1] in {
-  def : Pat<(v4i32 (X86Shufp VR128:$src1,
-                       (bc_v4i32 (memopv2i64 addr:$src2)), (i8 imm:$imm))),
-            (SHUFPSrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v4i32 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (SHUFPSrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Generic SHUFPD patterns
-  def : Pat<(v2i64 (X86Shufp VR128:$src1,
-                       (memopv2i64 addr:$src2), (i8 imm:$imm))),
-            (SHUFPDrmi VR128:$src1, addr:$src2, imm:$imm)>;
-  def : Pat<(v2i64 (X86Shufp VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-            (SHUFPDrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Unpack FP Instructions
 //===----------------------------------------------------------------------===//
@@ -6489,8 +6445,8 @@ let Constraints = "$src1 = $dst" in {
 /// SS41I_binop_rmi_int - SSE 4.1 binary operator with 8-bit immediate
 multiclass SS41I_binop_rmi_int<bits<8> opc, string OpcodeStr,
                  Intrinsic IntId, RegisterClass RC, PatFrag memop_frag,
-                 X86MemOperand x86memop, bit Is2Addr = 1,
-                 OpndItins itins = DEFAULT_ITINS> {
+                 X86MemOperand x86memop, bit Is2Addr,
+                 OpndItins itins> {
   let isCommutable = 1 in
   def rri : SS4AIi8<opc, MRMSrcReg, (outs RC:$dst),
         (ins RC:$src1, RC:$src2, u8imm:$src3),
@@ -6517,8 +6473,8 @@ multiclass SS41I_binop_rmi_int<bits<8> opc, string OpcodeStr,
 /// SS41I_binop_rmi - SSE 4.1 binary operator with 8-bit immediate
 multiclass SS41I_binop_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            ValueType OpVT, RegisterClass RC, PatFrag memop_frag,
-                           X86MemOperand x86memop, bit Is2Addr = 1,
-                           OpndItins itins = DEFAULT_ITINS> {
+                           X86MemOperand x86memop, bit Is2Addr,
+                           OpndItins itins> {
   let isCommutable = 1 in
   def rri : SS4AIi8<opc, MRMSrcReg, (outs RC:$dst),
         (ins RC:$src1, RC:$src2, u8imm:$src3),
@@ -6542,32 +6498,27 @@ multiclass SS41I_binop_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
         Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
+def BlendCommuteImm2 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue() & 0x03;
+  return getI8Imm(Imm ^ 0x03, SDLoc(N));
+}]>;
+
+def BlendCommuteImm4 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue() & 0x0f;
+  return getI8Imm(Imm ^ 0x0f, SDLoc(N));
+}]>;
+
+def BlendCommuteImm8 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue() & 0xff;
+  return getI8Imm(Imm ^ 0xff, SDLoc(N));
+}]>;
+
 let Predicates = [HasAVX] in {
   let isCommutable = 0 in {
     defm VMPSADBW : SS41I_binop_rmi_int<0x42, "vmpsadbw", int_x86_sse41_mpsadbw,
                                         VR128, loadv2i64, i128mem, 0,
                                         DEFAULT_ITINS_MPSADSCHED>, VEX_4V, VEX_WIG;
   }
-
-  let ExeDomain = SSEPackedSingle in {
-  defm VBLENDPS : SS41I_binop_rmi<0x0C, "vblendps", X86Blendi, v4f32,
-                                  VR128, loadv4f32, f128mem, 0,
-                                  DEFAULT_ITINS_FBLENDSCHED>, VEX_4V, VEX_WIG;
-  defm VBLENDPSY : SS41I_binop_rmi<0x0C, "vblendps", X86Blendi, v8f32,
-                                   VR256, loadv8f32, f256mem, 0,
-                                   DEFAULT_ITINS_FBLENDSCHED>, VEX_4V, VEX_L, VEX_WIG;
-  }
-  let ExeDomain = SSEPackedDouble in {
-  defm VBLENDPD : SS41I_binop_rmi<0x0D, "vblendpd", X86Blendi, v2f64,
-                                  VR128, loadv2f64, f128mem, 0,
-                                  DEFAULT_ITINS_FBLENDSCHED>, VEX_4V, VEX_WIG;
-  defm VBLENDPDY : SS41I_binop_rmi<0x0D, "vblendpd", X86Blendi, v4f64,
-                                   VR256, loadv4f64, f256mem, 0,
-                                   DEFAULT_ITINS_FBLENDSCHED>, VEX_4V, VEX_L, VEX_WIG;
-  }
-  defm VPBLENDW : SS41I_binop_rmi<0x0E, "vpblendw", X86Blendi, v8i16,
-                                  VR128, loadv2i64, i128mem, 0,
-                                  DEFAULT_ITINS_BLENDSCHED>, VEX_4V, VEX_WIG;
 
   let ExeDomain = SSEPackedSingle in
   defm VDPPS : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_sse41_dpps,
@@ -6589,9 +6540,6 @@ let Predicates = [HasAVX2] in {
                                   VR256, loadv4i64, i256mem, 0,
                                   DEFAULT_ITINS_MPSADSCHED>, VEX_4V, VEX_L, VEX_WIG;
   }
-  defm VPBLENDWY : SS41I_binop_rmi<0x0E, "vpblendw", X86Blendi, v16i16,
-                                   VR256, loadv4i64, i256mem, 0,
-                                   DEFAULT_ITINS_BLENDSCHED>, VEX_4V, VEX_L, VEX_WIG;
 }
 
 let Constraints = "$src1 = $dst" in {
@@ -6600,17 +6548,7 @@ let Constraints = "$src1 = $dst" in {
                                      VR128, memopv2i64, i128mem,
                                      1, SSE_MPSADBW_ITINS>;
   }
-  let ExeDomain = SSEPackedSingle in
-  defm BLENDPS : SS41I_binop_rmi<0x0C, "blendps", X86Blendi, v4f32,
-                                 VR128, memopv4f32, f128mem,
-                                 1, SSE_INTALU_ITINS_FBLEND_P>;
-  let ExeDomain = SSEPackedDouble in
-  defm BLENDPD : SS41I_binop_rmi<0x0D, "blendpd", X86Blendi, v2f64,
-                                 VR128, memopv2f64, f128mem,
-                                 1, SSE_INTALU_ITINS_FBLEND_P>;
-  defm PBLENDW : SS41I_binop_rmi<0x0E, "pblendw", X86Blendi, v8i16,
-                                 VR128, memopv2i64, i128mem,
-                                 1, SSE_INTALU_ITINS_BLEND_P>;
+
   let ExeDomain = SSEPackedSingle in
   defm DPPS : SS41I_binop_rmi_int<0x40, "dpps", int_x86_sse41_dpps,
                                   VR128, memopv4f32, f128mem, 1,
@@ -6620,6 +6558,82 @@ let Constraints = "$src1 = $dst" in {
                                   VR128, memopv2f64, f128mem, 1,
                                   SSE_DPPD_ITINS>;
 }
+
+/// SS41I_blend_rmi - SSE 4.1 blend with 8-bit immediate
+multiclass SS41I_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           ValueType OpVT, RegisterClass RC, PatFrag memop_frag,
+                           X86MemOperand x86memop, bit Is2Addr, Domain d,
+                           OpndItins itins, SDNodeXForm commuteXForm> {
+let ExeDomain = d, Constraints = !if(Is2Addr, "$src1 = $dst", "") in {
+  let isCommutable = 1 in
+  def rri : SS4AIi8<opc, MRMSrcReg, (outs RC:$dst),
+        (ins RC:$src1, RC:$src2, u8imm:$src3),
+        !if(Is2Addr,
+            !strconcat(OpcodeStr,
+                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+            !strconcat(OpcodeStr,
+                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
+        [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2, imm:$src3)))],
+        itins.rr>, Sched<[itins.Sched]>;
+  def rmi : SS4AIi8<opc, MRMSrcMem, (outs RC:$dst),
+        (ins RC:$src1, x86memop:$src2, u8imm:$src3),
+        !if(Is2Addr,
+            !strconcat(OpcodeStr,
+                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+            !strconcat(OpcodeStr,
+                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
+        [(set RC:$dst,
+          (OpVT (OpNode RC:$src1,
+                 (bitconvert (memop_frag addr:$src2)), imm:$src3)))], itins.rm>,
+        Sched<[itins.Sched.Folded, ReadAfterLd]>;
+}
+
+  // Pattern to commute if load is in first source.
+  def : Pat<(OpVT (OpNode (bitconvert (memop_frag addr:$src2)),
+                          RC:$src1, imm:$src3)),
+            (!cast<Instruction>(NAME#"rmi") RC:$src1, addr:$src2,
+                                            (commuteXForm imm:$src3))>;
+}
+
+let Predicates = [HasAVX] in {
+  defm VBLENDPS : SS41I_blend_rmi<0x0C, "vblendps", X86Blendi, v4f32,
+                                  VR128, loadv4f32, f128mem, 0, SSEPackedSingle,
+                                  DEFAULT_ITINS_FBLENDSCHED, BlendCommuteImm4>,
+                                  VEX_4V, VEX_WIG;
+  defm VBLENDPSY : SS41I_blend_rmi<0x0C, "vblendps", X86Blendi, v8f32,
+                                   VR256, loadv8f32, f256mem, 0, SSEPackedSingle,
+                                   DEFAULT_ITINS_FBLENDSCHED, BlendCommuteImm8>,
+                                   VEX_4V, VEX_L, VEX_WIG;
+  defm VBLENDPD : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v2f64,
+                                  VR128, loadv2f64, f128mem, 0, SSEPackedDouble,
+                                  DEFAULT_ITINS_FBLENDSCHED, BlendCommuteImm2>,
+                                  VEX_4V, VEX_WIG;
+  defm VBLENDPDY : SS41I_blend_rmi<0x0D, "vblendpd", X86Blendi, v4f64,
+                                   VR256, loadv4f64, f256mem, 0, SSEPackedDouble,
+                                   DEFAULT_ITINS_FBLENDSCHED, BlendCommuteImm4>,
+                                   VEX_4V, VEX_L, VEX_WIG;
+  defm VPBLENDW : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v8i16,
+                                  VR128, loadv2i64, i128mem, 0, SSEPackedInt,
+                                  DEFAULT_ITINS_BLENDSCHED, BlendCommuteImm8>,
+                                  VEX_4V, VEX_WIG;
+}
+
+let Predicates = [HasAVX2] in {
+  defm VPBLENDWY : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v16i16,
+                                   VR256, loadv4i64, i256mem, 0, SSEPackedInt,
+                                   DEFAULT_ITINS_BLENDSCHED, BlendCommuteImm8>,
+                                   VEX_4V, VEX_L, VEX_WIG;
+}
+
+defm BLENDPS : SS41I_blend_rmi<0x0C, "blendps", X86Blendi, v4f32,
+                               VR128, memopv4f32, f128mem, 1, SSEPackedSingle,
+                               SSE_INTALU_ITINS_FBLEND_P, BlendCommuteImm4>;
+defm BLENDPD : SS41I_blend_rmi<0x0D, "blendpd", X86Blendi, v2f64,
+                               VR128, memopv2f64, f128mem, 1, SSEPackedDouble,
+                               SSE_INTALU_ITINS_FBLEND_P, BlendCommuteImm2>;
+defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
+                               VR128, memopv2i64, i128mem, 1, SSEPackedInt,
+                               SSE_INTALU_ITINS_BLEND_P, BlendCommuteImm8>;
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
@@ -6771,7 +6785,7 @@ let Predicates = [UseSSE41], AddedComplexity = 15 in {
 let Uses = [XMM0], Constraints = "$src1 = $dst" in {
   multiclass SS41I_ternary_int<bits<8> opc, string OpcodeStr, PatFrag mem_frag,
                                X86MemOperand x86memop, Intrinsic IntId,
-                               OpndItins itins = DEFAULT_ITINS> {
+                               OpndItins itins> {
     def rr0 : SS48I<opc, MRMSrcReg, (outs VR128:$dst),
                     (ins VR128:$src1, VR128:$src2),
                     !strconcat(OpcodeStr,
@@ -7315,6 +7329,27 @@ def PCLMULQDQrm : PCLMULIi8<0x44, MRMSrcMem, (outs VR128:$dst),
            Sched<[WriteCLMulLd, ReadAfterLd]>;
 } // Constraints = "$src1 = $dst"
 
+// Immediate transform to help with commuting.
+def PCLMULCommuteImm : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  return getI8Imm((uint8_t)((Imm >> 4) | (Imm << 4)), SDLoc(N));
+}]>;
+
+// We can commute a load in the first operand by swapping the sources and
+// rotating the immediate.
+let Predicates = [HasAVX, HasPCLMUL] in {
+  def : Pat<(int_x86_pclmulqdq (loadv2i64 addr:$src2), VR128:$src1,
+                                (i8 imm:$src3)),
+            (VPCLMULQDQrm VR128:$src1, addr:$src2,
+                          (PCLMULCommuteImm imm:$src3))>;
+}
+
+let Predicates = [NoAVX, HasPCLMUL] in {
+  def : Pat<(int_x86_pclmulqdq (loadv2i64 addr:$src2), VR128:$src1,
+                                (i8 imm:$src3)),
+            (PCLMULQDQrm VR128:$src1, addr:$src2,
+                          (PCLMULCommuteImm imm:$src3))>;
+}
 
 multiclass pclmul_alias<string asm, int immop> {
   def : InstAlias<!strconcat("pclmul", asm, "dq {$src, $dst|$dst, $src}"),
@@ -7789,10 +7824,10 @@ let Predicates = [HasF16C, NoVLX] in {
 // AVX2 Instructions
 //===----------------------------------------------------------------------===//
 
-/// AVX2_binop_rmi - AVX2 binary operator with 8-bit immediate
-multiclass AVX2_binop_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
+/// AVX2_blend_rmi - AVX2 blend with 8-bit immediate
+multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           ValueType OpVT, RegisterClass RC, PatFrag memop_frag,
-                          X86MemOperand x86memop> {
+                          X86MemOperand x86memop, SDNodeXForm commuteXForm> {
   let isCommutable = 1 in
   def rri : AVX2AIi8<opc, MRMSrcReg, (outs RC:$dst),
         (ins RC:$src1, RC:$src2, u8imm:$src3),
@@ -7808,12 +7843,19 @@ multiclass AVX2_binop_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (OpVT (OpNode RC:$src1,
            (bitconvert (memop_frag addr:$src2)), imm:$src3)))]>,
         Sched<[WriteBlendLd, ReadAfterLd]>, VEX_4V;
+
+  // Pattern to commute if load is in first source.
+  def : Pat<(OpVT (OpNode (bitconvert (memop_frag addr:$src2)),
+                          RC:$src1, imm:$src3)),
+            (!cast<Instruction>(NAME#"rmi") RC:$src1, addr:$src2,
+                                            (commuteXForm imm:$src3))>;
 }
 
-defm VPBLENDD : AVX2_binop_rmi<0x02, "vpblendd", X86Blendi, v4i32,
-                               VR128, loadv2i64, i128mem>;
-defm VPBLENDDY : AVX2_binop_rmi<0x02, "vpblendd", X86Blendi, v8i32,
-                                VR256, loadv4i64, i256mem>, VEX_L;
+defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32,
+                               VR128, loadv2i64, i128mem, BlendCommuteImm4>;
+defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32,
+                                VR256, loadv4i64, i256mem, BlendCommuteImm8>,
+                                VEX_L;
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
