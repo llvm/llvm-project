@@ -25,7 +25,7 @@ int main()
 #if TEST_STD_VER >= 11
     {
         std::forward<A&>(source());  // expected-note {{requested here}}
-        // expected-error@type_traits:* 1 {{static_assert failed "can not forward an rvalue as an lvalue"}}
+        // expected-error-re@type_traits:* 1 {{static_assert failed {{.*}} "can not forward an rvalue as an lvalue"}}
     }
 #else
     {
