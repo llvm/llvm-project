@@ -1380,3 +1380,145 @@ XT<int> xt{};
 void PR33318(int i) {
   [&](auto) { static_assert(&i != nullptr, ""); }(0); // expected-warning 2{{always true}} expected-note {{instantiation}}
 }
+
+// Check to make sure that we don't capture when member-calls are made to members that are not of 'this' class.
+namespace PR34266 {
+// https://bugs.llvm.org/show_bug.cgi?id=34266
+namespace ns1 {
+struct A {
+  static void bar(int) { }
+  static void bar(double) { }
+};
+
+struct B 
+{
+  template<class T>
+  auto f() {
+    auto L =  [=] { 
+      T{}.bar(3.0); 
+      T::bar(3);
+    
+    };
+    ASSERT_NO_CAPTURES(L);
+    return L;
+  };
+};
+
+void test() {
+  B{}.f<A>();
+}
+} // end ns1
+
+namespace ns2 {
+struct A {
+  static void bar(int) { }
+  static void bar(double) { }
+};
+
+struct B 
+{
+  using T = A;
+  auto f() {
+    auto L =  [=](auto a) {  
+      T{}.bar(a); 
+      T::bar(a);
+    
+    };
+    ASSERT_NO_CAPTURES(L);
+    return L;
+  };
+};
+
+void test() {
+  B{}.f()(3.0);
+  B{}.f()(3);
+}
+} // end ns2
+
+namespace ns3 {
+struct A {
+  void bar(int) { }
+  static void bar(double) { }
+};
+
+struct B 
+{
+  using T = A;
+  auto f() {
+    auto L =  [=](auto a) { 
+      T{}.bar(a); 
+      T::bar(a); // This call ignores the instance member function because the implicit object argument fails to convert.
+    
+    };
+    ASSERT_NO_CAPTURES(L);
+    return L;
+  };
+};
+
+void test() {
+  B{}.f()(3.0);
+  B{}.f()(3); 
+}
+
+} // end ns3
+
+
+namespace ns4 {
+struct A {
+  void bar(int) { }
+  static void bar(double) { }
+};
+
+struct B : A
+{
+  using T = A;
+  auto f() {
+    auto L =  [=](auto a) { 
+      T{}.bar(a); 
+      T::bar(a); 
+    
+    };
+    // just check to see if the size if >= 2 bytes (which should be the case if we capture anything)
+    ASSERT_CLOSURE_SIZE(L, 2);
+    return L;
+  };
+};
+
+void test() {
+  B{}.f()(3.0);
+  B{}.f()(3); 
+}
+
+} // end ns4
+
+namespace ns5 {
+struct A {
+  void bar(int) { }
+  static void bar(double) { }
+};
+
+struct B 
+{
+  template<class T>
+  auto f() {
+    auto L =  [&](auto a) { 
+      T{}.bar(a); 
+      T::bar(a); 
+    
+    };
+    
+    ASSERT_NO_CAPTURES(L);
+    return L;
+  };
+};
+
+void test() {
+  B{}.f<A>()(3.0);
+  B{}.f<A>()(3); 
+}
+
+} // end ns5
+
+
+
+} // end PR34266

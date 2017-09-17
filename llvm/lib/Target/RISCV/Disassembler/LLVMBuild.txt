@@ -1,4 +1,4 @@
-;===- ./lib/Target/RISCV/LLVMBuild.txt -------------------------*- Conf -*--===;
+;===- ./lib/Target/RISCV/Disassembler/LLVMBuild.txt ------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,20 +15,10 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser Disassembler InstPrinter TargetInfo MCTargetDesc
-
 [component_0]
-type = TargetGroup
-name = RISCV
-parent = Target
-has_asmparser = 1
-has_asmprinter = 1
-has_disassembler = 1
-
-[component_1]
 type = Library
-name = RISCVCodeGen
+name = RISCVDisassembler
 parent = RISCV
-required_libraries = AsmPrinter Core CodeGen MC RISCVAsmPrinter RISCVDesc RISCVInfo Support Target
+required_libraries = MCDisassembler RISCVInfo Support
 add_to_library_groups = RISCV
+
