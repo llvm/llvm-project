@@ -60,15 +60,14 @@ registers:
 # ALL:          %0 = IMPLICIT_DEF
 # ALL-NEXT:     %1 = COPY %0.sub_ymm
 # ALL-NEXT:     %2 = VEXTRACTF64x4Zrr %0, 1
-# ALL-NEXT:     %xmm0 = COPY %1
+# ALL-NEXT:     %ymm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit %ymm0
 body:             |
   bb.1 (%ir-block.0):
 
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>), %2(<8 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
-    %xmm0 = COPY %1(<8 x s32>)
+    %ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit %ymm0
 
 ...
-

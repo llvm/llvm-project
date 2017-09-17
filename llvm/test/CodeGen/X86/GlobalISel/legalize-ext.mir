@@ -145,7 +145,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # ALL-NEXT:     %2(s32) = G_ZEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
@@ -154,7 +154,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s32) = G_ZEXT %1(s1)
     %eax = COPY %2(s32)
@@ -170,7 +170,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s16) = G_ZEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
@@ -178,7 +178,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s16) = G_ZEXT %0(s8)
     %ax = COPY %1(s16)
     RET 0, implicit %ax
@@ -193,7 +193,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s32) = G_ZEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -201,7 +201,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s32) = G_ZEXT %0(s8)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -216,7 +216,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %edi
+# ALL:          %0(s16) = COPY %di
 # ALL-NEXT:     %1(s32) = G_ZEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -224,7 +224,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s32) = G_ZEXT %0(s16)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -286,7 +286,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # ALL-NEXT:     %2(s32) = G_SEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
@@ -295,7 +295,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s32) = G_SEXT %1(s1)
     %eax = COPY %2(s32)
@@ -311,7 +311,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s16) = G_SEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
@@ -319,7 +319,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s16) = G_SEXT %0(s8)
     %ax = COPY %1(s16)
     RET 0, implicit %ax
@@ -334,7 +334,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s32) = G_SEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -342,7 +342,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s32) = G_SEXT %0(s8)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -357,7 +357,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %edi
+# ALL:          %0(s16) = COPY %di
 # ALL-NEXT:     %1(s32) = G_SEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -365,7 +365,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s32) = G_SEXT %0(s16)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -427,7 +427,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # ALL-NEXT:     %2(s32) = G_ANYEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
@@ -436,7 +436,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s32) = G_ANYEXT %1(s1)
     %eax = COPY %2(s32)
@@ -452,7 +452,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s16) = G_ANYEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
@@ -460,7 +460,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s16) = G_ANYEXT %0(s8)
     %ax = COPY %1(s16)
     RET 0, implicit %ax
@@ -475,7 +475,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %edi
+# ALL:          %0(s8) = COPY %dil
 # ALL-NEXT:     %1(s32) = G_ANYEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -483,7 +483,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s32) = G_ANYEXT %0(s8)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -498,7 +498,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %edi
+# ALL:          %0(s16) = COPY %di
 # ALL-NEXT:     %1(s32) = G_ANYEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
@@ -506,7 +506,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s32) = G_ANYEXT %0(s16)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
