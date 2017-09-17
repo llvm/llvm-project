@@ -5125,6 +5125,87 @@ static void checkDirectCallValidity(Sema &S, const Expr *Fn,
   }
 }
 
+static bool enclosingClassIsRelatedToClassInWhichMembersWereFound(
+    const UnresolvedMemberExpr *const UME, Sema &S) {
+
+  const auto GetFunctionLevelDCIfCXXClass =
+      [](Sema &S) -> const CXXRecordDecl * {
+    const DeclContext *const DC = S.getFunctionLevelDeclContext();
+    if (!DC || !DC->getParent())
+      return nullptr;
+
+    // If the call to some member function was made from within a member
+    // function body 'M' return return 'M's parent.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(DC))
+      return MD->getParent()->getCanonicalDecl();
+    // else the call was made from within a default member initializer of a
+    // class, so return the class.
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(DC))
+      return RD->getCanonicalDecl();
+    return nullptr;
+  };
+  // If our DeclContext is neither a member function nor a class (in the
+  // case of a lambda in a default member initializer), we can't have an
+  // enclosing 'this'.
+
+  const CXXRecordDecl *const CurParentClass = GetFunctionLevelDCIfCXXClass(S);
+  if (!CurParentClass)
+    return false;
+
+  // The naming class for implicit member functions call is the class in which
+  // name lookup starts.
+  const CXXRecordDecl *const NamingClass =
+      UME->getNamingClass()->getCanonicalDecl();
+  assert(NamingClass && "Must have naming class even for implicit access");
+
+  // If the unresolved member functions were found in a 'naming class' that is
+  // related (either the same or derived from) to the class that contains the
+  // member function that itself contained the implicit member access.
+
+  return CurParentClass == NamingClass ||
+         CurParentClass->isDerivedFrom(NamingClass);
+}
+
+static void
+tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
+    Sema &S, const UnresolvedMemberExpr *const UME, SourceLocation CallLoc) {
+
+  if (!UME)
+    return;
+
+  LambdaScopeInfo *const CurLSI = S.getCurLambda();
+  // Only try and implicitly capture 'this' within a C++ Lambda if it hasn't
+  // already been captured, or if this is an implicit member function call (if
+  // it isn't, an attempt to capture 'this' should already have been made).
+  if (!CurLSI || CurLSI->ImpCaptureStyle == CurLSI->ImpCap_None ||
+      !UME->isImplicitAccess() || CurLSI->isCXXThisCaptured())
+    return;
+
+  // Check if the naming class in which the unresolved members were found is
+  // related (same as or is a base of) to the enclosing class.
+ 
+  if (!enclosingClassIsRelatedToClassInWhichMembersWereFound(UME, S))
+    return;
+  
+        
+  DeclContext *EnclosingFunctionCtx = S.CurContext->getParent()->getParent();
+  // If the enclosing function is not dependent, then this lambda is
+  // capture ready, so if we can capture this, do so.
+  if (!EnclosingFunctionCtx->isDependentContext()) {
+    // If the current lambda and all enclosing lambdas can capture 'this' -
+    // then go ahead and capture 'this' (since our unresolved overload set
+    // contains at least one non-static member function).
+    if (!S.CheckCXXThisCapture(CallLoc, /*Explcit*/ false, /*Diagnose*/ false))
+      S.CheckCXXThisCapture(CallLoc);
+  } else if (S.CurContext->isDependentContext()) {
+    // ... since this is an implicit member reference, that might potentially
+    // involve a 'this' capture, mark 'this' for potential capture in
+    // enclosing lambdas.
+    if (CurLSI->ImpCaptureStyle != CurLSI->ImpCap_None)
+      CurLSI->addPotentialThisCapture(CallLoc);
+  }
+}
+
 /// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
 /// This provides the location of the left/right parens and a list of comma
 /// locations.
@@ -5173,6 +5254,11 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
             Context, Fn, cast<CallExpr>(ExecConfig), ArgExprs,
             Context.DependentTy, VK_RValue, RParenLoc);
       } else {
+
+       tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
+            *this, dyn_cast<UnresolvedMemberExpr>(Fn->IgnoreParens()),
+            Fn->getLocStart());
+
         return new (Context) CallExpr(
             Context, Fn, ArgExprs, Context.DependentTy, VK_RValue, RParenLoc);
       }
