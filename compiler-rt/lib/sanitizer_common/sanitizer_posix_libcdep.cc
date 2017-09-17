@@ -223,7 +223,7 @@ bool SignalContext::IsStackOverflow() const {
   // On s390, the fault address in siginfo points to start of the page, not
   // to the precise word that was accessed.  Mask off the low bits of sp to
   // take it into account.
-  bool IsStackAccess = sig.addr >= (sig.sp & ~0xFFF) && sig.addr < sp + 0xFFFF;
+  bool IsStackAccess = addr >= (sp & ~0xFFF) && addr < sp + 0xFFFF;
 #else
   bool IsStackAccess = addr + 512 > sp && addr < sp + 0xFFFF;
 #endif
