@@ -89,7 +89,6 @@
 ; Check that we don't emit any pubnames or pubtypes under -gmlt
 ; CHECK-NOT: .debug_pubnames contents:
 ; CHECK-NOT: .debug_pubtypes contents:
-; CHECK: .apple{{.*}} contents:
 
 ; Function Attrs: nounwind uwtable
 define void @_Z2f1v() #0 !dbg !4 {
