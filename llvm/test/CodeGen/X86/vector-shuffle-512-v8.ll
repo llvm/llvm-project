@@ -2241,12 +2241,12 @@ define <8 x double> @shuffle_v8f64_2301uu67(<8 x double> %a0, <8 x double> %a1) 
 define <8 x double> @shuffle_v8f64_2301uuuu(<8 x double> %a0, <8 x double> %a1) {
 ; AVX512F-LABEL: shuffle_v8f64_2301uuuu:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[2,3,0,1]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8f64_2301uuuu:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX512F-32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[2,3,0,1]
 ; AVX512F-32-NEXT:    retl
   %1 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x double> %1

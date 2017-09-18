@@ -544,8 +544,8 @@ define <8 x i16> @merge_8i16_i16_23u567u9(i16* %ptr) nounwind uwtable noinline s
 ; X32-SSE1-NEXT:    movzwl 18(%ecx), %ecx
 ; X32-SSE1-NEXT:    movw %di, 10(%eax)
 ; X32-SSE1-NEXT:    movw %cx, 14(%eax)
-; X32-SSE1-NEXT:    movl %edx, (%eax)
 ; X32-SSE1-NEXT:    movl %esi, 6(%eax)
+; X32-SSE1-NEXT:    movl %edx, (%eax)
 ; X32-SSE1-NEXT:    popl %esi
 ; X32-SSE1-NEXT:    popl %edi
 ; X32-SSE1-NEXT:    retl $4
@@ -626,8 +626,8 @@ define <8 x i16> @merge_8i16_i16_45u7zzzz(i16* %ptr) nounwind uwtable noinline s
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE1-NEXT:    movl 8(%ecx), %edx
 ; X32-SSE1-NEXT:    movzwl 14(%ecx), %ecx
-; X32-SSE1-NEXT:    movl %edx, (%eax)
 ; X32-SSE1-NEXT:    movw %cx, 6(%eax)
+; X32-SSE1-NEXT:    movl %edx, (%eax)
 ; X32-SSE1-NEXT:    movl $0, 12(%eax)
 ; X32-SSE1-NEXT:    movl $0, 8(%eax)
 ; X32-SSE1-NEXT:    retl $4
@@ -698,8 +698,8 @@ define <16 x i8> @merge_16i8_i8_01u3456789ABCDuF(i8* %ptr) nounwind uwtable noin
 ; X32-SSE1-NEXT:    movb %cl, 15(%eax)
 ; X32-SSE1-NEXT:    movw %bx, 11(%eax)
 ; X32-SSE1-NEXT:    movl %edi, 7(%eax)
-; X32-SSE1-NEXT:    movw %bp, (%eax)
 ; X32-SSE1-NEXT:    movl %esi, 3(%eax)
+; X32-SSE1-NEXT:    movw %bp, (%eax)
 ; X32-SSE1-NEXT:    popl %esi
 ; X32-SSE1-NEXT:    popl %edi
 ; X32-SSE1-NEXT:    popl %ebx
@@ -773,8 +773,8 @@ define <16 x i8> @merge_16i8_i8_01u3uuzzuuuuuzzz(i8* %ptr) nounwind uwtable noin
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE1-NEXT:    movzwl (%ecx), %edx
 ; X32-SSE1-NEXT:    movb 3(%ecx), %cl
-; X32-SSE1-NEXT:    movw %dx, (%eax)
 ; X32-SSE1-NEXT:    movb %cl, 3(%eax)
+; X32-SSE1-NEXT:    movw %dx, (%eax)
 ; X32-SSE1-NEXT:    movb $0, 15(%eax)
 ; X32-SSE1-NEXT:    movw $0, 13(%eax)
 ; X32-SSE1-NEXT:    movw $0, 6(%eax)

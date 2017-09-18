@@ -39,7 +39,9 @@ if(COMPILER_RT_BUILD_SANITIZERS)
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
     compiler_rt_build_runtime(${sanitizer})
   endforeach()
+endif()
 
+if (COMPILER_RT_HAS_PROFILE)
   compiler_rt_build_runtime(profile)
 endif()
 

@@ -51,7 +51,7 @@ static cl::opt<bool>
                  cl::desc("Analyze array contents for load forwarding"),
                  cl::cat(PollyCategory), cl::init(true), cl::Hidden);
 
-static cl::opt<unsigned long>
+static cl::opt<unsigned>
     MaxOps("polly-optree-max-ops",
            cl::desc("Maximum number of ISL operations to invest for known "
                     "analysis; 0=no limit"),

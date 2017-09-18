@@ -13565,10 +13565,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
                              Ptr, ST->getMemoryVT(), ST->getMemOperand());
   }
 
-  // Only perform this optimization before the types are legal, because we
-  // don't want to perform this optimization on every DAGCombine invocation.
-  if ((TLI.mergeStoresAfterLegalization()) ? Level == AfterLegalizeDAG
-                                           : !LegalTypes) {
+  // Always perform this optimization before types are legal. If the target
+  // prefers, also try this after legalization to catch stores that were created
+  // by intrinsics or other nodes.
+  if (!LegalTypes || (TLI.mergeStoresAfterLegalization())) {
     for (;;) {
       // There can be multiple store sequences on the same chain.
       // Keep trying to merge store sequences until we are unable to do so
