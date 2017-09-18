@@ -12179,6 +12179,26 @@ EVT ARMTargetLowering::getOptimalMemOpType(uint64_t Size,
   return MVT::Other;
 }
 
+// 64-bit integers are split into their high and low parts and held in two
+// different registers, so the trunc is free since the low register can just
+// be used.
+bool ARMTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
+  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+    return false;
+  unsigned NumBits1 = SrcTy->getPrimitiveSizeInBits();
+  unsigned NumBits2 = DstTy->getPrimitiveSizeInBits();
+  return NumBits1 > NumBits2;
+}
+
+bool ARMTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
+  if (SrcVT.isVector() || DstVT.isVector() || !SrcVT.isInteger() ||
+      !DstVT.isInteger())
+    return false;
+  unsigned NumBits1 = SrcVT.getSizeInBits();
+  unsigned NumBits2 = DstVT.getSizeInBits();
+  return NumBits1 > NumBits2;
+}
+
 bool ARMTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   if (Val.getOpcode() != ISD::LOAD)
     return false;

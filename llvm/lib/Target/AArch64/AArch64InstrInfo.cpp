@@ -736,6 +736,7 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 
 bool AArch64InstrInfo::isExynosShiftLeftFast(const MachineInstr &MI) const {
   unsigned Imm, Shift;
+  AArch64_AM::ShiftExtendType Ext;
 
   switch (MI.getOpcode()) {
   default:
@@ -779,8 +780,8 @@ bool AArch64InstrInfo::isExynosShiftLeftFast(const MachineInstr &MI) const {
   case AArch64::SUBXrs:
     Imm = MI.getOperand(3).getImm();
     Shift = AArch64_AM::getShiftValue(Imm);
-    return (Shift == 0 ||
-            (Shift <= 3 && AArch64_AM::getShiftType(Imm) == AArch64_AM::LSL));
+    Ext = AArch64_AM::getShiftType(Imm);
+    return (Shift == 0 || (Shift <= 3 && Ext == AArch64_AM::LSL));
 
   // WriteIEReg
   case AArch64::ADDSWrx:
@@ -797,8 +798,62 @@ bool AArch64InstrInfo::isExynosShiftLeftFast(const MachineInstr &MI) const {
   case AArch64::SUBXrx64:
     Imm = MI.getOperand(3).getImm();
     Shift = AArch64_AM::getArithShiftValue(Imm);
-    return (Shift == 0 ||
-            (Shift <= 3 && AArch64_AM::getExtendType(Imm) == AArch64_AM::UXTX));
+    Ext = AArch64_AM::getArithExtendType(Imm);
+    return (Shift == 0 || (Shift <= 3 && Ext == AArch64_AM::UXTX));
+
+  case AArch64::PRFMroW:
+  case AArch64::PRFMroX:
+
+  // WriteLDIdx
+  case AArch64::LDRBBroW:
+  case AArch64::LDRBBroX:
+  case AArch64::LDRHHroW:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRSBWroW:
+  case AArch64::LDRSBWroX:
+  case AArch64::LDRSBXroW:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSHWroW:
+  case AArch64::LDRSHWroX:
+  case AArch64::LDRSHXroW:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSWroW:
+  case AArch64::LDRSWroX:
+  case AArch64::LDRWroW:
+  case AArch64::LDRWroX:
+  case AArch64::LDRXroW:
+  case AArch64::LDRXroX:
+
+  case AArch64::LDRBroW:
+  case AArch64::LDRBroX:
+  case AArch64::LDRDroW:
+  case AArch64::LDRDroX:
+  case AArch64::LDRHroW:
+  case AArch64::LDRHroX:
+  case AArch64::LDRSroW:
+  case AArch64::LDRSroX:
+
+  // WriteSTIdx
+  case AArch64::STRBBroW:
+  case AArch64::STRBBroX:
+  case AArch64::STRHHroW:
+  case AArch64::STRHHroX:
+  case AArch64::STRWroW:
+  case AArch64::STRWroX:
+  case AArch64::STRXroW:
+  case AArch64::STRXroX:
+
+  case AArch64::STRBroW:
+  case AArch64::STRBroX:
+  case AArch64::STRDroW:
+  case AArch64::STRDroX:
+  case AArch64::STRHroW:
+  case AArch64::STRHroX:
+  case AArch64::STRSroW:
+  case AArch64::STRSroX:
+    Imm = MI.getOperand(3).getImm();
+    Ext = AArch64_AM::getMemExtendType(Imm);
+    return (Ext == AArch64_AM::SXTX || Ext == AArch64_AM::UXTX);
   }
 }
 

@@ -1066,7 +1066,7 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; AVX2-NEXT:    vmovdqu (%rcx), %xmm2
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm3
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm4 = ymm3[0,1,2,3,6,7,2,3,8,9,8,9,4,5,6,7,16,17,18,19,22,23,18,19,24,25,24,25,20,21,22,23]
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm3[2,3,0,1]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,3,0,1]
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[u,u,0,1,u,u,u,u,2,3,u,u,u,u,4,5,u,u,22,23,u,u,u,u,24,25,u,u,u,u,26,27]
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7],ymm4[8],ymm3[9],ymm4[10,11],ymm3[12],ymm4[13,14],ymm3[15]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,0,0,u,1,1,u,2>
@@ -1385,7 +1385,7 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-NEXT:    vmovdqu (%rdx), %ymm1
 ; AVX2-NEXT:    vmovdqu (%rcx), %ymm2
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,0,2,2]
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm3[0,1,0,1]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,0,1]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm0[0,0,2,1]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7]
 ; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm4

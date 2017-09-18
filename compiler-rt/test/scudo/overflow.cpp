@@ -1,6 +1,6 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                   not %run %t malloc     2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=QuarantineSizeKb=64 not %run %t quarantine 2>&1 | FileCheck %s
+// RUN:                                     not %run %t malloc     2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=QuarantineSizeKb=64 not %run %t quarantine 2>&1 | FileCheck %s
 
 // Tests that header corruption of an allocated or quarantined chunk is caught.
 

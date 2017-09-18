@@ -1,6 +1,6 @@
 // RUN: %clang_scudo %s -o %t
-// RUN: SCUDO_OPTIONS="QuarantineSizeMb=0:ThreadLocalQuarantineSizeKb=0" %run %t 5 1000000 2>&1
-// RUN: SCUDO_OPTIONS="QuarantineSizeMb=1:ThreadLocalQuarantineSizeKb=64" %run %t 5 1000000 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeKb=0:ThreadLocalQuarantineSizeKb=0"     %run %t 5 1000000 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeKb=1024:ThreadLocalQuarantineSizeKb=64" %run %t 5 1000000 2>&1
 
 // Tests parallel allocations and deallocations of memory chunks from a number
 // of concurrent threads, with and without quarantine.

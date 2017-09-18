@@ -567,15 +567,10 @@ declare <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16>) nounwind readnone
 
 
 define <4 x i64> @test_x86_avx2_vperm2i128(<4 x i64> %a0, <4 x i64> %a1) {
-; AVX2-LABEL: test_x86_avx2_vperm2i128:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX2-NEXT:    retl
-;
-; AVX512-LABEL: test_x86_avx2_vperm2i128:
-; AVX512:       ## BB#0:
-; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX512-NEXT:    retl
+; CHECK-LABEL: test_x86_avx2_vperm2i128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; CHECK-NEXT:    retl
   %res = call <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64> %a0, <4 x i64> %a1, i8 1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
 }

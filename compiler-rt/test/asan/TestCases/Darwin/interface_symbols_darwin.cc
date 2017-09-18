@@ -1,11 +1,16 @@
-// Check the presence of interface symbols in compiled file.
+// Check the presence of interface symbols in the ASan runtime dylib.
+// If you're changing this file, please also change
+// ../Linux/interface_symbols.c
 
-// RUN: %clang_asan -O2 %s -o %t.exe
-// RUN: nm -D %t.exe | grep " [TWw] "                                          \
+// RUN: %clangxx_asan -dead_strip -O2 %s -o %t.exe
+//
+// note: we can not use -D on Darwin.
+// RUN: nm -g `%clang_asan %s -fsanitize=address -### 2>&1 | grep "libclang_rt.asan_osx_dynamic.dylib" | sed -e 's/.*"\(.*libclang_rt.asan_osx_dynamic.dylib\)".*/\1/'` \
+// RUN:  | grep " [TU] "                                                       \
 // RUN:  | grep -o "\(__asan_\|__ubsan_\|__sancov_\|__sanitizer_\)[^ ]*"       \
 // RUN:  | grep -v "__sanitizer_syscall"                                       \
 // RUN:  | grep -v "__sanitizer_weak_hook"                                     \
-// RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss"                    \
+// RUN:  | grep -v "__sanitizer_mz"                                            \
 // RUN:  | grep -v "__sancov_lowest_stack"                                     \
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
@@ -25,9 +30,7 @@
 // RUN: echo
 // RUN: echo "=== NOTE === If you see a mismatch below, please update sanitizer_interface.inc files."
 // RUN: diff %t.imports-sorted %t.exports-sorted
-//
-// FIXME: nm -D on powerpc somewhy shows ASan interface symbols residing
-// in "initialized data section".
-// REQUIRES: x86-target-arch,asan-static-runtime
+
+// UNSUPPORTED: ios
 
 int main() { return 0; }
