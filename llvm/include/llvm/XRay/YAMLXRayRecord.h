@@ -54,6 +54,7 @@ template <> struct ScalarEnumerationTraits<xray::RecordTypes> {
   static void enumeration(IO &IO, xray::RecordTypes &Type) {
     IO.enumCase(Type, "function-enter", xray::RecordTypes::ENTER);
     IO.enumCase(Type, "function-exit", xray::RecordTypes::EXIT);
+    IO.enumCase(Type, "function-tail-exit", xray::RecordTypes::TAIL_EXIT);
   }
 };
 

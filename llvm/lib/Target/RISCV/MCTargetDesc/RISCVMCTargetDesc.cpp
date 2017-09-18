@@ -29,6 +29,9 @@
 #define GET_REGINFO_MC_DESC
 #include "RISCVGenRegisterInfo.inc"
 
+#define GET_SUBTARGETINFO_MC_DESC
+#include "RISCVGenSubtargetInfo.inc"
+
 using namespace llvm;
 
 static MCInstrInfo *createRISCVMCInstrInfo() {
@@ -64,5 +67,6 @@ extern "C" void LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterMCAsmBackend(*T, createRISCVAsmBackend);
     TargetRegistry::RegisterMCCodeEmitter(*T, createRISCVMCCodeEmitter);
     TargetRegistry::RegisterMCInstPrinter(*T, createRISCVMCInstPrinter);
+    TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVMCSubtargetInfoImpl);
   }
 }

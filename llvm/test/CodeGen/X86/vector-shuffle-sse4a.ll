@@ -212,14 +212,14 @@ define <8 x i16> @shuf_0zzz1zzz(<8 x i16> %a0) {
 define <4 x i32> @shuf_0z1z(<4 x i32> %a0) {
 ; AMD10H-LABEL: shuf_0z1z:
 ; AMD10H:       # BB#0:
-; AMD10H-NEXT:    pxor %xmm1, %xmm1
-; AMD10H-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AMD10H-NEXT:    xorps %xmm1, %xmm1
+; AMD10H-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AMD10H-NEXT:    retq
 ;
 ; BTVER1-LABEL: shuf_0z1z:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    pxor %xmm1, %xmm1
-; BTVER1-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; BTVER1-NEXT:    xorps %xmm1, %xmm1
+; BTVER1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; BTVER1-NEXT:    retq
 ;
 ; BTVER2-LABEL: shuf_0z1z:

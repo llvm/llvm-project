@@ -1444,49 +1444,49 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 define <4 x float> @test_movlhps(<4 x float> %a0, <4 x float> %a1) {
 ; GENERIC-LABEL: test_movlhps:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; GENERIC-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; GENERIC-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movlhps:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; ATOM-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; ATOM-NEXT:    addps %xmm1, %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movlhps:
 ; SLM:       # BB#0:
-; SLM-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SLM-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; SLM-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_movlhps:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SANDY-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; SANDY-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movlhps:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; HASWELL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_movlhps:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_movlhps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
+; BTVER2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movlhps:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
+; ZNVER1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>

@@ -11,14 +11,14 @@ define <4 x float> @test_unpackl_fhadd_128(<4 x float> %a0, <4 x float> %a1, <4 
 ; X32:       ## BB#0:
 ; X32-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vhaddps %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_fhadd_128:
 ; X64:       ## BB#0:
 ; X64-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vhaddps %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a2, <4 x float> %a3)

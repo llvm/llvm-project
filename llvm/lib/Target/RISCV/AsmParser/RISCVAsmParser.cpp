@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -30,6 +31,9 @@ struct RISCVOperand;
 class RISCVAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
+  bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
+                                  int Lower, int Upper, Twine Msg);
+
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -48,6 +52,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
   OperandMatchResultTy parseRegister(OperandVector &Operands);
+  OperandMatchResultTy parseMemOpBaseReg(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands);
 
@@ -125,8 +130,55 @@ public:
     return static_cast<const MCConstantExpr *>(Val)->getValue();
   }
 
+  // Predicate methods for AsmOperands defined in RISCVInstrInfo.td
+
+  /// Return true if the operand is a valid for the fence instruction e.g.
+  /// ('iorw').
+  bool isFenceArg() const {
+    if (!isImm())
+      return false;
+    const MCExpr *Val = getImm();
+    auto *SVal = dyn_cast<MCSymbolRefExpr>(Val);
+    if (!SVal || SVal->getKind() != MCSymbolRefExpr::VK_None)
+      return false;
+
+    StringRef Str = SVal->getSymbol().getName();
+    // Letters must be unique, taken from 'iorw', and in ascending order. This
+    // holds as long as each individual character is one of 'iorw' and is
+    // greater than the previous character.
+    char Prev = '\0';
+    for (char c : Str) {
+      if (c != 'i' && c != 'o' && c != 'r' && c != 'w')
+        return false;
+      if (c <= Prev)
+        return false;
+      Prev = c;
+    }
+    return true;
+  }
+
+  bool isUImm5() const {
+    return (isConstantImm() && isUInt<5>(getConstantImm()));
+  }
+
   bool isSImm12() const {
     return (isConstantImm() && isInt<12>(getConstantImm()));
+  }
+
+  bool isUImm12() const {
+    return (isConstantImm() && isUInt<12>(getConstantImm()));
+  }
+
+  bool isSImm13Lsb0() const {
+    return (isConstantImm() && isShiftedInt<12, 1>(getConstantImm()));
+  }
+
+  bool isUImm20() const {
+    return (isConstantImm() && isUInt<20>(getConstantImm()));
+  }
+
+  bool isSImm21Lsb0() const {
+    return (isConstantImm() && isShiftedInt<20, 1>(getConstantImm()));
   }
 
   /// getStartLoc - Gets location of the first token of this operand
@@ -208,6 +260,24 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
   }
+
+  void addFenceArgOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    // isFenceArg has validated the operand, meaning this cast is safe
+    auto SE = cast<MCSymbolRefExpr>(getImm());
+
+    unsigned Imm = 0;
+    for (char c : SE->getSymbol().getName()) {
+      switch (c) {
+        default: llvm_unreachable("FenceArg must contain only [iorw]");
+        case 'i': Imm |= RISCVFenceField::I; break;
+        case 'o': Imm |= RISCVFenceField::O; break;
+        case 'r': Imm |= RISCVFenceField::R; break;
+        case 'w': Imm |= RISCVFenceField::W; break;
+      }
+    }
+    Inst.addOperand(MCOperand::createImm(Imm));
+  }
 };
 } // end anonymous namespace.
 
@@ -215,13 +285,19 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #include "RISCVGenAsmMatcher.inc"
 
+bool RISCVAsmParser::generateImmOutOfRangeError(
+    OperandVector &Operands, uint64_t ErrorInfo, int Lower, int Upper,
+    Twine Msg = "immediate must be an integer in the range") {
+  SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
+}
+
 bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              OperandVector &Operands,
                                              MCStreamer &Out,
                                              uint64_t &ErrorInfo,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
-  SMLoc ErrorLoc;
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   default:
@@ -234,8 +310,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "instruction use requires an option to be enabled");
   case Match_MnemonicFail:
     return Error(IDLoc, "unrecognized instruction mnemonic");
-  case Match_InvalidOperand:
-    ErrorLoc = IDLoc;
+  case Match_InvalidOperand: {
+    SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0U) {
       if (ErrorInfo >= Operands.size())
         return Error(ErrorLoc, "too few operands for instruction");
@@ -245,10 +321,30 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ErrorLoc = IDLoc;
     }
     return Error(ErrorLoc, "invalid operand for instruction");
+  }
+  case Match_InvalidUImm5:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidSImm12:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 11),
+                                      (1 << 11) - 1);
+  case Match_InvalidUImm12:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1);
+  case Match_InvalidSImm13Lsb0:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
+        "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidUImm20:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1);
+  case Match_InvalidSImm21Lsb0:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
+        "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidFenceArg: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc,
-                 "immediate must be an integer in the range [-2048, 2047]");
+    return Error(
+        ErrorLoc,
+        "operand must be formed of letters selected in-order from 'iorw'");
+  }
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -292,6 +388,10 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands) {
 }
 
 OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+  const MCExpr *Res;
+
   switch (getLexer().getKind()) {
   default:
     return MatchOperand_NoMatch;
@@ -300,16 +400,46 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::Plus:
   case AsmToken::Integer:
   case AsmToken::String:
+    if (getParser().parseExpression(Res))
+      return MatchOperand_ParseFail;
+    break;
+  case AsmToken::Identifier: {
+    StringRef Identifier;
+    if (getParser().parseIdentifier(Identifier))
+      return MatchOperand_ParseFail;
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
     break;
   }
+  }
 
-  const MCExpr *IdVal;
-  SMLoc S = getLoc();
-  if (getParser().parseExpression(IdVal))
+  Operands.push_back(RISCVOperand::createImm(Res, S, E));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::LParen)) {
+    Error(getLoc(), "expected '('");
     return MatchOperand_ParseFail;
+  }
 
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
-  Operands.push_back(RISCVOperand::createImm(IdVal, S, E));
+  getParser().Lex(); // Eat '('
+  Operands.push_back(RISCVOperand::createToken("(", getLoc()));
+
+  if (parseRegister(Operands) != MatchOperand_Success) {
+    Error(getLoc(), "expected register");
+    return MatchOperand_ParseFail;
+  }
+
+  if (getLexer().isNot(AsmToken::RParen)) {
+    Error(getLoc(), "expected ')'");
+    return MatchOperand_ParseFail;
+  }
+
+  getParser().Lex(); // Eat ')'
+  Operands.push_back(RISCVOperand::createToken(")", getLoc()));
+
   return MatchOperand_Success;
 }
 
@@ -322,8 +452,12 @@ bool RISCVAsmParser::parseOperand(OperandVector &Operands) {
     return false;
 
   // Attempt to parse token as an immediate
-  if (parseImmediate(Operands) == MatchOperand_Success)
+  if (parseImmediate(Operands) == MatchOperand_Success) {
+    // Parse memory base register if present
+    if (getLexer().is(AsmToken::LParen))
+      return parseMemOpBaseReg(Operands) != MatchOperand_Success;
     return false;
+  }
 
   // Finally we have exhausted all options and must declare defeat.
   Error(getLoc(), "unknown operand");

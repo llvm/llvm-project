@@ -16,7 +16,7 @@
 ; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407467 }
 ; CHECK-NEXT:   - { type: 0, func-id: 4, function: '4', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407492 }
 ; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407517 }
-; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407542 }
+; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-tail-exit, tsc: 7238225556407542 }
 ; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407552 }
 ; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407562 }
 ; CHECK-NEXT:   - { type: 0, func-id: 6, function: '6', cpu: 6, thread: 5, kind: function-enter, tsc: 7238225556407682 }
