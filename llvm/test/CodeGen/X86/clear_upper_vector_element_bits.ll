@@ -853,9 +853,9 @@ define <16 x i8> @_clearupper16xi8b(<16 x i8>) nounwind {
 ; SSE-NEXT:    andb $15, %r11b
 ; SSE-NEXT:    movb %r11b, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    popq %rbx
 ; SSE-NEXT:    popq %r14
 ; SSE-NEXT:    retq
@@ -1031,9 +1031,9 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; SSE-NEXT:    andb $15, %r11b
 ; SSE-NEXT:    movb %r11b, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE-NEXT:    popq %rbx
 ; SSE-NEXT:    popq %r14
 ; SSE-NEXT:    retq

@@ -96,7 +96,7 @@ define <4 x i32> @load_splat_4i32_4i32_0101(<4 x i32>* %ptr) nounwind uwtable re
 ;
 ; AVX1-LABEL: load_splat_4i32_4i32_0101:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_4i32_4i32_0101:
@@ -123,7 +123,7 @@ define <8 x i32> @load_splat_8i32_4i32_01010101(<4 x i32>* %ptr) nounwind uwtabl
 ;
 ; AVX1-LABEL: load_splat_8i32_4i32_01010101:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -178,7 +178,7 @@ define <8 x i16> @load_splat_8i16_8i16_01010101(<8 x i16>* %ptr) nounwind uwtabl
 ;
 ; AVX1-LABEL: load_splat_8i16_8i16_01010101:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_8i16_8i16_01010101:
@@ -204,7 +204,7 @@ define <8 x i16> @load_splat_8i16_8i16_01230123(<8 x i16>* %ptr) nounwind uwtabl
 ;
 ; AVX1-LABEL: load_splat_8i16_8i16_01230123:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_8i16_8i16_01230123:
@@ -231,7 +231,7 @@ define <16 x i16> @load_splat_16i16_8i16_0101010101010101(<8 x i16>* %ptr) nounw
 ;
 ; AVX1-LABEL: load_splat_16i16_8i16_0101010101010101:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -259,7 +259,7 @@ define <16 x i16> @load_splat_16i16_8i16_0123012301230123(<8 x i16>* %ptr) nounw
 ;
 ; AVX1-LABEL: load_splat_16i16_8i16_0123012301230123:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -359,7 +359,7 @@ define <16 x i8> @load_splat_16i8_16i8_0123012301230123(<16 x i8>* %ptr) nounwin
 ;
 ; AVX1-LABEL: load_splat_16i8_16i8_0123012301230123:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_16i8_16i8_0123012301230123:
@@ -385,7 +385,7 @@ define <16 x i8> @load_splat_16i8_16i8_0123456701234567(<16 x i8>* %ptr) nounwin
 ;
 ; AVX1-LABEL: load_splat_16i8_16i8_0123456701234567:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_16i8_16i8_0123456701234567:
@@ -442,7 +442,7 @@ define <32 x i8> @load_splat_32i8_16i8_01230123012301230123012301230123(<16 x i8
 ;
 ; AVX1-LABEL: load_splat_32i8_16i8_01230123012301230123012301230123:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -470,7 +470,7 @@ define <32 x i8> @load_splat_32i8_16i8_01234567012345670123456701234567(<16 x i8
 ;
 ; AVX1-LABEL: load_splat_32i8_16i8_01234567012345670123456701234567:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

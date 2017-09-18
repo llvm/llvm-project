@@ -935,15 +935,15 @@ define <4 x float> @insertps_with_undefs(<4 x float> %a, float* %b) {
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X32-NEXT:    movapd %xmm1, %xmm0
+; X32-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_with_undefs:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-NEXT:    movapd %xmm1, %xmm0
+; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = load float, float* %b, align 4
   %2 = insertelement <4 x float> undef, float %1, i32 0

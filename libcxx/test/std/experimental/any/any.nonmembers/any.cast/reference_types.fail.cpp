@@ -25,13 +25,13 @@ using std::experimental::any_cast;
 int main()
 {
     any a(1);
-    any_cast<int &>(&a); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int &&>(&a); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int const &>(&a); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int const&&>(&a); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
+    any_cast<int &>(&a); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int &&>(&a); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int const &>(&a); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int const&&>(&a); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
     any const& a2 = a;
-    any_cast<int &>(&a2); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int &&>(&a2); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int const &>(&a2); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
-    any_cast<int const &&>(&a2); // expected-error@experimental/any:* 1 {{static_assert failed "_ValueType may not be a reference."}}
+    any_cast<int &>(&a2); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int &&>(&a2); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int const &>(&a2); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
+    any_cast<int const &&>(&a2); // expected-error-re@experimental/any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
 }

@@ -6,7 +6,7 @@ define <4 x i64> @test1(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retl
  %b = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
  ret <4 x i64>%b

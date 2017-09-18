@@ -718,7 +718,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask3(<16 x float>
 define <2 x double> @test_2xdouble_unpack_low_mask0(<2 x double> %vec1, <2 x double> %vec2) {
 ; CHECK-LABEL: test_2xdouble_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %res

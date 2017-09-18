@@ -241,14 +241,14 @@ define void @shuffle_v4i32_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ;
 ; AVX-LABEL: shuffle_v4i32_to_v2i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v4i32_to_v2i32:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX512F-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX512F-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v4i32_to_v2i32:
@@ -259,8 +259,8 @@ define void @shuffle_v4i32_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ;
 ; AVX512BW-LABEL: shuffle_v4i32_to_v2i32:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX512BW-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: shuffle_v4i32_to_v2i32:
@@ -283,14 +283,14 @@ define void @trunc_v2i64_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ;
 ; AVX-LABEL: trunc_v2i64_to_v2i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_v2i64_to_v2i32:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX512F-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX512F-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: trunc_v2i64_to_v2i32:
@@ -301,8 +301,8 @@ define void @trunc_v2i64_to_v2i32(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ;
 ; AVX512BW-LABEL: trunc_v2i64_to_v2i32:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512BW-NEXT:    vpermilps {{.*#+}} xmm0 = mem[0,2,2,3]
+; AVX512BW-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: trunc_v2i64_to_v2i32:

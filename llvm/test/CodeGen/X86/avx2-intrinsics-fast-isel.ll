@@ -2536,12 +2536,12 @@ declare <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8>, <32 x i8>) nounwind readnone
 define <4 x i64> @test_mm256_shuffle_epi32(<4 x i64> %a0) {
 ; X32-LABEL: test_mm256_shuffle_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
+; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_shuffle_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
+; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,3,0,0,7,7,4,4]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %shuf = shufflevector <8 x i32> %arg0, <8 x i32> undef, <8 x i32> <i32 3, i32 3, i32 0, i32 0, i32 7, i32 7, i32 4, i32 4>
@@ -3314,12 +3314,12 @@ define <4 x i64> @test_mm256_unpackhi_epi16(<4 x i64> %a0, <4 x i64> %a1) nounwi
 define <4 x i64> @test_mm256_unpackhi_epi32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm256_unpackhi_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; X32-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_unpackhi_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
+; X64-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
@@ -3331,12 +3331,12 @@ define <4 x i64> @test_mm256_unpackhi_epi32(<4 x i64> %a0, <4 x i64> %a1) nounwi
 define <4 x i64> @test_mm256_unpackhi_epi64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm256_unpackhi_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_unpackhi_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> %a1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i64> %res
@@ -3379,12 +3379,12 @@ define <4 x i64> @test_mm256_unpacklo_epi16(<4 x i64> %a0, <4 x i64> %a1) nounwi
 define <4 x i64> @test_mm256_unpacklo_epi32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm256_unpacklo_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; X32-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_unpacklo_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; X64-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
@@ -3396,12 +3396,12 @@ define <4 x i64> @test_mm256_unpacklo_epi32(<4 x i64> %a0, <4 x i64> %a1) nounwi
 define <4 x i64> @test_mm256_unpacklo_epi64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm256_unpacklo_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_unpacklo_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i64> %res

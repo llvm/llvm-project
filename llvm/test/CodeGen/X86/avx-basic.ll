@@ -80,8 +80,8 @@ define <4 x i64> @ISelCrash(<4 x i64> %a) nounwind uwtable readnone ssp {
 define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: VMOVZQI2PQI:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    ## -- End function
   %ptrcast.i33.i = bitcast [0 x float]* %aFOO to i32*
