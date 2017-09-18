@@ -58,18 +58,9 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
                        const DWARFAddressRangesVector &Ranges,
                        unsigned AddressSize, unsigned Indent,
                        const DIDumpOptions &DumpOpts) {
-  StringMap<unsigned> SectionAmountMap;
-  std::vector<StringRef> SectionNames;
-  if (Obj.getFile() && !DumpOpts.Brief) {
-    for (const SectionRef &Section : Obj.getFile()->sections()) {
-      StringRef Name;
-      if (Section.getName(Name))
-        Name = "<error>";
-
-      ++SectionAmountMap[Name];
-      SectionNames.push_back(Name);
-    }
-  }
+  ArrayRef<SectionName> SectionNames;
+  if (!DumpOpts.Brief)
+    SectionNames = Obj.getSectionNames();
 
   for (size_t I = 0; I < Ranges.size(); ++I) {
     const DWARFAddressRange &R = Ranges[I];
@@ -82,13 +73,11 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
     if (SectionNames.empty() || R.SectionIndex == -1ULL)
       continue;
 
-    StringRef Name = R.SectionIndex < SectionNames.size()
-                         ? SectionNames[R.SectionIndex]
-                         : "<error>";
-    OS << format(" \"%s\"", Name.str().c_str());
+    StringRef Name = SectionNames[R.SectionIndex].Name;
+    OS << " \"" << Name << '\"';
 
-    // Print section index if there is more than one section with this name.
-    if (SectionAmountMap[Name] > 1)
+    // Print section index if name is not unique.
+    if (!SectionNames[R.SectionIndex].IsNameUnique)
       OS << format(" [%u]", R.SectionIndex);
   }
 }

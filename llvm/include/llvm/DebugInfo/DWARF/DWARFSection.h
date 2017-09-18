@@ -19,6 +19,11 @@ struct DWARFSection {
   StringRef Data;
 };
 
+struct SectionName {
+  StringRef Name;
+  bool IsNameUnique;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFSECTION_H
