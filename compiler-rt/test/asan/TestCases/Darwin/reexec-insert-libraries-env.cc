@@ -10,6 +10,8 @@
 // RUN: %env DYLD_INSERT_LIBRARIES=darwin-dummy-shared-lib-so.dylib \
 // RUN:     %run %t 2>&1 | FileCheck %s || exit 1
 
+// UNSUPPORTED: ios
+
 #if !defined(SHARED_LIB)
 #include <stdio.h>
 #include <stdlib.h>
