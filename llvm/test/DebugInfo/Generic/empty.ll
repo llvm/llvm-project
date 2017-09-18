@@ -12,9 +12,7 @@
 ; CHECK: total_length: 0x00000019
 ; CHECK-NOT: file_names[
 
-; CHECK: .debug_pubnames contents:
-; CHECK-NOT: {{^}}0x
-
+; CHECK-NOT: .debug_pubnames contents:
 ; CHECK: contents:
 
 ; Don't emit DW_AT_addr_base when there are no addresses.
