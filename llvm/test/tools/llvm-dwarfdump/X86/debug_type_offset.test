@@ -1,0 +1,8 @@
+RUN: llvm-mc %S/../../../DebugInfo/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -debug-types=0x00000019 - | FileCheck %s
+CHECK: .debug_types contents:
+:CHECK-NOT: {{:}}
+CHECK: 0x00000019: DW_TAG_structure_type
+CHECK:               DW_AT_visibility
+CHECK-NOT: {{:}}
