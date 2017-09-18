@@ -67,6 +67,7 @@ public:
 
   void dump(raw_ostream &OS) const;
   void extract(DataExtractor Data);
+  bool empty() const { return begin() == end(); }
 
   DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
     return AbbrDeclSets.begin();

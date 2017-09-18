@@ -1,0 +1,5 @@
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a | FileCheck %s
+CHECK: libfat-test.a(x86_64)(fat-test.o):        file format Mach-O 64-bit x86-64
+CHECK: .debug_info contents:
+CHECK: libfat-test.a(i386)(fat-test.o):  file format Mach-O 32-bit i386
+CHECK: .debug_info contents:

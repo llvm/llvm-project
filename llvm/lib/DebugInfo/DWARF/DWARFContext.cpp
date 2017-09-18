@@ -41,6 +41,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -67,17 +68,36 @@ DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
 
 DWARFContext::~DWARFContext() = default;
 
-static void dumpAccelSection(raw_ostream &OS, StringRef Name,
-                             const DWARFObject &Obj,
+static void dumpAccelSection(raw_ostream &OS, const DWARFObject &Obj,
                              const DWARFSection &Section,
                              StringRef StringSection, bool LittleEndian) {
   DWARFDataExtractor AccelSection(Obj, Section, LittleEndian, 0);
   DataExtractor StrData(StringSection, LittleEndian, 0);
-  OS << "\n." << Name << " contents:\n";
   DWARFAcceleratorTable Accel(AccelSection, StrData);
   if (!Accel.extract())
     return;
   Accel.dump(OS);
+}
+
+/// Dump the UUID load command.
+static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
+  auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
+  if (!MachO)
+    return;
+  for (auto LC : MachO->load_commands()) {
+    raw_ostream::uuid_t UUID;
+    if (LC.C.cmd == MachO::LC_UUID) {
+      if (LC.C.cmdsize < sizeof(UUID) + sizeof(LC.C)) {
+        OS << "error: UUID load command is too short.\n";
+        return;
+      }
+      OS << "UUID: ";
+      memcpy(&UUID, LC.Ptr+sizeof(LC.C), sizeof(UUID));
+      OS.write_uuid(UUID);
+      OS << ' ' << MachO->getFileFormatName();
+      OS << ' ' << MachO->getFileName() << '\n';
+    }
+  }
 }
 
 static void
@@ -167,9 +187,6 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
                                      const DWARFSection &StringOffsetsSection,
                                      StringRef StringSection, bool LittleEndian,
                                      unsigned MaxVersion) {
-  if (StringOffsetsSection.Data.empty())
-    return;
-  OS << "\n." << SectionName << " contents:\n";
   // If we have at least one (compile or type) unit with DWARF v5 or greater,
   // we assume that the section is formatted like a DWARF v5 string offsets
   // section.
@@ -199,77 +216,108 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
   }
 }
 
-void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
+void DWARFContext::dump(
+    raw_ostream &OS, DIDumpOptions DumpOpts,
+    std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
+
+  Optional<uint64_t> DumpOffset;
   uint64_t DumpType = DumpOpts.DumpType;
   bool DumpEH = DumpOpts.DumpEH;
-  bool SummarizeTypes = DumpOpts.SummarizeTypes;
+  unsigned RecDepth =
+      DumpOpts.ShowChildren ? std::numeric_limits<unsigned>::max() : 0;
 
-  if (DumpType & DIDT_DebugAbbrev) {
-    OS << ".debug_abbrev contents:\n";
+  StringRef Extension = sys::path::extension(DObj->getFileName());
+  bool IsDWO = (Extension == ".dwo") || (Extension == ".dwp");
+
+  // Print UUID header.
+  const auto *ObjFile = DObj->getFile();
+  if (DumpType & DIDT_UUID)
+    dumpUUID(OS, *ObjFile);
+
+  // Print a header for each explicitly-requested section.
+  // Otherwise just print one for non-empty sections.
+  // Only print empty .dwo section headers when dumping a .dwo file.
+  bool Explicit = DumpType != DIDT_All && !IsDWO;
+  bool ExplicitDWO = Explicit && IsDWO;
+  auto shouldDump = [&](bool Explicit, const char *Name, unsigned ID,
+                        StringRef Section) {
+    DumpOffset = DumpOffsets[ID];
+    unsigned Mask = 1U << ID;
+    bool Should = (DumpType & Mask) && (Explicit || !Section.empty());
+    if (Should)
+      OS << "\n" << Name << " contents:\n";
+    return Should;
+  };
+
+  // Dump individual sections.
+  if (shouldDump(Explicit, ".debug_abbrev", DIDT_ID_DebugAbbrev,
+                 DObj->getAbbrevSection()))
     getDebugAbbrev()->dump(OS);
-  }
+  if (shouldDump(ExplicitDWO, ".debug_abbrev.dwo", DIDT_ID_DebugAbbrev,
+                 DObj->getAbbrevDWOSection()))
+    getDebugAbbrevDWO()->dump(OS);
 
-  if (DumpType & DIDT_DebugAbbrevDwo)
-    if (const DWARFDebugAbbrev *D = getDebugAbbrevDWO()) {
-      OS << "\n.debug_abbrev.dwo contents:\n";
-      D->dump(OS);
+  auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
+                           DWARFSection Section, cu_iterator_range CUs) {
+    if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
+      for (const auto &CU : CUs)
+        if (DumpOffset)
+          CU->getDIEForOffset(DumpOffset.getValue()).dump(OS, RecDepth);
+        else
+          CU->dump(OS, DumpOpts);
     }
+  };
+  dumpDebugInfo(Explicit, ".debug_info", DObj->getInfoSection(),
+                compile_units());
+  dumpDebugInfo(ExplicitDWO, ".debug_info.dwo", DObj->getInfoDWOSection(),
+                dwo_compile_units());
 
-  if (DumpType & DIDT_DebugInfo) {
-    OS << "\n.debug_info contents:\n";
-    for (const auto &CU : compile_units())
-      CU->dump(OS, DumpOpts);
-  }
-
-  if ((DumpType & DIDT_DebugInfoDwo) &&
-      getNumDWOCompileUnits()) {
-    OS << "\n.debug_info.dwo contents:\n";
-    for (const auto &DWOCU : dwo_compile_units())
-      DWOCU->dump(OS, DumpOpts);
-  }
-
-  if ((DumpType & DIDT_DebugTypes) && getNumTypeUnits()) {
-    OS << "\n.debug_types contents:\n";
-    for (const auto &TUS : type_unit_sections())
+  auto dumpDebugType = [&](const char *Name,
+                           tu_section_iterator_range TUSections) {
+    OS << '\n' << Name << " contents:\n";
+    DumpOffset = DumpOffsets[DIDT_ID_DebugTypes];
+    for (const auto &TUS : TUSections)
       for (const auto &TU : TUS)
-        TU->dump(OS, SummarizeTypes);
+        if (DumpOffset)
+          TU->getDIEForOffset(*DumpOffset).dump(OS, RecDepth);
+        else
+          TU->dump(OS, DumpOpts);
+  };
+  if ((DumpType & DIDT_DebugTypes)) {
+    if (Explicit || getNumTypeUnits())
+      dumpDebugType(".debug_types", type_unit_sections());
+    if (ExplicitDWO || getNumDWOTypeUnits())
+      dumpDebugType(".debug_types.dwo", dwo_type_unit_sections());
   }
 
-  if ((DumpType & DIDT_DebugTypesDwo) &&
-      getNumDWOTypeUnits()) {
-    OS << "\n.debug_types.dwo contents:\n";
-    for (const auto &DWOTUS : dwo_type_unit_sections())
-      for (const auto &DWOTU : DWOTUS)
-        DWOTU->dump(OS, SummarizeTypes);
-  }
-
-  if (DumpType & DIDT_DebugLoc) {
-    OS << "\n.debug_loc contents:\n";
+  if (shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
+                 DObj->getLocSection().Data)) {
     getDebugLoc()->dump(OS, getRegisterInfo());
   }
-
-  if (DumpType & DIDT_DebugLocDwo) {
-    OS << "\n.debug_loc.dwo contents:\n";
+  if (shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
+                 DObj->getLocDWOSection().Data)) {
     getDebugLocDWO()->dump(OS, getRegisterInfo());
   }
 
-  if (DumpType & DIDT_DebugFrames) {
-    OS << "\n.debug_frame contents:\n";
+  if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrames,
+                 DObj->getDebugFrameSection())) {
     getDebugFrame()->dump(OS);
-    if (DumpEH) {
-      OS << "\n.eh_frame contents:\n";
-      getEHFrame()->dump(OS);
-    }
+  }
+  if (DumpEH && !getEHFrame()->empty()) {
+    OS << "\n.eh_frame contents:\n";
+    getEHFrame()->dump(OS);
   }
 
   if (DumpType & DIDT_DebugMacro) {
-    OS << "\n.debug_macinfo contents:\n";
-    getDebugMacro()->dump(OS);
+    if (Explicit || !getDebugMacro()->empty()) {
+      OS << "\n.debug_macinfo contents:\n";
+      getDebugMacro()->dump(OS);
+    }
   }
 
-  uint32_t offset = 0;
-  if (DumpType & DIDT_DebugAranges) {
-    OS << "\n.debug_aranges contents:\n";
+  if (shouldDump(Explicit, ".debug_aranges", DIDT_ID_DebugAranges,
+                 DObj->getARangeSection())) {
+    uint32_t offset = 0;
     DataExtractor arangesData(DObj->getARangeSection(), isLittleEndian(), 0);
     DWARFDebugArangeSet set;
     while (set.extract(arangesData, &offset))
@@ -277,8 +325,8 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   }
 
   uint8_t savedAddressByteSize = 0;
-  if (DumpType & DIDT_DebugLine) {
-    OS << "\n.debug_line contents:\n";
+  if (shouldDump(Explicit, ".debug_line", DIDT_ID_DebugLine,
+                 DObj->getLineSection().Data)) {
     for (const auto &CU : compile_units()) {
       savedAddressByteSize = CU->getAddressByteSize();
       auto CUDIE = CU->getUnitDIE();
@@ -295,18 +343,13 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     }
   }
 
-  if (DumpType & DIDT_DebugCUIndex) {
-    OS << "\n.debug_cu_index contents:\n";
-    getCUIndex().dump(OS);
+  // FIXME: This seems sketchy.
+  for (const auto &CU : compile_units()) {
+    savedAddressByteSize = CU->getAddressByteSize();
+    break;
   }
-
-  if (DumpType & DIDT_DebugTUIndex) {
-    OS << "\n.debug_tu_index contents:\n";
-    getTUIndex().dump(OS);
-  }
-
-  if (DumpType & DIDT_DebugLineDwo) {
-    OS << "\n.debug_line.dwo contents:\n";
+  if (shouldDump(ExplicitDWO, ".debug_line.dwo", DIDT_ID_DebugLine,
+                 DObj->getLineDWOSection().Data)) {
     unsigned stmtOffset = 0;
     DWARFDataExtractor lineData(*DObj, DObj->getLineDWOSection(),
                                 isLittleEndian(), savedAddressByteSize);
@@ -317,22 +360,30 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     }
   }
 
-  if (DumpType & DIDT_DebugStr) {
-    OS << "\n.debug_str contents:\n";
+  if (shouldDump(Explicit, ".debug_cu_index", DIDT_ID_DebugCUIndex,
+                 DObj->getCUIndexSection())) {
+    getCUIndex().dump(OS);
+  }
+
+  if (shouldDump(Explicit, ".debug_tu_index", DIDT_ID_DebugTUIndex,
+                 DObj->getTUIndexSection())) {
+    getTUIndex().dump(OS);
+  }
+
+  if (shouldDump(Explicit, ".debug_str", DIDT_ID_DebugStr,
+                 DObj->getStringSection())) {
     DataExtractor strData(DObj->getStringSection(), isLittleEndian(), 0);
-    offset = 0;
+    uint32_t offset = 0;
     uint32_t strOffset = 0;
     while (const char *s = strData.getCStr(&offset)) {
       OS << format("0x%8.8x: \"%s\"\n", strOffset, s);
       strOffset = offset;
     }
   }
-
-  if ((DumpType & DIDT_DebugStrDwo) &&
-      !DObj->getStringDWOSection().empty()) {
-    OS << "\n.debug_str.dwo contents:\n";
+  if (shouldDump(ExplicitDWO, ".debug_str.dwo", DIDT_ID_DebugStr,
+                 DObj->getStringDWOSection())) {
     DataExtractor strDWOData(DObj->getStringDWOSection(), isLittleEndian(), 0);
-    offset = 0;
+    uint32_t offset = 0;
     uint32_t strDWOOffset = 0;
     while (const char *s = strDWOData.getCStr(&offset)) {
       OS << format("0x%8.8x: \"%s\"\n", strDWOOffset, s);
@@ -340,70 +391,77 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     }
   }
 
-  if (DumpType & DIDT_DebugRanges) {
-    OS << "\n.debug_ranges contents:\n";
+  if (shouldDump(Explicit, ".debug_ranges", DIDT_ID_DebugRanges,
+                 DObj->getRangeSection().Data)) {
     // In fact, different compile units may have different address byte
-    // sizes, but for simplicity we just use the address byte size of the last
-    // compile unit (there is no easy and fast way to associate address range
-    // list and the compile unit it describes).
+    // sizes, but for simplicity we just use the address byte size of the
+    // last compile unit (there is no easy and fast way to associate address
+    // range list and the compile unit it describes).
+    // FIXME: savedAddressByteSize seems sketchy.
     DWARFDataExtractor rangesData(*DObj, DObj->getRangeSection(),
                                   isLittleEndian(), savedAddressByteSize);
-    offset = 0;
+    uint32_t offset = 0;
     DWARFDebugRangeList rangeList;
     while (rangeList.extract(rangesData, &offset))
       rangeList.dump(OS);
   }
 
-  if (DumpType & DIDT_DebugPubnames)
+  if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,
+                 DObj->getPubNamesSection()))
     DWARFDebugPubTable(DObj->getPubNamesSection(), isLittleEndian(), false)
-        .dump("debug_pubnames", OS);
+        .dump(OS);
 
-  if (DumpType & DIDT_DebugPubtypes)
+  if (shouldDump(Explicit, ".debug_pubtypes", DIDT_ID_DebugPubtypes,
+                 DObj->getPubTypesSection()))
     DWARFDebugPubTable(DObj->getPubTypesSection(), isLittleEndian(), false)
-        .dump("debug_pubtypes", OS);
+        .dump(OS);
 
-  if (DumpType & DIDT_DebugGnuPubnames)
+  if (shouldDump(Explicit, ".debug_gnu_pubnames", DIDT_ID_DebugGnuPubnames,
+                 DObj->getGnuPubNamesSection()))
     DWARFDebugPubTable(DObj->getGnuPubNamesSection(), isLittleEndian(),
                        true /* GnuStyle */)
-        .dump("debug_gnu_pubnames", OS);
+        .dump(OS);
 
-  if (DumpType & DIDT_DebugGnuPubtypes)
+  if (shouldDump(Explicit, ".debug_gnu_pubtypes", DIDT_ID_DebugGnuPubtypes,
+                 DObj->getGnuPubTypesSection()))
     DWARFDebugPubTable(DObj->getGnuPubTypesSection(), isLittleEndian(),
                        true /* GnuStyle */)
-        .dump("debug_gnu_pubtypes", OS);
+        .dump(OS);
 
-  if (DumpType & DIDT_DebugStrOffsets)
+  if (shouldDump(Explicit, ".debug_str_offsets", DIDT_ID_DebugStrOffsets,
+                 DObj->getStringOffsetSection().Data))
     dumpStringOffsetsSection(
         OS, "debug_str_offsets", *DObj, DObj->getStringOffsetSection(),
         DObj->getStringSection(), isLittleEndian(), getMaxVersion());
-
-  if (DumpType & DIDT_DebugStrOffsetsDwo) {
+  if (shouldDump(ExplicitDWO, ".debug_str_offsets.dwo", DIDT_ID_DebugStrOffsets,
+                 DObj->getStringOffsetDWOSection().Data))
     dumpStringOffsetsSection(
         OS, "debug_str_offsets.dwo", *DObj, DObj->getStringOffsetDWOSection(),
         DObj->getStringDWOSection(), isLittleEndian(), getMaxVersion());
-  }
 
-  if ((DumpType & DIDT_GdbIndex) &&
-      !DObj->getGdbIndexSection().empty()) {
-    OS << "\n.gnu_index contents:\n";
+  if (shouldDump(Explicit, ".gnu_index", DIDT_ID_GdbIndex,
+                 DObj->getGdbIndexSection())) {
     getGdbIndex().dump(OS);
   }
 
-  if (DumpType & DIDT_AppleNames)
-    dumpAccelSection(OS, "apple_names", *DObj, DObj->getAppleNamesSection(),
+  if (shouldDump(Explicit, ".apple_names", DIDT_ID_AppleNames,
+                 DObj->getAppleNamesSection().Data))
+    dumpAccelSection(OS, *DObj, DObj->getAppleNamesSection(),
                      DObj->getStringSection(), isLittleEndian());
 
-  if (DumpType & DIDT_AppleTypes)
-    dumpAccelSection(OS, "apple_types", *DObj, DObj->getAppleTypesSection(),
+  if (shouldDump(Explicit, ".apple_types", DIDT_ID_AppleTypes,
+                 DObj->getAppleTypesSection().Data))
+    dumpAccelSection(OS, *DObj, DObj->getAppleTypesSection(),
                      DObj->getStringSection(), isLittleEndian());
 
-  if (DumpType & DIDT_AppleNamespaces)
-    dumpAccelSection(OS, "apple_namespaces", *DObj,
-                     DObj->getAppleNamespacesSection(),
+  if (shouldDump(Explicit, ".apple_namespaces", DIDT_ID_AppleNamespaces,
+                 DObj->getAppleNamespacesSection().Data))
+    dumpAccelSection(OS, *DObj, DObj->getAppleNamespacesSection(),
                      DObj->getStringSection(), isLittleEndian());
 
-  if (DumpType & DIDT_AppleObjC)
-    dumpAccelSection(OS, "apple_objc", *DObj, DObj->getAppleObjCSection(),
+  if (shouldDump(Explicit, ".apple_objc", DIDT_ID_AppleObjC,
+                 DObj->getAppleObjCSection().Data))
+    dumpAccelSection(OS, *DObj, DObj->getAppleObjCSection(),
                      DObj->getStringSection(), isLittleEndian());
 }
 
@@ -434,9 +492,10 @@ DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
   return DWARFDie();
 }
 
-bool DWARFContext::verify(raw_ostream &OS, uint64_t DumpType) {
+bool DWARFContext::verify(raw_ostream &OS, unsigned DumpType,
+                          DIDumpOptions DumpOpts) {
   bool Success = true;
-  DWARFVerifier verifier(OS, *this);
+  DWARFVerifier verifier(OS, *this, DumpOpts);
 
   Success &= verifier.handleDebugAbbrev();
   if (DumpType & DIDT_DebugInfo)
@@ -594,7 +653,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
 
   // Make sure the offset is good before we try to parse.
   if (stmtOffset >= U->getLineSection().Data.size())
-    return nullptr;  
+    return nullptr;
 
   // We have to parse it first.
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
@@ -942,6 +1001,7 @@ class DWARFObjInMemory final : public DWARFObject {
   uint8_t AddressSize;
   StringRef FileName;
   const object::ObjectFile *Obj = nullptr;
+  std::vector<SectionName> SectionNames;
 
   using TypeSectionMap = MapVector<object::SectionRef, DWARFSectionMap,
                                    std::map<object::SectionRef, unsigned>>;
@@ -1063,9 +1123,13 @@ public:
         AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()),
         Obj(&Obj) {
 
+    StringMap<unsigned> SectionAmountMap;
     for (const SectionRef &Section : Obj.sections()) {
       StringRef Name;
       Section.getName(Name);
+      ++SectionAmountMap[Name];
+      SectionNames.push_back({ Name, true });
+
       // Skip BSS and Virtual sections, they aren't interesting.
       if (Section.isBSS() || Section.isVirtual())
         continue;
@@ -1187,6 +1251,10 @@ public:
         Map->insert({Reloc.getOffset(), Rel});
       }
     }
+
+    for (SectionName &S : SectionNames)
+      if (SectionAmountMap[S.Name] > 1)
+        S.IsNameUnique = false;
   }
 
   Optional<RelocAddrEntry> find(const DWARFSection &S,
@@ -1199,6 +1267,10 @@ public:
   }
 
   const object::ObjectFile *getFile() const override { return Obj; }
+
+  ArrayRef<SectionName> getSectionNames() const override {
+    return SectionNames;
+  }
 
   bool isLittleEndian() const override { return IsLittleEndian; }
   StringRef getAbbrevDWOSection() const override { return AbbrevDWOSection; }

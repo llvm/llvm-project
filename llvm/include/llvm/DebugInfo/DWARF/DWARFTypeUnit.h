@@ -42,7 +42,7 @@ public:
     return DWARFUnit::getHeaderSize() + 12;
   }
 
-  void dump(raw_ostream &OS, bool Brief = false);
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {});
   static const DWARFSectionKind Section = DW_SECT_TYPES;
 
 protected:

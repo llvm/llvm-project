@@ -76,8 +76,7 @@ TYPES:     3 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000099)  
 NOTYP:     3 [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000010)
 NOTYP:     4 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000075)      [0x00000011, 0x00000022) [0x00000010, 0x00000024)
 
-CHECK-LABEL: .debug_tu_index contents:
-NOTYP-NOT: Index
+CHECK-NOT: .debug_tu_index contents:
 TYPES: Index Signature  TYPES                           ABBREV                             LINE                     STR_OFFSETS
 TYPES:     1 [[FOOSIG]] {{\[}}[[FOOUOFF]], [[BARUOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
 TYPES:     4 [[BARSIG]] {{\[}}[[BARUOFF]], [[XUOFF]])   [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)

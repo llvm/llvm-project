@@ -15,6 +15,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocVisitor.h"
@@ -36,31 +37,117 @@
 using namespace llvm;
 using namespace object;
 
-static cl::list<std::string>
-InputFilenames(cl::Positional, cl::desc("<input object files or .dSYM bundles>"),
-               cl::ZeroOrMore);
+/// Parser for options that take an optional offest argument.
+/// @{
+struct OffsetOption {
+  uint64_t Val = 0;
+  bool HasValue = false;
+  bool IsRequested = false;
+};
 
-static cl::opt<bool> DumpAll("all", cl::desc("Dump all debug info sections"));
-static cl::alias DumpAllAlias("a", cl::desc("Alias for --all"),
-                              cl::aliasopt(DumpAll));
+namespace llvm {
+namespace cl {
+template <>
+class parser<OffsetOption> final : public basic_parser<OffsetOption> {
+public:
+  parser(Option &O) : basic_parser(O) {}
 
-static uint64_t DumpType = DIDT_Null;
+  /// Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, OffsetOption &Val) {
+    if (Arg == "") {
+      Val.Val = 0;
+      Val.HasValue = false;
+      Val.IsRequested = true;
+      return false;
+    }
+    if (Arg.getAsInteger(0, Val.Val))
+      return O.error("'" + Arg + "' value invalid for integer argument!");
+    Val.HasValue = true;
+    Val.IsRequested = true;
+    return false;
+  }
+
+  enum ValueExpected getValueExpectedFlagDefault() const {
+    return ValueOptional;
+  }
+
+  void printOptionInfo(const Option &O, size_t GlobalWidth) const {
+    outs() << "  -" << O.ArgStr;
+    Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
+  }
+
+  void printOptionDiff(const Option &O, OffsetOption V, OptVal Default,
+                       size_t GlobalWidth) const {
+    printOptionName(O, GlobalWidth);
+    outs() << "[=offset]";
+  }
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override {};
+};
+} // cl
+} // llvm
+
+/// @}
+/// Command line options.
+/// @{
+
+namespace {
+using namespace cl;
+
+OptionCategory DwarfDumpCategory("Specific Options");
+static opt<bool> Help("h", desc("Alias for -help"), Hidden,
+                      cat(DwarfDumpCategory));
+static list<std::string>
+    InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
+                   ZeroOrMore, cat(DwarfDumpCategory));
+
+cl::OptionCategory SectionCategory("Section-specific Dump Options",
+                                   "These control which sections are dumped. "
+                                   "Where applicable these parameters take an "
+                                   "optional =<offset> argument to dump only "
+                                   "the entry at the specified offset.");
+
+static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
+                         cat(SectionCategory));
+static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
+
+// Options for dumping specific sections.
+static unsigned DumpType = DIDT_Null;
+static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  static cl::opt<bool> Dump##ENUM_NAME(                                        \
-      CMDLINE_NAME, cl::desc("Dump the " ELF_NAME " section"));
+  static opt<OffsetOption> Dump##ENUM_NAME(                                    \
+      CMDLINE_NAME, desc("Dump the " ELF_NAME " section"),                     \
+      cat(SectionCategory));
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
-static cl::opt<bool>
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+                          cat(DwarfDumpCategory));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
+
+static opt<bool>
+    ShowChildren("show-children",
+                 desc("Show a debug info entry's children when selectively "
+                      "printing with the =<Offset> option"));
+static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
+                               aliasopt(ShowChildren));
+static opt<bool>
     SummarizeTypes("summarize-types",
-                   cl::desc("Abbreviate the description of type unit entries"));
-static cl::opt<bool> Verify("verify", cl::desc("Verify the DWARF debug info"));
-static cl::opt<bool> Quiet("quiet",
-                           cl::desc("Use with -verify to not emit to STDOUT."));
-static cl::opt<bool> Verbose("verbose",
-                             cl::desc("Print more low-level encoding details"));
-static cl::alias VerboseAlias("v", cl::desc("Alias for -verbose"),
-                              cl::aliasopt(Verbose));
+                   desc("Abbreviate the description of type unit entries"));
+static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
+                        cat(DwarfDumpCategory));
+static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
+                       cat(DwarfDumpCategory));
+static opt<bool> Verbose("verbose",
+                         desc("Print more low-level encoding details"),
+                         cat(DwarfDumpCategory));
+static alias VerboseAlias("v", desc("Alias for -verbose"), aliasopt(Verbose),
+                          cat(DwarfDumpCategory));
+} // namespace
+/// @}
+//===----------------------------------------------------------------------===//
+
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
@@ -69,46 +156,29 @@ static void error(StringRef Filename, std::error_code EC) {
   exit(1);
 }
 
-static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
+static DIDumpOptions getDumpOpts() {
+  DIDumpOptions DumpOpts;
+  DumpOpts.DumpType = DumpType;
+  DumpOpts.ShowChildren = ShowChildren;
+  DumpOpts.SummarizeTypes = SummarizeTypes;
+  DumpOpts.Verbose = Verbose;
+  return DumpOpts;
+}
+
+static bool dumpObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
   logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
-
-  outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
-         << "\n\n";
-
+  // The UUID dump already contains all the same information.
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    outs() << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
 
   // Dump the complete DWARF structure.
-  DIDumpOptions DumpOpts;
-  DumpOpts.DumpType = DumpType;
-  DumpOpts.SummarizeTypes = SummarizeTypes;
-  DumpOpts.Brief = !Verbose;
-  DICtx->dump(outs(), DumpOpts);
+  DICtx->dump(outs(), getDumpOpts(), DumpOffsets);
+  return true;
 }
 
-static void DumpInput(StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
-
-  Expected<std::unique_ptr<Binary>> BinOrErr =
-      object::createBinary(Buff->getMemBufferRef());
-  if (!BinOrErr)
-    error(Filename, errorToErrorCode(BinOrErr.takeError()));
-
-  if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
-    DumpObjectFile(*Obj, Filename);
-  else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
-    for (auto &ObjForArch : Fat->objects()) {
-      auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
-      DumpObjectFile(**MachOOrErr,
-                     Filename + " (" + ObjForArch.getArchFlagName() + ")");
-    }
-}
-
-static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
+static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
   std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
 
   // Verify the DWARF and exit with non-zero exit status if verification
@@ -116,7 +186,7 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType);
+  bool Result = DICtx->verify(stream, DumpType, getDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -124,28 +194,62 @@ static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
   return Result;
 }
 
-static bool VerifyInput(StringRef Filename) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-  MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
+static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
+                         std::function<bool(ObjectFile &, Twine)> HandleObj);
 
-  Expected<std::unique_ptr<Binary>> BinOrErr =
-  object::createBinary(Buff->getMemBufferRef());
-  if (!BinOrErr)
-    error(Filename, errorToErrorCode(BinOrErr.takeError()));
+static bool handleArchive(StringRef Filename, Archive &Arch,
+                          std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  bool Result = true;
+  Error Err = Error::success();
+  for (auto Child : Arch.children(Err)) {
+    auto BuffOrErr = Child.getMemoryBufferRef();
+    error(Filename, errorToErrorCode(BuffOrErr.takeError()));
+    auto NameOrErr = Child.getName();
+    error(Filename, errorToErrorCode(NameOrErr.takeError()));
+    std::string Name = (Filename + "(" + NameOrErr.get() + ")").str();
+    Result &= handleBuffer(Name, BuffOrErr.get(), HandleObj);
+  }
+  error(Filename, errorToErrorCode(std::move(Err)));
+
+  return Result;
+}
+
+static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
+                         std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
+  error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   bool Result = true;
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
-    Result = VerifyObjectFile(*Obj, Filename);
+    Result = HandleObj(*Obj, Filename);
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
-      auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
-      if (!VerifyObjectFile(**MachOOrErr, Filename + " (" + ObjForArch.getArchFlagName() + ")"))
-        Result = false;
+      std::string ObjName =
+          (Filename + "(" + ObjForArch.getArchFlagName() + ")").str();
+      if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
+        Result &= HandleObj(**MachOOrErr, ObjName);
+        continue;
+      } else
+        consumeError(MachOOrErr.takeError());
+      if (auto ArchiveOrErr = ObjForArch.getAsArchive()) {
+        error(ObjName, errorToErrorCode(ArchiveOrErr.takeError()));
+        Result &= handleArchive(ObjName, *ArchiveOrErr.get(), HandleObj);
+        continue;
+      } else
+        consumeError(ArchiveOrErr.takeError());
     }
+  else if (auto *Arch = dyn_cast<Archive>(BinOrErr->get()))
+    Result = handleArchive(Filename, *Arch, HandleObj);
   return Result;
+}
+
+static bool handleFile(StringRef Filename,
+                       std::function<bool(ObjectFile &, Twine)> HandleObj) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+  MemoryBuffer::getFileOrSTDIN(Filename);
+  error(Filename, BuffOrErr.getError());
+  std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
+  return handleBuffer(Filename, *Buffer, HandleObj);
 }
 
 /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
@@ -190,15 +294,29 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm dwarf dumper\n");
+  HideUnrelatedOptions({&DwarfDumpCategory, &SectionCategory});
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "pretty-print DWARF debug information in object files"
+      " and debug info archives.\n");
+
+  if (Help) {
+    PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
+    return 0;
+  }
 
   // Defaults to dumping all sections, unless brief mode is specified in which
   // case only the .debug_info section in dumped.
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
-  if (Dump##ENUM_NAME)                                                         \
-    DumpType |= DIDT_##ENUM_NAME;
+  if (Dump##ENUM_NAME.IsRequested) {                                           \
+    DumpType |= DIDT_##ENUM_NAME;                                              \
+    if (Dump##ENUM_NAME.HasValue)                                              \
+      DumpOffsets[DIDT_ID_##ENUM_NAME] = Dump##ENUM_NAME.Val;                  \
+  }
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  if (DumpUUID)
+    DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
@@ -221,10 +339,14 @@ int main(int argc, char **argv) {
 
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
-    if (!std::all_of(Objects.begin(), Objects.end(), VerifyInput))
+    if (!std::all_of(Objects.begin(), Objects.end(), [](std::string Object) {
+          return handleFile(Object, verifyObjectFile);
+        }))
       exit(1);
   } else {
-    std::for_each(Objects.begin(), Objects.end(), DumpInput);
+    std::for_each(Objects.begin(), Objects.end(), [](std::string Object) {
+      handleFile(Object, dumpObjectFile);
+    });
   }
 
   return EXIT_SUCCESS;

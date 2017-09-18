@@ -112,34 +112,36 @@ struct DILineInfoSpecifier {
       : FLIKind(FLIKind), FNKind(FNKind) {}
 };
 
-namespace {
 /// This is just a helper to programmatically construct DIDumpType.
 enum DIDumpTypeCounter {
-  DIDT_ID_Null = 0,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_ID##ENUM_NAME,
+  DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  DIDT_ID_UUID,
+  DIDT_ID_Count
 };
-}
+static_assert(DIDT_ID_Count <= 32, "section types overflow storage");
 
 /// Selects which debug sections get dumped.
-enum DIDumpType : uint64_t {
+enum DIDumpType : unsigned {
   DIDT_Null,
-  DIDT_All             = ~0ULL,
+  DIDT_All             = ~0U,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_##ENUM_NAME = 1 << DIDT_ID##ENUM_NAME,
+  DIDT_##ENUM_NAME = 1U << DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
+  DIDT_UUID = 1 << DIDT_ID_UUID,
 };
 
 /// Container for dump options that control which debug information will be
 /// dumped.
 struct DIDumpOptions {
-    uint64_t DumpType = DIDT_All;
-    bool DumpEH = false;
-    bool SummarizeTypes = false;
-    bool Brief = false;
+  unsigned DumpType = DIDT_All;
+  bool DumpEH = false;
+  bool ShowChildren = false;
+  bool SummarizeTypes = false;
+  bool Verbose = false;
 };
 
 class DIContext {
@@ -156,7 +158,8 @@ public:
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
-  virtual bool verify(raw_ostream &OS, uint64_t DumpType = DIDT_All) {
+  virtual bool verify(raw_ostream &OS, unsigned DumpType = DIDT_All,
+                      DIDumpOptions DumpOpts = {}) {
     // No verifier? Just say things went well.
     return true;
   }

@@ -17,7 +17,7 @@
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[D:0x[0-9a-z]*]]
 ; CHECK: DW_AT_ranges [DW_FORM_sec_offset]   (0x00000000
-; CHECK: .debug_loc contents:
+; CHECK-NOT: .debug_loc contents:
 ; CHECK-NOT: Beginning address offset
 ; CHECK: .debug_loc.dwo contents:
 
