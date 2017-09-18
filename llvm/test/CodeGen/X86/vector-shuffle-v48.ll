@@ -5,7 +5,7 @@ define <32 x i8> @foo(<48 x i8>* %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovdqu 32(%rdi), %xmm0
 ; CHECK-NEXT:    vmovdqu (%rdi), %ymm1
-; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm1[2,3,0,1]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u,u,u,u,u,u,0,2,3,5,6]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,3,4,6,7,9,10,12,13,15,u,u,u,u,u,24,25,27,28,30,31,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255,u,u,u,u,u,u,u,u,u,u>

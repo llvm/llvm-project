@@ -1662,21 +1662,21 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
 void VerifyWarning(DWARFContext &DwarfContext, StringRef Error) {
   SmallString<1024> Str;
   raw_svector_ostream Strm(Str);
-  EXPECT_TRUE(DwarfContext.verify(Strm, DIDT_All));
+  EXPECT_TRUE(DwarfContext.verify(Strm));
   EXPECT_TRUE(Str.str().contains(Error));
 }
 
 void VerifyError(DWARFContext &DwarfContext, StringRef Error) {
   SmallString<1024> Str;
   raw_svector_ostream Strm(Str);
-  EXPECT_FALSE(DwarfContext.verify(Strm, DIDT_All));
+  EXPECT_FALSE(DwarfContext.verify(Strm));
   EXPECT_TRUE(Str.str().contains(Error));
 }
 
 void VerifySuccess(DWARFContext &DwarfContext) {
   SmallString<1024> Str;
   raw_svector_ostream Strm(Str);
-  EXPECT_TRUE(DwarfContext.verify(Strm, DIDT_All));
+  EXPECT_TRUE(DwarfContext.verify(Strm));
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {

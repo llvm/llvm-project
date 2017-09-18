@@ -446,12 +446,10 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
 
   const RelTy &Rel = Rels[FirstRelI];
   SymbolBody &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
-  auto *D = dyn_cast<DefinedRegular>(&B);
-  if (!D || !D->Section)
-    return false;
-  auto *Target =
-      cast<InputSectionBase>(cast<InputSectionBase>(D->Section)->Repl);
-  return Target && Target->Live;
+  if (auto *D = dyn_cast<DefinedRegular>(&B))
+    if (D->Section)
+      return cast<InputSectionBase>(D->Section)->Repl->Live;
+  return false;
 }
 
 // .eh_frame is a sequence of CIE or FDE records. In general, there

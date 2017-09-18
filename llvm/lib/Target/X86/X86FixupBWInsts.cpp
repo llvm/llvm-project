@@ -166,15 +166,85 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-// TODO: This method of analysis can miss some legal cases, because the
-// super-register could be live into the address expression for a memory
-// reference for the instruction, and still be killed/last used by the
-// instruction. However, the existing query interfaces don't seem to
-// easily allow that to be checked.
-//
-// What we'd really like to know is whether after OrigMI, the
-// only portion of SuperDestReg that is alive is the portion that
-// was the destination register of OrigMI.
+/// Check if register \p Reg is live after the \p MI.
+///
+/// \p LiveRegs should be in a state describing liveness information in
+/// that exact place as this function tries to precise analysis made
+/// by \p LiveRegs by exploiting the information about particular
+/// instruction \p MI. \p MI is expected to be one of the MOVs handled
+/// by the x86FixupBWInsts pass.
+/// Note: similar to LivePhysRegs::contains this would state that
+/// super-register is not used if only some part of it is used.
+///
+/// X86 backend does not have subregister liveness tracking enabled,
+/// so liveness information might be overly conservative. However, for
+/// some specific instructions (this pass only cares about MOVs) we can
+/// produce more precise results by analysing that MOV's operands.
+///
+/// Indeed, if super-register is not live before the mov it means that it
+/// was originally <read-undef> and so we are free to modify these
+/// undef upper bits. That may happen in case where the use is in another MBB
+/// and the vreg/physreg corresponding to the move has higher width than
+/// necessary (e.g. due to register coalescing with a "truncate" copy).
+/// So, it handles pattern like this:
+///
+///   BB#2: derived from LLVM BB %if.then
+///   Live Ins: %RDI
+///   Predecessors according to CFG: BB#0
+///   %AX<def> = MOV16rm %RDI<kill>, 1, %noreg, 0, %noreg, %EAX<imp-def>; mem:LD2[%p]
+///                                             No %EAX<imp-use>
+///   Successors according to CFG: BB#3(?%)
+///
+///   BB#3: derived from LLVM BB %if.end
+///   Live Ins: %EAX                            Only %AX is actually live
+///   Predecessors according to CFG: BB#2 BB#1
+///   %AX<def> = KILL %AX, %EAX<imp-use,kill>
+///   RET 0, %AX
+static bool isLive(const MachineInstr &MI,
+                   const LivePhysRegs &LiveRegs,
+                   const TargetRegisterInfo *TRI,
+                   unsigned Reg) {
+  if (!LiveRegs.contains(Reg))
+    return false;
+
+  unsigned Opc = MI.getOpcode(); (void)Opc;
+  // These are the opcodes currently handled by the pass, if something
+  // else will be added we need to ensure that new opcode has the same
+  // properties.
+  assert((Opc == X86::MOV8rm || Opc == X86::MOV16rm || Opc == X86::MOV8rr ||
+          Opc == X86::MOV16rr) &&
+         "Unexpected opcode.");
+
+  bool IsDefined = false;
+  for (auto &MO: MI.implicit_operands()) {
+    if (!MO.isReg())
+      continue;
+
+    assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
+
+    for (MCSuperRegIterator Supers(Reg, TRI, true); Supers.isValid(); ++Supers) {
+      if (*Supers == MO.getReg()) {
+        if (MO.isDef())
+          IsDefined = true;
+        else
+          return true; // SuperReg Imp-used' -> live before the MI
+      }
+    }
+  }
+  // Reg is not Imp-def'ed -> it's live both before/after the instruction.
+  if (!IsDefined)
+    return true;
+
+  // Otherwise, the Reg is not live before the MI and the MOV can't
+  // make it really live, so it's in fact dead even after the MI.
+  return false;
+}
+
+/// \brief Check if after \p OrigMI the only portion of super register
+/// of the destination register of \p OrigMI that is alive is that
+/// destination register.
+///
+/// If so, return that super register in \p SuperDestReg.
 bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
                                             unsigned &SuperDestReg) const {
   auto *TRI = &TII->getRegisterInfo();
@@ -191,7 +261,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
   if (SubRegIdx == X86::sub_8bit_hi)
     return false;
 
-  if (LiveRegs.contains(SuperDestReg))
+  if (isLive(*OrigMI, LiveRegs, TRI, SuperDestReg))
     return false;
 
   if (SubRegIdx == X86::sub_8bit) {
@@ -201,7 +271,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
     unsigned UpperByteReg =
         getX86SubSuperRegister(SuperDestReg, 8, /*High=*/true);
 
-    if (LiveRegs.contains(UpperByteReg))
+    if (isLive(*OrigMI, LiveRegs, TRI, UpperByteReg))
       return false;
   }
 
@@ -328,7 +398,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
 
   for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
     MachineInstr *MI = &*I;
-    
+
     if (MachineInstr *NewMI = tryReplaceInstr(MI, MBB))
       MIReplacements.push_back(std::make_pair(MI, NewMI));
 

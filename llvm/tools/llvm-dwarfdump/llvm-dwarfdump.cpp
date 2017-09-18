@@ -122,6 +122,8 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
+static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
+                                 aliasopt(DumpDebugFrame));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
@@ -186,7 +188,7 @@ static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType, getDumpOpts());
+  bool Result = DICtx->verify(stream, getDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else

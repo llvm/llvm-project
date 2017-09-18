@@ -4710,7 +4710,7 @@ def VSDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b0,
 // Indexed dot product instructions:
 class DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty> :
   N3Vnp<0b11100, 0b10, 0b1101, Q, U,
-       (outs Ty:$Vd), (ins Ty:$Vn, DPR:$Vm, VectorIndex32:$lane),
+       (outs Ty:$Vd), (ins Ty:$Vn, DPR_VFP2:$Vm, VectorIndex32:$lane),
        N3RegFrm, IIC_VDOTPROD, opc, dt, []> {
   bit lane;
   let Inst{5} = lane;

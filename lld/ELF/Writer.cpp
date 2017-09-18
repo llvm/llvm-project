@@ -835,17 +835,17 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (Script->Opt.HasSections)
     return;
 
-  auto Add = [](StringRef S, int64_t Pos = -1) {
+  auto Add = [](StringRef S, int64_t Pos) {
     return addOptionalRegular<ELFT>(S, Out::ElfHeader, Pos, STV_DEFAULT);
   };
 
   ElfSym::Bss = Add("__bss_start", 0);
-  ElfSym::End1 = Add("end");
-  ElfSym::End2 = Add("_end");
-  ElfSym::Etext1 = Add("etext");
-  ElfSym::Etext2 = Add("_etext");
-  ElfSym::Edata1 = Add("edata");
-  ElfSym::Edata2 = Add("_edata");
+  ElfSym::End1 = Add("end", -1);
+  ElfSym::End2 = Add("_end", -1);
+  ElfSym::Etext1 = Add("etext", -1);
+  ElfSym::Etext2 = Add("_etext", -1);
+  ElfSym::Edata1 = Add("edata", -1);
+  ElfSym::Edata2 = Add("_edata", -1);
 }
 
 // Sort input sections by section name suffixes for

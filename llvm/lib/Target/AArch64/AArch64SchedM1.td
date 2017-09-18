@@ -88,16 +88,43 @@ def M1WriteBX : SchedWriteVariant<[SchedVar<M1BranchLinkFastPred, [M1WriteA1,
                                                                    M1WriteC1]>]>;
 
 def M1WriteL5 : SchedWriteRes<[M1UnitL]> { let Latency = 5; }
-def M1WriteLX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M1WriteL5,
-                                                            M1WriteA1]>,
-                                   SchedVar<NoSchedPred,   [M1WriteL5]>]>;
+def M1WriteLA : SchedWriteRes<[M1UnitL,
+                               M1UnitL]> { let Latency = 5; }
+def M1WriteLB : SchedWriteRes<[M1UnitL]> { let Latency = 6;
+                                           let ResourceCycles = [2]; }
+def M1WriteLC : SchedWriteRes<[M1UnitA,
+                               M1UnitL]> { let Latency = 5; }
+def M1WriteLD : SchedWriteRes<[M1UnitA,
+                               M1UnitL,
+                               M1UnitL]> { let Latency = 5; }
+def M1WriteLX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
+                                   SchedVar<NoSchedPred,         [M1WriteA1,
+                                                                  M1WriteL5]>]>;
 
-def M1WriteS1 : SchedWriteRes<[M1UnitS]> { let Latency = 1; }
-def M1WriteS2 : SchedWriteRes<[M1UnitS]> { let Latency = 2; }
-def M1WriteS4 : SchedWriteRes<[M1UnitS]> { let Latency = 4; }
-def M1WriteSX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M1WriteS2,
-                                                            M1WriteA1]>,
-                                   SchedVar<NoSchedPred,   [M1WriteS1]>]>;
+def M1WriteS1 : SchedWriteRes<[M1UnitS]>   { let Latency = 1; }
+def M1WriteS2 : SchedWriteRes<[M1UnitS]>   { let Latency = 2; }
+def M1WriteS4 : SchedWriteRes<[M1UnitS]>   { let Latency = 4; }
+def M1WriteSA : SchedWriteRes<[M1UnitS,
+                               M1UnitFST,
+                               M1UnitS,
+                               M1UnitFST]> { let Latency = 1; }
+def M1WriteSB : SchedWriteRes<[M1UnitS,
+                               M1UnitFST,
+                               M1UnitA]>   { let Latency = 2; }
+def M1WriteSC : SchedWriteRes<[M1UnitS,
+                               M1UnitFST,
+                               M1UnitA]>   { let Latency = 1; }
+def M1WriteSD : SchedWriteRes<[M1UnitS,
+                               M1UnitFST,
+                               M1UnitS,
+                               M1UnitFST,
+                               M1UnitA]>   { let Latency = 1; }
+def M1WriteSX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
+                                   SchedVar<NoSchedPred,         [M1WriteA1,
+                                                                  M1WriteS1]>]>;
+def M1WriteSY : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
+                                   SchedVar<NoSchedPred,         [M1WriteA1,
+                                                                  M1WriteS2]>]>;
 
 def M1ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,   [ReadDefault]>]>;
@@ -162,7 +189,8 @@ def : WriteRes<WriteFCopy, [M1UnitS]>    { let Latency = 4; }
 def : WriteRes<WriteVLD, [M1UnitL]> { let Latency = 5; }
 
 // FP store instructions.
-def : WriteRes<WriteVST, [M1UnitS, M1UnitFST]> { let Latency = 1; }
+def : WriteRes<WriteVST, [M1UnitS,
+                          M1UnitFST]> { let Latency = 1; }
 
 // ASIMD FP instructions.
 def : WriteRes<WriteV, [M1UnitFADD]> { let Latency = 3; }
@@ -369,6 +397,8 @@ def : InstRW<[WriteLD,
               WriteLDHi,
               WriteAdr,
               M1WriteA1], (instregex "^LDP(SW|W|X)(post|pre)")>;
+def : InstRW<[M1WriteLX,
+              ReadAdrBase], (instregex "^PRFMro[WX]")>;
 
 // Store instructions.
 
@@ -399,22 +429,46 @@ def : InstRW<[M1WriteS4],     (instregex "^FMOV[WX][DS](High)?r")>;
 def : InstRW<[M1WriteNEONI],  (instregex "^FMOV[DS][WX](High)?r")>;
 
 // FP load instructions.
+def : InstRW<[WriteVLD],    (instregex "^LDR[DSQ]l")>;
+def : InstRW<[WriteVLD],    (instregex "^LDUR[BDHSQ]i")>;
 def : InstRW<[WriteVLD,
               WriteAdr,
-              M1WriteA1], (instregex "^LDP[DS](post|pre)")>;
+              ReadAdrBase], (instregex "^LDR[BDHSQ](post|pre)")>;
+def : InstRW<[WriteVLD],    (instregex "^LDR[BDHSQ]ui")>;
+def : InstRW<[M1WriteLX,
+              ReadAdrBase], (instregex "^LDR[BDHS]ro[WX]")>;
+def : InstRW<[M1WriteLC,
+              ReadAdrBase], (instregex "^LDRQro[WX]")>;
 def : InstRW<[WriteVLD,
-              WriteVLD,
+              WriteLDHi],   (instregex "^LDN?P[DS]i")>;
+def : InstRW<[M1WriteLB,
+              WriteLDHi],   (instregex "^LDN?PQi")>;
+def : InstRW<[M1WriteLC,
+              WriteLDHi,
               WriteAdr,
-              M1WriteA1], (instregex "^LDPQ(post|pre)")>;
+              ReadAdrBase], (instregex "^LDP[DS](post|pre)")>;
+def : InstRW<[M1WriteLD,
+              WriteLDHi,
+              WriteAdr,
+              ReadAdrBase], (instregex "^LDPQ(post|pre)")>;
 
 // FP store instructions.
+def : InstRW<[WriteVST],    (instregex "^STUR[BDHSQ]i")>;
 def : InstRW<[WriteVST,
               WriteAdr,
-              M1WriteA1], (instregex "^STP[DS](post|pre)")>;
-def : InstRW<[WriteVST,
-              WriteVST,
+              ReadAdrBase], (instregex "^STR[BDHSQ](post|pre)")>;
+def : InstRW<[WriteVST],    (instregex "^STR[BDHSQ]ui")>;
+def : InstRW<[M1WriteSY,
+              ReadAdrBase], (instregex "^STR[BDHS]ro[WX]")>;
+def : InstRW<[M1WriteSB,
+              ReadAdrBase], (instregex "^STRQro[WX]")>;
+def : InstRW<[WriteVST],    (instregex "^STN?P[DSQ]i")>;
+def : InstRW<[M1WriteSC,
               WriteAdr,
-              M1WriteA1], (instregex "^STPQ(post|pre)")>;
+              ReadAdrBase], (instregex "^STP[DS](post|pre)")>;
+def : InstRW<[M1WriteSD,
+              WriteAdr,
+              ReadAdrBase], (instregex "^STPQ(post|pre)")>;
 
 // ASIMD instructions.
 def : InstRW<[M1WriteNMISC3], (instregex "^[SU]ABAL?v")>;

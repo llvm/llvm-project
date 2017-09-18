@@ -3,6 +3,7 @@
 config.name_suffix = "@SCUDO_TEST_CONFIG_SUFFIX@"
 config.target_arch = "@SCUDO_TEST_TARGET_ARCH@"
 config.target_cflags = "@SCUDO_TEST_TARGET_CFLAGS@"
+config.android = "@ANDROID@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

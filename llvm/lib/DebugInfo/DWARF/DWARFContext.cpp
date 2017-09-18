@@ -222,7 +222,6 @@ void DWARFContext::dump(
 
   Optional<uint64_t> DumpOffset;
   uint64_t DumpType = DumpOpts.DumpType;
-  bool DumpEH = DumpOpts.DumpEH;
   unsigned RecDepth =
       DumpOpts.ShowChildren ? std::numeric_limits<unsigned>::max() : 0;
 
@@ -299,12 +298,13 @@ void DWARFContext::dump(
     getDebugLocDWO()->dump(OS, getRegisterInfo());
   }
 
-  if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrames,
+  if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                  DObj->getDebugFrameSection())) {
     getDebugFrame()->dump(OS);
   }
-  if (DumpEH && !getEHFrame()->empty()) {
-    OS << "\n.eh_frame contents:\n";
+
+  if (shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
+                 DObj->getEHFrameSection())) {
     getEHFrame()->dump(OS);
   }
 
@@ -492,15 +492,14 @@ DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
   return DWARFDie();
 }
 
-bool DWARFContext::verify(raw_ostream &OS, unsigned DumpType,
-                          DIDumpOptions DumpOpts) {
+bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   bool Success = true;
   DWARFVerifier verifier(OS, *this, DumpOpts);
 
   Success &= verifier.handleDebugAbbrev();
-  if (DumpType & DIDT_DebugInfo)
+  if (DumpOpts.DumpType & DIDT_DebugInfo)
     Success &= verifier.handleDebugInfo();
-  if (DumpType & DIDT_DebugLine)
+  if (DumpOpts.DumpType & DIDT_DebugLine)
     Success &= verifier.handleDebugLine();
   Success &= verifier.handleAccelTables();
   return Success;

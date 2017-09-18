@@ -1215,7 +1215,7 @@ define void @isel_crash_8w(i16* %cV_R.addr) {
 ; X64:       ## BB#0: ## %entry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movw (%rdi), %ax
+; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    vmovd %eax, %xmm1
 ; X64-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -1274,7 +1274,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-NEXT:    movw (%rdi), %ax
+; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    vmovd %eax, %xmm1
 ; X64-NEXT:    vpbroadcastw %xmm1, %ymm1
 ; X64-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)

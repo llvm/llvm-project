@@ -503,14 +503,14 @@ define <4 x i64> @combine_pshufb_as_zext128(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_zext128:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X32-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14],zero,zero,zero,zero,zero,zero,ymm0[13,12],zero,zero,zero,zero,zero,zero,ymm0[31,30],zero,zero,zero,zero,zero,zero,ymm0[29,28],zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_zext128:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X64-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14],zero,zero,zero,zero,zero,zero,ymm0[13,12],zero,zero,zero,zero,zero,zero,ymm0[31,30],zero,zero,zero,zero,zero,zero,ymm0[29,28],zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %1 = shufflevector <32 x i8> %a0, <32 x i8> undef, <32 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

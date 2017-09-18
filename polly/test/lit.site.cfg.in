@@ -50,6 +50,7 @@ if config.link_polly_into_tools == '' or \
                                  + ' -polly-remarks-minimal '
                                  + ' -polly-use-llvm-names '
                                  + ' -polly-import-jscop-dir=%S '
+                                 + ' -polly-codegen-verify '
                                  ))
 else:
     config.substitutions.append(('%loadPolly', ''
@@ -57,6 +58,7 @@ else:
                                  + ' -polly-remarks-minimal '
                                  + ' -polly-use-llvm-names '
                                  + ' -polly-import-jscop-dir=%S '
+                                 + ' -polly-codegen-verify '
                                  ))
 
 if config.enable_gpgpu_codegen == 'TRUE' :

@@ -2984,27 +2984,26 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       unsigned Alignment = SI->getAlignment();
       unsigned AS = SI->getPointerAddressSpace();
 
-      ValueList ValueOp;
+      ValueList ScalarStoreValues;
       for (Value *V : E->Scalars)
-        ValueOp.push_back(cast<StoreInst>(V)->getValueOperand());
+        ScalarStoreValues.push_back(cast<StoreInst>(V)->getValueOperand());
 
       setInsertPointAfterBundle(E->Scalars, VL0);
 
-      Value *VecValue = vectorizeTree(ValueOp);
-      Value *VecPtr = Builder.CreateBitCast(SI->getPointerOperand(),
-                                            VecTy->getPointerTo(AS));
+      Value *VecValue = vectorizeTree(ScalarStoreValues);
+      Value *ScalarPtr = SI->getPointerOperand();
+      Value *VecPtr = Builder.CreateBitCast(ScalarPtr, VecTy->getPointerTo(AS));
       StoreInst *S = Builder.CreateStore(VecValue, VecPtr);
 
-      // The pointer operand uses an in-tree scalar so we add the new BitCast to
-      // ExternalUses list to make sure that an extract will be generated in the
+      // The pointer operand uses an in-tree scalar, so add the new BitCast to
+      // ExternalUses to make sure that an extract will be generated in the
       // future.
-      Value *PO = SI->getPointerOperand();
-      if (getTreeEntry(PO))
-        ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
+      if (getTreeEntry(ScalarPtr))
+        ExternalUses.push_back(ExternalUser(ScalarPtr, cast<User>(VecPtr), 0));
 
-      if (!Alignment) {
+      if (!Alignment)
         Alignment = DL->getABITypeAlignment(SI->getValueOperand()->getType());
-      }
+
       S->setAlignment(Alignment);
       E->VectorizedValue = S;
       ++NumVectorInstructions;

@@ -2540,7 +2540,7 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    retq
   %b = add <8 x i32> %a, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %c = shufflevector <8 x i32> %b, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 7, i32 6, i32 5, i32 4>
