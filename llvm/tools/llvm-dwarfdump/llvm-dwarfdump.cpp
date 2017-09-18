@@ -131,9 +131,15 @@ static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<Offset> option"));
+                      "printing with the =<offset> option"));
 static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
                                aliasopt(ShowChildren));
+static opt<bool>
+    ShowParents("show-parents",
+                desc("Show a debug info entry's parents when selectively "
+                     "printing with the =<offset> option"));
+static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
+                              aliasopt(ShowParents));
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"));
@@ -162,6 +168,7 @@ static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.ShowChildren = ShowChildren;
+  DumpOpts.ShowParents = ShowParents;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
   return DumpOpts;

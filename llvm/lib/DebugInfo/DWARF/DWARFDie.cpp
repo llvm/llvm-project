@@ -367,6 +367,16 @@ void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
   CallDiscriminator = toUnsigned(find(DW_AT_GNU_discriminator), 0);
 }
 
+/// Helper to dump a DIE with all of its parents, but no siblings.
+static unsigned dumpParentChain(DWARFDie Die, raw_ostream &OS, unsigned Indent,
+                                DIDumpOptions DumpOpts) {
+  if (!Die)
+    return Indent;
+  Indent = dumpParentChain(Die.getParent(), OS, Indent, DumpOpts);
+  Die.dump(OS, 0, Indent, DumpOpts);
+  return Indent + 2;
+}
+
 void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
                     DIDumpOptions DumpOpts) const {
   if (!isValid())
@@ -374,7 +384,12 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
   DWARFDataExtractor debug_info_data = U->getDebugInfoExtractor();
   const uint32_t Offset = getOffset();
   uint32_t offset = Offset;
-  RecurseDepth += DumpOpts.ShowChildren ? 1 : 0;
+  if (DumpOpts.ShowChildren)
+    RecurseDepth++;
+  if (DumpOpts.ShowParents) {
+    DumpOpts.ShowParents = false;
+    Indent = dumpParentChain(getParent(), OS, Indent, DumpOpts);
+  }
 
   if (debug_info_data.isValidOffset(offset)) {
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
