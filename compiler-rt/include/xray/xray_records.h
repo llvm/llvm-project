@@ -78,7 +78,10 @@ struct alignas(32) XRayRecord {
   // The CPU where the thread is running. We assume number of CPUs <= 256.
   uint8_t CPU = 0;
 
-  // The type of the event. Usually either ENTER = 0 or EXIT = 1.
+  // The type of the event. One of the following:
+  //   ENTER = 0
+  //   EXIT = 1
+  //   TAIL_EXIT = 2
   uint8_t Type = 0;
 
   // The function ID for the record.

@@ -148,6 +148,14 @@ void BackgroundThread(void *arg) {
 #endif
 
 #if !SANITIZER_GO
+void StartReportDeadlySignal() {
+  // Write the first message using fd=2, just in case.
+  // It may actually fail to write in case stderr is closed.
+  CatastrophicErrorWrite(SanitizerToolName, internal_strlen(SanitizerToolName));
+  static const char kDeadlySignal[] = ":DEADLYSIGNAL\n";
+  CatastrophicErrorWrite(kDeadlySignal, sizeof(kDeadlySignal) - 1);
+}
+
 static void MaybeReportNonExecRegion(uptr pc) {
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);

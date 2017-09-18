@@ -42,7 +42,7 @@ bool Preprocessor::isInPrimaryFile() const {
          "Top level include stack isn't our primary lexer?");
   return std::none_of(
       IncludeMacroStack.begin() + 1, IncludeMacroStack.end(),
-      [](const IncludeStackInfo &ISI) -> bool { return IsFileLexer(ISI); });
+      [&](const IncludeStackInfo &ISI) -> bool { return IsFileLexer(ISI); });
 }
 
 /// getCurrentLexer - Return the current file lexer being lexed from.  Note

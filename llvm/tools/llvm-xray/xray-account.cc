@@ -150,7 +150,8 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
     ThreadStack.emplace_back(Record.FuncId, Record.TSC);
     break;
   }
-  case RecordTypes::EXIT: {
+  case RecordTypes::EXIT:
+  case RecordTypes::TAIL_EXIT: {
     if (ThreadStack.empty())
       return false;
 
@@ -418,6 +419,9 @@ template <> struct format_provider<llvm::xray::RecordTypes> {
         break;
       case RecordTypes::EXIT:
         Stream << "exit";
+        break;
+      case RecordTypes::TAIL_EXIT:
+        Stream << "tail-exit";
         break;
     }
   }

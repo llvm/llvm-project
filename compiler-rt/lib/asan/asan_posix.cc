@@ -34,7 +34,6 @@
 namespace __asan {
 
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
-  ScopedDeadlySignal signal_scope(GetCurrentThread());
   StartReportDeadlySignal();
   SignalContext sig(siginfo, context);
   ReportDeadlySignal(sig);

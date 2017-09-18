@@ -352,7 +352,8 @@ public:
       }
       return AccountRecordStatus::OK;
     }
-    case RecordTypes::EXIT: {
+    case RecordTypes::EXIT:
+    case RecordTypes::TAIL_EXIT: {
       bool wasLastRecordExit = state->wasLastRecordExit;
       state->wasLastRecordExit = true;
       // The exit case is more interesting, since we want to be able to deduce
