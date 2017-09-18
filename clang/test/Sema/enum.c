@@ -123,3 +123,14 @@ int NegativeShortTest[NegativeShort == -1 ? 1 : -1];
 // PR24610
 enum Color { Red, Green, Blue }; // expected-note{{previous use is here}}
 typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type that does not match previous declaration}}
+
+// PR28903
+struct PR28903 {
+  enum {
+    PR28903_A = (enum { // expected-error-re {{'enum PR28903::(anonymous at {{.*}})' cannot be defined in an enumeration}}
+      PR28903_B,
+      PR28903_C = PR28903_B
+    })0
+  };
+  int makeStructNonEmpty;
+};
