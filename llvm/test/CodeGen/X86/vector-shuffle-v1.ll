@@ -5,7 +5,7 @@
 define <2 x i1> @shuf2i1_1_0(<2 x i1> %a) {
 ; AVX512F-LABEL: shuf2i1_1_0:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf2i1_1_0:
@@ -49,7 +49,7 @@ define <2 x i1> @shuf2i1_1_2(<2 x i1> %a) {
 define <4 x i1> @shuf4i1_3_2_10(<4 x i1> %a) {
 ; AVX512F-LABEL: shuf4i1_3_2_10:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf4i1_3_2_10:

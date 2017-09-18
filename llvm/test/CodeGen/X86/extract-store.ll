@@ -363,8 +363,8 @@ define void @extract_i64_1(i64* nocapture %dst, <2 x i64> %foo) nounwind {
 ; AVX-X32-LABEL: extract_i64_1:
 ; AVX-X32:       # BB#0:
 ; AVX-X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX-X32-NEXT:    vmovq %xmm0, (%eax)
+; AVX-X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX-X32-NEXT:    vmovlps %xmm0, (%eax)
 ; AVX-X32-NEXT:    retl
 ;
 ; AVX-X64-LABEL: extract_i64_1:

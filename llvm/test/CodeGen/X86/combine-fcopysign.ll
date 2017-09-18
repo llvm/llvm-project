@@ -245,7 +245,7 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; SSE-NEXT:    cvtss2sd %xmm5, %xmm4
 ; SSE-NEXT:    andps %xmm8, %xmm4
 ; SSE-NEXT:    orps %xmm0, %xmm4
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm4[0]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    andps %xmm7, %xmm0
@@ -257,8 +257,8 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; SSE-NEXT:    cvtss2sd %xmm6, %xmm0
 ; SSE-NEXT:    andps %xmm8, %xmm0
 ; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fpext_sgn:

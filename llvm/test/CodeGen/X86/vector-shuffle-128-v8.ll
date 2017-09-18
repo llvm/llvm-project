@@ -14,7 +14,7 @@ define <8 x i16> @shuffle_v8i16_01012323(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX-LABEL: shuffle_v8i16_01012323:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3>
   ret <8 x i16> %shuffle
@@ -27,7 +27,7 @@ define <8 x i16> @shuffle_v8i16_67452301(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX-LABEL: shuffle_v8i16_67452301:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 2, i32 3, i32 0, i32 1>
   ret <8 x i16> %shuffle
@@ -167,7 +167,7 @@ define <8 x i16> @shuffle_v8i16_23016745(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX-LABEL: shuffle_v8i16_23016745:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,3,2]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,2]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
   ret <8 x i16> %shuffle
@@ -1119,7 +1119,7 @@ define <8 x i16> @shuffle_v8i16_XXXdXXXX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX-LABEL: shuffle_v8i16_XXXdXXXX:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,2,3,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[2,2,3,3]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %shuffle

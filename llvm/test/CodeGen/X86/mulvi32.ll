@@ -308,8 +308,8 @@ define <4 x i64> @_mul4xi32toi64b(<4 x i32>, <4 x i32>) {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm1 = xmm2[1],xmm0[1]
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX1-NEXT:    vpunpckhqdq {{.*#+}} xmm1 = xmm2[1],xmm0[1]
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

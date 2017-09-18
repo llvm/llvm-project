@@ -1066,7 +1066,7 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 ;
 ; SKX_32-LABEL: test20:
 ; SKX_32:       # BB#0:
-; SKX_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SKX_32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SKX_32-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; SKX_32-NEXT:    vptestmq %xmm2, %xmm2, %k0
 ; SKX_32-NEXT:    kshiftlb $6, %k0, %k0
@@ -1163,7 +1163,7 @@ define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x fl
 ;
 ; SKX-LABEL: test22:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SKX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; SKX-NEXT:    vptestmq %xmm1, %xmm1, %k0
 ; SKX-NEXT:    kshiftlb $6, %k0, %k0
@@ -1174,7 +1174,7 @@ define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x fl
 ;
 ; SKX_32-LABEL: test22:
 ; SKX_32:       # BB#0:
-; SKX_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SKX_32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SKX_32-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; SKX_32-NEXT:    vptestmq %xmm1, %xmm1, %k0
 ; SKX_32-NEXT:    kshiftlb $6, %k0, %k0
@@ -1454,7 +1454,7 @@ define <2 x float> @test27(float* %base, <2 x i32> %ind) {
 ;
 ; SKX-LABEL: test27:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; SKX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; SKX-NEXT:    movb $3, %al
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vgatherdps (%rdi,%xmm1,4), %xmm0 {%k1}
@@ -1462,7 +1462,7 @@ define <2 x float> @test27(float* %base, <2 x i32> %ind) {
 ;
 ; SKX_32-LABEL: test27:
 ; SKX_32:       # BB#0:
-; SKX_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; SKX_32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    movb $3, %cl
 ; SKX_32-NEXT:    kmovw %ecx, %k1

@@ -394,7 +394,6 @@ namespace llvm {
       MOVSHDUP,
       MOVSLDUP,
       MOVLHPS,
-      MOVLHPD,
       MOVHLPS,
       MOVLPS,
       MOVLPD,

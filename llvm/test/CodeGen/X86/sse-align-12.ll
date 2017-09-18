@@ -54,7 +54,7 @@ define <2 x double> @c(<2 x double>* %y) nounwind {
 define <2 x double> @d(<2 x double>* %y, <2 x double> %z) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movupd (%rdi), %xmm1
+; CHECK-NEXT:    movups (%rdi), %xmm1
 ; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %y, align 8

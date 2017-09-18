@@ -140,15 +140,15 @@ define <4 x i32> @knownbits_mask_shuffle_shuffle_undef_sext(<8 x i16> %a0) nounw
 define <4 x float> @knownbits_mask_shuffle_uitofp(<4 x i32> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_shuffle_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_shuffle_uitofp:
 ; X64:       # BB#0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -160,17 +160,17 @@ define <4 x float> @knownbits_mask_shuffle_uitofp(<4 x i32> %a0) nounwind {
 define <4 x float> @knownbits_mask_or_shuffle_uitofp(<4 x i32> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vorps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X64:       # BB#0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vorps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -183,17 +183,17 @@ define <4 x float> @knownbits_mask_or_shuffle_uitofp(<4 x i32> %a0) nounwind {
 define <4 x float> @knownbits_mask_xor_shuffle_uitofp(<4 x i32> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_xor_shuffle_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpxor {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vxorps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_xor_shuffle_uitofp:
 ; X64:       # BB#0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -394,20 +394,20 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
 define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; X32-LABEL: knownbits_mask_concat_uitofp:
 ; X32:       # BB#0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm1, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; X32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,3,1,3]
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm1, %xmm1
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[1,3,1,3]
 ; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X32-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_concat_uitofp:
 ; X64:       # BB#0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
-; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,3,1,3]
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X64-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[1,3,1,3]
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq

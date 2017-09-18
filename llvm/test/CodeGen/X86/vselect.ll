@@ -462,15 +462,15 @@ define <2 x i64> @test25(<2 x i64> %a, <2 x i64> %b) {
 define <4 x float> @select_of_shuffles_0(<2 x float> %a0, <2 x float> %b0, <2 x float> %a1, <2 x float> %b1) {
 ; SSE-LABEL: select_of_shuffles_0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; SSE-NEXT:    subps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_of_shuffles_0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <2 x float> %a0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

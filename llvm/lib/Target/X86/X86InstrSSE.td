@@ -995,7 +995,7 @@ let Predicates = [UseSSE2] in {
 //===----------------------------------------------------------------------===//
 
 let AddedComplexity = 20 in {
-  defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Movlhpd, "movhp",
+  defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Unpckl, "movhp",
                                     IIC_SSE_MOV_LH>;
 }
 
@@ -1037,14 +1037,6 @@ let Predicates = [UseAVX] in {
                  (bc_v4f32 (v2i64 (X86vzload addr:$src2)))),
             (VMOVHPSrm VR128:$src1, addr:$src2)>;
 
-  // FIXME: Instead of X86Unpckl, there should be a X86Movlhpd here, the problem
-  // is during lowering, where it's not possible to recognize the load fold
-  // cause it has two uses through a bitcast. One use disappears at isel time
-  // and the fold opportunity reappears.
-  def : Pat<(v2f64 (X86Unpckl VR128:$src1,
-                      (scalar_to_vector (loadf64 addr:$src2)))),
-            (VMOVHPDrm VR128:$src1, addr:$src2)>;
-
   // Also handle an i64 load because that may get selected as a faster way to
   // load the data.
   def : Pat<(v2f64 (X86Unpckl VR128:$src1,
@@ -1074,14 +1066,6 @@ let Predicates = [UseSSE1] in {
 
 let Predicates = [UseSSE2] in {
   // MOVHPD patterns
-
-  // FIXME: Instead of X86Unpckl, there should be a X86Movlhpd here, the problem
-  // is during lowering, where it's not possible to recognize the load fold
-  // cause it has two uses through a bitcast. One use disappears at isel time
-  // and the fold opportunity reappears.
-  def : Pat<(v2f64 (X86Unpckl VR128:$src1,
-                      (scalar_to_vector (loadf64 addr:$src2)))),
-            (MOVHPDrm VR128:$src1, addr:$src2)>;
 
   // Also handle an i64 load because that may get selected as a faster way to
   // load the data.
