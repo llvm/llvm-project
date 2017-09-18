@@ -1,4 +1,4 @@
-//===---- LiveRangeCalc.cpp - Calculate live ranges -----------------------===//
+//===- LiveRangeCalc.cpp - Calculate live ranges --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,9 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "LiveRangeCalc.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
@@ -43,7 +61,6 @@ void LiveRangeCalc::reset(const MachineFunction *mf,
   resetLiveOutMap();
   LiveIn.clear();
 }
-
 
 static void createDeadDef(SlotIndexes &Indexes, VNInfo::Allocator &Alloc,
                           LiveRange &LR, const MachineOperand &MO) {
@@ -136,7 +153,6 @@ void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
     createDeadDef(*Indexes, *Alloc, LR, MO);
 }
 
-
 void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
                                  LiveInterval *LI) {
   SmallVector<SlotIndex, 4> Undefs;
@@ -197,7 +213,6 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
   }
 }
 
-
 void LiveRangeCalc::updateFromLiveIns() {
   LiveRangeUpdater Updater;
   for (const LiveInBlock &I : LiveIn) {
@@ -248,7 +263,6 @@ void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
   calculateValues();
 }
 
-
 // This function is called by a client after using the low-level API to add
 // live-out and live-in blocks.  The unique value optimization is not
 // available, SplitEditor::transferValues handles that case directly anyway.
@@ -258,7 +272,6 @@ void LiveRangeCalc::calculateValues() {
   updateSSA();
   updateFromLiveIns();
 }
-
 
 bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
                                  MachineBasicBlock &MBB, BitVector &DefOnEntry,
@@ -410,7 +423,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
   LiveIn.clear();
   FoundUndef |= (TheVNI == nullptr || TheVNI == &UndefVNI);
-  if (Undefs.size() > 0 && FoundUndef)
+  if (!Undefs.empty() && FoundUndef)
     UniqueVNI = false;
 
   // Both updateSSA() and LiveRangeUpdater benefit from ordered blocks, but
@@ -454,7 +467,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   LiveIn.reserve(WorkList.size());
   for (unsigned BN : WorkList) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
-    if (Undefs.size() > 0 &&
+    if (!Undefs.empty() &&
         !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
       continue;
     addLiveInBlock(LR, DomTree->getNode(MBB));
@@ -464,7 +477,6 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
   return false;
 }
-
 
 // This is essentially the same iterative algorithm that SSAUpdater uses,
 // except we already have a dominator tree, so we don't have to recompute it.
