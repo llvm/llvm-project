@@ -1723,12 +1723,7 @@ Status Process::Resume() {
       log->Printf("Process::Resume: -- TrySetRunning failed, not resuming.");
     return error;
   }
-  Status error = PrivateResume();
-  if (!error.Success()) {
-    // Undo running state change
-    m_public_run_lock.SetStopped();
-  }
-  return error;
+  return PrivateResume();
 }
 
 Status Process::ResumeSynchronous(Stream *stream) {
@@ -1757,9 +1752,6 @@ Status Process::ResumeSynchronous(Stream *stream) {
       error.SetErrorStringWithFormat(
           "process not in stopped state after synchronous resume: %s",
           StateAsCString(state));
-  } else {
-    // Undo running state change
-    m_public_run_lock.SetStopped();
   }
 
   // Undo the hijacking of process events...

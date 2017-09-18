@@ -15,7 +15,7 @@ that never materialized (e.g. remote unwinding).
 
 The unwinder has two levels of API. The high level APIs are the `_Unwind_*`
 functions which implement functionality required by `__cxa_*` exception
-funcionts. The low level APIs are the `unw_*` functions which are an interface
+functions. The low level APIs are the `unw_*` functions which are an interface
 defined by the old HP libunwind project.
 
 Getting Started with libunwind
