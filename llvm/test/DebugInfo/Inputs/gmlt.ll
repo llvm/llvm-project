@@ -87,12 +87,8 @@
 
 
 ; Check that we don't emit any pubnames or pubtypes under -gmlt
-; CHECK: .debug_pubnames contents:
-; CHECK-NOT: Offset
-
-; CHECK: .debug_pubtypes contents:
-; CHECK-NOT: Offset
-
+; CHECK-NOT: .debug_pubnames contents:
+; CHECK-NOT: .debug_pubtypes contents:
 ; CHECK: .apple{{.*}} contents:
 
 ; Function Attrs: nounwind uwtable
