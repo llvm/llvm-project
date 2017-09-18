@@ -9,6 +9,8 @@
 // RUN: %env_asan_opts=symbolize=0 not %run %t 2>&1 | %asan_symbolize | FileCheck %s
 // REQUIRES: stable-runtime
 
+// UNSUPPORTED: ios
+
 #if !defined(SHARED_LIB)
 #include <dlfcn.h>
 #include <stdio.h>
