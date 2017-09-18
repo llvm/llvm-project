@@ -121,15 +121,7 @@ public:
     return DICtx->getKind() == CK_DWARF;
   }
 
-  /// Dump a textual representation to \p OS. If any \p DumpOffsets are present,
-  /// dump only the record at the specified offset.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets);
-
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) override {
-    std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets;
-    dump(OS, DumpOpts, DumpOffsets);
-  }
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) override;
 
   bool verify(raw_ostream &OS, unsigned DumpType = DIDT_All,
               DIDumpOptions DumpOpts = {}) override;

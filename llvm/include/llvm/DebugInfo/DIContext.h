@@ -114,6 +114,7 @@ struct DILineInfoSpecifier {
 
 /// This is just a helper to programmatically construct DIDumpType.
 enum DIDumpTypeCounter {
+  DIDT_ID_Null = 0,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
   DIDT_ID_##ENUM_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -128,10 +129,10 @@ enum DIDumpType : unsigned {
   DIDT_Null,
   DIDT_All             = ~0U,
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
-  DIDT_##ENUM_NAME = 1U << DIDT_ID_##ENUM_NAME,
+  DIDT_##ENUM_NAME = 1U << (DIDT_ID_##ENUM_NAME - 1),
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
-  DIDT_UUID = 1 << DIDT_ID_UUID,
+  DIDT_UUID = 1 << (DIDT_ID_UUID - 1),
 };
 
 /// Container for dump options that control which debug information will be
