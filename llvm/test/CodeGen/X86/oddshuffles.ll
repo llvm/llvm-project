@@ -22,9 +22,9 @@ define void @v3i64(<2 x i64> %a, <2 x i64> %b, <3 x i64>* %p) nounwind {
 ;
 ; AVX1-LABEL: v3i64:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vpextrq $1, %xmm0, 16(%rdi)
-; AVX1-NEXT:    vmovapd %xmm1, (%rdi)
+; AVX1-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v3i64:

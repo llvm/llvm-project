@@ -128,14 +128,14 @@ define <8 x i16> @t4(<8 x i16> %A, <8 x i16> %B) nounwind {
 define <8 x i16> @t5(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; X86-LABEL: t5:
 ; X86:       # BB#0:
-; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-NEXT:    movaps %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t5:
 ; X64:       # BB#0:
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
 	%tmp = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> < i32 8, i32 9, i32 0, i32 1, i32 10, i32 11, i32 2, i32 3 >
 	ret <8 x i16> %tmp
@@ -402,16 +402,16 @@ define <4 x i32> @t17() nounwind {
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    movaps (%eax), %xmm0
 ; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t17:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movaps (%rax), %xmm0
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X64-NEXT:    pxor %xmm1, %xmm1
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq
 entry:
   %tmp1 = load <4 x float>, <4 x float>* undef, align 16

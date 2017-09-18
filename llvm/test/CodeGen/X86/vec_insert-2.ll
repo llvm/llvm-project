@@ -46,8 +46,8 @@ define <2 x double> @t3(double %s, <2 x double> %tmp) nounwind {
 ;
 ; X64-LABEL: t3:
 ; X64:       # BB#0:
-; X64-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; X64-NEXT:    movapd %xmm1, %xmm0
+; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp1 = insertelement <2 x double> %tmp, double %s, i32 1
   ret <2 x double> %tmp1

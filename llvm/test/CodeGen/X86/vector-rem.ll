@@ -108,7 +108,7 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    retq
   %m = frem <4 x float> %t, %u

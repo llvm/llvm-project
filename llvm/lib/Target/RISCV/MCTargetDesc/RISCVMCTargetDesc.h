@@ -55,4 +55,7 @@ MCObjectWriter *createRISCVELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
 #define GET_INSTRINFO_ENUM
 #include "RISCVGenInstrInfo.inc"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "RISCVGenSubtargetInfo.inc"
+
 #endif

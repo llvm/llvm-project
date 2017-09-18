@@ -128,6 +128,9 @@ void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
     case RecordTypes::EXIT:
       Writer.write(uint8_t{1});
       break;
+    case RecordTypes::TAIL_EXIT:
+      Writer.write(uint8_t{2});
+      break;
     }
     Writer.write(R.FuncId);
     Writer.write(R.TSC);

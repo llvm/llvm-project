@@ -147,7 +147,7 @@ template <typename Predicate>
 bool TypeSetByHwMode::constrain(Predicate P) {
   bool Changed = false;
   for (auto &I : *this)
-    Changed |= berase_if(I.second, std::not1(std::ref(P)));
+    Changed |= berase_if(I.second, [&P](MVT VT) { return !P(VT); });
   return Changed;
 }
 
@@ -436,11 +436,11 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     TypeSetByHwMode::SetType &B = Big.get(M);
 
     if (any_of(S, isIntegerOrPtr) && any_of(S, isIntegerOrPtr)) {
-      auto NotInt = std::not1(std::ref(isIntegerOrPtr));
+      auto NotInt = [](MVT VT) { return !isIntegerOrPtr(VT); };
       Changed |= berase_if(S, NotInt) |
                  berase_if(B, NotInt);
     } else if (any_of(S, isFloatingPoint) && any_of(B, isFloatingPoint)) {
-      auto NotFP = std::not1(std::ref(isFloatingPoint));
+      auto NotFP = [](MVT VT) { return !isFloatingPoint(VT); };
       Changed |= berase_if(S, NotFP) |
                  berase_if(B, NotFP);
     } else if (S.empty() || B.empty()) {

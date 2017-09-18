@@ -114,7 +114,7 @@ define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl (%ecx), %ecx
 ; X32-NEXT:    vmovd %ecx, %xmm0
 ; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -123,7 +123,7 @@ define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    movl %eax, (%rsi)
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -386,12 +386,12 @@ define <4 x i32> @load_splat_4i32_4i32_1111(<4 x i32>* %ptr) nounwind uwtable re
 ; X32-LABEL: load_splat_4i32_4i32_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,1,1,1]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_4i32_4i32_1111:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,1,1,1]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,1,1]
 ; X64-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -488,12 +488,12 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X32-LABEL: load_splat_2i64_2i64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr
@@ -602,8 +602,8 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ;
 ; X64-LABEL: G:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    retq
 entry:
   %q = load i64, i64* %ptr, align 8
@@ -645,12 +645,12 @@ entry:
 define <4 x i32> @H(<4 x i32> %a) {
 ; X32-LABEL: H:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: H:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X64-NEXT:    retq
 entry:
   %x = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>

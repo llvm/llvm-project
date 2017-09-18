@@ -268,8 +268,8 @@ define <2 x i32> @trunc_qd_128(<2 x i64> %i) #0 {
 define void @trunc_qd_128_mem(<2 x i64> %i, <2 x i32>* %res) #0 {
 ; KNL-LABEL: trunc_qd_128_mem:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; KNL-NEXT:    vmovq %xmm0, (%rdi)
+; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; KNL-NEXT:    vmovlps %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_qd_128_mem:
