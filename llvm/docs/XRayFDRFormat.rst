@@ -165,7 +165,7 @@ Function action types are as follows.
 +---------------+--------------+-----------------------------------------------+
 | Exit          | ``1``        | Typical function exit.                        |
 +---------------+--------------+-----------------------------------------------+
-| Tail_Exit     | ``2``        | An exit from a function due to Tail call      |
+| Tail_Exit     | ``2``        | An exit from a function due to tail call      |
 |               |              | optimization.                                 |
 +---------------+--------------+-----------------------------------------------+
 | Entry_Args    | ``3``        | A function entry that records arguments.      |

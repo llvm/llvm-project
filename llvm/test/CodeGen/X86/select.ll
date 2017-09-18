@@ -170,8 +170,8 @@ define void @test5(i1 %c, <2 x i16> %a, <2 x i16> %b, <2 x i16>* %p) nounwind {
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB4_2
 ; MCU-NEXT:  # BB#1:
-; MCU-NEXT:    movw {{[0-9]+}}(%esp), %cx
-; MCU-NEXT:    movw {{[0-9]+}}(%esp), %dx
+; MCU-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; MCU-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; MCU-NEXT:  .LBB4_2:
 ; MCU-NEXT:    movw %cx, 2(%esi)
 ; MCU-NEXT:    movw %dx, (%esi)

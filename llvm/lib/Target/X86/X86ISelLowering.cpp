@@ -30107,10 +30107,10 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
 
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
+  bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
   // Check if the first operand is all zeros and Cond type is vXi1.
   // This situation only applies to avx512.
-  if (FValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse() &&
+  if (TValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse() &&
       CondVT.getVectorElementType() == MVT::i1) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
     SDValue CondNew = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
@@ -30128,7 +30128,7 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
-  FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
+  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
 
   // Try to invert the condition if true value is not all 1s and false value is
   // not all 0s.
@@ -30138,7 +30138,6 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
       // Check if SETCC has already been promoted.
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT) ==
           CondVT) {
-    bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
     bool FValIsAllOnes = ISD::isBuildVectorAllOnes(RHS.getNode());
 
     if (TValIsAllZeros || FValIsAllOnes) {

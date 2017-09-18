@@ -4303,7 +4303,7 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; ALL-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; ALL-NEXT:    callq __truncdfhf2
-; ALL-NEXT:    movw %ax, %bx
+; ALL-NEXT:    movl %eax, %ebx
 ; ALL-NEXT:    shll $16, %ebx
 ; ALL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; ALL-NEXT:    callq __truncdfhf2
@@ -4328,7 +4328,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4342,7 +4342,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -4365,7 +4365,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4379,7 +4379,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -4402,7 +4402,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4416,7 +4416,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __truncdfhf2
@@ -4444,7 +4444,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4458,7 +4458,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -4482,7 +4482,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4496,7 +4496,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -4520,7 +4520,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bx
+; AVX512F-NEXT:    movl %eax, %ebx
 ; AVX512F-NEXT:    shll $16, %ebx
 ; AVX512F-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4534,7 +4534,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bx
+; AVX512F-NEXT:    movl %eax, %ebx
 ; AVX512F-NEXT:    shll $16, %ebx
 ; AVX512F-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512F-NEXT:    callq __truncdfhf2
@@ -4558,7 +4558,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bx
+; AVX512VL-NEXT:    movl %eax, %ebx
 ; AVX512VL-NEXT:    shll $16, %ebx
 ; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4572,7 +4572,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bx
+; AVX512VL-NEXT:    movl %eax, %ebx
 ; AVX512VL-NEXT:    shll $16, %ebx
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512VL-NEXT:    callq __truncdfhf2
@@ -4603,7 +4603,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4617,7 +4617,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -4641,7 +4641,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4655,7 +4655,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -4679,7 +4679,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bx
+; AVX512F-NEXT:    movl %eax, %ebx
 ; AVX512F-NEXT:    shll $16, %ebx
 ; AVX512F-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4693,7 +4693,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bx
+; AVX512F-NEXT:    movl %eax, %ebx
 ; AVX512F-NEXT:    shll $16, %ebx
 ; AVX512F-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512F-NEXT:    callq __truncdfhf2
@@ -4717,7 +4717,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bx
+; AVX512VL-NEXT:    movl %eax, %ebx
 ; AVX512VL-NEXT:    shll $16, %ebx
 ; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4731,7 +4731,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bx
+; AVX512VL-NEXT:    movl %eax, %ebx
 ; AVX512VL-NEXT:    shll $16, %ebx
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512VL-NEXT:    callq __truncdfhf2
@@ -4766,7 +4766,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4780,7 +4780,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -4791,7 +4791,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = mem[1,0]
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4805,7 +4805,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bx
+; AVX1-NEXT:    movl %eax, %ebx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -4833,7 +4833,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4847,7 +4847,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -4858,7 +4858,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = mem[1,0]
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4872,7 +4872,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bx
+; AVX2-NEXT:    movl %eax, %ebx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -4899,7 +4899,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %zmm0 # 64-byte Reload
 ; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
@@ -4913,7 +4913,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __truncdfhf2
@@ -4927,7 +4927,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -4941,7 +4941,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2
-; AVX512-NEXT:    movw %ax, %bx
+; AVX512-NEXT:    movl %eax, %ebx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __truncdfhf2
@@ -5138,7 +5138,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bp
+; AVX1-NEXT:    movl %eax, %ebp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5152,7 +5152,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bp
+; AVX1-NEXT:    movl %eax, %ebp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -5180,7 +5180,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bp
+; AVX2-NEXT:    movl %eax, %ebp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5194,7 +5194,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bp
+; AVX2-NEXT:    movl %eax, %ebp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -5222,7 +5222,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bp
+; AVX512F-NEXT:    movl %eax, %ebp
 ; AVX512F-NEXT:    shll $16, %ebp
 ; AVX512F-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5236,7 +5236,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bp
+; AVX512F-NEXT:    movl %eax, %ebp
 ; AVX512F-NEXT:    shll $16, %ebp
 ; AVX512F-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512F-NEXT:    callq __truncdfhf2
@@ -5264,7 +5264,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bp
+; AVX512VL-NEXT:    movl %eax, %ebp
 ; AVX512VL-NEXT:    shll $16, %ebp
 ; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5278,7 +5278,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bp
+; AVX512VL-NEXT:    movl %eax, %ebp
 ; AVX512VL-NEXT:    shll $16, %ebp
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512VL-NEXT:    callq __truncdfhf2
@@ -5314,7 +5314,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bp
+; AVX1-NEXT:    movl %eax, %ebp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5328,7 +5328,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
-; AVX1-NEXT:    movw %ax, %bp
+; AVX1-NEXT:    movl %eax, %ebp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2
@@ -5356,7 +5356,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bp
+; AVX2-NEXT:    movl %eax, %ebp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5370,7 +5370,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
-; AVX2-NEXT:    movw %ax, %bp
+; AVX2-NEXT:    movl %eax, %ebp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2
@@ -5398,7 +5398,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bp
+; AVX512F-NEXT:    movl %eax, %ebp
 ; AVX512F-NEXT:    shll $16, %ebp
 ; AVX512F-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5412,7 +5412,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    callq __truncdfhf2
-; AVX512F-NEXT:    movw %ax, %bp
+; AVX512F-NEXT:    movl %eax, %ebp
 ; AVX512F-NEXT:    shll $16, %ebp
 ; AVX512F-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512F-NEXT:    callq __truncdfhf2
@@ -5440,7 +5440,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bp
+; AVX512VL-NEXT:    movl %eax, %ebp
 ; AVX512VL-NEXT:    shll $16, %ebp
 ; AVX512VL-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
@@ -5454,7 +5454,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    callq __truncdfhf2
-; AVX512VL-NEXT:    movw %ax, %bp
+; AVX512VL-NEXT:    movl %eax, %ebp
 ; AVX512VL-NEXT:    shll $16, %ebp
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512VL-NEXT:    callq __truncdfhf2

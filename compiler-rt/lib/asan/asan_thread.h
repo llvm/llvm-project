@@ -125,10 +125,6 @@ class AsanThread {
   bool isUnwinding() const { return unwinding_; }
   void setUnwinding(bool b) { unwinding_ = b; }
 
-  // True if we are in a deadly signal handler.
-  bool isInDeadlySignal() const { return in_deadly_signal_; }
-  void setInDeadlySignal(bool b) { in_deadly_signal_ = b; }
-
   AsanThreadLocalMallocStorage &malloc_storage() { return malloc_storage_; }
   AsanStats &stats() { return stats_; }
 
@@ -167,7 +163,6 @@ class AsanThread {
   AsanThreadLocalMallocStorage malloc_storage_;
   AsanStats stats_;
   bool unwinding_;
-  bool in_deadly_signal_;
 };
 
 // ScopedUnwinding is a scope for stacktracing member of a context
@@ -177,20 +172,6 @@ class ScopedUnwinding {
     t->setUnwinding(true);
   }
   ~ScopedUnwinding() { thread->setUnwinding(false); }
-
- private:
-  AsanThread *thread;
-};
-
-// ScopedDeadlySignal is a scope for handling deadly signals.
-class ScopedDeadlySignal {
- public:
-  explicit ScopedDeadlySignal(AsanThread *t) : thread(t) {
-    if (thread) thread->setInDeadlySignal(true);
-  }
-  ~ScopedDeadlySignal() {
-    if (thread) thread->setInDeadlySignal(false);
-  }
 
  private:
   AsanThread *thread;

@@ -94,7 +94,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    movb %al, %cl
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    je .LBB3_4
 ; CHECK-NEXT:  # BB#3: # %func_4.exit.i
 ; CHECK-NEXT:    xorl %ecx, %ecx
@@ -107,7 +107,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:  # BB#6: # %bb.i.i
 ; CHECK-NEXT:    movb {{.*}}(%rip), %cl
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    movb %al, %cl
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:  .LBB3_7: # %func_1.exit
 ; CHECK-NEXT:    movb %cl, {{.*}}(%rip)
 ; CHECK-NEXT:    movzbl %cl, %esi
@@ -197,7 +197,7 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB6_2
 ; CHECK-NEXT:  # BB#1:
-; CHECK-NEXT:    movb %dl, %sil
+; CHECK-NEXT:    movl %edx, %esi
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq

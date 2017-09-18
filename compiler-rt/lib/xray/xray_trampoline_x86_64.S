@@ -135,10 +135,6 @@ __xray_FunctionExit:
 	.type __xray_FunctionTailExit,@function
 __xray_FunctionTailExit:
 	.cfi_startproc
-	// Save the important registers as in the entry trampoline, but indicate that
-	// this is an exit. In the future, we will introduce a new entry type that
-	// differentiates between a normal exit and a tail exit, but we'd have to do
-	// this and increment the version number for the header.
 	SAVE_REGISTERS
 
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
@@ -146,7 +142,7 @@ __xray_FunctionTailExit:
 	je	.Ltmp4
 
 	movl	%r10d, %edi
-	movl	$1, %esi
+	movl	$2, %esi
 	callq	*%rax
 
 .Ltmp4:
