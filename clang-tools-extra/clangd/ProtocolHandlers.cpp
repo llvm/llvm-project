@@ -45,7 +45,7 @@ struct TextDocumentDidOpenHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override {
-    auto DOTDP = DidOpenTextDocumentParams::parse(Params);
+    auto DOTDP = DidOpenTextDocumentParams::parse(Params, Output);
     if (!DOTDP) {
       Output.log("Failed to decode DidOpenTextDocumentParams!\n");
       return;
@@ -62,7 +62,7 @@ struct TextDocumentDidChangeHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override {
-    auto DCTDP = DidChangeTextDocumentParams::parse(Params);
+    auto DCTDP = DidChangeTextDocumentParams::parse(Params, Output);
     if (!DCTDP || DCTDP->contentChanges.size() != 1) {
       Output.log("Failed to decode DidChangeTextDocumentParams!\n");
       return;
@@ -80,7 +80,7 @@ struct TextDocumentDidCloseHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override {
-    auto DCTDP = DidCloseTextDocumentParams::parse(Params);
+    auto DCTDP = DidCloseTextDocumentParams::parse(Params, Output);
     if (!DCTDP) {
       Output.log("Failed to decode DidCloseTextDocumentParams!\n");
       return;
@@ -99,7 +99,7 @@ struct TextDocumentOnTypeFormattingHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto DOTFP = DocumentOnTypeFormattingParams::parse(Params);
+    auto DOTFP = DocumentOnTypeFormattingParams::parse(Params, Output);
     if (!DOTFP) {
       Output.log("Failed to decode DocumentOnTypeFormattingParams!\n");
       return;
@@ -118,7 +118,7 @@ struct TextDocumentRangeFormattingHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto DRFP = DocumentRangeFormattingParams::parse(Params);
+    auto DRFP = DocumentRangeFormattingParams::parse(Params, Output);
     if (!DRFP) {
       Output.log("Failed to decode DocumentRangeFormattingParams!\n");
       return;
@@ -137,7 +137,7 @@ struct TextDocumentFormattingHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto DFP = DocumentFormattingParams::parse(Params);
+    auto DFP = DocumentFormattingParams::parse(Params, Output);
     if (!DFP) {
       Output.log("Failed to decode DocumentFormattingParams!\n");
       return;
@@ -155,7 +155,7 @@ struct CodeActionHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto CAP = CodeActionParams::parse(Params);
+    auto CAP = CodeActionParams::parse(Params, Output);
     if (!CAP) {
       Output.log("Failed to decode CodeActionParams!\n");
       return;
@@ -173,7 +173,7 @@ struct CompletionHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto TDPP = TextDocumentPositionParams::parse(Params);
+    auto TDPP = TextDocumentPositionParams::parse(Params, Output);
     if (!TDPP) {
       Output.log("Failed to decode TextDocumentPositionParams!\n");
       return;
@@ -191,7 +191,7 @@ struct GotoDefinitionHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    auto TDPP = TextDocumentPositionParams::parse(Params);
+    auto TDPP = TextDocumentPositionParams::parse(Params, Output);
     if (!TDPP) {
       Output.log("Failed to decode TextDocumentPositionParams!\n");
       return;

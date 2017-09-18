@@ -266,7 +266,6 @@ public:
 
       computeCommon();
       Known = computeKnown(true, true);
-      simplify(Known);
 
       // Preexisting ValInsts use the known content analysis of themselves.
       Translator = makeIdentityMap(Known.range(), false);
