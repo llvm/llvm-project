@@ -69,6 +69,7 @@ construct_compiler_rt_default_triple()
 if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" STREQUAL "androideabi")
   set(ANDROID 1)
 endif()
+pythonize_bool(ANDROID)
 
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})

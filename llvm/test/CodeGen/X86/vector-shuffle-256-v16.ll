@@ -3243,15 +3243,10 @@ define <16 x i16> @shuffle_v16i16_00_03_02_21_uu_uu_uu_uu_08_11_10_29_uu_uu_uu_u
 }
 
 define <16 x i16> @shuffle_v16i16_uu_uu_uu_21_uu_uu_uu_uu_uu_uu_uu_29_uu_uu_uu_uu(<16 x i16> %a, <16 x i16> %b) {
-; AVX1-LABEL: shuffle_v16i16_uu_uu_uu_21_uu_uu_uu_uu_uu_uu_uu_29_uu_uu_uu_uu:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm1[0,2,2,3,4,6,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v16i16_uu_uu_uu_21_uu_uu_uu_uu_uu_uu_uu_29_uu_uu_uu_uu:
-; AVX2OR512VL:       # BB#0:
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm0 = ymm1[0,2,2,3,4,6,6,7]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v16i16_uu_uu_uu_21_uu_uu_uu_uu_uu_uu_uu_29_uu_uu_uu_uu:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm1[0,2,2,3,4,6,6,7]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 21, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 29, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i16> %shuffle
 }

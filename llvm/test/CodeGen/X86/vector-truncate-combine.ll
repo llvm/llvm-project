@@ -14,7 +14,7 @@
 ; NOTE: This operation is collapsed to a single truncate, so this test no longer covers
 ; what it originally intended to.
 
-; CHECK:      MOVLHPSrr
+; CHECK:      PUNPCKLQDQrr
 ; CHECK:      PSHUFHWri
 ; CHECK:      PACKUSWBrr
 ; CHECK:      PACKUSWBrr

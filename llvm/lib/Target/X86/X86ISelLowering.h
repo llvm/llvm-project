@@ -394,7 +394,6 @@ namespace llvm {
       MOVSHDUP,
       MOVSLDUP,
       MOVLHPS,
-      MOVLHPD,
       MOVHLPS,
       MOVLPS,
       MOVLPD,
@@ -1036,6 +1035,13 @@ namespace llvm {
     /// with this index.
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                  unsigned Index) const override;
+
+    bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
+                                      unsigned AddrSpace) const override {
+      // If we can replace more than 2 scalar stores, there will be a reduction
+      // in instructions even after we add a vector constant load.
+      return NumElem > 2;
+    }
 
     /// Intel processors have a unified instruction and data cache
     const char * getClearCacheBuiltinName() const override {

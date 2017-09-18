@@ -79,7 +79,7 @@ will look like:
   int Result = Main();
   J.removeModule(H);
 
-The APIs that we build in these tutorials will all be aovariations on this simple
+The APIs that we build in these tutorials will all be variations on this simple
 theme. Behind the API we will refine the implementation of the JIT to add
 support for optimization and lazy compilation. Eventually we will extend the
 API itself to allow higher-level program representations (e.g. ASTs) to be
@@ -112,11 +112,14 @@ usual include guards and #includes [2]_, we get to the definition of our class:
 
   #include "llvm/ADT/STLExtras.h"
   #include "llvm/ExecutionEngine/ExecutionEngine.h"
+  #include "llvm/ExecutionEngine/JITSymbol.h"
   #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+  #include "llvm/ExecutionEngine/SectionMemoryManager.h"
   #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
   #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
   #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-  #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+  #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+  #include "llvm/IR/DataLayout.h"
   #include "llvm/IR/Mangler.h"
   #include "llvm/Support/DynamicLibrary.h"
   #include "llvm/Support/raw_ostream.h"
@@ -159,7 +162,7 @@ That's it for member variables, after that we have a single typedef:
 ModuleHandle. This is the handle type that will be returned from our JIT's
 addModule method, and can be passed to the removeModule method to remove a
 module. The IRCompileLayer class already provides a convenient handle type
-(IRCompileLayer::ModuleSetHandleT), so we just alias our ModuleHandle to this.
+(IRCompileLayer::ModuleHandleT), so we just alias our ModuleHandle to this.
 
 .. code-block:: c++
 
@@ -181,7 +184,7 @@ each module that is added (a JIT memory manager manages memory allocations,
 memory permissions, and registration of exception handlers for JIT'd code). For
 this we use a lambda that returns a SectionMemoryManager, an off-the-shelf
 utility that provides all the basic memory management functionality required for
-this chapter. Next we initialize our CompileLayer. The Compile laye needs two
+this chapter. Next we initialize our CompileLayer. The CompileLayer needs two
 things: (1) A reference to our object layer, and (2) a compiler instance to use
 to perform the actual compilation from IR to object files. We use the
 off-the-shelf SimpleCompiler instance for now. Finally, in the body of the
@@ -220,7 +223,7 @@ Now we come to the first of our JIT API methods: addModule. This method is
 responsible for adding IR to the JIT and making it available for execution. In
 this initial implementation of our JIT we will make our modules "available for
 execution" by adding them straight to the CompileLayer, which will immediately
-compile them. In later chapters we will teach our JIT to be defer compilation
+compile them. In later chapters we will teach our JIT to defer compilation
 of individual functions until they're actually called.
 
 To add our module to the CompileLayer we need to supply both the module and a
@@ -335,7 +338,7 @@ example, use:
 .. code-block:: bash
 
     # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orc native` -O3 -o toy
+    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
     # Run
     ./toy
 
@@ -351,41 +354,41 @@ Here is the code:
        left as an exercise for the reader. (The KaleidoscopeJIT.h used in the
        original tutorials will be a helpful reference).
 
-.. [2] +-----------------------+-----------------------------------------------+
-       |         File          |               Reason for inclusion            |
-       +=======================+===============================================+
-       |      STLExtras.h      | LLVM utilities that are useful when working   |
-       |                       | with the STL.                                 |
-       +-----------------------+-----------------------------------------------+
-       |   ExecutionEngine.h   | Access to the EngineBuilder::selectTarget     |
-       |                       | method.                                       |
-       +-----------------------+-----------------------------------------------+
-       |                       | Access to the                                 |
-       | RTDyldMemoryManager.h | RTDyldMemoryManager::getSymbolAddressInProcess|
-       |                       | method.                                       |
-       +-----------------------+-----------------------------------------------+
-       |    CompileUtils.h     | Provides the SimpleCompiler class.            |
-       +-----------------------+-----------------------------------------------+
-       |   IRCompileLayer.h    | Provides the IRCompileLayer class.            |
-       +-----------------------+-----------------------------------------------+
-       |                       | Access the createLambdaResolver function,     |
-       |   LambdaResolver.h    | which provides easy construction of symbol    |
-       |                       | resolvers.                                    |
-       +-----------------------+-----------------------------------------------+
-       |  ObjectLinkingLayer.h | Provides the ObjectLinkingLayer class.        |
-       +-----------------------+-----------------------------------------------+
-       |       Mangler.h       | Provides the Mangler class for platform       |
-       |                       | specific name-mangling.                       |
-       +-----------------------+-----------------------------------------------+
-       |   DynamicLibrary.h    | Provides the DynamicLibrary class, which      |
-       |                       | makes symbols in the host process searchable. |
-       +-----------------------+-----------------------------------------------+
-       |                       | A fast output stream class. We use the        |
-       |     raw_ostream.h     | raw_string_ostream subclass for symbol        |
-       |                       | mangling                                      |
-       +-----------------------+-----------------------------------------------+
-       |   TargetMachine.h     | LLVM target machine description class.        |
-       +-----------------------+-----------------------------------------------+
+.. [2] +-----------------------------+-----------------------------------------------+
+       |         File                |               Reason for inclusion            |
+       +=============================+===============================================+
+       |      STLExtras.h            | LLVM utilities that are useful when working   |
+       |                             | with the STL.                                 |
+       +-----------------------------+-----------------------------------------------+
+       |   ExecutionEngine.h         | Access to the EngineBuilder::selectTarget     |
+       |                             | method.                                       |
+       +-----------------------------+-----------------------------------------------+
+       |                             | Access to the                                 |
+       | RTDyldMemoryManager.h       | RTDyldMemoryManager::getSymbolAddressInProcess|
+       |                             | method.                                       |
+       +-----------------------------+-----------------------------------------------+
+       |    CompileUtils.h           | Provides the SimpleCompiler class.            |
+       +-----------------------------+-----------------------------------------------+
+       |   IRCompileLayer.h          | Provides the IRCompileLayer class.            |
+       +-----------------------------+-----------------------------------------------+
+       |                             | Access the createLambdaResolver function,     |
+       |   LambdaResolver.h          | which provides easy construction of symbol    |
+       |                             | resolvers.                                    |
+       +-----------------------------+-----------------------------------------------+
+       |  RTDyldObjectLinkingLayer.h | Provides the RTDyldObjectLinkingLayer class.  |
+       +-----------------------------+-----------------------------------------------+
+       |       Mangler.h             | Provides the Mangler class for platform       |
+       |                             | specific name-mangling.                       |
+       +-----------------------------+-----------------------------------------------+
+       |   DynamicLibrary.h          | Provides the DynamicLibrary class, which      |
+       |                             | makes symbols in the host process searchable. |
+       +-----------------------------+-----------------------------------------------+
+       |                             | A fast output stream class. We use the        |
+       |     raw_ostream.h           | raw_string_ostream subclass for symbol        |
+       |                             | mangling                                      |
+       +-----------------------------+-----------------------------------------------+
+       |   TargetMachine.h           | LLVM target machine description class.        |
+       +-----------------------------+-----------------------------------------------+
 
 .. [3] Actually they don't have to be lambdas, any object with a call operator
        will do, including plain old functions or std::functions.

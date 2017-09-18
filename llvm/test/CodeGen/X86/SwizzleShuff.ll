@@ -66,7 +66,7 @@ define <4 x i32> @reverse_1(<4 x i32>* %pA, <4 x i32>* %pB) {
 define <4 x i32> @no_reverse_shuff(<4 x i32>* %pA, <4 x i32>* %pB) {
 ; CHECK-LABEL: no_reverse_shuff:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
 ; CHECK-NEXT:    retq
   %A = load <4 x i32>, <4 x i32>* %pA
   %B = load <4 x i32>, <4 x i32>* %pB

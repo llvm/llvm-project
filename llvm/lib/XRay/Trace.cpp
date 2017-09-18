@@ -48,7 +48,7 @@ Error readBinaryFormatHeader(StringRef Data, XRayFileHeader &FileHeader) {
   FileHeader.NonstopTSC = Bitfield & 1uL << 1;
   FileHeader.CycleFrequency = HeaderExtractor.getU64(&OffsetPtr);
   std::memcpy(&FileHeader.FreeFormData, Data.bytes_begin() + OffsetPtr, 16);
-  if (FileHeader.Version != 1)
+  if (FileHeader.Version != 1 && FileHeader.Version != 2)
     return make_error<StringError>(
         Twine("Unsupported XRay file version: ") + Twine(FileHeader.Version),
         std::make_error_code(std::errc::invalid_argument));
@@ -93,6 +93,9 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
       break;
     case 1:
       Record.Type = RecordTypes::EXIT;
+      break;
+    case 2:
+      Record.Type = RecordTypes::TAIL_EXIT;
       break;
     default:
       return make_error<StringError>(
@@ -320,8 +323,10 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
       Record.Type = RecordTypes::ENTER;
       break;
     case static_cast<uint8_t>(RecordTypes::EXIT):
-    case 2: // TAIL_EXIT is not yet defined in RecordTypes.
       Record.Type = RecordTypes::EXIT;
+      break;
+    case static_cast<uint8_t>(RecordTypes::TAIL_EXIT):
+      Record.Type = RecordTypes::TAIL_EXIT;
       break;
     default:
       // Cast to an unsigned integer to not interpret the record type as a char.
@@ -443,7 +448,7 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
   // Having iterated over everything we've been given, we've either consumed
   // everything and ended up in the end state, or were told to skip the rest.
   bool Finished = State.Expects == FDRState::Token::SCAN_TO_END_OF_THREAD_BUF &&
-        State.CurrentBufferSize == State.CurrentBufferConsumed;
+                  State.CurrentBufferSize == State.CurrentBufferConsumed;
   if (State.Expects != FDRState::Token::NEW_BUFFER_RECORD_OR_EOF && !Finished)
     return make_error<StringError>(
         Twine("Encountered EOF with unexpected state expectation ") +
@@ -534,9 +539,8 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   enum BinaryFormatType { NAIVE_FORMAT = 0, FLIGHT_DATA_RECORDER_FORMAT = 1 };
 
   Trace T;
-  if (Version == 1 && Type == NAIVE_FORMAT) {
-    if (auto E =
-            loadNaiveFormatLog(Data, T.FileHeader, T.Records))
+  if (Type == NAIVE_FORMAT && (Version == 1 || Version == 2)) {
+    if (auto E = loadNaiveFormatLog(Data, T.FileHeader, T.Records))
       return std::move(E);
   } else if (Version == 1 && Type == FLIGHT_DATA_RECORDER_FORMAT) {
     if (auto E = loadFDRLog(Data, T.FileHeader, T.Records))

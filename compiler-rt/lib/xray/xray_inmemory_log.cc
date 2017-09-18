@@ -89,7 +89,7 @@ static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
   // header will only be written once, at the start, and let the threads
   // logging do writes which just append.
   XRayFileHeader Header;
-  Header.Version = 1;
+  Header.Version = 2;  // Version 2 includes tail exit records.
   Header.Type = FileTypes::NAIVE_LOG;
   Header.CycleFrequency = CycleFrequency;
 
@@ -117,6 +117,13 @@ void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
       Fd, reinterpret_cast<__xray::XRayRecord *>(InMemoryBuffer), Offset);
   thread_local pid_t TId = syscall(SYS_gettid);
 
+  // Use a simple recursion guard, to handle cases where we're already logging
+  // and for one reason or another, this function gets called again in the same
+  // thread.
+  thread_local volatile bool RecusionGuard = false;
+  if (RecusionGuard) return;
+  RecusionGuard = true;
+
   // First we get the useful data, and stuff it into the already aligned buffer
   // through a pointer offset.
   auto &R = reinterpret_cast<__xray::XRayRecord *>(InMemoryBuffer)[Offset];
@@ -133,6 +140,8 @@ void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
                      reinterpret_cast<char *>(RecordBuffer + Offset));
     Offset = 0;
   }
+
+  RecusionGuard = false;
 }
 
 void __xray_InMemoryRawLogRealTSC(int32_t FuncId,

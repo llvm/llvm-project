@@ -690,7 +690,6 @@ inline void processFunctionHook(
     TLD.LastFunctionEntryTSC = TSC;
     break;
   case XRayEntryType::TAIL:
-    break;
   case XRayEntryType::EXIT:
     // Break out and write the exit record if we can't erase any functions.
     if (TLD.NumConsecutiveFnEnters == 0 ||

@@ -1,5 +1,8 @@
 // RUN: %clangxx -O0 -g %s -lutil -o %t && %run %t | FileCheck %s
+
 // REQUIRES: stable-runtime
+// XFAIL: android && i386-target-arch && asan
+
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>

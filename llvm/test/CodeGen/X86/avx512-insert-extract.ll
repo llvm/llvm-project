@@ -882,7 +882,7 @@ define <16 x i32> @test_insert_128_v16i32(<16 x i32> %x, i32 %y) {
 define <8 x double> @test_insert_128_v8f64(<8 x double> %x, double %y) {
 ; CHECK-LABEL: test_insert_128_v8f64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %r = insertelement <8 x double> %x, double %y, i32 1

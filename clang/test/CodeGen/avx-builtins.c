@@ -678,19 +678,19 @@ __m256 test_mm256_permute_ps(__m256 A) {
 
 __m256d test_mm256_permute2f128_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_permute2f128_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 49)
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_permute2f128_pd(A, B, 0x31);
 }
 
 __m256 test_mm256_permute2f128_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_permute2f128_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, i8 19)
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   return _mm256_permute2f128_ps(A, B, 0x13);
 }
 
 __m256i test_mm256_permute2f128_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_permute2f128_si256
-  // CHECK: call <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32> %{{.*}}, <8 x i32> %{{.*}}, i8 32)
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_permute2f128_si256(A, B, 0x20);
 }
 

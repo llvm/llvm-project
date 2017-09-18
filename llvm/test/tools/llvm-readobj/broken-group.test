@@ -1,0 +1,77 @@
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-readobj --elf-section-groups -elf-output-style=GNU \
+# RUN:   %t.o >%tout.log 2>%terr.log
+# RUN: FileCheck %s -check-prefix=GNU-STDERR < %terr.log
+# GNU-STDERR: Error: section [    3] in group section [    4] already in group section [    2]
+# RUN: FileCheck %s -check-prefix=GNU-STDOUT < %tout.log
+# GNU-STDOUT:      COMDAT group section [    2] `.group' [bar] contains 1 sections:
+# GNU-STDOUT-NEXT:   [Index]    Name
+# GNU-STDOUT-NEXT:   [    3]   .foo
+# GNU-STDOUT:      COMDAT group section [    4] `.group1' [zed] contains 1 sections:
+# GNU-STDOUT-NEXT:   [Index]    Name
+
+# RUN: llvm-readobj --elf-section-groups \
+# RUN:   %t.o >%t2out.log 2>%t2err.log %t.o
+# RUN: FileCheck %s -check-prefix=LLVM-STDERR < %t2err.log
+# LLVM-STDERR: Error: .foo (3) in a group .group1 (4) is already in a group .group (2)
+# RUN: FileCheck %s -check-prefix=LLVM-STDOUT < %t2out.log
+# LLVM-STDOUT:      Groups {
+# LLVM-STDOUT-NEXT:   Group {
+# LLVM-STDOUT-NEXT:     Name: .group
+# LLVM-STDOUT-NEXT:     Index: 2
+# LLVM-STDOUT-NEXT:     Type: COMDAT
+# LLVM-STDOUT-NEXT:     Signature: bar
+# LLVM-STDOUT-NEXT:     Section(s) in group [
+# LLVM-STDOUT-NEXT:       .foo (3)
+# LLVM-STDOUT-NEXT:     ]
+# LLVM-STDOUT-NEXT:   }
+# LLVM-STDOUT-NEXT:   Group {
+# LLVM-STDOUT-NEXT:     Name: .group1
+# LLVM-STDOUT-NEXT:     Index: 4
+# LLVM-STDOUT-NEXT:     Type: COMDAT
+# LLVM-STDOUT-NEXT:     Signature: zed
+# LLVM-STDOUT-NEXT:     Section(s) in group [
+# LLVM-STDOUT-NEXT:     ]
+# LLVM-STDOUT-NEXT:   }
+# LLVM-STDOUT-NEXT: }
+
+!ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         ''
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    AddressAlign:    0x0000000000000004
+    Info:            bar
+    Members:         
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .foo
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .group1
+    Type:            SHT_GROUP
+    Link:            .symtab
+    AddressAlign:    0x0000000000000004
+    Info:            zed
+    Members:         
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .foo
+Symbols:         
+  Local:           
+    - Name:            bar
+      Section:         .group
+    - Name:            zed
+      Section:         .group1

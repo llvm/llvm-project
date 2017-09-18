@@ -502,8 +502,8 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512_32-NEXT:    movl %esp, %ebp
 ; AVX512_32-NEXT:    andl $-8, %esp
 ; AVX512_32-NEXT:    subl $8, %esp
-; AVX512_32-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512_32-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; AVX512_32-NEXT:    vsubpd {{\.LCPI.*}}, %xmm0, %xmm0
 ; AVX512_32-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX512_32-NEXT:    vmovlpd %xmm0, (%esp)
@@ -523,8 +523,8 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_32-NEXT:    movl %esp, %ebp
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2_32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; SSE2_32-NEXT:    subpd {{\.LCPI.*}}, %xmm0
 ; SSE2_32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2_32-NEXT:    addpd %xmm0, %xmm1

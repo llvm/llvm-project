@@ -123,42 +123,14 @@ bool X86TargetInfo::initFeatureMap(
   case CK_PentiumPro:
   case CK_Lakemont:
     break;
+
   case CK_PentiumMMX:
   case CK_Pentium2:
   case CK_K6:
   case CK_WinChipC6:
     setFeatureEnabledImpl(Features, "mmx", true);
     break;
-  case CK_Pentium3:
-  case CK_Pentium3M:
-  case CK_C3_2:
-    setFeatureEnabledImpl(Features, "sse", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_PentiumM:
-  case CK_Pentium4:
-  case CK_Pentium4M:
-  case CK_x86_64:
-    setFeatureEnabledImpl(Features, "sse2", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_Yonah:
-  case CK_Prescott:
-  case CK_Nocona:
-    setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
-  case CK_Core2:
-    setFeatureEnabledImpl(Features, "ssse3", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
-  case CK_Penryn:
-    setFeatureEnabledImpl(Features, "sse4.1", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    setFeatureEnabledImpl(Features, "cx16", true);
-    break;
+
   case CK_Cannonlake:
     setFeatureEnabledImpl(Features, "avx512ifma", true);
     setFeatureEnabledImpl(Features, "avx512vbmi", true);
@@ -209,9 +181,30 @@ bool X86TargetInfo::initFeatureMap(
     LLVM_FALLTHROUGH;
   case CK_Nehalem:
     setFeatureEnabledImpl(Features, "sse4.2", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
+    LLVM_FALLTHROUGH;
+  case CK_Penryn:
+    setFeatureEnabledImpl(Features, "sse4.1", true);
+    LLVM_FALLTHROUGH;
+  case CK_Core2:
+    setFeatureEnabledImpl(Features, "ssse3", true);
+    LLVM_FALLTHROUGH;
+  case CK_Yonah:
+  case CK_Prescott:
+  case CK_Nocona:
+    setFeatureEnabledImpl(Features, "sse3", true);
     setFeatureEnabledImpl(Features, "cx16", true);
+    LLVM_FALLTHROUGH;
+  case CK_PentiumM:
+  case CK_Pentium4:
+  case CK_x86_64:
+    setFeatureEnabledImpl(Features, "sse2", true);
+    LLVM_FALLTHROUGH;
+  case CK_Pentium3:
+  case CK_C3_2:
+    setFeatureEnabledImpl(Features, "sse", true);
+    setFeatureEnabledImpl(Features, "fxsr", true);
     break;
+
   case CK_Goldmont:
     setFeatureEnabledImpl(Features, "sha", true);
     setFeatureEnabledImpl(Features, "rdrnd", true);
@@ -234,6 +227,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     break;
+
   case CK_KNL:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
@@ -258,44 +252,34 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsave", true);
     setFeatureEnabledImpl(Features, "movbe", true);
     break;
+
   case CK_K6_2:
   case CK_K6_3:
   case CK_WinChip2:
   case CK_C3:
     setFeatureEnabledImpl(Features, "3dnow", true);
     break;
-  case CK_Athlon:
-  case CK_AthlonThunderbird:
-  case CK_Geode:
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    break;
-  case CK_Athlon4:
-  case CK_AthlonXP:
-  case CK_AthlonMP:
-    setFeatureEnabledImpl(Features, "sse", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
-  case CK_K8:
-  case CK_Opteron:
-  case CK_Athlon64:
-  case CK_AthlonFX:
-    setFeatureEnabledImpl(Features, "sse2", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
-    setFeatureEnabledImpl(Features, "fxsr", true);
-    break;
+
   case CK_AMDFAM10:
     setFeatureEnabledImpl(Features, "sse4a", true);
     setFeatureEnabledImpl(Features, "lzcnt", true);
     setFeatureEnabledImpl(Features, "popcnt", true);
     LLVM_FALLTHROUGH;
   case CK_K8SSE3:
-  case CK_OpteronSSE3:
-  case CK_Athlon64SSE3:
     setFeatureEnabledImpl(Features, "sse3", true);
-    setFeatureEnabledImpl(Features, "3dnowa", true);
+    LLVM_FALLTHROUGH;
+  case CK_K8:
+    setFeatureEnabledImpl(Features, "sse2", true);
+    LLVM_FALLTHROUGH;
+  case CK_AthlonXP:
+    setFeatureEnabledImpl(Features, "sse", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
+    LLVM_FALLTHROUGH;
+  case CK_Athlon:
+  case CK_Geode:
+    setFeatureEnabledImpl(Features, "3dnowa", true);
     break;
+
   case CK_BTVER2:
     setFeatureEnabledImpl(Features, "avx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -314,6 +298,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     break;
+
   case CK_ZNVER1:
     setFeatureEnabledImpl(Features, "adx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -342,6 +327,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     break;
+
   case CK_BDVER4:
     setFeatureEnabledImpl(Features, "avx2", true);
     setFeatureEnabledImpl(Features, "bmi2", true);
@@ -807,7 +793,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     defineCPUMacros(Builder, "pentium");
     break;
   case CK_Pentium3:
-  case CK_Pentium3M:
   case CK_PentiumM:
     Builder.defineMacro("__tune_pentium3__");
     LLVM_FALLTHROUGH;
@@ -827,7 +812,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__pentiumpro__");
     break;
   case CK_Pentium4:
-  case CK_Pentium4M:
     defineCPUMacros(Builder, "pentium4");
     break;
   case CK_Yonah:
@@ -888,10 +872,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     defineCPUMacros(Builder, "k6");
     break;
   case CK_Athlon:
-  case CK_AthlonThunderbird:
-  case CK_Athlon4:
   case CK_AthlonXP:
-  case CK_AthlonMP:
     defineCPUMacros(Builder, "athlon");
     if (SSELevel != NoSSE) {
       Builder.defineMacro("__athlon_sse__");
@@ -901,11 +882,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_K8:
   case CK_K8SSE3:
   case CK_x86_64:
-  case CK_Opteron:
-  case CK_OpteronSSE3:
-  case CK_Athlon64:
-  case CK_Athlon64SSE3:
-  case CK_AthlonFX:
     defineCPUMacros(Builder, "k8");
     break;
   case CK_AMDFAM10:
@@ -1553,55 +1529,37 @@ X86TargetInfo::CPUKind X86TargetInfo::getCPUKind(StringRef CPU) const {
       .Case("i686", CK_i686)
       .Case("pentiumpro", CK_PentiumPro)
       .Case("pentium2", CK_Pentium2)
-      .Case("pentium3", CK_Pentium3)
-      .Case("pentium3m", CK_Pentium3M)
+      .Cases("pentium3", "pentium3m", CK_Pentium3)
       .Case("pentium-m", CK_PentiumM)
       .Case("c3-2", CK_C3_2)
       .Case("yonah", CK_Yonah)
-      .Case("pentium4", CK_Pentium4)
-      .Case("pentium4m", CK_Pentium4M)
+      .Cases("pentium4", "pentium4m", CK_Pentium4)
       .Case("prescott", CK_Prescott)
       .Case("nocona", CK_Nocona)
       .Case("core2", CK_Core2)
       .Case("penryn", CK_Penryn)
-      .Case("bonnell", CK_Bonnell)
-      .Case("atom", CK_Bonnell) // Legacy name.
-      .Case("silvermont", CK_Silvermont)
-      .Case("slm", CK_Silvermont) // Legacy name.
+      .Cases("bonnell", "atom", CK_Bonnell)
+      .Cases("silvermont", "slm", CK_Silvermont)
       .Case("goldmont", CK_Goldmont)
-      .Case("nehalem", CK_Nehalem)
-      .Case("corei7", CK_Nehalem) // Legacy name.
+      .Cases("nehalem", "corei7", CK_Nehalem)
       .Case("westmere", CK_Westmere)
-      .Case("sandybridge", CK_SandyBridge)
-      .Case("corei7-avx", CK_SandyBridge) // Legacy name.
-      .Case("ivybridge", CK_IvyBridge)
-      .Case("core-avx-i", CK_IvyBridge) // Legacy name.
-      .Case("haswell", CK_Haswell)
-      .Case("core-avx2", CK_Haswell) // Legacy name.
+      .Cases("sandybridge", "corei7-avx", CK_SandyBridge)
+      .Cases("ivybridge", "core-avx-i", CK_IvyBridge)
+      .Cases("haswell", "core-avx2", CK_Haswell)
       .Case("broadwell", CK_Broadwell)
       .Case("skylake", CK_SkylakeClient)
-      .Case("skylake-avx512", CK_SkylakeServer)
-      .Case("skx", CK_SkylakeServer) // Legacy name.
+      .Cases("skylake-avx512", "skx", CK_SkylakeServer)
       .Case("cannonlake", CK_Cannonlake)
       .Case("knl", CK_KNL)
       .Case("lakemont", CK_Lakemont)
       .Case("k6", CK_K6)
       .Case("k6-2", CK_K6_2)
       .Case("k6-3", CK_K6_3)
-      .Case("athlon", CK_Athlon)
-      .Case("athlon-tbird", CK_AthlonThunderbird)
-      .Case("athlon-4", CK_Athlon4)
-      .Case("athlon-xp", CK_AthlonXP)
-      .Case("athlon-mp", CK_AthlonMP)
-      .Case("athlon64", CK_Athlon64)
-      .Case("athlon64-sse3", CK_Athlon64SSE3)
-      .Case("athlon-fx", CK_AthlonFX)
-      .Case("k8", CK_K8)
-      .Case("k8-sse3", CK_K8SSE3)
-      .Case("opteron", CK_Opteron)
-      .Case("opteron-sse3", CK_OpteronSSE3)
-      .Case("barcelona", CK_AMDFAM10)
-      .Case("amdfam10", CK_AMDFAM10)
+      .Cases("athlon", "athlon-tbird", CK_Athlon)
+      .Cases("athlon-xp", "athlon-mp", "athlon-4", CK_AthlonXP)
+      .Cases("k8", "athlon64", "athlon-fx", "opteron", CK_K8)
+      .Cases("k8-sse3", "athlon64-sse3", "opteron-sse3", CK_K8SSE3)
+      .Cases("amdfam10", "barcelona", CK_AMDFAM10)
       .Case("btver1", CK_BTVER1)
       .Case("btver2", CK_BTVER2)
       .Case("bdver1", CK_BDVER1)

@@ -914,12 +914,12 @@ define <16 x float> @combine_vpermt2var_vpermi2var_16f32_as_unpckhps(<16 x float
 define <16 x i32> @vpermt2var_vpermi2var_16i32_as_unpckldq(<16 x i32> %a0, <16 x i32> %a1) {
 ; X32-LABEL: vpermt2var_vpermi2var_16i32_as_unpckldq:
 ; X32:       # BB#0:
-; X32-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
+; X32-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpermt2var_vpermi2var_16i32_as_unpckldq:
 ; X64:       # BB#0:
-; X64-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
+; X64-NEXT:    vunpcklps {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; X64-NEXT:    retq
   %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %a0, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>, <16 x i32> %a1, i16 -1)
   ret <16 x i32> %res0

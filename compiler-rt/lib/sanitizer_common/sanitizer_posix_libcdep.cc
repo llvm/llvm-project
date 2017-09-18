@@ -223,7 +223,7 @@ bool SignalContext::IsStackOverflow() const {
   // On s390, the fault address in siginfo points to start of the page, not
   // to the precise word that was accessed.  Mask off the low bits of sp to
   // take it into account.
-  bool IsStackAccess = sig.addr >= (sig.sp & ~0xFFF) && sig.addr < sp + 0xFFFF;
+  bool IsStackAccess = addr >= (sp & ~0xFFF) && addr < sp + 0xFFFF;
 #else
   bool IsStackAccess = addr + 512 > sp && addr < sp + 0xFFFF;
 #endif
@@ -259,14 +259,6 @@ bool SignalContext::IsStackOverflow() const {
   auto si = static_cast<const siginfo_t *>(siginfo);
   return IsStackAccess &&
          (si->si_code == si_SEGV_MAPERR || si->si_code == si_SEGV_ACCERR);
-}
-
-void StartReportDeadlySignal() {
-  // Write the first message using fd=2, just in case.
-  // It may actually fail to write in case stderr is closed.
-  internal_write(2, SanitizerToolName, internal_strlen(SanitizerToolName));
-  static const char kDeadlySignal[] = ":DEADLYSIGNAL\n";
-  internal_write(2, kDeadlySignal, sizeof(kDeadlySignal) - 1);
 }
 
 #endif  // SANITIZER_GO

@@ -63,7 +63,7 @@ ThinLTO is currently supported for the following linkers:
 - **ld64**:
   Starting with `Xcode 8 <https://developer.apple.com/xcode/>`_.
 - **lld**:
-  Starting with r284050 (ELF only).
+  Starting with r284050 for ELF, r298942 for COFF.
 
 Usage
 =====
@@ -77,6 +77,13 @@ To utilize ThinLTO, simply add the -flto=thin option to compile and link. E.g.
 
   % clang -flto=thin -O2 file1.c file2.c -c
   % clang -flto=thin -O2 file1.o file2.o -o a.out
+
+When using lld-link, the -flto option need only be added to the compile step:
+
+.. code-block:: console
+
+  % clang-cl -flto=thin -O2 -c file1.c file2.c
+  % lld-link /out:a.exe file1.obj file2.obj
 
 As mentioned earlier, by default the linkers will launch the ThinLTO backend
 threads in parallel, passing the resulting native object files back to the
@@ -111,6 +118,8 @@ be reduced to ``N`` via:
   ``-Wl,-mllvm,-threads=N``
 - lld:
   ``-Wl,--thinlto-jobs=N``
+- lld-link:
+  ``/opt:lldltojobs=N``
 
 Incremental
 -----------
@@ -125,7 +134,7 @@ which currently must be enabled through a linker option.
   ``-Wl,-cache_path_lto,/path/to/cache``
 - ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-dir=/path/to/cache``
-- COFF lld (as of LLVM 6.0):
+- COFF lld-link (as of LLVM 6.0):
   ``/lldltocache:/path/to/cache``
 
 Cache Pruning
@@ -138,7 +147,7 @@ policy string. The cache policy must be specified with a linker option.
 
 - ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-policy,POLICY``
-- COFF lld (as of LLVM 6.0):
+- COFF lld-link (as of LLVM 6.0):
   ``/lldltocachepolicy:POLICY``
 
 A policy string is a series of key-value pairs separated by ``:`` characters.
@@ -187,12 +196,19 @@ To bootstrap clang/LLVM with ThinLTO, follow these steps:
    when configuring the bootstrap compiler build:
 
   * ``-DLLVM_ENABLE_LTO=Thin``
-  * ``-DLLVM_PARALLEL_LINK_JOBS=1``
-    (since the ThinLTO link invokes parallel backend jobs)
   * ``-DCMAKE_C_COMPILER=/path/to/host/clang``
   * ``-DCMAKE_CXX_COMPILER=/path/to/host/clang++``
   * ``-DCMAKE_RANLIB=/path/to/host/llvm-ranlib``
   * ``-DCMAKE_AR=/path/to/host/llvm-ar``
+
+  Or, on Windows:
+
+  * ``-DLLVM_ENABLE_LTO=Thin``
+  * ``-DCMAKE_C_COMPILER=/path/to/host/clang-cl.exe``
+  * ``-DCMAKE_CXX_COMPILER=/path/to/host/clang-cl.exe``
+  * ``-DCMAKE_LINKER=/path/to/host/lld-link.exe``
+  * ``-DCMAKE_RANLIB=/path/to/host/llvm-ranlib.exe``
+  * ``-DCMAKE_AR=/path/to/host/llvm-ar.exe``
 
 #. To use additional linker arguments for controlling the backend
    parallelism_ or enabling incremental_ builds of the bootstrap compiler,

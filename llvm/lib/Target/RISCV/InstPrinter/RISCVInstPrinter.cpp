@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVInstPrinter.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -52,4 +53,17 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
   MO.getExpr()->print(O, &MAI);
+}
+
+void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
+                                     raw_ostream &O) {
+  unsigned FenceArg = MI->getOperand(OpNo).getImm();
+  if ((FenceArg & RISCVFenceField::I) != 0)
+    O << 'i';
+  if ((FenceArg & RISCVFenceField::O) != 0)
+    O << 'o';
+  if ((FenceArg & RISCVFenceField::R) != 0)
+    O << 'r';
+  if ((FenceArg & RISCVFenceField::W) != 0)
+    O << 'w';
 }
