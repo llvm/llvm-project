@@ -418,6 +418,10 @@ MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
                                     const MachineInstr &Orig, int FrameIndex);
 
+/// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
+/// modifying an instruction in place while iterating over a basic block.
+void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex);
+
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;
 }
