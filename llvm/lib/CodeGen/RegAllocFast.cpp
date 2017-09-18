@@ -133,11 +133,6 @@ namespace {
       return false;
     }
 
-    // SkippedInstrs - Descriptors of instructions whose clobber list was
-    // ignored because all registers were spilled. It is still necessary to
-    // mark all the clobbered registers as used by the function.
-    SmallPtrSet<const MCInstrDesc*, 4> SkippedInstrs;
-
     // isBulkSpilling - This flag is set when LiveRegMap will be cleared
     // completely after spilling all live registers. LiveRegMap entries should
     // not be erased.
@@ -1025,10 +1020,6 @@ void RAFast::AllocateBasicBlock() {
       // those for virtual registers in between.
       DEBUG(dbgs() << "  Spilling remaining registers before call.\n");
       spillAll(MI);
-
-      // The imp-defs are skipped below, but we still need to mark those
-      // registers as used by the function.
-      SkippedInstrs.insert(&MCID);
     }
 
     // Third scan.
@@ -1112,7 +1103,6 @@ bool RAFast::runOnMachineFunction(MachineFunction &Fn) {
   // replaced. Remove the virtual registers.
   MRI->clearVirtRegs();
 
-  SkippedInstrs.clear();
   StackSlotForVirtReg.clear();
   LiveDbgValueMap.clear();
   return true;
