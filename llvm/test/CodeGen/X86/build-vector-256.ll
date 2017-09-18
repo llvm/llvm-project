@@ -12,8 +12,8 @@ define <4 x double> @test_buildvector_v4f64(double %a0, double %a1, double %a2, 
 ;
 ; AVX-64-LABEL: test_buildvector_v4f64:
 ; AVX-64:       # BB#0:
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-64-NEXT:    retq
   %ins0 = insertelement <4 x double> undef, double %a0, i32 0

@@ -12,11 +12,11 @@ define <8 x double> @test_buildvector_v8f64(double %a0, double %a1, double %a2, 
 ;
 ; AVX-64-LABEL: test_buildvector_v8f64:
 ; AVX-64:       # BB#0:
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm6[0],xmm7[0]
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm4[0],xmm5[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm6 = xmm6[0],xmm7[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm4[0],xmm5[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-64-NEXT:    vinsertf64x4 $1, %ymm4, %zmm0, %zmm0
 ; AVX-64-NEXT:    retq

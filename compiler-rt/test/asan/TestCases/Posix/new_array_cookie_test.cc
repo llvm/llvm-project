@@ -3,6 +3,9 @@
 // RUN:                                    not %run %t 2>&1  | FileCheck %s
 // RUN: %env_asan_opts=poison_array_cookie=1 not %run %t 2>&1  | FileCheck %s
 // RUN: %env_asan_opts=poison_array_cookie=0 not %run %t 2>&1  | FileCheck %s --check-prefix=NO_COOKIE
+
+// UNSUPPORTED: ios
+
 #include <stdio.h>
 #include <stdlib.h>
 struct C {

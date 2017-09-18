@@ -182,7 +182,7 @@ define <4 x i32> @test13(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @test14(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
   %shuf1 = shufflevector <2 x i64> %a, <2 x i64> zeroinitializer, <2 x i32><i32 0, i32 2>
   %shuf2 = shufflevector <2 x i64> %b, <2 x i64> zeroinitializer, <2 x i32><i32 2, i32 0>
@@ -207,8 +207,8 @@ define <4 x i32> @test15(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @test16(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf1 = shufflevector <2 x i64> %a, <2 x i64> zeroinitializer, <2 x i32><i32 2, i32 0>
   %shuf2 = shufflevector <2 x i64> %b, <2 x i64> zeroinitializer, <2 x i32><i32 0, i32 2>

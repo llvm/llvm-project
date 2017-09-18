@@ -52,7 +52,7 @@ define <4 x double> @unpacklopd_not(<4 x double> %src1, <4 x double> %src2) noun
 ; CHECK-LABEL: unpacklopd_not:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle.i = shufflevector <4 x double> %src1, <4 x double> %src2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
@@ -76,7 +76,7 @@ define <4 x double> @unpackhipd_not(<4 x double> %src1, <4 x double> %src2) noun
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle.i = shufflevector <4 x double> %src1, <4 x double> %src2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
@@ -120,7 +120,7 @@ define <4 x i64> @unpackhipd1(<4 x i64> %src1, <4 x i64> %src2) nounwind uwtable
 define <4 x i64> @unpackhipd2(<4 x i64>* %src1, <4 x i64>* %src2) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: unpackhipd2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm0
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],mem[1],ymm0[3],mem[3]
 ; CHECK-NEXT:    retq
   %a = load <4 x i64>, <4 x i64>* %src1
@@ -162,7 +162,7 @@ define <4 x i64> @unpacklopd1(<4 x i64> %src1, <4 x i64> %src2) nounwind uwtable
 define <4 x i64> @unpacklopd2(<4 x i64>* %src1, <4 x i64>* %src2) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: unpacklopd2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm0
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
 ; CHECK-NEXT:    retq
   %a = load <4 x i64>, <4 x i64>* %src1

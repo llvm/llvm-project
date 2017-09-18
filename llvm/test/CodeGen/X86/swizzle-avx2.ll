@@ -25,7 +25,7 @@ define <8 x i32> @swizzle_1(<8 x i32> %v) {
 define <8 x i32> @swizzle_2(<8 x i32> %v) {
 ; CHECK-LABEL: swizzle_2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
 ; CHECK-NEXT:    retq
   %1 = shufflevector <8 x i32> %v, <8 x i32> undef, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 0, i32 1, i32 2, i32 3>
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 0, i32 1, i32 2, i32 3>
@@ -35,7 +35,7 @@ define <8 x i32> @swizzle_2(<8 x i32> %v) {
 define <8 x i32> @swizzle_3(<8 x i32> %v) {
 ; CHECK-LABEL: swizzle_3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
 ; CHECK-NEXT:    retq
   %1 = shufflevector <8 x i32> %v, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>
   %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 2, i32 3, i32 0, i32 1>

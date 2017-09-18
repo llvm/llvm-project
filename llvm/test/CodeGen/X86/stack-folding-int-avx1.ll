@@ -771,7 +771,9 @@ define <4 x i32> @stack_fold_pshufd(<4 x i32> %a0) {
   ;CHECK:       vpshufd $27, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  ret <4 x i32> %2
+  ; add forces execution domain
+  %3 = add <4 x i32> %2, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %3
 }
 
 define <8 x i16> @stack_fold_pshufhw(<8 x i16> %a0) {

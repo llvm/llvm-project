@@ -2246,15 +2246,15 @@ define <4 x double> @test_mm256_set_pd(double %a0, double %a1, double %a2, doubl
 ; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X32-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_set_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm3[0],xmm2[0]
+; X64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm3[0],xmm2[0]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %res0 = insertelement <4 x double> undef, double %a3, i32 0
@@ -2399,8 +2399,8 @@ define <4 x i64> @test_mm256_set1_epi16(i16 %a0) nounwind {
 define <4 x i64> @test_mm256_set1_epi32(i32 %a0) nounwind {
 ; X32-LABEL: test_mm256_set1_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -2883,15 +2883,15 @@ define <4 x double> @test_mm256_setr_pd(double %a0, double %a1, double %a2, doub
 ; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X32-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm3[0],xmm2[0]
+; X32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X32-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm3[0],xmm2[0]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_setr_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res0 = insertelement <4 x double> undef, double %a0, i32 0
