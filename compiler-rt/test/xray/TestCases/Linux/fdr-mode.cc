@@ -69,24 +69,24 @@ int main(int argc, char *argv[]) {
 
 // Check that we're able to see two threads, each entering and exiting fA().
 // TRACE-DAG: - { type: 0, func-id: [[FIDA:[0-9]+]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 // TRACE-DAG: - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDA]], function: {{.*fA.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 //
 // Do the same as above for fC()
 // TRACE-DAG: - { type: 0, func-id: [[FIDC:[0-9]+]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 // TRACE-DAG: - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDC]], function: {{.*fC.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 
 // Do the same as above for fB()
 // TRACE-DAG: - { type: 0, func-id: [[FIDB:[0-9]+]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 // TRACE-DAG: - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE:     - { type: 0, func-id: [[FIDB]], function: {{.*fB.*}}, cpu: {{.*}}, thread: [[THREAD2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 
 // Assert that when unwriting is enabled with a high threshold time, all the function records are erased. A CPU switch could erroneously fail this test, but
 // is unlikely given the test program.
 // UNWRITE: header
 // UNWRITE-NOT: function-enter
-// UNWRITE-NOT: function-exit
+// UNWRITE-NOT: function-{{exit|tail-exit}}

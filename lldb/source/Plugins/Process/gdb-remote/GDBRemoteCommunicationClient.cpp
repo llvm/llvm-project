@@ -2624,7 +2624,8 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
      * tid.
      * Assume pid=tid=1 in such cases.
     */
-    if (thread_ids.size() == 0 && IsConnected()) {
+    if ((response.IsUnsupportedResponse() || response.IsNormalResponse()) &&
+        thread_ids.size() == 0 && IsConnected()) {
       thread_ids.push_back(1);
     }
   } else {

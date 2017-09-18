@@ -53,7 +53,7 @@ struct XRayFileHeader {
 /// This may or may not correspond to actual record types in the raw trace (as
 /// the loader implementation may synthesize this information in the process of
 /// of loading).
-enum class RecordTypes { ENTER, EXIT };
+enum class RecordTypes { ENTER, EXIT, TAIL_EXIT };
 
 struct XRayRecord {
   /// The type of record.

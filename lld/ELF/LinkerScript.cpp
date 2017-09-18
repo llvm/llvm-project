@@ -668,8 +668,8 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // consequeces and gives us a section to put the symbol in.
   uint64_t Flags = SHF_ALLOC;
 
-  for (int I = 0, E = Opt.Commands.size(); I != E; ++I) {
-    auto *Sec = dyn_cast<OutputSection>(Opt.Commands[I]);
+  for (BaseCommand * Cmd : Opt.Commands) {
+    auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
     if (Sec->Live) {
@@ -681,7 +681,6 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       continue;
 
     Sec->Live = true;
-    Sec->SectionIndex = I;
     Sec->Flags = Flags;
   }
 }

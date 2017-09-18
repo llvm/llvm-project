@@ -214,7 +214,8 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
     ThreadStack.push_back({Record.FuncId, Record.TSC});
     break;
   }
-  case RecordTypes::EXIT: {
+  case RecordTypes::EXIT:
+  case RecordTypes::TAIL_EXIT: {
     // FIXME: Refactor this and the account subcommand to reduce code
     // duplication
     if (ThreadStack.size() == 0 || ThreadStack.back().FuncId != Record.FuncId) {

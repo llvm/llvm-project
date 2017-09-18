@@ -25,14 +25,20 @@ namespace __asan {
 static void OnStackUnwind(const SignalContext &sig,
                           const void *callback_context,
                           BufferedStackTrace *stack) {
+  bool fast = common_flags()->fast_unwind_on_fatal;
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+  // On FreeBSD the slow unwinding that leverages _Unwind_Backtrace()
+  // yields the call stack of the signal's handler and not of the code
+  // that raised the signal (as it does on Linux).
+  fast = true;
+#endif
   // Tests and maybe some users expect that scariness is going to be printed
   // just before the stack. As only asan has scariness score we have no
   // corresponding code in the sanitizer_common and we use this callback to
   // print it.
   static_cast<const ScarinessScoreBase *>(callback_context)->Print();
   GetStackTraceWithPcBpAndContext(stack, kStackTraceMax, sig.pc, sig.bp,
-                                  sig.context,
-                                  common_flags()->fast_unwind_on_fatal);
+                                  sig.context, fast);
 }
 
 void ErrorDeadlySignal::Print() {

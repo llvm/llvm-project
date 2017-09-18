@@ -1864,7 +1864,7 @@ define <32 x i16>@test_int_x86_avx512_mask_pbroadcast_w_gpr_512(i16 %x0, <32 x i
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; AVX512F-32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; AVX512F-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm1 {%k1} {z}
 ; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
 ; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm2
