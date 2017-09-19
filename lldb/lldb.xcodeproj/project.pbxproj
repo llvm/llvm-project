@@ -3580,6 +3580,7 @@
 				2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */,
 				2321F93A1BDD332400BA9A93 /* SocketTest.cpp */,
 				2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */,
+				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 			);
 			path = Host;
 			sourceTree = "<group>";
@@ -3619,7 +3620,6 @@
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
-				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 				8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */,
 				2321F9461BDD346100BA9A93 /* UriParserTest.cpp */,
 			);
