@@ -503,14 +503,12 @@ void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   if (Sec->Pieces.empty())
     return;
 
-  if (Sec->NumRelocations) {
-    if (Sec->AreRelocsRela)
-      addSectionAux(Sec, Sec->template relas<ELFT>());
-    else
-      addSectionAux(Sec, Sec->template rels<ELFT>());
-    return;
-  }
-  addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
+  if (Sec->NumRelocations == 0)
+    addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
+  else if (Sec->AreRelocsRela)
+    addSectionAux(Sec, Sec->template relas<ELFT>());
+  else
+    addSectionAux(Sec, Sec->template rels<ELFT>());
 }
 
 template <class ELFT>
@@ -1028,9 +1026,11 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   if (!Config->Rpath.empty())
     add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          InX::DynStrTab->addString(Config->Rpath)});
-  for (SharedFile<ELFT> *F : SharedFile<ELFT>::Instances)
+  for (InputFile *File : SharedFiles) {
+    SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
     if (F->isNeeded())
       add({DT_NEEDED, InX::DynStrTab->addString(F->SoName)});
+  }
   if (!Config->SoName.empty())
     add({DT_SONAME, InX::DynStrTab->addString(Config->SoName)});
 

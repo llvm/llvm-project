@@ -8,7 +8,6 @@ add_lldb_unittest(UtilityTests
   StatusTest.cpp
   StringExtractorTest.cpp
   StructuredDataTest.cpp
-  TaskPoolTest.cpp
   TildeExpressionResolverTest.cpp
   TimeoutTest.cpp
   TimerTest.cpp

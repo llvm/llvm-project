@@ -18,7 +18,7 @@ define <4 x double> @foo4(<4 x double> %v, <4 x double> *%p) nounwind {
 ; AVX2-LABEL: foo4:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
-; AVX2-NEXT:    vmovapd %ymm0, (%rdi)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x double> %v, <4 x double> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %res1 = shufflevector<4 x double> %res, <4 x double> undef, <4 x i32> <i32 2, i32 0, i32 undef, i32 undef>
@@ -31,7 +31,7 @@ define <8 x float> @foo8(<8 x float> %v, <8 x float> *%p) nounwind {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
-; AVX2-NEXT:    vmovapd %ymm0, (%rdi)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX2-NEXT:    retq
   %res = shufflevector <8 x float> %v, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %res1 = shufflevector<8 x float> %res, <8 x float> undef, <8 x i32> <i32 2, i32 0, i32 undef, i32 undef, i32 5, i32 1, i32 3, i32 7>

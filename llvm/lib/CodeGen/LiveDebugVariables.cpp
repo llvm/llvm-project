@@ -979,6 +979,7 @@ splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs, LiveIntervals &LIS) {
 
 void UserValue::rewriteLocations(VirtRegMap &VRM, const TargetRegisterInfo &TRI,
                                  BitVector &SpilledLocations) {
+  SpilledLocations.clear();
   SpilledLocations.resize(locations.size());
 
   // Iterate over locations in reverse makes it easier to handle coalescing.

@@ -36,6 +36,15 @@ define void @stp_double(double %a, double %b, double* nocapture %p) nounwind {
   ret void
 }
 
+; CHECK-LABEL: stp_doublex2
+; CHECK: stp q0, q1, [x0]
+define void @stp_doublex2(<2 x double> %a, <2 x double> %b, <2 x double>* nocapture %p) nounwind {
+  store <2 x double> %a, <2 x double>* %p, align 16
+  %add.ptr = getelementptr inbounds <2 x double>, <2 x double>* %p, i64 1
+  store <2 x double> %b, <2 x double>* %add.ptr, align 16
+  ret void
+}
+
 ; Test the load/store optimizer---combine ldurs into a ldp, if appropriate
 define void @stur_int(i32 %a, i32 %b, i32* nocapture %p) nounwind {
 ; CHECK-LABEL: stur_int
@@ -78,6 +87,17 @@ define void @stur_double(double %a, double %b, double* nocapture %p) nounwind {
   store double %a, double* %p1, align 2
   %p2 = getelementptr inbounds double, double* %p, i32 -2
   store double %b, double* %p2, align 2
+  ret void
+}
+
+define void @stur_doublex2(<2 x double> %a, <2 x double> %b, <2 x double>* nocapture %p) nounwind {
+; CHECK-LABEL: stur_doublex2
+; CHECK: stp q{{[0-9]+}}, q{{[0-9]+}}, [x{{[0-9]+}}, #-32]
+; CHECK-NEXT: ret
+  %p1 = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -1
+  store <2 x double> %a, <2 x double>* %p1, align 2
+  %p2 = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 -2
+  store <2 x double> %b, <2 x double>* %p2, align 2
   ret void
 }
 

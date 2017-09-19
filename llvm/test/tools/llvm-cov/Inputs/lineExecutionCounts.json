@@ -12,7 +12,7 @@
 
 // Verify the Summary Section for the first file
 // CHECK-SAME: "summary":{
-// CHECK-SAME: "lines":{"count":20,"covered":16,"percent":80},
+// CHECK-SAME: "lines":{"count":20,"covered":18,"percent":90},
 // CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
 // CHECK-SAME: "regions":{"count":11,"covered":8,"notcovered":3,"percent":72}}}
 
@@ -30,7 +30,7 @@
 
 // Full Export Summary
 // CHECK-SAME: "totals":{
-// CHECK-SAME: "lines":{"count":20,"covered":16,"percent":80},
+// CHECK-SAME: "lines":{"count":20,"covered":18,"percent":90},
 // CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
 // CHECK-SAME: "instantiations":{"count":1,"covered":1,"percent":100},
 // CHECK-SAME: "regions":{"count":11,"covered":8,"notcovered":3,"percent":72}}

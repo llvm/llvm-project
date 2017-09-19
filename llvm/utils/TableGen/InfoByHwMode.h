@@ -63,23 +63,30 @@ struct InfoByHwMode {
   typedef typename MapType::const_iterator const_iterator;
 
   InfoByHwMode() = default;
-  InfoByHwMode(const MapType &&M) : Map(M) {}
+  InfoByHwMode(const MapType &M) : Map(M) {}
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator begin() { return Map.begin(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator end()   { return Map.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator begin() const { return Map.begin(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const   { return Map.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const { return Map.empty(); }
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool hasMode(unsigned M) const { return Map.find(M) != Map.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool hasDefault() const { return hasMode(DefaultMode); }
 
   InfoT &get(unsigned Mode) {
     if (!hasMode(Mode)) {
       assert(hasMode(DefaultMode));
-      Map[Mode] = Map[DefaultMode];
+      Map.insert({Mode, Map.at(DefaultMode)});
     }
-    return Map[Mode];
+    return Map.at(Mode);
   }
   const InfoT &get(unsigned Mode) const {
     auto F = Map.find(Mode);
@@ -89,9 +96,11 @@ struct InfoByHwMode {
     return F->second;
   }
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isSimple() const {
     return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   InfoT getSimple() const {
     assert(isSimple());
     return Map.begin()->second;

@@ -5,16 +5,16 @@
 define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X32-LABEL: trunc4:
 ; X32:       # BB#0:
-; X32-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; X32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: trunc4:
 ; X64:       # BB#0:
-; X64-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; X64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
