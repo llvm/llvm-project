@@ -261,16 +261,17 @@ private:
   llvm::DenseSet<uint64_t> LiveOffsets;
 };
 
-struct EhSectionPiece : public SectionPiece {
-  EhSectionPiece(size_t Off, InputSectionBase *ID, uint32_t Size,
+struct EhSectionPiece {
+  EhSectionPiece(size_t Off, InputSectionBase *Sec, uint32_t Size,
                  unsigned FirstRelocation)
-      : SectionPiece(Off, false), ID(ID), Size(Size),
-        FirstRelocation(FirstRelocation) {}
-  InputSectionBase *ID;
-  uint32_t Size;
-  uint32_t size() const { return Size; }
+      : InputOff(Off), Sec(Sec), Size(Size), FirstRelocation(FirstRelocation) {}
 
-  ArrayRef<uint8_t> data() { return {ID->Data.data() + this->InputOff, Size}; }
+  ArrayRef<uint8_t> data() { return {Sec->Data.data() + this->InputOff, Size}; }
+
+  size_t InputOff;
+  ssize_t OutputOff = -1;
+  InputSectionBase *Sec;
+  uint32_t Size;
   unsigned FirstRelocation;
 };
 
@@ -337,7 +338,7 @@ private:
 extern std::vector<InputSectionBase *> InputSections;
 
 // Builds section order for handling --symbol-ordering-file.
-template <class ELFT> llvm::DenseMap<SectionBase *, int> buildSectionOrder();
+llvm::DenseMap<SectionBase *, int> buildSectionOrder();
 
 } // namespace elf
 
