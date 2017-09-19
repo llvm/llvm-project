@@ -11,7 +11,7 @@
 define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
 ; MMX-LABEL: test_select:
 ; MMX:       # BB#0:
-; MMX-NEXT:    testb %dl, %dl
+; MMX-NEXT:    testl %edx, %edx
 ; MMX-NEXT:    jne .LBB0_1
 ; MMX-NEXT:  # BB#2:
 ; MMX-NEXT:    movaps {{.*}}(%rip), %xmm0
@@ -25,7 +25,7 @@ define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
 ; CHECK-LABEL: test_select:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %dl, %dl
+; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    cmovneq (%rdi), %rax
 ; CHECK-NEXT:    movabsq $9223231299366420480, %rcx # imm = 0x7FFF800000000000
 ; CHECK-NEXT:    cmovneq 8(%rdi), %rcx

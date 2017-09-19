@@ -3686,6 +3686,16 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       movePackToVALU(Worklist, MRI, Inst);
       Inst.eraseFromParent();
       continue;
+
+    case AMDGPU::S_XNOR_B32:
+      lowerScalarXnor(Worklist, Inst);
+      Inst.eraseFromParent();
+      continue;
+
+    case AMDGPU::S_XNOR_B64:
+      splitScalar64BitBinaryOp(Worklist, Inst, AMDGPU::S_XNOR_B32);
+      Inst.eraseFromParent();
+      continue;
     }
 
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
@@ -3802,6 +3812,33 @@ void SIInstrInfo::lowerScalarAbs(SetVectorType &Worklist,
 
   MRI.replaceRegWith(Dest.getReg(), ResultReg);
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+}
+
+void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
+                                  MachineInstr &Inst) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock::iterator MII = Inst;
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+
+  legalizeGenericOperand(MBB, MII, &AMDGPU::VGPR_32RegClass, Src0, MRI, DL);
+  legalizeGenericOperand(MBB, MII, &AMDGPU::VGPR_32RegClass, Src1, MRI, DL);
+
+  unsigned Xor = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_XOR_B32_e64), Xor)
+    .add(Src0)
+    .add(Src1);
+
+  unsigned Not = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_NOT_B32_e64), Not)
+    .addReg(Xor);
+
+  MRI.replaceRegWith(Dest.getReg(), Not);
+  addUsersToMoveToVALUWorklist(Not, MRI, Worklist);
 }
 
 void SIInstrInfo::splitScalar64BitUnaryOp(

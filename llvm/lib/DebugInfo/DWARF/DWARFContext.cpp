@@ -222,8 +222,6 @@ void DWARFContext::dump(
 
   Optional<uint64_t> DumpOffset;
   uint64_t DumpType = DumpOpts.DumpType;
-  unsigned RecDepth =
-      DumpOpts.ShowChildren ? std::numeric_limits<unsigned>::max() : 0;
 
   StringRef Extension = sys::path::extension(DObj->getFileName());
   bool IsDWO = (Extension == ".dwo") || (Extension == ".dwp");
@@ -259,10 +257,10 @@ void DWARFContext::dump(
   auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
                            DWARFSection Section, cu_iterator_range CUs) {
     if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
-      for (const auto &CU : CUs)
-        if (DumpOffset)
-          CU->getDIEForOffset(DumpOffset.getValue()).dump(OS, RecDepth);
-        else
+      if (DumpOffset)
+        getDIEForOffset(DumpOffset.getValue()).dump(OS, 0, 0, DumpOpts);
+      else
+        for (const auto &CU : CUs)
           CU->dump(OS, DumpOpts);
     }
   };
@@ -278,7 +276,7 @@ void DWARFContext::dump(
     for (const auto &TUS : TUSections)
       for (const auto &TU : TUS)
         if (DumpOffset)
-          TU->getDIEForOffset(*DumpOffset).dump(OS, RecDepth);
+          TU->getDIEForOffset(*DumpOffset).dump(OS, 0, 0, DumpOpts);
         else
           TU->dump(OS, DumpOpts);
   };

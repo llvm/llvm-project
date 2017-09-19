@@ -1046,20 +1046,21 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; AVX1-NEXT:    pushq %r13
 ; AVX1-NEXT:    pushq %r12
 ; AVX1-NEXT:    pushq %rbx
-; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; AVX1-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; AVX1-NEXT:    movq %rcx, %r8
 ; AVX1-NEXT:    movq %rcx, %r9
 ; AVX1-NEXT:    movq %rcx, %r10
 ; AVX1-NEXT:    movq %rcx, %r11
 ; AVX1-NEXT:    movq %rcx, %r14
 ; AVX1-NEXT:    movq %rcx, %r15
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX1-NEXT:    movq %rdx, %r12
 ; AVX1-NEXT:    movq %rdx, %r13
-; AVX1-NEXT:    movq %rdx, %rbx
-; AVX1-NEXT:    movq %rdx, %rax
 ; AVX1-NEXT:    movq %rdx, %rdi
+; AVX1-NEXT:    movq %rdx, %rax
 ; AVX1-NEXT:    movq %rdx, %rsi
+; AVX1-NEXT:    movq %rdx, %rbx
 ; AVX1-NEXT:    movq %rdx, %rbp
 ; AVX1-NEXT:    andb $15, %dl
 ; AVX1-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
@@ -1069,18 +1070,18 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; AVX1-NEXT:    shrq $56, %rbp
 ; AVX1-NEXT:    andb $15, %bpl
 ; AVX1-NEXT:    movb %bpl, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    shrq $48, %rsi
+; AVX1-NEXT:    shrq $48, %rbx
+; AVX1-NEXT:    andb $15, %bl
+; AVX1-NEXT:    movb %bl, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    shrq $40, %rsi
 ; AVX1-NEXT:    andb $15, %sil
 ; AVX1-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    shrq $40, %rdi
-; AVX1-NEXT:    andb $15, %dil
-; AVX1-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    shrq $32, %rax
 ; AVX1-NEXT:    andb $15, %al
 ; AVX1-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    shrq $24, %rbx
-; AVX1-NEXT:    andb $15, %bl
-; AVX1-NEXT:    movb %bl, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    shrq $24, %rdi
+; AVX1-NEXT:    andb $15, %dil
+; AVX1-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    shrq $16, %r13
 ; AVX1-NEXT:    andb $15, %r13b
 ; AVX1-NEXT:    movb %r13b, -{{[0-9]+}}(%rsp)
@@ -1216,20 +1217,21 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; AVX2-NEXT:    pushq %r13
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; AVX2-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; AVX2-NEXT:    movq %rcx, %r8
 ; AVX2-NEXT:    movq %rcx, %r9
 ; AVX2-NEXT:    movq %rcx, %r10
 ; AVX2-NEXT:    movq %rcx, %r11
 ; AVX2-NEXT:    movq %rcx, %r14
 ; AVX2-NEXT:    movq %rcx, %r15
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX2-NEXT:    movq %rdx, %r12
 ; AVX2-NEXT:    movq %rdx, %r13
-; AVX2-NEXT:    movq %rdx, %rbx
-; AVX2-NEXT:    movq %rdx, %rax
 ; AVX2-NEXT:    movq %rdx, %rdi
+; AVX2-NEXT:    movq %rdx, %rax
 ; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    movq %rdx, %rbx
 ; AVX2-NEXT:    movq %rdx, %rbp
 ; AVX2-NEXT:    andb $15, %dl
 ; AVX2-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
@@ -1239,18 +1241,18 @@ define <32 x i8> @_clearupper32xi8b(<32 x i8>) nounwind {
 ; AVX2-NEXT:    shrq $56, %rbp
 ; AVX2-NEXT:    andb $15, %bpl
 ; AVX2-NEXT:    movb %bpl, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    shrq $48, %rsi
+; AVX2-NEXT:    shrq $48, %rbx
+; AVX2-NEXT:    andb $15, %bl
+; AVX2-NEXT:    movb %bl, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    shrq $40, %rsi
 ; AVX2-NEXT:    andb $15, %sil
 ; AVX2-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    shrq $40, %rdi
-; AVX2-NEXT:    andb $15, %dil
-; AVX2-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    shrq $32, %rax
 ; AVX2-NEXT:    andb $15, %al
 ; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    shrq $24, %rbx
-; AVX2-NEXT:    andb $15, %bl
-; AVX2-NEXT:    movb %bl, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    shrq $24, %rdi
+; AVX2-NEXT:    andb $15, %dil
+; AVX2-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    shrq $16, %r13
 ; AVX2-NEXT:    andb $15, %r13b
 ; AVX2-NEXT:    movb %r13b, -{{[0-9]+}}(%rsp)

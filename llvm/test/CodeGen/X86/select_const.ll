@@ -53,7 +53,7 @@ define i32 @select_1_or_0(i1 %cond) {
 define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_1_or_0_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -85,8 +85,8 @@ define i32 @select_0_or_neg1(i1 %cond) {
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -119,8 +119,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -151,8 +151,8 @@ define i32 @select_Cplus1_C(i1 %cond) {
 define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_Cplus1_C_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    addl $41, %eax
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    leal 41(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 42, i32 41
   ret i32 %sel
@@ -185,9 +185,8 @@ define i32 @select_C_Cplus1(i1 %cond) {
 define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %dil, %ecx
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel
@@ -413,7 +412,7 @@ define i32 @select_C1_C2(i1 %cond) {
 define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_C1_C2_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    movl $421, %ecx # imm = 0x1A5
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    cmovnel %ecx, %eax

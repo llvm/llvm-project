@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s -check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s -check-prefix=X64
 
-; Check that the argument gets zero-extended before calling.
+; It's not necessary to zero-extend the arg because it is specified 'zeroext'. 
 define void @bar1(i1 zeroext %v1) nounwind ssp {
 ; X32-LABEL: bar1:
 ; X32:       # BB#0:
@@ -14,7 +14,6 @@ define void @bar1(i1 zeroext %v1) nounwind ssp {
 ;
 ; X64-LABEL: bar1:
 ; X64:       # BB#0:
-; X64-NEXT:    movzbl %dil, %edi
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo1 # TAILCALL
   %conv = zext i1 %v1 to i32

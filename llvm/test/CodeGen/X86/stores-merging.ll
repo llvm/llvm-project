@@ -13,8 +13,9 @@
 define void @redundant_stores_merging() {
 ; CHECK-LABEL: redundant_stores_merging:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
+; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 1, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 1), align 4
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -26,8 +27,9 @@ define void @redundant_stores_merging() {
 define void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
+; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -57,22 +59,7 @@ define void @overlapping_stores_merging() {
 define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_16_consecutive_bytes:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpextrb $0, %xmm0, (%rdi)
-; CHECK-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
-; CHECK-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
-; CHECK-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
-; CHECK-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
-; CHECK-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
-; CHECK-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; CHECK-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
-; CHECK-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
-; CHECK-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
-; CHECK-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
-; CHECK-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
-; CHECK-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
-; CHECK-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
-; CHECK-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
-; CHECK-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
+; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %bc = bitcast <2 x i64> %v to <16 x i8>
   %ext00 = extractelement <16 x i8> %bc, i32 0
@@ -131,39 +118,7 @@ define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #
 define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_32_consecutive_bytes:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpextrb $0, %xmm0, (%rdi)
-; CHECK-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
-; CHECK-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
-; CHECK-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
-; CHECK-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
-; CHECK-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
-; CHECK-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; CHECK-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
-; CHECK-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
-; CHECK-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
-; CHECK-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
-; CHECK-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
-; CHECK-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
-; CHECK-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
-; CHECK-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
-; CHECK-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
-; CHECK-NEXT:    vpextrb $0, %xmm1, 16(%rdi)
-; CHECK-NEXT:    vpextrb $1, %xmm1, 17(%rdi)
-; CHECK-NEXT:    vpextrb $2, %xmm1, 18(%rdi)
-; CHECK-NEXT:    vpextrb $3, %xmm1, 19(%rdi)
-; CHECK-NEXT:    vpextrb $4, %xmm1, 20(%rdi)
-; CHECK-NEXT:    vpextrb $5, %xmm1, 21(%rdi)
-; CHECK-NEXT:    vpextrb $6, %xmm1, 22(%rdi)
-; CHECK-NEXT:    vpextrb $7, %xmm1, 23(%rdi)
-; CHECK-NEXT:    vpextrb $8, %xmm1, 24(%rdi)
-; CHECK-NEXT:    vpextrb $9, %xmm1, 25(%rdi)
-; CHECK-NEXT:    vpextrb $10, %xmm1, 26(%rdi)
-; CHECK-NEXT:    vpextrb $11, %xmm1, 27(%rdi)
-; CHECK-NEXT:    vpextrb $12, %xmm1, 28(%rdi)
-; CHECK-NEXT:    vpextrb $13, %xmm1, 29(%rdi)
-; CHECK-NEXT:    vpextrb $14, %xmm1, 30(%rdi)
-; CHECK-NEXT:    vpextrb $15, %xmm1, 31(%rdi)
+; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %bc = bitcast <4 x i64> %v to <32 x i8>
