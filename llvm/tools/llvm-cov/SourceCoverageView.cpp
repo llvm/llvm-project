@@ -84,22 +84,16 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
 }
 
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
-  auto CheckIfUncovered = [](const coverage::CoverageSegment &S) {
-    return S.HasCount && S.Count == 0;
-  };
-  // L is less than R if (1) it's an uncovered segment (has a 0 count), and (2)
-  // either R is not an uncovered segment, or L has a lower line number than R.
   const auto MinSegIt =
-      std::min_element(CoverageInfo.begin(), CoverageInfo.end(),
-                       [CheckIfUncovered](const coverage::CoverageSegment &L,
-                                          const coverage::CoverageSegment &R) {
-                         return (CheckIfUncovered(L) &&
-                                 (!CheckIfUncovered(R) || (L.Line < R.Line)));
-                       });
-  if (CheckIfUncovered(*MinSegIt))
-    return (*MinSegIt).Line;
+      find_if(CoverageInfo, [](const coverage::CoverageSegment &S) {
+        return S.HasCount && S.Count == 0;
+      });
+
   // There is no uncovered line, return zero.
-  return 0;
+  if (MinSegIt == CoverageInfo.end())
+    return 0;
+
+  return (*MinSegIt).Line;
 }
 
 std::string SourceCoverageView::formatCount(uint64_t N) {
