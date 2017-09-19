@@ -28,6 +28,14 @@ void baz() { // CHECK: [[@LINE]]:12 -> [[@LINE+2]]:2
   return;    // CHECK-NOT: File
 }
 
+// CHECK-LABEL: _Z3mazv:
+void maz() {
+  if (true)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> 36:3 = (#0 - #1)
+
+  return; // CHECK-NOT: Gap
+}
+
 // CHECK-LABEL: _Z3bari:
 void bar(int x) {
   IF (x)
