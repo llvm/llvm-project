@@ -7,7 +7,7 @@
 void foo(int x) {
   if (x == 0) {
     return;
-  } // CHECK: [[@LINE]]:4 -> [[@LINE+2]]:2 = (#0 - #1)
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:2 = (#0 - #1)
 
 }
 
@@ -15,11 +15,11 @@ void foo(int x) {
 void fooo(int x) {
   if (x == 0) {
     return;
-  } // CHECK: [[@LINE]]:4 -> [[@LINE+2]]:3 = (#0 - #1)
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:3 = (#0 - #1)
 
   if (x == 1) {
     return;
-  } // CHECK: [[@LINE]]:4 -> [[@LINE+2]]:2 = ((#0 - #1) - #2)
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:2 = ((#0 - #1) - #2)
 
 }
 
@@ -31,10 +31,10 @@ void baz() { // CHECK: [[@LINE]]:12 -> [[@LINE+2]]:2
 // CHECK-LABEL: _Z3bari:
 void bar(int x) {
   IF (x)
-    return; // CHECK: [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
 
   IF (!x)
-    return; // CHECK: [[@LINE]]:11 -> [[@LINE+2]]:3 = ((#0 - #1) - #2)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = ((#0 - #1) - #2)
 
   foo(x);
 }
@@ -69,34 +69,34 @@ void weird_if() {
   int i = 0;
 
   if (false)
-    return; // CHECK: [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
 
   if (false)
     i++;
 
   if (i + 100 > 0) { // CHECK: [[@LINE]]:20 -> [[@LINE+6]]:4 = #3
     if (false)       // CHECK: [[@LINE+1]]:7 -> [[@LINE+1]]:13 = #4
-      return;        // CHECK: [[@LINE]]:13 -> [[@LINE+2]]:5 = (#3 - #4)
+      return;        // CHECK: Gap,File 0, [[@LINE]]:13 -> [[@LINE+2]]:5 = (#3 - #4)
                      // CHECK: [[@LINE+1]]:5 -> [[@LINE+3]]:4 = (#3 - #4)
-    return;          // CHECK: [[@LINE]]:5 -> [[@LINE+4]]:3 = ((#0 - #1) - #3)
+    return;          // CHECK: Gap,File 0, [[@LINE]]:5 -> [[@LINE+4]]:3 = ((#0 - #1) - #3)
 
   }
 
   if (false)
-    return;
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:2
 }
 
 // CHECK-LABEL: _Z8for_loopv:
 void for_loop() {
   if (false)
-    return; // CHECK: [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
 
   for (int i = 0; i < 10; ++i) {
     if (i % 2 == 0)
-      continue; // CHECK: [[@LINE]]:15 -> [[@LINE+2]]:5 = (#2 - #3)
+      continue; // CHECK: Gap,File 0, [[@LINE]]:15 -> [[@LINE+2]]:5 = (#2 - #3)
 
     if (i % 5 == 0)
-      break; // CHECK: [[@LINE]]:12 -> [[@LINE+2]]:5 = ((#2 - #3) - #4)
+      break; // CHECK: Gap,File 0, [[@LINE]]:12 -> [[@LINE+2]]:5 = ((#2 - #3) - #4)
 
     int x = i; // CHECK: [[@LINE]]:5 -> [[@LINE+3]]:4 = ((#2 - #3) - #4)
     return; // CHECK-NOT: [[@LINE]]:11 -> [[@LINE+2]]
@@ -109,22 +109,22 @@ struct Error {};
 // CHECK-LABEL: _Z10while_loopv:
 void while_loop() {
   if (false)
-    return; // CHECK: [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
 
   int x = 0;
   while (++x < 10) {
     if (x == 1)
-      continue; // CHECK: [[@LINE]]:15 -> [[@LINE+2]]:5 = (#2 - #3)
+      continue; // CHECK: Gap,File 0, [[@LINE]]:15 -> [[@LINE+2]]:5 = (#2 - #3)
 
     while (++x < 4) {
       if (x == 3)
-        break; // CHECK: [[@LINE]]:14 -> [[@LINE+2]]:7 = (#4 - #5)
+        break; // CHECK: Gap,File 0, [[@LINE]]:14 -> [[@LINE+2]]:7 = (#4 - #5)
 
       while (++x < 5) {}
     }
 
     if (x == 0)
-      throw Error(); // CHECK: [[@LINE]]:20 -> [[@LINE+2]]:5 = ((#2 - #3) - #7)
+      throw Error(); // CHECK: Gap,File 0, [[@LINE]]:20 -> [[@LINE+2]]:5 = ((#2 - #3) - #7)
 
     while (++x < 9) {
       if (x == 0)
@@ -137,12 +137,12 @@ void while_loop() {
 // CHECK-LABEL: _Z5gotosv:
 void gotos() {
   if (false)
-    goto out; // CHECK: [[@LINE]]:13 -> [[@LINE+2]]:3 = (#0 - #1)
+    goto out; // CHECK: Gap,File 0, [[@LINE]]:13 -> [[@LINE+2]]:3 = (#0 - #1)
 
   return; // CHECK: [[@LINE]]:3 -> [[@LINE+4]]:2 = (#0 - #1)
 
 out:
-	return; // CHECK: [[@LINE]]:8 -> [[@LINE+1]]:2 = 0
+	return; // CHECK: Gap,File 0, [[@LINE]]:8 -> [[@LINE+1]]:2 = 0
 }
 
 int main() {

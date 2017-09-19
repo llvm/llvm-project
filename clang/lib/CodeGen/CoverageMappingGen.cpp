@@ -48,11 +48,16 @@ class SourceMappingRegion {
   /// Whether this region should be emitted after its parent is emitted.
   bool DeferRegion;
 
+  /// Whether this region is a gap region. The count from a gap region is set
+  /// as the line execution count if there are no other regions on the line.
+  bool GapRegion;
+
 public:
   SourceMappingRegion(Counter Count, Optional<SourceLocation> LocStart,
-                      Optional<SourceLocation> LocEnd, bool DeferRegion = false)
+                      Optional<SourceLocation> LocEnd, bool DeferRegion = false,
+                      bool GapRegion = false)
       : Count(Count), LocStart(LocStart), LocEnd(LocEnd),
-        DeferRegion(DeferRegion) {}
+        DeferRegion(DeferRegion), GapRegion(GapRegion) {}
 
   const Counter &getCounter() const { return Count; }
 
@@ -79,6 +84,10 @@ public:
   bool isDeferred() const { return DeferRegion; }
 
   void setDeferred(bool Deferred) { DeferRegion = Deferred; }
+
+  bool isGap() const { return GapRegion; }
+
+  void setGap(bool Gap) { GapRegion = Gap; }
 };
 
 /// Spelling locations for the start and end of a source region.
@@ -322,9 +331,16 @@ public:
       // Find the spelling locations for the mapping region.
       SpellingRegion SR{SM, LocStart, LocEnd};
       assert(SR.isInSourceOrder() && "region start and end out of order");
-      MappingRegions.push_back(CounterMappingRegion::makeRegion(
-          Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
-          SR.LineEnd, SR.ColumnEnd));
+
+      if (Region.isGap()) {
+        MappingRegions.push_back(CounterMappingRegion::makeGapRegion(
+            Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
+            SR.LineEnd, SR.ColumnEnd));
+      } else {
+        MappingRegions.push_back(CounterMappingRegion::makeRegion(
+            Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
+            SR.LineEnd, SR.ColumnEnd));
+      }
     }
   }
 
@@ -496,6 +512,7 @@ struct CounterCoverageMappingBuilder
     if (!SpellingRegion(SM, DR.getStartLoc(), DeferredEndLoc).isInSourceOrder())
       return Index;
 
+    DR.setGap(true);
     DR.setCounter(Count);
     DR.setEndLoc(DeferredEndLoc);
     handleFileExit(DeferredEndLoc);
@@ -1111,6 +1128,9 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       break;
     case CounterMappingRegion::SkippedRegion:
       OS << "Skipped,";
+      break;
+    case CounterMappingRegion::GapRegion:
+      OS << "Gap,";
       break;
     }
 
