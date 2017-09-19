@@ -230,12 +230,26 @@ define i32 @test_rorx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_rorx_i32:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
-; COMMON-NEXT:    rorxl $5, (%rdx), %eax # sched: [1:0.50]
-; COMMON-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_rorx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    rorxl $5, (%rdx), %eax # sched: [1:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_rorx_i32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    rorxl $5, %edi, %ecx # sched: [1:1.00]
+; SKYLAKE-NEXT:    rorxl $5, (%rdx), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_rorx_i32:
+; KNL:       # BB#0:
+; KNL-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
+; KNL-NEXT:    rorxl $5, (%rdx), %eax # sched: [1:0.50]
+; KNL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_rorx_i32:
 ; ZNVER1:       # BB#0:
@@ -262,12 +276,26 @@ define i64 @test_rorx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_rorx_i64:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
-; COMMON-NEXT:    rorxq $5, (%rdx), %rax # sched: [1:0.50]
-; COMMON-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_rorx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    rorxq $5, (%rdx), %rax # sched: [1:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_rorx_i64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:1.00]
+; SKYLAKE-NEXT:    rorxq $5, (%rdx), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_rorx_i64:
+; KNL:       # BB#0:
+; KNL-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
+; KNL-NEXT:    rorxq $5, (%rdx), %rax # sched: [1:0.50]
+; KNL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_rorx_i64:
 ; ZNVER1:       # BB#0:
@@ -294,12 +322,26 @@ define i32 @test_sarx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_sarx_i32:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
-; COMMON-NEXT:    sarxl %esi, (%rdx), %eax # sched: [1:0.50]
-; COMMON-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_sarx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    sarxl %esi, (%rdx), %eax # sched: [1:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_sarx_i32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:1.00]
+; SKYLAKE-NEXT:    sarxl %esi, (%rdx), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_sarx_i32:
+; KNL:       # BB#0:
+; KNL-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
+; KNL-NEXT:    sarxl %esi, (%rdx), %eax # sched: [1:0.50]
+; KNL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_sarx_i32:
 ; ZNVER1:       # BB#0:
@@ -322,12 +364,26 @@ define i64 @test_sarx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_sarx_i64:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; COMMON-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [1:0.50]
-; COMMON-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_sarx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_sarx_i64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:1.00]
+; SKYLAKE-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_sarx_i64:
+; KNL:       # BB#0:
+; KNL-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; KNL-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; KNL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_sarx_i64:
 ; ZNVER1:       # BB#0:
@@ -350,12 +406,26 @@ define i32 @test_shlx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_shlx_i32:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
-; COMMON-NEXT:    shlxl %esi, (%rdx), %eax # sched: [1:0.50]
-; COMMON-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_shlx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    shlxl %esi, (%rdx), %eax # sched: [1:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_shlx_i32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:1.00]
+; SKYLAKE-NEXT:    shlxl %esi, (%rdx), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_shlx_i32:
+; KNL:       # BB#0:
+; KNL-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
+; KNL-NEXT:    shlxl %esi, (%rdx), %eax # sched: [1:0.50]
+; KNL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shlx_i32:
 ; ZNVER1:       # BB#0:
@@ -378,12 +448,26 @@ define i64 @test_shlx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_shlx_i64:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; COMMON-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [1:0.50]
-; COMMON-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_shlx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_shlx_i64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:1.00]
+; SKYLAKE-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_shlx_i64:
+; KNL:       # BB#0:
+; KNL-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; KNL-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; KNL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shlx_i64:
 ; ZNVER1:       # BB#0:
@@ -406,12 +490,26 @@ define i32 @test_shrx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_shrx_i32:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
-; COMMON-NEXT:    shrxl %esi, (%rdx), %eax # sched: [1:0.50]
-; COMMON-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_shrx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    shrxl %esi, (%rdx), %eax # sched: [1:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_shrx_i32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:1.00]
+; SKYLAKE-NEXT:    shrxl %esi, (%rdx), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_shrx_i32:
+; KNL:       # BB#0:
+; KNL-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
+; KNL-NEXT:    shrxl %esi, (%rdx), %eax # sched: [1:0.50]
+; KNL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shrx_i32:
 ; ZNVER1:       # BB#0:
@@ -434,12 +532,26 @@ define i64 @test_shrx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
-; COMMON-LABEL: test_shrx_i64:
-; COMMON:       # BB#0:
-; COMMON-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; COMMON-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [1:0.50]
-; COMMON-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; COMMON-NEXT:    retq # sched: [2:1.00]
+; HASWELL-LABEL: test_shrx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_shrx_i64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:1.00]
+; SKYLAKE-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
+; KNL-LABEL: test_shrx_i64:
+; KNL:       # BB#0:
+; KNL-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; KNL-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [1:0.50]
+; KNL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shrx_i64:
 ; ZNVER1:       # BB#0:

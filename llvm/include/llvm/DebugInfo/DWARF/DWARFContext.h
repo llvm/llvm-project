@@ -131,8 +131,7 @@ public:
     dump(OS, DumpOpts, DumpOffsets);
   }
 
-  bool verify(raw_ostream &OS, unsigned DumpType = DIDT_All,
-              DIDumpOptions DumpOpts = {}) override;
+  bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) override;
 
   using cu_iterator_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
   using tu_iterator_range = DWARFUnitSection<DWARFTypeUnit>::iterator_range;

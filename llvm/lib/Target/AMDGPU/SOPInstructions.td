@@ -391,6 +391,14 @@ def S_XOR_B32 : SOP2_32 <"s_xor_b32",
 def S_XOR_B64 : SOP2_64 <"s_xor_b64",
   [(set i64:$sdst, (xor i64:$src0, i64:$src1))]
 >;
+
+def S_XNOR_B32 : SOP2_32 <"s_xnor_b32",
+  [(set i32:$sdst, (not (xor_oneuse i32:$src0, i32:$src1)))]
+>;
+
+def S_XNOR_B64 : SOP2_64 <"s_xnor_b64",
+  [(set i64:$sdst, (not (xor_oneuse i64:$src0, i64:$src1)))]
+>;
 } // End isCommutable = 1
 
 def S_ANDN2_B32 : SOP2_32 <"s_andn2_b32">;
@@ -401,8 +409,6 @@ def S_NAND_B32 : SOP2_32 <"s_nand_b32">;
 def S_NAND_B64 : SOP2_64 <"s_nand_b64">;
 def S_NOR_B32 : SOP2_32 <"s_nor_b32">;
 def S_NOR_B64 : SOP2_64 <"s_nor_b64">;
-def S_XNOR_B32 : SOP2_32 <"s_xnor_b32">;
-def S_XNOR_B64 : SOP2_64 <"s_xnor_b64">;
 } // End Defs = [SCC]
 
 // Use added complexity so these patterns are preferred to the VALU patterns.

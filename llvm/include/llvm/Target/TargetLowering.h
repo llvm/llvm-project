@@ -410,8 +410,9 @@ public:
     return false;
   }
 
-  /// Should we merge stores after Legalization (generally
-  /// better quality) or before (simpler)
+  /// Allow store merging after legalization in addition to before legalization.
+  /// This may catch stores that do not exist earlier (eg, stores created from
+  /// intrinsics).
   virtual bool mergeStoresAfterLegalization() const { return false; }
 
   /// Returns if it's reasonable to merge stores to MemVT size.

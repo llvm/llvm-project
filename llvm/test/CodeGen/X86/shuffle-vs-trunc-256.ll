@@ -260,9 +260,9 @@ define void @shuffle_v8i32_to_v4i32(<8 x i32>* %L, <4 x i32>* %S) nounwind {
 ;
 ; AVX2-LABEL: shuffle_v8i32_to_v4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -313,9 +313,9 @@ define void @trunc_v4i64_to_v4i32(<8 x i32>* %L, <4 x i32>* %S) nounwind {
 ;
 ; AVX2-LABEL: trunc_v4i64_to_v4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

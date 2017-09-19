@@ -308,7 +308,8 @@ class InstrItineraryData;
                             bool MemcpyStrSrc,
                             MachineFunction &MF) const override;
 
-    using TargetLowering::isZExtFree;
+    bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+    bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
@@ -625,7 +626,8 @@ class InstrItineraryData;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

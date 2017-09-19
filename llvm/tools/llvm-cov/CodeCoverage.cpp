@@ -841,7 +841,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
     // Show functions.
     for (const auto &Function : Coverage->getCoveredFunctions()) {
-      if (!Filters.matches(Function))
+      if (!Filters.matches(*Coverage.get(), Function))
         continue;
 
       auto mainView = createFunctionView(Function, *Coverage);

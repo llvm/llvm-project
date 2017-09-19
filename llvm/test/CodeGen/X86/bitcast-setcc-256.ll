@@ -77,9 +77,8 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -126,24 +125,13 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSSE3-NEXT:    retq
 ;
-; AVX1-LABEL: v8f32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: v8f32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovmskps %ymm0, %eax
-; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX12-LABEL: v8f32:
+; AVX12:       # BB#0:
+; AVX12-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    vmovmskps %ymm0, %eax
+; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX12-NEXT:    vzeroupper
+; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v8f32:
 ; AVX512:       # BB#0:

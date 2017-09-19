@@ -120,7 +120,7 @@ void SourceCoverageViewText::renderLine(
     Col = End;
     if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
-    else if (S->HasCount && S->Count == 0)
+    else if (!S->IsGapRegion && S->HasCount && S->Count == 0)
       Highlight = raw_ostream::RED;
     else
       Highlight = None;

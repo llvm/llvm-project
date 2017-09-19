@@ -83,64 +83,17 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
   llvm_unreachable("Unknown coverage output format!");
 }
 
-LineCoverageStats::LineCoverageStats(
-    ArrayRef<const coverage::CoverageSegment *> LineSegments,
-    const coverage::CoverageSegment *WrappedSegment) {
-  // Find the minimum number of regions which start in this line.
-  unsigned MinRegionCount = 0;
-  auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
-    return S->HasCount && S->IsRegionEntry;
-  };
-  for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)
-    if (isStartOfRegion(LineSegments[I]))
-      ++MinRegionCount;
-
-  bool StartOfSkippedRegion = !LineSegments.empty() &&
-                              !LineSegments.front()->HasCount &&
-                              LineSegments.front()->IsRegionEntry;
-
-  ExecutionCount = 0;
-  HasMultipleRegions = MinRegionCount > 1;
-  Mapped =
-      !StartOfSkippedRegion &&
-      ((WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0));
-
-  if (!Mapped)
-    return;
-
-  // Pick the max count among regions which start and end on this line, to
-  // avoid erroneously using the wrapped count, and to avoid picking region
-  // counts which come from deferred regions.
-  if (LineSegments.size() > 1) {
-    for (unsigned I = 0; I < LineSegments.size() - 1; ++I)
-      ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
-    return;
-  }
-
-  // Just pick the maximum count.
-  if (WrappedSegment && WrappedSegment->HasCount)
-    ExecutionCount = WrappedSegment->Count;
-  if (!LineSegments.empty())
-    ExecutionCount = std::max(ExecutionCount, LineSegments[0]->Count);
-}
-
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
-  auto CheckIfUncovered = [](const coverage::CoverageSegment &S) {
-    return S.HasCount && S.Count == 0;
-  };
-  // L is less than R if (1) it's an uncovered segment (has a 0 count), and (2)
-  // either R is not an uncovered segment, or L has a lower line number than R.
   const auto MinSegIt =
-      std::min_element(CoverageInfo.begin(), CoverageInfo.end(),
-                       [CheckIfUncovered](const coverage::CoverageSegment &L,
-                                          const coverage::CoverageSegment &R) {
-                         return (CheckIfUncovered(L) &&
-                                 (!CheckIfUncovered(R) || (L.Line < R.Line)));
-                       });
-  if (CheckIfUncovered(*MinSegIt))
-    return (*MinSegIt).Line;
+      find_if(CoverageInfo, [](const coverage::CoverageSegment &S) {
+        return S.HasCount && S.Count == 0;
+      });
+
   // There is no uncovered line, return zero.
-  return 0;
+  if (MinSegIt == CoverageInfo.end())
+    return 0;
+
+  return (*MinSegIt).Line;
 }
 
 std::string SourceCoverageView::formatCount(uint64_t N) {

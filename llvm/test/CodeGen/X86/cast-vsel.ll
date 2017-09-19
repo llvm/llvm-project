@@ -314,8 +314,6 @@ define void @example25() nounwind {
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE2-NEXT:    psllw $15, %xmm1
-; SSE2-NEXT:    psraw $15, %xmm1
 ; SSE2-NEXT:    movaps dc+4096(%rax), %xmm2
 ; SSE2-NEXT:    movaps dc+4112(%rax), %xmm3
 ; SSE2-NEXT:    cmpltps dd+4112(%rax), %xmm3
@@ -327,8 +325,6 @@ define void @example25() nounwind {
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,6,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    psllw $15, %xmm2
-; SSE2-NEXT:    psraw $15, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
@@ -357,8 +353,6 @@ define void @example25() nounwind {
 ; SSE41-NEXT:    cmpltps db+4096(%rax), %xmm2
 ; SSE41-NEXT:    pshufb %xmm0, %xmm2
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE41-NEXT:    psllw $15, %xmm2
-; SSE41-NEXT:    psraw $15, %xmm2
 ; SSE41-NEXT:    movaps dc+4096(%rax), %xmm3
 ; SSE41-NEXT:    movaps dc+4112(%rax), %xmm4
 ; SSE41-NEXT:    cmpltps dd+4112(%rax), %xmm4
@@ -366,8 +360,6 @@ define void @example25() nounwind {
 ; SSE41-NEXT:    cmpltps dd+4096(%rax), %xmm3
 ; SSE41-NEXT:    pshufb %xmm0, %xmm3
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
-; SSE41-NEXT:    psllw $15, %xmm3
-; SSE41-NEXT:    psraw $15, %xmm3
 ; SSE41-NEXT:    pand %xmm2, %xmm3
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; SSE41-NEXT:    pand %xmm1, %xmm2

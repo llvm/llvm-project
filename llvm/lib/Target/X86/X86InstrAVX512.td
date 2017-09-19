@@ -8086,12 +8086,6 @@ multiclass avx512_trunc_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
   // for intrinsic patter match
   def : Pat<(DestInfo.VT (X86select DestInfo.KRCWM:$mask,
                            (DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src1))),
-                           undef)),
-            (!cast<Instruction>(NAME#SrcInfo.ZSuffix##rrkz) DestInfo.KRCWM:$mask ,
-                                      SrcInfo.RC:$src1)>;
-
-  def : Pat<(DestInfo.VT (X86select DestInfo.KRCWM:$mask,
-                           (DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src1))),
                            DestInfo.ImmAllZerosV)),
             (!cast<Instruction>(NAME#SrcInfo.ZSuffix##rrkz) DestInfo.KRCWM:$mask ,
                                       SrcInfo.RC:$src1)>;

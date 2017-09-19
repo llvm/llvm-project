@@ -1,6 +1,11 @@
 // RUN: llvm-mc -triple aarch64-- -mattr=+crc %s 2>&1 |\
 // RUN:   FileCheck %s --check-prefix=CRC
 
+// RUN: llvm-mc -triple aarch64-- -mcpu=cortex-a55 %s 2>&1 |\
+// RUN:   FileCheck %s --check-prefix=CRC
+// RUN: llvm-mc -triple aarch64-- -mcpu=cortex-a75 %s 2>&1 |\
+// RUN:   FileCheck %s --check-prefix=CRC
+
 // RUN: not llvm-mc -triple aarch64-- %s 2>&1 |\
 // RUN:   FileCheck %s --check-prefix=NOCRC
 // RUN: not llvm-mc -triple aarch64-- -mcpu=cyclone %s 2>&1 |\

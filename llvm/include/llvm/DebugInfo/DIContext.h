@@ -138,8 +138,8 @@ enum DIDumpType : unsigned {
 /// dumped.
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
-  bool DumpEH = false;
   bool ShowChildren = false;
+  bool ShowParents = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
 };
@@ -158,8 +158,7 @@ public:
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
-  virtual bool verify(raw_ostream &OS, unsigned DumpType = DIDT_All,
-                      DIDumpOptions DumpOpts = {}) {
+  virtual bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) {
     // No verifier? Just say things went well.
     return true;
   }

@@ -3035,6 +3035,30 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
 
+  case ISD::BITCAST: {
+    SDValue N0 = Op.getOperand(0);
+    unsigned SrcBits = N0.getScalarValueSizeInBits();
+
+    // Ignore bitcasts from floating point.
+    if (!N0.getValueType().isInteger())
+      break;
+
+    // Fast handling of 'identity' bitcasts.
+    if (VTBits == SrcBits)
+      return ComputeNumSignBits(N0, DemandedElts, Depth + 1);
+
+    // Bitcast 'large element' scalar/vector to 'small element' vector.
+    // TODO: Handle cases other than 'sign splat' when we have a use case.
+    // Requires handling of DemandedElts and Endianness.
+    if ((SrcBits % VTBits) == 0) {
+      assert(Op.getValueType().isVector() && "Expected bitcast to vector");
+      Tmp = ComputeNumSignBits(N0, Depth + 1);
+      if (Tmp == SrcBits)
+        return VTBits;
+    }
+    break;
+  }
+
   case ISD::SIGN_EXTEND:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
