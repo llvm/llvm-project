@@ -136,6 +136,20 @@ public:
   }
 };
 
+/// \brief Coverage statistics for a single line.
+struct LineCoverageStats {
+  uint64_t ExecutionCount;
+  bool HasMultipleRegions;
+  bool Mapped;
+
+  LineCoverageStats(ArrayRef<const coverage::CoverageSegment *> LineSegments,
+                    const coverage::CoverageSegment *WrappedSegment);
+
+  bool isMapped() const { return Mapped; }
+
+  bool hasMultipleRegions() const { return HasMultipleRegions; }
+};
+
 /// \brief A summary of function's code coverage.
 struct FunctionCoverageSummary {
   std::string Name;
@@ -154,8 +168,8 @@ struct FunctionCoverageSummary {
 
   /// \brief Compute the code coverage summary for the given function coverage
   /// mapping record.
-  static FunctionCoverageSummary
-  get(const coverage::FunctionRecord &Function);
+  static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
+                                     const coverage::FunctionRecord &Function);
 
   /// Compute the code coverage summary for an instantiation group \p Group,
   /// given a list of summaries for each instantiation in \p Summaries.
