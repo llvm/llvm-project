@@ -78,6 +78,9 @@ private:
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
 
+  void lowerScalarXnor(SetVectorType &Worklist,
+                       MachineInstr &Inst) const;
+
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
                                MachineInstr &Inst, unsigned Opcode) const;
 

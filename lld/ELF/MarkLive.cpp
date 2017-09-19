@@ -135,7 +135,7 @@ scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
     // This is a FDE. The relocations point to the described function or to
     // a LSDA. We only need to keep the LSDA alive, so ignore anything that
     // points to executable sections.
-    typename ELFT::uint PieceEnd = Piece.InputOff + Piece.size();
+    typename ELFT::uint PieceEnd = Piece.InputOff + Piece.Size;
     for (unsigned I2 = FirstRelI, N2 = Rels.size(); I2 < N2; ++I2) {
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)

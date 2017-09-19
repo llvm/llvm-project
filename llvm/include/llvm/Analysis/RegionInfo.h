@@ -407,6 +407,11 @@ public:
   ///         else NULL.
   BlockT *getExitingBlock() const;
 
+  /// @brief Collect all blocks of this region's single exit edge, if existing.
+  ///
+  /// @return True if this region contains all the predecessors of the exit.
+  bool getExitingBlocks(SmallVectorImpl<BlockT *> &Exitings) const;
+
   /// @brief Is this a simple region?
   ///
   /// A region is simple if it has exactly one exit and one entry edge.

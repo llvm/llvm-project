@@ -48,6 +48,7 @@ def getTestSuite(item, litConfig, cache):
         # configuration to load instead.
         config_map = litConfig.params.get('config_map')
         if config_map:
+            cfgpath = os.path.realpath(cfgpath)
             cfgpath = os.path.normpath(cfgpath)
             cfgpath = os.path.normcase(cfgpath)
             target = config_map.get(cfgpath)

@@ -19,7 +19,7 @@
 
 void foo(bool cond) { // CHECK:  [[@LINE]]| 1|void foo(
   if (cond) {         // CHECK:  [[@LINE]]| 1| if (cond) {
-  }                   // CHECK:  [[@LINE]]| 1|  }
+  }                   // CHECK:  [[@LINE]]| 0|  }
 }                     // CHECK:  [[@LINE]]| 1|}
 void bar() {          // CHECK:  [[@LINE]]| 1|void bar() {
 }                     // CHECK:  [[@LINE]]| 1|}

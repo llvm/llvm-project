@@ -672,9 +672,8 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts);
 
 #else
-static void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data,
-                                        ValueHandle Vtable,
-                                        bool ValidVtable, ReportOptions Opts) {
+void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
+                                 bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 #endif

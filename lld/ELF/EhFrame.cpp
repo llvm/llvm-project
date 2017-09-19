@@ -154,8 +154,7 @@ template <class ELFT> void EhReader<ELFT>::skipAugP() {
 }
 
 template <class ELFT> uint8_t elf::getFdeEncoding(EhSectionPiece *P) {
-  auto *IS = static_cast<InputSectionBase *>(P->ID);
-  return EhReader<ELFT>(IS, P->data()).getFdeEncoding();
+  return EhReader<ELFT>(P->Sec, P->data()).getFdeEncoding();
 }
 
 template <class ELFT> uint8_t EhReader<ELFT>::getFdeEncoding() {

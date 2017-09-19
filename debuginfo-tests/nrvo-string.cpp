@@ -3,8 +3,6 @@
 //
 // RUN: %clangxx -O0 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
 // RUN: %test_debuginfo %s %t.out
-// RUN: %clangxx -O1 -fno-exceptions %target_itanium_abi_host_triple %s -o %t.out -g
-// RUN: %test_debuginfo %s %t.out
 //
 // PR34513
 

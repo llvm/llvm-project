@@ -970,12 +970,12 @@ declare <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32>, <8 x i32>, i8) nounwind 
 define <8 x i32> @test_x86_avx2_permd(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: test_x86_avx2_permd:
 ; AVX2:       ## BB#0:
-; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x75,0x36,0xc0]
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x75,0x16,0xc0]
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx2_permd:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x36,0xc0]
+; AVX512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x16,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res

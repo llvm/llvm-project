@@ -1112,37 +1112,6 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, ValTy, Add1, Lo);
 }
 
-static SDValue performAssertZextCombine(SDNode *N, SelectionDAG &DAG,
-                                        TargetLowering::DAGCombinerInfo &DCI,
-                                        const MipsSubtarget &Subtarget) {
-  SDValue N0 = N->getOperand(0);
-  EVT NarrowerVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-
-  if (N0.getOpcode() != ISD::TRUNCATE)
-    return SDValue();
-
-  if (N0.getOperand(0).getOpcode() != ISD::AssertZext)
-    return SDValue();
-
-  // fold (AssertZext (trunc (AssertZext x))) -> (trunc (AssertZext x))
-  // if the type of the extension of the innermost AssertZext node is
-  // smaller from that of the outermost node, eg:
-  // (AssertZext:i32 (trunc:i32 (AssertZext:i64 X, i32)), i8)
-  //   -> (trunc:i32 (AssertZext X, i8))
-  SDValue WiderAssertZext = N0.getOperand(0);
-  EVT WiderVT = cast<VTSDNode>(WiderAssertZext->getOperand(1))->getVT();
-
-  if (NarrowerVT.bitsLT(WiderVT)) {
-    SDValue NewAssertZext = DAG.getNode(
-        ISD::AssertZext, SDLoc(N), WiderAssertZext.getValueType(),
-        WiderAssertZext.getOperand(0), DAG.getValueType(NarrowerVT));
-    return DAG.getNode(ISD::TRUNCATE, SDLoc(N), N->getValueType(0),
-                       NewAssertZext);
-  }
-
-  return SDValue();
-}
-
 static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const MipsSubtarget &Subtarget) {
@@ -1215,8 +1184,6 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::ADD:
     return performADDCombine(N, DAG, DCI, Subtarget);
-  case ISD::AssertZext:
-    return performAssertZextCombine(N, DAG, DCI, Subtarget);
   case ISD::SHL:
     return performSHLCombine(N, DAG, DCI, Subtarget);
   case ISD::SUB:
