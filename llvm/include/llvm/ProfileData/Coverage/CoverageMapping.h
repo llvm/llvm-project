@@ -213,7 +213,11 @@ struct CounterMappingRegion {
 
     /// A SkippedRegion represents a source range with code that was skipped
     /// by a preprocessor or similar means.
-    SkippedRegion
+    SkippedRegion,
+
+    /// A GapRegion is like a CodeRegion, but its count is only set as the
+    /// line execution count when its the only region in the line.
+    GapRegion
   };
 
   Counter Count;
@@ -248,6 +252,13 @@ struct CounterMappingRegion {
               unsigned LineEnd, unsigned ColumnEnd) {
     return CounterMappingRegion(Counter(), FileID, 0, LineStart, ColumnStart,
                                 LineEnd, ColumnEnd, SkippedRegion);
+  }
+
+  static CounterMappingRegion
+  makeGapRegion(Counter Count, unsigned FileID, unsigned LineStart,
+                unsigned ColumnStart, unsigned LineEnd, unsigned ColumnEnd) {
+    return CounterMappingRegion(Count, FileID, 0, LineStart, ColumnStart,
+                                LineEnd, (1U << 31) | ColumnEnd, GapRegion);
   }
 
   inline LineColPair startLoc() const {
@@ -377,19 +388,23 @@ struct CoverageSegment {
   bool HasCount;
   /// Whether this enters a new region or returns to a previous count.
   bool IsRegionEntry;
+  /// Whether this enters a gap region.
+  bool IsGapRegion;
 
   CoverageSegment(unsigned Line, unsigned Col, bool IsRegionEntry)
       : Line(Line), Col(Col), Count(0), HasCount(false),
-        IsRegionEntry(IsRegionEntry) {}
+        IsRegionEntry(IsRegionEntry), IsGapRegion(false) {}
 
   CoverageSegment(unsigned Line, unsigned Col, uint64_t Count,
-                  bool IsRegionEntry)
+                  bool IsRegionEntry, bool IsGapRegion = false)
       : Line(Line), Col(Col), Count(Count), HasCount(true),
-        IsRegionEntry(IsRegionEntry) {}
+        IsRegionEntry(IsRegionEntry), IsGapRegion(IsGapRegion) {}
 
   friend bool operator==(const CoverageSegment &L, const CoverageSegment &R) {
-    return std::tie(L.Line, L.Col, L.Count, L.HasCount, L.IsRegionEntry) ==
-           std::tie(R.Line, R.Col, R.Count, R.HasCount, R.IsRegionEntry);
+    return std::tie(L.Line, L.Col, L.Count, L.HasCount, L.IsRegionEntry,
+                    L.IsGapRegion) == std::tie(R.Line, R.Col, R.Count,
+                                               R.HasCount, R.IsRegionEntry,
+                                               R.IsGapRegion);
   }
 };
 
@@ -660,7 +675,10 @@ enum CovMapVersion {
   // name string pointer to MD5 to support name section compression. Name
   // section is also compressed.
   Version2 = 1,
-  // The current version is Version2
+  // A new interpretation of the columnEnd field is added in order to mark
+  // regions as gap areas.
+  Version3 = 2,
+  // The current version is Version3
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

@@ -171,6 +171,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
     Counter Count = Minimizer.adjust(I->Count);
     switch (I->Kind) {
     case CounterMappingRegion::CodeRegion:
+    case CounterMappingRegion::GapRegion:
       writeCounter(MinExpressions, Count, OS);
       break;
     case CounterMappingRegion::ExpansionRegion: {
