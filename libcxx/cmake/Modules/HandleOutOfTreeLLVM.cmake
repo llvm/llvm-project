@@ -106,11 +106,6 @@ macro(configure_out_of_tree_llvm)
     set(LLVM_ENABLE_SPHINX OFF)
   endif()
 
-  # In a standalone build, we don't have llvm to automatically generate the
-  # llvm-lit script for us.  So we need to provide an explicit directory that
-  # the configurator should write the script into.
-  set(LLVM_LIT_OUTPUT_DIR "${libcxx_BINARY_DIR}/bin")
-
   # Required LIT Configuration ------------------------------------------------
   # Define the default arguments to use with 'lit', and an option for the user
   # to override.
