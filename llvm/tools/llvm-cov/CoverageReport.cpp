@@ -306,7 +306,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
-      FunctionCoverageSummary Function = FunctionCoverageSummary::get(F);
+      auto Function = FunctionCoverageSummary::get(Coverage, F);
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
@@ -332,7 +332,7 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     for (const auto &Group : Coverage.getInstantiationGroups(Filename)) {
       std::vector<FunctionCoverageSummary> InstantiationSummaries;
       for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
-        auto InstantiationSummary = FunctionCoverageSummary::get(*F);
+        auto InstantiationSummary = FunctionCoverageSummary::get(Coverage, *F);
         Summary.addInstantiation(InstantiationSummary);
         Totals.addInstantiation(InstantiationSummary);
         InstantiationSummaries.push_back(InstantiationSummary);
