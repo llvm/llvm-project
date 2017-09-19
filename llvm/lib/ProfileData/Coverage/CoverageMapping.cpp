@@ -320,7 +320,7 @@ class SegmentBuilder {
 
   /// Emit a segment with the count from \p Region starting at \p StartLoc.
   //
-  /// \p IsRegionEntry: The segment is at the start of a new region.
+  /// \p IsRegionEntry: The segment is at the start of a new non-gap region.
   /// \p EmitSkippedRegion: The segment must be emitted as a skipped region.
   void startSegment(const CountedRegion &Region, LineColPair StartLoc,
                     bool IsRegionEntry, bool EmitSkippedRegion = false) {
@@ -337,7 +337,8 @@ class SegmentBuilder {
 
     if (HasCount)
       Segments.emplace_back(StartLoc.first, StartLoc.second,
-                            Region.ExecutionCount, IsRegionEntry);
+                            Region.ExecutionCount, IsRegionEntry,
+                            Region.Kind == CounterMappingRegion::GapRegion);
     else
       Segments.emplace_back(StartLoc.first, StartLoc.second, IsRegionEntry);
 
@@ -346,7 +347,8 @@ class SegmentBuilder {
       dbgs() << "Segment at " << Last.Line << ":" << Last.Col
              << " (count = " << Last.Count << ")"
              << (Last.IsRegionEntry ? ", RegionEntry" : "")
-             << (!Last.HasCount ? ", Skipped" : "") << "\n";
+             << (!Last.HasCount ? ", Skipped" : "")
+             << (Last.IsGapRegion ? ", Gap" : "") << "\n";
     });
   }
 
@@ -419,20 +421,22 @@ class SegmentBuilder {
         completeRegionsUntil(CurStartLoc, FirstCompletedRegion);
       }
 
+      bool GapRegion = CR.value().Kind == CounterMappingRegion::GapRegion;
+
       // Try to emit a segment for the current region.
       if (CurStartLoc == CR.value().endLoc()) {
         // Avoid making zero-length regions active. If it's the last region,
         // emit a skipped segment. Otherwise use its predecessor's count.
         const bool Skipped = (CR.index() + 1) == Regions.size();
         startSegment(ActiveRegions.empty() ? CR.value() : *ActiveRegions.back(),
-                     CurStartLoc, true, Skipped);
+                     CurStartLoc, !GapRegion, Skipped);
         continue;
       }
       if (CR.index() + 1 == Regions.size() ||
           CurStartLoc != Regions[CR.index() + 1].startLoc()) {
         // Emit a segment if the next region doesn't start at the same location
         // as this one.
-        startSegment(CR.value(), CurStartLoc, true);
+        startSegment(CR.value(), CurStartLoc, !GapRegion);
       }
 
       // This region is active (i.e not completed).

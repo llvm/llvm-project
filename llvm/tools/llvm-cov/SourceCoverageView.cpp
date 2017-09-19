@@ -89,7 +89,7 @@ LineCoverageStats::LineCoverageStats(
   // Find the minimum number of regions which start in this line.
   unsigned MinRegionCount = 0;
   auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
-    return S->HasCount && S->IsRegionEntry;
+    return !S->IsGapRegion && S->HasCount && S->IsRegionEntry;
   };
   for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)
     if (isStartOfRegion(LineSegments[I]))
@@ -112,16 +112,19 @@ LineCoverageStats::LineCoverageStats(
   // avoid erroneously using the wrapped count, and to avoid picking region
   // counts which come from deferred regions.
   if (LineSegments.size() > 1) {
-    for (unsigned I = 0; I < LineSegments.size() - 1; ++I)
-      ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
+    for (unsigned I = 0; I < LineSegments.size() - 1; ++I) {
+      if (!LineSegments[I]->IsGapRegion)
+        ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
+    }
     return;
   }
 
-  // Just pick the maximum count.
-  if (WrappedSegment && WrappedSegment->HasCount)
+  // If a non-gap region starts here, use its count. Otherwise use the wrapped
+  // count.
+  if (MinRegionCount == 1)
+    ExecutionCount = LineSegments[0]->Count;
+  else
     ExecutionCount = WrappedSegment->Count;
-  if (!LineSegments.empty())
-    ExecutionCount = std::max(ExecutionCount, LineSegments[0]->Count);
 }
 
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
