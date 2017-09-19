@@ -22,6 +22,7 @@
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -174,6 +175,8 @@ namespace options {
   static std::string thinlto_object_suffix_replace;
   // Optional path to a directory for caching ThinLTO objects.
   static std::string cache_dir;
+  // Optional pruning policy for ThinLTO caches.
+  static std::string cache_policy;
   // Additional options to pass into the code generator.
   // Note: This array will contain all plugin options which are not claimed
   // as plugin exclusive to pass to the code generator.
@@ -222,6 +225,8 @@ namespace options {
                 "thinlto-object-suffix-replace expects 'old;new' format");
     } else if (opt.startswith("cache-dir=")) {
       cache_dir = opt.substr(strlen("cache-dir="));
+    } else if (opt.startswith("cache-policy=")) {
+      cache_policy = opt.substr(strlen("cache-policy="));
     } else if (opt.size() == 2 && opt[0] == 'O') {
       if (opt[1] < '0' || opt[1] > '3')
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
@@ -969,6 +974,12 @@ static ld_plugin_status cleanup_hook(void) {
     if (EC)
       message(LDPL_ERROR, "Failed to delete '%s': %s", Name.c_str(),
               EC.message().c_str());
+  }
+
+  // Prune cache
+  if (!options::cache_policy.empty()) {
+    CachePruningPolicy policy = check(parseCachePruningPolicy(options::cache_policy));
+    pruneCache(options::cache_dir, policy);
   }
 
   return LDPS_OK;

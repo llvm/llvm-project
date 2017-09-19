@@ -2457,12 +2457,12 @@ declare <4 x i64> @llvm.x86.avx2.vperm2i128(<4 x i64>, <4 x i64>, i8) nounwind r
 define <4 x i64> @test_mm256_permute4x64_epi64(<4 x i64> %a0) {
 ; X32-LABEL: test_mm256_permute4x64_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,2,0]
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,2,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_permute4x64_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,2,0]
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,2,0]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 0, i32 2, i32 0>
   ret <4 x i64> %res
@@ -2485,12 +2485,12 @@ define <4 x double> @test_mm256_permute4x64_pd(<4 x double> %a0) {
 define <4 x i64> @test_mm256_permutevar8x32_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_permutevar8x32_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; X32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_permutevar8x32_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; X64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>

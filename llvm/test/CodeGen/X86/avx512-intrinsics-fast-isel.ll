@@ -482,12 +482,12 @@ define <16 x float> @test_mm512_maskz_permute_ps(i16 %a0, <16 x float> %a1) {
 define <8 x i64> @test_mm512_permutex_epi64(<8 x i64> %a0) {
 ; X32-LABEL: test_mm512_permutex_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_permutex_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
 ; X64-NEXT:    retq
   %res = shufflevector <8 x i64> %a0, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
   ret <8 x i64> %res

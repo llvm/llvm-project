@@ -1187,6 +1187,13 @@ function(configure_lit_site_cfg input output)
   endif()
 endfunction()
 
+function(dump_all_cmake_variables)
+  get_cmake_property(_variableNames VARIABLES)
+  foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+  endforeach()
+endfunction()
+
 function(get_llvm_lit_path base_dir file_name)
   cmake_parse_arguments(ARG "ALLOW_EXTERNAL" "" "" ${ARGN})
 

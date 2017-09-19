@@ -654,12 +654,12 @@ define <8 x i64> @combine_permvar_as_vpbroadcastq512(<8 x i64> %x0) {
 define <8 x i64> @combine_permvar_8i64_as_permq(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_permvar_8i64_as_permq:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
+; X32-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permvar_8i64_as_permq:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
 ; X64-NEXT:    retq
   %1 = call <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>, <8 x i64> %x1, i8 -1)
   ret <8 x i64> %1
@@ -941,13 +941,13 @@ define <32 x i16> @combine_vpermi2var_32i16_identity(<32 x i16> %x0, <32 x i16> 
 define <8 x double> @combine_vpermi2var_8f64_as_vpermpd(<8 x double> %x0, <8 x double> %x1) {
 ; X32-LABEL: combine_vpermi2var_8f64_as_vpermpd:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovapd {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
+; X32-NEXT:    vmovaps {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
 ; X32-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermi2var_8f64_as_vpermpd:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovapd {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
+; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
 ; X64-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; X64-NEXT:    retq
   %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 7, i64 6, i64 5, i64 4>, <8 x double> %x1, i8 -1)
@@ -958,14 +958,14 @@ define <8 x double> @combine_vpermi2var_8f64_as_vpermpd(<8 x double> %x0, <8 x d
 define <8 x i64> @combine_vpermt2var_8i64_as_vpermq(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_vpermt2var_8i64_as_vpermq:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X32-NEXT:    vmovaps {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
+; X32-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_8i64_as_vpermq:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
-; X64-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [7,6,5,4,3,2,1,0]
+; X64-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; X64-NEXT:    retq
   %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 3, i64 2, i64 1, i64 0, i64 7, i64 6, i64 5, i64 4>, <8 x i64> %x0, <8 x i64> %x1, i8 -1)
   %res1 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 12, i64 5, i64 14, i64 7, i64 8, i64 1, i64 10, i64 3>, <8 x i64> %res0, <8 x i64> %res0, i8 -1)
@@ -992,14 +992,14 @@ define <16 x float> @combine_vpermi2var_16f32_as_vpermps(<16 x float> %x0, <16 x
 define <16 x i32> @combine_vpermt2var_16i32_as_vpermd(<16 x i32> %x0, <16 x i32> %x1) {
 ; X32-LABEL: combine_vpermt2var_16i32_as_vpermd:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
-; X32-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; X32-NEXT:    vmovaps {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
+; X32-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_16i32_as_vpermd:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
-; X64-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vmovaps {{.*#+}} zmm1 = [7,7,5,5,3,3,1,1,15,15,13,13,11,11,9,9]
+; X64-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; X64-NEXT:    retq
   %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>, <16 x i32> %x0, <16 x i32> %x1, i16 -1)
   %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>, <16 x i32> %res0, <16 x i32> %res0, i16 -1)

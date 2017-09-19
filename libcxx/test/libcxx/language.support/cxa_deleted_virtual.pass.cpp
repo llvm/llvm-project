@@ -11,5 +11,8 @@
 
 // Test exporting the symbol: "__cxa_deleted_virtual" in macosx
 
-struct S { virtual void f() = delete; };
-int main() { new S; }
+struct S { virtual void f() = delete; virtual ~S() {} };
+int main() {
+  S *s = new S;
+  delete s;
+}
