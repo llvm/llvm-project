@@ -770,7 +770,13 @@ struct CounterCoverageMappingBuilder
     Counter ExitCount = propagateCounts(getRegionCounter(Body), Body);
     assert(RegionStack.empty() && "Regions entered but never exited");
 
-    // Complete any deferred regions introduced by the last statement in a decl.
+    // Special case: if the last statement is a return, throw away the
+    // deferred region. This allows the closing brace to have a count.
+    if (auto *CS = dyn_cast_or_null<CompoundStmt>(Body))
+      if (dyn_cast_or_null<ReturnStmt>(CS->body_back()))
+        DeferredRegion = None;
+
+    // Complete any deferred regions introduced by the last statement.
     popRegions(completeDeferred(ExitCount, getEnd(Body)));
   }
 
