@@ -141,10 +141,12 @@ Cache Pruning
 -------------
 
 To help keep the size of the cache under control, ThinLTO supports cache
-pruning. Cache pruning is supported with ld64 and ELF and COFF lld, but
-currently only ELF and COFF lld allow you to control the policy with a
+pruning. Cache pruning is supported with gold, ld64 and ELF and COFF lld, but
+currently only gold, ELF and COFF lld allow you to control the policy with a
 policy string. The cache policy must be specified with a linker option.
 
+- gold (as of LLVM 6.0):
+  ``-Wl,-plugin-opt,cache-policy=POLICY``
 - ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-policy,POLICY``
 - COFF lld-link (as of LLVM 6.0):

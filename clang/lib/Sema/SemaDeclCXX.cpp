@@ -12439,7 +12439,8 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       assert(Pattern && "We must have set the Pattern!");
     }
 
-    if (InstantiateInClassInitializer(Loc, Field, Pattern,
+    if (!Pattern->hasInClassInitializer() ||
+        InstantiateInClassInitializer(Loc, Field, Pattern,
                                       getTemplateInstantiationArgs(Field))) {
       // Don't diagnose this again.
       Field->setInvalidDecl();

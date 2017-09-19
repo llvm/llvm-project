@@ -51,7 +51,7 @@ static cl::opt<bool>
                  cl::desc("Analyze array contents for load forwarding"),
                  cl::cat(PollyCategory), cl::init(true), cl::Hidden);
 
-static cl::opt<unsigned long>
+static cl::opt<unsigned>
     MaxOps("polly-optree-max-ops",
            cl::desc("Maximum number of ISL operations to invest for known "
                     "analysis; 0=no limit"),
@@ -266,7 +266,6 @@ public:
 
       computeCommon();
       Known = computeKnown(true, true);
-      simplify(Known);
 
       // Preexisting ValInsts use the known content analysis of themselves.
       Translator = makeIdentityMap(Known.range(), false);
