@@ -1015,8 +1015,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // producing a shared library.
   // We also need one if any shared libraries are used and for pie executables
   // (probably because the dynamic linker needs it).
-  Config->HasDynSymTab = !SharedFile<ELFT>::Instances.empty() || Config->Pic ||
-                         Config->ExportDynamic;
+  Config->HasDynSymTab =
+      !SharedFiles.empty() || Config->Pic || Config->ExportDynamic;
 
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
@@ -1064,11 +1064,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
   // Aggregate all input sections into one place.
-  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances)
+  for (InputFile *F : ObjectFiles)
     for (InputSectionBase *S : F->getSections())
       if (S && S != &InputSection::Discarded)
         InputSections.push_back(S);
-  for (BinaryFile *F : BinaryFile::Instances)
+  for (BinaryFile *F : BinaryFiles)
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 

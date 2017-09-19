@@ -59,8 +59,8 @@ public:
 };
 
 struct CieRecord {
-  EhSectionPiece *Piece = nullptr;
-  std::vector<EhSectionPiece *> FdePieces;
+  EhSectionPiece *Cie = nullptr;
+  std::vector<EhSectionPiece *> Fdes;
 };
 
 // Section for .eh_frame.
@@ -100,7 +100,7 @@ private:
 
   uint64_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  std::vector<CieRecord *> Cies;
+  std::vector<CieRecord *> CieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;

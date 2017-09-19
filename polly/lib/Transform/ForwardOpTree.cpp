@@ -131,6 +131,9 @@ enum ForwardingDecision {
 /// statements. The simplification pass can clean these up.
 class ForwardOpTreeImpl : ZoneAlgorithm {
 private:
+  /// Scope guard to limit the number of isl operations for this pass.
+  IslMaxOperationsGuard &MaxOpGuard;
+
   /// How many instructions have been copied to other statements.
   int NumInstructionsCopied = 0;
 
@@ -248,8 +251,8 @@ private:
   }
 
 public:
-  ForwardOpTreeImpl(Scop *S, LoopInfo *LI)
-      : ZoneAlgorithm("polly-optree", S, LI) {}
+  ForwardOpTreeImpl(Scop *S, LoopInfo *LI, IslMaxOperationsGuard &MaxOpGuard)
+      : ZoneAlgorithm("polly-optree", S, LI), MaxOpGuard(MaxOpGuard) {}
 
   /// Compute the zones of known array element contents.
   ///
@@ -260,9 +263,8 @@ public:
     // Check that nothing strange occurs.
     collectCompatibleElts();
 
-    isl_ctx_reset_error(IslCtx.get());
     {
-      IslMaxOperationsGuard MaxOpGuard(IslCtx.get(), MaxOps);
+      IslQuotaScope QuotaScope = MaxOpGuard.enter();
 
       computeCommon();
       Known = computeKnown(true, true);
@@ -273,7 +275,6 @@ public:
 
     if (!Known || !Translator) {
       assert(isl_ctx_last_error(IslCtx.get()) == isl_error_quota);
-      KnownOutOfQuota++;
       Known = nullptr;
       Translator = nullptr;
       DEBUG(dbgs() << "Known analysis exceeded max_operations\n");
@@ -402,7 +403,8 @@ public:
                                       Loop *DefLoop, isl::map DefToTarget,
                                       bool DoIt) {
     // Cannot do anything without successful known analysis.
-    if (Known.is_null())
+    if (Known.is_null() || Translator.is_null() || UseToTarget.is_null() ||
+        DefToTarget.is_null() || MaxOpGuard.hasQuotaExceeded())
       return FD_NotApplicable;
 
     LoadInst *LI = dyn_cast<LoadInst>(Inst);
@@ -444,6 +446,8 @@ public:
     default:
       llvm_unreachable("Shouldn't return this");
     }
+
+    IslQuotaScope QuotaScope = MaxOpGuard.enter(!DoIt);
 
     // { DomainDef[] -> ValInst[] }
     isl::map ExpectedVal = makeValInst(Inst, UseStmt, UseLoop);
@@ -699,6 +703,8 @@ public:
       DefLoop = LI->getLoopFor(Inst->getParent());
 
       if (DefToTarget.is_null() && !Known.is_null()) {
+        IslQuotaScope QuotaScope = MaxOpGuard.enter(!DoIt);
+
         // { UseDomain[] -> DefDomain[] }
         isl::map UseToDef = computeUseToDefFlowDependency(UseStmt, DefStmt);
 
@@ -846,15 +852,25 @@ public:
     releaseMemory();
 
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    Impl = llvm::make_unique<ForwardOpTreeImpl>(&S, &LI);
 
-    if (AnalyzeKnown) {
-      DEBUG(dbgs() << "Prepare forwarders...\n");
-      Impl->computeKnownValues();
+    {
+      IslMaxOperationsGuard MaxOpGuard(S.getIslCtx(), MaxOps, false);
+      Impl = llvm::make_unique<ForwardOpTreeImpl>(&S, &LI, MaxOpGuard);
+
+      if (AnalyzeKnown) {
+        DEBUG(dbgs() << "Prepare forwarders...\n");
+        Impl->computeKnownValues();
+      }
+
+      DEBUG(dbgs() << "Forwarding operand trees...\n");
+      Impl->forwardOperandTrees();
+
+      if (MaxOpGuard.hasQuotaExceeded()) {
+        DEBUG(dbgs() << "Not all operations completed because of "
+                        "max_operations exceeded\n");
+        KnownOutOfQuota++;
+      }
     }
-
-    DEBUG(dbgs() << "Forwarding operand trees...\n");
-    Impl->forwardOperandTrees();
 
     DEBUG(dbgs() << "\nFinal Scop:\n");
     DEBUG(dbgs() << S);
