@@ -95,7 +95,7 @@ define void @foo() {
 ; X64-LABEL: foo:
 ; X64:       # BB#0: # %bb
 ; X64-NEXT:    movzwl {{.*}}(%rip), %ecx
-; X64-NEXT:    movw {{.*}}(%rip), %ax
+; X64-NEXT:    movzwl {{.*}}(%rip), %eax
 ; X64-NEXT:    xorw %cx, %ax
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    movzwl %ax, %eax
@@ -119,7 +119,7 @@ define void @foo() {
 ; 686-NEXT:    andl $-8, %esp
 ; 686-NEXT:    subl $8, %esp
 ; 686-NEXT:    movzwl var_27, %ecx
-; 686-NEXT:    movw var_22, %ax
+; 686-NEXT:    movzwl var_22, %eax
 ; 686-NEXT:    xorw %cx, %ax
 ; 686-NEXT:    xorl %ecx, %eax
 ; 686-NEXT:    movzwl %ax, %eax

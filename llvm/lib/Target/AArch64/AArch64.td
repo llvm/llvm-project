@@ -215,6 +215,7 @@ def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
 
 def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    "Cortex-A55 ARM processors", [
+                                   HasV8_2aOps,
                                    FeatureCrypto,
                                    FeatureFPARMv8,
                                    FeatureFuseAES,
@@ -262,6 +263,7 @@ def ProcA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
 
 def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    "Cortex-A75 ARM processors", [
+                                   HasV8_2aOps,
                                    FeatureCrypto,
                                    FeatureFPARMv8,
                                    FeatureFuseAES,

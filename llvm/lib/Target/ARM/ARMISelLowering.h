@@ -308,7 +308,8 @@ class InstrItineraryData;
                             bool MemcpyStrSrc,
                             MachineFunction &MF) const override;
 
-    using TargetLowering::isZExtFree;
+    bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+    bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isVectorLoadExtDesirable(SDValue ExtVal) const override;

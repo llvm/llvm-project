@@ -1,7 +1,7 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                              %run %t 2>&1
-// RUN: SCUDO_OPTIONS=DeallocationTypeMismatch=0     %run %t 2>&1
-// RUN: SCUDO_OPTIONS=DeallocationTypeMismatch=1 not %run %t 2>&1 | FileCheck %s
+// RUN:                                                %run %t 2>&1
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=0     %run %t 2>&1
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t 2>&1 | FileCheck %s
 
 // Tests that the options can be passed using getScudoDefaultOptions, and that
 // the environment ones take precedence over them.

@@ -12,7 +12,7 @@ define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movw $1, %ax
-; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # BB#1: # %cond.false.i
 ; CHECK-NEXT:    movl $g_4, %eax

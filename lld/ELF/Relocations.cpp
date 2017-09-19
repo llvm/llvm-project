@@ -765,7 +765,7 @@ public:
     if (P.empty())
       return Off;
 
-    while (I != Size && P[I].InputOff + P[I].size() <= Off)
+    while (I != Size && P[I].InputOff + P[I].Size <= Off)
       ++I;
     if (I == Size)
       return Off;

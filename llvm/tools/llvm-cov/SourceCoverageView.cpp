@@ -89,7 +89,7 @@ LineCoverageStats::LineCoverageStats(
   // Find the minimum number of regions which start in this line.
   unsigned MinRegionCount = 0;
   auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
-    return S->HasCount && S->IsRegionEntry;
+    return !S->IsGapRegion && S->HasCount && S->IsRegionEntry;
   };
   for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)
     if (isStartOfRegion(LineSegments[I]))
@@ -112,35 +112,32 @@ LineCoverageStats::LineCoverageStats(
   // avoid erroneously using the wrapped count, and to avoid picking region
   // counts which come from deferred regions.
   if (LineSegments.size() > 1) {
-    for (unsigned I = 0; I < LineSegments.size() - 1; ++I)
-      ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
+    for (unsigned I = 0; I < LineSegments.size() - 1; ++I) {
+      if (!LineSegments[I]->IsGapRegion)
+        ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
+    }
     return;
   }
 
-  // Just pick the maximum count.
-  if (WrappedSegment && WrappedSegment->HasCount)
+  // If a non-gap region starts here, use its count. Otherwise use the wrapped
+  // count.
+  if (MinRegionCount == 1)
+    ExecutionCount = LineSegments[0]->Count;
+  else
     ExecutionCount = WrappedSegment->Count;
-  if (!LineSegments.empty())
-    ExecutionCount = std::max(ExecutionCount, LineSegments[0]->Count);
 }
 
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
-  auto CheckIfUncovered = [](const coverage::CoverageSegment &S) {
-    return S.HasCount && S.Count == 0;
-  };
-  // L is less than R if (1) it's an uncovered segment (has a 0 count), and (2)
-  // either R is not an uncovered segment, or L has a lower line number than R.
   const auto MinSegIt =
-      std::min_element(CoverageInfo.begin(), CoverageInfo.end(),
-                       [CheckIfUncovered](const coverage::CoverageSegment &L,
-                                          const coverage::CoverageSegment &R) {
-                         return (CheckIfUncovered(L) &&
-                                 (!CheckIfUncovered(R) || (L.Line < R.Line)));
-                       });
-  if (CheckIfUncovered(*MinSegIt))
-    return (*MinSegIt).Line;
+      find_if(CoverageInfo, [](const coverage::CoverageSegment &S) {
+        return S.HasCount && S.Count == 0;
+      });
+
   // There is no uncovered line, return zero.
-  return 0;
+  if (MinSegIt == CoverageInfo.end())
+    return 0;
+
+  return (*MinSegIt).Line;
 }
 
 std::string SourceCoverageView::formatCount(uint64_t N) {
