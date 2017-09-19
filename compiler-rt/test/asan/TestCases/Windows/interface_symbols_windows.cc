@@ -39,6 +39,7 @@
 // IMPORT: __asan_unhandled_exception_filter
 // IMPORT: __asan_test_only_reported_buggy_pointer
 // IMPORT: __sancov_lowest_stack
+// IMPORT: __ubsan_vptr_type_cache
 //
 // RUN: cat %t.imports1 %t.imports2 %t.imports3 | sort | uniq > %t.imports-sorted
 // RUN: cat %t.exports | sort | uniq > %t.exports-sorted
