@@ -1,10 +1,10 @@
 // RUN: %clang_scudo %s -o %t
-// RUN: SCUDO_OPTIONS="QuarantineSizeMb=1:QuarantineSizeKb=64"           not %run %t unused 2>&1
-// RUN: SCUDO_OPTIONS="QuarantineSizeMb=1:QuarantineChunksUpToSize=256"  not %run %t unused 2>&1
-// RUN: SCUDO_OPTIONS="QuarantineSizeKb=0:ThreadLocalQuarantineSizeKb=0"     %run %t zeroquarantine 2>&1
-// RUN: SCUDO_OPTIONS=QuarantineSizeKb=64                                    %run %t smallquarantine 2>&1
-// RUN: SCUDO_OPTIONS=QuarantineChunksUpToSize=256                           %run %t threshold 2>&1
-// RUN: SCUDO_OPTIONS="QuarantineSizeMb=1"                                   %run %t oldquarantine 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeMb=1:QuarantineSizeKb=64"           not %run %t unused 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeMb=1:QuarantineChunksUpToSize=256"  not %run %t unused 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeKb=0:ThreadLocalQuarantineSizeKb=0"     %run %t zeroquarantine 2>&1
+// RUN: %env_scudo_opts=QuarantineSizeKb=64                                    %run %t smallquarantine 2>&1
+// RUN: %env_scudo_opts=QuarantineChunksUpToSize=256                           %run %t threshold 2>&1
+// RUN: %env_scudo_opts="QuarantineSizeMb=1"                                   %run %t oldquarantine 2>&1
 
 // Tests that the quarantine prevents a chunk from being reused right away.
 // Also tests that a chunk will eventually become available again for

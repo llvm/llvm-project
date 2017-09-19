@@ -1,13 +1,13 @@
 // RUN: %clang_scudo %s -lstdc++ -o %t
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=1     %run %t malloc 2>&1
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=1     %run %t calloc 2>&1
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=0 not %run %t new 2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=1 not %run %t new 2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=allocator_may_return_null=1     %run %t new-nothrow 2>&1
-// RUN:                                               %run %t usable 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t malloc 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t calloc 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=1 not %run %t new 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1
+// RUN:                                                 %run %t usable 2>&1
 
 // Tests for various edge cases related to sizes, notably the maximum size the
 // allocator can allocate. Tests that an integer overflow in the parameters of

@@ -4,6 +4,10 @@
 // Verifies that calling malloc in a preinit_array function succeeds, and that
 // the resulting pointer can be freed at program termination.
 
+// On some Android versions, calling mmap() from a preinit function segfaults.
+// It looks like __mmap2.S ends up calling a NULL function pointer.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
