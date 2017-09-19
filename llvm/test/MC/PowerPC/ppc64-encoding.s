@@ -460,6 +460,38 @@
 # CHECK-LE: mulhwu. 2, 3, 4                 # encoding: [0x17,0x20,0x43,0x7c]
             mulhwu. 2, 3, 4
 
+# CHECK-BE: maddhd 2, 3, 4, 5               # encoding: [0x10,0x43,0x21,0x70]
+# CHECK-LE: maddhd 2, 3, 4, 5               # encoding: [0x70,0x21,0x43,0x10]
+            maddhd 2, 3, 4, 5
+
+# CHECK-BE: maddhdu 2, 3, 4, 5              # encoding: [0x10,0x43,0x21,0x71]
+# CHECK-LE: maddhdu 2, 3, 4, 5              # encoding: [0x71,0x21,0x43,0x10]
+            maddhdu 2, 3, 4, 5
+
+# CHECK-BE: maddld 2, 3, 4, 5               # encoding: [0x10,0x43,0x21,0x73]
+# CHECK-LE: maddld 2, 3, 4, 5               # encoding: [0x73,0x21,0x43,0x10]
+            maddld 2, 3, 4, 5
+
+# CHECK-BE: setb 2, 3                       # encoding: [0x7c,0x4c,0x01,0x00]
+# CHECK-LE: setb 2, 3                       # encoding: [0x00,0x01,0x4c,0x7c]
+            setb 2, 3
+
+# CHECK-BE: darn 2, 3                       # encoding: [0x7c,0x43,0x05,0xe6]
+# CHECK-LE: darn 2, 3                       # encoding: [0xe6,0x05,0x43,0x7c]
+            darn 2, 3
+
+# CHECK-BE: addpcis 3, 22627                # encoding: [0x4c,0x71,0x58,0x45]
+# CHECK-LE: addpcis 3, 22627                # encoding: [0x45,0x58,0x71,0x4c]
+            addpcis 3, 22627
+
+# CHECK-BE: addpcis 3, 22627                # encoding: [0x4c,0x71,0x58,0x45]
+# CHECK-LE: addpcis 3, 22627                # encoding: [0x45,0x58,0x71,0x4c]
+            subpcis 3, -22627
+
+# CHECK-BE: lnia 3                          # encoding: [0x4c,0x60,0x00,0x04]
+# CHECK-LE: lnia 3                          # encoding: [0x04,0x00,0x60,0x4c]
+            lnia 3
+
 # CHECK-BE: divw 2, 3, 4                    # encoding: [0x7c,0x43,0x23,0xd6]
 # CHECK-LE: divw 2, 3, 4                    # encoding: [0xd6,0x23,0x43,0x7c]
             divw 2, 3, 4

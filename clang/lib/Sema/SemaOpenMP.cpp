@@ -10510,9 +10510,14 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
         if (!CurContext->isDependentContext() &&
             DSAStack->getParentOrderedRegionParam() &&
             DepCounter != DSAStack->isParentLoopControlVariable(D).first) {
-          Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration)
-              << DSAStack->getParentLoopControlVariable(
-                     DepCounter.getZExtValue());
+          ValueDecl* VD = DSAStack->getParentLoopControlVariable(
+              DepCounter.getZExtValue());
+          if (VD) {
+            Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration)
+                << 1 << VD;
+          } else {
+             Diag(ELoc, diag::err_omp_depend_sink_expected_loop_iteration) << 0;
+          }
           continue;
         }
         OpsOffs.push_back({RHS, OOK});
@@ -10545,8 +10550,9 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
 
     if (!CurContext->isDependentContext() && DepKind == OMPC_DEPEND_sink &&
         TotalDepCount > VarList.size() &&
-        DSAStack->getParentOrderedRegionParam()) {
-      Diag(EndLoc, diag::err_omp_depend_sink_expected_loop_iteration)
+        DSAStack->getParentOrderedRegionParam() &&
+        DSAStack->getParentLoopControlVariable(VarList.size() + 1)) {
+      Diag(EndLoc, diag::err_omp_depend_sink_expected_loop_iteration) << 1
           << DSAStack->getParentLoopControlVariable(VarList.size() + 1);
     }
     if (DepKind != OMPC_DEPEND_source && DepKind != OMPC_DEPEND_sink &&

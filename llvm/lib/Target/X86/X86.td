@@ -602,8 +602,7 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureFastVectorFSQRT
 ]>;
 
-// FIXME: define SKL model
-class SkylakeClientProc<string Name> : ProcModel<Name, HaswellModel,
+class SkylakeClientProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKLFeatures.Value, [
     ProcIntelSKL
   ]>;
@@ -641,7 +640,7 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 ]>;
 
 // FIXME: define SKX model
-class SkylakeServerProc<string Name> : ProcModel<Name, HaswellModel,
+class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKXFeatures.Value, [
     ProcIntelSKX
   ]>;

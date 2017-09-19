@@ -165,9 +165,12 @@ DWARFUnitIndex::Entry::getOffset() const {
 const DWARFUnitIndex::Entry *
 DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
   for (uint32_t i = 0; i != Header.NumBuckets; ++i)
-    if (const auto &Contribs = Rows[i].Contributions)
-      if (Contribs[InfoColumn].Offset == Offset)
+    if (const auto &Contribs = Rows[i].Contributions) {
+      const auto &InfoContrib = Contribs[InfoColumn];
+      if (InfoContrib.Offset <= Offset &&
+          Offset < (InfoContrib.Offset + InfoContrib.Length))
         return &Rows[i];
+    }
   return nullptr;
 }
 

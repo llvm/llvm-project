@@ -2026,18 +2026,17 @@ _mm512_maskz_mov_epi8 (__mmask64 __U, __m512i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi8 (__m512i __O, __mmask64 __M, char __A)
 {
-  return (__m512i) __builtin_ia32_pbroadcastb512_gpr_mask (__A,
-                 (__v64qi) __O,
-                 __M);
+  return (__m512i) __builtin_ia32_selectb_512(__M,
+                                              (__v64qi)_mm512_set1_epi8(__A),
+                                              (__v64qi) __O);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_set1_epi8 (__mmask64 __M, char __A)
 {
-  return (__m512i) __builtin_ia32_pbroadcastb512_gpr_mask (__A,
-                 (__v64qi)
-                 _mm512_setzero_qi(),
-                 __M);
+  return (__m512i) __builtin_ia32_selectb_512(__M,
+                                              (__v64qi) _mm512_set1_epi8(__A),
+                                              (__v64qi) _mm512_setzero_si512());
 }
 
 static __inline__ __mmask64 __DEFAULT_FN_ATTRS
@@ -2217,17 +2216,17 @@ _mm512_maskz_broadcastb_epi8 (__mmask64 __M, __m128i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi16 (__m512i __O, __mmask32 __M, short __A)
 {
-  return (__m512i) __builtin_ia32_pbroadcastw512_gpr_mask (__A,
-                 (__v32hi) __O,
-                 __M);
+  return (__m512i) __builtin_ia32_selectw_512(__M,
+                                              (__v32hi) _mm512_set1_epi16(__A),
+                                              (__v32hi) __O);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_set1_epi16 (__mmask32 __M, short __A)
 {
-  return (__m512i) __builtin_ia32_pbroadcastw512_gpr_mask (__A,
-                 (__v32hi) _mm512_setzero_hi(),
-                 __M);
+  return (__m512i) __builtin_ia32_selectw_512(__M,
+                                              (__v32hi) _mm512_set1_epi16(__A),
+                                              (__v32hi) _mm512_setzero_si512());
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

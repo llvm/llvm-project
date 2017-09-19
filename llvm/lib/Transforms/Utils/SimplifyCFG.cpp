@@ -5191,8 +5191,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // string and lookup indices into that.
 
   // Ignore switches with less than three cases. Lookup tables will not make
-  // them
-  // faster, so we don't analyze them.
+  // them faster, so we don't analyze them.
   if (SI->getNumCases() < 3)
     return false;
 
@@ -5310,15 +5309,14 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Builder.SetInsertPoint(LookupBB);
 
   if (NeedMask) {
-    // Before doing the lookup we do the hole check.
-    // The LookupBB is therefore re-purposed to do the hole check
-    // and we create a new LookupBB.
+    // Before doing the lookup, we do the hole check. The LookupBB is therefore
+    // re-purposed to do the hole check, and we create a new LookupBB.
     BasicBlock *MaskBB = LookupBB;
     MaskBB->setName("switch.hole_check");
     LookupBB = BasicBlock::Create(Mod.getContext(), "switch.lookup",
                                   CommonDest->getParent(), CommonDest);
 
-    // Make the mask's bitwidth at least 8bit and a power-of-2 to avoid
+    // Make the mask's bitwidth at least 8-bit and a power-of-2 to avoid
     // unnecessary illegal types.
     uint64_t TableSizePowOf2 = NextPowerOf2(std::max(7ULL, TableSize - 1ULL));
     APInt MaskInt(TableSizePowOf2, 0);
@@ -5348,7 +5346,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
-    // We cached PHINodes in PHIs, to avoid accessing deleted PHINodes later,
+    // We cached PHINodes in PHIs. To avoid accessing deleted PHINodes later,
     // do not delete PHINodes here.
     SI->getDefaultDest()->removePredecessor(SI->getParent(),
                                             /*DontDeleteUselessPHIs=*/true);
@@ -5419,14 +5417,14 @@ static bool isSwitchDense(ArrayRef<int64_t> Values) {
   return NumCases * 100 >= Range * MinDensity;
 }
 
-// Try and transform a switch that has "holes" in it to a contiguous sequence
-// of cases.
-//
-// A switch such as: switch(i) {case 5: case 9: case 13: case 17:} can be
-// range-reduced to: switch ((i-5) / 4) {case 0: case 1: case 2: case 3:}.
-//
-// This converts a sparse switch into a dense switch which allows better
-// lowering and could also allow transforming into a lookup table.
+/// Try to transform a switch that has "holes" in it to a contiguous sequence
+/// of cases.
+///
+/// A switch such as: switch(i) {case 5: case 9: case 13: case 17:} can be
+/// range-reduced to: switch ((i-5) / 4) {case 0: case 1: case 2: case 3:}.
+///
+/// This converts a sparse switch into a dense switch which allows better
+/// lowering and could also allow transforming into a lookup table.
 static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
                               const DataLayout &DL,
                               const TargetTransformInfo &TTI) {
@@ -5552,11 +5550,11 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (ForwardSwitchConditionToPHI(SI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
-  // The conversion from switch to lookup tables results in difficult
-  // to analyze code and makes pruning branches much harder.
-  // This is a problem of the switch expression itself can still be
-  // restricted as a result of inlining or CVP. There only apply this
-  // transformation during late steps of the optimisation chain.
+  // The conversion from switch to lookup tables results in difficult-to-analyze
+  // code and makes pruning branches much harder. This is a problem if the
+  // switch expression itself can still be restricted as a result of inlining or
+  // CVP. Therefore, only apply this transformation during late stages of the
+  // optimisation pipeline.
   if (LateSimplifyCFG && SwitchToLookupTable(SI, Builder, DL, TTI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
@@ -5690,8 +5688,8 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
     return true;
 
   // If the Terminator is the only non-phi instruction, simplify the block.
-  // if LoopHeader is provided, check if the block or its successor is a loop
-  // header (This is for early invocations before loop simplify and
+  // If LoopHeader is provided, check if the block or its successor is a loop
+  // header. (This is for early invocations before loop simplify and
   // vectorization to keep canonical loop forms for nested loops. These blocks
   // can be eliminated when the pass is invoked later in the back-end.)
   bool NeedCanonicalLoop =
@@ -5702,8 +5700,8 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB))
     return true;
 
-  // If the only instruction in the block is a seteq/setne comparison
-  // against a constant, try to simplify the block.
+  // If the only instruction in the block is a seteq/setne comparison against a
+  // constant, try to simplify the block.
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(I))
     if (ICI->isEquality() && isa<ConstantInt>(ICI->getOperand(1))) {
       for (++I; isa<DbgInfoIntrinsic>(I); ++I)

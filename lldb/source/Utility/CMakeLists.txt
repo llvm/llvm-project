@@ -29,7 +29,6 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   StringList.cpp
   StructuredData.cpp
-  TaskPool.cpp
   TildeExpressionResolver.cpp
   Timer.cpp
   UserID.cpp

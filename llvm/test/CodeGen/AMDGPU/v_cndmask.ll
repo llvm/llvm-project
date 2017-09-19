@@ -122,7 +122,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(float addrspace(1)*
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k1_vgprZ_f32:
 ; GCN-DAG: {{buffer|flat}}_load_dword [[Z:v[0-9]+]]
 ; GCN-DAG: s_load_dword [[X:s[0-9]+]]
-; GCN: v_cmp_nlg_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], [[X]], 0
+; GCN-DAG: v_cmp_nlg_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], [[X]], 0
 ; GCN: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, 1.0, [[Z]], [[COND]]
 define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(float addrspace(1)* %out, float %x, float addrspace(1)* %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1

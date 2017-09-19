@@ -241,25 +241,10 @@ static void sortSections(InputSection **Begin, InputSection **End,
     std::stable_sort(Begin, End, getComparator(K));
 }
 
-static llvm::DenseMap<SectionBase *, int> getSectionOrder() {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return buildSectionOrder<ELF32LE>();
-  case ELF32BEKind:
-    return buildSectionOrder<ELF32BE>();
-  case ELF64LEKind:
-    return buildSectionOrder<ELF64LE>();
-  case ELF64BEKind:
-    return buildSectionOrder<ELF64BE>();
-  default:
-    llvm_unreachable("unknown ELF type");
-  }
-}
-
 static void sortBySymbolOrder(InputSection **Begin, InputSection **End) {
   if (Config->SymbolOrderingFile.empty())
     return;
-  static llvm::DenseMap<SectionBase *, int> Order = getSectionOrder();
+  static llvm::DenseMap<SectionBase *, int> Order = buildSectionOrder();
   MutableArrayRef<InputSection *> In(Begin, End - Begin);
   sortByOrder(In, [&](InputSectionBase *S) { return Order.lookup(S); });
 }

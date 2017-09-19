@@ -270,3 +270,22 @@ define <4 x i32> @ashr_mask7_v4i32(<4 x i32> %a0) {
   %2 = and <4 x i32> %1, <i32 7, i32 7, i32 7, i32 7>
   ret <4 x i32> %2
 }
+
+;
+; SimplifyDemandedBits
+;
+
+; PR34620 - redundant PAND after vector shift of a byte vector (PSRLW)
+define <16 x i8> @PR34620(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: PR34620:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    psrlw $1, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddb %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %1 = lshr <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %2 = and <16 x i8> %1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %3 = add <16 x i8> %2, %a1
+  ret <16 x i8> %3
+}
