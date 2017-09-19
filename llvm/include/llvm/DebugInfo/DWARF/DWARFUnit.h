@@ -188,7 +188,8 @@ class DWARFUnit {
 
   uint32_t Offset;
   uint32_t Length;
-  const DWARFAbbreviationDeclarationSet *Abbrevs;
+  mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
+  uint64_t AbbrOffset;
   uint8_t UnitType;
   llvm::Optional<BaseAddress> BaseAddr;
   /// The compile unit debug information entry items.
@@ -280,9 +281,7 @@ public:
     return FormParams.getDwarfOffsetByteSize();
   }
 
-  const DWARFAbbreviationDeclarationSet *getAbbreviations() const {
-    return Abbrevs;
-  }
+  const DWARFAbbreviationDeclarationSet *getAbbreviations() const;
 
   uint8_t getUnitType() const { return UnitType; }
 
