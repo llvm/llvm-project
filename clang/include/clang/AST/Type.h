@@ -3791,10 +3791,9 @@ public:
     return reinterpret_cast<RecordDecl*>(TagType::getDecl());
   }
 
-  // FIXME: This predicate is a helper to QualType/Type. It needs to
-  // recursively check all fields for const-ness. If any field is declared
-  // const, it needs to return false.
-  bool hasConstFields() const { return false; }
+  /// Recursively check all fields in the record for const-ness. If any field
+  /// is declared const, return true. Otherwise, return false.
+  bool hasConstFields() const;
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
