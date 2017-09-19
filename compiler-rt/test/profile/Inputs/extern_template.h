@@ -3,7 +3,7 @@ template <typename T> struct Test {
   void doIt(int N) { // CHECK: [[@LINE]]| 2|  void doIt
     if (N > 10) {    // CHECK: [[@LINE]]| 2|    if (N > 10) {
       M += 2;        // CHECK: [[@LINE]]| 1|      M += 2;
-    } else           // CHECK: [[@LINE]]| 2|    } else
+    } else           // CHECK: [[@LINE]]| 1|    } else
       M -= 2;        // CHECK: [[@LINE]]| 1|      M -= 2;
   }
   T M;
