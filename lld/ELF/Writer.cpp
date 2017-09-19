@@ -1044,6 +1044,17 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
       llvm::make_reverse_iterator(I), llvm::make_reverse_iterator(B),
       [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); });
   I = J.base();
+
+  // As a special case, if the orphan section is the last section, put
+  // it at the very end, past any other commands.
+  // This matches bfd's behavior and is convenient when the linker script fully
+  // specifies the start of the file, but doesn't care about the end (the non
+  // alloc sections for example).
+  auto NextSec = std::find_if(
+      I, E, [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); });
+  if (NextSec == E)
+    return E;
+
   while (I != E && shouldSkip(*I))
     ++I;
   return I;
