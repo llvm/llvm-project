@@ -16,7 +16,7 @@ define i32 @PR32420() {
 ; CHECK-NEXT:    shll $12, %ecx
 ; CHECK-NEXT:    sarw $12, %cx
 ; CHECK-NEXT:    movq _b@{{.*}}(%rip), %rdx
-; CHECK-NEXT:    movw %cx, %si
+; CHECK-NEXT:    movl %ecx, %esi
 ; CHECK-NEXT:    orw (%rdx), %si
 ; CHECK-NEXT:    andl %ecx, %esi
 ; CHECK-NEXT:    movw %si, (%rdx)

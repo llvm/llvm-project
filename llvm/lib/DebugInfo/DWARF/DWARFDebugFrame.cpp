@@ -188,10 +188,16 @@ void FrameEntry::parseInstructions(DataExtractor Data, uint32_t *Offset,
           break;
         }
         case DW_CFA_def_cfa_expression:
+          // FIXME: Parse the actual instruction.
+          *Offset += Data.getULEB128(Offset);
+          break;
         case DW_CFA_expression:
-        case DW_CFA_val_expression:
-          // TODO: implement this
-          report_fatal_error("Values with expressions not implemented yet!");
+        case DW_CFA_val_expression: {
+          // FIXME: Parse the actual instruction.
+          Data.getULEB128(Offset);
+          *Offset += Data.getULEB128(Offset);
+          break;
+        }
       }
     }
   }

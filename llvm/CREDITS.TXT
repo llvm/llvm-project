@@ -43,6 +43,10 @@ N: Neil Booth
 E: neil@daikokuya.co.uk
 D: APFloat implementation.
 
+N: Alex Bradbury
+E: asb@lowrisc.org
+D: RISC-V backend
+
 N: Misha Brukman
 E: brukman+llvm@uiuc.edu
 W: http://misha.brukman.net

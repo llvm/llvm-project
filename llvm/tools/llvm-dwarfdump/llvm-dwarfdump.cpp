@@ -122,6 +122,8 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
+static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
+                                 aliasopt(DumpDebugFrame));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
@@ -129,9 +131,15 @@ static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<Offset> option"));
+                      "printing with the =<offset> option"));
 static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
                                aliasopt(ShowChildren));
+static opt<bool>
+    ShowParents("show-parents",
+                desc("Show a debug info entry's parents when selectively "
+                     "printing with the =<offset> option"));
+static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
+                              aliasopt(ShowParents));
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"));
@@ -160,6 +168,7 @@ static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.ShowChildren = ShowChildren;
+  DumpOpts.ShowParents = ShowParents;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
   return DumpOpts;
@@ -186,7 +195,7 @@ static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, DumpType, getDumpOpts());
+  bool Result = DICtx->verify(stream, getDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -343,11 +352,9 @@ int main(int argc, char **argv) {
           return handleFile(Object, verifyObjectFile);
         }))
       exit(1);
-  } else {
-    std::for_each(Objects.begin(), Objects.end(), [](std::string Object) {
+  } else
+    for (auto Object : Objects)
       handleFile(Object, dumpObjectFile);
-    });
-  }
 
   return EXIT_SUCCESS;
 }

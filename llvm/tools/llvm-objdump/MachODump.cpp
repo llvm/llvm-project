@@ -1279,7 +1279,6 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;
-    DumpOpts.DumpEH = true;
     DICtx->dump(outs(), DumpOpts);
   }
 }
@@ -5833,7 +5832,7 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
     mtime = nullptr;
     name = nullptr;
     for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr; 
+      const char *val = nullptr;
       xar_prop_get(xf, key, &val);
 #if 0 // Useful for debugging.
       outs() << "key: " << key << " value: " << val << "\n";
@@ -6023,7 +6022,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
     member_type = NULL;
     member_size_string = NULL;
     for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr; 
+      const char *val = nullptr;
       xar_prop_get(xf, key, &val);
 #if 0 // Useful for debugging.
       outs() << "key: " << key << " value: " << val << "\n";

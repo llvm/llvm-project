@@ -86,7 +86,7 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML-INDEX: <td class='column-entry-green'>
 // HTML-INDEX: 100.00% (1/1)
 // HTML-INDEX: <td class='column-entry-yellow'>
-// HTML-INDEX: 80.00% (16/20)
+// HTML-INDEX: 90.00% (18/20)
 // HTML-INDEX: <td class='column-entry-red'>
 // HTML-INDEX: 72.73% (8/11)
 // HTML-INDEX: TOTALS

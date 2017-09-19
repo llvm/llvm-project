@@ -969,12 +969,12 @@ define <8 x float> @test_mm256_maskz_moveldup_ps(i8 %a0, <8 x float> %a1) {
 define <4 x i64> @test_mm256_permutex_epi64(<4 x i64> %a0) {
 ; X32-LABEL: test_mm256_permutex_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_permutex_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,0,0]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
   ret <4 x i64> %res

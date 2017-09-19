@@ -23,7 +23,7 @@ define <2 x i64> @test_mm_broadcastb_epi8(<2 x i64> %a0) {
 define <2 x i64> @test_mm_mask_broadcastb_epi8(<2 x i64> %a0, i16 %a1, <2 x i64> %a2) {
 ; X32-LABEL: test_mm_mask_broadcastb_epi8:
 ; X32:       # BB#0:
-; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    vpbroadcastb %xmm1, %xmm0 {%k1}
 ; X32-NEXT:    retl
@@ -45,7 +45,7 @@ define <2 x i64> @test_mm_mask_broadcastb_epi8(<2 x i64> %a0, i16 %a1, <2 x i64>
 define <2 x i64> @test_mm_maskz_broadcastb_epi8(i16 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_maskz_broadcastb_epi8:
 ; X32:       # BB#0:
-; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    vpbroadcastb %xmm0, %xmm0 {%k1} {z}
 ; X32-NEXT:    retl
@@ -200,7 +200,7 @@ define <4 x i64> @test_mm256_broadcastw_epi16(<2 x i64> %a0) {
 define <4 x i64> @test_mm256_mask_broadcastw_epi16(<4 x i64> %a0, i16 %a1, <2 x i64> %a2) {
 ; X32-LABEL: test_mm256_mask_broadcastw_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    vpbroadcastw %xmm1, %ymm0 {%k1}
 ; X32-NEXT:    retl
@@ -222,7 +222,7 @@ define <4 x i64> @test_mm256_mask_broadcastw_epi16(<4 x i64> %a0, i16 %a1, <2 x 
 define <4 x i64> @test_mm256_maskz_broadcastw_epi16(i16 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm256_maskz_broadcastw_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    vpbroadcastw %xmm0, %ymm0 {%k1} {z}
 ; X32-NEXT:    retl

@@ -10,8 +10,8 @@ declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-LABEL: test_bitreverse_v2i16:
 ; X86:       # BB#0:
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %cx
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    andl $3855, %edx # imm = 0xF0F
@@ -271,7 +271,7 @@ declare i16 @llvm.bitreverse.i16(i16) readnone
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i16:
 ; X86:       # BB#0:
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F

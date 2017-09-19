@@ -99,7 +99,10 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               const MachineInstr &MI) {
   MachineOptimizationRemarkMissed R(PassName, "GISelFailure: ",
                                     MI.getDebugLoc(), MI.getParent());
-  R << Msg << ": " << ore::MNV("Inst", MI);
+  R << Msg;
+  // Printing MI is expensive;  only do it if expensive remarks are enabled.
+  if (MORE.allowExtraAnalysis(PassName))
+    R << ": " << ore::MNV("Inst", MI);
   reportGISelFailure(MF, TPC, MORE, R);
 }
 

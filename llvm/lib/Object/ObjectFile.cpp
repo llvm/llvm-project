@@ -79,6 +79,31 @@ section_iterator ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
   return section_iterator(SectionRef(Sec, this));
 }
 
+Triple ObjectFile::makeTriple() const {
+  Triple TheTriple;
+  auto Arch = getArch();
+  TheTriple.setArch(Triple::ArchType(Arch));
+
+  // For ARM targets, try to use the build attributes to build determine
+  // the build target. Target features are also added, but later during
+  // disassembly.
+  if (Arch == Triple::arm || Arch == Triple::armeb)
+    setARMSubArch(TheTriple);
+
+  // TheTriple defaults to ELF, and COFF doesn't have an environment:
+  // the best we can do here is indicate that it is mach-o.
+  if (isMachO())
+    TheTriple.setObjectFormat(Triple::MachO);
+
+  if (isCOFF()) {
+    const auto COFFObj = dyn_cast<COFFObjectFile>(this);
+    if (COFFObj->getArch() == Triple::thumb)
+      TheTriple.setTriple("thumbv7-windows");
+  }
+
+  return TheTriple;
+}
+
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   StringRef Data = Object.getBuffer();

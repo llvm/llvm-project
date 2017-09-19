@@ -7,6 +7,7 @@ config_map = {}
 
 def map_config(source_dir, site_config):
     global config_map
+    source_dir = os.path.realpath(source_dir)
     source_dir = os.path.normpath(source_dir)
     source_dir = os.path.normcase(source_dir)
     site_config = os.path.normpath(site_config)

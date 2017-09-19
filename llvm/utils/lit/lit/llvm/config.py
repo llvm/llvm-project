@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -38,14 +39,28 @@ class LLVMConfig(object):
         if not self.use_lit_shell:
             features.add('shell')
 
+
+        # Running on Darwin OS
+        if platform.system() in ['Darwin']:
+            # FIXME: lld uses the first, other projects use the second.
+            # We should standardize on the former.
+            features.add('system-linker-mach-o')
+            features.add('system-darwin')
+        elif platform.system() in ['Windows']:
+            # For tests that require Windows to run.
+            features.add('system-windows')
+
         # Native compilation: host arch == default triple arch
-        # FIXME: Consider cases that target can be executed
-        # even if host_triple were different from target_triple.
-        if config.host_triple == config.target_triple:
+        # Both of these values should probably be in every site config (e.g. as
+        # part of the standard header.  But currently they aren't)
+        host_triple = getattr(config, 'host_triple', None)
+        target_triple = getattr(config, 'target_triple', None)
+        if host_triple and host_triple == target_triple:
             features.add("native")
 
         # Sanitizers.
-        sanitizers = frozenset(x.lower() for x in getattr(config, 'llvm_use_sanitizer', []).split(';'))
+        sanitizers = getattr(config, 'llvm_use_sanitizer', '')
+        sanitizers = frozenset(x.lower() for x in sanitizers.split(';'))
         features.add(binary_feature('address' in sanitizers, 'asan', 'not_'))
         features.add(binary_feature('memory' in sanitizers, 'msan', 'not_'))
         features.add(binary_feature('undefined' in sanitizers, 'ubsan', 'not_'))
@@ -58,7 +73,6 @@ class LLVMConfig(object):
         if lit.util.pythonize_bool(long_tests):
             features.add("long_tests")
 
-        target_triple = getattr(config, 'target_triple', None)
         if target_triple:
             if re.match(r'^x86_64.*-linux', target_triple):
                 features.add("x86_64-linux")
@@ -79,20 +93,29 @@ class LLVMConfig(object):
             features.add('abi-breaking-checks')
 
     def with_environment(self, variable, value, append_path = False):
-        if append_path and variable in self.config.environment:
+        if append_path:
+            # For paths, we should be able to take a list of them and process all
+            # of them.
+            paths_to_add = value
+            if lit.util.is_string(paths_to_add):
+                paths_to_add = [paths_to_add]
+
             def norm(x):
                 return os.path.normcase(os.path.normpath(x))
 
-            # Move it to the front if it already exists, otherwise insert it at the
-            # beginning.
-            value = norm(value)
-            current_value = self.config.environment[variable]
-            items = [norm(x) for x in current_value.split(os.path.pathsep)]
-            try:
-                items.remove(value)
-            except ValueError:
-                pass
-            value = os.path.pathsep.join([value] + items)
+            current_paths = self.config.environment.get(variable, "")
+            current_paths = current_paths.split(os.path.pathsep)
+            paths = [norm(p) for p in current_paths]
+            for p in paths_to_add:
+                # Move it to the front if it already exists, otherwise insert it at the
+                # beginning.
+                p = norm(p)
+                try:
+                    paths.remove(p)
+                except ValueError:
+                    pass
+                paths = [p] + paths
+            value = os.pathsep.join(paths)
         self.config.environment[variable] = value
 
 
@@ -104,16 +127,35 @@ class LLVMConfig(object):
             if value:
                 self.with_environment(v, value, append_path)
 
-    def feature_config(self, flag, feature):
-        # Ask llvm-config about assertion mode.
+    def clear_environment(self, variables):
+        for name in variables:
+            if name in self.config.environment:
+                del self.config.environment[name]
+
+    def feature_config(self, features, encoding = 'ascii'):
+        # Ask llvm-config about the specified feature.
+        arguments = [x for (x, _) in features]
         try:
+            config_path = os.path.join(self.config.llvm_tools_dir, 'llvm-config')
+
             llvm_config_cmd = subprocess.Popen(
-                [os.path.join(self.config.llvm_tools_dir, 'llvm-config'), flag],
+                [config_path] + arguments,
                 stdout = subprocess.PIPE,
                 env=self.config.environment)
         except OSError:
             self.lit_config.fatal("Could not find llvm-config in " + self.config.llvm_tools_dir)
 
         output, _ = llvm_config_cmd.communicate()
-        if re.search(r'ON', output.decode('ascii')):
-            self.config.available_features.add(feature)
+        output = output.decode(encoding)
+        lines = output.split('\n')
+        for (feature_line, (_, patterns)) in zip(lines, features):
+            # We should have either a callable or a dictionary.  If it's a
+            # dictionary, grep each key against the output and use the value if
+            # it matches.  If it's a callable, it does the entire translation.
+            if callable(patterns):
+                features_to_add = patterns(feature_line)
+                self.config.available_features.update(features_to_add)
+            else:
+                for (re_pattern, feature) in patterns.items():
+                    if re.search(re_pattern, feature_line):
+                        self.config.available_features.add(feature)

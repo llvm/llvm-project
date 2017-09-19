@@ -527,7 +527,7 @@ void SourceCoverageViewHTML::renderLine(
     const auto *CurSeg = Segments[I];
     if (CurSeg->Col == ExpansionCol)
       Color = "cyan";
-    else if (CheckIfUncovered(CurSeg))
+    else if (!CurSeg->IsGapRegion && CheckIfUncovered(CurSeg))
       Color = "red";
     else
       Color = None;
