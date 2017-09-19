@@ -115,9 +115,9 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   return Name;
 }
 
-template <class ELFT> static bool needsInterpSection() {
-  return !SharedFile<ELFT>::Instances.empty() &&
-         !Config->DynamicLinker.empty() && !Script->ignoreInterpSection();
+static bool needsInterpSection() {
+  return !SharedFiles.empty() && !Config->DynamicLinker.empty() &&
+         !Script->ignoreInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
@@ -273,7 +273,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->updateAlignment(Config->Wordsize);
 
-  if (needsInterpSection<ELFT>()) {
+  if (needsInterpSection()) {
     InX::Interp = createInterpSection();
     Add(InX::Interp);
   } else {
@@ -454,7 +454,8 @@ static bool includeInSymtab(const SymbolBody &B) {
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!InX::SymTab)
     return;
-  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances) {
+  for (InputFile *File : ObjectFiles) {
+    ObjFile<ELFT> *F = cast<ObjFile<ELFT>>(File);
     for (SymbolBody *B : F->getLocalSymbols()) {
       if (!B->IsLocal)
         fatal(toString(F) +
@@ -862,12 +863,12 @@ static void sortCtorsDtors(OutputSection *Cmd) {
 }
 
 // Sort input sections using the list provided by --symbol-ordering-file.
-template <class ELFT> static void sortBySymbolsOrder() {
+static void sortBySymbolsOrder() {
   if (Config->SymbolOrderingFile.empty())
     return;
 
   // Sort sections by priority.
-  DenseMap<SectionBase *, int> SectionOrder = buildSectionOrder<ELFT>();
+  DenseMap<SectionBase *, int> SectionOrder = buildSectionOrder();
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
@@ -897,7 +898,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
                               Old.end());
 
   Script->fabricateDefaultCommands();
-  sortBySymbolsOrder<ELFT>();
+  sortBySymbolsOrder();
   sortInitFini(findSection(".init_array"));
   sortInitFini(findSection(".fini_array"));
   sortCtorsDtors(findSection(".ctors"));

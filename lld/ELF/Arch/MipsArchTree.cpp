@@ -283,8 +283,9 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> Files) {
 
 template <class ELFT> uint32_t elf::getMipsEFlags() {
   std::vector<FileFlags> V;
-  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances)
-    V.push_back({F->getName(), F->getObj().getHeader()->e_flags});
+  for (InputFile *F : ObjectFiles)
+    V.push_back(
+        {F->getName(), cast<ObjFile<ELFT>>(F)->getObj().getHeader()->e_flags});
   if (V.empty())
     return 0;
   checkFlags(V);
