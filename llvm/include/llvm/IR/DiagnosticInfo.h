@@ -438,10 +438,10 @@ public:
       : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Loc),
         PassName(PassName), RemarkName(RemarkName) {}
 
-  DiagnosticInfoOptimizationBase &operator<<(StringRef S);
-  DiagnosticInfoOptimizationBase &operator<<(Argument A);
-  DiagnosticInfoOptimizationBase &operator<<(setIsVerbose V);
-  DiagnosticInfoOptimizationBase &operator<<(setExtraArgs EA);
+  void insert(StringRef S);
+  void insert(Argument A);
+  void insert(setIsVerbose V);
+  void insert(setExtraArgs EA);
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -510,6 +510,81 @@ protected:
 
   friend struct yaml::MappingTraits<DiagnosticInfoOptimizationBase *>;
 };
+
+/// Allow the insertion operator to return the actual remark type rather than a
+/// common base class.  This allows returning the result of the insertion
+/// directly by value, e.g. return OptimizationRemarkAnalysis(...) << "blah".
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               StringRef>::type S) {
+  R.insert(S);
+  return R;
+}
+
+/// Also allow r-value for the remark to allow insertion into a
+/// temporarily-constructed remark.
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &&R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               StringRef>::type S) {
+  R.insert(S);
+  return R;
+}
+
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::Argument>::type A) {
+  R.insert(A);
+  return R;
+}
+
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &&R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::Argument>::type A) {
+  R.insert(A);
+  return R;
+}
+
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::setIsVerbose>::type V) {
+  R.insert(V);
+  return R;
+}
+
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &&R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::setIsVerbose>::type V) {
+  R.insert(V);
+  return R;
+}
+
+template <class RemarkT>
+RemarkT &
+operator<<(RemarkT &R,
+           typename std::enable_if<
+               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
+               DiagnosticInfoOptimizationBase::setExtraArgs>::type EA) {
+  R.insert(EA);
+  return R;
+}
 
 /// \brief Common features for diagnostics dealing with optimization remarks
 /// that are used by IR passes.

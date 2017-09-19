@@ -57,11 +57,14 @@ struct DiagnosticHandler {
   /// to provide different implementation.
   virtual bool isPassedOptRemarkEnabled(StringRef PassName) const;
 
-  /// Return true if any type of remarks are enabled.
+  /// Return true if any type of remarks are enabled for this pass.
   bool isAnyRemarkEnabled(StringRef PassName) const {
     return (isMissedOptRemarkEnabled(PassName) ||
             isPassedOptRemarkEnabled(PassName) ||
             isAnalysisRemarkEnabled(PassName));
   }
+
+  /// Return true if any type of remarks are enabled for any pass.
+  virtual bool isAnyRemarkEnabled() const;
 };
 }

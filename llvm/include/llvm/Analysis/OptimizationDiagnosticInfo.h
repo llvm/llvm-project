@@ -24,7 +24,6 @@
 
 namespace llvm {
 class DebugLoc;
-class LLVMContext;
 class Loop;
 class Pass;
 class Twine;
@@ -73,6 +72,21 @@ public:
   /// This is the new interface that should be now used rather than the legacy
   /// emit* APIs.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
+
+  /// \brief Take a lambda that returns a remark which will be emitted.  Second
+  /// argument is only used to restrict this to functions.
+  template <typename T>
+  void emit(T RemarkBuilder, decltype(RemarkBuilder()) * = nullptr) {
+    // Avoid building the remark unless we know there are at least *some*
+    // remarks enabled. We can't currently check whether remarks are requested
+    // for the calling pass since that requires actually building the remark.
+
+    if (F->getContext().getDiagnosticsOutputFile() ||
+        F->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
+      auto R = RemarkBuilder();
+      emit(R);
+    }
+  }
 
   /// \brief Whether we allow for extra compile-time budget to perform more
   /// analysis to produce fewer false positives.
