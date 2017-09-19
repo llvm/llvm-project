@@ -693,6 +693,18 @@ def DIVDE : XOForm_1<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                      isPPC64, Requires<[HasExtDiv]>;
 
 let Predicates = [IsISA3_0] in {
+def MADDHD : VAForm_1a<48, (outs g8rc :$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
+                       "maddhd $RT, $RA, $RB, $RC", IIC_IntMulHD, []>, isPPC64;
+def MADDHDU : VAForm_1a<49, (outs g8rc :$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
+                       "maddhdu $RT, $RA, $RB, $RC", IIC_IntMulHD, []>, isPPC64;
+def MADDLD : VAForm_1a<51, (outs g8rc :$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
+                       "maddld $RT, $RA, $RB, $RC", IIC_IntMulHD, []>, isPPC64;
+def SETB : XForm_44<31, 128, (outs g8rc:$RT), (ins crrc:$BFA),
+                     "setb $RT, $BFA", IIC_IntGeneral>, isPPC64;
+def DARN : XForm_45<31, 755, (outs g8rc:$RT), (ins i32imm:$L),
+                     "darn $RT, $L", IIC_LdStLD>, isPPC64;
+def ADDPCIS : DXForm<19, 2, (outs g8rc:$RT), (ins i32imm:$D),
+                     "addpcis $RT, $D", IIC_BrB, []>, isPPC64;
 def MODSD : XForm_8<31, 777, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "modsd $rT, $rA, $rB", IIC_IntDivW,
                         [(set i64:$rT, (srem i64:$rA, i64:$rB))]>;

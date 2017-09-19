@@ -53,19 +53,20 @@ namespace clang {
         : CodeGenOpts(CGOpts), BackendCon(BCon) {}
   
     bool handleDiagnostics(const DiagnosticInfo &DI) override;
-    bool isAnalysisRemarkEnable(const std::string &PassName) {
+
+    bool isAnalysisRemarkEnabled(StringRef PassName) const override {
       return (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
               CodeGenOpts.OptimizationRemarkAnalysisPattern->match(PassName));
     }
-    bool isMissedOptRemarkEnable(const std::string &PassName) {
+    bool isMissedOptRemarkEnabled(StringRef PassName) const override {
       return (CodeGenOpts.OptimizationRemarkMissedPattern &&
               CodeGenOpts.OptimizationRemarkMissedPattern->match(PassName));
     }
-    bool isPassedOptRemarkEnable(const std::string &PassName) {
+    bool isPassedOptRemarkEnabled(StringRef PassName) const override {
       return (CodeGenOpts.OptimizationRemarkPattern &&
               CodeGenOpts.OptimizationRemarkPattern->match(PassName));
     }
-  
+
   private:
     const CodeGenOptions &CodeGenOpts;
     BackendConsumer *BackendCon;

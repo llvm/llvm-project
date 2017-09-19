@@ -473,10 +473,12 @@ class DIFile : public DIScope {
   friend class MDNode;
 
 public:
+  // These values must be explictly set, as they end up in the final object
+  // file.
   enum ChecksumKind {
-    CSK_None,
-    CSK_MD5,
-    CSK_SHA1,
+    CSK_None = 0,
+    CSK_MD5 = 1,
+    CSK_SHA1 = 2,
     CSK_Last = CSK_SHA1 // Should be last enumeration.
   };
 
@@ -510,7 +512,7 @@ public:
                              ChecksumKind CSK = CSK_None,
                              StringRef CS = StringRef()),
                     (Filename, Directory, CSK, CS))
-  DEFINE_MDNODE_GET(DIFile, (MDString *Filename, MDString *Directory,
+  DEFINE_MDNODE_GET(DIFile, (MDString * Filename, MDString *Directory,
                              ChecksumKind CSK = CSK_None,
                              MDString *CS = nullptr),
                     (Filename, Directory, CSK, CS))

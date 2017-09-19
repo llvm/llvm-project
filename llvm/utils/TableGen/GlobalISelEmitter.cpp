@@ -2038,9 +2038,11 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
     for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
       TreePatternNode *SrcChild = Src->getChild(i);
 
-      // For G_INTRINSIC, the operand immediately following the defs is an
-      // intrinsic ID.
-      if (SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" && i == 0) {
+      // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
+      // following the defs is an intrinsic ID.
+      if ((SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" ||
+           SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS") &&
+          i == 0) {
         if (const CodeGenIntrinsic *II = Src->getIntrinsicInfo(CGP)) {
           OperandMatcher &OM =
               InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);

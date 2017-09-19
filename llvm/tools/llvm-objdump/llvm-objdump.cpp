@@ -362,29 +362,11 @@ static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   llvm::Triple TheTriple("unknown-unknown-unknown");
   if (TripleName.empty()) {
     if (Obj) {
-      auto Arch = Obj->getArch();
-      TheTriple.setArch(Triple::ArchType(Arch));
-
-      // For ARM targets, try to use the build attributes to build determine
-      // the build target. Target features are also added, but later during
-      // disassembly.
-      if (Arch == Triple::arm || Arch == Triple::armeb) {
-        Obj->setARMSubArch(TheTriple);
-      }
-
-      // TheTriple defaults to ELF, and COFF doesn't have an environment:
-      // the best we can do here is indicate that it is mach-o.
-      if (Obj->isMachO())
-        TheTriple.setObjectFormat(Triple::MachO);
-
-      if (Obj->isCOFF()) {
-        const auto COFFObj = dyn_cast<COFFObjectFile>(Obj);
-        if (COFFObj->getArch() == Triple::thumb)
-          TheTriple.setTriple("thumbv7-windows");
-      }
+      TheTriple = Obj->makeTriple();
     }
   } else {
     TheTriple.setTriple(Triple::normalize(TripleName));
+
     // Use the triple, but also try to combine with ARM build attributes.
     if (Obj) {
       auto Arch = Obj->getArch();

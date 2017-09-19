@@ -96,7 +96,7 @@ private:
   bool parseBracedList(bool ContinueOnSemicolons = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
   void parseParens();
-  void parseSquare();
+  void parseSquare(bool LambdaIntroducer = false);
   void parseIfThenElse();
   void parseTryCatch();
   void parseForOrWhileLoop();

@@ -21,24 +21,168 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <array>
 #include <map>
 #include <set>
 #include <vector>
 
 namespace llvm {
-  class Record;
-  class Init;
-  class ListInit;
-  class DagInit;
-  class SDNodeInfo;
-  class TreePattern;
-  class TreePatternNode;
-  class CodeGenDAGPatterns;
-  class ComplexPattern;
 
-struct TypeSetByHwMode : public InfoByHwMode<std::set<MVT>> {
-  typedef std::set<MVT> SetType;
+class Record;
+class Init;
+class ListInit;
+class DagInit;
+class SDNodeInfo;
+class TreePattern;
+class TreePatternNode;
+class CodeGenDAGPatterns;
+class ComplexPattern;
+
+/// This represents a set of MVTs. Since the underlying type for the MVT
+/// is uint8_t, there are at most 256 values. To reduce the number of memory
+/// allocations and deallocations, represent the set as a sequence of bits.
+/// To reduce the allocations even further, make MachineValueTypeSet own
+/// the storage and use std::array as the bit container.
+struct MachineValueTypeSet {
+  static_assert(std::is_same<std::underlying_type<MVT::SimpleValueType>::type,
+                             uint8_t>::value,
+                "Change uint8_t here to the SimpleValueType's type");
+  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
+  using WordType = uint64_t;
+  static unsigned constexpr WordWidth = 8*sizeof(WordType);
+  static unsigned constexpr NumWords = Capacity/WordWidth;
+  static_assert(NumWords*WordWidth == Capacity,
+                "Capacity should be a multiple of WordWidth");
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  MachineValueTypeSet() {
+    clear();
+  }
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  unsigned size() const {
+    unsigned Count = 0;
+    for (WordType W : Words)
+      Count += countPopulation(W);
+    return Count;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  void clear() {
+    std::memset(Words.data(), 0, NumWords*sizeof(WordType));
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  bool empty() const {
+    for (WordType W : Words)
+      if (W != 0)
+        return false;
+    return true;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  unsigned count(MVT T) const {
+    return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
+  }
+  std::pair<MachineValueTypeSet&,bool> insert(MVT T) {
+    bool V = count(T.SimpleTy);
+    Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
+    return {*this, V};
+  }
+  MachineValueTypeSet &insert(const MachineValueTypeSet &S) {
+    for (unsigned i = 0; i != NumWords; ++i)
+      Words[i] |= S.Words[i];
+    return *this;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  void erase(MVT T) {
+    Words[T.SimpleTy / WordWidth] &= ~(WordType(1) << (T.SimpleTy % WordWidth));
+  }
+
+  struct const_iterator {
+    // Some implementations of the C++ library require these traits to be
+    // defined.
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MVT;
+    using difference_type = ptrdiff_t;
+    using pointer = const MVT*;
+    using reference = const MVT&;
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    MVT operator*() const {
+      assert(Pos != Capacity);
+      return MVT::SimpleValueType(Pos);
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    const_iterator(const MachineValueTypeSet *S, bool End) : Set(S) {
+      Pos = End ? Capacity : find_from_pos(0);
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    const_iterator &operator++() {
+      assert(Pos != Capacity);
+      Pos = find_from_pos(Pos+1);
+      return *this;
+    }
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    bool operator==(const const_iterator &It) const {
+      return Set == It.Set && Pos == It.Pos;
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    bool operator!=(const const_iterator &It) const {
+      return !operator==(It);
+    }
+
+  private:
+    unsigned find_from_pos(unsigned P) const {
+      unsigned SkipWords = P / WordWidth;
+      unsigned SkipBits = P % WordWidth;
+      unsigned Count = SkipWords * WordWidth;
+
+      // If P is in the middle of a word, process it manually here, because
+      // the trailing bits need to be masked off to use findFirstSet.
+      if (SkipBits != 0) {
+        WordType W = Set->Words[SkipWords];
+        W &= maskLeadingOnes<WordType>(WordWidth-SkipBits);
+        if (W != 0)
+          return Count + findFirstSet(W);
+        Count += WordWidth;
+        SkipWords++;
+      }
+
+      for (unsigned i = SkipWords; i != NumWords; ++i) {
+        WordType W = Set->Words[i];
+        if (W != 0)
+          return Count + findFirstSet(W);
+        Count += WordWidth;
+      }
+      return Capacity;
+    }
+
+    const MachineValueTypeSet *Set;
+    unsigned Pos;
+  };
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  const_iterator begin() const { return const_iterator(this, false); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  const_iterator end()   const { return const_iterator(this, true); }
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  bool operator==(const MachineValueTypeSet &S) const {
+    return Words == S.Words;
+  }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  bool operator!=(const MachineValueTypeSet &S) const {
+    return !operator==(S);
+  }
+
+private:
+  friend struct const_iterator;
+  std::array<WordType,NumWords> Words;
+};
+
+struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
+  using SetType = MachineValueTypeSet;
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -56,19 +200,23 @@ struct TypeSetByHwMode : public InfoByHwMode<std::set<MVT>> {
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
   ValueTypeByHwMode getValueTypeByHwMode() const;
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
     return isDefaultOnly() && Map.begin()->second.size() == 1;
   }
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   MVT getMachineValueType() const {
     assert(isMachineValueType());
     return *Map.begin()->second.begin();
   }
 
   bool isPossible() const;
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isDefaultOnly() const {
-    return Map.size() == 1 &&
-           Map.begin()->first == DefaultMode;
+    return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
 
   bool insert(const ValueTypeByHwMode &VVT);
@@ -178,6 +326,10 @@ struct TypeInfer {
 
 private:
   TypeSetByHwMode getLegalTypes();
+
+  /// Cached legal types.
+  bool LegalTypesCached = false;
+  TypeSetByHwMode::SetType LegalCache = {};
 };
 
 /// Set type used to track multiply used variables in patterns

@@ -53,7 +53,7 @@
 
 #include "lldb/Target/Language.h"
 
-#include "lldb/Utility/TaskPool.h"
+#include "lldb/Host/TaskPool.h"
 
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"

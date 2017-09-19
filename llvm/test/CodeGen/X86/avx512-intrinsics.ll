@@ -4171,44 +4171,8 @@ define i8@test_int_x86_avx512_ptestnm_q_512(<8 x i64> %x0, <8 x i64> %x1, i8 %x2
   ret i8 %res2
 }
 
-define <16 x i32>@test_int_x86_avx512_mask_pbroadcastd_gpr_512(i32 %x0, <16 x i32> %x1, i16 %mask) {
-; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcastd_gpr_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpbroadcastd %edi, %zmm1 {%k1} {z}
-; CHECK-NEXT:    vpbroadcastd %edi, %zmm0 {%k1}
-; CHECK-NEXT:    vpbroadcastd %edi, %zmm2
-; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
-; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pbroadcast.d.gpr.512(i32 %x0, <16 x i32> %x1, i16 -1)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.pbroadcast.d.gpr.512(i32 %x0, <16 x i32> %x1, i16 %mask)
-  %res2 = call <16 x i32> @llvm.x86.avx512.mask.pbroadcast.d.gpr.512(i32 %x0, <16 x i32> zeroinitializer, i16 %mask)
-  %res3 = add <16 x i32> %res, %res1
-  %res4 = add <16 x i32> %res2, %res3
-  ret <16 x i32> %res4
-}
 
-declare <16 x i32> @llvm.x86.avx512.mask.pbroadcast.d.gpr.512(i32, <16 x i32>, i16)
 
-define <8 x i64>@test_int_x86_avx512_mask_pbroadcastq_gpr_512(i64 %x0, <8 x i64> %x1, i8 %mask) {
-; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcastq_gpr_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpbroadcastq %rdi, %zmm1 {%k1} {z}
-; CHECK-NEXT:    vpbroadcastq %rdi, %zmm0 {%k1}
-; CHECK-NEXT:    vpbroadcastq %rdi, %zmm2
-; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
-; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.pbroadcast.q.gpr.512(i64 %x0, <8 x i64> %x1,i8 -1)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.pbroadcast.q.gpr.512(i64 %x0, <8 x i64> %x1,i8 %mask)
-  %res2 = call <8 x i64> @llvm.x86.avx512.mask.pbroadcast.q.gpr.512(i64 %x0, <8 x i64> zeroinitializer,i8 %mask)
-  %res3 = add <8 x i64> %res, %res1
-  %res4 = add <8 x i64> %res2, %res3
-  ret <8 x i64> %res4
-}
-declare <8 x i64> @llvm.x86.avx512.mask.pbroadcast.q.gpr.512(i64, <8 x i64>, i8)
 
 declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32)
 

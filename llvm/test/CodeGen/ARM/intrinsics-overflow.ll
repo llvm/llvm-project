@@ -1,4 +1,6 @@
-; RUN: llc < %s -mtriple=arm-linux -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=arm-linux -mcpu=generic -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=ARM
+; RUN: llc < %s -mtriple=thumbv6m-eabi -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=THUMBV6
+; RUN: llc < %s -mtriple=thumbv7-eabi -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=THUMBV7
 
 define i32 @uadd_overflow(i32 %a, i32 %b) #0 {
   %sadd = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
@@ -7,10 +9,19 @@ define i32 @uadd_overflow(i32 %a, i32 %b) #0 {
   ret i32 %2
 
   ; CHECK-LABEL: uadd_overflow:
-  ; CHECK: add r[[R2:[0-9]+]], r[[R0:[0-9]+]], r[[R1:[0-9]+]]
-  ; CHECK: mov r[[R1]], #1
-  ; CHECK: cmp r[[R2]], r[[R0]]
-  ; CHECK: movhs r[[R1]], #0
+
+  ; ARM: adds r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; ARM: mov r[[R2:[0-9]+]], #0
+  ; ARM: adc r[[R0]], r[[R2]], #0
+
+  ; THUMBV6: movs    r[[R2:[0-9]+]], #0
+  ; THUMBV6: adds    r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; THUMBV6: adcs    r[[R2]], r[[R2]]
+  ; THUMBV6: mov     r[[R0]], r[[R2]]
+
+  ; THUMBV7: adds  r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; THUMBV7: mov.w r[[R2:[0-9]+]], #0
+  ; THUMBV7: adc   r[[R0]], r[[R2]], #0
 }
 
 
@@ -21,10 +32,26 @@ define i32 @sadd_overflow(i32 %a, i32 %b) #0 {
   ret i32 %2
 
   ; CHECK-LABEL: sadd_overflow:
-  ; CHECK: add r[[R2:[0-9]+]], r[[R0:[0-9]+]], r[[R1:[0-9]+]]
-  ; CHECK: mov r[[R1]], #1
-  ; CHECK: cmp r[[R2]], r[[R0]]
-  ; CHECK: movvc r[[R1]], #0
+
+  ; ARM: add r[[R2:[0-9]+]], r[[R0:[0-9]+]], r[[R1:[0-9]+]]
+  ; ARM: mov r[[R1]], #1
+  ; ARM: cmp r[[R2]], r[[R0]]
+  ; ARM: movvc r[[R1]], #0
+
+  ; THUMBV6: mov  r[[R2:[0-9]+]], r[[R0:[0-9]+]]
+  ; THUMBV6: adds r[[R3:[0-9]+]], r[[R2]], r[[R1:[0-9]+]]
+  ; THUMBV6: movs r[[R0]], #0
+  ; THUMBV6: movs r[[R1]], #1
+  ; THUMBV6: cmp  r[[R3]], r[[R2]]
+  ; THUMBV6: bvc  .L[[LABEL:.*]]
+  ; THUMBV6: mov  r[[R0]], r[[R1]]
+  ; THUMBV6: .L[[LABEL]]:
+
+  ; THUMBV7: movs  r[[R1]], #1
+  ; THUMBV7: cmp   r[[R2]], r[[R0]]
+  ; THUMBV7: it    vc
+  ; THUMBV7: movvc r[[R1]], #0
+  ; THUMBV7: mov   r[[R0]], r[[R1]]
 }
 
 define i32 @usub_overflow(i32 %a, i32 %b) #0 {
@@ -34,9 +61,26 @@ define i32 @usub_overflow(i32 %a, i32 %b) #0 {
   ret i32 %2
 
   ; CHECK-LABEL: usub_overflow:
-  ; CHECK: mov r[[R2]], #1
-  ; CHECK: cmp r[[R0]], r[[R1]]
-  ; CHECK: movhs r[[R2]], #0
+
+  ; ARM: subs    r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; ARM: mov     r[[R2:[0-9]+]], #0
+  ; ARM: adc     r[[R0]], r[[R2]], #0
+  ; ARM: rsb     r[[R0]], r[[R0]], #1
+
+  ; THUMBV6: movs    r[[R2:[0-9]+]], #0
+  ; THUMBV6: subs    r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; THUMBV6: adcs    r[[R2]], r[[R2]]
+  ; THUMBV6: movs    r[[R0]], #1
+  ; THUMBV6: subs    r[[R0]], r[[R0]], r[[R2]]
+
+  ; THUMBV7: subs    r[[R0:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; THUMBV7: mov.w   r[[R2:[0-9]+]], #0
+  ; THUMBV7: adc     r[[R0]], r[[R2]], #0
+  ; THUMBV7: rsb.w   r[[R0]], r[[R0]], #1
+
+  ; We should know that the overflow is just 1 bit,
+  ; no need to clear any other bit
+  ; CHECK-NOT: and
 }
 
 define i32 @ssub_overflow(i32 %a, i32 %b) #0 {
@@ -46,9 +90,23 @@ define i32 @ssub_overflow(i32 %a, i32 %b) #0 {
   ret i32 %2
 
   ; CHECK-LABEL: ssub_overflow:
-  ; CHECK: mov r[[R2]], #1
-  ; CHECK: cmp r[[R0]], r[[R1]]
-  ; CHECK: movvc r[[R2]], #0
+
+  ; ARM: mov r[[R2]], #1
+  ; ARM: cmp r[[R0]], r[[R1]]
+  ; ARM: movvc r[[R2]], #0
+
+  ; THUMBV6: movs    r[[R0]], #0
+  ; THUMBV6: movs    r[[R3:[0-9]+]], #1
+  ; THUMBV6: cmp     r[[R2]], r[[R1:[0-9]+]]
+  ; THUMBV6: bvc     .L[[LABEL:.*]]
+  ; THUMBV6: mov     r[[R0]], r[[R3]]
+  ; THUMBV6: .L[[LABEL]]:
+
+  ; THUMBV7: movs  r[[R2:[0-9]+]], #1
+  ; THUMBV7: cmp   r[[R0:[0-9]+]], r[[R1:[0-9]+]]
+  ; THUMBV7: it    vc
+  ; THUMBV7: movvc r[[R2]], #0
+  ; THUMBV7: mov   r[[R0]], r[[R2]]
 }
 
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1

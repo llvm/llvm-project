@@ -219,9 +219,9 @@ define amdgpu_kernel void @s_and_32_bit_constant_i64(i64 addrspace(1)* %out, i64
 }
 
 ; FUNC-LABEL: {{^}}s_and_multi_use_inline_imm_i64:
+; SI: s_load_dwordx2
 ; SI: s_load_dword [[A:s[0-9]+]]
 ; SI: s_load_dword [[B:s[0-9]+]]
-; SI: s_load_dwordx2
 ; SI: s_load_dwordx2
 ; SI-NOT: and
 ; SI: s_lshl_b32 [[A]], [[A]], 1

@@ -118,6 +118,12 @@ def G_VAARG : Instruction {
   let mayStore = 1;
 }
 
+def G_BSWAP : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------

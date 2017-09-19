@@ -63,11 +63,11 @@ define amdgpu_kernel void @no_reorder_local_load_volatile_global_store_local_loa
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
 ; CI: buffer_store_dword
 
-; GFX9: global_store_dword
-; GFX9: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:4
+; GFX9-DAG: global_store_dword
+; GFX9-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:4
 ; GFX9: s_barrier
-; GFX9: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
-; GFX9: global_store_dword
+; GFX9-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
+; GFX9-DAG: global_store_dword
 define amdgpu_kernel void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
@@ -256,10 +256,11 @@ define amdgpu_kernel void @reorder_global_offsets(i32 addrspace(1)* nocapture %o
 ; CI: v_mov_b32
 
 ; CI: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; CI-NEXT: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:20{{$}}
 
 ; CI: v_add_i32
 ; CI: v_add_i32
+
+; CI: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:20{{$}}
 
 ; CI: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:36{{$}}
 ; CI-NEXT: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:52{{$}}

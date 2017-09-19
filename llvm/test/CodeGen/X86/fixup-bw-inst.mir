@@ -2,7 +2,6 @@
 
 --- |
   define void @test1() { ret void }
-
   define void @test2() { ret void }
 
   define i16 @test3(i16* readonly %p) {

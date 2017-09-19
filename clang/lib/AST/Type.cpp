@@ -2994,6 +2994,19 @@ bool TagType::isBeingDefined() const {
   return getDecl()->isBeingDefined();
 }
 
+bool RecordType::hasConstFields() const {
+  for (FieldDecl *FD : getDecl()->fields()) {
+    QualType FieldTy = FD->getType();
+    if (FieldTy.isConstQualified())
+      return true;
+    FieldTy = FieldTy.getCanonicalType();
+    if (const RecordType *FieldRecTy = FieldTy->getAs<RecordType>())
+      if (FieldRecTy->hasConstFields())
+        return true;
+  }
+  return false;
+}
+
 bool AttributedType::isQualifier() const {
   switch (getAttrKind()) {
   // These are type qualifiers in the traditional C sense: they annotate

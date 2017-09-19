@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/TaskPool.h"
+#include "lldb/Host/TaskPool.h"
+#include "lldb/Host/ThreadLauncher.h"
 
 #include <cstdint> // for uint32_t
 #include <queue>   // for queue
@@ -22,6 +23,8 @@ public:
 
 private:
   TaskPoolImpl();
+
+  static lldb::thread_result_t WorkerPtr(void *pool);
 
   static void Worker(TaskPoolImpl *pool);
 
@@ -45,6 +48,7 @@ TaskPoolImpl::TaskPoolImpl() : m_thread_count(0) {}
 
 void TaskPoolImpl::AddTask(std::function<void()> &&task_fn) {
   static const uint32_t max_threads = std::thread::hardware_concurrency();
+  const size_t min_stack_size = 8 * 1024 * 1024;
 
   std::unique_lock<std::mutex> lock(m_tasks_mutex);
   m_tasks.emplace(std::move(task_fn));
@@ -54,8 +58,15 @@ void TaskPoolImpl::AddTask(std::function<void()> &&task_fn) {
     // This prevents the thread
     // from exiting prematurely and triggering a linux libc bug
     // (https://sourceware.org/bugzilla/show_bug.cgi?id=19951).
-    std::thread(Worker, this).detach();
+    lldb_private::ThreadLauncher::LaunchThread("task-pool.worker", WorkerPtr,
+                                               this, nullptr, min_stack_size)
+        .Release();
   }
+}
+
+lldb::thread_result_t TaskPoolImpl::WorkerPtr(void *pool) {
+  Worker((TaskPoolImpl *)pool);
+  return 0;
 }
 
 void TaskPoolImpl::Worker(TaskPoolImpl *pool) {

@@ -28,11 +28,11 @@ define <8 x i32> @trunc8i64_8i32(<8 x i64> %a) {
 ;
 ; AVX2-LABEL: trunc8i64_8i32:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,2,3]
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc8i64_8i32:
@@ -701,11 +701,11 @@ define <8 x i32> @trunc2x4i64_8i32(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: trunc2x4i64_8i32:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,2,3]
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc2x4i64_8i32:
