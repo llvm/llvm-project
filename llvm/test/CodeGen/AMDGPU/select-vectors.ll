@@ -215,9 +215,9 @@ define amdgpu_kernel void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> 
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
 ; GCN-DAG: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
 
-; GCN: v_cndmask_b32_e32
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
-; GCN: v_cndmask_b32_e32
+; GCN-DAG: v_cndmask_b32_e32
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
+; GCN-DAG: v_cndmask_b32_e32
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0

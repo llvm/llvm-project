@@ -159,7 +159,14 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
   if (Insertion.second) {
     // We have to compute the full filepath and emit a .cv_file directive.
     StringRef FullPath = getFullFilepath(F);
-    bool Success = OS.EmitCVFileDirective(NextId, FullPath);
+    std::string Checksum = fromHex(F->getChecksum());
+    void *CKMem = OS.getContext().allocate(Checksum.size(), 1);
+    memcpy(CKMem, Checksum.data(), Checksum.size());
+    ArrayRef<uint8_t> ChecksumAsBytes(reinterpret_cast<const uint8_t *>(CKMem),
+                                      Checksum.size());
+    DIFile::ChecksumKind ChecksumKind = F->getChecksumKind();
+    bool Success = OS.EmitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
+                                          static_cast<unsigned>(ChecksumKind));
     (void)Success;
     assert(Success && ".cv_file directive failed");
   }
@@ -681,8 +688,10 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   OS.AddComment("Inlinee lines subsection");
   MCSymbol *InlineEnd = beginCVSubsection(DebugSubsectionKind::InlineeLines);
 
-  // We don't provide any extra file info.
-  // FIXME: Find out if debuggers use this info.
+  // We emit the checksum info for files.  This is used by debuggers to
+  // determine if a pdb matches the source before loading it.  Visual Studio,
+  // for instance, will display a warning that the breakpoints are not valid if
+  // the pdb does not match the source.
   OS.AddComment("Inlinee lines signature");
   OS.EmitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
 
@@ -695,13 +704,10 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     OS.AddComment("Inlined function " + SP->getName() + " starts at " +
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
     OS.AddBlankLine();
-    // The filechecksum table uses 8 byte entries for now, and file ids start at
-    // 1.
-    unsigned FileOffset = (FileId - 1) * 8;
     OS.AddComment("Type index of inlined function");
     OS.EmitIntValue(InlineeIdx.getIndex(), 4);
     OS.AddComment("Offset into filechecksum table");
-    OS.EmitIntValue(FileOffset, 4);
+    OS.EmitCVFileChecksumOffsetDirective(FileId);
     OS.AddComment("Starting line number");
     OS.EmitIntValue(SP->getLine(), 4);
   }

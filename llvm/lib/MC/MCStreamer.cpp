@@ -228,8 +228,11 @@ void MCStreamer::EnsureValidDwarfFrame() {
     report_fatal_error("No open frame");
 }
 
-bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
-  return getContext().getCVContext().addFile(FileNo, Filename);
+bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+                                     ArrayRef<uint8_t> Checksum,
+                                     unsigned ChecksumKind) {
+  return getContext().getCVContext().addFile(*this, FileNo, Filename, Checksum,
+                                             ChecksumKind);
 }
 
 bool MCStreamer::EmitCVFuncIdDirective(unsigned FunctionId) {

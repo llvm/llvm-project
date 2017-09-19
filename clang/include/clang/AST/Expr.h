@@ -275,6 +275,7 @@ public:
     MLV_LValueCast,           // Specialized form of MLV_InvalidExpression.
     MLV_IncompleteType,
     MLV_ConstQualified,
+    MLV_ConstQualifiedField,
     MLV_ConstAddrSpace,
     MLV_ArrayType,
     MLV_NoSetterProperty,
@@ -324,6 +325,7 @@ public:
       CM_LValueCast, // Same as CM_RValue, but indicates GCC cast-as-lvalue ext
       CM_NoSetterProperty,// Implicit assignment to ObjC property without setter
       CM_ConstQualified,
+      CM_ConstQualifiedField,
       CM_ConstAddrSpace,
       CM_ArrayType,
       CM_IncompleteType
@@ -3123,6 +3125,12 @@ public:
   bool isShiftAssignOp() const {
     return isShiftAssignOp(getOpcode());
   }
+
+  // Return true if a binary operator using the specified opcode and operands
+  // would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
+  // integer to a pointer.
+  static bool isNullPointerArithmeticExtension(ASTContext &Ctx, Opcode Opc,
+                                               Expr *LHS, Expr *RHS);
 
   static bool classof(const Stmt *S) {
     return S->getStmtClass() >= firstBinaryOperatorConstant &&

@@ -720,7 +720,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         continue;
       Instruction *DI = I;
       if (!CalledFunction && !PromotedInsns.count(I) &&
-          CallSite(I).isIndirectCall())
+          CallSite(I).isIndirectCall()) {
         for (const auto *FS : findIndirectCallFunctionSamples(*I)) {
           auto CalleeFunctionName = FS->getName();
           // If it is a recursive call, we do not inline it as it could bloat
@@ -751,12 +751,17 @@ bool SampleProfileLoader::inlineHotFunctions(
             continue;
           }
         }
+        // If there is profile mismatch, we should not attempt to inline DI.
+        if (!isa<CallInst>(DI) && !isa<InvokeInst>(DI))
+          continue;
+      }
       if (!CalledFunction || !CalledFunction->getSubprogram()) {
         findCalleeFunctionSamples(*I)->findImportedFunctions(
             ImportGUIDs, F.getParent(),
             Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
         continue;
       }
+      assert(isa<CallInst>(DI) || isa<InvokeInst>(DI));
       CallSite CS(DI);
       DebugLoc DLoc = I->getDebugLoc();
       BasicBlock *BB = I->getParent();

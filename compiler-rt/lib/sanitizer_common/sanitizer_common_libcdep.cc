@@ -147,7 +147,7 @@ void BackgroundThread(void *arg) {
 }
 #endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_FUCHSIA && !SANITIZER_GO
 void StartReportDeadlySignal() {
   // Write the first message using fd=2, just in case.
   // It may actually fail to write in case stderr is closed.
@@ -254,7 +254,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
   else
     ReportDeadlySignalImpl(sig, tid, unwind, unwind_context);
 }
-#endif  // !SANITIZER_GO
+#endif  // !SANITIZER_FUCHSIA && !SANITIZER_GO
 
 void WriteToSyslog(const char *msg) {
   InternalScopedString msg_copy(kErrorMessageBufferSize);

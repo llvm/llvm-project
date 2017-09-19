@@ -270,5 +270,13 @@ int k;
     }
   }
 
+#pragma omp for ordered(2) // expected-note {{as specified in 'ordered' clause}}
+  for (int i = 0; i < 10; ++i) { // expected-error {{expected 2 for loops after '#pragma omp for', but found only 1}}
+#pragma omp ordered depend(sink : i)
+    int j;
+#pragma omp ordered depend(sink : i, j) // expected-error {{expected loop iteration variable}}
+    foo();
+  }
+
   return foo<int>(); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
 }

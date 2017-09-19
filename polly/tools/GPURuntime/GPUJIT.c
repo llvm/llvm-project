@@ -507,21 +507,20 @@ static PollyGPUFunction *getKernelCL(const char *BinaryBuffer,
   cl_int Ret;
 
   if (HandleOpenCLBeignet) {
-    // TODO: This is a workaround, since clCreateProgramWithLLVMIntel only
+    // This is a workaround, since clCreateProgramWithLLVMIntel only
     // accepts a filename to a valid llvm-ir file as an argument, instead
     // of accepting the BinaryBuffer directly.
-    FILE *fp = fopen("kernel.ll", "wb");
-    if (fp != NULL) {
-      fputs(BinaryBuffer, fp);
-      fclose(fp);
-    }
+    char FileName[] = "/tmp/polly_kernelXXXXXX";
+    int File = mkstemp(FileName);
+    write(File, BinaryBuffer, strlen(BinaryBuffer));
 
     ((OpenCLKernel *)Function->Kernel)->Program =
         clCreateProgramWithLLVMIntelFcnPtr(
             ((OpenCLContext *)GlobalContext->Context)->Context, 1,
-            &GlobalDeviceID, "kernel.ll", &Ret);
+            &GlobalDeviceID, FileName, &Ret);
     checkOpenCLError(Ret, "Failed to create program from llvm.\n");
-    unlink("kernel.ll");
+    close(File);
+    unlink(FileName);
   } else {
     size_t BinarySize = strlen(BinaryBuffer);
     ((OpenCLKernel *)Function->Kernel)->Program =

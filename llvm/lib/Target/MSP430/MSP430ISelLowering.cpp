@@ -322,7 +322,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 
   setMinFunctionAlignment(1);
-  setPrefFunctionAlignment(2);
+  setPrefFunctionAlignment(1);
 }
 
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,

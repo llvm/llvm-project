@@ -20,3 +20,6 @@ test_inline_strip_conflict:3000:0
 test_norecursive_inline:3000:0
  1: test_norecursive_inline:3000
   20: 3000
+test_noinline_bitcast:3000:0
+ 1: foo_direct_i32:3000
+  1: 3000

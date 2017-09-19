@@ -40,7 +40,7 @@ define i32 @crc32_32_8(i32 %a0, i8 %a1, i8 *%a2) {
 ; SKYLAKE-LABEL: crc32_32_8:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
-; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
+; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
@@ -96,7 +96,7 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; SKYLAKE-LABEL: crc32_32_16:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; SKYLAKE-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
+; SKYLAKE-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
@@ -152,7 +152,7 @@ define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; SKYLAKE-LABEL: crc32_32_32:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
-; SKYLAKE-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
+; SKYLAKE-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
@@ -208,7 +208,7 @@ define i64 @crc32_64_8(i64 %a0, i8 %a1, i8 *%a2) nounwind {
 ; SKYLAKE-LABEL: crc32_64_8:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
-; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
+; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
@@ -264,7 +264,7 @@ define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; SKYLAKE-LABEL: crc32_64_64:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
-; SKYLAKE-NEXT:    crc32q (%rdx), %rdi # sched: [7:1.00]
+; SKYLAKE-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
@@ -503,9 +503,9 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pcmpistri:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
+; SKYLAKE-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    movl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [11:3.00]
+; SKYLAKE-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; SKYLAKE-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
@@ -562,8 +562,8 @@ define <16 x i8> @test_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pcmpistrm:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
-; SKYLAKE-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [11:3.00]
+; SKYLAKE-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [10:3.00]
+; SKYLAKE-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpistrm:
@@ -611,8 +611,8 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pcmpgtq:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; SKYLAKE-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SKYLAKE-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtq:
@@ -661,8 +661,8 @@ define <2 x i64> @test_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_pclmulqdq:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [11:2.00]
-; SKYLAKE-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
+; SKYLAKE-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_pclmulqdq:

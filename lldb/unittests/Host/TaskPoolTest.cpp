@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "lldb/Utility/TaskPool.h"
+#include "lldb/Host/TaskPool.h"
 
 TEST(TaskPoolTest, AddTask) {
   auto fn = [](int x) { return x * x + 1; };
