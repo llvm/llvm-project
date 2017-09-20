@@ -12,6 +12,10 @@
 
 # CHECK: error: {{.*}}.script:1: unable to evaluate expression: input section .text has no output section assigned
 
+# Simple case that we can handle.
+# RUN: echo "SECTIONS { aaa = ABSOLUTE(foo); .text  : { *(.text*) } }" > %t4.script
+# RUN: ld.lld -o %t --script %t4.script %t.o
+
 .section .text
 .globl foo
 foo:
