@@ -187,6 +187,8 @@ void OutputSection::addChunk(Chunk *C) {
   C->setRVA(Off);
   C->OutputSectionOff = Off;
   Off += C->getSize();
+  if (Off > UINT32_MAX)
+    error("section larger than 4 GiB: " + Name);
   Header.VirtualSize = Off;
   if (C->hasData())
     Header.SizeOfRawData = alignTo(Off, SectorSize);
