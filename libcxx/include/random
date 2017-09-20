@@ -3124,8 +3124,8 @@ public:
 
 private:
     _LIBCPP_INLINE_VISIBILITY
-    result_type __eval(false_type);
-    result_type __eval(true_type);
+    result_type __eval(false_type) const;
+    result_type __eval(true_type) const;
 
     template <size_t __count>
         _LIBCPP_INLINE_VISIBILITY
@@ -3151,14 +3151,14 @@ private:
 template<class _Engine, size_t __w, class _UIntType>
 inline
 _UIntType
-independent_bits_engine<_Engine, __w, _UIntType>::__eval(false_type)
+independent_bits_engine<_Engine, __w, _UIntType>::__eval(false_type) const
 {
     return static_cast<result_type>(__e_() & __mask0);
 }
 
 template<class _Engine, size_t __w, class _UIntType>
 _UIntType
-independent_bits_engine<_Engine, __w, _UIntType>::__eval(true_type)
+independent_bits_engine<_Engine, __w, _UIntType>::__eval(true_type) const
 {
     result_type _Sp = 0;
     for (size_t __k = 0; __k < __n0; ++__k)

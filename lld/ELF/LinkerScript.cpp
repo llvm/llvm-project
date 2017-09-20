@@ -71,6 +71,11 @@ uint64_t ExprValue::getSecAddr() const {
 }
 
 uint64_t ExprValue::getSectionOffset() const {
+  // If the alignment is trivial, we don't have to compute the full
+  // value to know the offset. This allows this function to succeed in
+  // cases where the output section is not yet known.
+  if (Alignment == 1)
+    return Val;
   return getValue() - getSecAddr();
 }
 
@@ -143,6 +148,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   ExprValue V = Cmd->Expression();
   if (V.isAbsolute()) {
     Sym->Value = V.getValue();
+    Sym->Section = nullptr;
   } else {
     Sym->Section = V.Sec;
     Sym->Value = V.getSectionOffset();
