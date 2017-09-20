@@ -352,11 +352,9 @@ int main(int argc, char **argv) {
           return handleFile(Object, verifyObjectFile);
         }))
       exit(1);
-  } else {
-    std::for_each(Objects.begin(), Objects.end(), [](std::string Object) {
+  } else
+    for (auto Object : Objects)
       handleFile(Object, dumpObjectFile);
-    });
-  }
 
   return EXIT_SUCCESS;
 }
