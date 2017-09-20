@@ -39,7 +39,7 @@ int init_capture(T t) {
 }
 
 struct X {
-  template <typename T> X(T);
+  template <typename T> X(T) {}
 };
 struct Y { Y(const X &x = [] {}); };
 

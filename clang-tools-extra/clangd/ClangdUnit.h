@@ -40,6 +40,8 @@ struct CompileCommand;
 
 namespace clangd {
 
+class Logger;
+
 /// A diagnostic with its FixIts.
 struct DiagWithFixIts {
   clangd::Diagnostic Diag;
@@ -57,7 +59,7 @@ public:
         ArrayRef<serialization::DeclID> PreambleDeclIDs,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
-        IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+        IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);
@@ -141,11 +143,11 @@ public:
   // deferRebuild will hold references to it.
   static std::shared_ptr<CppFile>
   Create(PathRef FileName, tooling::CompileCommand Command,
-         std::shared_ptr<PCHContainerOperations> PCHs);
+         std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 private:
   CppFile(PathRef FileName, tooling::CompileCommand Command,
-          std::shared_ptr<PCHContainerOperations> PCHs);
+          std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 public:
   CppFile(CppFile const &) = delete;
@@ -246,6 +248,8 @@ private:
   std::shared_ptr<const PreambleData> LatestAvailablePreamble;
   /// Utility class, required by clang.
   std::shared_ptr<PCHContainerOperations> PCHs;
+  /// Used for logging various messages.
+  clangd::Logger &Logger;
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.
@@ -254,10 +258,11 @@ codeComplete(PathRef FileName, tooling::CompileCommand Command,
              PrecompiledPreamble const *Preamble, StringRef Contents,
              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
              std::shared_ptr<PCHContainerOperations> PCHs,
-             bool SnippetCompletions);
+             bool SnippetCompletions, clangd::Logger &Logger);
 
 /// Get definition of symbol at a specified \p Pos.
-std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos);
+std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
+                                      clangd::Logger &Logger);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

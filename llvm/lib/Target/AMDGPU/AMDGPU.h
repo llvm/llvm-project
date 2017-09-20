@@ -198,6 +198,9 @@ void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
+Pass *createAMDGPUFunctionInliningPass();
+void initializeAMDGPUInlinerPass(PassRegistry&);
+
 Target &getTheAMDGPUTarget();
 Target &getTheGCNTarget();
 

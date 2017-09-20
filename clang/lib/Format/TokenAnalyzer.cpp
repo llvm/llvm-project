@@ -57,8 +57,9 @@ Environment::CreateVirtualEnvironment(StringRef Code, StringRef FileName,
   std::unique_ptr<SourceManager> VirtualSM(
       new SourceManager(*Diagnostics, *FileMgr));
   InMemoryFileSystem->addFile(
-      FileName, 0, llvm::MemoryBuffer::getMemBuffer(
-                       Code, FileName, /*RequiresNullTerminator=*/false));
+      FileName, 0,
+      llvm::MemoryBuffer::getMemBuffer(Code, FileName,
+                                       /*RequiresNullTerminator=*/false));
   FileID ID = VirtualSM->createFileID(FileMgr->getFile(FileName),
                                       SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());

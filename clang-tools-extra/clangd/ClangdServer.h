@@ -36,6 +36,8 @@ class PCHContainerOperations;
 
 namespace clangd {
 
+class Logger;
+
 /// Turn a [line, column] pair into an offset in Code.
 size_t positionToOffset(StringRef Code, Position P);
 
@@ -201,10 +203,12 @@ public:
   /// \p DiagConsumer. Note that a callback to \p DiagConsumer happens on a
   /// worker thread. Therefore, instances of \p DiagConsumer must properly
   /// synchronize access to shared state.
+  ///
+  /// Various messages are logged using \p Logger.
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
-               bool SnippetCompletions,
+               bool SnippetCompletions, clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
@@ -267,6 +271,7 @@ private:
 
   std::future<void> scheduleCancelRebuild(std::shared_ptr<CppFile> Resources);
 
+  clangd::Logger &Logger;
   GlobalCompilationDatabase &CDB;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;

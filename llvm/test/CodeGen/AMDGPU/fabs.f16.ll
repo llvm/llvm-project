@@ -7,7 +7,7 @@
 ; unless isFabsFree returns true
 
 ; GCN-LABEL: {{^}}s_fabs_free_f16:
-; GCN: flat_load_ushort [[VAL:v[0-9]+]],
+; GCN: {{flat|global}}_load_ushort [[VAL:v[0-9]+]],
 ; GCN: v_and_b32_e32 [[RESULT:v[0-9]+]], 0x7fff, [[VAL]]
 ; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 
@@ -75,8 +75,8 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 }
 
 ; GCN-LABEL: {{^}}fabs_fold_f16:
-; GCN: flat_load_ushort [[IN0:v[0-9]+]]
-; GCN: flat_load_ushort [[IN1:v[0-9]+]]
+; GCN: {{flat|global}}_load_ushort [[IN0:v[0-9]+]]
+; GCN: {{flat|global}}_load_ushort [[IN1:v[0-9]+]]
 
 ; CI-DAG: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[IN0]]
 ; CI-DAG: v_cvt_f32_f16_e64 [[ABS_CVT1:v[0-9]+]], |[[IN1]]|

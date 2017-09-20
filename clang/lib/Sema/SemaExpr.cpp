@@ -13897,6 +13897,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
              !LangOpts.GNUInline &&
              !Func->getMostRecentDecl()->hasAttr<GNUInlineAttr>())
       UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
+    else if (isExternalWithNoLinkageType(Func))
+      UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
   }
 
   Func->markUsed(Context);

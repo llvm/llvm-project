@@ -143,7 +143,7 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so
       // we shouldn't try to run any more loop passes on it.
-      LI.markAsRemoved(L);
+      LI.markAsErased(L);
     }
     ++NumExtracted;
   }

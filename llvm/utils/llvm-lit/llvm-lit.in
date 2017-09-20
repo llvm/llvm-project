@@ -3,6 +3,8 @@
 import os
 import sys
 
+sys.dont_write_bytecode = True
+
 config_map = {}
 
 def map_config(source_dir, site_config):
