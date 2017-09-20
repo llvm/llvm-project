@@ -25,7 +25,6 @@ namespace lld {
 namespace elf {
 
 class DefinedCommon;
-class EhInputSection;
 class SymbolBody;
 struct SectionPiece;
 
@@ -263,16 +262,17 @@ private:
 };
 
 struct EhSectionPiece {
-  EhSectionPiece(size_t Off, uint32_t Size, unsigned FirstRelocation)
-      : InputOff(Off), Size(Size), FirstRelocation(FirstRelocation) {
-    assert(Off < UINT32_MAX && Size < UINT32_MAX);
-  }
+  EhSectionPiece(size_t Off, InputSectionBase *Sec, uint32_t Size,
+                 unsigned FirstRelocation)
+      : InputOff(Off), Sec(Sec), Size(Size), FirstRelocation(FirstRelocation) {}
 
-  ArrayRef<uint8_t> data(EhInputSection *Sec);
-  uint32_t InputOff;
-  int32_t OutputOff = -1;
+  ArrayRef<uint8_t> data() { return {Sec->Data.data() + this->InputOff, Size}; }
+
+  size_t InputOff;
+  ssize_t OutputOff = -1;
+  InputSectionBase *Sec;
   uint32_t Size;
-  uint32_t FirstRelocation;
+  unsigned FirstRelocation;
 };
 
 // This corresponds to a .eh_frame section of an input file.
@@ -291,10 +291,6 @@ public:
 
   SyntheticSection *getParent() const;
 };
-
-inline ArrayRef<uint8_t> EhSectionPiece::data(EhInputSection *Sec) {
-  return {Sec->Data.data() + InputOff, Size};
-}
 
 // This is a section that is added directly to an output section
 // instead of needing special combination via a synthetic section. This

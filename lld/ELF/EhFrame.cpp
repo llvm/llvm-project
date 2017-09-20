@@ -153,9 +153,8 @@ template <class ELFT> void EhReader<ELFT>::skipAugP() {
   D = D.slice(Size);
 }
 
-template <class ELFT>
-uint8_t elf::getFdeEncoding(EhInputSection *Sec, EhSectionPiece *Piece) {
-  return EhReader<ELFT>(Sec, Piece->data(Sec)).getFdeEncoding();
+template <class ELFT> uint8_t elf::getFdeEncoding(EhSectionPiece *P) {
+  return EhReader<ELFT>(P->Sec, P->data()).getFdeEncoding();
 }
 
 template <class ELFT> uint8_t EhReader<ELFT>::getFdeEncoding() {
@@ -206,11 +205,7 @@ template size_t elf::readEhRecordSize<ELF32BE>(InputSectionBase *S, size_t Off);
 template size_t elf::readEhRecordSize<ELF64LE>(InputSectionBase *S, size_t Off);
 template size_t elf::readEhRecordSize<ELF64BE>(InputSectionBase *S, size_t Off);
 
-template uint8_t elf::getFdeEncoding<ELF32LE>(EhInputSection *,
-                                              EhSectionPiece *);
-template uint8_t elf::getFdeEncoding<ELF32BE>(EhInputSection *,
-                                              EhSectionPiece *);
-template uint8_t elf::getFdeEncoding<ELF64LE>(EhInputSection *,
-                                              EhSectionPiece *);
-template uint8_t elf::getFdeEncoding<ELF64BE>(EhInputSection *,
-                                              EhSectionPiece *);
+template uint8_t elf::getFdeEncoding<ELF32LE>(EhSectionPiece *P);
+template uint8_t elf::getFdeEncoding<ELF32BE>(EhSectionPiece *P);
+template uint8_t elf::getFdeEncoding<ELF64LE>(EhSectionPiece *P);
+template uint8_t elf::getFdeEncoding<ELF64BE>(EhSectionPiece *P);
