@@ -346,6 +346,10 @@ OPTIONS
 
  Show coverage summaries for each function.
 
+.. option:: -show-instantiation-summary=[VALUE]
+
+ Show statistics for all function instantiations. Defaults to false.
+
 .. program:: llvm-cov export
 
 .. _llvm-cov-export:
