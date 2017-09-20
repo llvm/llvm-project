@@ -38,6 +38,10 @@
 #define POLL poll
 #endif
 
+#ifdef __ANDROID__
+#define FORCE_PSELECT
+#endif
+
 #if SIGNAL_POLLING_UNSUPPORTED
 #ifdef LLVM_ON_WIN32
 typedef int sigset_t;
