@@ -1198,7 +1198,12 @@ function(get_llvm_lit_path base_dir file_name)
   cmake_parse_arguments(ARG "ALLOW_EXTERNAL" "" "" ${ARGN})
 
   if (ARG_ALLOW_EXTERNAL)
+    set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_EXTERNAL_LIT}")
     set (LLVM_EXTERNAL_LIT "" CACHE STRING "Command used to spawn lit")
+    if ("${LLVM_EXTERNAL_LIT}" STREQUAL "")
+      set(LLVM_EXTERNAL_LIT "${LLVM_DEFAULT_EXTERNAL_LIT}")
+    endif()
+
     if (NOT "${LLVM_EXTERNAL_LIT}" STREQUAL "")
       if (EXISTS ${LLVM_EXTERNAL_LIT})
         get_filename_component(LIT_FILE_NAME ${LLVM_EXTERNAL_LIT} NAME)
@@ -1230,9 +1235,7 @@ function(get_llvm_lit_path base_dir file_name)
   elseif(NOT "${LLVM_RUNTIME_OUTPUT_INTDIR}" STREQUAL "")
     set(LLVM_LIT_BASE_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   else()
-    message(WARNING "Could not find suitable output location for llvm-lit."
-                    "Using default ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit")
-    set(LLVM_LIT_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+    set(LLVM_LIT_BASE_DIR "")
   endif()
 
   # Cache this so we don't have to do it again and have subsequent calls

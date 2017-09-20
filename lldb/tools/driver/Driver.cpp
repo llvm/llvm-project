@@ -9,6 +9,7 @@
 
 #include "Driver.h"
 
+#include <atomic>
 #include <csignal>
 #include <fcntl.h>
 #include <limits.h>
@@ -1177,17 +1178,16 @@ void sigwinch_handler(int signo) {
 }
 
 void sigint_handler(int signo) {
-  static bool g_interrupt_sent = false;
+  static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver) {
-    if (!g_interrupt_sent) {
-      g_interrupt_sent = true;
+    if (!g_interrupt_sent.test_and_set()) {
       g_driver->GetDebugger().DispatchInputInterrupt();
-      g_interrupt_sent = false;
+      g_interrupt_sent.clear();
       return;
     }
   }
 
-  exit(signo);
+  _exit(signo);
 }
 
 void sigtstp_handler(int signo) {

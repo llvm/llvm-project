@@ -20,6 +20,7 @@
 #include "CodeGenTarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -222,11 +223,11 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   bool insert(const ValueTypeByHwMode &VVT);
   bool constrain(const TypeSetByHwMode &VTS);
   template <typename Predicate> bool constrain(Predicate P);
-  template <typename Predicate> bool assign_if(const TypeSetByHwMode &VTS,
-                                               Predicate P);
+  template <typename Predicate>
+  bool assign_if(const TypeSetByHwMode &VTS, Predicate P);
 
-  std::string getAsString() const;
-  static std::string getAsString(const SetType &S);
+  void writeToStream(raw_ostream &OS) const;
+  static void writeToStream(const SetType &S, raw_ostream &OS);
 
   bool operator==(const TypeSetByHwMode &VTS) const;
   bool operator!=(const TypeSetByHwMode &VTS) const { return !(*this == VTS); }
@@ -333,7 +334,7 @@ private:
 };
 
 /// Set type used to track multiply used variables in patterns
-typedef std::set<std::string> MultipleUseVarSet;
+typedef StringSet<> MultipleUseVarSet;
 
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
