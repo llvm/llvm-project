@@ -464,12 +464,11 @@ void DWARFContext::dump(
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  parseDWOCompileUnits();
+  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection(), true);
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
-      if (auto CUOff = R->getOffset(DW_SECT_INFO))
-        return DWOCUs.getUnitForOffset(CUOff->Offset);
+      return DWOCUs.getUnitForIndexEntry(*R);
     return nullptr;
   }
 

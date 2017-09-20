@@ -47,10 +47,11 @@ public:
   /// Returns the Unit that contains the given section offset in the
   /// same section this Unit originated from.
   virtual DWARFUnit *getUnitForOffset(uint32_t Offset) const = 0;
+  virtual DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) = 0;
 
   void parse(DWARFContext &C, const DWARFSection &Section);
   void parseDWO(DWARFContext &C, const DWARFSection &DWOSection,
-                DWARFUnitIndex *Index = nullptr);
+                bool Lazy = false);
 
 protected:
   ~DWARFUnitSectionBase() = default;
@@ -59,7 +60,7 @@ protected:
                          const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                          StringRef SS, const DWARFSection &SOS,
                          const DWARFSection *AOS, const DWARFSection &LS,
-                         bool isLittleEndian, bool isDWO) = 0;
+                         bool isLittleEndian, bool isDWO, bool Lazy) = 0;
 };
 
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
@@ -70,6 +71,7 @@ template<typename UnitType>
 class DWARFUnitSection final : public SmallVector<std::unique_ptr<UnitType>, 1>,
                                public DWARFUnitSectionBase {
   bool Parsed = false;
+  std::function<std::unique_ptr<UnitType>(uint32_t)> Parser;
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<UnitType>>;
@@ -82,29 +84,76 @@ public:
         [](uint32_t LHS, const std::unique_ptr<UnitType> &RHS) {
           return LHS < RHS->getNextUnitOffset();
         });
-    if (CU != this->end())
+    if (CU != this->end() && (*CU)->getOffset() <= Offset)
       return CU->get();
     return nullptr;
+  }
+  UnitType *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) override {
+    const auto *CUOff = E.getOffset(DW_SECT_INFO);
+    if (!CUOff)
+      return nullptr;
+
+    auto Offset = CUOff->Offset;
+
+    auto *CU = std::upper_bound(
+        this->begin(), this->end(), CUOff->Offset,
+        [](uint32_t LHS, const std::unique_ptr<UnitType> &RHS) {
+          return LHS < RHS->getNextUnitOffset();
+        });
+    if (CU != this->end() && (*CU)->getOffset() <= Offset)
+      return CU->get();
+
+    if (!Parser)
+      return nullptr;
+
+    auto U = Parser(Offset);
+    if (!U)
+      U = nullptr;
+
+    auto *NewCU = U.get();
+    this->insert(CU, std::move(U));
+    return NewCU;
   }
 
 private:
   void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                  const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                  StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
-                 const DWARFSection &LS, bool LE, bool IsDWO) override {
+                 const DWARFSection &LS, bool LE, bool IsDWO,
+                 bool Lazy) override {
     if (Parsed)
       return;
-    const auto &Index = getDWARFUnitIndex(Context, UnitType::Section);
     DataExtractor Data(Section.Data, LE, 0);
+    if (!Parser) {
+      const DWARFUnitIndex *Index = nullptr;
+      if (IsDWO)
+        Index = &getDWARFUnitIndex(Context, UnitType::Section);
+      Parser = [=, &Context, &Section, &SOS,
+                &LS](uint32_t Offset) -> std::unique_ptr<UnitType> {
+        if (!Data.isValidOffset(Offset))
+          return nullptr;
+        auto U = llvm::make_unique<UnitType>(
+            Context, Section, DA, RS, SS, SOS, AOS, LS, LE, IsDWO, *this,
+            Index ? Index->getFromOffset(Offset) : nullptr);
+        if (!U->extract(Data, &Offset))
+          return nullptr;
+        return U;
+      };
+    }
+    if (Lazy)
+      return;
+    auto I = this->begin();
     uint32_t Offset = 0;
     while (Data.isValidOffset(Offset)) {
-      auto U = llvm::make_unique<UnitType>(Context, Section, DA, RS, SS, SOS,
-                                           AOS, LS, LE, IsDWO, *this,
-                                           Index.getFromOffset(Offset));
-      if (!U->extract(Data, &Offset))
+      if (I != this->end() && (*I)->getOffset() == Offset) {
+        ++I;
+        continue;
+      }
+      auto U = Parser(Offset);
+      if (!U)
         break;
-      this->push_back(std::move(U));
-      Offset = this->back()->getNextUnitOffset();
+      Offset = U->getNextUnitOffset();
+      I = std::next(this->insert(I, std::move(U)));
     }
     Parsed = true;
   }
