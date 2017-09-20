@@ -191,7 +191,7 @@ cl::opt<bool> PrintFaultMaps("fault-map-section",
 
 cl::opt<DIDumpType> llvm::DwarfDumpType(
     "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
-    cl::values(clEnumValN(DIDT_DebugFrames, "frames", ".debug_frame")));
+    cl::values(clEnumValN(DIDT_DebugFrame, "frames", ".debug_frame")));
 
 cl::opt<bool> PrintSource(
     "source",
@@ -2085,7 +2085,6 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;
-    DumpOpts.DumpEH = true;
     DICtx->dump(outs(), DumpOpts);
   }
 }
