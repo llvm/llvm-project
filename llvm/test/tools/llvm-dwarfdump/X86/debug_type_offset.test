@@ -1,4 +1,4 @@
-RUN: llvm-mc %S/../../../DebugInfo/Inputs/typeunit-header.s -filetype obj \
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
 RUN:   -triple x86_64-unknown-elf -o - \
 RUN:   | llvm-dwarfdump -debug-types=0x00000019 - | FileCheck %s
 CHECK: .debug_types contents:
@@ -7,7 +7,7 @@ CHECK: 0x00000019: DW_TAG_structure_type
 CHECK:               DW_AT_visibility
 CHECK-NOT: {{:}}
 
-RUN: llvm-mc %S/../../../DebugInfo/Inputs/typeunit-header.s -filetype obj \
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
 RUN:   -triple x86_64-unknown-elf -o - \
 RUN:   | llvm-dwarfdump -c -debug-types=0x0000017 - \
 RUN:   | FileCheck %s --check-prefix=CHILDREN
