@@ -101,4 +101,9 @@ entry:
 ; CHECK-NEXT:         Flags:           1
 ; CHECK-NEXT:       - Name:            bar_alias
 ; CHECK-NEXT:         Flags:           1
+; CHECK-NEXT:     SegmentNames:    
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            .data.bar
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            .data.bar_alias_address
 ; CHECK-NEXT: ...

@@ -1418,8 +1418,8 @@ inline typename std::enable_if<has_MappingTraits<T, EmptyContext>::value,
                                Input &>::type
 operator>>(Input &yin, T &docMap) {
   EmptyContext Ctx;
-  if (yin.setCurrentDocument())
-    yamlize(yin, docMap, true, Ctx);
+  yin.setCurrentDocument();
+  yamlize(yin, docMap, true, Ctx);
   return yin;
 }
 

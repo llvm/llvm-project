@@ -396,6 +396,15 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
     case wasm::WASM_DATA_ALIGNMENT:
       LinkingData.DataAlignment = readVaruint32(Ptr);
       break;
+    case wasm::WASM_SEGMENT_NAMES: {
+      uint32_t Count = readVaruint32(Ptr);
+      if (Count > DataSegments.size())
+        return make_error<GenericBinaryError>("Too many segment names",
+                                              object_error::parse_failed);
+      for (uint32_t i = 0; i < Count; i++)
+        DataSegments[i].Data.Name = readString(Ptr);
+      break;
+    }
     case wasm::WASM_STACK_POINTER:
     default:
       Ptr += Size;

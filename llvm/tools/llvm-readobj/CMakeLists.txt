@@ -19,6 +19,7 @@ add_llvm_tool(llvm-readobj
   ObjDumper.cpp
   WasmDumper.cpp
   Win64EHDumper.cpp
+  WindowsResourceDumper.cpp
   )
 
 add_llvm_tool_symlink(llvm-readelf llvm-readobj)

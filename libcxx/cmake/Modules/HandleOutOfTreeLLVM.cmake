@@ -111,14 +111,17 @@ macro(configure_out_of_tree_llvm)
   # the configurator should write the script into.
   set(LLVM_LIT_OUTPUT_DIR "${libcxx_BINARY_DIR}/bin")
 
-  # Required LIT Configuration ------------------------------------------------
-  # Define the default arguments to use with 'lit', and an option for the user
-  # to override.
-  set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
-  if (MSVC OR XCODE)
-    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+  if (LLVM_INCLUDE_TESTS)
+    # Required LIT Configuration ------------------------------------------------
+    # Define the default arguments to use with 'lit', and an option for the user
+    # to override.
+    set(LLVM_EXTERNAL_LIT "${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py")
+    set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
+    if (MSVC OR XCODE)
+      set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+    endif()
+    set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
   endif()
-  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
   # Required doc configuration
   if (LLVM_ENABLE_SPHINX)

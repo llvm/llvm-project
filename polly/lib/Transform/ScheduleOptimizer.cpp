@@ -1431,37 +1431,43 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
   if (!Root)
     return;
 
-  Root.foreach_ancestor_top_down([Version](
-                                     isl::schedule_node Node) -> isl::stat {
-    switch (isl_schedule_node_get_type(Node.get())) {
-    case isl_schedule_node_band: {
-      NumBands[Version]++;
-      if (isl_schedule_node_band_get_permutable(Node.get()) == isl_bool_true)
-        NumPermutable[Version]++;
+  isl_schedule_node_foreach_descendant_top_down(
+      Root.get(),
+      [](__isl_keep isl_schedule_node *nodeptr, void *user) -> isl_bool {
+        isl::schedule_node Node = isl::manage(isl_schedule_node_copy(nodeptr));
+        int Version = *static_cast<int *>(user);
 
-      int CountMembers = isl_schedule_node_band_n_member(Node.get());
-      NumBandMembers[Version] += CountMembers;
-      for (int i = 0; i < CountMembers; i += 1) {
-        if (Node.band_member_get_coincident(i))
-          NumCoincident[Version]++;
-      }
-      break;
-    }
+        switch (isl_schedule_node_get_type(Node.get())) {
+        case isl_schedule_node_band: {
+          NumBands[Version]++;
+          if (isl_schedule_node_band_get_permutable(Node.get()) ==
+              isl_bool_true)
+            NumPermutable[Version]++;
 
-    case isl_schedule_node_filter:
-      NumFilters[Version]++;
-      break;
+          int CountMembers = isl_schedule_node_band_n_member(Node.get());
+          NumBandMembers[Version] += CountMembers;
+          for (int i = 0; i < CountMembers; i += 1) {
+            if (Node.band_member_get_coincident(i))
+              NumCoincident[Version]++;
+          }
+          break;
+        }
 
-    case isl_schedule_node_extension:
-      NumExtension[Version]++;
-      break;
+        case isl_schedule_node_filter:
+          NumFilters[Version]++;
+          break;
 
-    default:
-      break;
-    }
+        case isl_schedule_node_extension:
+          NumExtension[Version]++;
+          break;
 
-    return isl::stat::ok;
-  });
+        default:
+          break;
+        }
+
+        return isl_bool_true;
+      },
+      &Version);
 }
 
 bool IslScheduleOptimizer::runOnScop(Scop &S) {
@@ -1613,7 +1619,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   const OptimizerAdditionalInfoTy OAI = {TTI, const_cast<Dependences *>(&D)};
   auto NewSchedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
-  walkScheduleTreeForStatistics(NewSchedule, 1);
+  walkScheduleTreeForStatistics(NewSchedule, 2);
 
   if (!ScheduleTreeOptimizer::isProfitableSchedule(S, NewSchedule))
     return false;

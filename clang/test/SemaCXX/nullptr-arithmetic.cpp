@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -pedantic -Wextra -std=c++11
+// RUN: %clang_cc1 %s -fsyntax-only -triple i686-unknown-unknown -verify -pedantic -Wextra -std=c++11
+// RUN: %clang_cc1 %s -fsyntax-only -triple x86_64-unknown-unknown -verify -pedantic -Wextra -std=c++11
 
 #include <stdint.h>
 

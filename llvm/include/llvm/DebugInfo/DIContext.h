@@ -138,10 +138,26 @@ enum DIDumpType : unsigned {
 /// dumped.
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
+  unsigned RecurseDepth = -1U;
   bool ShowChildren = false;
   bool ShowParents = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
+
+  /// Return default option set for printing a single DIE without children.
+  static DIDumpOptions getForSingleDIE() {
+    DIDumpOptions Opts;
+    Opts.RecurseDepth = 0;
+    return Opts;
+  }
+
+  /// Return the options with RecurseDepth set to 0 unless explicitly required.
+  DIDumpOptions noImplicitRecursion() const {
+    DIDumpOptions Opts = *this;
+    if (RecurseDepth == -1U && !ShowChildren)
+      Opts.RecurseDepth = 0;
+    return Opts;
+  }
 };
 
 class DIContext {

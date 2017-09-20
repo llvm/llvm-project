@@ -1114,11 +1114,7 @@ bool CapturedStmt::capturesVariable(const VarDecl *Var) const {
   for (const auto &I : captures()) {
     if (!I.capturesVariable() && !I.capturesVariableByCopy())
       continue;
-
-    // This does not handle variable redeclarations. This should be
-    // extended to capture variables with redeclarations, for example
-    // a thread-private variable in OpenMP.
-    if (I.getCapturedVar() == Var)
+    if (I.getCapturedVar()->getCanonicalDecl() == Var->getCanonicalDecl())
       return true;
   }
 

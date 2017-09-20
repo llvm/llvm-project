@@ -209,16 +209,23 @@ extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
 static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
                                     SmallVectorImpl<const char *> &ArgVector,
                                     std::set<std::string> &SavedStrings) {
+  // Put target and mode arguments at the start of argument list so that
+  // arguments specified in command line could override them. Avoid putting
+  // them at index 0, as an option like '-cc1' must remain the first.
+  auto InsertionPoint = ArgVector.begin();
+  if (InsertionPoint != ArgVector.end())
+    ++InsertionPoint;
+
   if (NameParts.DriverMode) {
     // Add the mode flag to the arguments.
-    ArgVector.insert(ArgVector.end(),
+    ArgVector.insert(InsertionPoint,
                      GetStableCStr(SavedStrings, NameParts.DriverMode));
   }
 
   if (NameParts.TargetIsValid) {
     const char *arr[] = {"-target", GetStableCStr(SavedStrings,
                                                   NameParts.TargetPrefix)};
-    ArgVector.insert(ArgVector.end(), std::begin(arr), std::end(arr));
+    ArgVector.insert(InsertionPoint, std::begin(arr), std::end(arr));
   }
 }
 

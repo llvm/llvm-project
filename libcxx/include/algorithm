@@ -3013,6 +3013,7 @@ template<class _Engine, class _UIntType>
 _UIntType
 __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
 {
+    const size_t _WRt = numeric_limits<result_type>::digits;
     result_type _Sp = 0;
     for (size_t __k = 0; __k < __n0_; ++__k)
     {
@@ -3021,7 +3022,7 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
         {
             __u = __e_() - _Engine::min();
         } while (__u >= __y0_);
-        if (__w0_ < _WDt)
+        if (__w0_ < _WRt)
             _Sp <<= __w0_;
         else
             _Sp = 0;
@@ -3034,7 +3035,7 @@ __independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
         {
             __u = __e_() - _Engine::min();
         } while (__u >= __y1_);
-        if (__w0_ < _WDt - 1)
+        if (__w0_ < _WRt - 1)
             _Sp <<= __w0_ + 1;
         else
             _Sp = 0;

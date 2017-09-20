@@ -600,6 +600,11 @@ private:
   /// value, or null if it didn't simplify.
   Value *SimplifyUsingDistributiveLaws(BinaryOperator &I);
 
+  // Binary Op helper for select operations where the expression can be
+  // efficiently reorganized.
+  Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
+                                        Value *RHS);
+
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
   Value *tryFactorization(BinaryOperator &, Instruction::BinaryOps, Value *,

@@ -148,7 +148,7 @@ void WasmDumper::printSections() {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);
     DictScope SectionD(W, "Section");
     W.printEnum("Type", WasmSec.Type, makeArrayRef(WasmSectionTypes));
-    W.printNumber("Size", (uint64_t)WasmSec.Content.size());
+    W.printNumber("Size", static_cast<uint64_t>(WasmSec.Content.size()));
     W.printNumber("Offset", WasmSec.Offset);
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM:
@@ -160,6 +160,19 @@ void WasmDumper::printSections() {
           W.printNumber("DataAlignment", LinkingData.DataAlignment);
       }
       break;
+    case wasm::WASM_SEC_DATA: {
+      ListScope Group(W, "Segments");
+      for (const WasmSegment &Segment : Obj->dataSegments()) {
+        const wasm::WasmDataSegment& Seg = Segment.Data;
+        DictScope Group(W, "Segment");
+        if (!Seg.Name.empty())
+          W.printString("Name", Seg.Name);
+        W.printNumber("Size", static_cast<uint64_t>(Seg.Content.size()));
+        if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST)
+          W.printNumber("Offset", Seg.Offset.Value.Int32);
+      }
+      break;
+    }
     case wasm::WASM_SEC_MEMORY:
       ListScope Group(W, "Memories");
       for (const wasm::WasmLimits &Memory : Obj->memories()) {

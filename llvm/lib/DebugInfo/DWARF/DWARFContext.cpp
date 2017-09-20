@@ -258,7 +258,8 @@ void DWARFContext::dump(
                            DWARFSection Section, cu_iterator_range CUs) {
     if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
       if (DumpOffset)
-        getDIEForOffset(DumpOffset.getValue()).dump(OS, 0, 0, DumpOpts);
+        getDIEForOffset(DumpOffset.getValue())
+            .dump(OS, 0, DumpOpts.noImplicitRecursion());
       else
         for (const auto &CU : CUs)
           CU->dump(OS, DumpOpts);
@@ -276,7 +277,8 @@ void DWARFContext::dump(
     for (const auto &TUS : TUSections)
       for (const auto &TU : TUS)
         if (DumpOffset)
-          TU->getDIEForOffset(*DumpOffset).dump(OS, 0, 0, DumpOpts);
+          TU->getDIEForOffset(*DumpOffset)
+              .dump(OS, 0, DumpOpts.noImplicitRecursion());
         else
           TU->dump(OS, DumpOpts);
   };

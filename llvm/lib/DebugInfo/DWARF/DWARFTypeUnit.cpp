@@ -55,7 +55,7 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
      << " (next unit at " << format("0x%08x", getNextUnitOffset()) << ")\n";
 
   if (DWARFDie TU = getUnitDIE(false))
-    TU.dump(OS, -1U, 0, DumpOpts);
+    TU.dump(OS, 0, DumpOpts);
   else
     OS << "<type unit can't be parsed!>\n\n";
 }
