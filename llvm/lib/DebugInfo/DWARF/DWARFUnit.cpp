@@ -33,17 +33,17 @@ void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   const DWARFObject &D = C.getDWARFObj();
   parseImpl(C, Section, C.getDebugAbbrev(), &D.getRangeSection(),
             D.getStringSection(), D.getStringOffsetSection(),
-            &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(), false);
+            &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(), false,
+            false);
 }
 
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
-                                    const DWARFSection &DWOSection,
-                                    DWARFUnitIndex *Index) {
+                                    const DWARFSection &DWOSection, bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
   parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
             D.getStringDWOSection(), D.getStringOffsetDWOSection(),
             &D.getAddrSection(), D.getLineDWOSection(), C.isLittleEndian(),
-            true);
+            true, Lazy);
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,

@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEOPERAND_H
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
@@ -65,6 +66,7 @@ public:
     MO_CFIIndex,          ///< MCCFIInstruction index.
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
+    MO_Last = MO_Predicate,
   };
 
 private:
@@ -781,6 +783,14 @@ public:
 private:
   void removeRegFromUses();
 
+  /// Artificial kinds for DenseMap usage.
+  enum : unsigned char {
+    MO_Empty = MO_Last + 1,
+    MO_Tombstone,
+  };
+
+  friend struct DenseMapInfo<MachineOperand>;
+
   //===--------------------------------------------------------------------===//
   // Methods for handling register use/def lists.
   //===--------------------------------------------------------------------===//
@@ -791,6 +801,26 @@ private:
   bool isOnRegUseList() const {
     assert(isReg() && "Can only add reg operand to use lists");
     return Contents.Reg.Prev != nullptr;
+  }
+};
+
+template <> struct DenseMapInfo<MachineOperand> {
+  static MachineOperand getEmptyKey() {
+    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
+        MachineOperand::MO_Empty));
+  }
+  static MachineOperand getTombstoneKey() {
+    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
+        MachineOperand::MO_Tombstone));
+  }
+  static unsigned getHashValue(const MachineOperand &MO) {
+    return hash_value(MO);
+  }
+  static bool isEqual(const MachineOperand &LHS, const MachineOperand &RHS) {
+    if (LHS.getType() == MachineOperand::MO_Empty ||
+        LHS.getType() == MachineOperand::MO_Tombstone)
+      return LHS.getType() == RHS.getType();
+    return LHS.isIdenticalTo(RHS);
   }
 };
 

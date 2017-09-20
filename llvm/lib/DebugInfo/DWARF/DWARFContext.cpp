@@ -222,9 +222,6 @@ void DWARFContext::dump(
 
   Optional<uint64_t> DumpOffset;
   uint64_t DumpType = DumpOpts.DumpType;
-  bool DumpEH = DumpOpts.DumpEH;
-  unsigned RecDepth =
-      DumpOpts.ShowChildren ? std::numeric_limits<unsigned>::max() : 0;
 
   StringRef Extension = sys::path::extension(DObj->getFileName());
   bool IsDWO = (Extension == ".dwo") || (Extension == ".dwp");
@@ -260,10 +257,11 @@ void DWARFContext::dump(
   auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
                            DWARFSection Section, cu_iterator_range CUs) {
     if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
-      for (const auto &CU : CUs)
-        if (DumpOffset)
-          CU->getDIEForOffset(DumpOffset.getValue()).dump(OS, RecDepth);
-        else
+      if (DumpOffset)
+        getDIEForOffset(DumpOffset.getValue())
+            .dump(OS, 0, DumpOpts.noImplicitRecursion());
+      else
+        for (const auto &CU : CUs)
           CU->dump(OS, DumpOpts);
     }
   };
@@ -279,7 +277,8 @@ void DWARFContext::dump(
     for (const auto &TUS : TUSections)
       for (const auto &TU : TUS)
         if (DumpOffset)
-          TU->getDIEForOffset(*DumpOffset).dump(OS, RecDepth);
+          TU->getDIEForOffset(*DumpOffset)
+              .dump(OS, 0, DumpOpts.noImplicitRecursion());
         else
           TU->dump(OS, DumpOpts);
   };
@@ -299,12 +298,13 @@ void DWARFContext::dump(
     getDebugLocDWO()->dump(OS, getRegisterInfo());
   }
 
-  if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrames,
+  if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                  DObj->getDebugFrameSection())) {
     getDebugFrame()->dump(OS);
   }
-  if (DumpEH && !getEHFrame()->empty()) {
-    OS << "\n.eh_frame contents:\n";
+
+  if (shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
+                 DObj->getEHFrameSection())) {
     getEHFrame()->dump(OS);
   }
 
@@ -466,12 +466,11 @@ void DWARFContext::dump(
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  parseDWOCompileUnits();
+  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection(), true);
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
-      if (auto CUOff = R->getOffset(DW_SECT_INFO))
-        return DWOCUs.getUnitForOffset(CUOff->Offset);
+      return DWOCUs.getUnitForIndexEntry(*R);
     return nullptr;
   }
 
@@ -492,15 +491,14 @@ DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
   return DWARFDie();
 }
 
-bool DWARFContext::verify(raw_ostream &OS, unsigned DumpType,
-                          DIDumpOptions DumpOpts) {
+bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   bool Success = true;
   DWARFVerifier verifier(OS, *this, DumpOpts);
 
   Success &= verifier.handleDebugAbbrev();
-  if (DumpType & DIDT_DebugInfo)
+  if (DumpOpts.DumpType & DIDT_DebugInfo)
     Success &= verifier.handleDebugInfo();
-  if (DumpType & DIDT_DebugLine)
+  if (DumpOpts.DumpType & DIDT_DebugLine)
     Success &= verifier.handleDebugLine();
   Success &= verifier.handleAccelTables();
   return Success;

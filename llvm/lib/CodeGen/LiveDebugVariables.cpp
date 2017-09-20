@@ -126,11 +126,6 @@ class UserValue {
   /// lexical scope.
   SmallSet<SlotIndex, 2> trimmedDefs;
 
-  /// coalesceLocation - After LocNo was changed, check if it has become
-  /// identical to another location, and coalesce them. This may cause LocNo or
-  /// a later location to be erased, but no earlier location will be erased.
-  void coalesceLocation(unsigned LocNo);
-
   /// insertDebugValue - Insert a DBG_VALUE into MBB at Idx for LocNo.
   void insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx, unsigned LocNo,
                         LiveIntervals &LIS, const TargetInstrInfo &TII);
@@ -420,34 +415,6 @@ void LDVImpl::print(raw_ostream &OS) {
     userValues[i]->print(OS, TRI);
 }
 #endif
-
-void UserValue::coalesceLocation(unsigned LocNo) {
-  unsigned KeepLoc = 0;
-  for (unsigned e = locations.size(); KeepLoc != e; ++KeepLoc) {
-    if (KeepLoc == LocNo)
-      continue;
-    if (locations[KeepLoc].isIdenticalTo(locations[LocNo]))
-      break;
-  }
-  // No matches.
-  if (KeepLoc == locations.size())
-    return;
-
-  // Keep the smaller location, erase the larger one.
-  unsigned EraseLoc = LocNo;
-  if (KeepLoc > EraseLoc)
-    std::swap(KeepLoc, EraseLoc);
-  locations.erase(locations.begin() + EraseLoc);
-
-  // Rewrite values.
-  for (LocMap::iterator I = locInts.begin(); I.valid(); ++I) {
-    unsigned v = I.value();
-    if (v == EraseLoc)
-      I.setValue(KeepLoc);      // Coalesce when possible.
-    else if (v > EraseLoc)
-      I.setValueUnchecked(v-1); // Avoid coalescing with untransformed values.
-  }
-}
 
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
   for (unsigned i = 0, e = locations.size(); i != e; ++i)
@@ -973,31 +940,54 @@ splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs, LiveIntervals &LIS) {
     static_cast<LDVImpl*>(pImpl)->splitRegister(OldReg, NewRegs);
 }
 
-void
-UserValue::rewriteLocations(VirtRegMap &VRM, const TargetRegisterInfo &TRI) {
-  // Iterate over locations in reverse makes it easier to handle coalescing.
-  for (unsigned i = locations.size(); i ; --i) {
-    unsigned LocNo = i-1;
-    MachineOperand &Loc = locations[LocNo];
+void UserValue::rewriteLocations(VirtRegMap &VRM,
+                                 const TargetRegisterInfo &TRI) {
+  // Build a set of new locations with new numbers so we can coalesce our
+  // IntervalMap if two vreg intervals collapse to the same physical location.
+  // Use MapVector instead of SetVector because MapVector::insert returns the
+  // position of the previously or newly inserted element.
+  MapVector<MachineOperand, bool> NewLocations;
+  SmallVector<unsigned, 4> LocNoMap(locations.size());
+  for (unsigned I = 0, E = locations.size(); I != E; ++I) {
+    MachineOperand Loc = locations[I];
     // Only virtual registers are rewritten.
-    if (!Loc.isReg() || !Loc.getReg() ||
-        !TargetRegisterInfo::isVirtualRegister(Loc.getReg()))
-      continue;
-    unsigned VirtReg = Loc.getReg();
-    if (VRM.isAssignedReg(VirtReg) &&
-        TargetRegisterInfo::isPhysicalRegister(VRM.getPhys(VirtReg))) {
-      // This can create a %noreg operand in rare cases when the sub-register
-      // index is no longer available. That means the user value is in a
-      // non-existent sub-register, and %noreg is exactly what we want.
-      Loc.substPhysReg(VRM.getPhys(VirtReg), TRI);
-    } else if (VRM.getStackSlot(VirtReg) != VirtRegMap::NO_STACK_SLOT) {
-      // FIXME: Translate SubIdx to a stackslot offset.
-      Loc = MachineOperand::CreateFI(VRM.getStackSlot(VirtReg));
-    } else {
-      Loc.setReg(0);
-      Loc.setSubReg(0);
+    if (Loc.isReg() && Loc.getReg() &&
+        TargetRegisterInfo::isVirtualRegister(Loc.getReg())) {
+      unsigned VirtReg = Loc.getReg();
+      if (VRM.isAssignedReg(VirtReg) &&
+          TargetRegisterInfo::isPhysicalRegister(VRM.getPhys(VirtReg))) {
+        // This can create a %noreg operand in rare cases when the sub-register
+        // index is no longer available. That means the user value is in a
+        // non-existent sub-register, and %noreg is exactly what we want.
+        Loc.substPhysReg(VRM.getPhys(VirtReg), TRI);
+      } else if (VRM.getStackSlot(VirtReg) != VirtRegMap::NO_STACK_SLOT) {
+        // FIXME: Translate SubIdx to a stackslot offset.
+        Loc = MachineOperand::CreateFI(VRM.getStackSlot(VirtReg));
+      } else {
+        Loc.setReg(0);
+        Loc.setSubReg(0);
+      }
     }
-    coalesceLocation(LocNo);
+
+    // Insert this location if it doesn't already exist and record a mapping
+    // from the old number to the new number.
+    auto InsertResult = NewLocations.insert({Loc, false});
+    LocNoMap[I] = std::distance(NewLocations.begin(), InsertResult.first);
+  }
+
+  // Rewrite the locations.
+  locations.clear();
+  for (const auto &Pair : NewLocations)
+    locations.push_back(Pair.first);
+
+  // Update the interval map, but only coalesce left, since intervals to the
+  // right use the old location numbers. This should merge two contiguous
+  // DBG_VALUE intervals with different vregs that were allocated to the same
+  // physical register.
+  for (LocMap::iterator I = locInts.begin(); I.valid(); ++I) {
+    unsigned NewLocNo = LocNoMap[I.value()];
+    I.setValueUnchecked(NewLocNo);
+    I.setStart(I.start());
   }
 }
 
