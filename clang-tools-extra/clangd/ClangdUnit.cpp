@@ -9,6 +9,7 @@
 
 #include "ClangdUnit.h"
 
+#include "Logger.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -26,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Format.h"
-#include "Logger.h"
 
 #include <algorithm>
 #include <chrono>
@@ -894,7 +894,8 @@ PreambleData::PreambleData(PrecompiledPreamble Preamble,
 
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
-                std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger) {
+                std::shared_ptr<PCHContainerOperations> PCHs,
+                clangd::Logger &Logger) {
   return std::shared_ptr<CppFile>(
       new CppFile(FileName, std::move(Command), std::move(PCHs), Logger));
 }
