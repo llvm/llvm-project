@@ -159,7 +159,7 @@ representation.
   misunderstood instruction.
 
 :doc:`Frontend/PerformanceTips`
-   A collection of tips for frontend authors on how to generate IR 
+   A collection of tips for frontend authors on how to generate IR
    which LLVM is able to effectively optimize.
 
 :doc:`Docker`
@@ -281,6 +281,7 @@ For API clients and LLVM developers.
    XRayExample
    XRayFDRFormat
    PDB/index
+   CFIVerify
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -410,6 +411,9 @@ For API clients and LLVM developers.
 
 :doc:`The Microsoft PDB File Format <PDB/index>`
   A detailed description of the Microsoft PDB (Program Database) file format.
+
+:doc:`CFIVerify`
+  A description of the verification tool for Control Flow Integrity.
 
 Development Process Documentation
 =================================

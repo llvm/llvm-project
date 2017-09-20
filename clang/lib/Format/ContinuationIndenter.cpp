@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "BreakableToken.h"
 #include "ContinuationIndenter.h"
+#include "BreakableToken.h"
 #include "WhitespaceManager.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/SourceManager.h"
@@ -127,9 +127,8 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
   assert(&Previous == Current.Previous);
-  if (!Current.CanBreakBefore &&
-      !(State.Stack.back().BreakBeforeClosingBrace &&
-        Current.closesBlockOrBlockTypeList(Style)))
+  if (!Current.CanBreakBefore && !(State.Stack.back().BreakBeforeClosingBrace &&
+                                   Current.closesBlockOrBlockTypeList(Style)))
     return false;
   // The opening "{" of a braced list has to be on the same line as the first
   // element if it is nested in another braced init list or function call.
@@ -428,9 +427,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak &&
       Previous.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
       State.Column > getNewLineColumn(State) &&
-      (!Previous.Previous ||
-       !Previous.Previous->isOneOf(tok::kw_for, tok::kw_while,
-                                   tok::kw_switch)) &&
+      (!Previous.Previous || !Previous.Previous->isOneOf(
+                                 tok::kw_for, tok::kw_while, tok::kw_switch)) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -895,8 +893,10 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     //       Next(...)
     //       ^ line up here.
     State.Stack.back().Indent =
-        State.Column + (Style.BreakConstructorInitializers ==
-                            FormatStyle::BCIS_BeforeComma ? 0 : 2);
+        State.Column +
+        (Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma
+             ? 0
+             : 2);
     State.Stack.back().NestedBlockIndent = State.Stack.back().Indent;
     if (Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
       State.Stack.back().AvoidBinPacking = true;
@@ -908,7 +908,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         State.FirstIndent + Style.ConstructorInitializerIndentWidth;
     State.Stack.back().NestedBlockIndent = State.Stack.back().Indent;
     if (Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
-        State.Stack.back().AvoidBinPacking = true;
+      State.Stack.back().AvoidBinPacking = true;
   }
   if (Current.is(TT_InheritanceColon))
     State.Stack.back().Indent =
@@ -936,8 +936,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         State.Stack[i].NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
   }
-  if (Previous && (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) ||
-                   Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr)) &&
+  if (Previous &&
+      (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) ||
+       Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr)) &&
       !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
     State.Stack.back().NestedBlockInlined =
         !Newline &&
@@ -1091,14 +1092,13 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     bool EndsInComma = Current.MatchingParen &&
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
-    AvoidBinPacking =
-        EndsInComma || Current.is(TT_DictLiteral) ||
-        Style.Language == FormatStyle::LK_Proto ||
-        Style.Language == FormatStyle::LK_TextProto ||
-        !Style.BinPackArguments ||
-        (NextNoComment &&
-         NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
-                                TT_DesignatedInitializerLSquare));
+    AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
+                      Style.Language == FormatStyle::LK_Proto ||
+                      Style.Language == FormatStyle::LK_TextProto ||
+                      !Style.BinPackArguments ||
+                      (NextNoComment &&
+                       NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
+                                              TT_DesignatedInitializerLSquare));
     BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);

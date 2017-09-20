@@ -228,6 +228,12 @@ void RelocationSection<ELFT>::writeSection(llvm::FileOutputBuffer &Out) const {
     writeRel(reinterpret_cast<Elf_Rela *>(Buf));
 }
 
+bool SectionWithStrTab::classof(const SectionBase *S) {
+  return isa<DynamicSymbolTableSection>(S) || isa<DynamicSection>(S);
+}
+
+void SectionWithStrTab::finalize() { this->Link = StrTab->Index; }
+
 // Returns true IFF a section is wholly inside the range of a segment
 static bool sectionWithinSegment(const SectionBase &Section,
                                  const Segment &Segment) {
@@ -308,16 +314,12 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
                                    SymbolTableSection *SymTab) {
 
   SymTab->Size = 0;
-  if (SymbolTable->Link - 1 >= Sections.size())
-    error("Symbol table has link index of " + Twine(SymbolTable->Link) +
-          " which is not a valid index");
-
-  if (auto StrTab =
-          dyn_cast<StringTableSection>(Sections[SymbolTable->Link - 1].get()))
-    SymTab->setStrTab(StrTab);
-  else
-    error("Symbol table has link index of " + Twine(SymbolTable->Link) +
-          "which is not a string table");
+  SymTab->setStrTab(getSectionOfType<StringTableSection>(
+      SymbolTable->Link,
+      "Symbol table has link index of " + Twine(SymTab->Link) +
+          " which is not a valid index",
+      "Symbol table has link index of " + Twine(SymTab->Link) +
+          " which is not a string table"));
 
   const Elf_Shdr &Shdr = *unwrapOrError(ElfFile.getSection(SymTab->Index));
   StringRef StrTabData = unwrapOrError(ElfFile.getStringTableForSymtab(Shdr));
@@ -325,6 +327,7 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
   for (const auto &Sym : unwrapOrError(ElfFile.symbols(&Shdr))) {
     SectionBase *DefSection = nullptr;
     StringRef Name = unwrapOrError(Sym.getName(StrTabData));
+
     if (Sym.st_shndx >= SHN_LORESERVE) {
       if (!isValidReservedSectionIndex(Sym.st_shndx, Machine)) {
         error(
@@ -333,12 +336,12 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
             Twine(Sym.st_shndx));
       }
     } else if (Sym.st_shndx != SHN_UNDEF) {
-      if (Sym.st_shndx >= Sections.size())
-        error("Symbol '" + Name +
-              "' is defined in invalid section with index " +
+      DefSection = getSection(
+          Sym.st_shndx,
+          "Symbol '" + Name + "' is defined in invalid section with index " +
               Twine(Sym.st_shndx));
-      DefSection = Sections[Sym.st_shndx - 1].get();
     }
+
     SymTab->addSymbol(Name, Sym.getBinding(), Sym.getType(), DefSection,
                       Sym.getValue(), Sym.st_shndx, Sym.st_size);
   }
@@ -366,6 +369,22 @@ void initRelocations(RelocationSection<ELFT> *Relocs,
 }
 
 template <class ELFT>
+SectionBase *Object<ELFT>::getSection(uint16_t Index, Twine ErrMsg) {
+  if (Index == SHN_UNDEF || Index > Sections.size())
+    error(ErrMsg);
+  return Sections[Index - 1].get();
+}
+
+template <class ELFT>
+template <class T>
+T *Object<ELFT>::getSectionOfType(uint16_t Index, Twine IndexErrMsg,
+                                  Twine TypeErrMsg) {
+  if (T *TSec = llvm::dyn_cast<T>(getSection(Index, IndexErrMsg)))
+    return TSec;
+  error(TypeErrMsg);
+}
+
+template <class ELFT>
 std::unique_ptr<SectionBase>
 Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                           const Elf_Shdr &Shdr) {
@@ -375,7 +394,26 @@ Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
   case SHT_RELA:
     return llvm::make_unique<RelocationSection<ELFT>>();
   case SHT_STRTAB:
+    // If a string table is allocated we don't want to mess with it. That would
+    // mean altering the memory image. There are no special link types or
+    // anything so we can just use a Section.
+    if (Shdr.sh_flags & SHF_ALLOC) {
+      Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+      return llvm::make_unique<Section>(Data);
+    }
     return llvm::make_unique<StringTableSection>();
+  case SHT_HASH:
+  case SHT_GNU_HASH:
+    // Hash tables should refer to SHT_DYNSYM which we're not going to change.
+    // Because of this we don't need to mess with the hash tables either.
+    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    return llvm::make_unique<Section>(Data);
+  case SHT_DYNSYM:
+    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    return llvm::make_unique<DynamicSymbolTableSection>(Data);
+  case SHT_DYNAMIC:
+    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    return llvm::make_unique<DynamicSection>(Data);
   case SHT_SYMTAB: {
     auto SymTab = llvm::make_unique<SymbolTableSectionImpl<ELFT>>();
     SymbolTable = SymTab.get();
@@ -423,27 +461,34 @@ void Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
   // relocation sections.
   for (auto &Section : Sections) {
     if (auto RelSec = dyn_cast<RelocationSection<ELFT>>(Section.get())) {
-      if (RelSec->Link - 1 >= Sections.size() || RelSec->Link == 0) {
-        error("Link field value " + Twine(RelSec->Link) + " in section " +
-              RelSec->Name + " is invalid");
-      }
-      if (RelSec->Info - 1 >= Sections.size() || RelSec->Info == 0) {
-        error("Info field value " + Twine(RelSec->Link) + " in section " +
-              RelSec->Name + " is invalid");
-      }
-      auto SymTab =
-          dyn_cast<SymbolTableSection>(Sections[RelSec->Link - 1].get());
-      if (SymTab == nullptr) {
-        error("Link field of relocation section " + RelSec->Name +
-              " is not a symbol table");
-      }
+
+      auto SymTab = getSectionOfType<SymbolTableSection>(
+          RelSec->Link,
+          "Link field value " + Twine(RelSec->Link) + " in section " +
+              RelSec->Name + " is invalid",
+          "Link field value " + Twine(RelSec->Link) + " in section " +
+              RelSec->Name + " is not a symbol table");
       RelSec->setSymTab(SymTab);
-      RelSec->setSection(Sections[RelSec->Info - 1].get());
+
+      RelSec->setSection(getSection(RelSec->Info,
+                                    "Info field value " + Twine(RelSec->Link) +
+                                        " in section " + RelSec->Name +
+                                        " is invalid"));
+
       auto Shdr = unwrapOrError(ElfFile.sections()).begin() + RelSec->Index;
       if (RelSec->Type == SHT_REL)
         initRelocations(RelSec, SymTab, unwrapOrError(ElfFile.rels(Shdr)));
       else
         initRelocations(RelSec, SymTab, unwrapOrError(ElfFile.relas(Shdr)));
+    }
+
+    if (auto Sec = dyn_cast<SectionWithStrTab>(Section.get())) {
+      Sec->setStrTab(getSectionOfType<StringTableSection>(
+          Sec->Link,
+          "Link field value " + Twine(Sec->Link) + " in section " + Sec->Name +
+              " is invalid",
+          "Link field value " + Twine(Sec->Link) + " in section " + Sec->Name +
+              " is not a string table"));
     }
   }
 }
@@ -462,8 +507,12 @@ template <class ELFT> Object<ELFT>::Object(const ELFObjectFile<ELFT> &Obj) {
   readSectionHeaders(ElfFile);
   readProgramHeaders(ElfFile);
 
-  SectionNames =
-      dyn_cast<StringTableSection>(Sections[Ehdr.e_shstrndx - 1].get());
+  SectionNames = getSectionOfType<StringTableSection>(
+      Ehdr.e_shstrndx,
+      "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) + " in elf header " +
+          " is invalid",
+      "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) + " in elf header " +
+          " is not a string table");
 }
 
 template <class ELFT>

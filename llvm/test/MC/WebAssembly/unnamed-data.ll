@@ -74,4 +74,13 @@
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        28
 ; CHECK-NEXT:     DataAlignment:   8
+; CHECK-NEXT:     SegmentNames:    
+; CHECK-NEXT:       - Index:       0
+; CHECK-NEXT:         Name:        .rodata..L.str1
+; CHECK-NEXT:       - Index:       1
+; CHECK-NEXT:         Name:        .rodata..L.str2
+; CHECK-NEXT:       - Index:       2
+; CHECK-NEXT:         Name:        .data.a
+; CHECK-NEXT:       - Index:       3
+; CHECK-NEXT:         Name:        .data.b
 ; CHECK-NEXT: ...

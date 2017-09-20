@@ -44,6 +44,8 @@ protected:
     ID_COFFImportFile,
     ID_IR,                 // LLVM IR
 
+    ID_WinRes, // Windows resource (.res) file.
+
     // Object and children.
     ID_StartObjects,
     ID_COFF,
@@ -57,8 +59,6 @@ protected:
     ID_MachO32B, // MachO 32-bit, big endian
     ID_MachO64L, // MachO 64-bit, little endian
     ID_MachO64B, // MachO 64-bit, big endian
-
-    ID_WinRes, // Windows resource (.res) file.
 
     ID_Wasm,
 

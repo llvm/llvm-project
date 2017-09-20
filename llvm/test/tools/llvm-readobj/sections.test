@@ -543,6 +543,12 @@ WASM-NEXT:   Section {
 WASM-NEXT:     Type: DATA (0xB)
 WASM-NEXT:     Size: 19
 WASM-NEXT:     Offset: 154
+WASM-NEXT:     Segments [
+WASM-NEXT:       Segment {
+WASM-NEXT:         Size: 13
+WASM-NEXT:         Offset: 0
+WASM-NEXT:       }
+WASM-NEXT:     ]
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)

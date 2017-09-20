@@ -1718,7 +1718,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   // result greater than C1.
   unsigned NumTZ = C2->countTrailingZeros();
   if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && NumTZ < C2->getBitWidth() &&
-      APInt::getOneBitSet(C2->getBitWidth(), NumTZ).ugt(*C1)) {
+      NumTZ >= C1->getActiveBits()) {
     Constant *Zero = Constant::getNullValue(And->getType());
     return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
   }

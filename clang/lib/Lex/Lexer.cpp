@@ -552,9 +552,9 @@ namespace {
 
 } // end anonymous namespace
 
-std::pair<unsigned, bool> Lexer::ComputePreamble(StringRef Buffer,
-                                                 const LangOptions &LangOpts,
-                                                 unsigned MaxLines) {
+PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
+                                      const LangOptions &LangOpts,
+                                      unsigned MaxLines) {
   // Create a lexer starting at the beginning of the file. Note that we use a
   // "fake" file source location at offset 1 so that the lexer will track our
   // position within the file.
@@ -688,7 +688,7 @@ std::pair<unsigned, bool> Lexer::ComputePreamble(StringRef Buffer,
   else
     End = TheTok.getLocation();
 
-  return std::make_pair(End.getRawEncoding() - StartLoc.getRawEncoding(),
+  return PreambleBounds(End.getRawEncoding() - FileLoc.getRawEncoding(),
                         TheTok.isAtStartOfLine());
 }
 
@@ -1394,9 +1394,9 @@ Slash:
 // Helper methods for lexing.
 //===----------------------------------------------------------------------===//
 
-/// \brief Routine that indiscriminately skips bytes in the source file.
-void Lexer::SkipBytes(unsigned Bytes, bool StartOfLine) {
-  BufferPtr += Bytes;
+/// \brief Routine that indiscriminately sets the offset into the source file.
+void Lexer::SetByteOffset(unsigned Offset, bool StartOfLine) {
+  BufferPtr = BufferStart + Offset;
   if (BufferPtr > BufferEnd)
     BufferPtr = BufferEnd;
   // FIXME: What exactly does the StartOfLine bit mean?  There are two

@@ -373,19 +373,19 @@ static unsigned dumpParentChain(DWARFDie Die, raw_ostream &OS, unsigned Indent,
   if (!Die)
     return Indent;
   Indent = dumpParentChain(Die.getParent(), OS, Indent, DumpOpts);
-  Die.dump(OS, 0, Indent, DumpOpts);
+  Die.dump(OS, Indent, DumpOpts);
   return Indent + 2;
 }
 
-void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
+void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
                     DIDumpOptions DumpOpts) const {
   if (!isValid())
     return;
   DWARFDataExtractor debug_info_data = U->getDebugInfoExtractor();
   const uint32_t Offset = getOffset();
   uint32_t offset = Offset;
-  if (DumpOpts.ShowChildren)
-    RecurseDepth++;
+  //  if (DumpOpts.ShowChildren && DumpOpts.RecurseDepth)
+  //  DumpOpts.RecurseDepth++;
   if (DumpOpts.ShowParents) {
     DumpOpts.ShowParents = false;
     Indent = dumpParentChain(getParent(), OS, Indent, DumpOpts);
@@ -423,9 +423,10 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
         }
 
         DWARFDie child = getFirstChild();
-        if (RecurseDepth > 0 && child) {
+        if (DumpOpts.RecurseDepth > 0 && child) {
+          DumpOpts.RecurseDepth--;
           while (child) {
-            child.dump(OS, RecurseDepth-1, Indent+2, DumpOpts);
+            child.dump(OS, Indent+2, DumpOpts);
             child = child.getSibling();
           }
         }

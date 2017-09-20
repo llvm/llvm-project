@@ -33,17 +33,14 @@
 ; CHECK:     NULL
 ; CHECK:   NULL
 
-; Function Attrs: noinline optnone uwtable
-define void @_Z2f2v() #0 !dbg !14 {
+; Function Attrs: noinline
+define void @_Z2f2v() noinline !dbg !14 {
 entry:
   call void @_ZN2ns1fEv(), !dbg !15
   ret void, !dbg !17
 }
 
-declare void @_ZN2ns1fEv() #1
-
-attributes #0 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @_ZN2ns1fEv()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11, !12}

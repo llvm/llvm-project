@@ -22,6 +22,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace clang {
@@ -896,6 +897,68 @@ int d;
     ASSERT_LE(Stats[I].HitsWithErrors, ReqStats[I].RequestsWithErrors);
     ASSERT_LE(Stats[I].HitsWithoutErrors, ReqStats[I].RequestsWithoutErrors);
   }
+}
+
+TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
+  class NoConcurrentAccessDiagConsumer : public DiagnosticsConsumer {
+  public:
+    NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
+        : StartSecondReparse(std::move(StartSecondReparse)) {}
+
+    void onDiagnosticsReady(
+        PathRef File,
+        Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+
+      std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
+      ASSERT_TRUE(Lock.owns_lock())
+          << "Detected concurrent onDiagnosticsReady calls for the same file.";
+      if (FirstRequest) {
+        FirstRequest = false;
+        StartSecondReparse.set_value();
+        // Sleep long enough for the second request to be processed.
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      }
+    }
+
+  private:
+    std::mutex Mutex;
+    bool FirstRequest = true;
+    std::promise<void> StartSecondReparse;
+  };
+
+  const auto SourceContentsWithoutErrors = R"cpp(
+int a;
+int b;
+int c;
+int d;
+)cpp";
+
+  const auto SourceContentsWithErrors = R"cpp(
+int a = x;
+int b;
+int c;
+int d;
+)cpp";
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  llvm::StringMap<std::string> FileContents;
+  FileContents[FooCpp] = "";
+  ConstantFSProvider FS(buildTestFS(FileContents));
+
+  std::promise<void> StartSecondReparsePromise;
+  std::future<void> StartSecondReparse = StartSecondReparsePromise.get_future();
+
+  NoConcurrentAccessDiagConsumer DiagConsumer(
+      std::move(StartSecondReparsePromise));
+
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  ClangdServer Server(CDB, DiagConsumer, FS, 4, /*SnippetCompletions=*/false,
+                      EmptyLogger::getInstance());
+  Server.addDocument(FooCpp, SourceContentsWithErrors);
+  StartSecondReparse.wait();
+
+  auto Future = Server.addDocument(FooCpp, SourceContentsWithoutErrors);
+  Future.wait();
 }
 
 } // namespace clangd

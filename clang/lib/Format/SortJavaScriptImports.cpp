@@ -277,7 +277,7 @@ private:
   // Parses module references in the given lines. Returns the module references,
   // and a pointer to the first "main code" line if that is adjacent to the
   // affected lines of module references, nullptr otherwise.
-  std::pair<SmallVector<JsModuleReference, 16>, AnnotatedLine*>
+  std::pair<SmallVector<JsModuleReference, 16>, AnnotatedLine *>
   parseModuleReferences(const AdditionalKeywords &Keywords,
                         SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
     SmallVector<JsModuleReference, 16> References;
