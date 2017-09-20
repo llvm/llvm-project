@@ -725,15 +725,29 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
-option(LLVM_BUILD_INSTRUMENTED "Build LLVM and tools with PGO instrumentation (experimental)" Off)
-mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
-append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}'"
-  CMAKE_CXX_FLAGS
-  CMAKE_C_FLAGS
-  CMAKE_EXE_LINKER_FLAGS
-  CMAKE_SHARED_LINKER_FLAGS)
+option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (experimental)" Off)
+mark_as_advanced(LLVM_ENABLE_IR_PGO)
 
-option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation (experimental)" Off)
+option(LLVM_BUILD_INSTRUMENTED "Build LLVM and tools with PGO instrumentation" Off)
+mark_as_advanced(LLVM_BUILD_INSTRUMENTED)
+
+if (LLVM_BUILD_INSTRUMENTED)
+  if (LLVM_ENABLE_IR_PGO)
+    append("-fprofile-generate='${LLVM_PROFILE_DATA_DIR}'"
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
+  else()
+    append("-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}'"
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
+option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
 append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}' -fcoverage-mapping"
   CMAKE_CXX_FLAGS
