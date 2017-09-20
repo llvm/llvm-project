@@ -964,7 +964,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
-  if (ElfSym::MipsGp && !ElfSym::MipsGp->Value) {
+  if (ElfSym::MipsGp) {
     // Find GP-relative section with the lowest address
     // and use this address to calculate default _gp value.
     for (OutputSection *OS : OutputSections) {

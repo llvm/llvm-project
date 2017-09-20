@@ -148,6 +148,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   ExprValue V = Cmd->Expression();
   if (V.isAbsolute()) {
     Sym->Value = V.getValue();
+    Sym->Section = nullptr;
   } else {
     Sym->Section = V.Sec;
     Sym->Value = V.getSectionOffset();
