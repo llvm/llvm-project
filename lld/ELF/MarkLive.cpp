@@ -126,7 +126,7 @@ scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
     unsigned FirstRelI = Piece.FirstRelocation;
     if (FirstRelI == (unsigned)-1)
       continue;
-    if (read32<E>(Piece.data().data() + 4) == 0) {
+    if (read32<E>(Piece.data(&EH).data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
       resolveReloc<ELFT>(EH, Rels[FirstRelI], Fn);
@@ -135,7 +135,7 @@ scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
     // This is a FDE. The relocations point to the described function or to
     // a LSDA. We only need to keep the LSDA alive, so ignore anything that
     // points to executable sections.
-    typename ELFT::uint PieceEnd = Piece.InputOff + Piece.size();
+    typename ELFT::uint PieceEnd = Piece.InputOff + Piece.Size;
     for (unsigned I2 = FirstRelI, N2 = Rels.size(); I2 < N2; ++I2) {
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)

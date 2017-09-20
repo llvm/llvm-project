@@ -25,6 +25,7 @@ namespace lld {
 namespace elf {
 
 class DefinedCommon;
+class EhInputSection;
 class SymbolBody;
 struct SectionPiece;
 
@@ -261,17 +262,17 @@ private:
   llvm::DenseSet<uint64_t> LiveOffsets;
 };
 
-struct EhSectionPiece : public SectionPiece {
-  EhSectionPiece(size_t Off, InputSectionBase *ID, uint32_t Size,
-                 unsigned FirstRelocation)
-      : SectionPiece(Off, false), ID(ID), Size(Size),
-        FirstRelocation(FirstRelocation) {}
-  InputSectionBase *ID;
-  uint32_t Size;
-  uint32_t size() const { return Size; }
+struct EhSectionPiece {
+  EhSectionPiece(size_t Off, uint32_t Size, unsigned FirstRelocation)
+      : InputOff(Off), Size(Size), FirstRelocation(FirstRelocation) {
+    assert(Off < UINT32_MAX && Size < UINT32_MAX);
+  }
 
-  ArrayRef<uint8_t> data() { return {ID->Data.data() + this->InputOff, Size}; }
-  unsigned FirstRelocation;
+  ArrayRef<uint8_t> data(EhInputSection *Sec);
+  uint32_t InputOff;
+  int32_t OutputOff = -1;
+  uint32_t Size;
+  uint32_t FirstRelocation;
 };
 
 // This corresponds to a .eh_frame section of an input file.
@@ -290,6 +291,10 @@ public:
 
   SyntheticSection *getParent() const;
 };
+
+inline ArrayRef<uint8_t> EhSectionPiece::data(EhInputSection *Sec) {
+  return {Sec->Data.data() + InputOff, Size};
+}
 
 // This is a section that is added directly to an output section
 // instead of needing special combination via a synthetic section. This
@@ -337,7 +342,7 @@ private:
 extern std::vector<InputSectionBase *> InputSections;
 
 // Builds section order for handling --symbol-ordering-file.
-template <class ELFT> llvm::DenseMap<SectionBase *, int> buildSectionOrder();
+llvm::DenseMap<SectionBase *, int> buildSectionOrder();
 
 } // namespace elf
 

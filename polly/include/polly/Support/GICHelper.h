@@ -287,6 +287,71 @@ operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
   return OS;
 }
 
+/// Scope guard for code that allows arbitrary isl function to return an error
+/// if the max-operations quota exceeds.
+///
+/// This allows to opt-in code sections that have known long executions times.
+/// code not in a hot path can continue to assume that no unexpected error
+/// occurs.
+///
+/// This is typically used inside a nested IslMaxOperationsGuard scope. The
+/// IslMaxOperationsGuard defines the number of allowed base operations for some
+/// code, IslQuotaScope defines where it is allowed to return an error result.
+class IslQuotaScope {
+  isl_ctx *IslCtx;
+  int OldOnError;
+
+public:
+  IslQuotaScope() : IslCtx(nullptr) {}
+  IslQuotaScope(const IslQuotaScope &) = delete;
+  IslQuotaScope(IslQuotaScope &&Other)
+      : IslCtx(Other.IslCtx), OldOnError(Other.OldOnError) {
+    Other.IslCtx = nullptr;
+  }
+  const IslQuotaScope &operator=(IslQuotaScope &&Other) {
+    std::swap(this->IslCtx, Other.IslCtx);
+    std::swap(this->OldOnError, Other.OldOnError);
+    return *this;
+  }
+
+  /// Enter a quota-aware scope.
+  ///
+  /// Should not be used directly. Use IslMaxOperationsGuard::enter() instead.
+  explicit IslQuotaScope(isl_ctx *IslCtx, unsigned long LocalMaxOps)
+      : IslCtx(IslCtx) {
+    assert(IslCtx);
+    assert(isl_ctx_get_max_operations(IslCtx) == 0 && "Incorrect nesting");
+    if (LocalMaxOps == 0) {
+      this->IslCtx = nullptr;
+      return;
+    }
+
+    OldOnError = isl_options_get_on_error(IslCtx);
+    isl_options_set_on_error(IslCtx, ISL_ON_ERROR_CONTINUE);
+    isl_ctx_reset_error(IslCtx);
+    isl_ctx_set_max_operations(IslCtx, LocalMaxOps);
+  }
+
+  ~IslQuotaScope() {
+    if (!IslCtx)
+      return;
+
+    assert(isl_ctx_get_max_operations(IslCtx) > 0 && "Incorrect nesting");
+    assert(isl_options_get_on_error(IslCtx) == ISL_ON_ERROR_CONTINUE &&
+           "Incorrect nesting");
+    isl_ctx_set_max_operations(IslCtx, 0);
+    isl_options_set_on_error(IslCtx, OldOnError);
+  }
+
+  /// Return whether the current quota has exceeded.
+  bool hasQuotaExceeded() const {
+    if (!IslCtx)
+      return false;
+
+    return isl_ctx_last_error(IslCtx) == isl_error_quota;
+  }
+};
+
 /// Scoped limit of ISL operations.
 ///
 /// Limits the number of ISL operations during the lifetime of this object. The
@@ -307,8 +372,11 @@ private:
   /// scope.
   isl_ctx *IslCtx;
 
-  /// Old OnError setting; to reset to when the scope ends.
-  int OldOnError;
+  /// Maximum number of operations for the scope.
+  unsigned long LocalMaxOps;
+
+  /// When AutoEnter is enabled, holds the IslQuotaScope object.
+  IslQuotaScope TopLevelScope;
 
 public:
   /// Enter a max operations scope.
@@ -316,8 +384,14 @@ public:
   /// @param IslCtx      The ISL context to set the operations limit for.
   /// @param LocalMaxOps Maximum number of operations allowed in the
   ///                    scope. If set to zero, no operations limit is enforced.
-  IslMaxOperationsGuard(isl_ctx *IslCtx, unsigned long LocalMaxOps)
-      : IslCtx(IslCtx) {
+  /// @param AutoEnter   If true, automatically enters an IslQuotaScope such
+  ///                    that isl operations may return quota errors
+  ///                    immediately. If false, only starts the operations
+  ///                    counter, but isl does not return quota errors before
+  ///                    calling enter().
+  IslMaxOperationsGuard(isl_ctx *IslCtx, unsigned long LocalMaxOps,
+                        bool AutoEnter = true)
+      : IslCtx(IslCtx), LocalMaxOps(LocalMaxOps) {
     assert(IslCtx);
     assert(isl_ctx_get_max_operations(IslCtx) == 0 &&
            "Nested max operations not supported");
@@ -328,26 +402,26 @@ public:
       return;
     }
 
-    // Save previous state.
-    OldOnError = isl_options_get_on_error(IslCtx);
-
-    // Activate the new setting.
-    isl_ctx_set_max_operations(IslCtx, LocalMaxOps);
     isl_ctx_reset_operations(IslCtx);
-    isl_options_set_on_error(IslCtx, ISL_ON_ERROR_CONTINUE);
+    TopLevelScope = enter(AutoEnter);
   }
 
-  /// Leave the max operations scope.
-  ~IslMaxOperationsGuard() {
+  /// Enter a scope that can handle out-of-quota errors.
+  ///
+  /// @param AllowReturnNull Whether the scoped code can handle out-of-quota
+  ///                        errors. If false, returns a dummy scope object that
+  ///                        does nothing.
+  IslQuotaScope enter(bool AllowReturnNull = true) {
+    return AllowReturnNull && IslCtx ? IslQuotaScope(IslCtx, LocalMaxOps)
+                                     : IslQuotaScope();
+  }
+
+  /// Return whether the current quota has exceeded.
+  bool hasQuotaExceeded() const {
     if (!IslCtx)
-      return;
+      return false;
 
-    assert(isl_options_get_on_error(IslCtx) == ISL_ON_ERROR_CONTINUE &&
-           "Unexpected change of the on_error setting");
-
-    // Return to the previous error setting.
-    isl_ctx_set_max_operations(IslCtx, 0);
-    isl_options_set_on_error(IslCtx, OldOnError);
+    return isl_ctx_last_error(IslCtx) == isl_error_quota;
   }
 };
 
