@@ -114,7 +114,8 @@ static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
 
 // Options for dumping specific sections.
 static unsigned DumpType = DIDT_Null;
-static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets;
+static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
+    DumpOffsets;
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
   static opt<OffsetOption> Dump##ENUM_NAME(                                    \
       CMDLINE_NAME, desc("Dump the " ELF_NAME " section"),                     \
@@ -123,6 +124,7 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count> DumpOffsets
 #undef HANDLE_DWARF_SECTION
 
 static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
+                                 NotHidden, cat(DwarfDumpCategory),
                                  aliasopt(DumpDebugFrame));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
@@ -131,18 +133,21 @@ static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<offset> option"));
+                      "printing with the =<offset> option"),
+                 cat(DwarfDumpCategory));
 static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
                                aliasopt(ShowChildren));
 static opt<bool>
     ShowParents("show-parents",
                 desc("Show a debug info entry's parents when selectively "
-                     "printing with the =<offset> option"));
+                     "printing with the =<offset> option"),
+                cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
                               aliasopt(ShowParents));
 static opt<bool>
     SummarizeTypes("summarize-types",
-                   desc("Abbreviate the description of type unit entries"));
+                   desc("Abbreviate the description of type unit entries"),
+                   cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
                         cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
