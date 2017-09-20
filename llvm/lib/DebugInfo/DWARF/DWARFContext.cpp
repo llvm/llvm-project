@@ -257,10 +257,10 @@ void DWARFContext::dump(
   auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
                            DWARFSection Section, cu_iterator_range CUs) {
     if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
-      for (const auto &CU : CUs)
-        if (DumpOffset)
-          CU->getDIEForOffset(DumpOffset.getValue()).dump(OS, 0, 0, DumpOpts);
-        else
+      if (DumpOffset)
+        getDIEForOffset(DumpOffset.getValue()).dump(OS, 0, 0, DumpOpts);
+      else
+        for (const auto &CU : CUs)
           CU->dump(OS, DumpOpts);
     }
   };
