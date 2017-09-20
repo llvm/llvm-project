@@ -1253,6 +1253,8 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
       // If we don't need a phi create a copy to the upward exposed vreg.
       if (!needPHI) {
         assert(UpwardsUse);
+        assert(!VRegs.empty() &&
+               "No predecessors?  Is the Calling Convention correct?");
         unsigned DestReg = UUseVReg;
         BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc, TII->get(TargetOpcode::COPY),
                 DestReg)

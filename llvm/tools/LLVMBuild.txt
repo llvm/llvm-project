@@ -25,6 +25,7 @@ subdirectories =
  llvm-as
  llvm-bcanalyzer
  llvm-cat
+ llvm-cfi-verify
  llvm-cov
  llvm-cvtres
  llvm-diff

@@ -229,7 +229,7 @@ public:
 
   enum Kind {
     K_GNU,
-    K_MIPS64,
+    K_GNU64,
     K_BSD,
     K_DARWIN,
     K_DARWIN64,

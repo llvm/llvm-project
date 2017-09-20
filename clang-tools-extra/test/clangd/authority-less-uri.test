@@ -16,7 +16,7 @@ Content-Length: 146
 # Test authority-less URI
 #
 # CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a","insertTextFormat":1}
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK: ]}
 
 Content-Length: 172
@@ -25,7 +25,7 @@ Content-Length: 172
 # Test params parsing in the presence of a 1.x-compatible client (inlined "uri")
 #
 # CHECK: {"jsonrpc":"2.0","id":2,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a","insertTextFormat":1}
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK: ]}
 Content-Length: 44
 

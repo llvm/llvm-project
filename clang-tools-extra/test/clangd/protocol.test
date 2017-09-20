@@ -31,7 +31,7 @@ Content-Length: 146
 # Test message with Content-Type before Content-Length
 #
 # CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a","insertTextFormat":1}
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK: ]}
 
 X-Test: Testing
@@ -50,7 +50,7 @@ Content-Length: 146
 # Test message with duplicate Content-Length headers
 #
 # CHECK: {"jsonrpc":"2.0","id":3,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a","insertTextFormat":1}
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK: ]}
 # STDERR: Warning: Duplicate Content-Length header received. The previous value for this message (10) was ignored.
 
@@ -69,7 +69,7 @@ Content-Length: 146
 # Test message with Content-Type before Content-Length
 #
 # CHECK: {"jsonrpc":"2.0","id":5,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a","insertTextFormat":1}
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK: ]}
 
 Content-Length: 1024

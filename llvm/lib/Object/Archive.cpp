@@ -179,7 +179,7 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
 
     // GNU long file names end with a "/\n".
     if (Parent->kind() == Archive::K_GNU ||
-        Parent->kind() == Archive::K_MIPS64) {
+        Parent->kind() == Archive::K_GNU64) {
       StringRef::size_type End = StringRef(addr).find('\n');
       return StringRef(addr, End - 1);
     }
@@ -338,7 +338,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
 
   ErrorAsOutParameter ErrAsOutParam(Err);
 
-  // If there was an error in the construction of the Header 
+  // If there was an error in the construction of the Header
   // then just return with the error now set.
   if (*Err)
     return;
@@ -698,7 +698,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   }
 
   if (Name == "//") {
-    Format = has64SymTable ? K_MIPS64 : K_GNU;
+    Format = has64SymTable ? K_GNU64 : K_GNU;
     // The string table is never an external member, but we still
     // must check any Expected<> return value.
     Expected<StringRef> BufOrErr = C->getBuffer();
@@ -715,7 +715,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   }
 
   if (Name[0] != '/') {
-    Format = has64SymTable ? K_MIPS64 : K_GNU;
+    Format = has64SymTable ? K_GNU64 : K_GNU;
     setFirstRegular(*C);
     Err = Error::success();
     return;
@@ -797,14 +797,14 @@ StringRef Archive::Symbol::getName() const {
 Expected<Archive::Child> Archive::Symbol::getMember() const {
   const char *Buf = Parent->getSymbolTable().begin();
   const char *Offsets = Buf;
-  if (Parent->kind() == K_MIPS64 || Parent->kind() == K_DARWIN64)
+  if (Parent->kind() == K_GNU64 || Parent->kind() == K_DARWIN64)
     Offsets += sizeof(uint64_t);
   else
     Offsets += sizeof(uint32_t);
   uint32_t Offset = 0;
   if (Parent->kind() == K_GNU) {
     Offset = read32be(Offsets + SymbolIndex * 4);
-  } else if (Parent->kind() == K_MIPS64) {
+  } else if (Parent->kind() == K_GNU64) {
     Offset = read64be(Offsets + SymbolIndex * 8);
   } else if (Parent->kind() == K_BSD) {
     // The SymbolIndex is an index into the ranlib structs that start at
@@ -902,7 +902,7 @@ Archive::symbol_iterator Archive::symbol_begin() const {
     uint32_t symbol_count = 0;
     symbol_count = read32be(buf);
     buf += sizeof(uint32_t) + (symbol_count * (sizeof(uint32_t)));
-  } else if (kind() == K_MIPS64) {
+  } else if (kind() == K_GNU64) {
     uint64_t symbol_count = read64be(buf);
     buf += sizeof(uint64_t) + (symbol_count * (sizeof(uint64_t)));
   } else if (kind() == K_BSD) {
@@ -959,7 +959,7 @@ uint32_t Archive::getNumberOfSymbols() const {
   const char *buf = getSymbolTable().begin();
   if (kind() == K_GNU)
     return read32be(buf);
-  if (kind() == K_MIPS64)
+  if (kind() == K_GNU64)
     return read64be(buf);
   if (kind() == K_BSD)
     return read32le(buf) / 8;

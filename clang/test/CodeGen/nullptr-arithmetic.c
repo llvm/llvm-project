@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -S %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -S %s -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -S %s -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
 
 #include <stdint.h>
 
@@ -32,3 +34,14 @@ int8_t* test3(intptr_t n) {
 // CHECK-LABEL: test3
 // CHECK: getelementptr
 // CHECK-NOT: inttoptr
+
+// This checks the case where the offset isn't pointer-sized.
+// The front end will implicitly cast the offset to an integer, so we need to
+// make sure that doesn't cause problems on targets where integers and pointers
+// are not the same size.
+int8_t *test4(int8_t b) {
+  return NULLPTRI8 + b;
+}
+// CHECK-LABEL: test4
+// CHECK: inttoptr
+// CHECK-NOT: getelementptr

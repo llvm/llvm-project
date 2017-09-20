@@ -215,7 +215,8 @@ private:
                             DataExtractor *StrData, const char *SectionName);
 
 public:
-  DWARFVerifier(raw_ostream &S, DWARFContext &D, DIDumpOptions DumpOpts = {})
+  DWARFVerifier(raw_ostream &S, DWARFContext &D,
+                DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE())
       : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)) {}
   /// Verify the information in any of the following sections, if available:
   /// .debug_abbrev, debug_abbrev.dwo

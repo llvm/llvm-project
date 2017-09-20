@@ -151,7 +151,7 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(AsyncThreadsCount), SnippetCompletions(SnippetCompletions) {
+      SnippetCompletions(SnippetCompletions), WorkScheduler(AsyncThreadsCount) {
 }
 
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
@@ -315,6 +315,19 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
     auto Diags = DeferredRebuild.get();
     if (!Diags)
       return; // A new reparse was requested before this one completed.
+
+    // We need to serialize access to resulting diagnostics to avoid calling
+    // `onDiagnosticsReady` in the wrong order.
+    std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
+    DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[FileStr];
+    // FIXME(ibiryukov): get rid of '<' comparison here. In the current
+    // implementation diagnostics will not be reported after version counters'
+    // overflow. This should not happen in practice, since DocVersion is a
+    // 64-bit unsigned integer.
+    if (Version < LastReportedDiagsVersion)
+      return;
+    LastReportedDiagsVersion = Version;
+
     DiagConsumer.onDiagnosticsReady(FileStr,
                                     make_tagged(std::move(*Diags), Tag));
   };

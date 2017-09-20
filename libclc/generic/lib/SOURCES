@@ -28,6 +28,17 @@ cl_khr_local_int32_extended_atomics/atom_max.cl
 cl_khr_local_int32_extended_atomics/atom_min.cl
 cl_khr_local_int32_extended_atomics/atom_or.cl
 cl_khr_local_int32_extended_atomics/atom_xor.cl
+cl_khr_int64_base_atomics/atom_add.cl
+cl_khr_int64_base_atomics/atom_cmpxchg.cl
+cl_khr_int64_base_atomics/atom_dec.cl
+cl_khr_int64_base_atomics/atom_inc.cl
+cl_khr_int64_base_atomics/atom_sub.cl
+cl_khr_int64_base_atomics/atom_xchg.cl
+cl_khr_int64_extended_atomics/atom_and.cl
+cl_khr_int64_extended_atomics/atom_max.cl
+cl_khr_int64_extended_atomics/atom_min.cl
+cl_khr_int64_extended_atomics/atom_or.cl
+cl_khr_int64_extended_atomics/atom_xor.cl
 convert.cl
 common/degrees.cl
 common/mix.cl

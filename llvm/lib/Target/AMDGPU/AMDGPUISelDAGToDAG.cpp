@@ -197,6 +197,7 @@ private:
   bool SelectVOP3OpSelMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                             SDValue &Clamp) const;
   bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods) const;
+  bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   void SelectADD_SUB_I64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
@@ -1988,6 +1989,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   }
 
   return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
+                                               SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods);
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

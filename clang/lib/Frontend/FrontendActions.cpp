@@ -591,7 +591,7 @@ void PrintPreambleAction::ExecuteAction() {
   auto Buffer = CI.getFileManager().getBufferForFile(getCurrentFile());
   if (Buffer) {
     unsigned Preamble =
-        Lexer::ComputePreamble((*Buffer)->getBuffer(), CI.getLangOpts()).first;
+        Lexer::ComputePreamble((*Buffer)->getBuffer(), CI.getLangOpts()).Size;
     llvm::outs().write((*Buffer)->getBufferStart(), Preamble);
   }
 }

@@ -368,13 +368,39 @@ private:
     }
   }
 
-  void FillSortText(const CodeCompletionString &CCS,
-                    CompletionItem &Item) const {
+  static int GetSortPriority(const CodeCompletionString &CCS) {
+    int Score = CCS.getPriority();
     // Fill in the sortText of the CompletionItem.
-    assert(CCS.getPriority() < 99999 && "Expecting code completion result "
-                                        "priority to have at most 5-digits");
+    assert(Score <= 99999 && "Expecting code completion result "
+                             "priority to have at most 5-digits");
+
+    const int Penalty = 100000;
+    switch (static_cast<CXAvailabilityKind>(CCS.getAvailability())) {
+    case CXAvailability_Available:
+      // No penalty.
+      break;
+    case CXAvailability_Deprecated:
+      Score += Penalty;
+      break;
+    case CXAvailability_NotAccessible:
+      Score += 2 * Penalty;
+      break;
+    case CXAvailability_NotAvailable:
+      Score += 3 * Penalty;
+      break;
+    }
+
+    return Score;
+  }
+
+  static void FillSortText(const CodeCompletionString &CCS,
+                           CompletionItem &Item) {
+    int Priority = GetSortPriority(CCS);
+    // Fill in the sortText of the CompletionItem.
+    assert(Priority <= 999999 &&
+           "Expecting sort priority to have at most 6-digits");
     llvm::raw_string_ostream(Item.sortText)
-        << llvm::format("%05d%s", CCS.getPriority(), Item.filterText.c_str());
+        << llvm::format("%06d%s", Priority, Item.filterText.c_str());
   }
 
   std::vector<CompletionItem> &Items;

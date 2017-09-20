@@ -1,0 +1,163 @@
+// Check dumping of the resources stored in .res files.
+// The input was generated with the following commands, using the original Windows
+// rc.exe:
+// > rc /fo test_resource.res /nologo test_resource.rc
+
+// RUN: llvm-readobj %p/Inputs/resources/test_resource.res | FileCheck %s
+
+// CHECK:  Resource type (int): 9
+// CHECK-NEXT:  Resource name (string): MYACCELERATORS
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x30
+// CHECK-NEXT:  Language ID: 1033
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 24
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 11000300 E7030000 0D004400 4C040000  |..........D.L...|
+// CHECK-NEXT:    0010: 82001200 BC010000                    |........|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 2
+// CHECK-NEXT:  Resource name (string): CURSOR
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x30
+// CHECK-NEXT:  Language ID: 1033
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 808
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 28000000 10000000 10000000 01001800  |(...............|
+// CHECK-NEXT:    0010: 00000000 00030000 C40E0000 C40E0000  |................|
+// CHECK-NEXT:    0020: 00000000 00000000 FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0030: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0040: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0050: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0060: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0070: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0080: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0090: FFFFFFFF FFFFFFFF FFFFFFFF FF7F7F7F  |................|
+// CHECK-NEXT:    00A0: 7C7C7C78 78787575 75FFFFFF FFFFFFFF  ||||xxxuuu.......|
+// CHECK-NEXT:    00B0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    00C0: FFFFFFFF 979797FF FFFFFFFF FF838383  |................|
+// CHECK-NEXT:    00D0: AAAAAADB DBDB7979 79757575 FFFFFFFF  |......yyyuuu....|
+// CHECK-NEXT:    00E0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    00F0: FFFFFFFF 9C9C9C98 9898FFFF FF888888  |................|
+// CHECK-NEXT:    0100: DBDBDBB7 B7B77D7D 7DFFFFFF FFFFFFFF  |......}}}.......|
+// CHECK-NEXT:    0110: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0120: FFFFFFFF A0A0A09C 9C9C9393 93ADADAD  |................|
+// CHECK-NEXT:    0130: F2F2F284 84848181 81FFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0140: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0150: FFFFFFFF A4A4A4D7 D7D79D9D 9DD0D0D0  |................|
+// CHECK-NEXT:    0160: EEEEEE91 91918D8D 8DFFFFFF FFFFFF81  |................|
+// CHECK-NEXT:    0170: 81817E7E 7EFFFFFF FFFFFFFF FFFFFFFF  |..~~~...........|
+// CHECK-NEXT:    0180: FFFFFFFF A9A9A9F2 F2F2E5E5 E5E2E2E2  |................|
+// CHECK-NEXT:    0190: 95959591 91918D8D 8D898989 868686FF  |................|
+// CHECK-NEXT:    01A0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    01B0: FFFFFFFF ADADADF2 F2F2E1E1 E1DFDFDF  |................|
+// CHECK-NEXT:    01C0: E7E7E7E4 E4E4BBBB BB8E8E8E FFFFFFFF  |................|
+// CHECK-NEXT:    01D0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    01E0: FFFFFFFF B5B5B5F2 F2F2E8E8 E8E7E7E7  |................|
+// CHECK-NEXT:    01F0: EAEAEAC6 C6C69E9E 9EFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0200: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0210: FFFFFFFF B9B9B9F4 F4F4ECEC ECEDEDED  |................|
+// CHECK-NEXT:    0220: CBCBCBA7 A7A7FFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0230: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0240: FFFFFFFF BDBDBDF7 F7F7EFEF EFD0D0D0  |................|
+// CHECK-NEXT:    0250: AFAFAFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0260: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0270: FFFFFFFF C1C1C1F7 F7F7D5D5 D5B6B6B6  |................|
+// CHECK-NEXT:    0280: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0290: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    02A0: FFFFFFFF C4C4C4D9 D9D9BEBE BEFFFFFF  |................|
+// CHECK-NEXT:    02B0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    02C0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    02D0: FFFFFFFF C8C8C8C5 C5C5FFFF FFFFFFFF  |................|
+// CHECK-NEXT:    02E0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    02F0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0300: FFFFFFFF CBCBCBFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0310: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0320: FFFFFFFF FFFFFFFF                    |........|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 2
+// CHECK-NEXT:  Resource name (string): OKAY
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x30
+// CHECK-NEXT:  Language ID: 1033
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 808
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 28000000 10000000 10000000 01001800  |(...............|
+// CHECK-NEXT:    0010: 00000000 00030000 C40E0000 C40E0000  |................|
+// (...)
+// CHECK-DAG:     0310: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................|
+// CHECK-NEXT:    0320: FFFFFFFF FFFFFFFF                    |........|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 4
+// CHECK-NEXT:  Resource name (int): 14432
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x1030
+// CHECK-NEXT:  Language ID: 2052
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 46
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 00000000 00006400 79007500 00000000  |......d.y.u.....|
+// CHECK-NEXT:    0010: 65007300 68006100 6C006100 00008000  |e.s.h.a.l.a.....|
+// CHECK-NEXT:    0020: 66006B00 61006F00 79006100 0000      |f.k.a.o.y.a...|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 5
+// CHECK-NEXT:  Resource name (string): TESTDIALOG
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x1030
+// CHECK-NEXT:  Language ID: 1033
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 108
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 0000C080 00000000 02000A00 0A00C800  |................|
+// CHECK-NEXT:    0010: 2C010000 00005400 65007300 74000000  |,.....T.e.s.t...|
+// CHECK-NEXT:    0020: 01000250 00000000 0A000A00 E6000E00  |...P............|
+// CHECK-NEXT:    0030: 0100FFFF 82004300 6F006E00 74006900  |......C.o.n.t.i.|
+// CHECK-NEXT:    0040: 6E007500 65003A00 00000000 00000150  |n.u.e.:........P|
+// CHECK-NEXT:    0050: 00000000 42008600 A1000D00 0200FFFF  |....B...........|
+// CHECK-NEXT:    0060: 80002600 4F004B00 00000000           |..&.O.K.....|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 9
+// CHECK-NEXT:  Resource name (int): 12
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x30
+// CHECK-NEXT:  Language ID: 1033
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 24
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 11005800 A4000000 0D004800 2E160000  |..X.......H.....|
+// CHECK-NEXT:    0010: 82001200 BC010000                    |........|
+// CHECK-NEXT:  )
+
+// CHECK-DAG:  Resource type (int): 4
+// CHECK-NEXT:  Resource name (string): "EAT"
+// CHECK-NEXT:  Data version: 0
+// CHECK-NEXT:  Memory flags: 0x1030
+// CHECK-NEXT:  Language ID: 3081
+// CHECK-NEXT:  Version (major): 0
+// CHECK-NEXT:  Version (minor): 0
+// CHECK-NEXT:  Characteristics: 0
+// CHECK-NEXT:  Data size: 48
+// CHECK-NEXT:  Data: (
+// CHECK-NEXT:    0000: 00000000 00006400 66006900 73006800  |......d.f.i.s.h.|
+// CHECK-NEXT:    0010: 00000000 65007300 61006C00 61006400  |....e.s.a.l.a.d.|
+// CHECK-NEXT:    0020: 00008000 66006400 75006300 6B000000  |....f.d.u.c.k...|
+// CHECK-NEXT:  )

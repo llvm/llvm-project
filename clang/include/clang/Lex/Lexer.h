@@ -39,6 +39,23 @@ enum ConflictMarkerKind {
   CMK_Perforce
 };
 
+/// Describes the bounds (start, size) of the preamble and a flag required by
+/// PreprocessorOptions::PrecompiledPreambleBytes.
+/// The preamble includes the BOM, if any.
+struct PreambleBounds {
+  PreambleBounds(unsigned Size, bool PreambleEndsAtStartOfLine)
+    : Size(Size),
+      PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
+
+  /// \brief Size of the preamble in bytes.
+  unsigned Size;
+  /// \brief Whether the preamble ends at the start of a new line.
+  ///
+  /// Used to inform the lexer as to whether it's starting at the beginning of
+  /// a line after skipping the preamble.
+  bool PreambleEndsAtStartOfLine;
+};
+
 /// Lexer - This provides a simple interface that turns a text buffer into a
 /// stream of tokens.  This provides no support for file reading or buffering,
 /// or buffering/seeking of tokens, only forward lexing is supported.  It relies
@@ -443,11 +460,11 @@ public:
   /// to fewer than this number of lines.
   ///
   /// \returns The offset into the file where the preamble ends and the rest
-  /// of the file begins along with a boolean value indicating whether 
+  /// of the file begins along with a boolean value indicating whether
   /// the preamble ends at the beginning of a new line.
-  static std::pair<unsigned, bool> ComputePreamble(StringRef Buffer,
-                                                   const LangOptions &LangOpts,
-                                                   unsigned MaxLines = 0);
+  static PreambleBounds ComputePreamble(StringRef Buffer,
+                                        const LangOptions &LangOpts,
+                                        unsigned MaxLines = 0);
 
   /// \brief Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -618,7 +635,7 @@ private:
   //===--------------------------------------------------------------------===//
   // Other lexer functions.
 
-  void SkipBytes(unsigned Bytes, bool StartOfLine);
+  void SetByteOffset(unsigned Offset, bool StartOfLine);
 
   void PropagateLineStartLeadingSpaceInfo(Token &Result);
 
