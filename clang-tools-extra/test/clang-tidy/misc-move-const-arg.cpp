@@ -10,7 +10,9 @@ template <typename _Tp> struct remove_reference<_Tp &> { typedef _Tp type; };
 template <typename _Tp> struct remove_reference<_Tp &&> { typedef _Tp type; };
 
 template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t);
+constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
+  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
+}
 
 } // namespace std
 

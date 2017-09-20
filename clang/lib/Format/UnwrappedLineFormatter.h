@@ -35,8 +35,7 @@ public:
                          const SourceManager &SourceMgr,
                          FormattingAttemptStatus *Status)
       : Indenter(Indenter), Whitespaces(Whitespaces), Style(Style),
-        Keywords(Keywords), SourceMgr(SourceMgr),
-        Status(Status) {}
+        Keywords(Keywords), SourceMgr(SourceMgr), Status(Status) {}
 
   /// \brief Format the current block and return the penalty.
   unsigned format(const SmallVectorImpl<AnnotatedLine *> &Lines,

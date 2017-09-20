@@ -1,6 +1,7 @@
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=false \
 ; RUN: -debug < %s 2>&1| FileCheck %s
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -debug < %s 2>&1| FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -stats -disable-output < %s 2>&1| FileCheck %s --check-prefix=STATS -match-full-lines
 ; REQUIRES: asserts
 ;
 ;    /* C := alpha*A*B + beta*C */
@@ -14,6 +15,7 @@
 ;
 ; CHECK-NOT: The matrix multiplication pattern was detected
 ; PATTERN-MATCHING-OPTS: The matrix multiplication pattern was detected
+; STATS:  1 polly-opt-isl    - Number of matrix multiplication patterns detected and optimized
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

@@ -20,6 +20,7 @@ union {
 class A {
 protected:
   void foo(int, A, decltype(u));
+  void bar();
 }; 
 
 void A::foo(int, A, decltype(u)) {
@@ -29,3 +30,5 @@ A a;
 
 int A::*x = 0;
 int (A::*y)(int) = 0;
+
+void A::bar() { foo(0, *this, u); }

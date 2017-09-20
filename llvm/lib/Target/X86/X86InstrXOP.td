@@ -213,7 +213,7 @@ multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128> 
            "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
            [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
-                             i8immZExt3:$cc)))]>,
+                             imm:$cc)))]>,
            XOP_4V;
   def mi : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, i128mem:$src2, XOPCC:$cc),
@@ -222,7 +222,7 @@ multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128> 
            [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1),
                              (vt128 (bitconvert (loadv2i64 addr:$src2))),
-                              i8immZExt3:$cc)))]>,
+                              imm:$cc)))]>,
            XOP_4V;
   let isAsmParserOnly = 1, hasSideEffects = 0 in {
     def ri_alt : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),

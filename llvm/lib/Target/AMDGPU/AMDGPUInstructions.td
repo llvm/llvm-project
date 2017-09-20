@@ -501,59 +501,6 @@ def FP_HALF : PatLeaf <
   [{return N->isExactlyValue(0.5);}]
 >;
 
-let isCodeGenOnly = 1, isPseudo = 1 in {
-
-let usesCustomInserter = 1  in {
-
-class CLAMP <RegisterClass rc> : AMDGPUShaderInst <
-  (outs rc:$dst),
-  (ins rc:$src0),
-  "CLAMP $dst, $src0",
-  [(set f32:$dst, (AMDGPUclamp f32:$src0))]
->;
-
-class FABS <RegisterClass rc> : AMDGPUShaderInst <
-  (outs rc:$dst),
-  (ins rc:$src0),
-  "FABS $dst, $src0",
-  [(set f32:$dst, (fabs f32:$src0))]
->;
-
-class FNEG <RegisterClass rc> : AMDGPUShaderInst <
-  (outs rc:$dst),
-  (ins rc:$src0),
-  "FNEG $dst, $src0",
-  [(set f32:$dst, (fneg f32:$src0))]
->;
-
-} // usesCustomInserter = 1
-
-multiclass RegisterLoadStore <RegisterClass dstClass, Operand addrClass,
-                    ComplexPattern addrPat> {
-let UseNamedOperandTable = 1 in {
-
-  def RegisterLoad : AMDGPUShaderInst <
-    (outs dstClass:$dst),
-    (ins addrClass:$addr, i32imm:$chan),
-    "RegisterLoad $dst, $addr",
-    [(set i32:$dst, (AMDGPUregister_load addrPat:$addr, (i32 timm:$chan)))]
-  > {
-    let isRegisterLoad = 1;
-  }
-
-  def RegisterStore : AMDGPUShaderInst <
-    (outs),
-    (ins dstClass:$val, addrClass:$addr, i32imm:$chan),
-    "RegisterStore $val, $addr",
-    [(AMDGPUregister_store i32:$val, addrPat:$addr, (i32 timm:$chan))]
-  > {
-    let isRegisterStore = 1;
-  }
-}
-}
-
-} // End isCodeGenOnly = 1, isPseudo = 1
-
 /* Generic helper patterns for intrinsics */
 /* -------------------------------------- */
 
