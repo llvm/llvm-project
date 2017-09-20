@@ -115,79 +115,108 @@ defm atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
 defm atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
 //===----------------------------------------------------------------------===//
-// SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1
-// to be glued to the memory instructions.
+// SDNodes PatFrags for loads/stores with a glue input.
+// This is for SDNodes and PatFrag for local loads and stores to
+// enable s_mov_b32 m0, -1 to be glued to the memory instructions.
+//
+// These mirror the regular load/store PatFrags and rely on special
+// processing during Select() to add the glued copy.
+//
 //===----------------------------------------------------------------------===//
 
-def SIld_local : SDNode <"ISD::LOAD", SDTLoad,
+def AMDGPUld_glue : SDNode <"ISD::LOAD", SDTLoad,
   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
 >;
 
-def si_ld_local : PatFrag <(ops node:$ptr), (SIld_local node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+def unindexedload_glue : PatFrag <(ops node:$ptr), (AMDGPUld_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
 }]>;
 
-def si_load_local : PatFrag <(ops node:$ptr), (si_ld_local node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED &&
-         cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
 }]>;
 
-def si_load_local_align8 : Aligned8Bytes <
-  (ops node:$ptr), (si_load_local node:$ptr)
->;
+def extload_glue : PatFrag<(ops node:$ptr), (load_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD;
+}]>;
 
-def si_sextload_local : PatFrag <(ops node:$ptr), (si_ld_local node:$ptr), [{
+def sextload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr), [{
   return cast<LoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD;
 }]>;
-def si_az_extload_local : AZExtLoadBase <si_ld_local>;
 
-multiclass SIExtLoadLocal <PatFrag ld_node> {
+def zextload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD;
+}]>;
 
-  def _i8 : PatFrag <(ops node:$ptr), (ld_node node:$ptr),
-                     [{return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;}]
-  >;
+def az_extload_glue : AZExtLoadBase <unindexedload_glue>;
 
-  def _i16 : PatFrag <(ops node:$ptr), (ld_node node:$ptr),
-                     [{return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;}]
-  >;
-}
+def az_extloadi8_glue : PatFrag<(ops node:$ptr), (az_extload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
 
-defm si_sextload_local : SIExtLoadLocal <si_sextload_local>;
-defm si_az_extload_local : SIExtLoadLocal <si_az_extload_local>;
+def az_extloadi16_glue : PatFrag<(ops node:$ptr), (az_extload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
 
-def SIst_local : SDNode <"ISD::STORE", SDTStore,
+def sextloadi8_glue : PatFrag<(ops node:$ptr), (sextload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+
+def sextloadi16_glue : PatFrag<(ops node:$ptr), (sextload_glue node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+
+def load_glue_align8 : Aligned8Bytes <
+  (ops node:$ptr), (load_glue node:$ptr)
+>;
+
+
+def load_local_m0 : LoadFrag<load_glue>, LocalAddress;
+def sextloadi8_local_m0 : LoadFrag<sextloadi8_glue>, LocalAddress;
+def sextloadi16_local_m0 : LoadFrag<sextloadi16_glue>, LocalAddress;
+def az_extloadi8_local_m0 : LoadFrag<az_extloadi8_glue>, LocalAddress;
+def az_extloadi16_local_m0 : LoadFrag<az_extloadi16_glue>, LocalAddress;
+def load_align8_local_m0 : LoadFrag <load_glue_align8>, LocalAddress;
+
+
+def AMDGPUst_glue : SDNode <"ISD::STORE", SDTStore,
   [SDNPHasChain, SDNPMayStore, SDNPMemOperand, SDNPInGlue]
 >;
 
-def si_st_local : PatFrag <
-  (ops node:$val, node:$ptr), (SIst_local node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+def unindexedstore_glue : PatFrag<(ops node:$val, node:$ptr),
+                                   (AMDGPUst_glue node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
 }]>;
 
-def si_store_local : PatFrag <
-  (ops node:$val, node:$ptr), (si_st_local node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED &&
-         !cast<StoreSDNode>(N)->isTruncatingStore();
+def store_glue : PatFrag<(ops node:$val, node:$ptr),
+                      (unindexedstore_glue node:$val, node:$ptr), [{
+  return !cast<StoreSDNode>(N)->isTruncatingStore();
 }]>;
 
-def si_store_local_align8 : Aligned8Bytes <
-  (ops node:$val, node:$ptr), (si_store_local node:$val, node:$ptr)
->;
-
-def si_truncstore_local : PatFrag <
-  (ops node:$val, node:$ptr), (si_st_local node:$val, node:$ptr), [{
+def truncstore_glue : PatFrag<(ops node:$val, node:$ptr),
+  (unindexedstore_glue node:$val, node:$ptr), [{
   return cast<StoreSDNode>(N)->isTruncatingStore();
 }]>;
 
-def si_truncstore_local_i8 : PatFrag <
-  (ops node:$val, node:$ptr), (si_truncstore_local node:$val, node:$ptr), [{
+def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
+                           (truncstore_glue node:$val, node:$ptr), [{
   return cast<StoreSDNode>(N)->getMemoryVT() == MVT::i8;
 }]>;
 
-def si_truncstore_local_i16 : PatFrag <
-  (ops node:$val, node:$ptr), (si_truncstore_local node:$val, node:$ptr), [{
+def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
+                           (truncstore_glue node:$val, node:$ptr), [{
   return cast<StoreSDNode>(N)->getMemoryVT() == MVT::i16;
 }]>;
+
+def store_glue_align8 : Aligned8Bytes <
+  (ops node:$value, node:$ptr), (store_glue node:$value, node:$ptr)
+>;
+
+def store_local_m0 : StoreFrag<store_glue>, LocalAddress;
+def truncstorei8_local_m0 : StoreFrag<truncstorei8_glue>, LocalAddress;
+def truncstorei16_local_m0 : StoreFrag<truncstorei16_glue>, LocalAddress;
+
+def store_align8_local_m0 : StoreFrag<store_glue_align8>, LocalAddress;
 
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),

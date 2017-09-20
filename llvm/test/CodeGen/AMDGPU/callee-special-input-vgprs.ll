@@ -327,8 +327,8 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; Requires loading and storing to stack slot.
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
 ; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:8 ; 4-byte Folded Spill
-; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
 ; GCN: s_add_u32 s32, s32, 0x400{{$}}
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
 
 ; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:8{{$}}
 

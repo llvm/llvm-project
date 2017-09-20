@@ -27,6 +27,4 @@ void a(S* b, void* c) {
   // Cases that don't match the GNU inttoptr idiom get a different warning.
   f = (char*)0 - i; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior}}
   int *g = (int*)0 + i; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior}}
-  unsigned char j = (unsigned char)b;
-  f = (char*)0 + j; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior}}
 }

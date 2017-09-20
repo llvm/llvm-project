@@ -1236,6 +1236,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Write the result.
   writeResult();
 
+  if (ErrorCount)
+    return;
+
   // Call exit to avoid calling destructors.
   exit(0);
 }

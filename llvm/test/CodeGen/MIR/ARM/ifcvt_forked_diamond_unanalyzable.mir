@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+---
+name:            foo
+body:             |
+  bb.0:
+    Bcc %bb.2, 1, %cpsr
+
+  bb.1:
+  successors: %bb.3(0x20000000), %bb.4(0x60000000)
+    %sp = tADDspi %sp, 1, 14, _
+    Bcc %bb.3, 1, %cpsr
+    B %bb.4
+
+  bb.2:
+  successors: %bb.3(0x20000000), %bb.4(0x60000000)
+    %sp = tADDspi %sp, 2, 14, _
+    Bcc %bb.3, 1, %cpsr
+    B %bb.4
+
+  bb.3:
+  successors:
+    %sp = tADDspi %sp, 3, 14, _
+    BX_RET 14, _
+
+  bb.4:
+  successors:
+    %sp = tADDspi %sp, 4, 14, _
+    BX_RET 14, _
+...
+
+# Forked-diamond testcase with unanalyzable instructions in both the True and
+# False BBs following the forked diamond.
+
+# CHECK: body:             |
+# CHECK:   bb.0:
+# CHECK:     successors: %bb.2(0x20000000), %bb.1(0x60000000)
+
+# CHECK:     %sp = tADDspi %sp, 2, 1, %cpsr
+# CHECK:     %sp = tADDspi %sp, 1, 0, %cpsr, implicit %sp
+# CHECK:     Bcc %bb.2, 1, %cpsr
+
+# CHECK:   bb.1:
+# CHECK:     %sp = tADDspi %sp, 4, 14, _
+# CHECK:     BX_RET 14, _
+
+# CHECK:   bb.2:
+# CHECK:     %sp = tADDspi %sp, 3, 14, _
+# CHECK:     BX_RET 14, _

@@ -721,8 +721,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // because of this, but unique-external linkage suits us.
     if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var)) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
-      if (TypeLV.getLinkage() != ExternalLinkage &&
-          TypeLV.getLinkage() != ModuleLinkage)
+      if (!isExternallyVisible(TypeLV.getLinkage()))
         return LinkageInfo::uniqueExternal();
       if (!LV.isVisibilityExplicit())
         LV.mergeVisibility(TypeLV);
@@ -772,7 +771,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       QualType TypeAsWritten = Function->getType();
       if (TypeSourceInfo *TSI = Function->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
-      if (TypeAsWritten->getLinkage() == UniqueExternalLinkage)
+      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
         return LinkageInfo::uniqueExternal();
     }
 
@@ -909,7 +908,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
   const NamedDecl *explicitSpecSuppressor = nullptr;
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-    // If the type of the function uses a type with unique-external
+    // If the type of the function uses a type that has non-externally-visible
     // linkage, it's not legally usable from outside this translation unit.
     // But only look at the type-as-written. If this function has an
     // auto-deduced return type, we can't compute the linkage of that type
@@ -922,7 +921,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
       QualType TypeAsWritten = MD->getType();
       if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
-      if (TypeAsWritten->getLinkage() == UniqueExternalLinkage)
+      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
         return LinkageInfo::uniqueExternal();
     }
     // If this is a method template specialization, use the linkage for
@@ -1119,6 +1118,9 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
                                              Decl *ContextDecl,
                                              LVComputationKind computation) {
   // This lambda has its linkage/visibility determined by its owner.
+  // FIXME: This is wrong. A lambda never formally has linkage; if this
+  // calculation determines the lambda has external linkage, it should be
+  // downgraded to VisibleNoLinkage.
   if (ContextDecl) {
     if (isa<ParmVarDecl>(ContextDecl))
       DC = ContextDecl->getDeclContext()->getRedeclContext();

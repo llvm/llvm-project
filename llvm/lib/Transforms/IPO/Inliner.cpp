@@ -356,10 +356,12 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
   if (IC.isNever()) {
     DEBUG(dbgs() << "    NOT Inlining: cost=never"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline", Call)
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline", Call)
              << NV("Callee", Callee) << " not inlined into "
              << NV("Caller", Caller)
-             << " because it should never be inlined (cost=never)");
+             << " because it should never be inlined (cost=never)";
+    });
     return None;
   }
 
@@ -367,11 +369,13 @@ shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
     DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
                  << ", thres=" << IC.getThreshold()
                  << ", Call: " << *CS.getInstruction() << "\n");
-    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
              << NV("Callee", Callee) << " not inlined into "
              << NV("Caller", Caller) << " because too costly to inline (cost="
              << NV("Cost", IC.getCost())
-             << ", threshold=" << NV("Threshold", IC.getThreshold()) << ")");
+             << ", threshold=" << NV("Threshold", IC.getThreshold()) << ")";
+    });
     return None;
   }
 
@@ -581,12 +585,14 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                    << NV("Callee", Callee) << " inlined into "
                    << NV("Caller", Caller) << " with cost=always");
         else
-          ORE.emit(OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
+          ORE.emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
                    << NV("Callee", Callee) << " inlined into "
                    << NV("Caller", Caller)
                    << " with cost=" << NV("Cost", OIC->getCost())
                    << " (threshold=" << NV("Threshold", OIC->getThreshold())
-                   << ")");
+                   << ")";
+          });
 
         // If inlining this function gave us any new call sites, throw them
         // onto our worklist to process.  They are useful inline candidates.

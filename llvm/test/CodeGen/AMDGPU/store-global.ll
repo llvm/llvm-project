@@ -85,11 +85,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_i24:
-; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; SIVI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
 ; SIVI-DAG: buffer_store_byte
 ; SIVI-DAG: buffer_store_short
 
-; GFX9-DAG: global_store_byte
+; GFX9-DAG: global_store_byte_d16_hi v{{\[[0-9]:[0-9]+\]}}, v{{[0-9]+}}, off offset:2
 ; GFX9-DAG: global_store_short
 
 ; EG: MEM_RAT MSKOR

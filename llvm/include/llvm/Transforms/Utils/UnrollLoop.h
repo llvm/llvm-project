@@ -39,13 +39,29 @@ const Loop* addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
                                      BasicBlock *ClonedBB, LoopInfo *LI,
                                      NewLoopsMap &NewLoops);
 
-bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
-                bool AllowRuntime, bool AllowExpensiveTripCount,
-                bool PreserveCondBr, bool PreserveOnlyFirst,
-                unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
-                LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
-                bool PreserveLCSSA);
+/// Represents the result of a \c UnrollLoop invocation.
+enum class LoopUnrollStatus {
+  /// The loop was not modified.
+  Unmodified,
+
+  /// The loop was partially unrolled -- we still have a loop, but with a
+  /// smaller trip count.  We may also have emitted epilogue loop if the loop
+  /// had a non-constant trip count.
+  PartiallyUnrolled,
+
+  /// The loop was fully unrolled into straight-line code.  We no longer have
+  /// any back-edges.
+  FullyUnrolled
+};
+
+LoopUnrollStatus UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
+                            bool Force, bool AllowRuntime,
+                            bool AllowExpensiveTripCount, bool PreserveCondBr,
+                            bool PreserveOnlyFirst, unsigned TripMultiple,
+                            unsigned PeelCount, bool UnrollRemainder,
+                            LoopInfo *LI, ScalarEvolution *SE,
+                            DominatorTree *DT, AssumptionCache *AC,
+                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool AllowExpensiveTripCount,

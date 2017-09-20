@@ -84,3 +84,8 @@ bool DiagnosticHandler::isPassedOptRemarkEnabled(StringRef PassName) const {
   return (PassRemarksPassedOptLoc.Pattern &&
           PassRemarksPassedOptLoc.Pattern->match(PassName));
 }
+
+bool DiagnosticHandler::isAnyRemarkEnabled() const {
+  return (PassRemarksPassedOptLoc.Pattern || PassRemarksMissedOptLoc.Pattern ||
+          PassRemarksAnalysisOptLoc.Pattern);
+}

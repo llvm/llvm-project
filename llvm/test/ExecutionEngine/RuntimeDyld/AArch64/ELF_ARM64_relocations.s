@@ -82,16 +82,3 @@ r:
 ## f & 0xFFF = 0xdef (bits 11:0 of f)
 ## 0xdef << 10 = 0x37bc00
 # rtdyld-check: *{4}(a) = 0x9137bc00
-
-	.data
-laser:
-	.asciz "laser"
-ABS16:
-	.short laser
-# rtdyld-check: (*{2}ABS16) = laser[15:0]
-ABS32:
-	.long laser
-# rtdyld-check: (*{4}ABS32) = laser[31:0]
-ABS64:
-	.xword laser
-# rtdyld-check: (*{8}ABS64) = laser

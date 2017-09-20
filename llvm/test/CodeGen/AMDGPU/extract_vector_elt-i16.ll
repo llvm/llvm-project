@@ -92,13 +92,17 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 }
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3i16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
 
 ; SICIVI: buffer_store_short
 ; SICIVI: buffer_store_short
 ; SICIVI: buffer_store_short
+
+; GFX9: buffer_load_ushort
+; GFX9: buffer_load_ushort
+; GFX9: global_load_short_d16_hi
 
 ; GFX9: buffer_store_dword
 ; GFX9: buffer_store_dword

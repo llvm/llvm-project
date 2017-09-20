@@ -334,7 +334,7 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     LI.removeBlock(BB);
 
   // The last step is to update LoopInfo now that we've eliminated this loop.
-  LI.markAsRemoved(L);
+  LI.markAsErased(L);
 }
 
 PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,

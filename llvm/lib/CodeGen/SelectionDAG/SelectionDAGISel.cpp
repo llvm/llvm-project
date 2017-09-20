@@ -1182,12 +1182,7 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
 
   // For each machine basic block in reverse post order.
   ReversePostOrderTraversal<MachineFunction *> RPOT(FuncInfo->MF);
-  for (ReversePostOrderTraversal<MachineFunction *>::rpo_iterator
-           It = RPOT.begin(),
-           E = RPOT.end();
-       It != E; ++It) {
-    MachineBasicBlock *MBB = *It;
-
+  for (MachineBasicBlock *MBB : RPOT) {
     // For each swifterror value in the function.
     for(const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
       auto Key = std::make_pair(MBB, SwiftErrorVal);
