@@ -4781,6 +4781,14 @@ def note_deleted_assign_field : Note<
 def warn_undefined_internal : Warning<
   "%select{function|variable}0 %q1 has internal linkage but is not defined">,
   InGroup<DiagGroup<"undefined-internal">>;
+def err_undefined_internal_type : Error<
+  "%select{function|variable}0 %q1 is used but not defined in this "
+  "translation unit, and cannot be defined in any other translation unit "
+  "because its type does not have linkage">;
+def ext_undefined_internal_type : Extension<
+  "ISO C++ requires a definition in this translation unit for "
+  "%select{function|variable}0 %q1 because its type does not have linkage">,
+  InGroup<DiagGroup<"undefined-internal-type">>;
 def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
   InGroup<DiagGroup<"undefined-inline">>;
 def err_undefined_inline_var : Error<"inline variable %q0 is not defined">;
@@ -5980,19 +5988,26 @@ def note_typecheck_assign_const : Note<
   "member function %q1 is declared const here|"
   "%select{|nested }1data member %2 declared const here}0">;
 
+def warn_lunsigned_always_true_comparison : Warning<
+  "comparison of unsigned expression %0 is always %select{false|true}1">,
+  InGroup<TautologicalUnsignedZeroCompare>;
+def warn_runsigned_always_true_comparison : Warning<
+  "comparison of %0 unsigned expression is always %select{false|true}1">,
+  InGroup<TautologicalUnsignedZeroCompare>;
+def warn_lunsigned_enum_always_true_comparison : Warning<
+  "comparison of unsigned enum expression %0 is always %select{false|true}1">,
+  InGroup<TautologicalUnsignedEnumZeroCompare>;
+def warn_runsigned_enum_always_true_comparison : Warning<
+  "comparison of %0 unsigned enum expression is always %select{false|true}1">,
+  InGroup<TautologicalUnsignedEnumZeroCompare>;
+
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
   InGroup<SignCompare>, DefaultIgnore;
-def warn_lunsigned_always_true_comparison : Warning<
-  "comparison of unsigned%select{| enum}2 expression %0 is always %1">,
-  InGroup<TautologicalUnsignedZeroCompare>;
 def warn_out_of_range_compare : Warning<
   "comparison of %select{constant %0|true|false}1 with " 
   "%select{expression of type %2|boolean expression}3 is always "
   "%select{false|true}4">, InGroup<TautologicalOutOfRangeCompare>;
-def warn_runsigned_always_true_comparison : Warning<
-  "comparison of %0 unsigned%select{| enum}2 expression is always %1">,
-  InGroup<TautologicalUnsignedZeroCompare>;
 def warn_comparison_of_mixed_enum_types : Warning<
   "comparison of two values with different enumeration types"
   "%diff{ ($ and $)|}0,1">,
@@ -8319,12 +8334,12 @@ def err_c99_array_usage_cxx : Error<
   "feature, not permitted in C++">;
 def err_type_unsupported : Error<
   "%0 is not supported on this target">;
-def err_nsconsumed_attribute_mismatch : Error<
+def warn_nsconsumed_attribute_mismatch : Warning<
   "overriding method has mismatched ns_consumed attribute on its"
-  " parameter">;
-def err_nsreturns_retained_attribute_mismatch : Error<
+  " parameter">, InGroup<NSConsumedMismatch>;
+def warn_nsreturns_retained_attribute_mismatch : Warning<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
-  " attributes">;
+  " attributes">, InGroup<NSReturnsMismatch>;
 
 def err_nserrordomain_not_tagdecl : Error<
   "ns_error_domain attribute only valid on "

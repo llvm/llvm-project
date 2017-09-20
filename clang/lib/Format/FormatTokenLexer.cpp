@@ -96,12 +96,10 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   }
 
   if (Style.Language == FormatStyle::LK_Java) {
-    static const tok::TokenKind JavaRightLogicalShift[] = {tok::greater,
-                                                           tok::greater,
-                                                           tok::greater};
-    static const tok::TokenKind JavaRightLogicalShiftAssign[] = {tok::greater,
-                                                                 tok::greater,
-                                                                 tok::greaterequal};
+    static const tok::TokenKind JavaRightLogicalShift[] = {
+        tok::greater, tok::greater, tok::greater};
+    static const tok::TokenKind JavaRightLogicalShiftAssign[] = {
+        tok::greater, tok::greater, tok::greaterequal};
     if (tryMergeTokens(JavaRightLogicalShift, TT_BinaryOperator))
       return;
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
@@ -162,9 +160,8 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
     return false;
   unsigned AddLength = 0;
   for (unsigned i = 1; i < Kinds.size(); ++i) {
-    if (!First[i]->is(Kinds[i]) ||
-        First[i]->WhitespaceRange.getBegin() !=
-            First[i]->WhitespaceRange.getEnd())
+    if (!First[i]->is(Kinds[i]) || First[i]->WhitespaceRange.getBegin() !=
+                                       First[i]->WhitespaceRange.getEnd())
       return false;
     AddLength += First[i]->TokenText.size();
   }
