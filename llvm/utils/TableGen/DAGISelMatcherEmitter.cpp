@@ -20,14 +20,16 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 using namespace llvm;
 
 enum {
-  CommentIndent = 30
+  IndexWidth = 6,
+  FullIndexWidth = IndexWidth + 4,
+  HistOpcWidth = 40,
 };
 
 cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
@@ -81,17 +83,17 @@ public:
     : CGP(cgp) {}
 
   unsigned EmitMatcherList(const Matcher *N, unsigned Indent,
-                           unsigned StartIdx, formatted_raw_ostream &OS);
+                           unsigned StartIdx, raw_ostream &OS);
 
-  void EmitPredicateFunctions(formatted_raw_ostream &OS);
+  void EmitPredicateFunctions(raw_ostream &OS);
 
-  void EmitHistogram(const Matcher *N, formatted_raw_ostream &OS);
+  void EmitHistogram(const Matcher *N, raw_ostream &OS);
 
   void EmitPatternMatchTable(raw_ostream &OS);
 
 private:
   unsigned EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
-                       formatted_raw_ostream &OS);
+                       raw_ostream &OS);
 
   unsigned getNodePredicate(TreePredicateFn Pred) {
     TreePattern *TP = Pred.getOrigPatFragRecord();
@@ -239,8 +241,8 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 /// the number of bytes emitted.
 unsigned MatcherTableEmitter::
 EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
-            formatted_raw_ostream &OS) {
-  OS.PadToColumn(Indent*2);
+            raw_ostream &OS) {
+  OS.indent(Indent*2);
 
   switch (N->getKind()) {
   case Matcher::Scope: {
@@ -256,10 +258,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
         ++CurrentIdx;
       } else  {
         if (!OmitComments) {
-          OS << "/*" << CurrentIdx << "*/";
-          OS.PadToColumn(Indent*2) << "/*Scope*/ ";
+          OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+          OS.indent(Indent*2) << "/*Scope*/ ";
         } else
-          OS.PadToColumn(Indent*2);
+          OS.indent(Indent*2);
       }
 
       // We need to encode the child and the offset of the failure code before
@@ -275,9 +277,8 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 
         TmpBuf.clear();
         raw_svector_ostream OS(TmpBuf);
-        formatted_raw_ostream FOS(OS);
         ChildSize = EmitMatcherList(SM->getChild(i), Indent+1,
-                                    CurrentIdx+VBRSize, FOS);
+                                    CurrentIdx+VBRSize, OS);
       } while (GetVBRSize(ChildSize) != VBRSize);
 
       assert(ChildSize != 0 && "Should not have a zero-sized child!");
@@ -287,8 +288,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
         OS << "/*->" << CurrentIdx+ChildSize << "*/";
 
         if (i == 0)
-          OS.PadToColumn(CommentIndent) << "// " << SM->getNumChildren()
-            << " children in Scope";
+          OS << " // " << SM->getNumChildren() << " children in Scope";
       }
 
       OS << '\n' << TmpBuf;
@@ -297,8 +297,8 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 
     // Emit a zero as a sentinel indicating end of 'Scope'.
     if (!OmitComments)
-      OS << "/*" << CurrentIdx << "*/";
-    OS.PadToColumn(Indent*2) << "0, ";
+      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+    OS.indent(Indent*2) << "0, ";
     if (!OmitComments)
       OS << "/*End of Scope*/";
     OS << '\n';
@@ -308,9 +308,9 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   case Matcher::RecordNode:
     OS << "OPC_RecordNode,";
     if (!OmitComments)
-      OS.PadToColumn(CommentIndent) << "// #"
-        << cast<RecordMatcher>(N)->getResultNo() << " = "
-        << cast<RecordMatcher>(N)->getWhatFor();
+      OS << " // #"
+         << cast<RecordMatcher>(N)->getResultNo() << " = "
+         << cast<RecordMatcher>(N)->getWhatFor();
     OS << '\n';
     return 1;
 
@@ -318,9 +318,9 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     OS << "OPC_RecordChild" << cast<RecordChildMatcher>(N)->getChildNo()
        << ',';
     if (!OmitComments)
-      OS.PadToColumn(CommentIndent) << "// #"
-        << cast<RecordChildMatcher>(N)->getResultNo() << " = "
-        << cast<RecordChildMatcher>(N)->getWhatFor();
+      OS << " // #"
+         << cast<RecordChildMatcher>(N)->getResultNo() << " = "
+         << cast<RecordChildMatcher>(N)->getWhatFor();
     OS << '\n';
     return 1;
 
@@ -362,7 +362,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     StringRef Pred =cast<CheckPatternPredicateMatcher>(N)->getPredicate();
     OS << "OPC_CheckPatternPredicate, " << getPatternPredicate(Pred) << ',';
     if (!OmitComments)
-      OS.PadToColumn(CommentIndent) << "// " << Pred;
+      OS << " // " << Pred;
     OS << '\n';
     return 2;
   }
@@ -370,7 +370,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     TreePredicateFn Pred = cast<CheckPredicateMatcher>(N)->getPredicate();
     OS << "OPC_CheckPredicate, " << getNodePredicate(Pred) << ',';
     if (!OmitComments)
-      OS.PadToColumn(CommentIndent) << "// " << Pred.getFnName();
+      OS << " // " << Pred.getFnName();
     OS << '\n';
     return 2;
   }
@@ -423,17 +423,16 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 
         TmpBuf.clear();
         raw_svector_ostream OS(TmpBuf);
-        formatted_raw_ostream FOS(OS);
         ChildSize = EmitMatcherList(Child, Indent+1, CurrentIdx+VBRSize+IdxSize,
-                                    FOS);
+                                    OS);
       } while (GetVBRSize(ChildSize) != VBRSize);
 
       assert(ChildSize != 0 && "Should not have a zero-sized child!");
 
       if (i != 0) {
         if (!OmitComments)
-          OS << "/*" << CurrentIdx << "*/";
-        OS.PadToColumn(Indent*2);
+          OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+        OS.indent(Indent*2);
         if (!OmitComments)
           OS << (isa<SwitchOpcodeMatcher>(N) ?
                      "/*SwitchOpcode*/ " : "/*SwitchType*/ ");
@@ -458,11 +457,11 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 
     // Emit the final zero to terminate the switch.
     if (!OmitComments)
-      OS << "/*" << CurrentIdx << "*/";
-    OS.PadToColumn(Indent*2) << "0, ";
+      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+    OS.indent(Indent*2) << "0,";
     if (!OmitComments)
       OS << (isa<SwitchOpcodeMatcher>(N) ?
-             "// EndSwitchOpcode" : "// EndSwitchType");
+             " // EndSwitchOpcode" : " // EndSwitchType");
 
     OS << '\n';
     ++CurrentIdx;
@@ -513,7 +512,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
        << CCPM->getMatchNumber() << ',';
 
     if (!OmitComments) {
-      OS.PadToColumn(CommentIndent) << "// " << Pattern.getSelectFunc();
+      OS << " // " << Pattern.getSelectFunc();
       OS << ":$" << CCPM->getName();
       for (unsigned i = 0, e = Pattern.getNumOperands(); i != e; ++i)
         OS << " #" << CCPM->getFirstResult()+i;
@@ -615,7 +614,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS.PadToColumn(CommentIndent) << "// "<<XF->getNodeXForm()->getName();
+      OS << " // "<<XF->getNodeXForm()->getName();
     OS <<'\n';
     return 3;
   }
@@ -636,7 +635,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
         unsigned Offset =
             getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
         OS << "TARGET_VAL(" << Offset << "),\n";
-        OS.PadToColumn(Indent * 2);
+        OS.indent(FullIndexWidth + Indent * 2);
       }
     }
     const EmitNodeMatcherCommon *EN = cast<EmitNodeMatcherCommon>(N);
@@ -655,7 +654,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
     OS << ",\n";
 
-    OS.PadToColumn(Indent*2+4);
+    OS.indent(FullIndexWidth + Indent*2+4);
     if (!CompressVTs) {
       OS << EN->getNumVTs();
       if (!OmitComments)
@@ -677,7 +676,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       // Print the result #'s for EmitNode.
       if (const EmitNodeMatcher *E = dyn_cast<EmitNodeMatcher>(EN)) {
         if (unsigned NumResults = EN->getNumVTs()) {
-          OS.PadToColumn(CommentIndent) << "// Results =";
+          OS << " // Results =";
           unsigned First = E->getFirstResultSlot();
           for (unsigned i = 0; i != NumResults; ++i)
             OS << " #" << First+i;
@@ -686,10 +685,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       OS << '\n';
 
       if (const MorphNodeToMatcher *SNT = dyn_cast<MorphNodeToMatcher>(N)) {
-        OS.PadToColumn(Indent*2) << "// Src: "
+        OS.indent(FullIndexWidth + Indent*2) << "// Src: "
           << *SNT->getPattern().getSrcPattern() << " - Complexity = "
           << SNT->getPattern().getPatternComplexity(CGP) << '\n';
-        OS.PadToColumn(Indent*2) << "// Dst: "
+        OS.indent(FullIndexWidth + Indent*2) << "// Dst: "
           << *SNT->getPattern().getDstPattern() << '\n';
       }
     } else
@@ -713,7 +712,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       unsigned Offset =
           getPatternIdxFromTable(src + " -> " + dst, std::move(include_src));
       OS << "TARGET_VAL(" << Offset << "),\n";
-      OS.PadToColumn(Indent * 2);
+      OS.indent(FullIndexWidth + Indent * 2);
     }
     OS << "OPC_CompleteMatch, " << CM->getNumResults() << ", ";
     unsigned NumResultBytes = 0;
@@ -721,10 +720,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       NumResultBytes += EmitVBRValue(CM->getResult(i), OS);
     OS << '\n';
     if (!OmitComments) {
-      OS.PadToColumn(Indent*2) << "// Src: "
+      OS.indent(FullIndexWidth + Indent*2) << " // Src: "
         << *CM->getPattern().getSrcPattern() << " - Complexity = "
         << CM->getPattern().getPatternComplexity(CGP) << '\n';
-      OS.PadToColumn(Indent*2) << "// Dst: "
+      OS.indent(FullIndexWidth + Indent*2) << " // Dst: "
         << *CM->getPattern().getDstPattern();
     }
     OS << '\n';
@@ -737,11 +736,11 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 /// EmitMatcherList - Emit the bytes for the specified matcher subtree.
 unsigned MatcherTableEmitter::
 EmitMatcherList(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
-                formatted_raw_ostream &OS) {
+                raw_ostream &OS) {
   unsigned Size = 0;
   while (N) {
     if (!OmitComments)
-      OS << "/*" << CurrentIdx << "*/";
+      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
     unsigned MatcherSize = EmitMatcher(N, Indent, CurrentIdx, OS);
     Size += MatcherSize;
     CurrentIdx += MatcherSize;
@@ -753,7 +752,7 @@ EmitMatcherList(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   return Size;
 }
 
-void MatcherTableEmitter::EmitPredicateFunctions(formatted_raw_ostream &OS) {
+void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   // Emit pattern predicates.
   if (!PatternPredicates.empty()) {
     OS << "bool CheckPatternPredicate(unsigned PredNo) const override {\n";
@@ -895,8 +894,51 @@ static void BuildHistogram(const Matcher *M, std::vector<unsigned> &OpcodeFreq){
   }
 }
 
+static StringRef getOpcodeString(Matcher::KindTy Kind) {
+  switch (Kind) {
+  case Matcher::Scope: return "OPC_Scope"; break;
+  case Matcher::RecordNode: return "OPC_RecordNode"; break;
+  case Matcher::RecordChild: return "OPC_RecordChild"; break;
+  case Matcher::RecordMemRef: return "OPC_RecordMemRef"; break;
+  case Matcher::CaptureGlueInput: return "OPC_CaptureGlueInput"; break;
+  case Matcher::MoveChild: return "OPC_MoveChild"; break;
+  case Matcher::MoveParent: return "OPC_MoveParent"; break;
+  case Matcher::CheckSame: return "OPC_CheckSame"; break;
+  case Matcher::CheckChildSame: return "OPC_CheckChildSame"; break;
+  case Matcher::CheckPatternPredicate:
+    return "OPC_CheckPatternPredicate"; break;
+  case Matcher::CheckPredicate: return "OPC_CheckPredicate"; break;
+  case Matcher::CheckOpcode: return "OPC_CheckOpcode"; break;
+  case Matcher::SwitchOpcode: return "OPC_SwitchOpcode"; break;
+  case Matcher::CheckType: return "OPC_CheckType"; break;
+  case Matcher::SwitchType: return "OPC_SwitchType"; break;
+  case Matcher::CheckChildType: return "OPC_CheckChildType"; break;
+  case Matcher::CheckInteger: return "OPC_CheckInteger"; break;
+  case Matcher::CheckChildInteger: return "OPC_CheckChildInteger"; break;
+  case Matcher::CheckCondCode: return "OPC_CheckCondCode"; break;
+  case Matcher::CheckValueType: return "OPC_CheckValueType"; break;
+  case Matcher::CheckComplexPat: return "OPC_CheckComplexPat"; break;
+  case Matcher::CheckAndImm: return "OPC_CheckAndImm"; break;
+  case Matcher::CheckOrImm: return "OPC_CheckOrImm"; break;
+  case Matcher::CheckFoldableChainNode:
+    return "OPC_CheckFoldableChainNode"; break;
+  case Matcher::EmitInteger: return "OPC_EmitInteger"; break;
+  case Matcher::EmitStringInteger: return "OPC_EmitStringInteger"; break;
+  case Matcher::EmitRegister: return "OPC_EmitRegister"; break;
+  case Matcher::EmitConvertToTarget: return "OPC_EmitConvertToTarget"; break;
+  case Matcher::EmitMergeInputChains: return "OPC_EmitMergeInputChains"; break;
+  case Matcher::EmitCopyToReg: return "OPC_EmitCopyToReg"; break;
+  case Matcher::EmitNode: return "OPC_EmitNode"; break;
+  case Matcher::MorphNodeTo: return "OPC_MorphNodeTo"; break;
+  case Matcher::EmitNodeXForm: return "OPC_EmitNodeXForm"; break;
+  case Matcher::CompleteMatch: return "OPC_CompleteMatch"; break;
+  }
+
+  llvm_unreachable("Unhandled opcode?");
+}
+
 void MatcherTableEmitter::EmitHistogram(const Matcher *M,
-                                        formatted_raw_ostream &OS) {
+                                        raw_ostream &OS) {
   if (OmitComments)
     return;
 
@@ -905,47 +947,9 @@ void MatcherTableEmitter::EmitHistogram(const Matcher *M,
 
   OS << "  // Opcode Histogram:\n";
   for (unsigned i = 0, e = OpcodeFreq.size(); i != e; ++i) {
-    OS << "  // #";
-    switch ((Matcher::KindTy)i) {
-    case Matcher::Scope: OS << "OPC_Scope"; break;
-    case Matcher::RecordNode: OS << "OPC_RecordNode"; break;
-    case Matcher::RecordChild: OS << "OPC_RecordChild"; break;
-    case Matcher::RecordMemRef: OS << "OPC_RecordMemRef"; break;
-    case Matcher::CaptureGlueInput: OS << "OPC_CaptureGlueInput"; break;
-    case Matcher::MoveChild: OS << "OPC_MoveChild"; break;
-    case Matcher::MoveParent: OS << "OPC_MoveParent"; break;
-    case Matcher::CheckSame: OS << "OPC_CheckSame"; break;
-    case Matcher::CheckChildSame: OS << "OPC_CheckChildSame"; break;
-    case Matcher::CheckPatternPredicate:
-      OS << "OPC_CheckPatternPredicate"; break;
-    case Matcher::CheckPredicate: OS << "OPC_CheckPredicate"; break;
-    case Matcher::CheckOpcode: OS << "OPC_CheckOpcode"; break;
-    case Matcher::SwitchOpcode: OS << "OPC_SwitchOpcode"; break;
-    case Matcher::CheckType: OS << "OPC_CheckType"; break;
-    case Matcher::SwitchType: OS << "OPC_SwitchType"; break;
-    case Matcher::CheckChildType: OS << "OPC_CheckChildType"; break;
-    case Matcher::CheckInteger: OS << "OPC_CheckInteger"; break;
-    case Matcher::CheckChildInteger: OS << "OPC_CheckChildInteger"; break;
-    case Matcher::CheckCondCode: OS << "OPC_CheckCondCode"; break;
-    case Matcher::CheckValueType: OS << "OPC_CheckValueType"; break;
-    case Matcher::CheckComplexPat: OS << "OPC_CheckComplexPat"; break;
-    case Matcher::CheckAndImm: OS << "OPC_CheckAndImm"; break;
-    case Matcher::CheckOrImm: OS << "OPC_CheckOrImm"; break;
-    case Matcher::CheckFoldableChainNode:
-      OS << "OPC_CheckFoldableChainNode"; break;
-    case Matcher::EmitInteger: OS << "OPC_EmitInteger"; break;
-    case Matcher::EmitStringInteger: OS << "OPC_EmitStringInteger"; break;
-    case Matcher::EmitRegister: OS << "OPC_EmitRegister"; break;
-    case Matcher::EmitConvertToTarget: OS << "OPC_EmitConvertToTarget"; break;
-    case Matcher::EmitMergeInputChains: OS << "OPC_EmitMergeInputChains"; break;
-    case Matcher::EmitCopyToReg: OS << "OPC_EmitCopyToReg"; break;
-    case Matcher::EmitNode: OS << "OPC_EmitNode"; break;
-    case Matcher::MorphNodeTo: OS << "OPC_MorphNodeTo"; break;
-    case Matcher::EmitNodeXForm: OS << "OPC_EmitNodeXForm"; break;
-    case Matcher::CompleteMatch: OS << "OPC_CompleteMatch"; break;
-    }
-
-    OS.PadToColumn(40) << " = " << OpcodeFreq[i] << '\n';
+    OS << "  // #"
+       << left_justify(getOpcodeString((Matcher::KindTy)i), HistOpcWidth)
+       << " = " << OpcodeFreq[i] << '\n';
   }
   OS << '\n';
 }
@@ -953,9 +957,7 @@ void MatcherTableEmitter::EmitHistogram(const Matcher *M,
 
 void llvm::EmitMatcherTable(const Matcher *TheMatcher,
                             const CodeGenDAGPatterns &CGP,
-                            raw_ostream &O) {
-  formatted_raw_ostream OS(O);
-
+                            raw_ostream &OS) {
   OS << "// The main instruction selector code.\n";
   OS << "void SelectCode(SDNode *N) {\n";
 
@@ -965,7 +967,7 @@ void llvm::EmitMatcherTable(const Matcher *TheMatcher,
   OS << "  // this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
   OS << "  static const unsigned char MatcherTable[] = {\n";
-  unsigned TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 6, 0, OS);
+  unsigned TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
   OS << "    0\n  }; // Total Array size is " << (TotalSize+1) << " bytes\n\n";
 
   MatcherEmitter.EmitHistogram(TheMatcher, OS);

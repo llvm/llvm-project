@@ -29222,11 +29222,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // specific PSHUF instruction sequences into their minimal form so that we
     // can evaluate how many specialized shuffle instructions are involved in
     // a particular chain.
-    SmallVector<int, 1> NonceMask; // Just a placeholder.
-    NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
-                                      /*Depth*/ 1, /*HasVarMask*/ false, DAG,
-                                      DCI, Subtarget))
+    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                      /*HasVarMask*/ false, DAG, DCI,
+                                      Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
   }
 
@@ -31857,11 +31855,9 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   // We can decode 'whole byte' logical bit shifts as shuffles.
   if (LogicalShift && (ShiftVal.getZExtValue() % 8) == 0) {
     SDValue Op(N, 0);
-    SmallVector<int, 1> NonceMask; // Just a placeholder.
-    NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
-                                      /*Depth*/ 1, /*HasVarMask*/ false, DAG,
-                                      DCI, Subtarget))
+    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                      /*HasVarMask*/ false, DAG, DCI,
+                                      Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
   }
 
@@ -31898,11 +31894,8 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);
-  SmallVector<int, 1> NonceMask; // Just a placeholder.
-  NonceMask.push_back(0);
-  combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
-                                /*Depth*/ 1, /*HasVarMask*/ false, DAG,
-                                DCI, Subtarget);
+  combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                /*HasVarMask*/ false, DAG, DCI, Subtarget);
   return SDValue();
 }
 
@@ -32202,11 +32195,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask AND with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    SmallVector<int, 1> NonceMask; // Just a placeholder.
-    NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
-                                      /*Depth*/ 1, /*HasVarMask*/ false, DAG,
-                                      DCI, Subtarget))
+    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                      /*HasVarMask*/ false, DAG, DCI,
+                                      Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
   }
 
@@ -34351,11 +34342,9 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask ANDNP with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    SmallVector<int, 1> NonceMask; // Just a placeholder.
-    NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
-                                      /*Depth*/ 1, /*HasVarMask*/ false, DAG,
-                                      DCI, Subtarget))
+    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                      /*HasVarMask*/ false, DAG, DCI,
+                                      Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
   }
 

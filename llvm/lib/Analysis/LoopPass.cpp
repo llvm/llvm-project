@@ -198,9 +198,7 @@ bool LPPassManager::runOnFunction(Function &F) {
       LoopWasDeleted = CurrentLoop->isInvalid();
 
       if (Changed)
-        dumpPassInfo(P, MODIFICATION_MSG, ON_LOOP_MSG,
-                     LoopWasDeleted ? "<deleted>"
-                                    : CurrentLoop->getHeader()->getName());
+        dumpPassInfo(P, MODIFICATION_MSG, ON_LOOP_MSG, CurrentLoop->getName());
       dumpPreservedSet(P);
 
       if (LoopWasDeleted) {

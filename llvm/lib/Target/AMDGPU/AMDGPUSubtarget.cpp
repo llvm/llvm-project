@@ -524,3 +524,57 @@ unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
 
   return MaxNumVGPRs - getReservedNumVGPRs(MF);
 }
+
+struct MemOpClusterMutation : ScheduleDAGMutation {
+  const SIInstrInfo *TII;
+
+  MemOpClusterMutation(const SIInstrInfo *tii) : TII(tii) {}
+
+  void apply(ScheduleDAGInstrs *DAGInstrs) override {
+    ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+
+    SUnit *SUa = nullptr;
+    // Search for two consequent memory operations and link them
+    // to prevent scheduler from moving them apart.
+    // In DAG pre-process SUnits are in the original order of
+    // the instructions before scheduling.
+    for (SUnit &SU : DAG->SUnits) {
+      MachineInstr &MI2 = *SU.getInstr();
+      if (!MI2.mayLoad() && !MI2.mayStore()) {
+        SUa = nullptr;
+        continue;
+      }
+      if (!SUa) {
+        SUa = &SU;
+        continue;
+      }
+
+      MachineInstr &MI1 = *SUa->getInstr();
+      if ((TII->isVMEM(MI1) && TII->isVMEM(MI2)) ||
+          (TII->isFLAT(MI1) && TII->isFLAT(MI2)) ||
+          (TII->isSMRD(MI1) && TII->isSMRD(MI2)) ||
+          (TII->isDS(MI1)   && TII->isDS(MI2))) {
+        SU.addPredBarrier(SUa);
+
+        for (const SDep &SI : SU.Preds) {
+          if (SI.getSUnit() != SUa)
+            SUa->addPred(SDep(SI.getSUnit(), SDep::Artificial));
+        }
+
+        if (&SU != &DAG->ExitSU) {
+          for (const SDep &SI : SUa->Succs) {
+            if (SI.getSUnit() != &SU)
+              SI.getSUnit()->addPred(SDep(&SU, SDep::Artificial));
+          }
+        }
+      }
+
+      SUa = &SU;
+    }
+  }
+};
+
+void SISubtarget::getPostRAMutations(
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(llvm::make_unique<MemOpClusterMutation>(&InstrInfo));
+}

@@ -31,4 +31,7 @@ Target &getTheNios2Target();
 #define GET_INSTRINFO_ENUM
 #include "Nios2GenInstrInfo.inc"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "Nios2GenSubtargetInfo.inc"
+
 #endif

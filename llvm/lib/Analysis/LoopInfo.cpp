@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -44,9 +45,9 @@ bool llvm::VerifyLoopInfo = true;
 #else
 bool llvm::VerifyLoopInfo = false;
 #endif
-static cl::opt<bool,true>
-VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
-                cl::desc("Verify loop info (time consuming)"));
+static cl::opt<bool, true>
+    VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
+                    cl::desc("Verify loop info (time consuming)"));
 
 //===----------------------------------------------------------------------===//
 // Loop implementation
@@ -55,7 +56,7 @@ VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
 bool Loop::isLoopInvariant(const Value *V) const {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return !contains(I);
-  return true;  // All non-instructions are loop invariant
+  return true; // All non-instructions are loop invariant
 }
 
 bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
@@ -66,7 +67,7 @@ bool Loop::makeLoopInvariant(Value *V, bool &Changed,
                              Instruction *InsertPt) const {
   if (Instruction *I = dyn_cast<Instruction>(V))
     return makeLoopInvariant(I, Changed, InsertPt);
-  return true;  // All non-instructions are loop-invariant.
+  return true; // All non-instructions are loop-invariant.
 }
 
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
@@ -112,12 +113,13 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 
   BasicBlock *Incoming = nullptr, *Backedge = nullptr;
   pred_iterator PI = pred_begin(H);
-  assert(PI != pred_end(H) &&
-         "Loop must have at least one backedge!");
+  assert(PI != pred_end(H) && "Loop must have at least one backedge!");
   Backedge = *PI++;
-  if (PI == pred_end(H)) return nullptr;  // dead loop
+  if (PI == pred_end(H))
+    return nullptr; // dead loop
   Incoming = *PI++;
-  if (PI != pred_end(H)) return nullptr;  // multiple backedges?
+  if (PI != pred_end(H))
+    return nullptr; // multiple backedges?
 
   if (contains(Incoming)) {
     if (contains(Backedge))
@@ -130,12 +132,11 @@ PHINode *Loop::getCanonicalInductionVariable() const {
   for (BasicBlock::iterator I = H->begin(); isa<PHINode>(I); ++I) {
     PHINode *PN = cast<PHINode>(I);
     if (ConstantInt *CI =
-        dyn_cast<ConstantInt>(PN->getIncomingValueForBlock(Incoming)))
+            dyn_cast<ConstantInt>(PN->getIncomingValueForBlock(Incoming)))
       if (CI->isZero())
         if (Instruction *Inc =
-            dyn_cast<Instruction>(PN->getIncomingValueForBlock(Backedge)))
-          if (Inc->getOpcode() == Instruction::Add &&
-                Inc->getOperand(0) == PN)
+                dyn_cast<Instruction>(PN->getIncomingValueForBlock(Backedge)))
+          if (Inc->getOpcode() == Instruction::Add && Inc->getOperand(0) == PN)
             if (ConstantInt *CI = dyn_cast<ConstantInt>(Inc->getOperand(1)))
               if (CI->isOne())
                 return PN;
@@ -255,7 +256,8 @@ void Loop::setLoopID(MDNode *LoopID) const {
     return;
   }
 
-  assert(!getLoopLatch() && "The loop should have no single latch at this point");
+  assert(!getLoopLatch() &&
+         "The loop should have no single latch at this point");
   BasicBlock *H = getHeader();
   for (BasicBlock *BB : this->blocks()) {
     TerminatorInst *TI = BB->getTerminator();
@@ -270,7 +272,7 @@ bool Loop::isAnnotatedParallel() const {
   MDNode *DesiredLoopIdMetadata = getLoopID();
 
   if (!DesiredLoopIdMetadata)
-      return false;
+    return false;
 
   // The loop branch contains the parallel loop metadata. In order to ensure
   // that any parallel-loop-unaware optimization pass hasn't added loop-carried
@@ -307,9 +309,7 @@ bool Loop::isAnnotatedParallel() const {
   return true;
 }
 
-DebugLoc Loop::getStartLoc() const {
-  return getLocRange().getStart();
-}
+DebugLoc Loop::getStartLoc() const { return getLocRange().getStart(); }
 
 Loop::LocRange Loop::getLocRange() const {
   // If we have a debug location in the loop ID, then use it.
@@ -357,8 +357,8 @@ bool Loop::hasDedicatedExits() const {
   return true;
 }
 
-void
-Loop::getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
+void Loop::getUniqueExitBlocks(
+    SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
   assert(hasDedicatedExits() &&
          "getUniqueExitBlocks assumes the loop has canonical form exits!");
 
@@ -408,12 +408,10 @@ BasicBlock *Loop::getUniqueExitBlock() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void Loop::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
 LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
-  print(dbgs(), /*Depth=*/ 0, /*Verbose=*/ true);
+  print(dbgs(), /*Depth=*/0, /*Verbose=*/true);
 }
 #endif
 
@@ -434,15 +432,15 @@ class UnloopUpdater {
   // loops within these subloops will not change parents. However, an immediate
   // subloop's new parent will be the nearest loop reachable from either its own
   // exits *or* any of its nested loop's exits.
-  DenseMap<Loop*, Loop*> SubloopParents;
+  DenseMap<Loop *, Loop *> SubloopParents;
 
   // Flag the presence of an irreducible backedge whose destination is a block
   // directly contained by the original unloop.
   bool FoundIB;
 
 public:
-  UnloopUpdater(Loop *UL, LoopInfo *LInfo) :
-    Unloop(*UL), LI(LInfo), DFS(UL), FoundIB(false) {}
+  UnloopUpdater(Loop *UL, LoopInfo *LInfo)
+      : Unloop(*UL), LI(LInfo), DFS(UL), FoundIB(false) {}
 
   void updateBlockParents();
 
@@ -472,8 +470,7 @@ void UnloopUpdater::updateBlockParents() {
         assert((NL != &Unloop && (!NL || NL->contains(&Unloop))) &&
                "uninitialized successor");
         LI->changeLoopFor(POI, NL);
-      }
-      else {
+      } else {
         // Or the current block is part of a subloop, in which case its parent
         // is unchanged.
         assert((FoundIB || Unloop.contains(L)) && "uninitialized successor");
@@ -490,7 +487,8 @@ void UnloopUpdater::updateBlockParents() {
     // from successors to predecessors as before.
     Changed = false;
     for (LoopBlocksDFS::POIterator POI = DFS.beginPostorder(),
-           POE = DFS.endPostorder(); POI != POE; ++POI) {
+                                   POE = DFS.endPostorder();
+         POI != POE; ++POI) {
 
       Loop *L = LI->getLoopFor(*POI);
       Loop *NL = getNearestLoop(*POI, L);
@@ -508,8 +506,8 @@ void UnloopUpdater::updateBlockParents() {
 void UnloopUpdater::removeBlocksFromAncestors() {
   // Remove all unloop's blocks (including those in nested subloops) from
   // ancestors below the new parent loop.
-  for (Loop::block_iterator BI = Unloop.block_begin(),
-         BE = Unloop.block_end(); BI != BE; ++BI) {
+  for (Loop::block_iterator BI = Unloop.block_begin(), BE = Unloop.block_end();
+       BI != BE; ++BI) {
     Loop *OuterParent = LI->getLoopFor(*BI);
     if (Unloop.contains(OuterParent)) {
       while (OuterParent->getParentLoop() != &Unloop)
@@ -609,9 +607,7 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
   return NearLoop;
 }
 
-LoopInfo::LoopInfo(const DomTreeBase<BasicBlock> &DomTree) {
-  analyze(DomTree);
-}
+LoopInfo::LoopInfo(const DomTreeBase<BasicBlock> &DomTree) { analyze(DomTree); }
 
 bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
                           FunctionAnalysisManager::Invalidator &) {
@@ -622,10 +618,12 @@ bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
            PAC.preservedSet<CFGAnalyses>());
 }
 
-void LoopInfo::markAsRemoved(Loop *Unloop) {
-  assert(!Unloop->isInvalid() && "Loop has already been removed");
-  Unloop->invalidate();
+void LoopInfo::markAsErased(Loop *Unloop) {
+  assert(!Unloop->isInvalid() && "Loop has already been erased!");
   RemovedLoops.push_back(Unloop);
+
+  auto InvalidateOnExit =
+      make_scope_exit([&]() { BaseT::clearLoop(*Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (!Unloop->getParentLoop()) {
@@ -766,5 +764,7 @@ PreservedAnalyses LoopVerifierPass::run(Function &F,
 void LoopBlocksDFS::perform(LoopInfo *LI) {
   LoopBlocksTraversal Traversal(*this, LI);
   for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-         POE = Traversal.end(); POI != POE; ++POI) ;
+                                        POE = Traversal.end();
+       POI != POE; ++POI)
+    ;
 }

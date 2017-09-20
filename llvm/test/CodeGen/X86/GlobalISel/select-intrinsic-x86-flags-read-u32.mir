@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=i386-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  define void @read_flags() { ret void }
+...
+
+---
+# Check that we select a the x86.flags.read.u32 intrinsic into a RDFLAGS
+# instruction. Also check that we constrain the register class of the COPY to
+# gr32.
+# CHECK-LABEL: name: read_flags
+name:            read_flags
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = RDFLAGS32
+body:             |
+  bb.0:
+    %0(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.flags.read.u32)
+    %rax = COPY %0(s32)
+...

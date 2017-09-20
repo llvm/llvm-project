@@ -33,7 +33,7 @@ def RSM : I<0xAA, RawFrm, (outs), (ins), "rsm", [], IIC_RSM>, TB;
 
 // Interrupt and SysCall Instructions.
 let Uses = [EFLAGS] in
-  def INTO : I<0xce, RawFrm, (outs), (ins), "into", []>;
+  def INTO : I<0xce, RawFrm, (outs), (ins), "into", []>, Requires<[Not64BitMode]>;
 def INT3 : I<0xcc, RawFrm, (outs), (ins), "int3",
               [(int_x86_int (i8 3))], IIC_INT3>;
 } // SchedRW

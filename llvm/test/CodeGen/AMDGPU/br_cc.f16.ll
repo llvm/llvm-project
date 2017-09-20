@@ -5,19 +5,19 @@
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
 
-; SI-DAG:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
-; SI-DAG:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
-; SI:  v_cmp_nlt_f32_e32 vcc, v[[B_F32]], v[[A_F32]]
+; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
+; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
+; SI:  v_cmp_nlt_f32_e32 vcc, v[[A_F32]], v[[B_F32]]
 ; VI:  v_cmp_nlt_f16_e32 vcc, v[[A_F16]], v[[B_F16]]
 ; GCN: s_cbranch_vccnz
 
 ; GCN: one{{$}}
-; SI: v_cvt_f16_f32_e32 v[[A_F16:[0-9]+]], v[[B_F32]]
+; SI: v_cvt_f16_f32_e32 v[[A_F16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short
 ; GCN: s_endpgm
 
 ; GCN: two{{$}}
-; SI:  v_cvt_f16_f32_e32 v[[B_F16:[0-9]+]], v[[A_F32]]
+; SI:  v_cvt_f16_f32_e32 v[[B_F16:[0-9]+]], v[[B_F32]]
 ; GCN: buffer_store_short v[[B_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @br_cc_f16(

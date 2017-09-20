@@ -2,6 +2,68 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl -mattr=+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -mcpu=knl -mattr=+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512F-32
 
+
+declare <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8, <64 x i8>, i64)
+
+  define <64 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_512(i8 %x0, <64 x i8> %x1, i64 %mask) {
+; AVX512BW-LABEL: test_int_x86_avx512_mask_pbroadcast_b_gpr_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm1
+; AVX512BW-NEXT:    kmovq %rsi, %k1
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
+; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_mask_pbroadcast_b_gpr_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm1
+; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
+; AVX512F-32-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    retl
+    %res = call <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8 %x0, <64 x i8> %x1, i64 -1)
+    %res1 = call <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8 %x0, <64 x i8> %x1, i64 %mask)
+    %res2 = call <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8 %x0, <64 x i8> zeroinitializer, i64 %mask)
+    %res3 = add <64 x i8> %res, %res1
+    %res4 = add <64 x i8> %res2, %res3
+    ret <64 x i8> %res4
+  }
+
+declare <32 x i16> @llvm.x86.avx512.mask.pbroadcast.w.gpr.512(i16, <32 x i16>, i32)
+  define <32 x i16>@test_int_x86_avx512_mask_pbroadcast_w_gpr_512(i16 %x0, <32 x i16> %x1, i32 %mask) {
+; AVX512BW-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm1
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
+; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm1
+; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
+; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    retl
+    %res = call <32 x i16> @llvm.x86.avx512.mask.pbroadcast.w.gpr.512(i16 %x0, <32 x i16> %x1, i32 -1)
+    %res1 = call <32 x i16> @llvm.x86.avx512.mask.pbroadcast.w.gpr.512(i16 %x0, <32 x i16> %x1, i32 %mask)
+   %res2 = call <32 x i16> @llvm.x86.avx512.mask.pbroadcast.w.gpr.512(i16 %x0, <32 x i16> zeroinitializer, i32 %mask)
+    %res3 = add <32 x i16> %res, %res1
+   %res4 = add <32 x i16> %res2, %res3
+    ret <32 x i16> %res4
+ }
+
 declare void @llvm.x86.avx512.mask.storeu.b.512(i8*, <64 x i8>, i64)
 
 define void@test_int_x86_avx512_mask_storeu_b_512(i8* %ptr1, i8* %ptr2, <64 x i8> %x1, i64 %x2) {

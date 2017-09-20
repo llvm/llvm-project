@@ -386,6 +386,22 @@ class DSForm_1<bits<6> opcode, bits<2> xo, dag OOL, dag IOL, string asmstr,
   let Inst{30-31} = xo;
 }
 
+// ISA V3.0B 1.6.6 DX-Form
+class DXForm<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
+             InstrItinClass itin, list<dag> pattern>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5>  RT;
+  bits<16> D;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RT;
+  let Inst{11-15} = D{5-1};  // d1
+  let Inst{16-25} = D{15-6}; // d0
+  let Inst{26-30} = xo;
+  let Inst{31}    = D{0};    // d2
+}
+
 // DQ-Form: [PO T RA DQ TX XO] or [PO S RA DQ SX XO]
 class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
@@ -723,6 +739,34 @@ class XForm_43<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{11-20} = 0;
   let Inst{21-30} = xo;
   let Inst{31}    = RC;
+}
+
+class XForm_44<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+               InstrItinClass itin>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<3> BFA;
+
+  let Inst{6-10}  = RT;
+  let Inst{11-13} = BFA;
+  let Inst{14-15} = 0;
+  let Inst{16-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
+class XForm_45<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+               InstrItinClass itin>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<2> L;
+
+  let Inst{6-10}  = RT;
+  let Inst{11-13} = 0;
+  let Inst{14-15} = L;
+  let Inst{16-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
 }
 
 class X_FRT5_XO2_XO3_XO10<bits<6> opcode, bits<2> xo1, bits<3> xo2, bits<10> xo,
