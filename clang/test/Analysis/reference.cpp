@@ -117,6 +117,11 @@ void testRetroactiveNullReference(int *x) {
   y = 5; // expected-warning{{Dereference of null pointer}}
 }
 
+namespace TestReferenceAddress {
+struct S { int &x; };
+S getS();
+S *getSP();
+
 void testReferenceAddress(int &x) {
 // FIXME: Move non-zero reference assumption out of RangeConstraintManager.cpp:422
 #ifdef ANALYZER_CM_Z3
@@ -127,23 +132,19 @@ void testReferenceAddress(int &x) {
   clang_analyzer_eval(&ref() != 0); // expected-warning{{TRUE}}
 #endif
 
-  struct S { int &x; };
-
-  extern S getS();
 #ifdef ANALYZER_CM_Z3
   clang_analyzer_eval(&getS().x != 0); // expected-warning{{UNKNOWN}}
 #else
   clang_analyzer_eval(&getS().x != 0); // expected-warning{{TRUE}}
 #endif
 
-  extern S *getSP();
 #ifdef ANALYZER_CM_Z3
   clang_analyzer_eval(&getSP()->x != 0); // expected-warning{{UNKNOWN}}
 #else
   clang_analyzer_eval(&getSP()->x != 0); // expected-warning{{TRUE}}
 #endif
 }
-
+}
 
 void testFunctionPointerReturn(void *opaque) {
   typedef int &(*RefFn)();

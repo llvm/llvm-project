@@ -71,6 +71,11 @@ uint64_t ExprValue::getSecAddr() const {
 }
 
 uint64_t ExprValue::getSectionOffset() const {
+  // If the alignment is trivial, we don't have to compute the full
+  // value to know the offset. This allows this function to succeed in
+  // cases where the output section is not yet known.
+  if (Alignment == 1)
+    return Val;
   return getValue() - getSecAddr();
 }
 
@@ -87,7 +92,7 @@ static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   // We want to set symbol values early if we can. This allows us to use symbols
   // as variables in linker scripts. Doing so allows us to write expressions
   // like this: `alignment = 16; . = ALIGN(., alignment)`
-  uint64_t SymValue = Value.isAbsolute() ? Value.getValue() : 0;
+  uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
   replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
                               Visibility, STT_NOTYPE, SymValue, 0, Sec);
   return Sym->body();

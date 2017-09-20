@@ -43,19 +43,23 @@ template <typename K, typename V> struct unordered_multimap : map<K, V> {};
 
 template <typename K, typename Cmp = less<K>> struct multiset : set<K, Cmp> {};
 
-template <typename FwIt, typename K> FwIt find(FwIt, FwIt, const K &);
+template <typename FwIt, typename K>
+FwIt find(FwIt, FwIt end, const K &) { return end; }
 
 template <typename FwIt, typename K, typename Cmp>
-FwIt find(FwIt, FwIt, const K &, Cmp);
+FwIt find(FwIt, FwIt end, const K &, Cmp) { return end; }
 
-template <typename FwIt, typename Pred> FwIt find_if(FwIt, FwIt, Pred);
+template <typename FwIt, typename Pred>
+FwIt find_if(FwIt, FwIt end, Pred) { return end; }
 
-template <typename FwIt, typename K> FwIt count(FwIt, FwIt, const K &);
+template <typename FwIt, typename K>
+unsigned count(FwIt, FwIt, const K &) { return 0; }
 
-template <typename FwIt, typename K> FwIt lower_bound(FwIt, FwIt, const K &);
+template <typename FwIt, typename K>
+FwIt lower_bound(FwIt, FwIt end, const K &) { return end; }
 
 template <typename FwIt, typename K, typename Ord>
-FwIt lower_bound(FwIt, FwIt, const K &, Ord);
+FwIt lower_bound(FwIt, FwIt end, const K &, Ord) { return end; }
 }
 
 #define FIND_IN_SET(x) find(x.begin(), x.end(), 10)

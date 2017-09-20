@@ -1,0 +1,42 @@
+language: cpp
+
+sudo: false
+dist: trusty
+
+cache:
+  apt: true
+
+
+matrix:
+  include:
+    - env:
+        - LABEL="make gcc LLVM-4.0"
+        - LLVM_VERSION=4.0
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - libedit-dev
+            - g++-4.8
+            # From sources above
+            - llvm-4.0-dev
+            - clang-4.0
+    - env:
+        - LABEL="make gcc LLVM-5.0"
+        - LLVM_VERSION=5.0
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - libedit-dev
+            - g++-4.8
+            # From sources above
+            - llvm-5.0-dev
+            - clang-5.0
+
+script:
+  - $PYTHON ./configure.py --with-llvm-config=$LLVM_CONFIG --with-cxx-compiler=$CXX && make -j4

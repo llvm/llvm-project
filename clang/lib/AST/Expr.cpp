@@ -1837,17 +1837,14 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
 
   // Check that we have one pointer and one integer operand.
   Expr *PExp;
-  Expr *IExp;
   if (LHS->getType()->isPointerType()) {
     if (!RHS->getType()->isIntegerType())
       return false;
     PExp = LHS;
-    IExp = RHS;
   } else if (RHS->getType()->isPointerType()) {
     if (!LHS->getType()->isIntegerType())
       return false;
     PExp = RHS;
-    IExp = LHS;
   } else {
     return false;
   }
@@ -1860,10 +1857,6 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   // Check that the pointee type is char-sized.
   const PointerType *PTy = PExp->getType()->getAs<PointerType>();
   if (!PTy || !PTy->getPointeeType()->isCharType())
-    return false;
-
-  // Check that the integer type is pointer-sized.
-  if (Ctx.getTypeSize(IExp->getType()) != Ctx.getTypeSize(PExp->getType()))
     return false;
 
   return true;

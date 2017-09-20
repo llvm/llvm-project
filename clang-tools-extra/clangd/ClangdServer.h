@@ -284,6 +284,13 @@ private:
   // ClangdServer
   ClangdScheduler WorkScheduler;
   bool SnippetCompletions;
+
+  /// Used to serialize diagnostic callbacks.
+  /// FIXME(ibiryukov): get rid of an extra map and put all version counters
+  /// into CppFile.
+  std::mutex DiagnosticsMutex;
+  /// Maps from a filename to the latest version of reported diagnostics.
+  llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
 };
 
 } // namespace clangd

@@ -41,8 +41,8 @@ static bool IsBlank(char C) {
 }
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment) {
-  static const char *const KnownPrefixes[] = {
-      "///<", "//!<", "///", "//", "//!"};
+  static const char *const KnownPrefixes[] = {"///<", "//!<", "///", "//",
+                                              "//!"};
   StringRef LongestPrefix;
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
@@ -225,8 +225,7 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
 }
 
 BreakableComment::BreakableComment(const FormatToken &Token,
-                                   unsigned StartColumn,
-                                   bool InPPDirective,
+                                   unsigned StartColumn, bool InPPDirective,
                                    encoding::Encoding Encoding,
                                    const FormatStyle &Style)
     : BreakableToken(Token, InPPDirective, Encoding, Style),
@@ -309,7 +308,7 @@ static bool mayReflowContent(StringRef Content) {
   // Lines starting with '@' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
   static const SmallVector<StringRef, 8> kSpecialMeaningPrefixes = {
-      "@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* " };
+      "@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "};
   bool hasSpecialMeaningPrefix = false;
   for (StringRef Prefix : kSpecialMeaningPrefixes) {
     if (Content.startswith(Prefix)) {
@@ -322,8 +321,8 @@ static bool mayReflowContent(StringRef Content) {
   // To avoid issues if a line starts with a number which is actually the end
   // of a previous line, we only consider numbers with up to 2 digits.
   static llvm::Regex kNumberedListRegexp = llvm::Regex("^[1-9][0-9]?\\. ");
-  hasSpecialMeaningPrefix = hasSpecialMeaningPrefix ||
-                            kNumberedListRegexp.match(Content);
+  hasSpecialMeaningPrefix =
+      hasSpecialMeaningPrefix || kNumberedListRegexp.match(Content);
 
   // Simple heuristic for what to reflow: content should contain at least two
   // characters and either the first or second character must be
@@ -385,8 +384,7 @@ BreakableBlockComment::BreakableBlockComment(
     // If the last line is empty, the closing "*/" will have a star.
     if (i + 1 == e && Content[i].empty())
       break;
-    if (!Content[i].empty() && i + 1 != e &&
-        Decoration.startswith(Content[i]))
+    if (!Content[i].empty() && i + 1 != e && Decoration.startswith(Content[i]))
       continue;
     while (!Content[i].startswith(Decoration))
       Decoration = Decoration.substr(0, Decoration.size() - 1);
@@ -428,8 +426,7 @@ BreakableBlockComment::BreakableBlockComment(
       IndentAtLineBreak =
           std::min<int>(IndentAtLineBreak, std::max(0, ContentColumn[i]));
   }
-  IndentAtLineBreak =
-      std::max<unsigned>(IndentAtLineBreak, Decoration.size());
+  IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
   if (Style.Language == FormatStyle::LK_JavaScript ||
@@ -441,8 +438,11 @@ BreakableBlockComment::BreakableBlockComment(
       // Detect a long single-line comment, like:
       // /** long long long */
       // Below, '2' is the width of '*/'.
-      unsigned EndColumn = ContentColumn[0] + encoding::columnWidthWithTabs(
-          Lines[0], ContentColumn[0], Style.TabWidth, Encoding) + 2;
+      unsigned EndColumn =
+          ContentColumn[0] +
+          encoding::columnWidthWithTabs(Lines[0], ContentColumn[0],
+                                        Style.TabWidth, Encoding) +
+          2;
       DelimitersOnNewline = EndColumn > Style.ColumnLimit;
     }
   }
@@ -559,27 +559,24 @@ BreakableToken::Split BreakableBlockComment::getSplitBefore(
   return Result;
 }
 
-unsigned BreakableBlockComment::getReflownColumn(
-    StringRef Content,
-    unsigned LineIndex,
-    unsigned PreviousEndColumn) const {
-    unsigned StartColumn = PreviousEndColumn + ReflowPrefix.size();
-    // If this is the last line, it will carry around its '*/' postfix.
-    unsigned PostfixLength = (LineIndex + 1 == Lines.size() ? 2 : 0);
-    // The line is composed of previous text, reflow prefix, reflown text and
-    // postfix.
-    unsigned ReflownColumn =
-        StartColumn + encoding::columnWidthWithTabs(Content, StartColumn,
-                                                    Style.TabWidth, Encoding) +
-        PostfixLength;
-    return ReflownColumn;
+unsigned
+BreakableBlockComment::getReflownColumn(StringRef Content, unsigned LineIndex,
+                                        unsigned PreviousEndColumn) const {
+  unsigned StartColumn = PreviousEndColumn + ReflowPrefix.size();
+  // If this is the last line, it will carry around its '*/' postfix.
+  unsigned PostfixLength = (LineIndex + 1 == Lines.size() ? 2 : 0);
+  // The line is composed of previous text, reflow prefix, reflown text and
+  // postfix.
+  unsigned ReflownColumn = StartColumn +
+                           encoding::columnWidthWithTabs(
+                               Content, StartColumn, Style.TabWidth, Encoding) +
+                           PostfixLength;
+  return ReflownColumn;
 }
 
 unsigned BreakableBlockComment::getLineLengthAfterSplitBefore(
-    unsigned LineIndex, unsigned TailOffset,
-    unsigned PreviousEndColumn,
-    unsigned ColumnLimit,
-    Split SplitBefore) const {
+    unsigned LineIndex, unsigned TailOffset, unsigned PreviousEndColumn,
+    unsigned ColumnLimit, Split SplitBefore) const {
   if (SplitBefore.first == StringRef::npos ||
       // Block comment line contents contain the trailing whitespace after the
       // decoration, so the need of left trim. Note that this behavior is
@@ -607,13 +604,13 @@ void BreakableBlockComment::replaceWhitespaceBefore(
     Split SplitBefore, WhitespaceManager &Whitespaces) {
   if (LineIndex == 0) {
     if (DelimitersOnNewline) {
-        // Since we're breaking af index 1 below, the break position and the
-        // break length are the same.
-        size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
-        if (BreakLength != StringRef::npos) {
-          insertBreak(LineIndex, 0, Split(1, BreakLength), Whitespaces);
-          DelimitersOnNewline = true;
-        }
+      // Since we're breaking af index 1 below, the break position and the
+      // break length are the same.
+      size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
+      if (BreakLength != StringRef::npos) {
+        insertBreak(LineIndex, 0, Split(1, BreakLength), Whitespaces);
+        DelimitersOnNewline = true;
+      }
     }
     return;
   }
@@ -625,11 +622,11 @@ void BreakableBlockComment::replaceWhitespaceBefore(
     // This is the offset of the end of the last line relative to the start of
     // the token text in the token.
     unsigned WhitespaceOffsetInToken = Content[LineIndex - 1].data() +
-        Content[LineIndex - 1].size() -
-        tokenAt(LineIndex).TokenText.data();
+                                       Content[LineIndex - 1].size() -
+                                       tokenAt(LineIndex).TokenText.data();
     unsigned WhitespaceLength = TrimmedContent.data() -
-        tokenAt(LineIndex).TokenText.data() -
-        WhitespaceOffsetInToken;
+                                tokenAt(LineIndex).TokenText.data() -
+                                WhitespaceOffsetInToken;
     Whitespaces.replaceWhitespaceInToken(
         tokenAt(LineIndex), WhitespaceOffsetInToken,
         /*ReplaceChars=*/WhitespaceLength, /*PreviousPostfix=*/"",
@@ -762,17 +759,12 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       Tokens[i] = LineTok;
       Content[i] = Lines[i].substr(IndentPrefix.size());
       OriginalContentColumn[i] =
-          StartColumn +
-          encoding::columnWidthWithTabs(OriginalPrefix[i],
-                                        StartColumn,
-                                        Style.TabWidth,
-                                        Encoding);
+          StartColumn + encoding::columnWidthWithTabs(OriginalPrefix[i],
+                                                      StartColumn,
+                                                      Style.TabWidth, Encoding);
       ContentColumn[i] =
-          StartColumn +
-          encoding::columnWidthWithTabs(Prefix[i],
-                                        StartColumn,
-                                        Style.TabWidth,
-                                        Encoding);
+          StartColumn + encoding::columnWidthWithTabs(Prefix[i], StartColumn,
+                                                      Style.TabWidth, Encoding);
 
       // Calculate the end of the non-whitespace text in this line.
       size_t EndOfLine = Content[i].find_last_not_of(Blanks);
@@ -845,10 +837,8 @@ BreakableComment::Split BreakableLineCommentSection::getSplitBefore(
 }
 
 unsigned BreakableLineCommentSection::getLineLengthAfterSplitBefore(
-    unsigned LineIndex, unsigned TailOffset,
-    unsigned PreviousEndColumn,
-    unsigned ColumnLimit,
-    Split SplitBefore) const {
+    unsigned LineIndex, unsigned TailOffset, unsigned PreviousEndColumn,
+    unsigned ColumnLimit, Split SplitBefore) const {
   if (SplitBefore.first == StringRef::npos ||
       SplitBefore.first + SplitBefore.second < Content[LineIndex].size()) {
     // A piece of line, not the whole line, gets reflown.
@@ -856,10 +846,9 @@ unsigned BreakableLineCommentSection::getLineLengthAfterSplitBefore(
   } else {
     // The whole line gets reflown.
     unsigned StartColumn = PreviousEndColumn + ReflowPrefix.size();
-    return StartColumn + encoding::columnWidthWithTabs(Content[LineIndex],
-                                                       StartColumn,
-                                                       Style.TabWidth,
-                                                       Encoding);
+    return StartColumn +
+           encoding::columnWidthWithTabs(Content[LineIndex], StartColumn,
+                                         Style.TabWidth, Encoding);
   }
 }
 
@@ -932,7 +921,7 @@ void BreakableLineCommentSection::replaceWhitespaceBefore(
   }
 }
 
-void BreakableLineCommentSection::updateNextToken(LineState& State) const {
+void BreakableLineCommentSection::updateNextToken(LineState &State) const {
   if (LastLineTok) {
     State.NextToken = LastLineTok->Next;
   }
