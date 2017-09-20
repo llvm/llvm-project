@@ -403,11 +403,11 @@ EhFrameSection<ELFT>::EhFrameSection()
 // and where their relocations point to.
 template <class ELFT>
 template <class RelTy>
-CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Cie,
+CieRecord *EhFrameSection<ELFT>::addCie(EhInputSection *Sec,
+                                        EhSectionPiece &Cie,
                                         ArrayRef<RelTy> Rels) {
-  auto *Sec = cast<EhInputSection>(Cie.Sec);
   const endianness E = ELFT::TargetEndianness;
-  if (read32<E>(Cie.data().data() + 4) != 0)
+  if (read32<E>(Cie.data(Sec).data() + 4) != 0)
     fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
 
   SymbolBody *Personality = nullptr;
@@ -417,10 +417,11 @@ CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Cie,
         &Sec->template getFile<ELFT>()->getRelocTargetSym(Rels[FirstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
-  CieRecord *Rec = &CieMap[{Cie.data(), Personality}];
+  CieRecord *Rec = &CieMap[{Cie.data(Sec), Personality}];
 
   // If not found, create a new one.
-  if (Rec->Cie == nullptr) {
+  if (Rec->Sec == nullptr) {
+    Rec->Sec = Sec;
     Rec->Cie = &Cie;
     CieRecords.push_back(Rec);
   }
@@ -431,9 +432,8 @@ CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Cie,
 // points to a live function.
 template <class ELFT>
 template <class RelTy>
-bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Fde,
+bool EhFrameSection<ELFT>::isFdeLive(EhInputSection *Sec, EhSectionPiece &Fde,
                                      ArrayRef<RelTy> Rels) {
-  auto *Sec = cast<EhInputSection>(Fde.Sec);
   unsigned FirstRelI = Fde.FirstRelocation;
 
   // An FDE should point to some function because FDEs are to describe
@@ -469,9 +469,9 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
       return;
 
     size_t Offset = Piece.InputOff;
-    uint32_t ID = read32<E>(Piece.data().data() + 4);
+    uint32_t ID = read32<E>(Piece.data(Sec).data() + 4);
     if (ID == 0) {
-      OffsetToCie[Offset] = addCie(Piece, Rels);
+      OffsetToCie[Offset] = addCie(Sec, Piece, Rels);
       continue;
     }
 
@@ -480,7 +480,7 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
     if (!Rec)
       fatal(toString(Sec) + ": invalid CIE reference");
 
-    if (!isFdeLive(Piece, Rels))
+    if (!isFdeLive(Sec, Piece, Rels))
       continue;
     Rec->Fdes.push_back(&Piece);
     NumFdes++;
@@ -586,11 +586,11 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
   for (CieRecord *Rec : CieRecords) {
     size_t CieOffset = Rec->Cie->OutputOff;
-    writeCieFde<ELFT>(Buf + CieOffset, Rec->Cie->data());
+    writeCieFde<ELFT>(Buf + CieOffset, Rec->Cie->data(Rec->Sec));
 
     for (EhSectionPiece *Fde : Rec->Fdes) {
       size_t Off = Fde->OutputOff;
-      writeCieFde<ELFT>(Buf + Off, Fde->data());
+      writeCieFde<ELFT>(Buf + Off, Fde->data(Rec->Sec));
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
@@ -606,7 +606,7 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   // we obtain two addresses and pass them to EhFrameHdr object.
   if (In<ELFT>::EhFrameHdr) {
     for (CieRecord *Rec : CieRecords) {
-      uint8_t Enc = getFdeEncoding<ELFT>(Rec->Cie);
+      uint8_t Enc = getFdeEncoding<ELFT>(Rec->Sec, Rec->Cie);
       for (EhSectionPiece *Fde : Rec->Fdes) {
         uint64_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
         uint64_t FdeVA = getParent()->Addr + Fde->OutputOff;

@@ -30,7 +30,7 @@ CppFileCollection::RecreateResult
 CppFileCollection::recreateFileIfCompileCommandChanged(
     PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
     std::shared_ptr<PCHContainerOperations> PCHs,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger) {
   auto NewCommand = getCompileCommand(CDB, File, ResourceDir);
 
   std::lock_guard<std::mutex> Lock(Mutex);
@@ -41,12 +41,13 @@ CppFileCollection::recreateFileIfCompileCommandChanged(
   if (It == OpenedFiles.end()) {
     It = OpenedFiles
              .try_emplace(File, CppFile::Create(File, std::move(NewCommand),
-                                                std::move(PCHs)))
+                                                std::move(PCHs), Logger))
              .first;
   } else if (!compileCommandsAreEqual(It->second->getCompileCommand(),
                                       NewCommand)) {
     Result.RemovedFile = std::move(It->second);
-    It->second = CppFile::Create(File, std::move(NewCommand), std::move(PCHs));
+    It->second =
+        CppFile::Create(File, std::move(NewCommand), std::move(PCHs), Logger);
   }
   Result.FileInCollection = It->second;
   return Result;

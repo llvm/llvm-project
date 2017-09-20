@@ -62,7 +62,10 @@ static void applySecRel(const SectionChunk *Sec, uint8_t *Off,
     fatal("SECREL relocation cannot be applied to absolute symbols");
   }
   uint64_t SecRel = S - OS->getRVA();
-  assert(SecRel < INT32_MAX && "overflow in SECREL relocation");
+  if (SecRel > UINT32_MAX) {
+    error("overflow in SECREL relocation in section: " + Sec->getSectionName());
+    return;
+  }
   add32(Off, SecRel);
 }
 

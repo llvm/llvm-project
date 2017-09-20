@@ -145,8 +145,10 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
                            unsigned AsyncThreadsCount, bool SnippetCompletions,
+                           clangd::Logger &Logger,
                            llvm::Optional<StringRef> ResourceDir)
-    : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+    : Logger(Logger), CDB(CDB), DiagConsumer(DiagConsumer),
+      FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       WorkScheduler(AsyncThreadsCount), SnippetCompletions(SnippetCompletions) {
@@ -157,7 +159,7 @@ std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   std::shared_ptr<CppFile> Resources =
-      Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value);
+      Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
   return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
                                  std::move(Resources), std::move(TaggedFS));
 }
@@ -175,7 +177,7 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   auto Recreated = Units.recreateFileIfCompileCommandChanged(
-      File, ResourceDir, CDB, PCHs, TaggedFS.Value);
+      File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
 
   // Note that std::future from this cleanup action is ignored.
   scheduleCancelRebuild(std::move(Recreated.RemovedFile));
@@ -210,7 +212,7 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   std::vector<CompletionItem> Result = clangd::codeComplete(
       File, Resources->getCompileCommand(),
       Preamble ? &Preamble->Preamble : nullptr, *OverridenContents, Pos,
-      TaggedFS.Value, PCHs, SnippetCompletions);
+      TaggedFS.Value, PCHs, SnippetCompletions, Logger);
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
@@ -278,10 +280,10 @@ Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
   assert(Resources && "Calling findDefinitions on non-added file");
 
   std::vector<Location> Result;
-  Resources->getAST().get()->runUnderLock([Pos, &Result](ParsedAST *AST) {
+  Resources->getAST().get()->runUnderLock([Pos, &Result, this](ParsedAST *AST) {
     if (!AST)
       return;
-    Result = clangd::findDefinitions(*AST, Pos);
+    Result = clangd::findDefinitions(*AST, Pos, Logger);
   });
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
