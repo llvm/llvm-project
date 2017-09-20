@@ -25,6 +25,8 @@ struct CompileCommand;
 
 namespace clangd {
 
+class Logger;
+
 /// Returns a default compile command to use for \p File.
 tooling::CompileCommand getDefaultCompileCommand(PathRef File);
 
@@ -45,6 +47,8 @@ public:
 class DirectoryBasedGlobalCompilationDatabase
     : public GlobalCompilationDatabase {
 public:
+  DirectoryBasedGlobalCompilationDatabase(clangd::Logger &Logger);
+
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override;
 
@@ -61,6 +65,8 @@ private:
 
   /// Stores extra flags per file.
   llvm::StringMap<std::vector<std::string>> ExtraFlagsForFile;
+  /// Used for logging.
+  clangd::Logger &Logger;
 };
 } // namespace clangd
 } // namespace clang

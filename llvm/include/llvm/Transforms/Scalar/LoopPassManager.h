@@ -166,7 +166,8 @@ public:
   /// the rest of the pass management infrastructure.
   void markLoopAsDeleted(Loop &L) {
     LAM.clear(L);
-    assert(CurrentL->contains(&L) && "Cannot delete a loop outside of the "
+    assert(&L == CurrentL ||
+           CurrentL->contains(&L) && "Cannot delete a loop outside of the "
                                      "subloop tree currently being processed.");
     if (&L == CurrentL)
       SkipCurrentLoop = true;

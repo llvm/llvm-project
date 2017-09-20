@@ -67,6 +67,12 @@ namespace clang {
               CodeGenOpts.OptimizationRemarkPattern->match(PassName));
     }
 
+    bool isAnyRemarkEnabled() const override {
+      return (CodeGenOpts.OptimizationRemarkAnalysisPattern ||
+              CodeGenOpts.OptimizationRemarkMissedPattern ||
+              CodeGenOpts.OptimizationRemarkPattern);
+    }
+
   private:
     const CodeGenOptions &CodeGenOpts;
     BackendConsumer *BackendCon;

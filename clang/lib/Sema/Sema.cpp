@@ -582,6 +582,23 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
   return false;
 }
 
+static bool isFunctionOrVarDeclExternC(NamedDecl *ND) {
+  if (auto *FD = dyn_cast<FunctionDecl>(ND))
+    return FD->isExternC();
+  return cast<VarDecl>(ND)->isExternC();
+}
+
+/// Determine whether ND is an external-linkage function or variable whose
+/// type has no linkage.
+bool Sema::isExternalWithNoLinkageType(ValueDecl *VD) {
+  // Note: it's not quite enough to check whether VD has UniqueExternalLinkage,
+  // because we also want to catch the case where its type has VisibleNoLinkage,
+  // which does not affect the linkage of VD.
+  return getLangOpts().CPlusPlus && VD->hasExternalFormalLinkage() &&
+         !isExternalFormalLinkage(VD->getType()->getLinkage()) &&
+         !isFunctionOrVarDeclExternC(VD);
+}
+
 /// Obtains a sorted list of functions and variables that are undefined but
 /// ODR-used.
 void Sema::getUndefinedButUsed(
@@ -598,17 +615,27 @@ void Sema::getUndefinedButUsed(
     if (isa<CXXDeductionGuideDecl>(ND))
       continue;
 
+    if (ND->hasAttr<DLLImportAttr>() || ND->hasAttr<DLLExportAttr>()) {
+      // An exported function will always be emitted when defined, so even if
+      // the function is inline, it doesn't have to be emitted in this TU. An
+      // imported function implies that it has been exported somewhere else.
+      continue;
+    }
+
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       if (FD->isDefined())
         continue;
       if (FD->isExternallyVisible() &&
+          !isExternalWithNoLinkageType(FD) &&
           !FD->getMostRecentDecl()->isInlined())
         continue;
     } else {
       auto *VD = cast<VarDecl>(ND);
       if (VD->hasDefinition() != VarDecl::DeclarationOnly)
         continue;
-      if (VD->isExternallyVisible() && !VD->getMostRecentDecl()->isInline())
+      if (VD->isExternallyVisible() &&
+          !isExternalWithNoLinkageType(VD) &&
+          !VD->getMostRecentDecl()->isInline())
         continue;
     }
 
@@ -626,33 +653,43 @@ static void checkUndefinedButUsed(Sema &S) {
   S.getUndefinedButUsed(Undefined);
   if (Undefined.empty()) return;
 
-  for (SmallVectorImpl<std::pair<NamedDecl *, SourceLocation> >::iterator
-         I = Undefined.begin(), E = Undefined.end(); I != E; ++I) {
-    NamedDecl *ND = I->first;
+  for (auto Undef : Undefined) {
+    ValueDecl *VD = cast<ValueDecl>(Undef.first);
+    SourceLocation UseLoc = Undef.second;
 
-    if (ND->hasAttr<DLLImportAttr>() || ND->hasAttr<DLLExportAttr>()) {
-      // An exported function will always be emitted when defined, so even if
-      // the function is inline, it doesn't have to be emitted in this TU. An
-      // imported function implies that it has been exported somewhere else.
-      continue;
-    }
-
-    if (!ND->isExternallyVisible()) {
-      S.Diag(ND->getLocation(), diag::warn_undefined_internal)
-        << isa<VarDecl>(ND) << ND;
-    } else if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    if (S.isExternalWithNoLinkageType(VD)) {
+      // C++ [basic.link]p8:
+      //   A type without linkage shall not be used as the type of a variable
+      //   or function with external linkage unless
+      //    -- the entity has C language linkage
+      //    -- the entity is not odr-used or is defined in the same TU
+      //
+      // As an extension, accept this in cases where the type is externally
+      // visible, since the function or variable actually can be defined in
+      // another translation unit in that case.
+      S.Diag(VD->getLocation(), isExternallyVisible(VD->getType()->getLinkage())
+                                    ? diag::ext_undefined_internal_type
+                                    : diag::err_undefined_internal_type)
+        << isa<VarDecl>(VD) << VD;
+    } else if (!VD->isExternallyVisible()) {
+      // FIXME: We can promote this to an error. The function or variable can't
+      // be defined anywhere else, so the program must necessarily violate the
+      // one definition rule.
+      S.Diag(VD->getLocation(), diag::warn_undefined_internal)
+        << isa<VarDecl>(VD) << VD;
+    } else if (auto *FD = dyn_cast<FunctionDecl>(VD)) {
       (void)FD;
       assert(FD->getMostRecentDecl()->isInlined() &&
              "used object requires definition but isn't inline or internal?");
       // FIXME: This is ill-formed; we should reject.
-      S.Diag(ND->getLocation(), diag::warn_undefined_inline) << ND;
+      S.Diag(VD->getLocation(), diag::warn_undefined_inline) << VD;
     } else {
-      assert(cast<VarDecl>(ND)->getMostRecentDecl()->isInline() &&
+      assert(cast<VarDecl>(VD)->getMostRecentDecl()->isInline() &&
              "used var requires definition but isn't inline or internal?");
-      S.Diag(ND->getLocation(), diag::err_undefined_inline_var) << ND;
+      S.Diag(VD->getLocation(), diag::err_undefined_inline_var) << VD;
     }
-    if (I->second.isValid())
-      S.Diag(I->second, diag::note_used_here);
+    if (UseLoc.isValid())
+      S.Diag(UseLoc, diag::note_used_here);
   }
 
   S.UndefinedButUsed.clear();

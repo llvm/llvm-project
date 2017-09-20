@@ -52,8 +52,9 @@ body:             |
 #CHECK:     B %bb.3
 
 # Empty bb.2, originally containing "unreachable" and thus has no successors
+# and we cannot guess them: we should print an empty list of successors.
 #CHECK:   bb.2:
-#CHECK-NOT: successors
+#CHECK: successors:{{ *$}}
 
 #CHECK:   bb.3:
 #CHECK:     successors: %bb.1

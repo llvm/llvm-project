@@ -4023,7 +4023,7 @@ ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
   unsigned IFlags = 0;
   if (IFlagsStr != "none") {
         for (int i = 0, e = IFlagsStr.size(); i != e; ++i) {
-      unsigned Flag = StringSwitch<unsigned>(IFlagsStr.substr(i, 1))
+      unsigned Flag = StringSwitch<unsigned>(IFlagsStr.substr(i, 1).lower())
         .Case("a", ARM_PROC::A)
         .Case("i", ARM_PROC::I)
         .Case("f", ARM_PROC::F)

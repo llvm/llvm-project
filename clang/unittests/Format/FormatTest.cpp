@@ -11588,6 +11588,11 @@ TEST_F(FormatTest, StructuredBindings) {
             format("auto  const  volatile  &&[a, b] = f();"));
   EXPECT_EQ("auto && [a, b] = f();", format("auto  &&[a, b] = f();"));
 
+  // Make sure we don't mistake structured bindings for lambdas.
+  verifyFormat("auto [a, b]{A * i};");
+  verifyFormat("auto const [a, b]{A * i};");
+  verifyFormat("auto const && [a, b]{A * i};");
+
   format::FormatStyle Spaces = format::getLLVMStyle();
   Spaces.SpacesInSquareBrackets = true;
   verifyFormat("auto [ a, b ] = f();", Spaces);

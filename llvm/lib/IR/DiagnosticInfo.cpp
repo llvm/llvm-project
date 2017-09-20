@@ -315,28 +315,20 @@ void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {
   DP << "Instruction selection used fallback path for " << getFunction();
 }
 
-DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
-operator<<(StringRef S) {
+void DiagnosticInfoOptimizationBase::insert(StringRef S) {
   Args.emplace_back(S);
-  return *this;
 }
 
-DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
-operator<<(Argument A) {
+void DiagnosticInfoOptimizationBase::insert(Argument A) {
   Args.push_back(std::move(A));
-  return *this;
 }
 
-DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
-operator<<(setIsVerbose V) {
+void DiagnosticInfoOptimizationBase::insert(setIsVerbose V) {
   IsVerbose = true;
-  return *this;
 }
 
-DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
-operator<<(setExtraArgs EA) {
+void DiagnosticInfoOptimizationBase::insert(setExtraArgs EA) {
   FirstExtraArgIndex = Args.size();
-  return *this;
 }
 
 std::string DiagnosticInfoOptimizationBase::getMsg() const {

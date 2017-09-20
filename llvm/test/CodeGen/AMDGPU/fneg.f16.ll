@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=CIVI -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=CIVI -check-prefix=GCN -check-prefix=GFX89 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,CIVI,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; FIXME: Should be able to do scalar op
 ; GCN-LABEL: {{^}}s_fneg_f16:
@@ -154,7 +154,8 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2f16(<2 x half> addrspace(1)* %i
 ; GCN-LABEL: {{^}}v_extract_fneg_no_fold_v2f16:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 ; GCN: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80008000, [[VAL]]
-; GCN: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[NEG]]
+; CIVI: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[NEG]]
+; GFX9: global_store_short_d16_hi v{{\[[0-9]+:[0-9]+\]}}, [[NEG]], off
 define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
   %val = load <2 x half>, <2 x half> addrspace(1)* %in
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %val

@@ -25,10 +25,9 @@ namespace format {
 const char *getTokenTypeName(TokenType Type) {
   static const char *const TokNames[] = {
 #define TYPE(X) #X,
-LIST_TOKEN_TYPES
+      LIST_TOKEN_TYPES
 #undef TYPE
-    nullptr
-  };
+      nullptr};
 
   if (Type < NUM_TOKEN_TYPES)
     return TokNames[Type];

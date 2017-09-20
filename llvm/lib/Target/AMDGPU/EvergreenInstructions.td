@@ -128,21 +128,21 @@ let usesCustomInserter = 1 in {
 def RAT_WRITE_CACHELESS_32_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0x1,
   (ins R600_TReg32_X:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr, $index_gpr, $eop",
-  [(global_store i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 // 64-bit store
 def RAT_WRITE_CACHELESS_64_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0x3,
   (ins R600_Reg64:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr.XY, $index_gpr, $eop",
-  [(global_store v2i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global v2i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 //128-bit store
 def RAT_WRITE_CACHELESS_128_eg : CF_MEM_RAT_CACHELESS <0x2, 0, 0xf,
   (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr, InstFlag:$eop),
   "STORE_RAW $rw_gpr.XYZW, $index_gpr, $eop",
-  [(global_store v4i32:$rw_gpr, i32:$index_gpr)]
+  [(store_global v4i32:$rw_gpr, i32:$index_gpr)]
 >;
 
 def RAT_STORE_TYPED_eg: CF_MEM_RAT_STORE_TYPED<1>;
@@ -614,7 +614,7 @@ def LDS_MAX_INT : R600_LDS_1A1D_NORET <0x6, "LDS_MAX_INT", [] >;
 def LDS_MIN_UINT : R600_LDS_1A1D_NORET <0x7, "LDS_MIN_UINT", [] >;
 def LDS_MAX_UINT : R600_LDS_1A1D_NORET <0x8, "LDS_MAX_UINT", [] >;
 def LDS_WRITE : R600_LDS_1A1D_NORET <0xD, "LDS_WRITE",
-  [(local_store (i32 R600_Reg32:$src1), R600_Reg32:$src0)]
+  [(store_local (i32 R600_Reg32:$src1), R600_Reg32:$src0)]
 >;
 def LDS_BYTE_WRITE : R600_LDS_1A1D_NORET<0x12, "LDS_BYTE_WRITE",
   [(truncstorei8_local i32:$src1, i32:$src0)]
@@ -656,7 +656,7 @@ def LDS_CMPST_RET : R600_LDS_1A2D_RET <0x30, "LDS_CMPST",
   [(set i32:$dst, (atomic_cmp_swap_32_local i32:$src0, i32:$src1, i32:$src2))]
 >;
 def LDS_READ_RET : R600_LDS_1A <0x32, "LDS_READ_RET",
-  [(set (i32 R600_Reg32:$dst), (local_load R600_Reg32:$src0))]
+  [(set (i32 R600_Reg32:$dst), (load_local R600_Reg32:$src0))]
 >;
 def LDS_BYTE_READ_RET : R600_LDS_1A <0x36, "LDS_BYTE_READ_RET",
   [(set i32:$dst, (sextloadi8_local i32:$src0))]
