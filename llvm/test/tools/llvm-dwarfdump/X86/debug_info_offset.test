@@ -22,6 +22,22 @@ CHILDREN: 0x0000000b: DW_TAG_compile_unit
 CHILDREN: DW_TAG_subprogram
 
 RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -debug-info=0x0000000b -c -r 0 - \
+RUN:   | FileCheck %s
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -debug-info=0x0000000b -c -r 1 - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -debug-info=0x0000000b -c -recurse-depth 0 - \
+RUN:   | FileCheck %s
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -debug-info=0x0000000b -c -recurse-depth 1 - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -debug-info=0x00000043 --show-parents - \
 RUN:   | FileCheck %s --check-prefix=PARENTS
 

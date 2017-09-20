@@ -133,7 +133,7 @@ static bool isBSDLike(object::Archive::Kind Kind) {
   case object::Archive::K_BSD:
   case object::Archive::K_DARWIN:
     return true;
-  case object::Archive::K_MIPS64:
+  case object::Archive::K_GNU64:
   case object::Archive::K_DARWIN64:
   case object::Archive::K_COFF:
     break;

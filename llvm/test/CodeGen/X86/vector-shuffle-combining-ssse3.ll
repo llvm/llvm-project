@@ -688,3 +688,25 @@ define <16 x i8> @constant_fold_pshufb_2() {
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> <i8 2, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>)
   ret <16 x i8> %1
 }
+
+define i32 @PR22415(double %a0) {
+; SSE-LABEL: PR22415:
+; SSE:       # BB#0:
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR22415:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
+; AVX-NEXT:    retq
+  %1 = bitcast double %a0 to <8 x i8>
+  %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 undef>
+  %3 = shufflevector <4 x i8> %2, <4 x i8> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %4 = bitcast <3 x i8> %3 to i24
+  %5 = zext i24 %4 to i32
+  ret i32 %5
+}

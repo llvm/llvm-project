@@ -542,6 +542,11 @@ LLVM-specific variables
   reverse order. This is useful for uncovering non-determinism caused by
   iteration of unordered containers.
 
+**LLVM_BUILD_INSTRUMENTED_COVERAGE**:BOOL
+  If enabled, `source-based code coverage
+  <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_ instrumentation
+  is enabled while building llvm.
+
 CMake Caches
 ============
 

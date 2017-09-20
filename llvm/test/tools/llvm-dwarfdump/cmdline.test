@@ -5,6 +5,7 @@ HELP-NOT: -reverse-iterate
 HELP: Section-specific Dump Options
 HELP: -debug-info            - Dump the .debug_info section
 HELP: -eh-frame
+HELP: -recurse-depth=<N> 
 HELP: -show-children
 HELP: -show-parents
 HELP: -summarize-types
