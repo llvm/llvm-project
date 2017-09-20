@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "Logger.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,6 +22,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace clang {
@@ -302,7 +304,8 @@ protected:
     ErrorCheckingDiagConsumer DiagConsumer;
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*SnippetCompletions=*/false);
+                        /*SnippetCompletions=*/false,
+                        EmptyLogger::getInstance());
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
@@ -365,7 +368,7 @@ TEST_F(ClangdVFSTest, Reparse) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*SnippetCompletions=*/false);
+                      /*SnippetCompletions=*/false, EmptyLogger::getInstance());
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -410,7 +413,7 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*SnippetCompletions=*/false);
+                      /*SnippetCompletions=*/false, EmptyLogger::getInstance());
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -457,7 +460,8 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false,
+                      EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
@@ -490,7 +494,8 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
                               "-stdlib=libstdc++"});
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false,
+                      EmptyLogger::getInstance());
 
   // Just a random gcc version string
   SmallString<8> Version("4.9.3");
@@ -538,7 +543,8 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false);
+                      /*AsyncThreadsCount=*/0, /*SnippetCompletions=*/false,
+                      EmptyLogger::getInstance());
   // No need to sync reparses, because reparses are performed on the calling
   // thread to true.
 
@@ -597,7 +603,7 @@ TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*SnippetCompletions=*/false);
+                      /*SnippetCompletions=*/false, EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = R"cpp(
@@ -745,7 +751,8 @@ int d;
   {
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*SnippetCompletions=*/false);
+                        /*SnippetCompletions=*/false,
+                        EmptyLogger::getInstance());
 
     // Prepare some random distributions for the test.
     std::random_device RandGen;
@@ -890,6 +897,68 @@ int d;
     ASSERT_LE(Stats[I].HitsWithErrors, ReqStats[I].RequestsWithErrors);
     ASSERT_LE(Stats[I].HitsWithoutErrors, ReqStats[I].RequestsWithoutErrors);
   }
+}
+
+TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
+  class NoConcurrentAccessDiagConsumer : public DiagnosticsConsumer {
+  public:
+    NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
+        : StartSecondReparse(std::move(StartSecondReparse)) {}
+
+    void onDiagnosticsReady(
+        PathRef File,
+        Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+
+      std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
+      ASSERT_TRUE(Lock.owns_lock())
+          << "Detected concurrent onDiagnosticsReady calls for the same file.";
+      if (FirstRequest) {
+        FirstRequest = false;
+        StartSecondReparse.set_value();
+        // Sleep long enough for the second request to be processed.
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      }
+    }
+
+  private:
+    std::mutex Mutex;
+    bool FirstRequest = true;
+    std::promise<void> StartSecondReparse;
+  };
+
+  const auto SourceContentsWithoutErrors = R"cpp(
+int a;
+int b;
+int c;
+int d;
+)cpp";
+
+  const auto SourceContentsWithErrors = R"cpp(
+int a = x;
+int b;
+int c;
+int d;
+)cpp";
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  llvm::StringMap<std::string> FileContents;
+  FileContents[FooCpp] = "";
+  ConstantFSProvider FS(buildTestFS(FileContents));
+
+  std::promise<void> StartSecondReparsePromise;
+  std::future<void> StartSecondReparse = StartSecondReparsePromise.get_future();
+
+  NoConcurrentAccessDiagConsumer DiagConsumer(
+      std::move(StartSecondReparsePromise));
+
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  ClangdServer Server(CDB, DiagConsumer, FS, 4, /*SnippetCompletions=*/false,
+                      EmptyLogger::getInstance());
+  Server.addDocument(FooCpp, SourceContentsWithErrors);
+  StartSecondReparse.wait();
+
+  auto Future = Server.addDocument(FooCpp, SourceContentsWithoutErrors);
+  Future.wait();
 }
 
 } // namespace clangd

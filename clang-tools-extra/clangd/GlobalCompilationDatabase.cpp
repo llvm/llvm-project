@@ -11,6 +11,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "Logger.h"
 
 namespace clang {
 namespace clangd {
@@ -35,6 +36,10 @@ tooling::CompileCommand getDefaultCompileCommand(PathRef File) {
                                  llvm::sys::path::filename(File), CommandLine,
                                  /*Output=*/"");
 }
+
+DirectoryBasedGlobalCompilationDatabase::
+    DirectoryBasedGlobalCompilationDatabase(clangd::Logger &Logger)
+    : Logger(Logger) {}
 
 std::vector<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommands(PathRef File) {
@@ -77,26 +82,19 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(PathRef File) {
     auto CachedIt = CompilationDatabases.find(Path);
     if (CachedIt != CompilationDatabases.end())
       return CachedIt->second.get();
+
     std::string Error;
     auto CDB = tooling::CompilationDatabase::loadFromDirectory(Path, Error);
-    if (!CDB) {
-      if (!Error.empty()) {
-        // FIXME(ibiryukov): logging
-        // Output.log("Error when trying to load compilation database from " +
-        //            Twine(Path) + ": " + Twine(Error) + "\n");
-      }
+    if (!CDB)
       continue;
-    }
 
     // FIXME(ibiryukov): Invalidate cached compilation databases on changes
-    auto result = CDB.get();
+    auto Result = CDB.get();
     CompilationDatabases.insert(std::make_pair(Path, std::move(CDB)));
-    return result;
+    return Result;
   }
 
-  // FIXME(ibiryukov): logging
-  // Output.log("Failed to find compilation database for " + Twine(File) +
-  // "\n");
+  Logger.log("Failed to find compilation database for " + Twine(File) + "\n");
   return nullptr;
 }
 

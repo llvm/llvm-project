@@ -20,14 +20,15 @@
 namespace clang {
 namespace clangd {
 
+class Logger;
+
 /// Thread-safe mapping from FileNames to CppFile.
 class CppFileCollection {
 public:
-  std::shared_ptr<CppFile>
-  getOrCreateFile(PathRef File, PathRef ResourceDir,
-                  GlobalCompilationDatabase &CDB,
-                  std::shared_ptr<PCHContainerOperations> PCHs,
-                  IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  std::shared_ptr<CppFile> getOrCreateFile(
+      PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
+      std::shared_ptr<PCHContainerOperations> PCHs,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     auto It = OpenedFiles.find(File);
@@ -36,7 +37,7 @@ public:
 
       It = OpenedFiles
                .try_emplace(File, CppFile::Create(File, std::move(Command),
-                                                  std::move(PCHs)))
+                                                  std::move(PCHs), Logger))
                .first;
     }
     return It->second;
@@ -59,7 +60,7 @@ public:
   RecreateResult recreateFileIfCompileCommandChanged(
       PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
       std::shared_ptr<PCHContainerOperations> PCHs,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
 
   std::shared_ptr<CppFile> getFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);

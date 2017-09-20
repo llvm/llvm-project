@@ -9,6 +9,7 @@
 
 #include "ClangdUnit.h"
 
+#include "Logger.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -367,13 +368,39 @@ private:
     }
   }
 
-  void FillSortText(const CodeCompletionString &CCS,
-                    CompletionItem &Item) const {
+  static int GetSortPriority(const CodeCompletionString &CCS) {
+    int Score = CCS.getPriority();
     // Fill in the sortText of the CompletionItem.
-    assert(CCS.getPriority() < 99999 && "Expecting code completion result "
-                                        "priority to have at most 5-digits");
+    assert(Score <= 99999 && "Expecting code completion result "
+                             "priority to have at most 5-digits");
+
+    const int Penalty = 100000;
+    switch (static_cast<CXAvailabilityKind>(CCS.getAvailability())) {
+    case CXAvailability_Available:
+      // No penalty.
+      break;
+    case CXAvailability_Deprecated:
+      Score += Penalty;
+      break;
+    case CXAvailability_NotAccessible:
+      Score += 2 * Penalty;
+      break;
+    case CXAvailability_NotAvailable:
+      Score += 3 * Penalty;
+      break;
+    }
+
+    return Score;
+  }
+
+  static void FillSortText(const CodeCompletionString &CCS,
+                           CompletionItem &Item) {
+    int Priority = GetSortPriority(CCS);
+    // Fill in the sortText of the CompletionItem.
+    assert(Priority <= 999999 &&
+           "Expecting sort priority to have at most 6-digits");
     llvm::raw_string_ostream(Item.sortText)
-        << llvm::format("%05d%s", CCS.getPriority(), Item.filterText.c_str());
+        << llvm::format("%06d%s", Priority, Item.filterText.c_str());
   }
 
   std::vector<CompletionItem> &Items;
@@ -525,7 +552,7 @@ clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
                      PrecompiledPreamble const *Preamble, StringRef Contents,
                      Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                      std::shared_ptr<PCHContainerOperations> PCHs,
-                     bool SnippetCompletions) {
+                     bool SnippetCompletions, clangd::Logger &Logger) {
   std::vector<const char *> ArgStrs;
   for (const auto &S : Command.CommandLine)
     ArgStrs.push_back(S.c_str());
@@ -583,12 +610,13 @@ clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
-    // FIXME(ibiryukov): log errors
+    Logger.log("BeginSourceFile() failed when running codeComplete for " +
+               FileName);
     return Items;
   }
-  if (!Action.Execute()) {
-    // FIXME(ibiryukov): log errors
-  }
+  if (!Action.Execute())
+    Logger.log("Execute() failed when running codeComplete for " + FileName);
+
   Action.EndSourceFile();
 
   return Items;
@@ -604,7 +632,8 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
                  ArrayRef<serialization::DeclID> PreambleDeclIDs,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
-                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                 IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                 clangd::Logger &Logger) {
 
   std::vector<DiagWithFixIts> ASTDiags;
   StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
@@ -618,13 +647,14 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
       Clang.get());
 
   auto Action = llvm::make_unique<ClangdFrontendAction>();
-  if (!Action->BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
-    // FIXME(ibiryukov): log error
+  const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
+  if (!Action->BeginSourceFile(*Clang, MainInput)) {
+    Logger.log("BeginSourceFile() failed when building AST for " +
+               MainInput.getFile());
     return llvm::None;
   }
-  if (!Action->Execute()) {
-    // FIXME(ibiryukov): log error
-  }
+  if (!Action->Execute())
+    Logger.log("Execute() failed when building AST for " + MainInput.getFile());
 
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
@@ -789,7 +819,8 @@ SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
 }
 } // namespace
 
-std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos) {
+std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos,
+                                              clangd::Logger &Logger) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
   if (!FE)
@@ -889,15 +920,17 @@ PreambleData::PreambleData(PrecompiledPreamble Preamble,
 
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
-                std::shared_ptr<PCHContainerOperations> PCHs) {
+                std::shared_ptr<PCHContainerOperations> PCHs,
+                clangd::Logger &Logger) {
   return std::shared_ptr<CppFile>(
-      new CppFile(FileName, std::move(Command), std::move(PCHs)));
+      new CppFile(FileName, std::move(Command), std::move(PCHs), Logger));
 }
 
 CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
-                 std::shared_ptr<PCHContainerOperations> PCHs)
+                 std::shared_ptr<PCHContainerOperations> PCHs,
+                 clangd::Logger &Logger)
     : FileName(FileName), Command(std::move(Command)), RebuildCounter(0),
-      RebuildInProgress(false), PCHs(std::move(PCHs)) {
+      RebuildInProgress(false), PCHs(std::move(PCHs)), Logger(Logger) {
 
   std::lock_guard<std::mutex> Lock(Mutex);
   LatestAvailablePreamble = nullptr;
@@ -1078,7 +1111,7 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST =
         ParsedAST::Build(std::move(CI), PreambleForAST, SerializedPreambleDecls,
-                         std::move(ContentsBuffer), PCHs, VFS);
+                         std::move(ContentsBuffer), PCHs, VFS, That->Logger);
 
     if (NewAST) {
       Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
