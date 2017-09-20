@@ -1383,7 +1383,8 @@ TEST_F(DIFileTest, get) {
 
   EXPECT_NE(N, DIFile::get(Context, "other", Directory, CSKind, Checksum));
   EXPECT_NE(N, DIFile::get(Context, Filename, "other", CSKind, Checksum));
-  EXPECT_NE(N, DIFile::get(Context, Filename, Directory, DIFile::CSK_SHA1, Checksum));
+  EXPECT_NE(
+      N, DIFile::get(Context, Filename, Directory, DIFile::CSK_SHA1, Checksum));
   EXPECT_NE(N, DIFile::get(Context, Filename, Directory));
 
   TempDIFile Temp = N->clone();

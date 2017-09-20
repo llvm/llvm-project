@@ -51,6 +51,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUTargetTransformInfo.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
+  AMDGPUInline.cpp
   AMDILCFGStructurizer.cpp
   GCNHazardRecognizer.cpp
   GCNIterativeScheduler.cpp

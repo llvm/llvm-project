@@ -206,14 +206,15 @@ class ModelledPHI {
 public:
   ModelledPHI() {}
   ModelledPHI(const PHINode *PN) {
+    // BasicBlock comes first so we sort by basic block pointer order, then by value pointer order.
+    SmallVector<std::pair<BasicBlock *, Value *>, 4> Ops;
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
-      Blocks.push_back(PN->getIncomingBlock(I));
-    std::sort(Blocks.begin(), Blocks.end());
-
-    // This assumes the PHI is already well-formed and there aren't conflicting
-    // incoming values for the same block.
-    for (auto *B : Blocks)
-      Values.push_back(PN->getIncomingValueForBlock(B));
+      Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
+    std::sort(Ops.begin(), Ops.end());
+    for (auto &P : Ops) {
+      Blocks.push_back(P.first);
+      Values.push_back(P.second);
+    }
   }
   /// Create a dummy ModelledPHI that will compare unequal to any other ModelledPHI
   /// without the same ID.
@@ -229,14 +230,12 @@ public:
   ModelledPHI(const VArray &V, const BArray &B) {
     std::copy(V.begin(), V.end(), std::back_inserter(Values));
     std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
-    std::sort(Blocks.begin(), Blocks.end());
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
   template <typename BArray>
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum, const BArray &B) {
     std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
-    std::sort(Blocks.begin(), Blocks.end());
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }

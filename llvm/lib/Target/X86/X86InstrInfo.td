@@ -590,18 +590,10 @@ def SSECC : Operand<i8> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def i8immZExt3 : ImmLeaf<i8, [{
-  return Imm >= 0 && Imm < 8;
-}]>;
-
 def AVXCC : Operand<i8> {
   let PrintMethod = "printSSEAVXCC";
   let OperandType = "OPERAND_IMMEDIATE";
 }
-
-def i8immZExt5 : ImmLeaf<i8, [{
-  return Imm >= 0 && Imm < 32;
-}]>;
 
 def AVX512ICC : Operand<i8> {
   let PrintMethod = "printSSEAVXCC";

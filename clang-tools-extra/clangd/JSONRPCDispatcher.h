@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
+#include "Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/YAMLParser.h"
@@ -21,7 +22,7 @@ namespace clangd {
 
 /// Encapsulates output and logs streams and provides thread-safe access to
 /// them.
-class JSONOutput {
+class JSONOutput : public Logger {
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
       : Outs(Outs), Logs(Logs) {}
@@ -30,7 +31,7 @@ public:
   void writeMessage(const Twine &Message);
 
   /// Write to the logging stream.
-  void log(const Twine &Message);
+  void log(const Twine &Message) override;
 
 private:
   llvm::raw_ostream &Outs;

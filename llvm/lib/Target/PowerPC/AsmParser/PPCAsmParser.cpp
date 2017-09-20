@@ -1138,6 +1138,15 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     Inst = TmpInst;
     break;
   }
+  case PPC::SUBPCIS: {
+    MCInst TmpInst;
+    int64_t N = Inst.getOperand(1).getImm();
+    TmpInst.setOpcode(PPC::ADDPCIS);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(MCOperand::createImm(-N));
+    Inst = TmpInst;
+    break;
+  }
   case PPC::SRDI:
   case PPC::SRDIo: {
     MCInst TmpInst;

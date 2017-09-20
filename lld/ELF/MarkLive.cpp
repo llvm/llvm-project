@@ -126,7 +126,7 @@ scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
     unsigned FirstRelI = Piece.FirstRelocation;
     if (FirstRelI == (unsigned)-1)
       continue;
-    if (read32<E>(Piece.data(&EH).data() + 4) == 0) {
+    if (read32<E>(Piece.data().data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
       resolveReloc<ELFT>(EH, Rels[FirstRelI], Fn);

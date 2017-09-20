@@ -22,8 +22,8 @@
 ; CHECK: Running analysis: LoopAccessAnalysis on outer.header
 ; CHECK: Finished Loop pass manager run.
 ; CHECK: Running pass: LoopUnrollPass
-; CHECK: Clearing all analysis results for: inner2.header
-; CHECK: Clearing all analysis results for: outer.header
+; CHECK: Clearing all analysis results for: <invalidated loop>
+; CHECK: Clearing all analysis results for: <invalidated loop>
 ; CHECK: Invalidating all non-preserved analyses for: test
 ; CHECK: Invalidating all non-preserved analyses for: inner1.header
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on inner1.header
