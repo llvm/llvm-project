@@ -179,6 +179,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
+  initializeAMDGPUInlinerPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -332,9 +333,11 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   bool EnableOpt = getOptLevel() > CodeGenOpt::None;
   bool Internalize = InternalizeSymbols;
-  bool EarlyInline = EarlyInlineAll && EnableOpt;
+  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableAMDGPUFunctionCalls;
   bool AMDGPUAA = EnableAMDGPUAliasAnalysis && EnableOpt;
   bool LibCallSimplify = EnableLibCallSimplify && EnableOpt;
+
+  Builder.Inliner = createAMDGPUFunctionInliningPass();
 
   if (Internalize) {
     // If we're generating code, we always have the whole program available. The

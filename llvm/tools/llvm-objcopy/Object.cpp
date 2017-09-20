@@ -240,6 +240,15 @@ static bool sectionWithinSegment(const SectionBase &Section,
          Segment.Offset + Segment.FileSize >= Section.OriginalOffset + SecSize;
 }
 
+// Returns true IFF a segment's original offset is inside of another segment's
+// range.
+static bool segmentOverlapsSegment(const Segment &Child,
+                                   const Segment &Parent) {
+
+  return Parent.OriginalOffset <= Child.OriginalOffset &&
+         Parent.OriginalOffset + Parent.FileSize > Child.OriginalOffset;
+}
+
 template <class ELFT>
 void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
   uint32_t Index = 0;
@@ -264,6 +273,30 @@ void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
         if (!Section->ParentSegment ||
             Section->ParentSegment->Offset > Seg.Offset) {
           Section->ParentSegment = &Seg;
+        }
+      }
+    }
+  }
+  // Now we do an O(n^2) loop through the segments in order to match up
+  // segments.
+  for (auto &Child : Segments) {
+    for (auto &Parent : Segments) {
+      // Every segment will overlap with itself but we don't want a segment to
+      // be it's own parent so we avoid that situation.
+      if (&Child != &Parent && segmentOverlapsSegment(*Child, *Parent)) {
+        // We want a canonical "most parental" segment but this requires
+        // inspecting the ParentSegment.
+        if (Child->ParentSegment != nullptr) {
+          if (Child->ParentSegment->OriginalOffset > Parent->OriginalOffset) {
+            Child->ParentSegment = Parent.get();
+          } else if (Child->ParentSegment->Index > Parent->Index) {
+            // They must have equal OriginalOffsets so we need to disambiguate.
+            // To decide which is the parent we'll choose the one with the
+            // higher index.
+            Child->ParentSegment = Parent.get();
+          }
+        } else {
+          Child->ParentSegment = Parent.get();
         }
       }
     }
@@ -497,13 +530,30 @@ template <class ELFT> void ELFObject<ELFT>::sortSections() {
 }
 
 template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
+  // We need a temporary list of segments that has a special order to it
+  // so that we know that anytime ->ParentSegment is set that segment has
+  // already had it's offset properly set.
+  std::vector<Segment *> OrderedSegments;
+  for (auto &Segment : this->Segments)
+    OrderedSegments.push_back(Segment.get());
+  auto CompareSegments = [](const Segment *A, const Segment *B) {
+    // Any segment without a parent segment should come before a segment
+    // that has a parent segment.
+    if (A->OriginalOffset < B->OriginalOffset)
+      return true;
+    if (A->OriginalOffset > B->OriginalOffset)
+      return false;
+    return A->Index < B->Index;
+  };
+  std::stable_sort(std::begin(OrderedSegments), std::end(OrderedSegments),
+                   CompareSegments);
   // The size of ELF + program headers will not change so it is ok to assume
   // that the first offset of the first segment is a good place to start
   // outputting sections. This covers both the standard case and the PT_PHDR
   // case.
   uint64_t Offset;
-  if (!this->Segments.empty()) {
-    Offset = this->Segments[0]->Offset;
+  if (!OrderedSegments.empty()) {
+    Offset = OrderedSegments[0]->Offset;
   } else {
     Offset = sizeof(Elf_Ehdr);
   }
@@ -512,10 +562,20 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
   // then it's acceptable, but not ideal, to simply move it to after the
   // segments. So we can simply layout segments one after the other accounting
   // for alignment.
-  for (auto &Segment : this->Segments) {
-    Offset = alignTo(Offset, Segment->Align);
-    Segment->Offset = Offset;
-    Offset += Segment->FileSize;
+  for (auto &Segment : OrderedSegments) {
+    // We assume that segments have been ordered by OriginalOffset and Index
+    // such that a parent segment will always come before a child segment in
+    // OrderedSegments. This means that the Offset of the ParentSegment should
+    // already be set and we can set our offset relative to it.
+    if (Segment->ParentSegment != nullptr) {
+      auto Parent = Segment->ParentSegment;
+      Segment->Offset =
+          Parent->Offset + Segment->OriginalOffset - Parent->OriginalOffset;
+    } else {
+      Offset = alignTo(Offset, Segment->Align == 0 ? 1 : Segment->Align);
+      Segment->Offset = Offset;
+      Offset += Segment->FileSize;
+    }
   }
   // Now the offset of every segment has been set we can assign the offsets
   // of each section. For sections that are covered by a segment we should use

@@ -76,7 +76,7 @@ class RAT_STORE_DWORD <RegisterClass rc, ValueType vt, bits<4> mask> :
   CF_MEM_RAT_CACHELESS <0x14, 0, mask,
                         (ins rc:$rw_gpr, R600_TReg32_X:$index_gpr),
                         "STORE_DWORD $rw_gpr, $index_gpr",
-                        [(global_store vt:$rw_gpr, i32:$index_gpr)]> {
+                        [(store_global vt:$rw_gpr, i32:$index_gpr)]> {
   let eop = 0; // This bit is not used on Cayman.
 }
 

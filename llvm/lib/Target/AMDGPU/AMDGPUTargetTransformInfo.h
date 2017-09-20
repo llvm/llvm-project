@@ -162,6 +162,8 @@ public:
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
+
+  unsigned getInliningThresholdMultiplier() { return 9; }
 };
 
 } // end namespace llvm

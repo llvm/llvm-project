@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-void f(intptr_t offset, int8_t b) {
+void f(intptr_t offset) {
   // A zero offset from a nullptr is OK.
   char *f = (char*)nullptr + 0;
   int *g = (int*)0 + 0;
@@ -13,7 +13,6 @@ void f(intptr_t offset, int8_t b) {
   // Cases that don't match the GNU inttoptr idiom get a different warning.
   f = (char*)0 - offset; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior if the offset is nonzero}}
   g = (int*)0 + offset; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior if the offset is nonzero}}
-  f = (char*)0 + b; // expected-warning {{performing pointer arithmetic on a null pointer has undefined behavior if the offset is nonzero}}
 }
 
 // Value-dependent pointer arithmetic should not produce a nullptr warning.

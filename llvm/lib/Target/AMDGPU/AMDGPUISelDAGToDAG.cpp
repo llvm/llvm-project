@@ -126,10 +126,10 @@ private:
   bool SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
                          SDValue &VAddr, SDValue &SOffset, SDValue &Offset,
                          SDValue &SLC) const;
-  bool SelectMUBUFScratchOffen(SDNode *Root,
+  bool SelectMUBUFScratchOffen(SDNode *Parent,
                                SDValue Addr, SDValue &RSrc, SDValue &VAddr,
                                SDValue &SOffset, SDValue &ImmOffset) const;
-  bool SelectMUBUFScratchOffset(SDNode *Root,
+  bool SelectMUBUFScratchOffset(SDNode *Parent,
                                 SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                                 SDValue &Offset) const;
 
@@ -1107,7 +1107,7 @@ std::pair<SDValue, SDValue> AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const 
                                                MVT::i32));
 }
 
-bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Root,
+bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
                                                  SDValue Addr, SDValue &Rsrc,
                                                  SDValue &VAddr, SDValue &SOffset,
                                                  SDValue &ImmOffset) const {
@@ -1130,7 +1130,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Root,
 
     // In a call sequence, stores to the argument stack area are relative to the
     // stack pointer.
-    const MachinePointerInfo &PtrInfo = cast<MemSDNode>(Root)->getPointerInfo();
+    const MachinePointerInfo &PtrInfo = cast<MemSDNode>(Parent)->getPointerInfo();
     unsigned SOffsetReg = isStackPtrRelative(PtrInfo) ?
       Info->getStackPtrOffsetReg() : Info->getScratchWaveOffsetReg();
 
@@ -1160,7 +1160,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Root,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Root,
+bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
                                                   SDValue Addr,
                                                   SDValue &SRsrc,
                                                   SDValue &SOffset,
@@ -1175,7 +1175,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Root,
 
   SRsrc = CurDAG->getRegister(Info->getScratchRSrcReg(), MVT::v4i32);
 
-  const MachinePointerInfo &PtrInfo = cast<MemSDNode>(Root)->getPointerInfo();
+  const MachinePointerInfo &PtrInfo = cast<MemSDNode>(Parent)->getPointerInfo();
   unsigned SOffsetReg = isStackPtrRelative(PtrInfo) ?
     Info->getStackPtrOffsetReg() : Info->getScratchWaveOffsetReg();
 

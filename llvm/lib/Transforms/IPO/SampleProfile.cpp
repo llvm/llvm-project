@@ -756,9 +756,11 @@ bool SampleProfileLoader::inlineHotFunctions(
           continue;
       }
       if (!CalledFunction || !CalledFunction->getSubprogram()) {
-        findCalleeFunctionSamples(*I)->findImportedFunctions(
-            ImportGUIDs, F.getParent(),
-            Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
+        // Handles functions that are imported from other modules.
+        for (const FunctionSamples *FS : findIndirectCallFunctionSamples(*I))
+          FS->findImportedFunctions(
+              ImportGUIDs, F.getParent(),
+              Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
         continue;
       }
       assert(isa<CallInst>(DI) || isa<InvokeInst>(DI));
