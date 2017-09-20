@@ -736,6 +736,10 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
       }
     }
 
+    // Handle specials cases for FMul with selects feeding the operation
+    if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
+      return replaceInstUsesWith(I, V);
+
     // (X*Y) * X => (X*X) * Y where Y != X
     //  The purpose is two-fold:
     //   1) to form a power expression (of X).

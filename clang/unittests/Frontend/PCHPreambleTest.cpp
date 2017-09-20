@@ -153,4 +153,48 @@ TEST_F(PCHPreambleTest, ReparseWithOverriddenFileDoesNotInvalidatePreamble) {
   ASSERT_EQ(initialCounts[2], GetFileReadCount(Header2));
 }
 
+TEST_F(PCHPreambleTest, ParseWithBom) {
+  std::string Header = "//./header.h";
+  std::string Main = "//./main.cpp";
+  AddFile(Header, "int random() { return 4; }");
+  AddFile(Main,
+    "\xef\xbb\xbf"
+    "#include \"//./header.h\"\n"
+    "int main() { return random() -2; }");
+
+  std::unique_ptr<ASTUnit> AST(ParseAST(Main));
+  ASSERT_TRUE(AST.get());
+  ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  unsigned HeaderReadCount = GetFileReadCount(Header);
+
+  ASSERT_TRUE(ReparseAST(AST));
+  ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+  
+  // Check preamble PCH was really reused
+  ASSERT_EQ(HeaderReadCount, GetFileReadCount(Header));
+
+  // Remove BOM
+  RemapFile(Main,
+    "#include \"//./header.h\"\n"
+    "int main() { return random() -2; }");
+
+  ASSERT_TRUE(ReparseAST(AST));
+  ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  ASSERT_LE(HeaderReadCount, GetFileReadCount(Header));
+  HeaderReadCount = GetFileReadCount(Header);
+
+  // Add BOM back
+  RemapFile(Main,
+    "\xef\xbb\xbf"
+    "#include \"//./header.h\"\n"
+    "int main() { return random() -2; }");
+
+  ASSERT_TRUE(ReparseAST(AST));
+  ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  ASSERT_LE(HeaderReadCount, GetFileReadCount(Header));
+}
+
 } // anonymous namespace

@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -30,6 +31,8 @@ namespace llvm {
   class MVT {
   public:
     enum SimpleValueType : uint8_t {
+      // clang-format off
+
       // Simple value types that aren't explicitly part of this enumeration
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
@@ -198,6 +201,10 @@ namespace llvm {
       // This value must be a multiple of 32.
       MAX_ALLOWED_VALUETYPE = 128,
 
+      // tombstone value used for DenseMap / DenseSet.
+      // This is only for internal use!
+      tombstone      = 247,
+
       // A value of type llvm::TokenTy
       token          = 248,
 
@@ -231,6 +238,8 @@ namespace llvm {
       // Any type. This is used for intrinsics that have overloadings.
       // This is only for tblgen's consumption!
       Any            = 255
+
+      // clang-format on
     };
 
     SimpleValueType SimpleTy = INVALID_SIMPLE_VALUE_TYPE;
@@ -1042,6 +1051,18 @@ namespace llvm {
                    (MVT::SimpleValueType)(MVT::LAST_FP_SCALABLE_VALUETYPE + 1));
     }
     /// @}
+  };
+
+  template <> struct DenseMapInfo<MVT> {
+    static inline MVT getEmptyKey() {
+      return MVT(MVT::INVALID_SIMPLE_VALUE_TYPE);
+    }
+
+    static inline MVT getTombstoneKey() { return MVT(MVT::tombstone); }
+    static unsigned getHashValue(const MVT &Val) {
+      return unsigned(Val.SimpleTy);
+    }
+    static bool isEqual(const MVT &LHS, const MVT &RHS) { return LHS == RHS; }
   };
 
 } // end namespace llvm

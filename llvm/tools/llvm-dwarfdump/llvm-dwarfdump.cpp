@@ -144,6 +144,13 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
                               aliasopt(ShowParents));
+static opt<unsigned> RecurseDepth(
+    "recurse-depth",
+    desc("Only recurse to a depth of N when displaying debug info entries."),
+    cat(DwarfDumpCategory), init(-1U), value_desc("N"));
+static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth"),
+                               aliasopt(RecurseDepth));
+
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"),
@@ -172,10 +179,14 @@ static void error(StringRef Filename, std::error_code EC) {
 static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
+  DumpOpts.RecurseDepth = RecurseDepth;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
+  // In -verify mode, print DIEs without children in error messages.
+  if (Verify)
+    return DumpOpts.noImplicitRecursion();
   return DumpOpts;
 }
 

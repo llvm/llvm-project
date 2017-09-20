@@ -102,6 +102,7 @@ struct WasmFunctionTypeDenseMapInfo {
 // wasm data segment.
 struct WasmDataSegment {
   MCSectionWasm *Section;
+  StringRef Name;
   uint32_t Offset;
   SmallVector<char, 4> Data;
 };
@@ -279,10 +280,11 @@ private:
                         uint32_t NumFuncImports);
   void writeCodeRelocSection();
   void writeDataRelocSection();
-  void writeLinkingMetaDataSection(uint32_t DataSize, uint32_t DataAlignment,
-                                   ArrayRef<StringRef> WeakSymbols,
-                                   bool HasStackPointer,
-                                   uint32_t StackPointerGlobal);
+  void writeLinkingMetaDataSection(
+      ArrayRef<WasmDataSegment> Segments, uint32_t DataSize,
+      uint32_t DataAlignment,
+      SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags,
+      bool HasStackPointer, uint32_t StackPointerGlobal);
 
   uint32_t getProvisionalValue(const WasmRelocationEntry &RelEntry);
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
@@ -911,7 +913,9 @@ void WasmObjectWriter::writeDataRelocSection() {
 }
 
 void WasmObjectWriter::writeLinkingMetaDataSection(
-    uint32_t DataSize, uint32_t DataAlignment, ArrayRef<StringRef> WeakSymbols,
+    ArrayRef<WasmDataSegment> Segments, uint32_t DataSize,
+    uint32_t DataAlignment,
+    SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags,
     bool HasStackPointer, uint32_t StackPointerGlobal) {
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_CUSTOM, "linking");
@@ -923,12 +927,12 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
     endSection(SubSection);
   }
 
-  if (WeakSymbols.size() != 0) {
+  if (SymbolFlags.size() != 0) {
     startSection(SubSection, wasm::WASM_SYMBOL_INFO);
-    encodeULEB128(WeakSymbols.size(), getStream());
-    for (const StringRef Export: WeakSymbols) {
-      writeString(Export);
-      encodeULEB128(wasm::WASM_SYMBOL_FLAG_WEAK, getStream());
+    encodeULEB128(SymbolFlags.size(), getStream());
+    for (auto Pair: SymbolFlags) {
+      writeString(Pair.first);
+      encodeULEB128(Pair.second, getStream());
     }
     endSection(SubSection);
   }
@@ -940,6 +944,14 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
 
     startSection(SubSection, wasm::WASM_DATA_ALIGNMENT);
     encodeULEB128(DataAlignment, getStream());
+    endSection(SubSection);
+  }
+
+  if (Segments.size()) {
+    startSection(SubSection, wasm::WASM_SEGMENT_NAMES);
+    encodeULEB128(Segments.size(), getStream());
+    for (const WasmDataSegment &Segment : Segments)
+      writeString(Segment.Name);
     endSection(SubSection);
   }
 
@@ -982,7 +994,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallVector<uint32_t, 4> TableElems;
   SmallVector<WasmImport, 4> Imports;
   SmallVector<WasmExport, 4> Exports;
-  SmallVector<StringRef, 4> WeakSymbols;
+  SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags;
   SmallPtrSet<const MCSymbolWasm *, 4> IsAddressTaken;
   unsigned NumFuncImports = 0;
   SmallVector<WasmDataSegment, 4> DataSegments;
@@ -1129,6 +1141,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     DataSize = alignTo(DataSize, Section.getAlignment());
     DataSegments.emplace_back();
     WasmDataSegment &Segment = DataSegments.back();
+    Segment.Name = Section.getSectionName();
     Segment.Offset = DataSize;
     Segment.Section = &Section;
     addData(Segment.Data, Section, DataAlignment);
@@ -1152,7 +1165,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
                  << " isVariable=" << WS.isVariable() << "\n");
 
     if (WS.isWeak())
-      WeakSymbols.push_back(WS.getName());
+      SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_WEAK);
 
     if (WS.isVariable())
       continue;
@@ -1223,7 +1236,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
 
     // If the symbol is visible outside this translation unit, export it.
-    if ((WS.isExternal() && WS.isDefined(/*SetUsed=*/false))) {
+    if (WS.isDefined(/*SetUsed=*/false)) {
       WasmExport Export;
       Export.FieldName = WS.getName();
       Export.Index = Index;
@@ -1233,6 +1246,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
       DEBUG(dbgs() << "  -> export " << Exports.size() << "\n");
       Exports.push_back(Export);
+      if (!WS.isExternal())
+        SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_LOCAL);
     }
   }
 
@@ -1242,6 +1257,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   for (const MCSymbol &S : Asm.symbols()) {
     if (!S.isVariable())
       continue;
+
     assert(S.isDefined(/*SetUsed=*/false));
 
     // Find the target symbol of this weak alias and export that index
@@ -1261,6 +1277,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
     DEBUG(dbgs() << "  -> export " << Exports.size() << "\n");
     Exports.push_back(Export);
+
+    if (!WS.isExternal())
+      SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_LOCAL);
   }
 
   // Add types for indirect function calls.
@@ -1288,7 +1307,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeNameSection(Functions, Imports, NumFuncImports);
   writeCodeRelocSection();
   writeDataRelocSection();
-  writeLinkingMetaDataSection(DataSize, DataAlignment, WeakSymbols, HasStackPointer, StackPointerGlobal);
+  writeLinkingMetaDataSection(DataSegments, DataSize, DataAlignment,
+                              SymbolFlags, HasStackPointer, StackPointerGlobal);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

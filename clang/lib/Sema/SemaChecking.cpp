@@ -8592,26 +8592,22 @@ bool CheckTautologicalComparisonWithZero(Sema &S, BinaryOperator *E) {
 
   bool Match = true;
 
-  if (Op == BO_LT && IsZero(S, RHS) &&
-      (isNonBooleanUnsignedValue(LHS) || HasEnumType(LHS))) {
+  if (Op == BO_LT && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
     S.Diag(E->getOperatorLoc(),
            HasEnumType(LHS) ? diag::warn_lunsigned_enum_always_true_comparison
                             : diag::warn_lunsigned_always_true_comparison)
         << "< 0" << false << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_GE && IsZero(S, RHS) &&
-             (isNonBooleanUnsignedValue(LHS) || HasEnumType(LHS))) {
+  } else if (Op == BO_GE && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
     S.Diag(E->getOperatorLoc(),
            HasEnumType(LHS) ? diag::warn_lunsigned_enum_always_true_comparison
                             : diag::warn_lunsigned_always_true_comparison)
         << ">= 0" << true << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_GT && IsZero(S, LHS) &&
-             (isNonBooleanUnsignedValue(RHS) || HasEnumType(RHS))) {
+  } else if (Op == BO_GT && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
     S.Diag(E->getOperatorLoc(),
            HasEnumType(RHS) ? diag::warn_runsigned_enum_always_true_comparison
                             : diag::warn_runsigned_always_true_comparison)
         << "0 >" << false << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_LE && IsZero(S, LHS) &&
-             (isNonBooleanUnsignedValue(RHS) || HasEnumType(RHS))) {
+  } else if (Op == BO_LE && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
     S.Diag(E->getOperatorLoc(),
            HasEnumType(RHS) ? diag::warn_runsigned_enum_always_true_comparison
                             : diag::warn_runsigned_always_true_comparison)

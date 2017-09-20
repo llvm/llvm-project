@@ -13,10 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -25,7 +27,6 @@
 #include <algorithm>
 #include <cstdio>
 #include <set>
-#include <sstream>
 using namespace llvm;
 
 #define DEBUG_TYPE "dag-patterns"
@@ -98,7 +99,7 @@ bool TypeSetByHwMode::isPossible() const {
 
 bool TypeSetByHwMode::insert(const ValueTypeByHwMode &VVT) {
   bool Changed = false;
-  std::set<unsigned> Modes;
+  SmallDenseSet<unsigned, 4> Modes;
   for (const auto &P : VVT) {
     unsigned M = P.first;
     Modes.insert(M);
@@ -114,7 +115,6 @@ bool TypeSetByHwMode::insert(const ValueTypeByHwMode &VVT) {
       if (!Modes.count(I.first))
         Changed |= I.second.insert(DT).second;
   }
-
   return Changed;
 }
 
@@ -164,40 +164,37 @@ bool TypeSetByHwMode::assign_if(const TypeSetByHwMode &VTS, Predicate P) {
   return !empty();
 }
 
-std::string TypeSetByHwMode::getAsString() const {
-  std::stringstream str;
-  std::vector<unsigned> Modes;
+void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
+  SmallVector<unsigned, 4> Modes;
+  Modes.reserve(Map.size());
 
   for (const auto &I : *this)
     Modes.push_back(I.first);
-  if (Modes.empty())
-    return "{}";
+  if (Modes.empty()) {
+    OS << "{}";
+    return;
+  }
   array_pod_sort(Modes.begin(), Modes.end());
 
-  str << '{';
+  OS << '{';
   for (unsigned M : Modes) {
-    const SetType &S = get(M);
-    str << ' ' << getModeName(M) << ':' << getAsString(S);
+    OS << ' ' << getModeName(M) << ':';
+    writeToStream(get(M), OS);
   }
-  str << " }";
-  return str.str();
+  OS << " }";
 }
 
-std::string TypeSetByHwMode::getAsString(const SetType &S) {
-  std::vector<MVT> Types;
-  for (MVT T : S)
-    Types.push_back(T);
+void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
+  SmallVector<MVT, 4> Types(S.begin(), S.end());
   array_pod_sort(Types.begin(), Types.end());
 
-  std::stringstream str;
-  str << '[';
+  OS << '[';
   for (unsigned i = 0, e = Types.size(); i != e; ++i) {
-    str << ValueTypeByHwMode::getMVTName(Types[i]);
+    OS << ValueTypeByHwMode::getMVTName(Types[i]);
     if (i != e-1)
-      str << ' ';
+      OS << ' ';
   }
-  str << ']';
-  return str.str();
+  OS << ']';
 }
 
 bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
@@ -211,7 +208,7 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
   }
 
-  std::set<unsigned> Modes;
+  SmallDenseSet<unsigned, 4> Modes;
   for (auto &I : *this)
     Modes.insert(I.first);
   for (const auto &I : VTS)
@@ -243,7 +240,8 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
 
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const {
-  dbgs() << getAsString() << '\n';
+  writeToStream(dbgs());
+  dbgs() << '\n';
 }
 
 bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
@@ -784,6 +782,7 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
   for (MVT T : Out) {
     if (!T.isOverloaded())
       continue;
+
     Ovs.insert(T);
     // MachineValueTypeSet allows iteration and erasing.
     Out.erase(T);
@@ -1410,8 +1409,10 @@ void TreePatternNode::print(raw_ostream &OS) const {
   else
     OS << '(' << getOperator()->getName();
 
-  for (unsigned i = 0, e = Types.size(); i != e; ++i)
-    OS << ':' << getExtType(i).getAsString();
+  for (unsigned i = 0, e = Types.size(); i != e; ++i) {
+    OS << ':';
+    getExtType(i).writeToStream(OS);
+  }
 
   if (!isLeaf()) {
     if (getNumChildren() != 0) {
@@ -2628,7 +2629,10 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
 
     // Validate the argument list, converting it to set, to discard duplicates.
     std::vector<std::string> &Args = P->getArgList();
-    std::set<std::string> OperandsSet(Args.begin(), Args.end());
+    // Copy the args so we can take StringRefs to them.
+    auto ArgsCopy = Args;
+    SmallDenseSet<StringRef, 4> OperandsSet;
+    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
@@ -3120,17 +3124,20 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
 
   // Verify that the top-level forms in the instruction are of void type, and
   // fill in the InstResults map.
+  SmallString<32> TypesString;
   for (unsigned j = 0, e = I->getNumTrees(); j != e; ++j) {
+    TypesString.clear();
     TreePatternNode *Pat = I->getTree(j);
     if (Pat->getNumTypes() != 0) {
-      std::string Types;
+      raw_svector_ostream OS(TypesString);
       for (unsigned k = 0, ke = Pat->getNumTypes(); k != ke; ++k) {
         if (k > 0)
-          Types += ", ";
-        Types += Pat->getExtType(k).getAsString();
+          OS << ", ";
+        Pat->getExtType(k).writeToStream(OS);
       }
       I->error("Top-level forms in instruction pattern should have"
-               " void types, has types " + Types);
+               " void types, has types " +
+               OS.str());
     }
 
     // Find inputs and outputs, and verify the structure of the uses/defs.
@@ -3812,11 +3819,11 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 }
 
 /// Dependent variable map for CodeGenDAGPattern variant generation
-typedef std::map<std::string, int> DepVarMap;
+typedef StringMap<int> DepVarMap;
 
 static void FindDepVarsOf(TreePatternNode *N, DepVarMap &DepMap) {
   if (N->isLeaf()) {
-    if (isa<DefInit>(N->getLeafValue()))
+    if (N->hasName() && isa<DefInit>(N->getLeafValue()))
       DepMap[N->getName()]++;
   } else {
     for (size_t i = 0, e = N->getNumChildren(); i != e; ++i)
@@ -3828,9 +3835,9 @@ static void FindDepVarsOf(TreePatternNode *N, DepVarMap &DepMap) {
 static void FindDepVars(TreePatternNode *N, MultipleUseVarSet &DepVars) {
   DepVarMap depcounts;
   FindDepVarsOf(N, depcounts);
-  for (const std::pair<std::string, int> &Pair : depcounts) {
-    if (Pair.second > 1)
-      DepVars.insert(Pair.first);
+  for (const auto &Pair : depcounts) {
+    if (Pair.getValue() > 1)
+      DepVars.insert(Pair.getKey());
   }
 }
 
@@ -3841,8 +3848,8 @@ static void DumpDepVars(MultipleUseVarSet &DepVars) {
     DEBUG(errs() << "<empty set>");
   } else {
     DEBUG(errs() << "[ ");
-    for (const std::string &DepVar : DepVars) {
-      DEBUG(errs() << DepVar << " ");
+    for (const auto &DepVar : DepVars) {
+      DEBUG(errs() << DepVar.getKey() << " ");
     }
     DEBUG(errs() << "]");
   }

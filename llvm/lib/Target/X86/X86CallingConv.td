@@ -592,6 +592,9 @@ def CC_X86_Win64_C : CallingConv<[
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCAssignToReg<[R10]>>,
 
+  // A SwiftError is passed in R12.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
   // 128 bit vectors are passed by pointer
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], CCPassIndirect<i64>>,
 

@@ -27,7 +27,7 @@ void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
      << ")\n";
 
   if (DWARFDie CUDie = getUnitDIE(false))
-    CUDie.dump(OS, -1U, 0, DumpOpts);
+    CUDie.dump(OS, 0, DumpOpts);
   else
     OS << "<compile unit can't be parsed!>\n\n";
 }

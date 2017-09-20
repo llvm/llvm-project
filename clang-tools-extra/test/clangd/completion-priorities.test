@@ -1,0 +1,36 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+
+Content-Length: 127
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 312
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"class Foo {\npublic:\n  void pub();\n\nprotected:\n  void prot();\n\nprivate:\n  void priv();\n};\n\nvoid Foo::pub() {\n  this->\n}\n\nvoid test() {\n  Foo f;\n  f.\n}"}}}
+
+Content-Length: 151
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":12,"character":8}}}
+# The order of results returned by codeComplete seems to be
+# nondeterministic, so we check regardless of order.
+#
+# CHECK: {"jsonrpc":"2.0","id":2,"result":[
+# CHECK-DAG: {"label":"pub()","kind":2,"detail":"void","sortText":"000034pub","filterText":"pub","insertText":"pub","insertTextFormat":1}
+# CHECK-DAG: {"label":"prot()","kind":2,"detail":"void","sortText":"000034prot","filterText":"prot","insertText":"prot","insertTextFormat":1}
+# CHECK-DAG: {"label":"priv()","kind":2,"detail":"void","sortText":"000034priv","filterText":"priv","insertText":"priv","insertTextFormat":1}
+# CHECK: ]}
+
+Content-Length: 151
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":17,"character":4}}}
+# CHECK: {"jsonrpc":"2.0","id":3,"result":[
+# CHECK-DAG: {"label":"pub()","kind":2,"detail":"void","sortText":"000034pub","filterText":"pub","insertText":"pub","insertTextFormat":1}
+# CHECK-DAG: {"label":"prot()","kind":2,"detail":"void","sortText":"200034prot","filterText":"prot","insertText":"prot","insertTextFormat":1}
+# CHECK-DAG: {"label":"priv()","kind":2,"detail":"void","sortText":"200034priv","filterText":"priv","insertText":"priv","insertTextFormat":1}
+# CHECK: ]}
+
+Content-Length: 58
+
+{"jsonrpc":"2.0","id":4,"method":"shutdown","params":null}

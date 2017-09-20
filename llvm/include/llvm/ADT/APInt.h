@@ -1724,13 +1724,13 @@ public:
   /// @{
 
   /// \returns the floor log base 2 of this APInt.
-  unsigned logBase2() const { return BitWidth - 1 - countLeadingZeros(); }
+  unsigned logBase2() const { return getActiveBits() -  1; }
 
   /// \returns the ceil log base 2 of this APInt.
   unsigned ceilLogBase2() const {
     APInt temp(*this);
     --temp;
-    return BitWidth - temp.countLeadingZeros();
+    return temp.getActiveBits();
   }
 
   /// \returns the nearest log base 2 of this APInt. Ties round up.
