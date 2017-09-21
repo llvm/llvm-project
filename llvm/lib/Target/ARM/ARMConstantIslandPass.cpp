@@ -1,4 +1,4 @@
-//===-- ARMConstantIslandPass.cpp - ARM constant islands ------------------===//
+//===- ARMConstantIslandPass.cpp - ARM constant islands -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,6 +20,7 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -37,6 +38,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -48,7 +50,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <new>
 #include <utility>
 #include <vector>
 
@@ -107,7 +108,7 @@ namespace {
     /// previous iteration by inserting unconditional branches.
     SmallSet<MachineBasicBlock*, 4> NewWaterList;
 
-    typedef std::vector<MachineBasicBlock*>::iterator water_iterator;
+    using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
     /// CPUser - One user of a constant pool, keeping the machine instruction
     /// pointer, the constant pool being referenced, and the max displacement
@@ -128,12 +129,11 @@ namespace {
       unsigned MaxDisp;
       bool NegOk;
       bool IsSoImm;
-      bool KnownAlignment;
+      bool KnownAlignment = false;
 
       CPUser(MachineInstr *mi, MachineInstr *cpemi, unsigned maxdisp,
              bool neg, bool soimm)
-        : MI(mi), CPEMI(cpemi), MaxDisp(maxdisp), NegOk(neg), IsSoImm(soimm),
-          KnownAlignment(false) {
+        : MI(mi), CPEMI(cpemi), MaxDisp(maxdisp), NegOk(neg), IsSoImm(soimm) {
         HighWaterMark = CPEMI->getParent();
       }
 
@@ -195,11 +195,9 @@ namespace {
     };
 
     /// ImmBranches - Keep track of all the immediate branch instructions.
-    ///
     std::vector<ImmBranch> ImmBranches;
 
     /// PushPopMIs - Keep track of all the Thumb push / pop instructions.
-    ///
     SmallVector<MachineInstr*, 4> PushPopMIs;
 
     /// T2JumpTables - Keep track of all the Thumb2 jumptable instructions.
@@ -290,9 +288,9 @@ namespace {
     }
   };
 
-  char ARMConstantIslands::ID = 0;
-
 } // end anonymous namespace
+
+char ARMConstantIslands::ID = 0;
 
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void ARMConstantIslands::verify() {
@@ -629,9 +627,9 @@ bool ARMConstantIslands::BBHasFallthrough(MachineBasicBlock *MBB) {
 
 /// findConstPoolEntry - Given the constpool index and CONSTPOOL_ENTRY MI,
 /// look up the corresponding CPEntry.
-ARMConstantIslands::CPEntry
-*ARMConstantIslands::findConstPoolEntry(unsigned CPI,
-                                        const MachineInstr *CPEMI) {
+ARMConstantIslands::CPEntry *
+ARMConstantIslands::findConstPoolEntry(unsigned CPI,
+                                       const MachineInstr *CPEMI) {
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
   // Number of entries per constpool index should be small, just do a
   // linear search.
@@ -1126,7 +1124,6 @@ void ARMConstantIslands::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
 /// and instruction CPEMI, and decrement its refcount.  If the refcount
 /// becomes 0 remove the entry and instruction.  Returns true if we removed
 /// the entry, false if we didn't.
-
 bool ARMConstantIslands::decrementCPEReferenceCount(unsigned CPI,
                                                     MachineInstr *CPEMI) {
   // Find the old entry. Eliminate it if it is no longer used.
@@ -1154,8 +1151,7 @@ unsigned ARMConstantIslands::getCombinedIndex(const MachineInstr *CPEMI) {
 /// 0 = no existing entry found
 /// 1 = entry found, and there were no code insertions or deletions
 /// 2 = entry found, and there were code insertions or deletions
-int ARMConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
-{
+int ARMConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset) {
   MachineInstr *UserMI = U.MI;
   MachineInstr *CPEMI  = U.CPEMI;
 

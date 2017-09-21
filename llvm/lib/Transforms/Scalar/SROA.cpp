@@ -4102,9 +4102,10 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(&AI)) {
-    auto *Var = DbgDecl->getVariable();
-    auto *Expr = DbgDecl->getExpression();
+  TinyPtrVector<DbgInfoIntrinsic *> DbgDeclares = FindDbgAddrUses(&AI);
+  if (!DbgDeclares.empty()) {
+    auto *Var = DbgDeclares.front()->getVariable();
+    auto *Expr = DbgDeclares.front()->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize = DL.getTypeSizeInBits(AI.getAllocatedType());
     for (auto Fragment : Fragments) {
@@ -4136,12 +4137,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
             DIExpression::createFragmentExpression(Expr, Start, Size);
       }
 
-      // Remove any existing dbg.declare intrinsic describing the same alloca.
-      if (DbgDeclareInst *OldDDI = FindAllocaDbgDeclare(Fragment.Alloca))
-        OldDDI->eraseFromParent();
+      // Remove any existing intrinsics describing the same alloca.
+      for (DbgInfoIntrinsic *OldDII : FindDbgAddrUses(Fragment.Alloca))
+        OldDII->eraseFromParent();
 
       DIB.insertDeclare(Fragment.Alloca, Var, FragmentExpr,
-                        DbgDecl->getDebugLoc(), &AI);
+                        DbgDeclares.front()->getDebugLoc(), &AI);
     }
   }
   return Changed;
@@ -4258,8 +4259,8 @@ void SROA::deleteDeadInstructions(
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(AI))
-        DbgDecl->eraseFromParent();
+      for (DbgInfoIntrinsic *OldDII : FindDbgAddrUses(AI))
+        OldDII->eraseFromParent();
     }
 
     ++NumDeleted;

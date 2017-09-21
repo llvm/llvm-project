@@ -188,8 +188,12 @@ enum : unsigned {
   WASM_SEGMENT_NAMES  = 0x5,
 };
 
+const unsigned WASM_SYMBOL_BINDING_MASK = 0x3;
+
 enum : unsigned {
-  WASM_SYMBOL_FLAG_WEAK = 0x1,
+  WASM_SYMBOL_BINDING_GLOBAL = 0x0,
+  WASM_SYMBOL_BINDING_WEAK   = 0x1,
+  WASM_SYMBOL_BINDING_LOCAL  = 0x2,
 };
 
 #define WASM_RELOC(name, value) name = value,

@@ -26,11 +26,17 @@
 ; CHECK-NEXT:           Value:           16
 ; CHECK-NEXT:       - Type:            I32
 ; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           24
 ; CHECK-NEXT:   - Type:            EXPORT
-; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:     Exports:
+; CHECK-NEXT:       - Name:            .L.str1
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            .L.str2
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            a
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           2
@@ -74,6 +80,11 @@
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        28
 ; CHECK-NEXT:     DataAlignment:   8
+; CHECK-NEXT:     SymbolInfo:      
+; CHECK-NEXT:       - Name:            .L.str1
+; CHECK-NEXT:         Flags:           2
+; CHECK-NEXT:       - Name:            .L.str2
+; CHECK-NEXT:         Flags:           2
 ; CHECK-NEXT:     SegmentNames:    
 ; CHECK-NEXT:       - Index:       0
 ; CHECK-NEXT:         Name:        .rodata..L.str1
@@ -83,4 +94,4 @@
 ; CHECK-NEXT:         Name:        .data.a
 ; CHECK-NEXT:       - Index:       3
 ; CHECK-NEXT:         Name:        .data.b
-; CHECK-NEXT: ...
+; CHECK_NEXT:   ...
