@@ -171,7 +171,48 @@ Debugger intrinsic functions
 ----------------------------
 
 LLVM uses several intrinsic functions (name prefixed with "``llvm.dbg``") to
-provide debug information at various points in generated code.
+track source local variables through optimization and code generation.
+
+``llvm.dbg.addr``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+  void @llvm.dbg.addr(metadata, metadata, metadata)
+
+This intrinsic provides information about a local element (e.g., variable).
+The first argument is metadata holding the address of variable, typically a
+static alloca in the function entry block.  The second argument is a
+`local variable <LangRef.html#dilocalvariable>`_ containing a description of
+the variable.  The third argument is a `complex expression
+<LangRef.html#diexpression>`_.  An `llvm.dbg.addr` intrinsic describes the
+*address* of a source variable.
+
+.. code-block:: llvm
+
+    %i.addr = alloca i32, align 4
+    call void @llvm.dbg.addr(metadata i32* %i.addr, metadata !1,
+                             metadata !DIExpression()), !dbg !2
+    !1 = !DILocalVariable(name: "i", ...) ; int i
+    !2 = !DILocation(...)
+    ...
+    %buffer = alloca [256 x i8], align 8
+    ; The address of i is buffer+64.
+    call void @llvm.dbg.addr(metadata [256 x i8]* %buffer, metadata !3,
+                             metadata !DIExpression(DW_OP_plus, 64)), !dbg !4
+    !3 = !DILocalVariable(name: "i", ...) ; int i
+    !4 = !DILocation(...)
+
+A frontend should generate exactly one call to ``llvm.dbg.addr`` at the point
+of declaration of a source variable. Optimization passes that fully promote the
+variable from memory to SSA values will replace this call with possibly
+multiple calls to `llvm.dbg.value`. Passes that delete stores are effectively
+partial promotion, and they will insert a mix of calls to ``llvm.dbg.value``
+and ``llvm.dbg.addr`` to track the source variable value when it is available.
+After optimization, there may be multiple calls to ``llvm.dbg.addr`` describing
+the program points where the variables lives in memory. All calls for the same
+concrete source variable must agree on the memory location.
+
 
 ``llvm.dbg.declare``
 ^^^^^^^^^^^^^^^^^^^^
@@ -180,26 +221,14 @@ provide debug information at various points in generated code.
 
   void @llvm.dbg.declare(metadata, metadata, metadata)
 
-This intrinsic provides information about a local element (e.g., variable).  The
-first argument is metadata holding the alloca for the variable.  The second
-argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
-description of the variable.  The third argument is a `complex expression
-<LangRef.html#diexpression>`_.  An `llvm.dbg.declare` instrinsic describes the
-*location* of a source variable.
-
-.. code-block:: llvm
-
-    %i.addr = alloca i32, align 4
-    call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !1, metadata !2), !dbg !3
-    !1 = !DILocalVariable(name: "i", ...) ; int i
-    !2 = !DIExpression()
-    !3 = !DILocation(...)
-    ...
-    %buffer = alloca [256 x i8], align 8
-    ; The address of i is buffer+64.
-    call void @llvm.dbg.declare(metadata [256 x i8]* %buffer, metadata !1, metadata !2)
-    !1 = !DILocalVariable(name: "i", ...) ; int i
-    !2 = !DIExpression(DW_OP_plus, 64)
+This intrinsic is identical to `llvm.dbg.addr`, except that there can only be
+one call to `llvm.dbg.declare` for a given concrete `local variable
+<LangRef.html#dilocalvariable>`_. It is not control-dependent, meaning that if
+a call to `llvm.dbg.declare` exists and has a valid location argument, that
+address is considered to be the true home of the variable across its entire
+lifetime. This makes it hard for optimizations to preserve accurate debug info
+in the presence of ``llvm.dbg.declare``, so we are transitioning away from it,
+and we plan to deprecate it in future LLVM releases.
 
 
 ``llvm.dbg.value``
@@ -241,6 +270,9 @@ following C fragment, for example:
   7.    }
   8.    X = Y;
   9.  }
+
+.. FIXME: Update the following example to use llvm.dbg.addr once that is the
+   default in clang.
 
 Compiled to LLVM, this function would be represented like this:
 

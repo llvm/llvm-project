@@ -8,10 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -94,4 +98,71 @@ TEST(Local, RemoveDuplicatePHINodes) {
   // downstream.
   EXPECT_TRUE(EliminateDuplicatePHINodes(BB));
   EXPECT_EQ(3U, BB->size());
+}
+
+std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("UtilsTests", errs());
+  return Mod;
+}
+
+TEST(Local, ReplaceDbgDeclare) {
+  LLVMContext C;
+
+  // Original C source to get debug info for a local variable:
+  // void f() { int x; }
+  std::unique_ptr<Module> M = parseIR(
+      C,
+      "define void @f() !dbg !8 {\n"
+      "entry:\n"
+      "  %x = alloca i32, align 4\n"
+      "  call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata "
+      "!DIExpression()), !dbg !13\n"
+      "  call void @llvm.dbg.declare(metadata i32* %x, metadata !11, metadata "
+      "!DIExpression()), !dbg !13\n"
+      "  ret void, !dbg !14\n"
+      "}\n"
+      "declare void @llvm.dbg.declare(metadata, metadata, metadata)\n"
+      "!llvm.dbg.cu = !{!0}\n"
+      "!llvm.module.flags = !{!3, !4}\n"
+      "!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "
+      "\"clang version 6.0.0 \", isOptimized: false, runtimeVersion: 0, "
+      "emissionKind: FullDebug, enums: !2)\n"
+      "!1 = !DIFile(filename: \"t2.c\", directory: \"foo\")\n"
+      "!2 = !{}\n"
+      "!3 = !{i32 2, !\"Dwarf Version\", i32 4}\n"
+      "!4 = !{i32 2, !\"Debug Info Version\", i32 3}\n"
+      "!8 = distinct !DISubprogram(name: \"f\", scope: !1, file: !1, line: 1, "
+      "type: !9, isLocal: false, isDefinition: true, scopeLine: 1, "
+      "isOptimized: false, unit: !0, variables: !2)\n"
+      "!9 = !DISubroutineType(types: !10)\n"
+      "!10 = !{null}\n"
+      "!11 = !DILocalVariable(name: \"x\", scope: !8, file: !1, line: 2, type: "
+      "!12)\n"
+      "!12 = !DIBasicType(name: \"int\", size: 32, encoding: DW_ATE_signed)\n"
+      "!13 = !DILocation(line: 2, column: 7, scope: !8)\n"
+      "!14 = !DILocation(line: 3, column: 1, scope: !8)\n");
+  auto *GV = M->getNamedValue("f");
+  ASSERT_TRUE(GV);
+  auto *F = dyn_cast<Function>(GV);
+  ASSERT_TRUE(F);
+  Instruction *Inst = &F->front().front();
+  auto *AI = dyn_cast<AllocaInst>(Inst);
+  ASSERT_TRUE(AI);
+  Inst = Inst->getNextNode()->getNextNode();
+  ASSERT_TRUE(Inst);
+  auto *DII = dyn_cast<DbgDeclareInst>(Inst);
+  ASSERT_TRUE(DII);
+  Value *NewBase = Constant::getNullValue(Type::getInt32PtrTy(C));
+  DIBuilder DIB(*M);
+  replaceDbgDeclare(AI, NewBase, DII, DIB, /*Deref=*/false, /*Offset=*/0);
+
+  // There should be exactly two dbg.declares.
+  int Declares = 0;
+  for (const Instruction &I : F->front())
+    if (isa<DbgDeclareInst>(I))
+      Declares++;
+  EXPECT_EQ(2, Declares);
 }
