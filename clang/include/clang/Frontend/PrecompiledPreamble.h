@@ -36,21 +36,6 @@ class CompilerInvocation;
 class DeclGroupRef;
 class PCHContainerOperations;
 
-/// A size of the preamble and a flag required by
-/// PreprocessorOptions::PrecompiledPreambleBytes.
-struct PreambleBounds {
-  PreambleBounds(unsigned Size, bool PreambleEndsAtStartOfLine)
-      : Size(Size), PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-
-  /// \brief Size of the preamble in bytes.
-  unsigned Size;
-  /// \brief Whether the preamble ends at the start of a new line.
-  ///
-  /// Used to inform the lexer as to whether it's starting at the beginning of
-  /// a line after skipping the preamble.
-  bool PreambleEndsAtStartOfLine;
-};
-
 /// \brief Runs lexer to compute suggested preamble bounds.
 PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
                                      llvm::MemoryBuffer *Buffer,

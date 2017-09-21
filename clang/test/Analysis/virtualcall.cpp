@@ -271,3 +271,24 @@ int main() {
 #if !PUREONLY
 	//expected-note-re@-2 2{{{{^}}Calling '~E'}}
 #endif
+
+namespace PR34451 {
+struct a {
+  void b() {
+    a c[1];
+    c->b();
+  }
+};
+
+class e {
+ public:
+  void b() const;
+};
+
+class c {
+  void m_fn2() const;
+  e d[];
+};
+
+void c::m_fn2() const { d->b(); }
+}
