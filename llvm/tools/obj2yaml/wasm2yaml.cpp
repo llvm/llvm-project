@@ -54,16 +54,11 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
   if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec = make_unique<WasmYAML::NameSection>();
     for (const object::SymbolRef& Sym: Obj.symbols()) {
-      uint32_t Flags = Sym.getFlags();
-      // Skip over symbols that come from imports or exports
-      if (Flags &
-          (object::SymbolRef::SF_Global | object::SymbolRef::SF_Undefined))
-        continue;
-      Expected<StringRef> NameOrError = Sym.getName();
-      if (!NameOrError)
+      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
+      if (Symbol.Type != object::WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME)
         continue;
       WasmYAML::NameEntry NameEntry;
-      NameEntry.Name = *NameOrError;
+      NameEntry.Name = Symbol.Name;
       NameEntry.Index = Sym.getValue();
       NameSec->FunctionNames.push_back(NameEntry);
     }

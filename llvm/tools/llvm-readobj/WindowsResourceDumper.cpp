@@ -15,6 +15,7 @@
 #include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/WindowsResource.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -26,8 +27,11 @@ std::string stripUTF16(const ArrayRef<UTF16> &UTF16Str) {
   Result.reserve(UTF16Str.size());
 
   for (UTF16 Ch : UTF16Str) {
-    if (Ch <= 0xFF)
-      Result += Ch;
+    // UTF16Str will have swapped byte order in case of big-endian machines.
+    // Swap it back in such a case.
+    support::ulittle16_t ChValue(Ch);
+    if (ChValue <= 0xFF)
+      Result += ChValue;
     else
       Result += '?';
   }
@@ -69,7 +73,7 @@ void Dumper::printEntry(const ResourceEntryRef &Ref) {
   SW.printNumber("Version (major)", Ref.getMajorVersion());
   SW.printNumber("Version (minor)", Ref.getMinorVersion());
   SW.printNumber("Characteristics", Ref.getCharacteristics());
-  SW.printNumber("Data size", Ref.getData().size());
+  SW.printNumber("Data size", (uint64_t)Ref.getData().size());
   SW.printBinary("Data:", Ref.getData());
   SW.startLine() << "\n";
 }

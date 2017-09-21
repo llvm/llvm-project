@@ -103,7 +103,7 @@ struct AllocaInfo {
   bool OnlyUsedInOneBlock;
 
   Value *AllocaPointerVal;
-  DbgDeclareInst *DbgDeclare;
+  TinyPtrVector<DbgInfoIntrinsic*> DbgDeclares;
 
   void clear() {
     DefiningBlocks.clear();
@@ -112,7 +112,7 @@ struct AllocaInfo {
     OnlyBlock = nullptr;
     OnlyUsedInOneBlock = true;
     AllocaPointerVal = nullptr;
-    DbgDeclare = nullptr;
+    DbgDeclares.clear();
   }
 
   /// Scan the uses of the specified alloca, filling in the AllocaInfo used
@@ -147,7 +147,7 @@ struct AllocaInfo {
       }
     }
 
-    DbgDeclare = FindAllocaDbgDeclare(AI);
+    DbgDeclares = FindDbgAddrUses(AI);
   }
 };
 
@@ -245,7 +245,7 @@ struct PromoteMem2Reg {
   /// For each alloca, we keep track of the dbg.declare intrinsic that
   /// describes it, if any, so that we can convert it to a dbg.value
   /// intrinsic if the alloca gets promoted.
-  SmallVector<DbgDeclareInst *, 8> AllocaDbgDeclares;
+  SmallVector<TinyPtrVector<DbgInfoIntrinsic *>, 8> AllocaDbgDeclares;
 
   /// The set of basic blocks the renamer has already visited.
   ///
@@ -409,11 +409,11 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
 
   // Record debuginfo for the store and remove the declaration's
   // debuginfo.
-  if (DbgDeclareInst *DDI = Info.DbgDeclare) {
+  for (DbgInfoIntrinsic *DII : Info.DbgDeclares) {
     DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
-    ConvertDebugDeclareToDebugValue(DDI, Info.OnlyStore, DIB);
-    DDI->eraseFromParent();
-    LBI.deleteValue(DDI);
+    ConvertDebugDeclareToDebugValue(DII, Info.OnlyStore, DIB);
+    DII->eraseFromParent();
+    LBI.deleteValue(DII);
   }
   // Remove the (now dead) store and alloca.
   Info.OnlyStore->eraseFromParent();
@@ -505,9 +505,9 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
   while (!AI->use_empty()) {
     StoreInst *SI = cast<StoreInst>(AI->user_back());
     // Record debuginfo for the store before removing it.
-    if (DbgDeclareInst *DDI = Info.DbgDeclare) {
+    for (DbgInfoIntrinsic *DII : Info.DbgDeclares) {
       DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
-      ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+      ConvertDebugDeclareToDebugValue(DII, SI, DIB);
     }
     SI->eraseFromParent();
     LBI.deleteValue(SI);
@@ -517,9 +517,9 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
   LBI.deleteValue(AI);
 
   // The alloca's debuginfo can be removed as well.
-  if (DbgDeclareInst *DDI = Info.DbgDeclare) {
-    DDI->eraseFromParent();
-    LBI.deleteValue(DDI);
+  for (DbgInfoIntrinsic *DII : Info.DbgDeclares) {
+    DII->eraseFromParent();
+    LBI.deleteValue(DII);
   }
 
   ++NumLocalPromoted;
@@ -587,8 +587,8 @@ void PromoteMem2Reg::run() {
     }
 
     // Remember the dbg.declare intrinsic describing this alloca, if any.
-    if (Info.DbgDeclare)
-      AllocaDbgDeclares[AllocaNum] = Info.DbgDeclare;
+    if (!Info.DbgDeclares.empty())
+      AllocaDbgDeclares[AllocaNum] = Info.DbgDeclares;
 
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
@@ -666,9 +666,9 @@ void PromoteMem2Reg::run() {
   }
 
   // Remove alloca's dbg.declare instrinsics from the function.
-  for (DbgDeclareInst *DDI : AllocaDbgDeclares)
-    if (DDI)
-      DDI->eraseFromParent();
+  for (auto &Declares : AllocaDbgDeclares)
+    for (auto *DII : Declares)
+      DII->eraseFromParent();
 
   // Loop over all of the PHI nodes and see if there are any that we can get
   // rid of because they merge all of the same incoming values.  This can
@@ -895,8 +895,8 @@ NextIteration:
 
         // The currently active variable for this block is now the PHI.
         IncomingVals[AllocaNo] = APN;
-        if (DbgDeclareInst *DDI = AllocaDbgDeclares[AllocaNo])
-          ConvertDebugDeclareToDebugValue(DDI, APN, DIB);
+        for (DbgInfoIntrinsic *DII : AllocaDbgDeclares[AllocaNo])
+          ConvertDebugDeclareToDebugValue(DII, APN, DIB);
 
         // Get the next phi node.
         ++PNI;
@@ -952,8 +952,8 @@ NextIteration:
       // what value were we writing?
       IncomingVals[ai->second] = SI->getOperand(0);
       // Record debuginfo for the store before removing it.
-      if (DbgDeclareInst *DDI = AllocaDbgDeclares[ai->second])
-        ConvertDebugDeclareToDebugValue(DDI, SI, DIB);
+      for (DbgInfoIntrinsic *DII : AllocaDbgDeclares[ai->second])
+        ConvertDebugDeclareToDebugValue(DII, SI, DIB);
       BB->getInstList().erase(SI);
     }
   }

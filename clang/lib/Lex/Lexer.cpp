@@ -564,9 +564,6 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
                  Buffer.end());
   TheLexer.SetCommentRetentionState(true);
 
-  // StartLoc will differ from FileLoc if there is a BOM that was skipped.
-  SourceLocation StartLoc = TheLexer.getSourceLocation();
-
   bool InPreprocessorDirective = false;
   Token TheTok;
   SourceLocation ActiveCommentLoc;

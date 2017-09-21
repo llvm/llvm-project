@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/ARM/ARMCallLowering.cpp - Call lowering -----------===//
+//===- llvm/lib/Target/ARM/ARMCallLowering.cpp - Call lowering ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,23 +6,47 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// This file implements the lowering of LLVM calls to machine code calls for
 /// GlobalISel.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #include "ARMCallLowering.h"
-
 #include "ARMBaseInstrInfo.h"
 #include "ARMISelLowering.h"
 #include "ARMSubtarget.h"
-
+#include "Utils/ARMBaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 using namespace llvm;
 
@@ -59,12 +83,13 @@ static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
 }
 
 namespace {
+
 /// Helper class for values going out through an ABI boundary (used for handling
 /// function return values and call parameters).
 struct OutgoingValueHandler : public CallLowering::ValueHandler {
   OutgoingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB), StackSize(0) {}
+      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -153,9 +178,10 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
   }
 
   MachineInstrBuilder &MIB;
-  uint64_t StackSize;
+  uint64_t StackSize = 0;
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
 
 void ARMCallLowering::splitToValueTypes(
     const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
@@ -259,6 +285,7 @@ bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 }
 
 namespace {
+
 /// Helper class for values coming in through an ABI boundary (used for handling
 /// formal arguments and call return values).
 struct IncomingValueHandler : public CallLowering::ValueHandler {
@@ -371,7 +398,8 @@ struct FormalArgHandler : public IncomingValueHandler {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };
-} // End anonymous namespace
+
+} // end anonymous namespace
 
 bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            const Function &F,
@@ -429,6 +457,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 }
 
 namespace {
+
 struct CallReturnHandler : public IncomingValueHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
@@ -440,7 +469,8 @@ struct CallReturnHandler : public IncomingValueHandler {
 
   MachineInstrBuilder MIB;
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
 
 bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 CallingConv::ID CallConv,

@@ -10,13 +10,18 @@ import lit.run
 from lit.TestingConfig import TestingConfig
 from lit import LitConfig, Test
 
+def chooseConfigFileFromDir(dir, config_names):
+    for name in config_names:
+        p = os.path.join(dir, name)
+        if os.path.exists(p):
+            return p
+    return None
+
 def dirContainsTestSuite(path, lit_config):
-    cfgpath = os.path.join(path, lit_config.site_config_name)
-    if os.path.exists(cfgpath):
-        return cfgpath
-    cfgpath = os.path.join(path, lit_config.config_name)
-    if os.path.exists(cfgpath):
-        return cfgpath
+    cfgpath = chooseConfigFileFromDir(path, lit_config.site_config_names)
+    if not cfgpath:
+        cfgpath = chooseConfigFileFromDir(path, lit_config.config_names)
+    return cfgpath
 
 def getTestSuite(item, litConfig, cache):
     """getTestSuite(item, litConfig, cache) -> (suite, relative_path)
@@ -99,10 +104,10 @@ def getLocalConfig(ts, path_in_suite, litConfig, cache):
 
         # Check if there is a local configuration file.
         source_path = ts.getSourcePath(path_in_suite)
-        cfgpath = os.path.join(source_path, litConfig.local_config_name)
+        cfgpath = chooseConfigFileFromDir(source_path, litConfig.local_config_names)
 
         # If not, just reuse the parent config.
-        if not os.path.exists(cfgpath):
+        if not cfgpath:
             return parent
 
         # Otherwise, copy the current config and load the local configuration

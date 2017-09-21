@@ -217,7 +217,7 @@ Error CoverageMapping::loadFunctionRecord(
                                                 Record.FunctionHash, Counts)) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
     if (IPE == instrprof_error::hash_mismatch) {
-      MismatchedFunctionCount++;
+      FuncHashMismatches.emplace_back(Record.FunctionName, Record.FunctionHash);
       return Error::success();
     } else if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);
@@ -237,7 +237,8 @@ Error CoverageMapping::loadFunctionRecord(
     Function.pushRegion(Region, *ExecutionCount);
   }
   if (Function.CountedRegions.size() != Record.MappingRegions.size()) {
-    MismatchedFunctionCount++;
+    FuncCounterMismatches.emplace_back(Record.FunctionName,
+                                       Function.CountedRegions.size());
     return Error::success();
   }
 

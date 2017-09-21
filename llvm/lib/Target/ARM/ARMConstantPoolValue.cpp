@@ -1,4 +1,4 @@
-//===-- ARMConstantPoolValue.cpp - ARM constantpool value -----------------===//
+//===- ARMConstantPoolValue.cpp - ARM constantpool value ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,6 @@
 
 #include "ARMConstantPoolValue.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
