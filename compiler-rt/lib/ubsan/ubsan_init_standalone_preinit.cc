@@ -1,4 +1,5 @@
-//===-- ubsan_init_standalone.cc ------------------------------------------===//
+//===-- ubsan_init_standalone_preinit.cc
+//------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,16 +14,13 @@
 
 #include "ubsan_platform.h"
 #if !CAN_SANITIZE_UB
-# error "UBSan is not supported on this platform!"
+#error "UBSan is not supported on this platform!"
 #endif
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "ubsan_init.h"
 
-class UbsanStandaloneInitializer {
- public:
-  UbsanStandaloneInitializer() {
-    __ubsan::InitAsStandalone();
-  }
-};
-static UbsanStandaloneInitializer ubsan_standalone_initializer;
+#if SANITIZER_CAN_USE_PREINIT_ARRAY
+__attribute__((section(".preinit_array"), used)) void (*__local_ubsan_preinit)(
+    void) = __ubsan::InitAsStandalone;
+#endif // SANITIZER_CAN_USE_PREINIT_ARRAY
