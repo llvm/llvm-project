@@ -1,4 +1,4 @@
-//===-- ARMISelLowering.h - ARM DAG Lowering Interface ----------*- C++ -*-===//
+//===- ARMISelLowering.h - ARM DAG Lowering Interface -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,12 +19,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineValueType.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
@@ -34,7 +36,19 @@
 namespace llvm {
 
 class ARMSubtarget;
+class DataLayout;
+class FastISel;
+class FunctionLoweringInfo;
+class GlobalValue;
 class InstrItineraryData;
+class Instruction;
+class MachineBasicBlock;
+class MachineInstr;
+class SelectionDAG;
+class TargetLibraryInfo;
+class TargetMachine;
+class TargetRegisterInfo;
+class VectorType;
 
   namespace ARMISD {
 
@@ -264,7 +278,6 @@ class InstrItineraryData;
 
     /// ReplaceNodeResults - Replace the results of node with an illegal result
     /// type with new values built out of custom code.
-    ///
     void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
                             SelectionDAG &DAG) const override;
 
@@ -571,7 +584,6 @@ class InstrItineraryData;
     const InstrItineraryData *Itins;
 
     /// ARMPCLabelIndex - Keep track of the number of ARM PC labels created.
-    ///
     unsigned ARMPCLabelIndex;
 
     // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
@@ -585,7 +597,7 @@ class InstrItineraryData;
     void addQRTypeForNEON(MVT VT);
     std::pair<SDValue, SDValue> getARMXALUOOp(SDValue Op, SelectionDAG &DAG, SDValue &ARMcc) const;
 
-    typedef SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPassVector;
+    using RegsToPassVector = SmallVector<std::pair<unsigned, SDValue>, 8>;
 
     void PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG, SDValue Chain,
                           SDValue &Arg, RegsToPassVector &RegsToPass,

@@ -111,8 +111,80 @@ defm INT_SHFL_BFLY_F32 : SHFL<Float32Regs, "bfly", int_nvvm_shfl_bfly_f32>;
 defm INT_SHFL_IDX_I32 : SHFL<Int32Regs, "idx", int_nvvm_shfl_idx_i32>;
 defm INT_SHFL_IDX_F32 : SHFL<Float32Regs, "idx", int_nvvm_shfl_idx_f32>;
 
-} // isConvergent = 1
+multiclass SHFL_SYNC<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
+  // Threadmask and the last two parameters to shfl.sync can be regs or imms.
+  // ptxas is smart enough to inline constant registers, so strictly speaking we
+  // don't need to handle immediates here.  But it's easy enough, and it makes
+  // our ptx more readable.
+  def rrr : NVPTXInst<
+      (outs regclass:$dst),
+      (ins Int32Regs:$threadmask, regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
+                            Int32Regs:$offset, Int32Regs:$mask))]>;
 
+  def rri : NVPTXInst<
+      (outs regclass:$dst),
+      (ins Int32Regs:$threadmask, regclass:$src, Int32Regs:$offset, i32imm:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
+                            Int32Regs:$offset, imm:$mask))]>;
+
+  def rir : NVPTXInst<
+      (outs regclass:$dst),
+      (ins Int32Regs:$threadmask, regclass:$src, i32imm:$offset, Int32Regs:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
+                            imm:$offset, Int32Regs:$mask))]>;
+
+  def rii : NVPTXInst<
+      (outs regclass:$dst),
+      (ins Int32Regs:$threadmask, regclass:$src, i32imm:$offset, i32imm:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
+                            imm:$offset, imm:$mask))]>;
+
+  def irr : NVPTXInst<
+      (outs regclass:$dst),
+      (ins i32imm:$threadmask, regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
+                            Int32Regs:$offset, Int32Regs:$mask))]>;
+
+  def iri : NVPTXInst<
+      (outs regclass:$dst),
+      (ins i32imm:$threadmask, regclass:$src, Int32Regs:$offset, i32imm:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
+                            Int32Regs:$offset, imm:$mask))]>;
+
+  def iir : NVPTXInst<
+      (outs regclass:$dst),
+      (ins i32imm:$threadmask, regclass:$src, i32imm:$offset, Int32Regs:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
+                            imm:$offset, Int32Regs:$mask))]>;
+
+  def iii : NVPTXInst<
+      (outs regclass:$dst),
+      (ins i32imm:$threadmask, regclass:$src, i32imm:$offset, i32imm:$mask),
+      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
+      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
+                            imm:$offset, imm:$mask))]>;
+}
+
+// On sm_70 these don't have to be convergent, so we may eventually want to
+// implement non-convergent variant of this intrinsic.
+defm INT_SHFL_SYNC_DOWN_I32 : SHFL_SYNC<Int32Regs, "down", int_nvvm_shfl_sync_down_i32>;
+defm INT_SHFL_SYNC_DOWN_F32 : SHFL_SYNC<Float32Regs, "down", int_nvvm_shfl_sync_down_f32>;
+defm INT_SHFL_SYNC_UP_I32 : SHFL_SYNC<Int32Regs, "up", int_nvvm_shfl_sync_up_i32>;
+defm INT_SHFL_SYNC_UP_F32 : SHFL_SYNC<Float32Regs, "up", int_nvvm_shfl_sync_up_f32>;
+defm INT_SHFL_SYNC_BFLY_I32 : SHFL_SYNC<Int32Regs, "bfly", int_nvvm_shfl_sync_bfly_i32>;
+defm INT_SHFL_SYNC_BFLY_F32 : SHFL_SYNC<Float32Regs, "bfly", int_nvvm_shfl_sync_bfly_f32>;
+defm INT_SHFL_SYNC_IDX_I32 : SHFL_SYNC<Int32Regs, "idx", int_nvvm_shfl_sync_idx_i32>;
+defm INT_SHFL_SYNC_IDX_F32 : SHFL_SYNC<Float32Regs, "idx", int_nvvm_shfl_sync_idx_f32>;
+
+} // isConvergent = 1
 
 //-----------------------------------
 // Explicit Memory Fence Functions

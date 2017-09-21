@@ -396,6 +396,15 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
     case wasm::WASM_DATA_ALIGNMENT:
       LinkingData.DataAlignment = readVaruint32(Ptr);
       break;
+    case wasm::WASM_SEGMENT_NAMES: {
+      uint32_t Count = readVaruint32(Ptr);
+      if (Count > DataSegments.size())
+        return make_error<GenericBinaryError>("Too many segment names",
+                                              object_error::parse_failed);
+      for (uint32_t i = 0; i < Count; i++)
+        DataSegments[i].Data.Name = readString(Ptr);
+      break;
+    }
     case wasm::WASM_STACK_POINTER:
     default:
       Ptr += Size;
@@ -758,15 +767,17 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   const WasmSymbol &Sym = getWasmSymbol(Symb);
 
   DEBUG(dbgs() << "getSymbolFlags: ptr=" << &Sym << " " << Sym << "\n");
-  if (Sym.Flags & wasm::WASM_SYMBOL_FLAG_WEAK)
+  if (Sym.isWeak())
     Result |= SymbolRef::SF_Weak;
+  if (!Sym.isLocal())
+    Result |= SymbolRef::SF_Global;
 
   switch (Sym.Type) {
   case WasmSymbol::SymbolType::FUNCTION_IMPORT:
     Result |= SymbolRef::SF_Undefined | SymbolRef::SF_Executable;
     break;
   case WasmSymbol::SymbolType::FUNCTION_EXPORT:
-    Result |= SymbolRef::SF_Global | SymbolRef::SF_Executable;
+    Result |= SymbolRef::SF_Executable;
     break;
   case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:
     Result |= SymbolRef::SF_Executable;
@@ -776,7 +787,6 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
     Result |= SymbolRef::SF_Undefined;
     break;
   case WasmSymbol::SymbolType::GLOBAL_EXPORT:
-    Result |= SymbolRef::SF_Global;
     break;
   }
 
@@ -811,8 +821,7 @@ Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   return getSymbolValue(Symb);
 }
 
-uint64_t WasmObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
-  const WasmSymbol& Sym = getWasmSymbol(Symb);
+uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol& Sym) const {
   switch (Sym.Type) {
   case WasmSymbol::SymbolType::FUNCTION_IMPORT:
   case WasmSymbol::SymbolType::GLOBAL_IMPORT:
@@ -831,6 +840,10 @@ uint64_t WasmObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
     return Sym.ElementIndex;
   }
   llvm_unreachable("invalid symbol type");
+}
+
+uint64_t WasmObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
+  return getWasmSymbolValue(getWasmSymbol(Symb));
 }
 
 uint32_t WasmObjectFile::getSymbolAlignment(DataRefImpl Symb) const {

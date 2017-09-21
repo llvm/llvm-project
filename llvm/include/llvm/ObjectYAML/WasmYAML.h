@@ -160,9 +160,10 @@ struct LinkingSection : CustomSection {
     return C && C->Name == "linking";
   }
 
-  std::vector<SymbolInfo> SymbolInfos;
   uint32_t DataSize;
   uint32_t DataAlignment;
+  std::vector<SymbolInfo> SymbolInfos;
+  std::vector<NameEntry> SegmentNames;
 };
 
 struct TypeSection : Section {

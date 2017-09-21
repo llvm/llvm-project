@@ -56,7 +56,19 @@ public:
   uint32_t ElementIndex;
 
   bool isWeak() const {
-    return Flags & wasm::WASM_SYMBOL_FLAG_WEAK;
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_WEAK;
+  }
+
+  bool isGlobal() const {
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_GLOBAL;
+  }
+
+  bool isLocal() const {
+    return getBinding() == wasm::WASM_SYMBOL_BINDING_LOCAL;
+  }
+
+  unsigned getBinding() const {
+    return Flags & wasm::WASM_SYMBOL_BINDING_MASK;
   }
 
   void print(raw_ostream &Out) const {
@@ -132,6 +144,7 @@ public:
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  uint64_t getWasmSymbolValue(const WasmSymbol& Sym) const;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;

@@ -124,7 +124,7 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
 #undef HANDLE_DWARF_SECTION
 
 static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
-                                 NotHidden, cat(DwarfDumpCategory),
+                                 NotHidden, cat(SectionCategory),
                                  aliasopt(DumpDebugFrame));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));

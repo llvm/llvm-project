@@ -157,6 +157,17 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
 
     SubSection.Done();
   }
+
+  // SEGMENT_NAMES subsection
+  if (Section.SegmentNames.size()) {
+    encodeULEB128(wasm::WASM_SEGMENT_NAMES, OS);
+    encodeULEB128(Section.SegmentNames.size(), SubSection.GetStream());
+    for (const WasmYAML::NameEntry &NameEntry : Section.SegmentNames) {
+      encodeULEB128(NameEntry.Index, SubSection.GetStream());
+      writeStringRef(NameEntry.Name, SubSection.GetStream());
+    }
+    SubSection.Done();
+  }
   return 0;
 }
 

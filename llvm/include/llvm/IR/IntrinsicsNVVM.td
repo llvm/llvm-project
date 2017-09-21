@@ -3736,4 +3736,48 @@ def int_nvvm_shfl_idx_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.f32">,
   GCCBuiltin<"__nvvm_shfl_idx_f32">;
+
+// Synchronizing shfl variants available in CUDA-9.
+// On sm_70 these don't have to be convergent, so we may eventually want to
+// implement non-convergent variant of this intrinsic.
+
+// shfl.sync.down.b32 dest, threadmask, val, offset , mask_and_clamp
+def int_nvvm_shfl_sync_down_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.down.i32">,
+  GCCBuiltin<"__nvvm_shfl_sync_down_i32">;
+def int_nvvm_shfl_sync_down_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.down.f32">,
+  GCCBuiltin<"__nvvm_shfl_sync_down_f32">;
+
+// shfl.sync.up.b32 dest, threadmask, val, offset, mask_and_clamp
+def int_nvvm_shfl_sync_up_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.up.i32">,
+  GCCBuiltin<"__nvvm_shfl_sync_up_i32">;
+def int_nvvm_shfl_sync_up_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.up.f32">,
+  GCCBuiltin<"__nvvm_shfl_sync_up_f32">;
+
+// shfl.sync.bfly.b32 dest, threadmask, val, offset, mask_and_clamp
+def int_nvvm_shfl_sync_bfly_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.bfly.i32">,
+  GCCBuiltin<"__nvvm_shfl_sync_bfly_i32">;
+def int_nvvm_shfl_sync_bfly_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.bfly.f32">,
+  GCCBuiltin<"__nvvm_shfl_sync_bfly_f32">;
+
+// shfl.sync.idx.b32 dest, threadmask, val, lane, mask_and_clamp
+def int_nvvm_shfl_sync_idx_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.idx.i32">,
+  GCCBuiltin<"__nvvm_shfl_sync_idx_i32">;
+def int_nvvm_shfl_sync_idx_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.idx.f32">,
+  GCCBuiltin<"__nvvm_shfl_sync_idx_f32">;
 }

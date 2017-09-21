@@ -21,6 +21,12 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> StressCalls(
+  "amdgpu-stress-function-calls",
+  cl::Hidden,
+  cl::desc("Force all functions to be noinline"),
+  cl::init(false));
+
 class AMDGPUAlwaysInline : public ModulePass {
   bool GlobalOpt;
 
@@ -57,9 +63,13 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
     }
   }
 
+  auto NewAttr = StressCalls ? Attribute::NoInline : Attribute::AlwaysInline;
+  auto IncompatAttr
+    = StressCalls ? Attribute::AlwaysInline : Attribute::NoInline;
+
   for (Function &F : M) {
     if (!F.hasLocalLinkage() && !F.isDeclaration() && !F.use_empty() &&
-        !F.hasFnAttribute(Attribute::NoInline))
+        !F.hasFnAttribute(IncompatAttr))
       FuncsToClone.push_back(&F);
   }
 
@@ -71,8 +81,8 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
   }
 
   for (Function &F : M) {
-    if (F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::NoInline)) {
-      F.addFnAttr(Attribute::AlwaysInline);
+    if (F.hasLocalLinkage() && !F.hasFnAttribute(IncompatAttr)) {
+      F.addFnAttr(NewAttr);
     }
   }
   return false;
