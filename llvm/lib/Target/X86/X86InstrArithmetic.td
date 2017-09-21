@@ -725,13 +725,6 @@ class BinOpRM<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
         mnemonic, "{$src2, $src1|$src1, $src2}", pattern, itin>,
     Sched<[WriteALULd, ReadAfterLd]>;
 
-// BinOpRM_R - Instructions like "add reg, reg, [mem]".
-class BinOpRM_R<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-              SDNode opnode>
-  : BinOpRM<opcode, mnemonic, typeinfo, (outs typeinfo.RegClass:$dst),
-            [(set typeinfo.RegClass:$dst,
-            (opnode typeinfo.RegClass:$src1, (typeinfo.LoadNode addr:$src2)))]>;
-
 // BinOpRM_F - Instructions like "cmp reg, [mem]".
 class BinOpRM_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               SDPatternOperator opnode>

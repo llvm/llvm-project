@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o %t.o
+; RUN: obj2yaml %t.o | FileCheck %s
+; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=CHECK-SYMS %s
 
 ; 'foo_alias()' is weak alias of function 'foo()'
 ; 'bar_alias' is weak alias of global variable 'bar'
@@ -107,3 +109,14 @@ entry:
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.bar_alias_address
 ; CHECK-NEXT: ...
+
+; CHECK-SYMS: SYMBOL TABLE:
+; CHECK-SYMS-NEXT: 00000000 g     F name	foo_alias
+; CHECK-SYMS-NEXT: 00000001 g     F name	call_alias
+; CHECK-SYMS-NEXT: 00000002 g     F name	foo
+; CHECK-SYMS-NEXT: 00000002 gw    F EXPORT	foo_alias
+; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	bar_alias
+; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	call_alias
+; CHECK-SYMS-NEXT: 00000002 g     F EXPORT	foo
+; CHECK-SYMS-NEXT: 00000000 g       EXPORT	bar
+; CHECK-SYMS-NEXT: 00000008 g       EXPORT	bar_alias_address

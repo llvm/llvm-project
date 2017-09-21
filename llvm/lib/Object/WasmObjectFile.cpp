@@ -769,7 +769,7 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   DEBUG(dbgs() << "getSymbolFlags: ptr=" << &Sym << " " << Sym << "\n");
   if (Sym.isWeak())
     Result |= SymbolRef::SF_Weak;
-  else if (Sym.isGlobal())
+  if (!Sym.isLocal())
     Result |= SymbolRef::SF_Global;
 
   switch (Sym.Type) {

@@ -350,8 +350,22 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   }
   auto Coverage = std::move(CoverageOrErr.get());
   unsigned Mismatched = Coverage->getMismatchedCount();
-  if (Mismatched)
+  if (Mismatched) {
     warning(utostr(Mismatched) + " functions have mismatched data");
+
+    if (ViewOpts.Debug) {
+      for (const auto &HashMismatch : Coverage->getHashMismatches())
+        errs() << "hash-mismatch: "
+               << "No profile record found for '" << HashMismatch.first << "'"
+               << " with hash = 0x" << utohexstr(HashMismatch.second) << "\n";
+
+      for (const auto &CounterMismatch : Coverage->getCounterMismatches())
+        errs() << "counter-mismatch: "
+               << "Coverage mapping for " << CounterMismatch.first
+               << " only has " << CounterMismatch.second
+               << " valid counter expressions\n";
+    }
+  }
 
   remapPathNames(*Coverage);
 

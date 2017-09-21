@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %t %s
-# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -dummy-extern f=0x0123456789abcdef -check=%s %t
-        
+# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -dummy-extern f=0x0123456789abcdef -dummy-extern symbol=0xf00f -check=%s %t
+
         .globl Q
         .section .dummy, "ax"
 Q:
@@ -82,3 +82,14 @@ r:
 ## f & 0xFFF = 0xdef (bits 11:0 of f)
 ## 0xdef << 10 = 0x37bc00
 # rtdyld-check: *{4}(a) = 0x9137bc00
+
+	.data
+ABS16:
+	.short symbol
+# rtdyld-check: (*{2}ABS16) = symbol[15:0]
+ABS32:
+	.long symbol
+# rtdyld-check: (*{4}ABS32) = symbol[31:0]
+ABS64:
+	.xword symbol
+# rtdyld-check: (*{8}ABS64) = symbol

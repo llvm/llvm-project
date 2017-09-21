@@ -2588,6 +2588,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitCallSite(CallSite CS) {
     Instruction &I = *CS.getInstruction();
+    if (I.getMetadata("nosanitize")) return;
     assert((CS.isCall() || CS.isInvoke()) && "Unknown type of CallSite");
     if (CS.isCall()) {
       CallInst *Call = cast<CallInst>(&I);
