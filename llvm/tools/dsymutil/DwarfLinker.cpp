@@ -1495,8 +1495,12 @@ static DWARFDie resolveDIEReference(
   uint64_t RefOffset = *RefValue.getAsReference();
 
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
-    if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset))
-      return RefDie;
+    if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
+      // In a file with broken references, an attribute might point to a NULL
+      // DIE.
+      if(!RefDie.isNULL())
+        return RefDie;
+    }
 
   Linker.reportWarning("could not find referenced DIE", &DIE);
   return DWARFDie();
