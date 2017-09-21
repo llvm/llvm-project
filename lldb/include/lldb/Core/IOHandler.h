@@ -195,7 +195,7 @@ public:
   enum class Completion { None, LLDBCommand, Expression };
 
   IOHandlerDelegate(Completion completion = Completion::None)
-      : m_completion(completion), m_io_handler_done(false) {}
+      : m_completion(completion) {}
 
   virtual ~IOHandlerDelegate() = default;
 
@@ -296,7 +296,6 @@ public:
 
 protected:
   Completion m_completion; // Support for common builtin completions
-  bool m_io_handler_done;
 };
 
 //----------------------------------------------------------------------

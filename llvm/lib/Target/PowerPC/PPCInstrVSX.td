@@ -47,6 +47,13 @@ def vssrc : RegisterOperand<VSSRC> {
   let ParserMatchClass = PPCRegVSSRCAsmOperand;
 }
 
+def PPCRegSPILLTOVSRRCAsmOperand : AsmOperandClass {
+  let Name = "RegSPILLTOVSRRC"; let PredicateMethod = "isVSRegNumber";
+}
+
+def spilltovsrrc : RegisterOperand<SPILLTOVSRRC> {
+  let ParserMatchClass = PPCRegSPILLTOVSRRCAsmOperand;
+}
 // Little-endian-specific nodes.
 def SDT_PPClxvd2x : SDTypeProfile<1, 1, [
   SDTCisVT<0, v2f64>, SDTCisPtrTy<1>
@@ -2863,6 +2870,23 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (f32 (DFLOADf32 ixaddr:$src))>;
 } // end HasP9Vector, AddedComplexity
 
+let Predicates = [HasP9Vector] in {
+  let isPseudo = 1 in {
+    let mayStore = 1 in {
+      def SPILLTOVSR_STX : Pseudo<(outs), (ins spilltovsrrc:$XT, memrr:$dst),
+                                "#SPILLTOVSR_STX", []>;
+      def SPILLTOVSR_ST : Pseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst),
+                                "#SPILLTOVSR_ST", []>;
+    }
+    let mayLoad = 1 in {
+      def SPILLTOVSR_LDX : Pseudo<(outs spilltovsrrc:$XT), (ins memrr:$src),
+                                "#SPILLTOVSR_LDX", []>;
+      def SPILLTOVSR_LD : Pseudo<(outs spilltovsrrc:$XT), (ins memrix:$src),
+                                "#SPILLTOVSR_LD", []>;
+
+    }
+  }
+}
 // Integer extend helper dags 32 -> 64
 def AnyExts {
   dag A = (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $A, sub_32);

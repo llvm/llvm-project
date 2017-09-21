@@ -4914,9 +4914,14 @@ void Scop::addAccessData(MemoryAccess *Access) {
 }
 
 void Scop::removeAccessData(MemoryAccess *Access) {
-  if (Access->isOriginalValueKind() && Access->isRead()) {
+  if (Access->isOriginalValueKind() && Access->isWrite()) {
+    ValueDefAccs.erase(Access->getAccessValue());
+  } else if (Access->isOriginalValueKind() && Access->isRead()) {
     auto &Uses = ValueUseAccs[Access->getScopArrayInfo()];
     std::remove(Uses.begin(), Uses.end(), Access);
+  } else if (Access->isOriginalPHIKind() && Access->isRead()) {
+    PHINode *PHI = cast<PHINode>(Access->getAccessInstruction());
+    PHIReadAccs.erase(PHI);
   } else if (Access->isOriginalAnyPHIKind() && Access->isWrite()) {
     auto &Incomings = PHIIncomingAccs[Access->getScopArrayInfo()];
     std::remove(Incomings.begin(), Incomings.end(), Access);
@@ -4930,11 +4935,7 @@ MemoryAccess *Scop::getValueDef(const ScopArrayInfo *SAI) const {
   if (!Val)
     return nullptr;
 
-  ScopStmt *Stmt = getStmtFor(Val);
-  if (!Stmt)
-    return nullptr;
-
-  return Stmt->lookupValueWriteOf(Val);
+  return ValueDefAccs.lookup(Val);
 }
 
 ArrayRef<MemoryAccess *> Scop::getValueUses(const ScopArrayInfo *SAI) const {
@@ -4952,10 +4953,7 @@ MemoryAccess *Scop::getPHIRead(const ScopArrayInfo *SAI) const {
     return nullptr;
 
   PHINode *PHI = cast<PHINode>(SAI->getBasePtr());
-  ScopStmt *Stmt = getStmtFor(PHI);
-  assert(Stmt && "PHINode must be within the SCoP");
-
-  return Stmt->lookupPHIReadOf(PHI);
+  return PHIReadAccs.lookup(PHI);
 }
 
 ArrayRef<MemoryAccess *> Scop::getPHIIncomings(const ScopArrayInfo *SAI) const {

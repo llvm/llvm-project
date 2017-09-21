@@ -9,6 +9,12 @@ import subprocess
 import sys
 import threading
 
+def norm_path(path):
+    path = os.path.realpath(path)
+    path = os.path.normpath(path)
+    path = os.path.normcase(path)
+    return path
+
 def is_string(value):
     try:
         # Python 2 and Python 3 are different here.

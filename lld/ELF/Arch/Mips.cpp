@@ -77,8 +77,6 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     Type &= 0xff;
   switch (Type) {
-  default:
-    return R_ABS;
   case R_MIPS_JALR:
   case R_MICROMIPS_JALR:
     return R_HINT;
@@ -88,15 +86,18 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_MICROMIPS_GPREL7_S2:
     return R_MIPS_GOTREL;
   case R_MIPS_26:
-    return R_PLT;
   case R_MICROMIPS_26_S1:
     return R_PLT;
   case R_MICROMIPS_PC26_S1:
     return R_PLT_PC;
   case R_MIPS_HI16:
   case R_MIPS_LO16:
+  case R_MIPS_HIGHER:
+  case R_MIPS_HIGHEST:
   case R_MICROMIPS_HI16:
   case R_MICROMIPS_LO16:
+  case R_MICROMIPS_HIGHER:
+  case R_MICROMIPS_HIGHEST:
     // R_MIPS_HI16/R_MIPS_LO16 relocations against _gp_disp calculate
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
@@ -106,8 +107,24 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
     if (&S == ElfSym::MipsLocalGp)
       return R_MIPS_GOT_GP;
     LLVM_FALLTHROUGH;
+  case R_MIPS_32:
+  case R_MIPS_64:
   case R_MIPS_GOT_OFST:
+  case R_MIPS_SUB:
+  case R_MIPS_TLS_DTPREL_HI16:
+  case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_DTPREL32:
+  case R_MIPS_TLS_DTPREL64:
+  case R_MIPS_TLS_TPREL_HI16:
+  case R_MIPS_TLS_TPREL_LO16:
+  case R_MIPS_TLS_TPREL32:
+  case R_MIPS_TLS_TPREL64:
   case R_MICROMIPS_GOT_OFST:
+  case R_MICROMIPS_SUB:
+  case R_MICROMIPS_TLS_DTPREL_HI16:
+  case R_MICROMIPS_TLS_DTPREL_LO16:
+  case R_MICROMIPS_TLS_TPREL_HI16:
+  case R_MICROMIPS_TLS_TPREL_LO16:
     return R_ABS;
   case R_MIPS_PC32:
   case R_MIPS_PC16:
@@ -154,6 +171,12 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_MIPS_TLS_LDM:
   case R_MICROMIPS_TLS_LDM:
     return R_MIPS_TLSLD;
+  case R_MIPS_NONE:
+    return R_NONE;
+  default:
+    error("do not know how to handle relocation '" + toString(Type) + "' (" +
+          Twine(Type) + ")");
+    return R_HINT;
   }
 }
 

@@ -2026,12 +2026,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   bool MergeWithParentScope = !Instantiation->isDefinedOutsideFunctionOrMethod();
   LocalInstantiationScope Scope(*this, MergeWithParentScope);
 
-  // All dllexported classes created during instantiation should be fully
-  // emitted after instantiation completes. We may not be ready to emit any
-  // delayed classes already on the stack, so save them away and put them back
-  // later.
-  decltype(DelayedDllExportClasses) ExportedClasses;
-  std::swap(ExportedClasses, DelayedDllExportClasses);
+  // Some class state isn't processed immediately but delayed till class
+  // instantiation completes. We may not be ready to handle any delayed state
+  // already on the stack as it might correspond to a different class, so save
+  // it now and put it back later.
+  SavePendingParsedClassStateRAII SavedPendingParsedClassState(*this);
 
   // Pull attributes from the pattern onto the instantiation.
   InstantiateAttrs(TemplateArgs, Pattern, Instantiation);
@@ -2117,9 +2116,6 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // Default arguments are parsed, if not instantiated. We can go instantiate
   // default arg exprs for default constructors if necessary now.
   ActOnFinishCXXNonNestedClass(Instantiation);
-
-  // Put back the delayed exported classes that we moved out of the way.
-  std::swap(ExportedClasses, DelayedDllExportClasses);
 
   // Instantiate late parsed attributes, and attach them to their decls.
   // See Sema::InstantiateAttrs

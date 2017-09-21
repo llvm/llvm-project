@@ -71,6 +71,38 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
 def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync \t$i;",
                              [(int_nvvm_bar_sync imm:$i)]>;
 
+def INT_BAR_WARP_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync \t$i;",
+                             [(int_nvvm_bar_warp_sync imm:$i)]>,
+        Requires<[hasPTX60, hasSM30]>;
+def INT_BAR_WARP_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "bar.warp.sync \t$i;",
+                             [(int_nvvm_bar_warp_sync Int32Regs:$i)]>,
+        Requires<[hasPTX60, hasSM30]>;
+
+def INT_BARRIER_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "barrier.sync \t$i;",
+                                   [(int_nvvm_barrier_sync imm:$i)]>,
+        Requires<[hasPTX60, hasSM30]>;
+def INT_BARRIER_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "barrier.sync \t$i;",
+                                   [(int_nvvm_barrier_sync Int32Regs:$i)]>,
+        Requires<[hasPTX60, hasSM30]>;
+
+def INT_BARRIER_SYNC_CNT_RR : NVPTXInst<(outs), (ins Int32Regs:$id, Int32Regs:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt Int32Regs:$id, Int32Regs:$cnt)]>,
+        Requires<[hasPTX60, hasSM30]>;
+def INT_BARRIER_SYNC_CNT_RI : NVPTXInst<(outs), (ins Int32Regs:$id, i32imm:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt Int32Regs:$id, imm:$cnt)]>,
+        Requires<[hasPTX60, hasSM30]>;
+def INT_BARRIER_SYNC_CNT_IR : NVPTXInst<(outs), (ins i32imm:$id, Int32Regs:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt imm:$id, Int32Regs:$cnt)]>,
+        Requires<[hasPTX60, hasSM30]>;
+def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
+        Requires<[hasPTX60, hasSM30]>;
+
+
 // shfl.{up,down,bfly,idx}.b32
 multiclass SHFL<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
   // The last two parameters to shfl can be regs or imms.  ptxas is smart
@@ -183,6 +215,37 @@ defm INT_SHFL_SYNC_BFLY_I32 : SHFL_SYNC<Int32Regs, "bfly", int_nvvm_shfl_sync_bf
 defm INT_SHFL_SYNC_BFLY_F32 : SHFL_SYNC<Float32Regs, "bfly", int_nvvm_shfl_sync_bfly_f32>;
 defm INT_SHFL_SYNC_IDX_I32 : SHFL_SYNC<Int32Regs, "idx", int_nvvm_shfl_sync_idx_i32>;
 defm INT_SHFL_SYNC_IDX_F32 : SHFL_SYNC<Float32Regs, "idx", int_nvvm_shfl_sync_idx_f32>;
+
+
+// vote.{all,any,uni,ballot}
+multiclass VOTE<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
+  def : NVPTXInst<(outs regclass:$dest), (ins Int1Regs:$pred),
+              "vote." # mode # " \t$dest, $pred;",
+              [(set regclass:$dest, (IntOp Int1Regs:$pred))]>,
+        Requires<[hasPTX60, hasSM30]>;
+}
+
+defm VOTE_ALL : VOTE<Int1Regs, "all.pred", int_nvvm_vote_all>;
+defm VOTE_ANY : VOTE<Int1Regs, "any.pred", int_nvvm_vote_any>;
+defm VOTE_UNI : VOTE<Int1Regs, "uni.pred", int_nvvm_vote_uni>;
+defm VOTE_BALLOT : VOTE<Int32Regs, "ballot.b32", int_nvvm_vote_ballot>;
+
+// vote.sync.{all,any,uni,ballot}
+multiclass VOTE_SYNC<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
+  def i : NVPTXInst<(outs regclass:$dest), (ins i32imm:$mask, Int1Regs:$pred),
+              "vote.sync." # mode # " \t$dest, $pred, $mask;",
+              [(set regclass:$dest, (IntOp imm:$mask, Int1Regs:$pred))]>,
+          Requires<[hasPTX60, hasSM30]>;
+  def r : NVPTXInst<(outs regclass:$dest), (ins Int32Regs:$mask, Int1Regs:$pred),
+              "vote.sync." # mode #" \t$dest, $pred, $mask;",
+              [(set regclass:$dest, (IntOp Int32Regs:$mask, Int1Regs:$pred))]>,
+          Requires<[hasPTX60, hasSM30]>;
+}
+
+defm VOTE_SYNC_ALL : VOTE_SYNC<Int1Regs, "all.pred", int_nvvm_vote_all_sync>;
+defm VOTE_SYNC_ANY : VOTE_SYNC<Int1Regs, "any.pred", int_nvvm_vote_any_sync>;
+defm VOTE_SYNC_UNI : VOTE_SYNC<Int1Regs, "uni.pred", int_nvvm_vote_uni_sync>;
+defm VOTE_SYNC_BALLOT : VOTE_SYNC<Int32Regs, "ballot.b32", int_nvvm_vote_ballot_sync>;
 
 } // isConvergent = 1
 

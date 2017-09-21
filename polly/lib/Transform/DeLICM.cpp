@@ -666,6 +666,19 @@ private:
   /// For each PHI instance we can directly determine which was the incoming
   /// block, and hence derive which value the PHI has.
   ///
+  /// The returned relation generally is injective, meaning that every PHI write
+  /// has at most one (or zero, if the incoming block's branch does not jump to
+  /// the PHI's block) PHI Read that reads it. However, due to the SCoP's
+  /// parameter context it is possible a statement instance that would overwrite
+  /// the PHI scalar is not in the statement's domain and thus a PHI write
+  /// appear to be used twice.  This is a static property, at runtime the
+  /// runtime condition should avoid that a configuration is executed. Although
+  /// incorrect, it should not have any effect in DeLICM.  If it passes the
+  /// conflict check, there are multiple locations, one for each PHI Read it
+  /// matches, it had to write to.  MemoryAccess::getAddressFunction() will
+  /// select only one of them.  That is, statically, not all necessary value are
+  /// written, but the runtime check guards it from ever being executed.
+  ///
   /// @param SAI The ScopArrayInfo representing the PHI's storage.
   ///
   /// @return { DomainPHIRead[] -> DomainPHIWrite[] }
@@ -702,7 +715,6 @@ private:
         isl_union_map_from_map(LastPerPHIWrites.take()),
         isl_union_map_reverse(PHIWriteScatter.take())));
     assert(isl_union_map_is_single_valued(Result.keep()) == isl_bool_true);
-    assert(isl_union_map_is_injective(Result.keep()) == isl_bool_true);
     return Result;
   }
 

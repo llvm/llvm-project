@@ -1,5 +1,5 @@
 // RUN: llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
-// RUN: llvm-dwarfdump -v -all %t | FileCheck %s
+// RUN: llvm-dwarfdump -all %t | FileCheck %s
 
 .globl _bar
 _bar:
@@ -38,46 +38,46 @@ _x:	.long 1
 // CHECK: .debug_info contents:
 
 // We don't check the leading addresses these are at.
-// CHECK:  DW_TAG_compile_unit [1] *
-// CHECK:    DW_AT_stmt_list [DW_FORM_sec_offset]	(0x00000000)
-// CHECK:    DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
-// CHECK:    DW_AT_high_pc [DW_FORM_addr]	(0x0000000000000008)
+// CHECK:  DW_TAG_compile_unit
+// CHECK:    DW_AT_stmt_list (0x00000000)
+// CHECK:    DW_AT_low_pc (0x0000000000000000)
+// CHECK:    DW_AT_high_pc (0x0000000000000008)
 // We don't check the file name as it is a temp directory
-// CHECK:    DW_AT_name [DW_FORM_string]
+// CHECK:    DW_AT_name
 // We don't check the DW_AT_comp_dir which is the current working directory
-// CHECK:    DW_AT_producer [DW_FORM_string]	("llvm-mc (based on {{.*}})")
-// CHECK:    DW_AT_language [DW_FORM_data2]	(DW_LANG_Mips_Assembler)
+// CHECK:    DW_AT_producer ("llvm-mc (based on {{.*}})")
+// CHECK:    DW_AT_language (DW_LANG_Mips_Assembler)
 
-// CHECK:    DW_TAG_label [2] *
-// CHECK:      DW_AT_name [DW_FORM_string]	("bar")
-// CHECK:      DW_AT_decl_file [DW_FORM_data4]	([[FILE:".*gen-dwarf.s"]])
-// CHECK:      DW_AT_decl_line [DW_FORM_data4]	(5)
-// CHECK:      DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
-// CHECK:      DW_AT_prototyped [DW_FORM_flag]	(0x00)
+// CHECK:    DW_TAG_label
+// CHECK:      DW_AT_name ("bar")
+// CHECK:      DW_AT_decl_file ([[FILE:".*gen-dwarf.s"]])
+// CHECK:      DW_AT_decl_line (5)
+// CHECK:      DW_AT_low_pc (0x0000000000000000)
+// CHECK:      DW_AT_prototyped (0x00)
 
-// CHECK:      DW_TAG_unspecified_parameters [3]  
-
-// CHECK:      NULL
-
-// CHECK:    DW_TAG_label [2] *
-// CHECK:      DW_AT_name [DW_FORM_string]	("foo")
-// CHECK:      DW_AT_decl_file [DW_FORM_data4]	([[FILE]])
-// CHECK:      DW_AT_decl_line [DW_FORM_data4]	(9)
-// CHECK:      DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000007)
-// CHECK:      DW_AT_prototyped [DW_FORM_flag]	(0x00)
-
-// CHECK:      DW_TAG_unspecified_parameters [3]  
+// CHECK:      DW_TAG_unspecified_parameters
 
 // CHECK:      NULL
 
-// CHECK:    DW_TAG_label [2] *
-// CHECK:      DW_AT_name [DW_FORM_string]	("baz")
-// CHECK:      DW_AT_decl_file [DW_FORM_data4]	([[FILE]])
-// CHECK:      DW_AT_decl_line [DW_FORM_data4]	(10)
-// CHECK:      DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000007)
-// CHECK:      DW_AT_prototyped [DW_FORM_flag]	(0x00)
+// CHECK:    DW_TAG_label
+// CHECK:      DW_AT_name ("foo")
+// CHECK:      DW_AT_decl_file ([[FILE]])
+// CHECK:      DW_AT_decl_line (9)
+// CHECK:      DW_AT_low_pc (0x0000000000000007)
+// CHECK:      DW_AT_prototyped (0x00)
 
-// CHECK:      DW_TAG_unspecified_parameters [3]  
+// CHECK:      DW_TAG_unspecified_parameters
+
+// CHECK:      NULL
+
+// CHECK:    DW_TAG_label
+// CHECK:      DW_AT_name ("baz")
+// CHECK:      DW_AT_decl_file ([[FILE]])
+// CHECK:      DW_AT_decl_line (10)
+// CHECK:      DW_AT_low_pc (0x0000000000000007)
+// CHECK:      DW_AT_prototyped (0x00)
+
+// CHECK:      DW_TAG_unspecified_parameters
 
 // CHECK:      NULL
 

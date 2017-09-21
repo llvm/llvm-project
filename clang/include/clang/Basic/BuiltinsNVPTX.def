@@ -378,6 +378,9 @@ BUILTIN(__nvvm_bar0_popc, "ii", "")
 BUILTIN(__nvvm_bar0_and, "ii", "")
 BUILTIN(__nvvm_bar0_or, "ii", "")
 BUILTIN(__nvvm_bar_sync, "vi", "n")
+TARGET_BUILTIN(__nvvm_bar_warp_sync, "vUi", "n", "ptx60")
+TARGET_BUILTIN(__nvvm_barrier_sync, "vUi", "n", "ptx60")
+TARGET_BUILTIN(__nvvm_barrier_sync_cnt, "vUiUi", "n", "ptx60")
 
 // Shuffle
 
@@ -398,6 +401,17 @@ TARGET_BUILTIN(__nvvm_shfl_sync_bfly_i32, "iUiiii", "", "ptx60")
 TARGET_BUILTIN(__nvvm_shfl_sync_bfly_f32, "fUifii", "", "ptx60")
 TARGET_BUILTIN(__nvvm_shfl_sync_idx_i32, "iUiiii", "", "ptx60")
 TARGET_BUILTIN(__nvvm_shfl_sync_idx_f32, "fUifii", "", "ptx60")
+
+// Vote
+BUILTIN(__nvvm_vote_all, "bb", "")
+BUILTIN(__nvvm_vote_any, "bb", "")
+BUILTIN(__nvvm_vote_uni, "bb", "")
+BUILTIN(__nvvm_vote_ballot, "Uib", "")
+
+TARGET_BUILTIN(__nvvm_vote_all_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_any_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", "ptx60")
+TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", "ptx60")
 
 // Membar
 

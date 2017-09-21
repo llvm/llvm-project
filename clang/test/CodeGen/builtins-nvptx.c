@@ -657,3 +657,15 @@ __device__ void nvvm_shfl(int i, float f, int a, int b) {
   __nvvm_shfl_idx_f32(f, a, b);
   // CHECK: ret void
 }
+
+__device__ void nvvm_vote(int pred) {
+  // CHECK: call i1 @llvm.nvvm.vote.all(i1
+  __nvvm_vote_all(pred);
+  // CHECK: call i1 @llvm.nvvm.vote.any(i1
+  __nvvm_vote_any(pred);
+  // CHECK: call i1 @llvm.nvvm.vote.uni(i1
+  __nvvm_vote_uni(pred);
+  // CHECK: call i32 @llvm.nvvm.vote.ballot(i1
+  __nvvm_vote_ballot(pred);
+  // CHECK: ret void
+}

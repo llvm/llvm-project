@@ -1113,10 +1113,14 @@ endfunction(llvm_canonicalize_cmake_booleans)
 # common variables that any Lit instance is likely to need, and custom
 # variables can be passed in.
 function(configure_lit_site_cfg site_in site_out)
-  cmake_parse_arguments(ARG "" "" "MAIN_CONFIG" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "MAIN_CONFIG;OUTPUT_MAPPING" ${ARGN})
 
   if ("${ARG_MAIN_CONFIG}" STREQUAL "")
-    set(ARG_MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg")
+    get_filename_component(INPUT_DIR ${site_in} DIRECTORY)
+    set(ARG_MAIN_CONFIG "${INPUT_DIR}/lit.cfg")
+  endif()
+  if ("${ARG_OUTPUT_MAPPING}" STREQUAL "")
+    set(ARG_OUTPUT_MAPPING "${site_out}")
   endif()
 
   foreach(c ${LLVM_TARGETS_TO_BUILD})
@@ -1184,7 +1188,6 @@ function(configure_lit_site_cfg site_in site_out)
      "lit.llvm.initialize(lit_config, config)\n")
 
   configure_file(${site_in} ${site_out} @ONLY)
-  get_filename_component(INPUT_DIR ${site_in} DIRECTORY)
   if (EXISTS "${ARG_MAIN_CONFIG}")
     set(PYTHON_STATEMENT "map_config('${ARG_MAIN_CONFIG}', '${site_out}')")
     get_property(LLVM_LIT_CONFIG_MAP GLOBAL PROPERTY LLVM_LIT_CONFIG_MAP)
