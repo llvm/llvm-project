@@ -1,0 +1,41 @@
+#RUN: llvm-dsymutil -f -oso-prepend-path=%p/Inputs/ -y %s -no-output 2>&1 \
+#RUN:   |  FileCheck %s
+
+# CHECK: warning: could not find referenced DIE
+
+# We've modified the DW_AT_abstract_origin offset to reference a NULL DIE.
+#
+# Source:
+#
+#   void f1() {}
+#   __attribute__((always_inline)) void f2() {
+#     f1();
+#   }
+#   int main() {
+#     f2();
+#   }
+#
+# Compile with:
+#
+#   $ clang -g null_die.c -O0 -S -o null_die.s
+#
+#   Manually patch the DW_AT_abstract_origin to point to a NULL DIE.
+#
+#   $ llvm-mc -triple x86_64-apple-darwin -filetype=obj -o null_die.o null_die.s
+#
+# To generate the debug map:
+#
+#   $ ld -arch x86_64 -macosx_version_min 10.13.0 -lSystem null_die.o -o null_die
+#   $ llvm-dsymutil -dump-debug-map null_die
+
+---
+triple:          'x86_64-apple-darwin'
+binary-path:     null_die
+objects:
+  - filename:        /null_die.o
+    timestamp:       1505928022
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F10, size: 0x0000000D }
+      - { sym: _f1, objAddr: 0x0000000000000000, binAddr: 0x0000000100000EF0, size: 0x00000010 }
+      - { sym: _f2, objAddr: 0x0000000000000010, binAddr: 0x0000000100000F00, size: 0x00000010 }
+...

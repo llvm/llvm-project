@@ -183,7 +183,7 @@ extern "C" void LLVMInitializeMipsTargetMC() {
         *T, createMipsObjectTargetStreamer);
 
     // Register the asm backend.
-    RegisterMCAsmBackend<MipsAsmBackend> Y(*T);
+    TargetRegistry::RegisterMCAsmBackend(*T, createMipsAsmBackend);
   }
 
   // Register the MC Code Emitter

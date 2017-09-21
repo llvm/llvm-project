@@ -87,3 +87,30 @@ namespace PR13986 {
     A<1> m_target;
   };
 }
+
+// rdar://problem/34167492
+// Template B is instantiated during checking if defaulted A copy constructor
+// is constexpr. For this we check if S<int> copy constructor is constexpr. And
+// for this we check S constructor template with default argument that mentions
+// template B. In  turn, template instantiation triggers checking defaulted
+// members exception spec. The problem is that it checks defaulted members not
+// for instantiated class only, but all defaulted members so far. In this case
+// we try to check exception spec for A default constructor which requires
+// initializer for the field _a. But initializers are added after constexpr
+// check so we reject the code because cannot find _a initializer.
+namespace rdar34167492 {
+  template <typename T> struct B { using type = bool; };
+
+  template <typename T> struct S {
+    S() noexcept;
+
+    template <typename U, typename B<U>::type = true>
+    S(const S<U>&) noexcept;
+  };
+
+  class A {
+    A() noexcept = default;
+    A(const A&) noexcept = default;
+    S<int> _a{};
+  };
+}

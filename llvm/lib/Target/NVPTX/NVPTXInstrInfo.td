@@ -155,6 +155,9 @@ def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def true : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
+def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
+
+def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
 
 def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;
 

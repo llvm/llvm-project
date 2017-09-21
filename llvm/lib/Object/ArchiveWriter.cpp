@@ -377,7 +377,7 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
 }
 
 std::error_code
-llvm::writeArchive(StringRef ArcName, std::vector<NewArchiveMember> &NewMembers,
+llvm::writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf) {

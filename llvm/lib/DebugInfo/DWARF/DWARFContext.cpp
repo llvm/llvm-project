@@ -299,14 +299,12 @@ void DWARFContext::dump(
   }
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
-                 DObj->getDebugFrameSection())) {
-    getDebugFrame()->dump(OS);
-  }
+                 DObj->getDebugFrameSection()))
+    getDebugFrame()->dump(OS, DumpOffset);
 
   if (shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
-                 DObj->getEHFrameSection())) {
-    getEHFrame()->dump(OS);
-  }
+                 DObj->getEHFrameSection()))
+    getEHFrame()->dump(OS, DumpOffset);
 
   if (DumpType & DIDT_DebugMacro) {
     if (Explicit || !getDebugMacro()->empty()) {
@@ -337,8 +335,14 @@ void DWARFContext::dump(
                                     isLittleEndian(), savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
         uint32_t Offset = *StmtOffset;
-        LineTable.parse(lineData, &Offset);
-        LineTable.dump(OS);
+        // Verbose dumping is done during parsing and not on the intermediate
+        // representation.
+        if (DumpOpts.Verbose) {
+          LineTable.parse(lineData, &Offset, &OS);
+        } else {
+          LineTable.parse(lineData, &Offset);
+          LineTable.dump(OS);
+        }
       }
     }
   }
