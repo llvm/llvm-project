@@ -374,18 +374,22 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
     auto mapHNode = llvm::make_unique<MapHNode>(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
-      ScalarNode *KeyScalar = dyn_cast<ScalarNode>(KeyNode);
-      if (!KeyScalar) {
-        setError(KeyNode, "Map key must be a scalar");
+      ScalarNode *Key = dyn_cast<ScalarNode>(KeyNode);
+      Node *Value = KVN.getValue();
+      if (!Key || !Value) {
+        if (!Key)
+          setError(KeyNode, "Map key must be a scalar");
+        if (!Value)
+          setError(KeyNode, "Map value must not be empty");
         break;
       }
       StringStorage.clear();
-      StringRef KeyStr = KeyScalar->getValue(StringStorage);
+      StringRef KeyStr = Key->getValue(StringStorage);
       if (!StringStorage.empty()) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
-      auto ValueHNode = this->createHNodes(KVN.getValue());
+      auto ValueHNode = this->createHNodes(Value);
       if (EC)
         break;
       mapHNode->Mapping[KeyStr] = std::move(ValueHNode);

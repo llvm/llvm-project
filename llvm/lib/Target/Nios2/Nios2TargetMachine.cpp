@@ -43,8 +43,7 @@ Nios2TargetMachine::Nios2TargetMachine(const Target &T, const Triple &TT,
                                        Optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM), *CM, OL),
-      DefaultSubtarget(TT, CPU, FS, *this) {}
+                        getEffectiveRelocModel(RM), *CM, OL) {}
 
 Nios2TargetMachine::~Nios2TargetMachine() {}
 
@@ -82,9 +81,6 @@ public:
     return getTM<Nios2TargetMachine>();
   }
 
-  const Nios2Subtarget &getNios2Subtarget() const {
-    return *getNios2TargetMachine().getSubtargetImpl();
-  }
   void addCodeGenPrepare() override;
   void addIRPasses() override;
 };

@@ -1,4 +1,4 @@
-//===-- ARMTargetTransformInfo.cpp - ARM specific TTI ---------------------===//
+//===- ARMTargetTransformInfo.cpp - ARM specific TTI ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,9 +8,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMTargetTransformInfo.h"
-#include "llvm/Support/Debug.h"
+#include "ARMSubtarget.h"
+#include "MCTargetDesc/ARMAddressingModes.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Target/CostTable.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "armtti"
@@ -65,7 +86,6 @@ int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   return 3;
 }
 
-
 // Constants smaller than 256 fit in the immediate field of
 // Thumb1 instructions so we return a zero cost and 1 otherwise.
 int ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
@@ -108,7 +128,6 @@ int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
 
   return getIntImmCost(Imm, Ty);
 }
-
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                  const Instruction *I) {
@@ -331,7 +350,6 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    const Instruction *I) {
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
@@ -455,7 +473,6 @@ int ARMTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo,
     ArrayRef<const Value *> Args) {
-
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 

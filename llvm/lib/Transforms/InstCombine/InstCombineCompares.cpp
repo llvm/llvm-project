@@ -1715,12 +1715,19 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   }
 
   // (X & C2) > C1 --> (X & C2) != 0, if any bit set in (X & C2) will produce a
-  // result greater than C1.
-  unsigned NumTZ = C2->countTrailingZeros();
-  if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && NumTZ < C2->getBitWidth() &&
-      APInt::getOneBitSet(C2->getBitWidth(), NumTZ).ugt(*C1)) {
-    Constant *Zero = Constant::getNullValue(And->getType());
-    return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+ // result greater than C1. Also handle (X & C2) < C1 --> (X & C2) == 0.
+  if (!C2->isNullValue()) {
+    unsigned NumTZ = C2->countTrailingZeros();
+    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT &&
+        NumTZ >= C1->getActiveBits()) {
+      Constant *Zero = Constant::getNullValue(And->getType());
+      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+    }
+    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
+        NumTZ >= C1->ceilLogBase2()) {
+      Constant *Zero = Constant::getNullValue(And->getType());
+      return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
+    }
   }
 
   return nullptr;
@@ -3919,26 +3926,22 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth,
   if (isSignCheck)
     return APInt::getSignMask(BitWidth);
 
-  ConstantInt *CI = dyn_cast<ConstantInt>(I.getOperand(1));
-  if (!CI) return APInt::getAllOnesValue(BitWidth);
-  const APInt &RHS = CI->getValue();
+  const APInt *RHS;
+  if (!match(I.getOperand(1), m_APInt(RHS)))
+    return APInt::getAllOnesValue(BitWidth);
 
   switch (I.getPredicate()) {
   // For a UGT comparison, we don't care about any bits that
   // correspond to the trailing ones of the comparand.  The value of these
   // bits doesn't impact the outcome of the comparison, because any value
   // greater than the RHS must differ in a bit higher than these due to carry.
-  case ICmpInst::ICMP_UGT: {
-    unsigned trailingOnes = RHS.countTrailingOnes();
-    return APInt::getBitsSetFrom(BitWidth, trailingOnes);
-  }
+  case ICmpInst::ICMP_UGT:
+    return APInt::getBitsSetFrom(BitWidth, RHS->countTrailingOnes());
 
   // Similarly, for a ULT comparison, we don't care about the trailing zeros.
   // Any value less than the RHS must differ in a higher bit because of carries.
-  case ICmpInst::ICMP_ULT: {
-    unsigned trailingZeros = RHS.countTrailingZeros();
-    return APInt::getBitsSetFrom(BitWidth, trailingZeros);
-  }
+  case ICmpInst::ICMP_ULT:
+    return APInt::getBitsSetFrom(BitWidth, RHS->countTrailingZeros());
 
   default:
     return APInt::getAllOnesValue(BitWidth);

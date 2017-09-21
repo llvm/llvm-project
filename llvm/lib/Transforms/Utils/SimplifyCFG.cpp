@@ -5275,8 +5275,12 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   // Compute the table index value.
   Builder.SetInsertPoint(SI);
-  Value *TableIndex =
-      Builder.CreateSub(SI->getCondition(), MinCaseVal, "switch.tableidx");
+  Value *TableIndex;
+  if (MinCaseVal->isNullValue())
+    TableIndex = SI->getCondition();
+  else
+    TableIndex = Builder.CreateSub(SI->getCondition(), MinCaseVal,
+                                   "switch.tableidx");
 
   // Compute the maximum table size representable by the integer type we are
   // switching upon.

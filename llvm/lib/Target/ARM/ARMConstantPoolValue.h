@@ -1,4 +1,4 @@
-//===-- ARMConstantPoolValue.h - ARM constantpool value ---------*- C++ -*-===//
+//===- ARMConstantPoolValue.h - ARM constantpool value ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,8 +14,9 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H
 #define LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/Support/Casting.h"
 #include <string>
@@ -29,6 +30,8 @@ class GlobalValue;
 class GlobalVariable;
 class LLVMContext;
 class MachineBasicBlock;
+class raw_ostream;
+class Type;
 
 namespace ARMCP {
 
@@ -174,7 +177,8 @@ public:
   const GlobalValue *getGV() const;
   const BlockAddress *getBlockAddress() const;
 
-  typedef SmallPtrSet<const GlobalVariable *, 1>::iterator promoted_iterator;
+  using promoted_iterator = SmallPtrSet<const GlobalVariable *, 1>::iterator;
+
   iterator_range<promoted_iterator> promotedGlobals() {
     return iterator_range<promoted_iterator>(GVars.begin(), GVars.end());
   }

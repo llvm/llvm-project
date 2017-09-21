@@ -1,4 +1,4 @@
-//===-- Thumb1FrameLowering.cpp - Thumb1 Frame Information ----------------===//
+//===- Thumb1FrameLowering.cpp - Thumb1 Frame Information -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,9 +16,9 @@
 #include "ARMBaseRegisterInfo.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb1InstrInfo.h"
 #include "ThumbRegisterInfo.h"
+#include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,10 +32,14 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <bitset>
 #include <cassert>
@@ -68,7 +72,6 @@ static void emitSPUpdate(MachineBasicBlock &MBB,
   emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
                             MRI, MIFlags);
 }
-
 
 MachineBasicBlock::iterator Thumb1FrameLowering::
 eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -643,7 +646,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   return true;
 }
 
-typedef std::bitset<ARM::NUM_TARGET_REGS> ARMRegSet;
+using ARMRegSet = std::bitset<ARM::NUM_TARGET_REGS>;
 
 // Return the first iteraror after CurrentReg which is present in EnabledRegs,
 // or OrderEnd if no further registers are in that set. This does not advance

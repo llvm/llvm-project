@@ -4261,12 +4261,17 @@ void AMDGPUAsmParser::cvtVOP3PImpl(MCInst &Inst,
                                    const OperandVector &Operands,
                                    bool IsPacked) {
   OptionalImmIndexMap OptIdx;
+  int Opc = Inst.getOpcode();
 
   cvtVOP3(Inst, Operands, OptIdx);
 
+  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in) != -1) {
+    assert(!IsPacked);
+    Inst.addOperand(Inst.getOperand(0));
+  }
+
   // FIXME: This is messy. Parse the modifiers as if it was a normal VOP3
   // instruction, and then figure out where to actually put the modifiers
-  int Opc = Inst.getOpcode();
 
   addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyOpSel);
 

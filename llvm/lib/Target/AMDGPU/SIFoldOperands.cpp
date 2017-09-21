@@ -775,6 +775,7 @@ static bool hasOneNonDBGUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
   return true;
 }
 
+// FIXME: Clamp for v_mad_mixhi_f16 handled during isel.
 bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   const MachineOperand *ClampSrc = isClamp(MI);
   if (!ClampSrc || !hasOneNonDBGUseInst(*MRI, ClampSrc->getReg()))

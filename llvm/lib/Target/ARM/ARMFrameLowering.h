@@ -1,4 +1,4 @@
-//==-- ARMTargetFrameLowering.h - Define frame lowering for ARM --*- C++ -*-==//
+//===- ARMTargetFrameLowering.h - Define frame lowering for ARM -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,18 +6,19 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_ARM_ARMFRAMELOWERING_H
 #define LLVM_LIB_TARGET_ARM_ARMFRAMELOWERING_H
 
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include <vector>
 
 namespace llvm {
-  class ARMSubtarget;
+
+class ARMSubtarget;
+class CalleeSavedInfo;
+class MachineFunction;
 
 class ARMFrameLowering : public TargetFrameLowering {
 protected:
@@ -62,7 +63,7 @@ public:
     return true;
   }
 
- private:
+private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const std::vector<CalleeSavedInfo> &CSI, unsigned StmOpc,
                     unsigned StrOpc, bool NoGap,
@@ -80,6 +81,6 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARMFRAMELOWERING_H

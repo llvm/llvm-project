@@ -19,8 +19,6 @@
 
 namespace llvm {
 class Nios2TargetMachine : public LLVMTargetMachine {
-  Nios2Subtarget DefaultSubtarget;
-
   mutable StringMap<std::unique_ptr<Nios2Subtarget>> SubtargetMap;
 
 public:
@@ -29,8 +27,6 @@ public:
                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                      CodeGenOpt::Level OL, bool JIT);
   ~Nios2TargetMachine() override;
-
-  const Nios2Subtarget *getSubtargetImpl() const { return &DefaultSubtarget; }
 
   const Nios2Subtarget *getSubtargetImpl(const Function &F) const override;
 
