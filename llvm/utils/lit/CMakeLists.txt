@@ -1,7 +1,12 @@
 # The configured file is not placed in the correct location
 # until the tests are run as we need to copy it into
 # a copy of the tests folder
-configure_lit_site_cfg("tests/lit.site.cfg.in" "lit.site.cfg")
+configure_lit_site_cfg(
+  "${CMAKE_CURRENT_SOURCE_DIR}/tests/lit.site.cfg.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg"
+  OUTPUT_MAPPING
+  "${CMAKE_CURRENT_BINARY_DIR}/tests/lit.site.cfg"
+  )
 
 # Lit's test suite creates output files next to the sources which makes the
 # source tree dirty. This is undesirable because we do out of source builds.

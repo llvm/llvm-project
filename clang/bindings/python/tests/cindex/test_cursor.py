@@ -395,6 +395,28 @@ def test_get_tokens():
     assert tokens[0].spelling == 'int'
     assert tokens[1].spelling == 'foo'
 
+def test_get_token_cursor():
+    """Ensure we can map tokens to cursors."""
+    tu = get_tu('class A {}; int foo(A var = A());', lang='cpp')
+    foo = get_cursor(tu, 'foo')
+
+    for cursor in foo.walk_preorder():
+        if cursor.kind.is_expression() and not cursor.kind.is_statement():
+            break
+    else:
+        assert False, "Could not find default value expression"
+
+    tokens = list(cursor.get_tokens())
+    assert len(tokens) == 4, [t.spelling for t in tokens]
+    assert tokens[0].spelling == '='
+    assert tokens[1].spelling == 'A'
+    assert tokens[2].spelling == '('
+    assert tokens[3].spelling == ')'
+    t_cursor = tokens[1].cursor
+    assert t_cursor.kind == CursorKind.TYPE_REF
+    r_cursor = t_cursor.referenced # should not raise an exception
+    assert r_cursor.kind == CursorKind.CLASS_DECL
+
 def test_get_arguments():
     tu = get_tu('void foo(int i, int j);')
     foo = get_cursor(tu, 'foo')

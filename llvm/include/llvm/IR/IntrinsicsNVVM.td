@@ -750,6 +750,17 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_bar_sync :
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
       GCCBuiltin<"__nvvm_bar_sync">;
+  def int_nvvm_bar_warp_sync :
+      Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
+      GCCBuiltin<"__nvvm_bar_warp_sync">;
+
+  // barrier.sync id[, cnt]
+  def int_nvvm_barrier_sync :
+      Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
+      GCCBuiltin<"__nvvm_barrier_sync">;
+  def int_nvvm_barrier_sync_cnt :
+      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>,
+      GCCBuiltin<"__nvvm_barrier_sync_cnt">;
 
   // Membar
   def int_nvvm_membar_cta : GCCBuiltin<"__nvvm_membar_cta">,
@@ -3780,4 +3791,55 @@ def int_nvvm_shfl_sync_idx_f32 :
   Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.sync.idx.f32">,
   GCCBuiltin<"__nvvm_shfl_sync_idx_f32">;
-}
+
+//
+// VOTE
+//
+
+// vote.all pred
+def int_nvvm_vote_all :
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.all">,
+  GCCBuiltin<"__nvvm_vote_all">;
+// vote.any pred
+def int_nvvm_vote_any :
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.any">,
+  GCCBuiltin<"__nvvm_vote_any">;
+// vote.uni pred
+def int_nvvm_vote_uni :
+  Intrinsic<[llvm_i1_ty], [llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.uni">,
+  GCCBuiltin<"__nvvm_vote_uni">;
+// vote.ballot pred
+def int_nvvm_vote_ballot :
+  Intrinsic<[llvm_i32_ty], [llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.ballot">,
+  GCCBuiltin<"__nvvm_vote_ballot">;
+
+//
+// VOTE.SYNC
+//
+
+// vote.sync.all mask, pred
+def int_nvvm_vote_all_sync :
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.all.sync">,
+  GCCBuiltin<"__nvvm_vote_all_sync">;
+// vote.sync.any mask, pred
+def int_nvvm_vote_any_sync :
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.any.sync">,
+  GCCBuiltin<"__nvvm_vote_any_sync">;
+// vote.sync.uni mask, pred
+def int_nvvm_vote_uni_sync :
+  Intrinsic<[llvm_i1_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.uni.sync">,
+  GCCBuiltin<"__nvvm_vote_uni_sync">;
+// vote.sync.ballot mask, pred
+def int_nvvm_vote_ballot_sync :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.ballot.sync">,
+  GCCBuiltin<"__nvvm_vote_ballot_sync">;
+
+} // let TargetPrefix = "nvvm"

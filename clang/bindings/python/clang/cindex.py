@@ -3216,6 +3216,7 @@ class Token(Structure):
     def cursor(self):
         """The Cursor this Token corresponds to."""
         cursor = Cursor()
+        cursor._tu = self._tu
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
 

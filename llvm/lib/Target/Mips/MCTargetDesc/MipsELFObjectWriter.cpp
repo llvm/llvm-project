@@ -55,7 +55,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
 
 class MipsELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  MipsELFObjectWriter(uint8_t OSABI, bool HasRelocationAddend, bool IsN64,
+  MipsELFObjectWriter(uint8_t OSABI, bool HasRelocationAddend, bool Is64,
                       bool IsLittleEndian);
 
   ~MipsELFObjectWriter() override = default;
@@ -210,10 +210,9 @@ static void dumpRelocs(const char *Prefix, const Container &Relocs) {
 #endif
 
 MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
-                                         bool HasRelocationAddend, bool IsN64,
+                                         bool HasRelocationAddend, bool Is64,
                                          bool IsLittleEndian)
-    : MCELFObjectTargetWriter(IsN64, OSABI, ELF::EM_MIPS, HasRelocationAddend,
-                              IsN64) {}
+    : MCELFObjectTargetWriter(Is64, OSABI, ELF::EM_MIPS, HasRelocationAddend) {}
 
 unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
@@ -282,7 +281,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_TPRel_8:
     return ELF::R_MIPS_TLS_TPREL64;
   case FK_GPRel_4:
-    if (isN64()) {
+    if (is64Bit()) {
       unsigned Type = (unsigned)ELF::R_MIPS_NONE;
       Type = setRType((unsigned)ELF::R_MIPS_GPREL32, Type);
       Type = setRType2((unsigned)ELF::R_MIPS_64, Type);
