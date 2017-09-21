@@ -1,0 +1,4 @@
+AAA: | BBB
+
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+# CHECK: Map value must not be empty

@@ -3917,6 +3917,24 @@ define <16 x i16> @shuffle_v16i16_02_18_03_19_10_26_11_27_00_16_01_17_08_24_09_2
   ret <16 x i16> %4
 }
 
+define <16 x i16> @shuffle_v16i16_04_06_07_uu_uu_06_07_05_12_14_15_uu_uu_14_15_13(<16 x i16> %a) {
+; AVX1-LABEL: shuffle_v16i16_04_06_07_uu_uu_06_07_05_12_14_15_uu_uu_14_15_13:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,9,12,13,14,15,14,15,8,9,12,13,14,15,10,11]
+; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v16i16_04_06_07_uu_uu_06_07_05_12_14_15_uu_uu_14_15_13:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9,12,13,14,15,14,15,8,9,12,13,14,15,10,11,24,25,28,29,30,31,30,31,24,25,28,29,30,31,26,27]
+; AVX2OR512VL-NEXT:    retq
+  %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 4, i32 6, i32 7, i32 undef, i32 undef, i32 6, i32 7, i32 5, i32 12, i32 14, i32 15, i32 undef, i32 undef, i32 14, i32 15, i32 13>
+  ret <16 x i16> %shuffle
+}
+
 define <16 x i16> @insert_v16i16_0elt_into_zero_vector(i16* %ptr) {
 ; ALL-LABEL: insert_v16i16_0elt_into_zero_vector:
 ; ALL:       # BB#0:

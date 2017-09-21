@@ -1,11 +1,14 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 5 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC5 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF45 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL %s
 // RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC -check-prefix RELOC4 %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 3 -fdebug-compilation-dir=/tmp
 // RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix DWARF -check-prefix DWARF3 %s
+// RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL %s
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 2 2>&1 | FileCheck -check-prefix VERSION %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 1 2>&1 | FileCheck -check-prefix DWARF1 %s
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 6 2>&1 | FileCheck -check-prefix DWARF6 %s
@@ -48,11 +51,11 @@ b:
 // DWARF-NEXT: [0x00000000 - 0x00000004)
 
 
-// DWARF: .debug_line contents:
-// DWARF:      0x0000000000000000     14      0      1   0   0  is_stmt
-// DWARF-NEXT: 0x0000000000000004     14      0      1   0   0  is_stmt end_sequence
-// DWARF-NEXT: 0x0000000000000000     18      0      1   0   0  is_stmt
-// DWARF-NEXT: 0x0000000000000004     18      0      1   0   0  is_stmt end_sequence
+// DWARF-DL: .debug_line contents:
+// DWARF-DL:      0x0000000000000000     17      0      1   0   0  is_stmt
+// DWARF-DL-NEXT: 0x0000000000000004     17      0      1   0   0  is_stmt end_sequence
+// DWARF-DL-NEXT: 0x0000000000000000     21      0      1   0   0  is_stmt
+// DWARF-DL-NEXT: 0x0000000000000004     21      0      1   0   0  is_stmt end_sequence
 
 
 // DWARF: .debug_ranges contents:

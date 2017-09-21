@@ -38,7 +38,7 @@ struct NewArchiveMember {
 };
 
 std::error_code
-writeArchive(StringRef ArcName, std::vector<NewArchiveMember> &NewMembers,
+writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
              bool WriteSymtab, object::Archive::Kind Kind, bool Deterministic,
              bool Thin, std::unique_ptr<MemoryBuffer> OldArchiveBuf = nullptr);
 }

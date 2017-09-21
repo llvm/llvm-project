@@ -1271,9 +1271,11 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, Deref, Offset);
-    // Insert llvm.dbg.declare immediately after the original alloca, and remove
-    // old llvm.dbg.declare.
+    // Insert llvm.dbg.declare immediately after InsertBefore, and remove old
+    // llvm.dbg.declare.
     Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
+    if (DII == InsertBefore)
+      InsertBefore = &*std::next(InsertBefore->getIterator());
     DII->eraseFromParent();
   }
   return !DbgAddrs.empty();

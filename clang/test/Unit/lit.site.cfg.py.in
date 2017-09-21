@@ -25,4 +25,4 @@ except KeyError:
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@CLANG_SOURCE_DIR@/test/Unit/lit.cfg")
+lit_config.load_config(config, "@CLANG_SOURCE_DIR@/test/Unit/lit.cfg.py")

@@ -46,6 +46,12 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "PPCGenInstrInfo.inc"
 
+STATISTIC(NumStoreSPILLVSRRCAsVec,
+          "Number of spillvsrrc spilled to stack as vec");
+STATISTIC(NumStoreSPILLVSRRCAsGpr,
+          "Number of spillvsrrc spilled to stack as gpr");
+STATISTIC(NumGPRtoVSRSpill, "Number of gpr spills to spillvsrrc");
+
 static cl::
 opt<bool> DisableCTRLoopAnal("disable-ppc-ctrloop-analysis", cl::Hidden,
             cl::desc("Disable analysis for CTR loops"));
@@ -280,6 +286,7 @@ unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case PPC::QVLFSXs:
   case PPC::QVLFDXb:
   case PPC::RESTORE_VRSAVE:
+  case PPC::SPILLTOVSR_LD:
     // Check for the operands added by addFrameReference (the immediate is the
     // offset which defaults to 0).
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -333,6 +340,7 @@ unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case PPC::QVSTFSXs:
   case PPC::QVSTFDXb:
   case PPC::SPILL_VRSAVE:
+  case PPC::SPILLTOVSR_ST:
     // Check for the operands added by addFrameReference (the immediate is the
     // offset which defaults to 0).
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -917,7 +925,18 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
-   }
+  } else if (PPC::G8RCRegClass.contains(SrcReg) &&
+             PPC::VSFRCRegClass.contains(DestReg)) {
+    BuildMI(MBB, I, DL, get(PPC::MTVSRD), DestReg).addReg(SrcReg);
+    NumGPRtoVSRSpill++;
+    getKillRegState(KillSrc);
+    return;
+  } else if (PPC::VSFRCRegClass.contains(SrcReg) &&
+             PPC::G8RCRegClass.contains(DestReg)) {
+    BuildMI(MBB, I, DL, get(PPC::MFVSRD), DestReg).addReg(SrcReg);
+    getKillRegState(KillSrc);
+    return;
+  }
 
   unsigned Opc;
   if (PPC::GPRCRegClass.contains(DestReg, SrcReg))
@@ -1061,6 +1080,11 @@ PPCInstrInfo::StoreRegToStackSlot(MachineFunction &MF,
                                                getKillRegState(isKill)),
                                        FrameIdx));
     NonRI = true;
+  } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
+    NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::SPILLTOVSR_ST))
+                                       .addReg(SrcReg,
+                                               getKillRegState(isKill)),
+                                       FrameIdx));
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -1182,6 +1206,9 @@ bool PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::QVLFDXb), DestReg),
                                        FrameIdx));
     NonRI = true;
+  } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
+    NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(PPC::SPILLTOVSR_LD),
+                                               DestReg), FrameIdx));
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -1995,6 +2022,48 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(Opcode));
     return true;
   }
+  case PPC::SPILLTOVSR_LD: {
+    unsigned TargetReg = MI.getOperand(0).getReg();
+    if (PPC::VSFRCRegClass.contains(TargetReg)) {
+      MI.setDesc(get(PPC::DFLOADf64));
+      return expandPostRAPseudo(MI);
+    }
+    else
+      MI.setDesc(get(PPC::LD));
+    return true;
+  }
+  case PPC::SPILLTOVSR_ST: {
+    unsigned SrcReg = MI.getOperand(0).getReg();
+    if (PPC::VSFRCRegClass.contains(SrcReg)) {
+      NumStoreSPILLVSRRCAsVec++;
+      MI.setDesc(get(PPC::DFSTOREf64));
+      return expandPostRAPseudo(MI);
+    } else {
+      NumStoreSPILLVSRRCAsGpr++;
+      MI.setDesc(get(PPC::STD));
+    }
+    return true;
+  }
+  case PPC::SPILLTOVSR_LDX: {
+    unsigned TargetReg = MI.getOperand(0).getReg();
+    if (PPC::VSFRCRegClass.contains(TargetReg))
+      MI.setDesc(get(PPC::LXSDX));
+    else
+      MI.setDesc(get(PPC::LDX));
+    return true;
+  }
+  case PPC::SPILLTOVSR_STX: {
+    unsigned SrcReg = MI.getOperand(0).getReg();
+    if (PPC::VSFRCRegClass.contains(SrcReg)) {
+      NumStoreSPILLVSRRCAsVec++;
+      MI.setDesc(get(PPC::STXSDX));
+    } else {
+      NumStoreSPILLVSRRCAsGpr++;
+      MI.setDesc(get(PPC::STDX));
+    }
+    return true;
+  }
+
   case PPC::CFENCE8: {
     auto Val = MI.getOperand(0).getReg();
     BuildMI(MBB, MI, DL, get(PPC::CMPD), PPC::CR7).addReg(Val).addReg(Val);
