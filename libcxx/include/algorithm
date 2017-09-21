@@ -2962,8 +2962,8 @@ public:
     result_type operator()() {return __eval(integral_constant<bool, _Rp != 0>());}
 
 private:
-    result_type __eval(false_type) const;
-    result_type __eval(true_type)  const;
+    result_type __eval(false_type);
+    result_type __eval(true_type);
 };
 
 template<class _Engine, class _UIntType>
@@ -3004,14 +3004,14 @@ __independent_bits_engine<_Engine, _UIntType>
 template<class _Engine, class _UIntType>
 inline
 _UIntType
-__independent_bits_engine<_Engine, _UIntType>::__eval(false_type) const
+__independent_bits_engine<_Engine, _UIntType>::__eval(false_type)
 {
     return static_cast<result_type>(__e_() & __mask0_);
 }
 
 template<class _Engine, class _UIntType>
 _UIntType
-__independent_bits_engine<_Engine, _UIntType>::__eval(true_type) const
+__independent_bits_engine<_Engine, _UIntType>::__eval(true_type)
 {
     const size_t _WRt = numeric_limits<result_type>::digits;
     result_type _Sp = 0;

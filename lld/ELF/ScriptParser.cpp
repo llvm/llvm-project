@@ -139,7 +139,7 @@ static bool isUnderSysroot(StringRef Path) {
 // Some operations only support one non absolute value. Move the
 // absolute one to the right hand side for convenience.
 static void moveAbsRight(ExprValue &A, ExprValue &B) {
-  if (A.Sec == nullptr)
+  if (A.Sec == nullptr || (A.ForceAbsolute && !B.isAbsolute()))
     std::swap(A, B);
   if (!B.isAbsolute())
     error(A.Loc + ": at least one side of the expression must be absolute");

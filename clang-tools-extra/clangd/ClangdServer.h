@@ -279,18 +279,17 @@ private:
   CppFileCollection Units;
   std::string ResourceDir;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  // WorkScheduler has to be the last member, because its destructor has to be
-  // called before all other members to stop the worker thread that references
-  // ClangdServer
-  ClangdScheduler WorkScheduler;
   bool SnippetCompletions;
-
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters
   /// into CppFile.
   std::mutex DiagnosticsMutex;
   /// Maps from a filename to the latest version of reported diagnostics.
   llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
+  // WorkScheduler has to be the last member, because its destructor has to be
+  // called before all other members to stop the worker thread that references
+  // ClangdServer
+  ClangdScheduler WorkScheduler;
 };
 
 } // namespace clangd
