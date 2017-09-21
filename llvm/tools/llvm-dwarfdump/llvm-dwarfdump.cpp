@@ -126,6 +126,13 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
 static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
                                  NotHidden, cat(DwarfDumpCategory),
                                  aliasopt(DumpDebugFrame));
+static list<std::string>
+    ArchFilters("arch",
+                desc("Dump debug information for the specified CPU "
+                     "architecture only. Architectures may be specified by "
+                     "name or by number. This option can be specified "
+                     "multiple times, once for each desired architecture."),
+                cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
@@ -190,28 +197,55 @@ static DIDumpOptions getDumpOpts() {
   return DumpOpts;
 }
 
-static bool dumpObjectFile(ObjectFile &Obj, Twine Filename) {
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
-  logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
+static uint32_t getCPUType(MachOObjectFile &MachO) {
+  if (MachO.is64Bit())
+    return MachO.getHeader64().cputype;
+  else
+    return MachO.getHeader().cputype;
+}
+
+/// Return true if the object file has not been filtered by an --arch option.
+static bool filterArch(ObjectFile &Obj) {
+  if (ArchFilters.empty())
+    return true;
+  if (auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
+    std::string ObjArch =
+        Triple::getArchTypeName(MachO->getArchTriple().getArch());
+    for (auto Arch : ArchFilters) {
+      if (Arch == ObjArch)
+        return true;
+      unsigned Value;
+      if (!StringRef(Arch).getAsInteger(0, Value))
+        if (Value == getCPUType(*MachO))
+          return true;
+    }
+  }
+  return false;
+}
+
+using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx, Twine)>;
+
+static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                           Twine Filename) {
+  logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
     outs() << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
 
   // Dump the complete DWARF structure.
-  DICtx->dump(outs(), getDumpOpts(), DumpOffsets);
+  DICtx.dump(outs(), getDumpOpts(), DumpOffsets);
   return true;
 }
 
-static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
-  std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
-
+static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                             Twine Filename) {
   // Verify the DWARF and exit with non-zero exit status if verification
   // fails.
   raw_ostream &stream = Quiet ? nulls() : outs();
   stream << "Verifying " << Filename.str() << ":\tfile format "
   << Obj.getFileFormatName() << "\n";
-  bool Result = DICtx->verify(stream, getDumpOpts());
+  bool Result = DICtx.verify(stream, getDumpOpts());
   if (Result)
     stream << "No errors.\n";
   else
@@ -220,10 +254,10 @@ static bool verifyObjectFile(ObjectFile &Obj, Twine Filename) {
 }
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
-                         std::function<bool(ObjectFile &, Twine)> HandleObj);
+                         HandlerFn HandleObj);
 
 static bool handleArchive(StringRef Filename, Archive &Arch,
-                          std::function<bool(ObjectFile &, Twine)> HandleObj) {
+                          HandlerFn HandleObj) {
   bool Result = true;
   Error Err = Error::success();
   for (auto Child : Arch.children(Err)) {
@@ -240,19 +274,27 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
 }
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
-                         std::function<bool(ObjectFile &, Twine)> HandleObj) {
+                         HandlerFn HandleObj) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
   error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   bool Result = true;
-  if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
-    Result = HandleObj(*Obj, Filename);
+  if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
+    if (filterArch(*Obj)) {
+      std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
+      Result = HandleObj(*Obj, *DICtx, Filename);
+    }
+  }
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
       std::string ObjName =
           (Filename + "(" + ObjForArch.getArchFlagName() + ")").str();
       if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
-        Result &= HandleObj(**MachOOrErr, ObjName);
+        auto &Obj = **MachOOrErr;
+        if (filterArch(Obj)) {
+          std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+          Result &= HandleObj(Obj, *DICtx, ObjName);
+        }
         continue;
       } else
         consumeError(MachOOrErr.takeError());
@@ -268,8 +310,7 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   return Result;
 }
 
-static bool handleFile(StringRef Filename,
-                       std::function<bool(ObjectFile &, Twine)> HandleObj) {
+static bool handleFile(StringRef Filename, HandlerFn HandleObj) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
   MemoryBuffer::getFileOrSTDIN(Filename);
   error(Filename, BuffOrErr.getError());
