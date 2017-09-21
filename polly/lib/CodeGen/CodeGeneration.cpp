@@ -182,8 +182,27 @@ static void removeLifetimeMarkers(Region *R) {
 
 static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
                     ScalarEvolution &SE, RegionInfo &RI) {
+  // Check whether IslAstInfo uses the same isl_ctx. Since -polly-codegen
+  // reports itself to preserve DependenceInfo and IslAstInfo, we might get
+  // those analysis that were computed by a different ScopInfo for a different
+  // Scop structure. When the ScopInfo/Scop object is freed, there is a high
+  // probability that the new ScopInfo/Scop object will be created at the same
+  // heap position with the same address. Comparing whether the Scop or ScopInfo
+  // address is the expected therefore is unreliable.
+  // Instead, we compare the address of the isl_ctx object. Both, DependenceInfo
+  // and IslAstInfo must hold a reference to the isl_ctx object to ensure it is
+  // not freed before the destruction of those analyses which might happen after
+  // the destruction of the Scop/ScopInfo they refer to.  Hence, the isl_ctx
+  // will not be freed and its space not reused as long there is a
+  // DependenceInfo or IslAstInfo around.
+  IslAst &Ast = AI.getIslAst();
+  if (Ast.getSharedIslCtx() != S.getSharedIslCtx()) {
+    DEBUG(dbgs() << "Got an IstAst for a different Scop/isl_ctx\n");
+    return false;
+  }
+
   // Check if we created an isl_ast root node, otherwise exit.
-  isl_ast_node *AstRoot = AI.getAst();
+  isl_ast_node *AstRoot = Ast.getAst();
   if (!AstRoot)
     return false;
 

@@ -151,7 +151,7 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(AsyncThreadsCount), SnippetCompletions(SnippetCompletions) {
+      SnippetCompletions(SnippetCompletions), WorkScheduler(AsyncThreadsCount) {
 }
 
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {

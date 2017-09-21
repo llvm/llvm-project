@@ -1485,6 +1485,11 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   const Dependences &D =
       getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
+  if (D.getSharedIslCtx() != S.getSharedIslCtx()) {
+    DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
+    return false;
+  }
+
   if (!D.hasValidDependences())
     return false;
 
