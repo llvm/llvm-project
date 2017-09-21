@@ -299,14 +299,12 @@ void DWARFContext::dump(
   }
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
-                 DObj->getDebugFrameSection())) {
-    getDebugFrame()->dump(OS);
-  }
+                 DObj->getDebugFrameSection()))
+    getDebugFrame()->dump(OS, DumpOffset);
 
   if (shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
-                 DObj->getEHFrameSection())) {
-    getEHFrame()->dump(OS);
-  }
+                 DObj->getEHFrameSection()))
+    getEHFrame()->dump(OS, DumpOffset);
 
   if (DumpType & DIDT_DebugMacro) {
     if (Explicit || !getDebugMacro()->empty()) {

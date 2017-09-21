@@ -8776,11 +8776,19 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     SDB->setValue(&Arg, Res);
     if (!TM.Options.EnableFastISel && Res.getOpcode() == ISD::BUILD_PAIR) {
+      // We want to associate the argument with the frame index, among
+      // involved operands, that correspond to the lowest address. The
+      // getCopyFromParts function, called earlier, is swapping the order of
+      // the operands to BUILD_PAIR depending on endianness. The result of
+      // that swapping is that the least significant bits of the argument will
+      // be in the first operand of the BUILD_PAIR node, and the most
+      // significant bits will be in the second operand.
+      unsigned LowAddressOp = DAG.getDataLayout().isBigEndian() ? 1 : 0;
       if (LoadSDNode *LNode =
-          dyn_cast<LoadSDNode>(Res.getOperand(0).getNode()))
+          dyn_cast<LoadSDNode>(Res.getOperand(LowAddressOp).getNode()))
         if (FrameIndexSDNode *FI =
             dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
-        FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
+          FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
     }
 
     // Update the SwiftErrorVRegDefMap.
