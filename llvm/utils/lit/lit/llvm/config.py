@@ -27,7 +27,8 @@ class LLVMConfig(object):
             path = self.lit_config.getToolsPath(config.lit_tools_dir,
                                            config.environment['PATH'],
                                            ['cmp.exe', 'grep.exe', 'sed.exe'])
-            self.with_environment('PATH', path, append_path=True)
+            if path is not None:
+                self.with_environment('PATH', path, append_path=True)
             self.use_lit_shell = True
 
         # Choose between lit's internal shell pipeline runner and a real shell.  If

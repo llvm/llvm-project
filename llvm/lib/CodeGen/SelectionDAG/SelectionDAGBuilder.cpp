@@ -5109,37 +5109,48 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     DAG.setRoot(CallResult.second);
     return nullptr;
   }
+  case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
-    const DbgDeclareInst &DI = cast<DbgDeclareInst>(I);
+    const DbgInfoIntrinsic &DI = cast<DbgInfoIntrinsic>(I);
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
-    const Value *Address = DI.getAddress();
     assert(Variable && "Missing variable");
-    if (!Address) {
-      DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
-      return nullptr;
-    }
 
     // Check if address has undef value.
-    if (isa<UndefValue>(Address) ||
+    const Value *Address = DI.getVariableLocation();
+    if (!Address || isa<UndefValue>(Address) ||
         (Address->use_empty() && !isa<Argument>(Address))) {
       DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       return nullptr;
     }
 
-    // Static allocas are handled more efficiently in the variable frame index
-    // side table.
-    if (const auto *AI =
-            dyn_cast<AllocaInst>(Address->stripInBoundsConstantOffsets()))
-      if (AI->isStaticAlloca() && FuncInfo.StaticAllocaMap.count(AI))
-        return nullptr;
+    bool isParameter = Variable->isParameter() || isa<Argument>(Address);
 
-    // Byval arguments with frame indices were already handled after argument
-    // lowering and before isel.
-    if (const auto *Arg =
-            dyn_cast<Argument>(Address->stripInBoundsConstantOffsets()))
-      if (FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
-        return nullptr;
+    // Check if this variable can be described by a frame index, typically
+    // either as a static alloca or a byval parameter.
+    int FI = INT_MAX;
+    if (const auto *AI =
+            dyn_cast<AllocaInst>(Address->stripInBoundsConstantOffsets())) {
+      if (AI->isStaticAlloca()) {
+        auto I = FuncInfo.StaticAllocaMap.find(AI);
+        if (I != FuncInfo.StaticAllocaMap.end())
+          FI = I->second;
+      }
+    } else if (const auto *Arg = dyn_cast<Argument>(
+                   Address->stripInBoundsConstantOffsets())) {
+      FI = FuncInfo.getArgumentFrameIndex(Arg);
+    }
+
+    // llvm.dbg.addr is control dependent and always generates indirect
+    // DBG_VALUE instructions. llvm.dbg.declare is handled as a frame index in
+    // the MachineFunction variable table.
+    if (FI != INT_MAX) {
+      if (Intrinsic == Intrinsic::dbg_addr)
+        DAG.AddDbgValue(DAG.getFrameIndexDbgValue(Variable, Expression, FI, dl,
+                                                  SDNodeOrder),
+                        getRoot().getNode(), isParameter);
+      return nullptr;
+    }
 
     SDValue &N = NodeMap[Address];
     if (!N.getNode() && isa<Argument>(Address))
@@ -5150,7 +5161,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
         Address = BCI->getOperand(0);
       // Parameters are handled specially.
-      bool isParameter = Variable->isParameter() || isa<Argument>(Address);
       auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
       if (isParameter && FINode) {
         // Byval parameter. We have a frame index at this point.

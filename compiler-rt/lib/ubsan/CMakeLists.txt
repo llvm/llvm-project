@@ -130,15 +130,16 @@ else()
   endif()
 
   if(COMPILER_RT_HAS_UBSAN)
-    # Initializer of standalone UBSan runtime.
     add_compiler_rt_object_libraries(RTUbsan_standalone
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ${UBSAN_STANDALONE_SOURCES} CFLAGS ${UBSAN_STANDALONE_CFLAGS})
+      SOURCES ${UBSAN_STANDALONE_SOURCES}
+      CFLAGS ${UBSAN_STANDALONE_CFLAGS})
 
     # Standalone UBSan runtimes.
     add_compiler_rt_runtime(clang_rt.ubsan_standalone
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
+      SOURCES ubsan_init_standalone_preinit.cc
       OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
               RTUbsan
@@ -158,8 +159,9 @@ else()
         SHARED
         ARCHS ${UBSAN_SUPPORTED_ARCH}
         OBJECT_LIBS RTSanitizerCommon
-                RTSanitizerCommonLibc
-                RTUbsan
+              RTSanitizerCommonLibc
+              RTUbsan
+              RTUbsan_standalone
         CFLAGS ${UBSAN_CFLAGS}
         LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
         LINK_LIBS ${UBSAN_DYNAMIC_LIBS}

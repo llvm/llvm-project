@@ -27,11 +27,7 @@ const char *__ubsan::GetSanititizerToolName() {
   return "UndefinedBehaviorSanitizer";
 }
 
-static enum {
-  UBSAN_MODE_UNKNOWN = 0,
-  UBSAN_MODE_STANDALONE,
-  UBSAN_MODE_PLUGIN
-} ubsan_mode;
+static bool ubsan_initialized;
 static StaticSpinMutex ubsan_init_mu;
 
 static void CommonInit() {
@@ -46,38 +42,24 @@ static void CommonStandaloneInit() {
   AndroidLogInit();
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
   CommonInit();
-  ubsan_mode = UBSAN_MODE_STANDALONE;
 }
 
 void __ubsan::InitAsStandalone() {
-  if (SANITIZER_CAN_USE_PREINIT_ARRAY) {
-    CHECK_EQ(UBSAN_MODE_UNKNOWN, ubsan_mode);
-    CommonStandaloneInit();
-    return;
-  }
   SpinMutexLock l(&ubsan_init_mu);
-  CHECK_NE(UBSAN_MODE_PLUGIN, ubsan_mode);
-  if (ubsan_mode == UBSAN_MODE_UNKNOWN)
+  if (!ubsan_initialized) {
     CommonStandaloneInit();
+    ubsan_initialized = true;
+  }
 }
 
-void __ubsan::InitAsStandaloneIfNecessary() {
-  if (SANITIZER_CAN_USE_PREINIT_ARRAY) {
-    CHECK_NE(UBSAN_MODE_UNKNOWN, ubsan_mode);
-    return;
-  }
-  SpinMutexLock l(&ubsan_init_mu);
-  if (ubsan_mode == UBSAN_MODE_UNKNOWN)
-    CommonStandaloneInit();
-}
+void __ubsan::InitAsStandaloneIfNecessary() { return InitAsStandalone(); }
 
 void __ubsan::InitAsPlugin() {
-#if !SANITIZER_CAN_USE_PREINIT_ARRAY
   SpinMutexLock l(&ubsan_init_mu);
-#endif
-  CHECK_EQ(UBSAN_MODE_UNKNOWN, ubsan_mode);
-  CommonInit();
-  ubsan_mode = UBSAN_MODE_PLUGIN;
+  if (!ubsan_initialized) {
+    CommonInit();
+    ubsan_initialized = true;
+  }
 }
 
 #endif  // CAN_SANITIZE_UB

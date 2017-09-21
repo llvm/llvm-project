@@ -17673,8 +17673,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (Subtarget.hasAVX512()) {
         SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CondOp0,
                                   CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
-        return DAG.getNode(VT.isVector() ? X86ISD::SELECT : X86ISD::SELECTS,
-                           DL, VT, Cmp, Op1, Op2);
+        assert(!VT.isVector() && "Not a scalar type?");
+        return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
       }
 
       SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, VT, CondOp0, CondOp1,

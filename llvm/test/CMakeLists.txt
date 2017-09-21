@@ -11,12 +11,16 @@ llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS)
 
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
   )
 
 # Don't include check-llvm into check-all without LLVM_BUILD_TOOLS.
@@ -148,15 +152,11 @@ set_target_properties(llvm-test-depends PROPERTIES FOLDER "Tests")
 
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  PARAMS llvm_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         llvm_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
-  PARAMS llvm_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         llvm_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLVM_TEST_DEPENDS}
   )
 
