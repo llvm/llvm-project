@@ -52,7 +52,7 @@ struct MachineValueTypeSet {
                 "Change uint8_t here to the SimpleValueType's type");
   static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
   using WordType = uint64_t;
-  static unsigned constexpr WordWidth = 8*sizeof(WordType);
+  static unsigned constexpr WordWidth = CHAR_BIT*sizeof(WordType);
   static unsigned constexpr NumWords = Capacity/WordWidth;
   static_assert(NumWords*WordWidth == Capacity,
                 "Capacity should be a multiple of WordWidth");
