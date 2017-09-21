@@ -77,3 +77,32 @@ class C1 : I6<C> {
 
 class C2 : I6<I> {
 };
+
+
+// MSVC makes a special case in that an interface is allowed to have a data
+// member if it is a property.
+__interface HasProp {
+  __declspec(property(get = Get, put = Put)) int data;
+  int Get(void);
+  void Put(int);
+};
+
+struct __declspec(uuid("00000000-0000-0000-C000-000000000046"))
+    IUnknown {
+  void foo();
+  __declspec(property(get = Get, put = Put), deprecated) int data;
+  int Get(void);
+  void Put(int);
+};
+
+struct IFaceStruct : IUnknown {
+  __declspec(property(get = Get2, put = Put2), deprecated) int data2;
+  int Get2(void);
+  void Put2(int);
+};
+
+__interface IFaceInheritsStruct : IFaceStruct {};
+static_assert(!__is_interface_class(HasProp), "oops");
+static_assert(!__is_interface_class(IUnknown), "oops");
+static_assert(!__is_interface_class(IFaceStruct), "oops");
+static_assert(!__is_interface_class(IFaceInheritsStruct), "oops");
