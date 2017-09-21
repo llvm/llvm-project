@@ -17,30 +17,30 @@
 #include "xray/xray_interface.h"
 #include "xray_defs.h"
 
-#include <memory>
-
 __sanitizer::SpinMutex XRayImplMutex;
-std::unique_ptr<XRayLogImpl> GlobalXRayImpl;
+XRayLogImpl *GlobalXRayImpl = nullptr;
 
 void __xray_set_log_impl(XRayLogImpl Impl) XRAY_NEVER_INSTRUMENT {
   if (Impl.log_init == nullptr || Impl.log_finalize == nullptr ||
       Impl.handle_arg0 == nullptr || Impl.flush_log == nullptr) {
     __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
-    GlobalXRayImpl.reset();
+    delete GlobalXRayImpl;
+    GlobalXRayImpl = nullptr;
     __xray_remove_handler();
     __xray_remove_handler_arg1();
     return;
   }
 
   __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
-  GlobalXRayImpl.reset(new XRayLogImpl);
+  GlobalXRayImpl = new XRayLogImpl();
   *GlobalXRayImpl = Impl;
   __xray_set_handler(Impl.handle_arg0);
 }
 
 void __xray_remove_log_impl() XRAY_NEVER_INSTRUMENT {
   __sanitizer::SpinMutexLock Guard(&XRayImplMutex);
-  GlobalXRayImpl.reset();
+  delete GlobalXRayImpl;
+  GlobalXRayImpl = nullptr;
   __xray_remove_handler();
   __xray_remove_handler_arg1();
 }

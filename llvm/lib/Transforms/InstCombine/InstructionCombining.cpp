@@ -2106,10 +2106,10 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  TinyPtrVector<DbgInfoIntrinsic *> DIIs;
+  DbgDeclareInst *DDI = nullptr;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    DIIs = FindDbgAddrUses(&MI);
+    DDI = FindAllocaDbgDeclare(&MI);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -2145,9 +2145,8 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
       } else if (isa<BitCastInst>(I) || isa<GetElementPtrInst>(I) ||
                  isa<AddrSpaceCastInst>(I)) {
         replaceInstUsesWith(*I, UndefValue::get(I->getType()));
-      } else if (auto *SI = dyn_cast<StoreInst>(I)) {
-        for (auto *DII : DIIs)
-          ConvertDebugDeclareToDebugValue(DII, SI, *DIB);
+      } else if (DDI && isa<StoreInst>(I)) {
+        ConvertDebugDeclareToDebugValue(DDI, cast<StoreInst>(I), *DIB);
       }
       eraseInstFromFunction(*I);
     }
@@ -2160,8 +2159,8 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
                          None, "", II->getParent());
     }
 
-    for (auto *DII : DIIs)
-      eraseInstFromFunction(*DII);
+    if (DDI)
+      eraseInstFromFunction(*DDI);
 
     return eraseInstFromFunction(MI);
   }

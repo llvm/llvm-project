@@ -24,6 +24,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -211,7 +212,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
 MCObjectWriter *
 MipsAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createMipsELFObjectWriter(OS, TheTriple);
+  return createMipsELFObjectWriter(OS, TheTriple, IsN32);
 }
 
 // Little-endian fixup data byte ordering:
@@ -472,4 +473,11 @@ bool MipsAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   // bigger problems), so just write zeros instead.
   OW->WriteZeros(Count);
   return true;
+}
+
+MCAsmBackend *llvm::createMipsAsmBackend(const Target &T,
+                                         const MCRegisterInfo &MRI,
+                                         const Triple &TT, StringRef CPU,
+                                         const MCTargetOptions &Options) {
+  return new MipsAsmBackend(T, MRI, TT, CPU, Options.ABIName == "n32");
 }

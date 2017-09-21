@@ -657,12 +657,10 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 }
 
 MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                                const Triple &TT) {
+                                                const Triple &TT, bool IsN32) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  // FIXME: We need to check an actual ABI. mips64/mips64el do not
-  // always imply the N64 ABI and RELA relocation's format.
-  bool IsN64 = TT.isArch64Bit();
-  bool HasRelocationAddend = IsN64;
+  bool IsN64 = TT.isArch64Bit() && !IsN32;
+  bool HasRelocationAddend = TT.isArch64Bit();
   auto *MOTW = new MipsELFObjectWriter(OSABI, HasRelocationAddend, IsN64,
                                        TT.isLittleEndian());
   return createELFObjectWriter(MOTW, OS, TT.isLittleEndian());

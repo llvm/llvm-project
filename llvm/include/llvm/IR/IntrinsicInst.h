@@ -71,12 +71,6 @@ namespace llvm {
     /// variable's value or its address.
     Value *getVariableLocation(bool AllowNullOp = true) const;
 
-    /// Does this describe the address of a local variable. True for dbg.addr
-    /// and dbg.declare, but not dbg.value, which describes its value.
-    bool isAddressOfVariable() const {
-      return getIntrinsicID() != Intrinsic::dbg_value;
-    }
-
     DILocalVariable *getVariable() const {
       return cast<DILocalVariable>(getRawVariable());
     }
@@ -93,13 +87,11 @@ namespace llvm {
       return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
     }
 
-    /// \name Casting methods
-    /// @{
+    // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
       switch (I->getIntrinsicID()) {
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
-      case Intrinsic::dbg_addr:
         return true;
       default: return false;
       }
@@ -107,7 +99,6 @@ namespace llvm {
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
-    /// @}
   };
 
   /// This represents the llvm.dbg.declare instruction.
@@ -115,26 +106,9 @@ namespace llvm {
   public:
     Value *getAddress() const { return getVariableLocation(); }
 
-    /// \name Casting methods
-    /// @{
+    // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
       return I->getIntrinsicID() == Intrinsic::dbg_declare;
-    }
-    static bool classof(const Value *V) {
-      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-    }
-    /// @}
-  };
-
-  /// This represents the llvm.dbg.addr instruction.
-  class DbgAddrIntrinsic : public DbgInfoIntrinsic {
-  public:
-    Value *getAddress() const { return getVariableLocation(); }
-
-    /// \name Casting methods
-    /// @{
-    static bool classof(const IntrinsicInst *I) {
-      return I->getIntrinsicID() == Intrinsic::dbg_addr;
     }
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -148,15 +122,13 @@ namespace llvm {
       return getVariableLocation(/* AllowNullOp = */ false);
     }
 
-    /// \name Casting methods
-    /// @{
+    // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
       return I->getIntrinsicID() == Intrinsic::dbg_value;
     }
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
-    /// @}
   };
 
   /// This is the common base class for constrained floating point intrinsics.
