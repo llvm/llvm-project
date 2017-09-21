@@ -97,8 +97,8 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
       PrintFatalError(TheDef->getLoc(),
                       "CoveredBySubRegs must have two or more entries");
     SmallVector<CodeGenSubRegIndex*, 8> IdxParts;
-    for (unsigned i = 0, e = Parts.size(); i != e; ++i)
-      IdxParts.push_back(RegBank.getSubRegIdx(Parts[i]));
+    for (Record *Part : Parts)
+      IdxParts.push_back(RegBank.getSubRegIdx(Part));
     setConcatenationOf(IdxParts);
   }
 }
@@ -189,8 +189,8 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   // Add ad hoc alias links. This is a symmetric relationship between two
   // registers, so build a symmetric graph by adding links in both ends.
   std::vector<Record*> Aliases = TheDef->getValueAsListOfDefs("Aliases");
-  for (unsigned i = 0, e = Aliases.size(); i != e; ++i) {
-    CodeGenRegister *Reg = RegBank.getReg(Aliases[i]);
+  for (Record *Alias : Aliases) {
+    CodeGenRegister *Reg = RegBank.getReg(Alias);
     ExplicitAliases.push_back(Reg);
     Reg->ExplicitAliases.push_back(this);
   }
@@ -254,9 +254,8 @@ static bool hasRegUnit(CodeGenRegister::RegUnitList &RegUnits, unsigned Unit) {
 // Return true if the RegUnits changed.
 bool CodeGenRegister::inheritRegUnits(CodeGenRegBank &RegBank) {
   bool changed = false;
-  for (SubRegMap::const_iterator I = SubRegs.begin(), E = SubRegs.end();
-       I != E; ++I) {
-    CodeGenRegister *SR = I->second;
+  for (const auto &SubReg : SubRegs) {
+    CodeGenRegister *SR = SubReg.second;
     // Merge the subregister's units into this register's RegUnits.
     changed |= (RegUnits |= SR->RegUnits);
   }
@@ -290,15 +289,13 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 
   // Clone inherited subregs and place duplicate entries in Orphans.
   // Here the order is important - earlier subregs take precedence.
-  for (unsigned i = 0, e = ExplicitSubRegs.size(); i != e; ++i) {
-    CodeGenRegister *SR = ExplicitSubRegs[i];
-    const SubRegMap &Map = SR->computeSubRegs(RegBank);
-    HasDisjunctSubRegs |= SR->HasDisjunctSubRegs;
+  for (CodeGenRegister *ESR : ExplicitSubRegs) {
+    const SubRegMap &Map = ESR->computeSubRegs(RegBank);
+    HasDisjunctSubRegs |= ESR->HasDisjunctSubRegs;
 
-    for (SubRegMap::const_iterator SI = Map.begin(), SE = Map.end(); SI != SE;
-         ++SI) {
-      if (!SubRegs.insert(*SI).second)
-        Orphans.insert(SI->second);
+    for (const auto &SR : Map) {
+      if (!SubRegs.insert(SR).second)
+        Orphans.insert(SR.second);
     }
   }
 
@@ -350,16 +347,14 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
     CodeGenSubRegIndex *Idx = Indices.pop_back_val();
     CodeGenRegister *SR = SubRegs[Idx];
     const SubRegMap &Map = SR->computeSubRegs(RegBank);
-    for (SubRegMap::const_iterator SI = Map.begin(), SE = Map.end(); SI != SE;
-         ++SI)
-      if (Orphans.erase(SI->second))
-        SubRegs[RegBank.getCompositeSubRegIndex(Idx, SI->first)] = SI->second;
+    for (const auto &SubReg : Map)
+      if (Orphans.erase(SubReg.second))
+        SubRegs[RegBank.getCompositeSubRegIndex(Idx, SubReg.first)] = SubReg.second;
   }
 
   // Compute the inverse SubReg -> Idx map.
-  for (SubRegMap::const_iterator SI = SubRegs.begin(), SE = SubRegs.end();
-       SI != SE; ++SI) {
-    if (SI->second == this) {
+  for (const auto &SubReg : SubRegs) {
+    if (SubReg.second == this) {
       ArrayRef<SMLoc> Loc;
       if (TheDef)
         Loc = TheDef->getLoc();
@@ -369,20 +364,20 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 
     // Compute AllSuperRegsCovered.
     if (!CoveredBySubRegs)
-      SI->first->AllSuperRegsCovered = false;
+      SubReg.first->AllSuperRegsCovered = false;
 
     // Ensure that every sub-register has a unique name.
     DenseMap<const CodeGenRegister*, CodeGenSubRegIndex*>::iterator Ins =
-      SubReg2Idx.insert(std::make_pair(SI->second, SI->first)).first;
-    if (Ins->second == SI->first)
+      SubReg2Idx.insert(std::make_pair(SubReg.second, SubReg.first)).first;
+    if (Ins->second == SubReg.first)
       continue;
-    // Trouble: Two different names for SI->second.
+    // Trouble: Two different names for SubReg.second.
     ArrayRef<SMLoc> Loc;
     if (TheDef)
       Loc = TheDef->getLoc();
     PrintFatalError(Loc, "Sub-register can't have two names: " +
-                  SI->second->getName() + " available as " +
-                  SI->first->getName() + " and " + Ins->second->getName());
+                  SubReg.second->getName() + " available as " +
+                  SubReg.first->getName() + " and " + Ins->second->getName());
   }
 
   // Derive possible names for sub-register concatenations from any explicit
