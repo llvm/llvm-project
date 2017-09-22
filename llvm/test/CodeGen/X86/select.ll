@@ -39,44 +39,58 @@ define i32 @test1(%0* %p, %0* %q, i1 %r) nounwind {
 
 ; PR2139
 define i32 @test2() nounwind {
-; CHECK-LABEL: test2:
-; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq _return_false
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    movw $-480, %ax ## imm = 0xFE20
-; CHECK-NEXT:    cmovnew %cx, %ax
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shll $3, %eax
-; CHECK-NEXT:    cmpl $32768, %eax ## imm = 0x8000
-; CHECK-NEXT:    jge LBB1_1
-; CHECK-NEXT:  ## BB#2: ## %bb91
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB1_1: ## %bb90
-; CHECK-NEXT:    ## -- End function
+; GENERIC-LABEL: test2:
+; GENERIC:       ## BB#0: ## %entry
+; GENERIC-NEXT:    pushq %rax
+; GENERIC-NEXT:    callq _return_false
+; GENERIC-NEXT:    xorl %ecx, %ecx
+; GENERIC-NEXT:    testb $1, %al
+; GENERIC-NEXT:    movl $-480, %eax
+; GENERIC-NEXT:    cmovnel %ecx, %eax
+; GENERIC-NEXT:    shll $3, %eax
+; GENERIC-NEXT:    cmpl $32768, %eax ## imm = 0x8000
+; GENERIC-NEXT:    jge LBB1_1
+; GENERIC-NEXT:  ## BB#2: ## %bb91
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    popq %rcx
+; GENERIC-NEXT:    retq
+; GENERIC-NEXT:  LBB1_1: ## %bb90
+; GENERIC-NEXT:    ## -- End function
+;
+; ATOM-LABEL: test2:
+; ATOM:       ## BB#0: ## %entry
+; ATOM-NEXT:    pushq %rax
+; ATOM-NEXT:    callq _return_false
+; ATOM-NEXT:    xorl %ecx, %ecx
+; ATOM-NEXT:    movl $-480, %edx
+; ATOM-NEXT:    testb $1, %al
+; ATOM-NEXT:    cmovnel %ecx, %edx
+; ATOM-NEXT:    shll $3, %edx
+; ATOM-NEXT:    cmpl $32768, %edx ## imm = 0x8000
+; ATOM-NEXT:    jge LBB1_1
+; ATOM-NEXT:  ## BB#2: ## %bb91
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    popq %rcx
+; ATOM-NEXT:    retq
+; ATOM-NEXT:  LBB1_1: ## %bb90
+; ATOM-NEXT:    ## -- End function
 ;
 ; MCU-LABEL: test2:
 ; MCU:       # BB#0: # %entry
 ; MCU-NEXT:    calll return_false
+; MCU-NEXT:    xorl    %ecx, %ecx
 ; MCU-NEXT:    testb $1, %al
-; MCU-NEXT:    jne .LBB1_1
-; MCU-NEXT:  # BB#2: # %entry
-; MCU-NEXT:    movw $-480, %ax # imm = 0xFE20
-; MCU-NEXT:    jmp .LBB1_3
-; MCU-NEXT:  .LBB1_1:
-; MCU-NEXT:    xorl %eax, %eax
-; MCU-NEXT:  .LBB1_3: # %entry
-; MCU-NEXT:    cwtl
-; MCU-NEXT:    shll $3, %eax
-; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
-; MCU-NEXT:    jge .LBB1_4
-; MCU-NEXT:  # BB#5: # %bb91
+; MCU-NEXT:    jne .LBB1_2
+; MCU-NEXT:  # BB#1: # %entry
+; MCU-NEXT:    movl $-480, %ecx # imm = 0xFE20
+; MCU-NEXT:  .LBB1_2:
+; MCU-NEXT:    shll $3, %ecx
+; MCU-NEXT:    cmpl $32768, %ecx # imm = 0x8000
+; MCU-NEXT:    jge .LBB1_3
+; MCU-NEXT:  # BB#4: # %bb91
 ; MCU-NEXT:    xorl %eax, %eax
 ; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB1_4: # %bb90
+; MCU-NEXT:  .LBB1_3: # %bb90
 entry:
   %tmp73 = tail call i1 @return_false()
   %g.0 = select i1 %tmp73, i16 0, i16 -480

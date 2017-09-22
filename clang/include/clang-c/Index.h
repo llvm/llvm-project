@@ -4293,6 +4293,12 @@ CINDEX_LINKAGE CXString clang_Cursor_getMangling(CXCursor);
 CINDEX_LINKAGE CXStringSet *clang_Cursor_getCXXManglings(CXCursor);
 
 /**
+ * \brief Retrieve the CXStrings representing the mangled symbols of the ObjC
+ * class interface or implementation at the cursor.
+ */
+CINDEX_LINKAGE CXStringSet *clang_Cursor_getObjCManglings(CXCursor);
+
+/**
  * @}
  */
 

@@ -205,7 +205,15 @@ void SetPrintfAndReportCallback(void (*callback)(const char *));
   } while (0)
 
 // Can be used to prevent mixing error reports from different sanitizers.
+// FIXME: Replace with ScopedErrorReportLock and hide.
 extern StaticSpinMutex CommonSanitizerReportMutex;
+
+// Lock sanitizer error reporting and protects against nested errors.
+class ScopedErrorReportLock {
+ public:
+  explicit ScopedErrorReportLock(u32 current_tid);
+  ~ScopedErrorReportLock();
+};
 
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;

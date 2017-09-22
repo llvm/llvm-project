@@ -19,6 +19,7 @@
 #include "InstPrinter/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
@@ -1089,7 +1090,61 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     recordSled(BeginOfSled, *MI, SledKind::FUNCTION_ENTER);
     break;
   }
-  case TargetOpcode::PATCHABLE_FUNCTION_EXIT: {
+  case TargetOpcode::PATCHABLE_RET: {
+    unsigned RetOpcode = MI->getOperand(0).getImm();
+    MCInst RetInst;
+    RetInst.setOpcode(RetOpcode);
+    for (const auto &MO :
+         make_range(std::next(MI->operands_begin()), MI->operands_end())) {
+      MCOperand MCOp;
+      if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this, false))
+        RetInst.addOperand(MCOp);
+    }
+
+    bool IsConditional;
+    if (RetOpcode == PPC::BCCLR) {
+      IsConditional = true;
+    } else if (RetOpcode == PPC::TCRETURNdi8 || RetOpcode == PPC::TCRETURNri8 ||
+               RetOpcode == PPC::TCRETURNai8) {
+      break;
+    } else if (RetOpcode == PPC::BLR8 || RetOpcode == PPC::TAILB8) {
+      IsConditional = false;
+    } else {
+      EmitToStreamer(*OutStreamer, RetInst);
+      break;
+    }
+
+    MCSymbol *FallthroughLabel;
+    if (IsConditional) {
+      // Before:
+      //   bgtlr cr0
+      //
+      // After:
+      //   ble cr0, .end
+      // .p2align 3
+      // .begin:
+      //   blr    # lis 0, FuncId[16..32]
+      //   nop    # li  0, FuncId[0..15]
+      //   std 0, -8(1)
+      //   mflr 0
+      //   bl __xray_FunctionExit
+      //   mtlr 0
+      //   blr
+      // .end:
+      //
+      // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
+      // of instructions change.
+      FallthroughLabel = OutContext.createTempSymbol();
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(PPC::BCC)
+              .addImm(PPC::InvertPredicate(
+                  static_cast<PPC::Predicate>(MI->getOperand(1).getImm())))
+              .addReg(MI->getOperand(2).getReg())
+              .addExpr(MCSymbolRefExpr::create(FallthroughLabel, OutContext)));
+      RetInst = MCInst();
+      RetInst.setOpcode(PPC::BLR8);
+    }
     // .p2align 3
     // .begin:
     //   b(lr)? # lis 0, FuncId[16..32]
@@ -1098,24 +1153,14 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     //   mflr 0
     //   bl __xray_FunctionExit
     //   mtlr 0
-    // .end:
     //   b(lr)?
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    const MachineInstr *Next = [&] {
-      MachineBasicBlock::const_iterator It(MI);
-      assert(It != MI->getParent()->end());
-      ++It;
-      assert(It->isReturn());
-      return &*It;
-    }();
     OutStreamer->EmitCodeAlignment(8);
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     OutStreamer->EmitLabel(BeginOfSled);
-    MCInst TmpInst;
-    LowerPPCMachineInstrToMCInst(Next, TmpInst, *this, false);
-    EmitToStreamer(*OutStreamer, TmpInst);
+    EmitToStreamer(*OutStreamer, RetInst);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
     EmitToStreamer(
         *OutStreamer,
@@ -1127,17 +1172,18 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
                            OutContext.getOrCreateSymbol("__xray_FunctionExit"),
                            OutContext)));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR8).addReg(PPC::X0));
+    EmitToStreamer(*OutStreamer, RetInst);
+    if (IsConditional)
+      OutStreamer->EmitLabel(FallthroughLabel);
     recordSled(BeginOfSled, *MI, SledKind::FUNCTION_EXIT);
     break;
   }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    llvm_unreachable("PATCHABLE_FUNCTION_EXIT should never be emitted");
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     // TODO: Define a trampoline `__xray_FunctionTailExit` and differentiate a
     // normal function exit from a tail exit.
-  case TargetOpcode::PATCHABLE_RET:
-    // PPC's tail call instruction, e.g. PPC::TCRETURNdi8, doesn't really
-    // lower to a PPC::B instruction. The PPC::B instruction is generated
-    // before it, and handled by the normal case.
-    llvm_unreachable("Tail call is handled in the normal case. See comments"
+    llvm_unreachable("Tail call is handled in the normal case. See comments "
                      "around this assert.");
   }
 }

@@ -593,6 +593,8 @@ static int DoRecoverableLeakCheck() {
   return have_leaks ? 1 : 0;
 }
 
+void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
+
 static Suppression *GetSuppressionForAddr(uptr addr) {
   Suppression *s = nullptr;
 
@@ -755,6 +757,7 @@ uptr LeakReport::UnsuppressedLeakCount() {
 namespace __lsan {
 void InitCommonLsan() { }
 void DoLeakCheck() { }
+void DoRecoverableLeakCheckVoid() { }
 void DisableInThisThread() { }
 void EnableInThisThread() { }
 }
