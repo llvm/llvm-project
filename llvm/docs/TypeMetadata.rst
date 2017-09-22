@@ -223,4 +223,4 @@ efficiently to minimize the sizes of the underlying bitsets.
       ret void
     }
 
-.. _GlobalLayoutBuilder: http://llvm.org/klaus/llvm/blob/master/include/llvm/Transforms/IPO/LowerTypeTests.h
+.. _GlobalLayoutBuilder: http://git.llvm.org/klaus/llvm/blob/master/include/llvm/Transforms/IPO/LowerTypeTests.h
