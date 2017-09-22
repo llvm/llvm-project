@@ -79,6 +79,21 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
+static const unsigned GPR32DecoderTable[] = {
+    BPF::W0,  BPF::W1,  BPF::W2,  BPF::W3,  BPF::W4,  BPF::W5,
+    BPF::W6,  BPF::W7,  BPF::W8,  BPF::W9,  BPF::W10, BPF::W11};
+
+static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t /*Address*/,
+                                             const void * /*Decoder*/) {
+  if (RegNo > 11)
+    return MCDisassembler::Fail;
+
+  unsigned Reg = GPR32DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeMemoryOpValue(MCInst &Inst, unsigned Insn,
                                         uint64_t Address, const void *Decoder) {
   unsigned Register = (Insn >> 16) & 0xf;

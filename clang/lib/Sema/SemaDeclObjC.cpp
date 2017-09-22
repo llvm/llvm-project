@@ -188,6 +188,14 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
       Diag(newDecl->getLocation(), diag::warn_nsconsumed_attribute_mismatch);
       Diag(oldDecl->getLocation(), diag::note_previous_decl) << "parameter";
     }
+
+    // A parameter of the overriding method should be annotated with noescape
+    // if the corresponding parameter of the overridden method is annotated.
+    if (oldDecl->hasAttr<NoEscapeAttr>() && !newDecl->hasAttr<NoEscapeAttr>()) {
+      Diag(newDecl->getLocation(),
+           diag::warn_overriding_method_missing_noescape);
+      Diag(oldDecl->getLocation(), diag::note_overridden_marked_noescape);
+    }
   }
 }
 

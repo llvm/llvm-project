@@ -123,10 +123,12 @@ namespace llvm {
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
+  void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
+  Pass *createHexagonVectorLoopCarriedReusePass();
 
   FunctionPass *createHexagonBitSimplify();
   FunctionPass *createHexagonBranchRelaxation();
@@ -177,6 +179,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonLoopIdiomRecognizePass(PR);
+  initializeHexagonVectorLoopCarriedReusePass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -236,6 +239,11 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
     PassManagerBuilder::EP_LateLoopOptimizations,
     [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
       PM.add(createHexagonLoopIdiomPass());
+    });
+  PMB.addExtension(
+    PassManagerBuilder::EP_LoopOptimizerEnd,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createHexagonVectorLoopCarriedReusePass());
     });
 }
 
