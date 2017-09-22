@@ -30,11 +30,12 @@ class Target;
 class MipsAsmBackend : public MCAsmBackend {
   Triple TheTriple;
   bool IsLittle; // Big or little endian
+  bool IsN32;
 
 public:
   MipsAsmBackend(const Target &T, const MCRegisterInfo &MRI, const Triple &TT,
-                 StringRef CPU)
-      : TheTriple(TT), IsLittle(TT.isLittleEndian()) {}
+                 StringRef CPU, bool N32)
+      : TheTriple(TT), IsLittle(TT.isLittleEndian()), IsN32(N32) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 

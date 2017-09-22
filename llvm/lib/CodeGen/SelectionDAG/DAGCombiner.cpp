@@ -1,4 +1,4 @@
-//===-- DAGCombiner.cpp - Implement a DAG node combiner -------------------===//
+//===- DAGCombiner.cpp - Implement a DAG node combiner --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,32 +16,64 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/DAGCombine.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <iterator>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dagcombine"
@@ -53,43 +85,41 @@ STATISTIC(OpsNarrowed     , "Number of load/op/store narrowed");
 STATISTIC(LdStFP2Int      , "Number of fp load/store pairs transformed to int");
 STATISTIC(SlicedLoads, "Number of load sliced");
 
-namespace {
-  static cl::opt<bool>
-    CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
-               cl::desc("Enable DAG combiner's use of IR alias analysis"));
+static cl::opt<bool>
+CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
+                 cl::desc("Enable DAG combiner's use of IR alias analysis"));
 
-  static cl::opt<bool>
-    UseTBAA("combiner-use-tbaa", cl::Hidden, cl::init(true),
-               cl::desc("Enable DAG combiner's use of TBAA"));
+static cl::opt<bool>
+UseTBAA("combiner-use-tbaa", cl::Hidden, cl::init(true),
+        cl::desc("Enable DAG combiner's use of TBAA"));
 
 #ifndef NDEBUG
-  static cl::opt<std::string>
-    CombinerAAOnlyFunc("combiner-aa-only-func", cl::Hidden,
-               cl::desc("Only use DAG-combiner alias analysis in this"
-                        " function"));
+static cl::opt<std::string>
+CombinerAAOnlyFunc("combiner-aa-only-func", cl::Hidden,
+                   cl::desc("Only use DAG-combiner alias analysis in this"
+                            " function"));
 #endif
 
-  /// Hidden option to stress test load slicing, i.e., when this option
-  /// is enabled, load slicing bypasses most of its profitability guards.
-  static cl::opt<bool>
-  StressLoadSlicing("combiner-stress-load-slicing", cl::Hidden,
-                    cl::desc("Bypass the profitability model of load "
-                             "slicing"),
-                    cl::init(false));
+/// Hidden option to stress test load slicing, i.e., when this option
+/// is enabled, load slicing bypasses most of its profitability guards.
+static cl::opt<bool>
+StressLoadSlicing("combiner-stress-load-slicing", cl::Hidden,
+                  cl::desc("Bypass the profitability model of load slicing"),
+                  cl::init(false));
 
-  static cl::opt<bool>
-    MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
-                      cl::desc("DAG combiner may split indexing from loads"));
+static cl::opt<bool>
+  MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
+                    cl::desc("DAG combiner may split indexing from loads"));
 
-//------------------------------ DAGCombiner ---------------------------------//
+namespace {
 
   class DAGCombiner {
     SelectionDAG &DAG;
     const TargetLowering &TLI;
     CombineLevel Level;
     CodeGenOpt::Level OptLevel;
-    bool LegalOperations;
-    bool LegalTypes;
+    bool LegalOperations = false;
+    bool LegalTypes = false;
     bool ForCodeSize;
 
     /// \brief Worklist of all of the nodes that need to be simplified.
@@ -128,6 +158,19 @@ namespace {
     SDValue visit(SDNode *N);
 
   public:
+    DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
+        : DAG(D), TLI(D.getTargetLoweringInfo()), Level(BeforeLegalizeTypes),
+          OptLevel(OL), AA(AA) {
+      ForCodeSize = DAG.getMachineFunction().getFunction()->optForSize();
+
+      MaximumLegalStoreInBits = 0;
+      for (MVT VT : MVT::all_valuetypes())
+        if (EVT(VT).isSimple() && VT != MVT::Other &&
+            TLI.isTypeLegal(EVT(VT)) &&
+            VT.getSizeInBits() >= MaximumLegalStoreInBits)
+          MaximumLegalStoreInBits = VT.getSizeInBits();
+    }
+
     /// Add to the worklist making sure its instance is at the back (next to be
     /// processed.)
     void AddToWorklist(SDNode *N) {
@@ -433,12 +476,14 @@ namespace {
     /// Holds a pointer to an LSBaseSDNode as well as information on where it
     /// is located in a sequence of memory operations connected by a chain.
     struct MemOpLink {
-      MemOpLink(LSBaseSDNode *N, int64_t Offset)
-          : MemNode(N), OffsetFromBase(Offset) {}
       // Ptr to the mem node.
       LSBaseSDNode *MemNode;
+
       // Offset from the base ptr.
       int64_t OffsetFromBase;
+
+      MemOpLink(LSBaseSDNode *N, int64_t Offset)
+          : MemNode(N), OffsetFromBase(Offset) {}
     };
 
     /// This is a helper function for visitMUL to check the profitability
@@ -448,7 +493,6 @@ namespace {
     bool isMulAddWithConstProfitable(SDNode *MulNode,
                                      SDValue &AddNode,
                                      SDValue &ConstNode);
-
 
     /// This is a helper function for visitAND and visitZERO_EXTEND.  Returns
     /// true if the (and (load x) c) pattern matches an extload.  ExtVT returns
@@ -501,19 +545,6 @@ namespace {
     SDValue distributeTruncateThroughAnd(SDNode *N);
 
   public:
-    DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
-        : DAG(D), TLI(D.getTargetLoweringInfo()), Level(BeforeLegalizeTypes),
-          OptLevel(OL), LegalOperations(false), LegalTypes(false), AA(AA) {
-      ForCodeSize = DAG.getMachineFunction().getFunction()->optForSize();
-
-      MaximumLegalStoreInBits = 0;
-      for (MVT VT : MVT::all_valuetypes())
-        if (EVT(VT).isSimple() && VT != MVT::Other &&
-            TLI.isTypeLegal(EVT(VT)) &&
-            VT.getSizeInBits() >= MaximumLegalStoreInBits)
-          MaximumLegalStoreInBits = VT.getSizeInBits();
-    }
-
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
 
@@ -542,14 +573,12 @@ namespace {
       return TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     }
   };
-}
 
-
-namespace {
 /// This class is a DAGUpdateListener that removes any deleted
 /// nodes from the worklist.
 class WorklistRemover : public SelectionDAG::DAGUpdateListener {
   DAGCombiner &DC;
+
 public:
   explicit WorklistRemover(DAGCombiner &dc)
     : SelectionDAG::DAGUpdateListener(dc.getDAG()), DC(dc) {}
@@ -558,7 +587,8 @@ public:
     DC.removeFromWorklist(N);
   }
 };
-}
+
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 //  TargetLowering::DAGCombinerInfo implementation
@@ -577,7 +607,6 @@ SDValue TargetLowering::DAGCombinerInfo::
 CombineTo(SDNode *N, SDValue Res, bool AddTo) {
   return ((DAGCombiner*)DC)->CombineTo(N, Res, AddTo);
 }
-
 
 SDValue TargetLowering::DAGCombinerInfo::
 CombineTo(SDNode *N, SDValue Res0, SDValue Res1, bool AddTo) {
@@ -1683,7 +1712,6 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
 
     // Check each of the operands.
     for (const SDValue &Op : TF->op_values()) {
-
       switch (Op.getOpcode()) {
       case ISD::EntryToken:
         // Entry tokens don't need to be added to the list. They are
@@ -3666,10 +3694,10 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
 bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
                                    EVT LoadResultTy, EVT &ExtVT, EVT &LoadedVT,
                                    bool &NarrowLoad) {
-  uint32_t ActiveBits = AndC->getAPIntValue().getActiveBits();
-
-  if (ActiveBits == 0 || !AndC->getAPIntValue().isMask(ActiveBits))
+  if (!AndC->getAPIntValue().isMask())
     return false;
+
+  unsigned ActiveBits = AndC->getAPIntValue().countTrailingOnes();
 
   ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   LoadedVT = LoadN->getMemoryVT();
@@ -4767,20 +4795,22 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
 }
 
 namespace {
+
 /// Represents known origin of an individual byte in load combine pattern. The
 /// value of the byte is either constant zero or comes from memory.
 struct ByteProvider {
   // For constant zero providers Load is set to nullptr. For memory providers
   // Load represents the node which loads the byte from memory.
   // ByteOffset is the offset of the byte in the value produced by the load.
-  LoadSDNode *Load;
-  unsigned ByteOffset;
+  LoadSDNode *Load = nullptr;
+  unsigned ByteOffset = 0;
 
-  ByteProvider() : Load(nullptr), ByteOffset(0) {}
+  ByteProvider() = default;
 
   static ByteProvider getMemory(LoadSDNode *Load, unsigned ByteOffset) {
     return ByteProvider(Load, ByteOffset);
   }
+
   static ByteProvider getConstantZero() { return ByteProvider(nullptr, 0); }
 
   bool isConstantZero() const { return !Load; }
@@ -4795,6 +4825,8 @@ private:
       : Load(Load), ByteOffset(ByteOffset) {}
 };
 
+} // end anonymous namespace
+
 /// Recursively traverses the expression calculating the origin of the requested
 /// byte of the given value. Returns None if the provider can't be calculated.
 ///
@@ -4806,9 +4838,9 @@ private:
 /// Because the parts of the expression are not allowed to have more than one
 /// use this function iterates over trees, not DAGs. So it never visits the same
 /// node more than once.
-const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
-                                                   unsigned Depth,
-                                                   bool Root = false) {
+static const Optional<ByteProvider>
+calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
+                      bool Root = false) {
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
     return None;
@@ -4892,7 +4924,6 @@ const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
 
   return None;
 }
-} // namespace
 
 /// Match a pattern where a wide type scalar value is loaded by several narrow
 /// loads and combined by shifts and ors. Fold it into a single load or a load
@@ -5005,7 +5036,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
     Loads.insert(L);
   }
-  assert(Loads.size() > 0 && "All the bytes of the value must be loaded from "
+  assert(!Loads.empty() && "All the bytes of the value must be loaded from "
          "memory, so there must be at least one load which produces the value");
   assert(Base && "Base address of the accessed memory location must be set");
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
@@ -5732,7 +5763,6 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
           TLI.isOperationLegalOrCustom(ISD::SIGN_EXTEND, TruncVT) &&
           TLI.isOperationLegalOrCustom(ISD::TRUNCATE, VT) &&
           TLI.isTruncateFree(VT, TruncVT)) {
-
         SDLoc DL(N);
         SDValue Amt = DAG.getConstant(ShiftAmt, DL,
             getShiftAmountTy(N0.getOperand(0).getValueType()));
@@ -5781,7 +5811,6 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // Simplify, based on bits shifted out of the LHS.
   if (N1C && SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
-
 
   // If the sign bit is known to be zero, switch this to a SRL.
   if (DAG.SignBitIsZero(N0))
@@ -6105,7 +6134,6 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
     return DAG.getNode(ISD::CTPOP, SDLoc(N), VT, N0);
   return SDValue();
 }
-
 
 /// \brief Generate Min/Max node
 static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
@@ -6469,7 +6497,6 @@ static SDValue ConvertSelectToConcatVector(SDNode *N, SelectionDAG &DAG) {
 }
 
 SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
-
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
@@ -6530,7 +6557,6 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
-
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
@@ -6545,7 +6571,6 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   // prevents the type legalizer from unrolling SETCC into scalar comparisons
   // and enables future optimizations (e.g. min/max pattern matching on X86).
   if (Mask.getOpcode() == ISD::SETCC) {
-
     // Check if any splitting is required.
     if (TLI.getTypeAction(*DAG.getContext(), VT) !=
         TargetLowering::TypeSplitVector)
@@ -6602,7 +6627,6 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMGATHER(SDNode *N) {
-
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
@@ -6679,7 +6703,6 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitMLOAD(SDNode *N) {
-
   if (Level >= AfterLegalizeTypes)
     return SDValue();
 
@@ -6691,7 +6714,6 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   // SETCC, then split both nodes and its operands before legalization. This
   // prevents the type legalizer from unrolling SETCC into scalar comparisons
   // and enables future optimizations (e.g. min/max pattern matching on X86).
-
   if (Mask.getOpcode() == ISD::SETCC) {
     EVT VT = N->getValueType(0);
 
@@ -7558,20 +7580,6 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       return DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
   }
 
-  // fold (zext (truncate (load x))) -> (zext (smaller load x))
-  // fold (zext (truncate (srl (load x), c))) -> (zext (small load (x+c/n)))
-  if (N0.getOpcode() == ISD::TRUNCATE) {
-    if (SDValue NarrowLoad = ReduceLoadWidth(N0.getNode())) {
-      SDNode *oye = N0.getOperand(0).getNode();
-      if (NarrowLoad.getNode() != N0.getNode()) {
-        CombineTo(N0.getNode(), NarrowLoad);
-        // CombineTo deleted the truncate, if needed, but not what's under it.
-        AddToWorklist(oye);
-      }
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
-  }
-
   // fold (zext (truncate x)) -> (and x, mask)
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (zext (truncate (load x))) -> (zext (smaller load x))
@@ -8381,7 +8389,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // we need to be more careful about the vector instructions that we generate.
   if (N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       LegalTypes && !LegalOperations && N0->hasOneUse() && VT != MVT::i1) {
-
     EVT VecTy = N0.getOperand(0).getValueType();
     EVT ExTy = N0.getValueType();
     EVT TrTy = N->getValueType(0);
@@ -8447,7 +8454,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       N0.getOpcode() == ISD::BITCAST && N0.hasOneUse() &&
       N0.getOperand(0).getOpcode() == ISD::BUILD_VECTOR &&
       N0.getOperand(0).hasOneUse()) {
-
     SDValue BuildVect = N0.getOperand(0);
     EVT BuildVectEltTy = BuildVect.getValueType().getVectorElementType();
     EVT TruncVecEltTy = VT.getVectorElementType();
@@ -10221,8 +10227,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
           (!LegalOperations ||
            // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
            // backend)... we should handle this gracefully after Legalize.
-           // TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT) ||
-           TLI.isOperationLegal(llvm::ISD::ConstantFP, VT) ||
+           // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
+           TLI.isOperationLegal(ISD::ConstantFP, VT) ||
            TLI.isFPImmLegal(Recip, VT)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0,
                            DAG.getConstantFP(Recip, DL, VT), Flags);
@@ -10404,7 +10410,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       // ...but only if the target supports immediate floating-point values
       (!LegalOperations ||
-       TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT)))
+       TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
     return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, N0);
 
   // If the input is a legal type, and SINT_TO_FP is not legal on this target,
@@ -10422,7 +10428,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
         !VT.isVector() &&
         (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT))) {
+         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
       SDLoc DL(N);
       SDValue Ops[] =
         { N0.getOperand(0), N0.getOperand(1),
@@ -10436,7 +10442,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     if (N0.getOpcode() == ISD::ZERO_EXTEND &&
         N0.getOperand(0).getOpcode() == ISD::SETCC &&!VT.isVector() &&
         (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT))) {
+         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
       SDLoc DL(N);
       SDValue Ops[] =
         { N0.getOperand(0).getOperand(0), N0.getOperand(0).getOperand(1),
@@ -10458,7 +10464,7 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       // ...but only if the target supports immediate floating-point values
       (!LegalOperations ||
-       TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT)))
+       TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT)))
     return DAG.getNode(ISD::UINT_TO_FP, SDLoc(N), VT, N0);
 
   // If the input is a legal type, and UINT_TO_FP is not legal on this target,
@@ -10473,10 +10479,9 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   // The next optimizations are desirable only if SELECT_CC can be lowered.
   if (TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT) || !LegalOperations) {
     // fold (uint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
-
     if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
         (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(llvm::ISD::ConstantFP, VT))) {
+         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
       SDLoc DL(N);
       SDValue Ops[] =
         { N0.getOperand(0), N0.getOperand(1),
@@ -11585,6 +11590,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
 }
 
 namespace {
+
 /// \brief Helper structure used to slice a load in smaller loads.
 /// Basically a slice is obtained from the following sequence:
 /// Origin = load Ty1, Base
@@ -11602,21 +11608,19 @@ struct LoadedSlice {
   struct Cost {
     /// Are we optimizing for code size.
     bool ForCodeSize;
-    /// Various cost.
-    unsigned Loads;
-    unsigned Truncates;
-    unsigned CrossRegisterBanksCopies;
-    unsigned ZExts;
-    unsigned Shift;
 
-    Cost(bool ForCodeSize = false)
-        : ForCodeSize(ForCodeSize), Loads(0), Truncates(0),
-          CrossRegisterBanksCopies(0), ZExts(0), Shift(0) {}
+    /// Various cost.
+    unsigned Loads = 0;
+    unsigned Truncates = 0;
+    unsigned CrossRegisterBanksCopies = 0;
+    unsigned ZExts = 0;
+    unsigned Shift = 0;
+
+    Cost(bool ForCodeSize = false) : ForCodeSize(ForCodeSize) {}
 
     /// \brief Get the cost of one isolated slice.
     Cost(const LoadedSlice &LS, bool ForCodeSize = false)
-        : ForCodeSize(ForCodeSize), Loads(1), Truncates(0),
-          CrossRegisterBanksCopies(0), ZExts(0), Shift(0) {
+        : ForCodeSize(ForCodeSize), Loads(1) {
       EVT TruncType = LS.Inst->getValueType(0);
       EVT LoadedType = LS.getLoadedType();
       if (TruncType != LoadedType &&
@@ -11678,13 +11682,17 @@ struct LoadedSlice {
 
     bool operator>=(const Cost &RHS) const { return !(*this < RHS); }
   };
+
   // The last instruction that represent the slice. This should be a
   // truncate instruction.
   SDNode *Inst;
+
   // The original load instruction.
   LoadSDNode *Origin;
+
   // The right shift amount in bits from the original load.
   unsigned Shift;
+
   // The DAG from which Origin came from.
   // This is used to get some contextual information about legal types, etc.
   SelectionDAG *DAG;
@@ -11886,7 +11894,8 @@ struct LoadedSlice {
     return true;
   }
 };
-}
+
+} // end anonymous namespace
 
 /// \brief Check that all bits set in \p UsedBits form a dense region, i.e.,
 /// \p UsedBits looks like 0..0 1..1 0..0.
@@ -11944,7 +11953,6 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
   for (unsigned CurrSlice = 0; CurrSlice < NumberOfSlices; ++CurrSlice,
                 // Set the beginning of the pair.
                                                            First = Second) {
-
     Second = &LoadedSlices[CurrSlice];
 
     // If First is NULL, it means we start a new pair.
@@ -12075,7 +12083,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
     // will be across several bytes. We do not support that.
     unsigned Width = User->getValueSizeInBits(0);
     if (Width < 8 || !isPowerOf2_32(Width) || (Shift & 0x7))
-      return 0;
+      return false;
 
     // Build the slice for this chain of computations.
     LoadedSlice LS(User, LD, Shift, &DAG);
@@ -12200,7 +12208,6 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   return Result;
 }
 
-
 /// Check to see if IVal is something that provides a value as specified by
 /// MaskInfo. If so, replace the specified store with a narrower store of
 /// truncated IVal.
@@ -12260,7 +12267,6 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
                 St->getPointerInfo().getWithOffset(StOffset), NewAlign)
       .getNode();
 }
-
 
 /// Look for sequence of load / op / store where op is one of 'or', 'xor', and
 /// 'and' of immediates. If 'op' is only touching some of the loaded bits, try
@@ -12465,7 +12471,6 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
 
   // Walk all the users of the constant with which we're multiplying.
   for (SDNode *Use : ConstNode->uses()) {
-
     if (Use == MulNode) // This use is the one we're on right now. Skip it.
       continue;
 
@@ -12764,6 +12769,7 @@ void DAGCombiner::getStoreMergeCandidates(
     Ptr = BaseIndexOffset::match(Other->getBasePtr(), DAG);
     return (BasePtr.equalBaseIndex(Ptr, DAG, Offset));
   };
+
   // We looking for a root node which is an ancestor to all mergable
   // stores. We search up through a load, to our root and then down
   // through all children. For instance we will find Store{1,2,3} if
@@ -12810,10 +12816,8 @@ void DAGCombiner::getStoreMergeCandidates(
 // indirectly through its operand (we already consider dependencies
 // through the chain). Check in parallel by searching up from
 // non-chain operands of candidates.
-
 bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores) {
-
   // FIXME: We should be able to truncate a full search of
   // predecessors by doing a BFS and keeping tabs the originating
   // stores from which worklist nodes come from in a similar way to
@@ -13341,7 +13345,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
     RV = true;
     StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
-    continue;
   }
   return RV;
 }
@@ -13592,7 +13595,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   // prefers, also try this after legalization to catch stores that were created
   // by intrinsics or other nodes.
   if (!LegalTypes || (TLI.mergeStoresAfterLegalization())) {
-    for (;;) {
+    while (true) {
       // There can be multiple store sequences on the same chain.
       // Keep trying to merge store sequences until we are unable to do so
       // or until we merge the last store on the chain.
@@ -14630,7 +14633,7 @@ SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
   // If the input is something other than an EXTRACT_VECTOR_ELT with a constant
   // index, bail out.
   // TODO: Allow undef elements in some cases?
-  if (any_of(N->ops(), [VT](SDValue Op) {
+  if (llvm::any_of(N->ops(), [VT](SDValue Op) {
         return Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
                !isa<ConstantSDNode>(Op.getOperand(1)) ||
                Op.getValueType() != VT.getVectorElementType();
@@ -15849,7 +15852,6 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       if (TLI.isTypeLegal(ScaleVT) &&
           0 == (InnerSVT.getSizeInBits() % ScaleSVT.getSizeInBits()) &&
           0 == (SVT.getSizeInBits() % ScaleSVT.getSizeInBits())) {
-
         int InnerScale = InnerSVT.getSizeInBits() / ScaleSVT.getSizeInBits();
         int OuterScale = SVT.getSizeInBits() / ScaleSVT.getSizeInBits();
 
@@ -16363,7 +16365,6 @@ SDValue DAGCombiner::SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1,
 /// the DAG combiner loop to avoid it being looked at.
 bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
                                     SDValue RHS) {
-
   // fold (select (setcc x, [+-]0.0, *lt), NaN, (fsqrt x))
   // The select + setcc is redundant, because fsqrt returns NaN for X < 0.
   if (const ConstantFPSDNode *NaN = isConstOrConstSplatFP(LHS)) {
@@ -16847,7 +16848,7 @@ SDValue DAGCombiner::BuildSDIV(SDNode *N) {
   if (C->isNullValue())
     return SDValue();
 
-  std::vector<SDNode*> Built;
+  std::vector<SDNode *> Built;
   SDValue S =
       TLI.BuildSDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
 
@@ -16893,7 +16894,7 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   if (C->isNullValue())
     return SDValue();
 
-  std::vector<SDNode*> Built;
+  std::vector<SDNode *> Built;
   SDValue S =
       TLI.BuildUDIV(N, C->getAPIntValue(), DAG, LegalOperations, &Built);
 

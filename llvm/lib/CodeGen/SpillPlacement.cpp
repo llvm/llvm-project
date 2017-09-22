@@ -1,4 +1,4 @@
-//===-- SpillPlacement.cpp - Optimal Spill Code Placement -----------------===//
+//===- SpillPlacement.cpp - Optimal Spill Code Placement ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,29 +28,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "SpillPlacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
 char SpillPlacement::ID = 0;
+
+char &llvm::SpillPlacementID = SpillPlacement::ID;
+
 INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
-
-char &llvm::SpillPlacementID = SpillPlacement::ID;
 
 void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -68,10 +76,10 @@ void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
 /// The node Value is positive when the variable should be in a register. The
 /// value can change when linked nodes change, but convergence is very fast
 /// because all weights are positive.
-///
 struct SpillPlacement::Node {
   /// BiasN - Sum of blocks that prefer a spill.
   BlockFrequency BiasN;
+
   /// BiasP - Sum of blocks that prefer a register.
   BlockFrequency BiasP;
 
@@ -80,7 +88,7 @@ struct SpillPlacement::Node {
   /// variable should go in a register through this bundle.
   int Value;
 
-  typedef SmallVector<std::pair<BlockFrequency, unsigned>, 4> LinkVector;
+  using LinkVector = SmallVector<std::pair<BlockFrequency, unsigned>, 4>;
 
   /// Links - (Weight, BundleNo) for all transparent blocks connecting to other
   /// bundles. The weights are all positive block frequencies.
@@ -104,7 +112,7 @@ struct SpillPlacement::Node {
   }
 
   /// clear - Reset per-query data, but preserve frequencies that only depend on
-  // the CFG.
+  /// the CFG.
   void clear(const BlockFrequency &Threshold) {
     BiasN = BiasP = Value = 0;
     SumLinkWeights = Threshold;
@@ -260,14 +268,14 @@ void SpillPlacement::addConstraints(ArrayRef<BlockConstraint> LiveBlocks) {
 
     // Live-in to block?
     if (I->Entry != DontCare) {
-      unsigned ib = bundles->getBundle(I->Number, 0);
+      unsigned ib = bundles->getBundle(I->Number, false);
       activate(ib);
       nodes[ib].addBias(Freq, I->Entry);
     }
 
     // Live-out from block?
     if (I->Exit != DontCare) {
-      unsigned ob = bundles->getBundle(I->Number, 1);
+      unsigned ob = bundles->getBundle(I->Number, true);
       activate(ob);
       nodes[ob].addBias(Freq, I->Exit);
     }
@@ -281,8 +289,8 @@ void SpillPlacement::addPrefSpill(ArrayRef<unsigned> Blocks, bool Strong) {
     BlockFrequency Freq = BlockFrequencies[*I];
     if (Strong)
       Freq += Freq;
-    unsigned ib = bundles->getBundle(*I, 0);
-    unsigned ob = bundles->getBundle(*I, 1);
+    unsigned ib = bundles->getBundle(*I, false);
+    unsigned ob = bundles->getBundle(*I, true);
     activate(ib);
     activate(ob);
     nodes[ib].addBias(Freq, PrefSpill);
@@ -294,8 +302,8 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
   for (ArrayRef<unsigned>::iterator I = Links.begin(), E = Links.end(); I != E;
        ++I) {
     unsigned Number = *I;
-    unsigned ib = bundles->getBundle(Number, 0);
-    unsigned ob = bundles->getBundle(Number, 1);
+    unsigned ib = bundles->getBundle(Number, false);
+    unsigned ob = bundles->getBundle(Number, true);
 
     // Ignore self-loops.
     if (ib == ob)

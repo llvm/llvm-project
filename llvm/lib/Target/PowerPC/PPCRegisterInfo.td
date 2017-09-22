@@ -305,6 +305,11 @@ def VFRC :  RegisterClass<"PPC", [f64], 64,
                                VF22, VF21, VF20)>;
 def VSFRC : RegisterClass<"PPC", [f64], 64, (add F8RC, VFRC)>;
 
+// Allow spilling GPR's into caller-saved VSR's.
+def SPILLTOVSRRC : RegisterClass<"PPC", [i64, f64], 64, (add G8RC, (sub VSFRC,
+				(sequence "VF%u", 31, 20),
+				(sequence "F%u", 31, 14)))>;
+
 // Register class for single precision scalars in VSX registers
 def VSSRC : RegisterClass<"PPC", [f32], 32, (add VSFRC)>;
 

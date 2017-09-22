@@ -681,10 +681,10 @@ performWriteOperation(ArchiveOperation Operation,
     break;
   }
 
-  std::error_code EC =
+  Error E =
       writeArchive(ArchiveName, NewMembersP ? *NewMembersP : NewMembers, Symtab,
                    Kind, Deterministic, Thin, std::move(OldArchiveBuf));
-  failIfError(EC, ArchiveName);
+  failIfError(std::move(E), ArchiveName);
 }
 
 static void createSymbolTable(object::Archive *OldArchive) {

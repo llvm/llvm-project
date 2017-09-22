@@ -25,6 +25,28 @@
 # CHECK-BASIC-OUT: top-level-suite :: test-one
 # CHECK-BASIC-OUT: top-level-suite :: test-two
 
+# Check discovery when providing the special builtin 'config_map'
+# RUN: %{python} %{inputs}/config-map-discovery/driver.py \
+# RUN:           %{inputs}/config-map-discovery/main-config/lit.cfg \
+# RUN:           %{inputs}/config-map-discovery/lit.alt.cfg \
+# RUN:           --single-process --debug --show-tests --show-suites > %t.out 2> %t.err
+# RUN: FileCheck --check-prefix=CHECK-CONFIG-MAP-OUT < %t.out %s
+# RUN: FileCheck --check-prefix=CHECK-CONFIG-MAP-ERR < %t.err %s
+
+# CHECK-CONFIG-MAP-OUT-NOT: ERROR: lit.cfg invoked
+# CHECK-CONFIG-MAP-OUT: -- Test Suites --
+# CHECK-CONFIG-MAP-OUT:   config-map - 2 tests
+# CHECK-CONFIG-MAP-OUT:     Source Root: {{.*[/\\]config-map-discovery[/\\]tests}}
+# CHECK-CONFIG-MAP-OUT:     Exec Root  : {{.*[/\\]tests[/\\]Inputs[/\\]config-map-discovery}}
+# CHECK-CONFIG-MAP-OUT: -- Available Tests --
+# CHECK-CONFIG-MAP-OUT-NOT: invalid-test.txt
+# CHECK-CONFIG-MAP-OUT:   config-map :: test1.txt
+# CHECK-CONFIG-MAP-OUT:   config-map :: test2.txt
+
+# CHECK-CONFIG-MAP-ERR: loading suite config '{{.*}}lit.alt.cfg'
+# CHECK-CONFIG-MAP-ERR: loaded config '{{.*}}lit.alt.cfg'
+# CHECK-CONFIG-MAP-ERR: resolved input '{{.*(/|\\\\)config-map-discovery(/|\\\\)main-config}}' to 'config-map'::()
+
 
 # Check discovery when exact test names are given.
 #

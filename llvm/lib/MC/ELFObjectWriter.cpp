@@ -1108,7 +1108,7 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
     if (is64Bit()) {
       write(Entry.Offset);
-      if (TargetObjectWriter->isN64()) {
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
         write(uint32_t(Index));
 
         write(TargetObjectWriter->getRSsym(Entry.Type));
@@ -1131,6 +1131,23 @@ void ELFObjectWriter::writeRelocations(const MCAssembler &Asm,
 
       if (hasRelocationAddend())
         write(uint32_t(Entry.Addend));
+
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
+        if (uint32_t RType = TargetObjectWriter->getRType2(Entry.Type)) {
+          write(uint32_t(Entry.Offset));
+
+          ERE32.setSymbolAndType(0, RType);
+          write(ERE32.r_info);
+          write(uint32_t(0));
+        }
+        if (uint32_t RType = TargetObjectWriter->getRType3(Entry.Type)) {
+          write(uint32_t(Entry.Offset));
+
+          ERE32.setSymbolAndType(0, RType);
+          write(ERE32.r_info);
+          write(uint32_t(0));
+        }
+      }
     }
   }
 }

@@ -1857,10 +1857,19 @@ def VNMLAH : AHbI<0b11100, 0b01, 1, 0,
                 RegConstraint<"$Sdin = $Sd">,
                 Requires<[HasFullFP16,UseFPVMLx,DontUseFusedMAC]>;
 
+// (-(a * b) - dst) -> -(dst + (a * b))
 def : Pat<(fsub_mlx (fneg (fmul_su DPR:$a, (f64 DPR:$b))), DPR:$dstin),
           (VNMLAD DPR:$dstin, DPR:$a, DPR:$b)>,
           Requires<[HasVFP2,HasDPVFP,UseFPVMLx,DontUseFusedMAC]>;
 def : Pat<(fsub_mlx (fneg (fmul_su SPR:$a, SPR:$b)), SPR:$dstin),
+          (VNMLAS SPR:$dstin, SPR:$a, SPR:$b)>,
+          Requires<[HasVFP2,DontUseNEONForFP,UseFPVMLx,DontUseFusedMAC]>;
+
+// (-dst - (a * b)) -> -(dst + (a * b))
+def : Pat<(fsub_mlx (fneg DPR:$dstin), (fmul_su DPR:$a, (f64 DPR:$b))),
+          (VNMLAD DPR:$dstin, DPR:$a, DPR:$b)>,
+          Requires<[HasVFP2,HasDPVFP,UseFPVMLx,DontUseFusedMAC]>;
+def : Pat<(fsub_mlx (fneg SPR:$dstin), (fmul_su SPR:$a, SPR:$b)),
           (VNMLAS SPR:$dstin, SPR:$a, SPR:$b)>,
           Requires<[HasVFP2,DontUseNEONForFP,UseFPVMLx,DontUseFusedMAC]>;
 

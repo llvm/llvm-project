@@ -9,6 +9,12 @@ import subprocess
 import sys
 import threading
 
+def norm_path(path):
+    path = os.path.realpath(path)
+    path = os.path.normpath(path)
+    path = os.path.normcase(path)
+    return path
+
 def is_string(value):
     try:
         # Python 2 and Python 3 are different here.
@@ -30,6 +36,8 @@ def pythonize_bool(value):
             return False
     raise ValueError('"{}" is not a valid boolean'.format(value))
 
+def make_word_regex(word):
+    return r'\b' + word + r'\b'
 
 def to_bytes(s):
     """Return the parameter as type 'bytes', possibly encoding it.
