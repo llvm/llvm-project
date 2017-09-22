@@ -67,6 +67,8 @@ public:
 
   __isl_give isl_ast_node *getAst();
 
+  const std::shared_ptr<isl_ctx> getSharedIslCtx() const { return Ctx; }
+
   /// Get the run-time conditions for the Scop.
   __isl_give isl_ast_expr *getRunCondition();
 
@@ -130,6 +132,9 @@ private:
 
 public:
   IslAstInfo(Scop &S, const Dependences &D) : S(S), Ast(IslAst::create(S, D)) {}
+
+  /// Return the isl AST computed by this IslAstInfo.
+  IslAst &getIslAst() { return Ast; }
 
   /// Return a copy of the AST root node.
   __isl_give isl_ast_node *getAst();

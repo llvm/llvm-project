@@ -806,6 +806,12 @@ bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
   const Dependences &D =
       getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
+  if (D.getSharedIslCtx() != Scop.getSharedIslCtx()) {
+    DEBUG(dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
+    Ast.reset();
+    return false;
+  }
+
   Ast.reset(new IslAstInfo(Scop, D));
 
   DEBUG(printScop(dbgs(), Scop));
@@ -815,7 +821,7 @@ bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
 void IslAstInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // Get the Common analysis usage of ScopPasses.
   ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<ScopInfoRegionPass>();
+  AU.addRequiredTransitive<ScopInfoRegionPass>();
   AU.addRequired<DependenceInfo>();
 
   AU.addPreserved<DependenceInfo>();
