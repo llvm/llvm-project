@@ -180,6 +180,14 @@ __attribute__((external_source_symbol(generated_declaration, defined_in="module"
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr5
 // CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
 
+namespace TestNoEscape {
+  void noescapeFunc(int *p0, __attribute__((noescape)) int *p1) {}
+  // CHECK: `-FunctionDecl{{.*}} noescapeFunc 'void (int *, __attribute__((noescape)) int *)'
+  // CHECK-NEXT: ParmVarDecl
+  // CHECK-NEXT: ParmVarDecl
+  // CHECK-NEXT: NoEscapeAttr
+}
+
 namespace TestSuppress {
   [[gsl::suppress("at-namespace")]];
   // CHECK: NamespaceDecl{{.*}} TestSuppress

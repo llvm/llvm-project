@@ -158,34 +158,44 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
            diag::note_related_result_type_overridden);
   }
   if (getLangOpts().ObjCAutoRefCount) {
-    if ((NewMethod->hasAttr<NSReturnsRetainedAttr>() !=
-         Overridden->hasAttr<NSReturnsRetainedAttr>())) {
-        Diag(NewMethod->getLocation(),
-             diag::err_nsreturns_retained_attribute_mismatch) << 1;
-        Diag(Overridden->getLocation(), diag::note_previous_decl) 
-        << "method";
+    Diags.setSeverity(diag::warn_nsreturns_retained_attribute_mismatch,
+                      diag::Severity::Error, SourceLocation());
+    Diags.setSeverity(diag::warn_nsconsumed_attribute_mismatch,
+                      diag::Severity::Error, SourceLocation());
+  }
+
+  if ((NewMethod->hasAttr<NSReturnsRetainedAttr>() !=
+       Overridden->hasAttr<NSReturnsRetainedAttr>())) {
+    Diag(NewMethod->getLocation(),
+         diag::warn_nsreturns_retained_attribute_mismatch) << 1;
+    Diag(Overridden->getLocation(), diag::note_previous_decl) << "method";
+  }
+  if ((NewMethod->hasAttr<NSReturnsNotRetainedAttr>() !=
+       Overridden->hasAttr<NSReturnsNotRetainedAttr>())) {
+    Diag(NewMethod->getLocation(),
+         diag::warn_nsreturns_retained_attribute_mismatch) << 0;
+    Diag(Overridden->getLocation(), diag::note_previous_decl)  << "method";
+  }
+
+  ObjCMethodDecl::param_const_iterator oi = Overridden->param_begin(),
+                                       oe = Overridden->param_end();
+  for (ObjCMethodDecl::param_iterator ni = NewMethod->param_begin(),
+                                      ne = NewMethod->param_end();
+       ni != ne && oi != oe; ++ni, ++oi) {
+    const ParmVarDecl *oldDecl = (*oi);
+    ParmVarDecl *newDecl = (*ni);
+    if (newDecl->hasAttr<NSConsumedAttr>() !=
+        oldDecl->hasAttr<NSConsumedAttr>()) {
+      Diag(newDecl->getLocation(), diag::warn_nsconsumed_attribute_mismatch);
+      Diag(oldDecl->getLocation(), diag::note_previous_decl) << "parameter";
     }
-    if ((NewMethod->hasAttr<NSReturnsNotRetainedAttr>() !=
-              Overridden->hasAttr<NSReturnsNotRetainedAttr>())) {
-        Diag(NewMethod->getLocation(),
-             diag::err_nsreturns_retained_attribute_mismatch) << 0;
-        Diag(Overridden->getLocation(), diag::note_previous_decl) 
-        << "method";
-    }
-    ObjCMethodDecl::param_const_iterator oi = Overridden->param_begin(),
-                                         oe = Overridden->param_end();
-    for (ObjCMethodDecl::param_iterator
-           ni = NewMethod->param_begin(), ne = NewMethod->param_end();
-         ni != ne && oi != oe; ++ni, ++oi) {
-      const ParmVarDecl *oldDecl = (*oi);
-      ParmVarDecl *newDecl = (*ni);
-      if (newDecl->hasAttr<NSConsumedAttr>() != 
-          oldDecl->hasAttr<NSConsumedAttr>()) {
-        Diag(newDecl->getLocation(),
-             diag::err_nsconsumed_attribute_mismatch);
-        Diag(oldDecl->getLocation(), diag::note_previous_decl) 
-          << "parameter";
-      }
+
+    // A parameter of the overriding method should be annotated with noescape
+    // if the corresponding parameter of the overridden method is annotated.
+    if (oldDecl->hasAttr<NoEscapeAttr>() && !newDecl->hasAttr<NoEscapeAttr>()) {
+      Diag(newDecl->getLocation(),
+           diag::warn_overriding_method_missing_noescape);
+      Diag(oldDecl->getLocation(), diag::note_overridden_marked_noescape);
     }
   }
 }
