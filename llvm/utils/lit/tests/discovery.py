@@ -45,7 +45,7 @@
 
 # CHECK-CONFIG-MAP-ERR: loading suite config '{{.*}}lit.alt.cfg'
 # CHECK-CONFIG-MAP-ERR: loaded config '{{.*}}lit.alt.cfg'
-# CHECK-CONFIG-MAP-ERR: resolved input '{{.*config-map-discovery[/\\]main-config}}' to 'config-map'::()
+# CHECK-CONFIG-MAP-ERR: resolved input '{{.*(/|\\\\)config-map-discovery(/|\\\\)main-config}}' to 'config-map'::()
 
 
 # Check discovery when exact test names are given.

@@ -1667,4 +1667,17 @@ entry:
   ret void
 }
 
-
+; Check for bug 34674 where invalid add of xzr was being generated.
+; CHECK-LABEL: bug34674:
+; CHECK: // %entry
+; CHECK-NEXT: mov [[ZREG:x[0-9]+]], xzr
+; CHECK-DAG: stp [[ZREG]], [[ZREG]], [x0]
+; CHECK-DAG: add x{{[0-9]+}}, [[ZREG]], #1
+define i64 @bug34674(<2 x i64>* %p) {
+entry:
+  store <2 x i64> zeroinitializer, <2 x i64>* %p
+  %p2 = bitcast <2 x i64>* %p to i64*
+  %ld = load i64, i64* %p2
+  %add = add i64 %ld, 1
+  ret i64 %add
+}

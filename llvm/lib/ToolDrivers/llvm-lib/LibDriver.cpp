@@ -157,13 +157,13 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
   // Create an archive file.
   std::string OutputPath = getOutputPath(&Args, Members[0]);
-  std::error_code EC =
-      writeArchive(OutputPath, Members,
-                   /*WriteSymtab=*/true, object::Archive::K_GNU,
-                   /*Deterministic*/ true, Args.hasArg(OPT_llvmlibthin));
-
-  if (EC) {
-    llvm::errs() << OutputPath << ": " << EC.message() << "\n";
+  if (Error E =
+          writeArchive(OutputPath, Members,
+                       /*WriteSymtab=*/true, object::Archive::K_GNU,
+                       /*Deterministic*/ true, Args.hasArg(OPT_llvmlibthin))) {
+    handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+      llvm::errs() << OutputPath << ": " << EI.message() << "\n";
+    });
     return 1;
   }
 
