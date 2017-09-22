@@ -14,7 +14,7 @@ typedef decltype(f()) NoLinkage3;
 inline auto g() { return [] {}; }
 typedef decltype(g()) VisibleNoLinkage1;
 inline auto y = [] {};
-typedef decltype(x) VisibleNoLinkage2;
+typedef decltype(y) VisibleNoLinkage2;
 inline auto h() { struct {} x; return x; }
 typedef decltype(h()) VisibleNoLinkage3;
 
@@ -42,19 +42,12 @@ void use_no_linkage() {
   no_linkage3(); // expected-note {{used here}}
 }
 
-// FIXME: This should emit an extension warning. It does not because we
-// incorrectly give the lambda external linkage.
-extern VisibleNoLinkage1 visible_no_linkage1();
-
-// FIXME: We should accept this as an extension. We don't because we
-// incorrectly give the lambda no linkage instead of "VisibleNoLinkage".
-extern VisibleNoLinkage2 visible_no_linkage2(); // expected-error {{used but not defined}}
-
-// This case is correctly accepted as an extension.
+extern VisibleNoLinkage1 visible_no_linkage1(); // expected-warning {{ISO C++ requires a definition}}
+extern VisibleNoLinkage2 visible_no_linkage2(); // expected-warning {{ISO C++ requires a definition}}
 extern VisibleNoLinkage3 visible_no_linkage3(); // expected-warning {{ISO C++ requires a definition}}
 
 void use_visible_no_linkage() {
-  visible_no_linkage1();
+  visible_no_linkage1(); // expected-note {{used here}}
   visible_no_linkage2(); // expected-note {{used here}}
   visible_no_linkage3(); // expected-note {{used here}}
 }

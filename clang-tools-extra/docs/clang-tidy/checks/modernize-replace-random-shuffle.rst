@@ -15,7 +15,7 @@ Below are two examples of what kind of occurrences will be found and two example
   std::random_shuffle(vec.begin(), vec.end());
 
   // Second example
-  std::random_shuffle(vec.begin(), vec.end(), randomFun);
+  std::random_shuffle(vec.begin(), vec.end(), randomFunc);
 
 Both of these examples will be replaced with:
 

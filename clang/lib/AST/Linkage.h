@@ -22,38 +22,50 @@
 #include "llvm/ADT/Optional.h"
 
 namespace clang {
-enum : unsigned {
-  IgnoreExplicitVisibilityBit = 2,
-  IgnoreAllVisibilityBit = 4
-};
-
 /// Kinds of LV computation.  The linkage side of the computation is
 /// always the same, but different things can change how visibility is
 /// computed.
-enum LVComputationKind {
-  /// Do an LV computation for, ultimately, a type.
-  /// Visibility may be restricted by type visibility settings and
-  /// the visibility of template arguments.
-  LVForType = NamedDecl::VisibilityForType,
+struct LVComputationKind {
+  /// The kind of entity whose visibility is ultimately being computed;
+  /// visibility computations for types and non-types follow different rules.
+  unsigned ExplicitKind : 1;
+  /// Whether explicit visibility attributes should be ignored. When set,
+  /// visibility may only be restricted by the visibility of template arguments.
+  unsigned IgnoreExplicitVisibility : 1;
+  /// Whether all visibility should be ignored. When set, we're only interested
+  /// in computing linkage.
+  unsigned IgnoreAllVisibility : 1;
 
-  /// Do an LV computation for, ultimately, a non-type declaration.
-  /// Visibility may be restricted by value visibility settings and
-  /// the visibility of template arguments.
-  LVForValue = NamedDecl::VisibilityForValue,
+  explicit LVComputationKind(NamedDecl::ExplicitVisibilityKind EK)
+      : ExplicitKind(EK), IgnoreExplicitVisibility(false),
+        IgnoreAllVisibility(false) {}
 
-  /// Do an LV computation for, ultimately, a type that already has
-  /// some sort of explicit visibility.  Visibility may only be
-  /// restricted by the visibility of template arguments.
-  LVForExplicitType = (LVForType | IgnoreExplicitVisibilityBit),
+  NamedDecl::ExplicitVisibilityKind getExplicitVisibilityKind() const {
+    return static_cast<NamedDecl::ExplicitVisibilityKind>(ExplicitKind);
+  }
 
-  /// Do an LV computation for, ultimately, a non-type declaration
-  /// that already has some sort of explicit visibility.  Visibility
-  /// may only be restricted by the visibility of template arguments.
-  LVForExplicitValue = (LVForValue | IgnoreExplicitVisibilityBit),
+  bool isTypeVisibility() const {
+    return getExplicitVisibilityKind() == NamedDecl::VisibilityForType;
+  }
+  bool isValueVisibility() const {
+    return getExplicitVisibilityKind() == NamedDecl::VisibilityForValue;
+  }
 
   /// Do an LV computation when we only care about the linkage.
-  LVForLinkageOnly =
-      LVForValue | IgnoreExplicitVisibilityBit | IgnoreAllVisibilityBit
+  static LVComputationKind forLinkageOnly() {
+    LVComputationKind Result(NamedDecl::VisibilityForValue);
+    Result.IgnoreExplicitVisibility = true;
+    Result.IgnoreAllVisibility = true;
+    return Result;
+  }
+
+  unsigned toBits() {
+    unsigned Bits = 0;
+    Bits = (Bits << 1) | ExplicitKind;
+    Bits = (Bits << 1) | IgnoreExplicitVisibility;
+    Bits = (Bits << 1) | IgnoreAllVisibility;
+    return Bits;
+  }
 };
 
 class LinkageComputer {
@@ -66,14 +78,12 @@ class LinkageComputer {
   // using C = Foo<B, B>;
   // using D = Foo<C, C>;
   //
-  // Note that the unsigned is actually a LVComputationKind; ubsan's enum
-  // sanitizer doesn't like tombstone/empty markers outside of
-  // LVComputationKind's range.
+  // The unsigned represents an LVComputationKind.
   using QueryType = std::pair<const NamedDecl *, unsigned>;
   llvm::SmallDenseMap<QueryType, LinkageInfo, 8> CachedLinkageInfo;
 
   static QueryType makeCacheKey(const NamedDecl *ND, LVComputationKind Kind) {
-    return std::make_pair(ND, static_cast<unsigned>(Kind));
+    return std::make_pair(ND, Kind.toBits());
   }
 
   llvm::Optional<LinkageInfo> lookup(const NamedDecl *ND,
@@ -107,10 +117,12 @@ class LinkageComputer {
                        LVComputationKind computation);
 
   LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
-                                         LVComputationKind computation);
+                                         LVComputationKind computation,
+                                         bool IgnoreVarTypeLinkage);
 
   LinkageInfo getLVForClassMember(const NamedDecl *D,
-                                  LVComputationKind computation);
+                                  LVComputationKind computation,
+                                  bool IgnoreVarTypeLinkage);
 
   LinkageInfo getLVForClosure(const DeclContext *DC, Decl *ContextDecl,
                               LVComputationKind computation);
@@ -125,7 +137,8 @@ class LinkageComputer {
 
 public:
   LinkageInfo computeLVForDecl(const NamedDecl *D,
-                               LVComputationKind computation);
+                               LVComputationKind computation,
+                               bool IgnoreVarTypeLinkage = false);
 
   LinkageInfo getLVForDecl(const NamedDecl *D, LVComputationKind computation);
 

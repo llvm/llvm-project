@@ -103,28 +103,22 @@ TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
 /// Does this computation kind permit us to consider additional
 /// visibility settings from attributes and the like?
 static bool hasExplicitVisibilityAlready(LVComputationKind computation) {
-  return ((unsigned(computation) & IgnoreExplicitVisibilityBit) != 0);
+  return computation.IgnoreExplicitVisibility;
 }
 
 /// Given an LVComputationKind, return one of the same type/value sort
 /// that records that it already has explicit visibility.
 static LVComputationKind
-withExplicitVisibilityAlready(LVComputationKind oldKind) {
-  LVComputationKind newKind =
-    static_cast<LVComputationKind>(unsigned(oldKind) |
-                                   IgnoreExplicitVisibilityBit);
-  assert(oldKind != LVForType          || newKind == LVForExplicitType);
-  assert(oldKind != LVForValue         || newKind == LVForExplicitValue);
-  assert(oldKind != LVForExplicitType  || newKind == LVForExplicitType);
-  assert(oldKind != LVForExplicitValue || newKind == LVForExplicitValue);
-  return newKind;
+withExplicitVisibilityAlready(LVComputationKind Kind) {
+  Kind.IgnoreExplicitVisibility = true;
+  return Kind;
 }
 
 static Optional<Visibility> getExplicitVisibility(const NamedDecl *D,
                                                   LVComputationKind kind) {
-  assert(!hasExplicitVisibilityAlready(kind) &&
+  assert(!kind.IgnoreExplicitVisibility &&
          "asking for explicit visibility when we shouldn't be");
-  return D->getExplicitVisibility((NamedDecl::ExplicitVisibilityKind) kind);
+  return D->getExplicitVisibility(kind.getExplicitVisibilityKind());
 }
 
 /// Is the given declaration a "type" or a "value" for the purposes of
@@ -190,7 +184,7 @@ static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
 
 LinkageInfo LinkageComputer::getLVForType(const Type &T,
                                           LVComputationKind computation) {
-  if (computation == LVForLinkageOnly)
+  if (computation.IgnoreAllVisibility)
     return LinkageInfo(T.getLinkage(), DefaultVisibility, true);
   return getTypeLinkageAndVisibility(&T);
 }
@@ -359,21 +353,11 @@ void LinkageComputer::mergeTemplateLV(
 /// that would match the given rules?
 static bool hasDirectVisibilityAttribute(const NamedDecl *D,
                                          LVComputationKind computation) {
-  switch (computation) {
-  case LVForType:
-  case LVForExplicitType:
-    if (D->hasAttr<TypeVisibilityAttr>())
-      return true;
-    // fallthrough
-  case LVForValue:
-  case LVForExplicitValue:
-    if (D->hasAttr<VisibilityAttr>())
-      return true;
+  if (computation.IgnoreAllVisibility)
     return false;
-  case LVForLinkageOnly:
-    return false;
-  }
-  llvm_unreachable("bad visibility computation kind");
+
+  return (computation.isTypeVisibility() && D->hasAttr<TypeVisibilityAttr>()) ||
+         D->hasAttr<VisibilityAttr>();
 }
 
 /// Should we consider visibility associated with the template
@@ -570,7 +554,8 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
 
 LinkageInfo
 LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
-                                            LVComputationKind computation) {
+                                            LVComputationKind computation,
+                                            bool IgnoreVarTypeLinkage) {
   assert(D->getDeclContext()->getRedeclContext()->isFileContext() &&
          "Not a name having namespace scope");
   ASTContext &Context = D->getASTContext();
@@ -627,7 +612,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //   - a data member of an anonymous union.
     const VarDecl *VD = IFD->getVarDecl();
     assert(VD && "Expected a VarDecl in this IndirectFieldDecl!");
-    return getLVForNamespaceScopeDecl(VD, computation);
+    return getLVForNamespaceScopeDecl(VD, computation, IgnoreVarTypeLinkage);
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
@@ -675,13 +660,10 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Add in global settings if the above didn't give us direct visibility.
     if (!LV.isVisibilityExplicit()) {
       // Use global type/value visibility as appropriate.
-      Visibility globalVisibility;
-      if (computation == LVForValue) {
-        globalVisibility = Context.getLangOpts().getValueVisibilityMode();
-      } else {
-        assert(computation == LVForType);
-        globalVisibility = Context.getLangOpts().getTypeVisibilityMode();
-      }
+      Visibility globalVisibility =
+          computation.isValueVisibility()
+              ? Context.getLangOpts().getValueVisibilityMode()
+              : Context.getLangOpts().getTypeVisibilityMode();
       LV.mergeVisibility(globalVisibility, /*explicit*/ false);
 
       // If we're paying attention to global visibility, apply
@@ -719,7 +701,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
-    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var)) {
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
+        !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
       if (!isExternallyVisible(TypeLV.getLinkage()))
         return LinkageInfo::uniqueExternal();
@@ -759,15 +742,9 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // unique-external linkage, it's not legally usable from outside
     // this translation unit.  However, we should use the C linkage
     // rules instead for extern "C" declarations.
-    if (Context.getLangOpts().CPlusPlus &&
-        !Function->isInExternCContext()) {
-      // Only look at the type-as-written. If this function has an auto-deduced
-      // return type, we can't compute the linkage of that type because it could
-      // require looking at the linkage of this function, and we don't need this
-      // for correctness because the type is not part of the function's
-      // signature.
-      // FIXME: This is a hack. We should be able to solve this circularity and 
-      // the one in getLVForClassMember for Functions some other way.
+    if (Context.getLangOpts().CPlusPlus && !Function->isInExternCContext()) {
+      // Only look at the type-as-written. Otherwise, deducing the return type
+      // of a function could change its linkage.
       QualType TypeAsWritten = Function->getType();
       if (TypeSourceInfo *TSI = Function->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
@@ -850,7 +827,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
 LinkageInfo
 LinkageComputer::getLVForClassMember(const NamedDecl *D,
-                                     LVComputationKind computation) {
+                                     LVComputationKind computation,
+                                     bool IgnoreVarTypeLinkage) {
   // Only certain class members have linkage.  Note that fields don't
   // really have linkage, but it's convenient to say they do for the
   // purposes of calculating linkage of pointer-to-data-member
@@ -908,22 +886,14 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
   const NamedDecl *explicitSpecSuppressor = nullptr;
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-    // If the type of the function uses a type that has non-externally-visible
-    // linkage, it's not legally usable from outside this translation unit.
-    // But only look at the type-as-written. If this function has an
-    // auto-deduced return type, we can't compute the linkage of that type
-    // because it could require looking at the linkage of this function, and we
-    // don't need this for correctness because the type is not part of the
-    // function's signature.
-    // FIXME: This is a hack. We should be able to solve this circularity and
-    // the one in getLVForNamespaceScopeDecl for Functions some other way.
-    {
-      QualType TypeAsWritten = MD->getType();
-      if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
-        TypeAsWritten = TSI->getType();
-      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
-        return LinkageInfo::uniqueExternal();
-    }
+    // Only look at the type-as-written. Otherwise, deducing the return type
+    // of a function could change its linkage.
+    QualType TypeAsWritten = MD->getType();
+    if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+      TypeAsWritten = TSI->getType();
+    if (!isExternallyVisible(TypeAsWritten->getLinkage()))
+      return LinkageInfo::uniqueExternal();
+
     // If this is a method template specialization, use the linkage for
     // the template parameters and arguments.
     if (FunctionTemplateSpecializationInfo *spec
@@ -960,10 +930,14 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
     // Modify the variable's linkage by its type, but ignore the
     // type's visibility unless it's a definition.
-    LinkageInfo typeLV = getLVForType(*VD->getType(), computation);
-    if (!LV.isVisibilityExplicit() && !classLV.isVisibilityExplicit())
-      LV.mergeVisibility(typeLV);
-    LV.mergeExternalVisibility(typeLV);
+    if (!IgnoreVarTypeLinkage) {
+      LinkageInfo typeLV = getLVForType(*VD->getType(), computation);
+      // FIXME: If the type's linkage is not externally visible, we can
+      // give this static data member UniqueExternalLinkage.
+      if (!LV.isVisibilityExplicit() && !classLV.isVisibilityExplicit())
+        LV.mergeVisibility(typeLV);
+      LV.mergeExternalVisibility(typeLV);
+    }
 
     if (isExplicitMemberSpecialization(VD)) {
       explicitSpecSuppressor = VD;
@@ -1011,8 +985,9 @@ bool NamedDecl::isLinkageValid() const {
   if (!hasCachedLinkage())
     return true;
 
-  Linkage L =
-      LinkageComputer{}.computeLVForDecl(this, LVForLinkageOnly).getLinkage();
+  Linkage L = LinkageComputer{}
+                  .computeLVForDecl(this, LVComputationKind::forLinkageOnly())
+                  .getLinkage();
   return L == getCachedLinkage();
 }
 
@@ -1032,7 +1007,9 @@ ObjCStringFormatFamily NamedDecl::getObjCFStringFormattingFamily() const {
 Linkage NamedDecl::getLinkageInternal() const {
   // We don't care about visibility here, so ask for the cheapest
   // possible visibility analysis.
-  return LinkageComputer{}.getLVForDecl(this, LVForLinkageOnly).getLinkage();
+  return LinkageComputer{}
+      .getLVForDecl(this, LVComputationKind::forLinkageOnly())
+      .getLinkage();
 }
 
 LinkageInfo NamedDecl::getLinkageAndVisibility() const {
@@ -1118,22 +1095,34 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
                                              Decl *ContextDecl,
                                              LVComputationKind computation) {
   // This lambda has its linkage/visibility determined by its owner.
-  // FIXME: This is wrong. A lambda never formally has linkage; if this
-  // calculation determines the lambda has external linkage, it should be
-  // downgraded to VisibleNoLinkage.
-  if (ContextDecl) {
-    if (isa<ParmVarDecl>(ContextDecl))
-      DC = ContextDecl->getDeclContext()->getRedeclContext();
-    else
-      return getLVForDecl(cast<NamedDecl>(ContextDecl), computation);
-  }
+  const NamedDecl *Owner;
+  if (!ContextDecl)
+    Owner = dyn_cast<NamedDecl>(DC);
+  else if (isa<ParmVarDecl>(ContextDecl))
+    Owner =
+        dyn_cast<NamedDecl>(ContextDecl->getDeclContext()->getRedeclContext());
+  else
+    Owner = cast<NamedDecl>(ContextDecl);
 
-  if (const auto *ND = dyn_cast<NamedDecl>(DC))
-    return getLVForDecl(ND, computation);
+  if (!Owner)
+    return LinkageInfo::none();
 
-  // FIXME: We have a closure at TU scope with no context declaration. This
-  // should probably have no linkage.
-  return LinkageInfo::external();
+  // If the owner has a deduced type, we need to skip querying the linkage and
+  // visibility of that type, because it might involve this closure type.  The
+  // only effect of this is that we might give a lambda VisibleNoLinkage rather
+  // than NoLinkage when we don't strictly need to, which is benign.
+  auto *VD = dyn_cast<VarDecl>(Owner);
+  LinkageInfo OwnerLV =
+      VD && VD->getType()->getContainedDeducedType()
+          ? computeLVForDecl(Owner, computation, /*IgnoreVarTypeLinkage*/true)
+          : getLVForDecl(Owner, computation);
+
+  // A lambda never formally has linkage. But if the owner is externally
+  // visible, then the lambda is too. We apply the same rules to blocks.
+  if (!isExternallyVisible(OwnerLV.getLinkage()))
+    return LinkageInfo::none();
+  return LinkageInfo(VisibleNoLinkage, OwnerLV.getVisibility(),
+                     OwnerLV.isVisibilityExplicit());
 }
 
 LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
@@ -1231,7 +1220,8 @@ getOutermostEnclosingLambda(const CXXRecordDecl *Record) {
 }
 
 LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
-                                              LVComputationKind computation) {
+                                              LVComputationKind computation,
+                                              bool IgnoreVarTypeLinkage) {
   // Internal_linkage attribute overrides other considerations.
   if (D->hasAttr<InternalLinkageAttr>())
     return getInternalLinkageFor(D);
@@ -1319,7 +1309,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
 
   // Handle linkage for namespace-scope names.
   if (D->getDeclContext()->getRedeclContext()->isFileContext())
-    return getLVForNamespaceScopeDecl(D, computation);
+    return getLVForNamespaceScopeDecl(D, computation, IgnoreVarTypeLinkage);
   
   // C++ [basic.link]p5:
   //   In addition, a member function, static data member, a named
@@ -1329,7 +1319,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   purposes (7.1.3), has external linkage if the name of the class
   //   has external linkage.
   if (D->getDeclContext()->isRecord())
-    return getLVForClassMember(D, computation);
+    return getLVForClassMember(D, computation, IgnoreVarTypeLinkage);
 
   // C++ [basic.link]p6:
   //   The name of a function declared in block scope and the name of
@@ -1357,7 +1347,7 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   if (D->hasAttr<InternalLinkageAttr>())
     return getInternalLinkageFor(D);
 
-  if (computation == LVForLinkageOnly && D->hasCachedLinkage())
+  if (computation.IgnoreAllVisibility && D->hasCachedLinkage())
     return LinkageInfo(D->getCachedLinkage(), DefaultVisibility, false);
 
   if (llvm::Optional<LinkageInfo> LI = lookup(D, computation))
@@ -1398,7 +1388,10 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
 }
 
 LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
-  return getLVForDecl(D, usesTypeVisibility(D) ? LVForType : LVForValue);
+  return getLVForDecl(D,
+                      LVComputationKind(usesTypeVisibility(D)
+                                            ? NamedDecl::VisibilityForType
+                                            : NamedDecl::VisibilityForValue));
 }
 
 Module *NamedDecl::getOwningModuleForLinkage() const {
