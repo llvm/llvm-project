@@ -349,7 +349,14 @@ public:
 
   /// Kinds of explicit visibility.
   enum ExplicitVisibilityKind {
+    /// Do an LV computation for, ultimately, a type.
+    /// Visibility may be restricted by type visibility settings and
+    /// the visibility of template arguments.
     VisibilityForType,
+
+    /// Do an LV computation for, ultimately, a non-type declaration.
+    /// Visibility may be restricted by value visibility settings and
+    /// the visibility of template arguments.
     VisibilityForValue
   };
 

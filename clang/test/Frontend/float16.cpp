@@ -111,7 +111,7 @@ public:
 };
 
 //CHECK:      |-CXXRecordDecl {{.*}} referenced class C1 definition
-//CHECK-NEXT: | |-CXXRecordDecl {{.*}} implicit referenced class C1
+//CHECK:      | |-CXXRecordDecl {{.*}} implicit referenced class C1
 //CHECK-NEXT: | |-FieldDecl {{.*}} referenced f1c '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} used f2c 'const _Float16' static
 //CHECK-NEXT: | |-FieldDecl {{.*}} f3c 'volatile _Float16'
@@ -179,7 +179,7 @@ template <class C> struct S1 {
 //CHECK:      |-ClassTemplateDecl {{.*}} S1
 //CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} referenced class depth 0 index 0 C
 //CHECK-NEXT: | |-CXXRecordDecl {{.*}} struct S1 definition
-//CHECK-NEXT: | | |-CXXRecordDecl {{.*}} implicit struct S1
+//CHECK:      | | |-CXXRecordDecl {{.*}} implicit struct S1
 //CHECK-NEXT: | | `-FieldDecl {{.*}} mem1 'C'
 //CHECK-NEXT: | `-ClassTemplateSpecialization {{.*}} 'S1'
 

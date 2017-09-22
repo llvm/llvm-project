@@ -11,31 +11,42 @@
 //  Declarations that describe the BPF register file
 //===----------------------------------------------------------------------===//
 
-// Registers are identified with 4-bit ID numbers.
-// Ri - 64-bit integer registers
-class Ri<bits<16> Enc, string n> : Register<n> {
-  let Namespace = "BPF";
-  let HWEncoding = Enc;
+let Namespace = "BPF" in {
+  def sub_32 : SubRegIndex<32>;
 }
 
-// Integer registers
-def R0 : Ri< 0, "r0">, DwarfRegNum<[0]>;
-def R1 : Ri< 1, "r1">, DwarfRegNum<[1]>;
-def R2 : Ri< 2, "r2">, DwarfRegNum<[2]>;
-def R3 : Ri< 3, "r3">, DwarfRegNum<[3]>;
-def R4 : Ri< 4, "r4">, DwarfRegNum<[4]>;
-def R5 : Ri< 5, "r5">, DwarfRegNum<[5]>;
-def R6 : Ri< 6, "r6">, DwarfRegNum<[6]>;
-def R7 : Ri< 7, "r7">, DwarfRegNum<[7]>;
-def R8 : Ri< 8, "r8">, DwarfRegNum<[8]>;
-def R9 : Ri< 9, "r9">, DwarfRegNum<[9]>;
-def R10 : Ri<10, "r10">, DwarfRegNum<[10]>;
-def R11 : Ri<11, "r11">, DwarfRegNum<[11]>;
+class Wi<bits<16> Enc, string n> : Register<n> {
+  let HWEncoding = Enc;
+  let Namespace = "BPF";
+}
+
+// Registers are identified with 4-bit ID numbers.
+// Ri - 64-bit integer registers
+class Ri<bits<16> Enc, string n, list<Register> subregs>
+  : RegisterWithSubRegs<n, subregs> {
+  let HWEncoding = Enc;
+  let Namespace = "BPF";
+  let SubRegIndices = [sub_32];
+}
+
+foreach I = 0-11 in {
+  // 32-bit Integer (alias to low part of 64-bit register).
+  def W#I  : Wi<I,  "w"#I>,  DwarfRegNum<[I]>;
+  // 64-bit Integer registers
+  def R#I  : Ri<I,  "r"#I,  [!cast<Wi>("W"#I)]>,  DwarfRegNum<[I]>;
+}
 
 // Register classes.
-def GPR : RegisterClass<"BPF", [i64], 64, (add R1, R2, R3, R4, R5,
-                                           R6, R7, R8, R9, // callee saved
-                                           R0,  // return value
-                                           R11, // stack ptr
-                                           R10  // frame ptr
-                                          )>;
+def GPR32 : RegisterClass<"BPF", [i32], 32, (add
+  (sequence "W%u", 1, 9),
+  W0, // Return value
+  W11, // Stack Ptr
+  W10  // Frame Ptr
+)>;
+
+def GPR : RegisterClass<"BPF", [i64], 64, (add
+  (sequence "R%u", 1, 9),
+  R0, // Return value
+  R11, // Stack Ptr
+  R10  // Frame Ptr
+)>;

@@ -751,7 +751,7 @@ public:
   /// the loop forest and parent loops for each block so that \c L is no longer
   /// referenced, but does not actually delete \c L immediately. The pointer
   /// will remain valid until this LoopInfo's memory is released.
-  void markAsErased(Loop *L);
+  void erase(Loop *L);
 
   /// Returns true if replacing From with To everywhere is guaranteed to
   /// preserve LCSSA form.

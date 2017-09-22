@@ -6439,8 +6439,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     // GetTarget prints out stuff.
     return;
   }
+  std::string MachOMCPU;
   if (MCPU.empty() && McpuDefault)
-    MCPU = McpuDefault;
+    MachOMCPU = McpuDefault;
+  else
+    MachOMCPU = MCPU;
 
   std::unique_ptr<const MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
   std::unique_ptr<const MCInstrInfo> ThumbInstrInfo;
@@ -6462,7 +6465,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<const MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TripleName));
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TripleName, MachOMCPU, FeaturesStr));
   MCContext Ctx(AsmInfo.get(), MRI.get(), nullptr);
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
@@ -6512,7 +6515,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbAsmInfo.reset(
         ThumbTarget->createMCAsmInfo(*ThumbMRI, ThumbTripleName));
     ThumbSTI.reset(
-        ThumbTarget->createMCSubtargetInfo(ThumbTripleName, MCPU, FeaturesStr));
+        ThumbTarget->createMCSubtargetInfo(ThumbTripleName, MachOMCPU,
+                                           FeaturesStr));
     ThumbCtx.reset(new MCContext(ThumbAsmInfo.get(), ThumbMRI.get(), nullptr));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     MCContext *PtrThumbCtx = ThumbCtx.get();

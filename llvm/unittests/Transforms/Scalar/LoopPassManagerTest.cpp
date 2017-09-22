@@ -1393,7 +1393,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
     for (BasicBlock *LoopBB : LoopBBs)
       LoopBB->eraseFromParent();
 
-    AR.LI.markAsErased(&L);
+    AR.LI.erase(&L);
   };
 
   // Build up the pass managers.

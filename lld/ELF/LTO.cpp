@@ -61,10 +61,8 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
 }
 
 static void checkError(Error E) {
-  handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) -> Error {
-    error(EIB.message());
-    return Error::success();
-  });
+  handleAllErrors(std::move(E),
+                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
 }
 
 static std::unique_ptr<lto::LTO> createLTO() {

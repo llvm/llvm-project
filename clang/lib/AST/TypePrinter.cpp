@@ -665,6 +665,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
       auto EPI = T->getExtParameterInfo(i);
       if (EPI.isConsumed()) OS << "__attribute__((ns_consumed)) ";
+      if (EPI.isNoEscape())
+        OS << "__attribute__((noescape)) ";
       auto ABI = EPI.getABI();
       if (ABI != ParameterABI::Ordinary)
         OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";
