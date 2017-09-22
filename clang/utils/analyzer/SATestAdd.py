@@ -65,7 +65,7 @@ def addNewProject(ID, BuildMode) :
         sys.exit(-1)
 
     # Build the project.
-    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True, Dir=Dir)
+    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True)
 
     # Add the project ID to the project map.
     ProjectMapPath = os.path.join(CurDir, SATestBuild.ProjectMapFile)

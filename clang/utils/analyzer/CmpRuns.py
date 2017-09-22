@@ -28,7 +28,6 @@ Usage:
 
 import os
 import plistlib
-import CmpRuns
 
 # Information about analysis run:
 # path - the analysis output directory
