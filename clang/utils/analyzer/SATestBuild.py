@@ -485,7 +485,6 @@ def checkBuild(SBOutputDir):
                                                    % (NumOfFailuresInSummary,))
         # TODO: Add a line "See the results folder for more."
 
-        FailuresCopied = NumOfFailuresInSummary
         Idx = 0
         for FailLogPathI in Failures:
             if Idx >= NumOfFailuresInSummary:
