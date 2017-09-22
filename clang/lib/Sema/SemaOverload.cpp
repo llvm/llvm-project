@@ -1481,6 +1481,23 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                  .getTypePtr());
       Changed = true;
     }
+
+    // Convert FromFPT's ExtParameterInfo if necessary. The conversion is valid
+    // only if the ExtParameterInfo lists of the two function prototypes can be
+    // merged and the merged list is identical to ToFPT's ExtParameterInfo list.
+    SmallVector<FunctionProtoType::ExtParameterInfo, 4> NewParamInfos;
+    bool CanUseToFPT, CanUseFromFPT;
+    if (Context.mergeExtParameterInfo(ToFPT, FromFPT, CanUseToFPT,
+                                      CanUseFromFPT, NewParamInfos) &&
+        CanUseToFPT && !CanUseFromFPT) {
+      FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+      ExtInfo.ExtParameterInfos =
+          NewParamInfos.empty() ? nullptr : NewParamInfos.data();
+      QualType QT = Context.getFunctionType(FromFPT->getReturnType(),
+                                            FromFPT->getParamTypes(), ExtInfo);
+      FromFn = QT->getAs<FunctionType>();
+      Changed = true;
+    }
   }
 
   if (!Changed)
@@ -2663,8 +2680,12 @@ bool Sema::IsBlockPointerConversion(QualType FromType, QualType ToType,
        // Argument types are too different. Abort.
        return false;
    }
-   if (!Context.doFunctionTypesMatchOnExtParameterInfos(FromFunctionType,
-                                                        ToFunctionType))
+
+   SmallVector<FunctionProtoType::ExtParameterInfo, 4> NewParamInfos;
+   bool CanUseToFPT, CanUseFromFPT;
+   if (!Context.mergeExtParameterInfo(ToFunctionType, FromFunctionType,
+                                      CanUseToFPT, CanUseFromFPT,
+                                      NewParamInfos))
      return false;
 
    ConvertedType = ToType;
