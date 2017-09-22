@@ -13932,7 +13932,8 @@ CreateNewDecl:
     Invalid = true;
   }
 
-  if (!Invalid && TUK == TUK_Definition && DC->getDeclKind() == Decl::Enum) {
+  if (!Invalid && getLangOpts().CPlusPlus && TUK == TUK_Definition &&
+      DC->getDeclKind() == Decl::Enum) {
     Diag(New->getLocation(), diag::err_type_defined_in_enum)
       << Context.getTagDeclType(New);
     Invalid = true;
@@ -15134,8 +15135,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (CXXRecordDecl *CXXRecord = dyn_cast<CXXRecordDecl>(Record)) {
       auto *Dtor = CXXRecord->getDestructor();
       if (Dtor && Dtor->isImplicit() &&
-          ShouldDeleteSpecialMember(Dtor, CXXDestructor))
+          ShouldDeleteSpecialMember(Dtor, CXXDestructor)) {
+        CXXRecord->setImplicitDestructorIsDeleted();
         SetDeclDeleted(Dtor, CXXRecord->getLocation());
+      }
     }
 
     if (Record->hasAttrs()) {

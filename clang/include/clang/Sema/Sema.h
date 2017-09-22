@@ -10551,6 +10551,36 @@ public:
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
 
 private:
+  class SavePendingParsedClassStateRAII {
+  public:
+    SavePendingParsedClassStateRAII(Sema &S) : S(S) { swapSavedState(); }
+
+    ~SavePendingParsedClassStateRAII() {
+      assert(S.DelayedExceptionSpecChecks.empty() &&
+             "there shouldn't be any pending delayed exception spec checks");
+      assert(S.DelayedDefaultedMemberExceptionSpecs.empty() &&
+             "there shouldn't be any pending delayed defaulted member "
+             "exception specs");
+      assert(S.DelayedDllExportClasses.empty() &&
+             "there shouldn't be any pending delayed DLL export classes");
+      swapSavedState();
+    }
+
+  private:
+    Sema &S;
+    decltype(DelayedExceptionSpecChecks) SavedExceptionSpecChecks;
+    decltype(DelayedDefaultedMemberExceptionSpecs)
+        SavedDefaultedMemberExceptionSpecs;
+    decltype(DelayedDllExportClasses) SavedDllExportClasses;
+
+    void swapSavedState() {
+      SavedExceptionSpecChecks.swap(S.DelayedExceptionSpecChecks);
+      SavedDefaultedMemberExceptionSpecs.swap(
+          S.DelayedDefaultedMemberExceptionSpecs);
+      SavedDllExportClasses.swap(S.DelayedDllExportClasses);
+    }
+  };
+
   /// \brief Helper class that collects misaligned member designations and
   /// their location info for delayed diagnostics.
   struct MisalignedMember {
