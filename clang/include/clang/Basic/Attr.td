@@ -1403,10 +1403,10 @@ def ObjCKindOf : TypeAttr {
   let Documentation = [Undocumented];
 }
 
-def NoEscape : InheritableAttr {
-  let Spellings = [GCC<"noescape">];
-  let Subjects = SubjectList<[ParmVar], WarnDiag, "ExpectedParameter">;
-  let Documentation = [Undocumented];
+def NoEscape : Attr {
+  let Spellings = [GNU<"noescape">, CXX11<"clang", "noescape">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [NoEscapeDocs];
 }
 
 def AssumeAligned : InheritableAttr {

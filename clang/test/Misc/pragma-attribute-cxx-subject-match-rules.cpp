@@ -44,9 +44,9 @@ struct testStructRecord {
   int testStructRecordField;
 };
 // CHECK-RECORD: CXXRecordDecl{{.*}} testStructRecord
-// CHECK-RECORD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-RECORD:   AnnotateAttr{{.*}} "test"
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testStructRecord
-// CHECK-RECORD_UNLESS_IS_UNION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-RECORD_UNLESS_IS_UNION:         AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testStructRecordField
 // CHECK-FIELD-NEXT: AnnotateAttr{{.*}} "test"
 
@@ -54,9 +54,9 @@ class testClassRecord {
   int testClassRecordField;
 };
 // CHECK-RECORD: CXXRecordDecl{{.*}} testClassRecord
-// CHECK-RECORD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-RECORD:   AnnotateAttr{{.*}} "test"
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testClassRecord
-// CHECK-RECORD_UNLESS_IS_UNION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-RECORD_UNLESS_IS_UNION:         AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testClassRecordField
 // CHECK-FIELD-NEXT: AnnotateAttr{{.*}} "test"
 
@@ -64,7 +64,7 @@ union testUnionRecord {
   int testUnionRecordField;
 };
 // CHECK-RECORD: CXXRecordDecl{{.*}} testUnionRecord
-// CHECK-RECORD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-RECORD:   AnnotateAttr{{.*}} "test"
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testUnionRecord
 // CHECK-RECORD_UNLESS_IS_UNION-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testUnionRecordField

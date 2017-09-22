@@ -10,6 +10,7 @@ import lit.formats
 import lit.util
 
 from lit.llvm import llvm_config
+from lit.llvm import ToolFilter
 
 # Configuration file for the 'lit' test runner.
 
@@ -112,55 +113,12 @@ config.substitutions.append( ('%PATH%', config.environment['PATH']) )
 if config.clang_examples:
     config.available_features.add('examples')
 
-# Note that when substituting %clang_cc1 also fill in the include directory of
-# the builtin headers. Those are part of even a freestanding environment, but
-# Clang relies on the driver to locate them.
-def getClangBuiltinIncludeDir(clang):
-    # FIXME: Rather than just getting the version, we should have clang print
-    # out its resource dir here in an easy to scrape form.
-    cmd = subprocess.Popen([clang, '-print-file-name=include'],
-                           stdout=subprocess.PIPE,
-                           env=config.environment)
-    if not cmd.stdout:
-      lit_config.fatal("Couldn't find the include dir for Clang ('%s')" % clang)
-    dir = cmd.stdout.read().strip()
-    if sys.platform in ['win32'] and not llvm_config.use_lit_shell:
-        # Don't pass dosish path separator to msys bash.exe.
-        dir = dir.replace('\\', '/')
-    # Ensure the result is an ascii string, across Python2.5+ - Python3.
-    return str(dir.decode('ascii'))
-
-def makeItaniumABITriple(triple):
-    m = re.match(r'(\w+)-(\w+)-(\w+)', triple)
-    if not m:
-      lit_config.fatal("Could not turn '%s' into Itanium ABI triple" % triple)
-    if m.group(3).lower() != 'win32':
-      # All non-win32 triples use the Itanium ABI.
-      return triple
-    return m.group(1) + '-' + m.group(2) + '-mingw32'
-
-def makeMSABITriple(triple):
-    m = re.match(r'(\w+)-(\w+)-(\w+)', triple)
-    if not m:
-      lit_config.fatal("Could not turn '%s' into MS ABI triple" % triple)
-    isa = m.group(1).lower()
-    vendor = m.group(2).lower()
-    os = m.group(3).lower()
-    if os == 'win32':
-      # If the OS is win32, we're done.
-      return triple
-    if isa.startswith('x86') or isa == 'amd64' or re.match(r'i\d86', isa):
-      # For x86 ISAs, adjust the OS.
-      return isa + '-' + vendor + '-win32'
-    # -win32 is not supported for non-x86 targets; use a default.
-    return 'i686-pc-win32'
-
+builtin_include_dir = llvm_config.get_clang_builtin_include_dir(config.clang)
 config.substitutions.append( ('%clang_analyze_cc1',
                               '%clang_cc1 -analyze %analyze') )
 config.substitutions.append( ('%clang_cc1',
                               '%s -cc1 -internal-isystem %s -nostdsysteminc'
-                              % (config.clang,
-                                 getClangBuiltinIncludeDir(config.clang))) )
+                              % (config.clang, builtin_include_dir)) )
 config.substitutions.append( ('%clang_cpp', ' ' + config.clang +
                               ' --driver-mode=cpp '))
 config.substitutions.append( ('%clang_cl', ' ' + config.clang +
@@ -168,16 +126,20 @@ config.substitutions.append( ('%clang_cl', ' ' + config.clang +
 config.substitutions.append( ('%clangxx', ' ' + config.clang +
                               ' --driver-mode=g++ '))
 config.substitutions.append( ('%clang', ' ' + config.clang + ' ') )
-config.substitutions.append( ('%test_debuginfo', ' ' + config.llvm_src_root + '/utils/test_debuginfo.pl ') )
-config.substitutions.append( ('%itanium_abi_triple', makeItaniumABITriple(config.target_triple)) )
-config.substitutions.append( ('%ms_abi_triple', makeMSABITriple(config.target_triple)) )
-config.substitutions.append( ('%resource_dir', getClangBuiltinIncludeDir(config.clang)) )
+config.substitutions.append( ('%test_debuginfo',
+                             ' ' + config.llvm_src_root +  '/utils/test_debuginfo.pl ') )
+config.substitutions.append( ('%itanium_abi_triple',
+                             llvm_config.make_itanium_abi_triple(config.target_triple)) )
+config.substitutions.append( ('%ms_abi_triple',
+                             llvm_config.make_msabi_triple(config.target_triple)) )
+config.substitutions.append( ('%resource_dir', builtin_include_dir) )
 config.substitutions.append( ('%python', config.python_executable) )
 
 # The host triple might not be set, at least if we're compiling clang from
 # an already installed llvm.
 if config.host_triple and config.host_triple != '@LLVM_HOST_TRIPLE@':
-    config.substitutions.append( ('%target_itanium_abi_host_triple', '--target=%s' % makeItaniumABITriple(config.host_triple)) )
+    config.substitutions.append( ('%target_itanium_abi_host_triple',
+                                 '--target=%s' % llvm_config.make_itanium_abi_triple(config.host_triple)) )
 else:
     config.substitutions.append( ('%target_itanium_abi_host_triple', '') )
 
@@ -207,50 +169,27 @@ config.substitutions.append(
     (' %clang-cl ',
      """*** invalid substitution, use '%clang_cl'. ***""") )
 
-# For each occurrence of a clang tool name as its own word, replace it
-# with the full path to the build directory holding that tool.  This
-# ensures that we are testing the tools just built and not some random
+# For each occurrence of a clang tool name, replace it with the full path to
+# the build directory holding that tool.  We explicitly specify the directories
+# to search to ensure that we get the tools just built and not some random
 # tools that might happen to be in the user's PATH.
-tool_dirs = os.path.pathsep.join((config.clang_tools_dir, config.llvm_tools_dir))
+tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
-# Regex assertions to reject neighbor hyphens/dots (seen in some tests).
-# For example, don't match 'clang-check-' or '.clang-format'.
-NoPreHyphenDot = r"(?<!(-|\.))"
-NoPostHyphenDot = r"(?!(-|\.))"
-NoPostBar = r"(?!(/|\\))"
-
-tool_patterns = [r"\bFileCheck\b",
-                 r"\bc-index-test\b",
-                 NoPreHyphenDot + r"\bclang-check\b" + NoPostHyphenDot,
-                 NoPreHyphenDot + r"\bclang-diff\b" + NoPostHyphenDot,
-                 NoPreHyphenDot + r"\bclang-format\b" + NoPostHyphenDot,
-                 # FIXME: Some clang test uses opt?
-                 NoPreHyphenDot + r"\bopt\b" + NoPostBar + NoPostHyphenDot,
-                 # Handle these specially as they are strings searched
-                 # for during testing.
-                 r"\| \bcount\b",
-                 r"\| \bnot\b"]
+tool_patterns = [
+    'FileCheck', 'c-index-test',
+    ToolFilter('clang-check', pre='-.', post='-.'),
+    ToolFilter('clang-diff', pre='-.', post='-.'),
+    ToolFilter('clang-format', pre='-.', post='-.'),
+    # FIXME: Some clang test uses opt?
+    ToolFilter('opt', pre='-.', post=r'/\-.'),
+    # Handle these specially as they are strings searched for during testing.
+    ToolFilter(r'\| \bcount\b', verbatim=True),
+    ToolFilter(r'\| \bnot\b', verbatim=True)]
 
 if config.clang_examples:
-    tool_patterns.append(NoPreHyphenDot + r"\bclang-interpreter\b" + NoPostHyphenDot)
+    tool_patterns.append(ToolFilter('clang-interpreter', '-.', '-.'))
 
-for pattern in tool_patterns:
-    # Extract the tool name from the pattern.  This relies on the tool
-    # name being surrounded by \b word match operators.  If the
-    # pattern starts with "| ", include it in the string to be
-    # substituted.
-    tool_match = re.match(r"^(\\)?((\| )?)\W+b([0-9A-Za-z-_]+)\\b\W*$",
-                          pattern)
-    tool_pipe = tool_match.group(2)
-    tool_name = tool_match.group(4)
-    tool_path = lit.util.which(tool_name, tool_dirs)
-    if not tool_path:
-        # Warn, but still provide a substitution.
-        lit_config.note('Did not find ' + tool_name + ' in ' + tool_dirs)
-        tool_path = config.clang_tools_dir + '/' + tool_name
-    config.substitutions.append((pattern, tool_pipe + tool_path))
-
-###
+llvm_config.add_tool_substitutions(tool_patterns, tool_dirs)
 
 # Set available features we allow tests to conditionalize on.
 #

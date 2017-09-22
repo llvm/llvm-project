@@ -17,7 +17,7 @@ class testClass2 {
   testClass2 *operator -> ();
 };
 // CHECK-LABEL: CXXRecordDecl{{.*}} testClass2
-// CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK: AnnotateAttr{{.*}} "test"
 // CHECK: CXXMethodDecl{{.*}} testMethod1
 // CHECK-NEXT: ParmVarDecl{{.*}} param
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
@@ -76,7 +76,7 @@ void testLambdaMethod() {
 // CHECK-LABEL: FunctionDecl{{.*}} testLambdaMethod
 // CHECK: LambdaExpr
 // CHECK-NEXT: CXXRecordDecl
-// CHECK-NEXT: CXXMethodDecl{{.*}} operator()
+// CHECK: CXXMethodDecl{{.*}} operator()
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
 

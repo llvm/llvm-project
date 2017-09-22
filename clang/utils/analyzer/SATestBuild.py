@@ -53,30 +53,12 @@ import time
 import plistlib
 import argparse
 from subprocess import check_call, check_output, CalledProcessError
+import multiprocessing
 
 #------------------------------------------------------------------------------
 # Helper functions.
 #------------------------------------------------------------------------------
 
-def detectCPUs():
-    """
-    Detects the number of CPUs on a system. Cribbed from pp.
-    """
-    # Linux, Unix and MacOS:
-    if hasattr(os, "sysconf"):
-        if os.sysconf_names.has_key("SC_NPROCESSORS_ONLN"):
-            # Linux & Unix:
-            ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
-            if isinstance(ncpus, int) and ncpus > 0:
-                return ncpus
-        else: # OSX:
-            return int(capture(['sysctl', '-n', 'hw.ncpu']))
-    # Windows:
-    if os.environ.has_key("NUMBER_OF_PROCESSORS"):
-        ncpus = int(os.environ["NUMBER_OF_PROCESSORS"])
-        if ncpus > 0:
-            return ncpus
-    return 1 # Default
 
 def which(command, paths = None):
    """which(command, [paths]) - Look up the given command in the paths string
@@ -142,13 +124,16 @@ def getSBOutputDirName(IsReferenceBuild) :
 #------------------------------------------------------------------------------
 
 # Find Clang for static analysis.
-Clang = which("clang", os.environ['PATH'])
+if 'CC' in os.environ:
+    Clang = os.environ['CC']
+else:
+    Clang = which("clang", os.environ['PATH'])
 if not Clang:
     print "Error: cannot find 'clang' in PATH"
     sys.exit(-1)
 
 # Number of jobs.
-Jobs = int(math.ceil(detectCPUs() * 0.75))
+Jobs = int(math.ceil(multiprocessing.cpu_count() * 0.75))
 
 # Project map stores info about all the "registered" projects.
 ProjectMapFile = "projectMap.csv"
@@ -303,7 +288,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
             # to speed up analysis.  xcodebuild will
             # automatically use the maximum number of cores.
             if (Command.startswith("make ") or Command == "make") and \
-                "-j" not in Command:
+                    "-j" not in Command:
                 Command += " -j%d" % Jobs
             SBCommand = SBPrefix + Command
             if Verbose == 1:
@@ -427,11 +412,8 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     assert(not os.path.exists(SBOutputDir))
     os.makedirs(os.path.join(SBOutputDir, LogFolderName))
 
-    # Open the log file.
-    PBuildLogFile = open(BuildLogPath, "wb+")
-
     # Build and analyze the project.
-    try:
+    with open(BuildLogPath, "wb+") as PBuildLogFile:
         if (ProjectBuildMode == 1):
             downloadAndPatch(Dir, PBuildLogFile)
             runCleanupScript(Dir, PBuildLogFile)
@@ -439,30 +421,31 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
         else:
             runAnalyzePreprocessed(Dir, SBOutputDir, ProjectBuildMode)
 
-        if IsReferenceBuild :
+        if IsReferenceBuild:
             runCleanupScript(Dir, PBuildLogFile)
-
-            # Make the absolute paths relative in the reference results.
-            for (DirPath, Dirnames, Filenames) in os.walk(SBOutputDir):
-                for F in Filenames:
-                    if (not F.endswith('plist')):
-                        continue
-                    Plist = os.path.join(DirPath, F)
-                    Data = plistlib.readPlist(Plist)
-                    PathPrefix = Dir
-                    if (ProjectBuildMode == 1):
-                        PathPrefix = os.path.join(Dir, PatchedSourceDirName)
-                    Paths = [SourceFile[len(PathPrefix)+1:]\
-                              if SourceFile.startswith(PathPrefix)\
-                              else SourceFile for SourceFile in Data['files']]
-                    Data['files'] = Paths
-                    plistlib.writePlist(Data, Plist)
-
-    finally:
-        PBuildLogFile.close()
+            normalizeReferenceResults(Dir, SBOutputDir, ProjectBuildMode)
 
     print "Build complete (time: %.2f). See the log for more details: %s" % \
            ((time.time()-TBegin), BuildLogPath)
+
+def normalizeReferenceResults(Dir, SBOutputDir, ProjectBuildMode):
+    """
+    Make the absolute paths relative in the reference results.
+    """
+    for (DirPath, Dirnames, Filenames) in os.walk(SBOutputDir):
+        for F in Filenames:
+            if (not F.endswith('plist')):
+                continue
+            Plist = os.path.join(DirPath, F)
+            Data = plistlib.readPlist(Plist)
+            PathPrefix = Dir
+            if (ProjectBuildMode == 1):
+                PathPrefix = os.path.join(Dir, PatchedSourceDirName)
+            Paths = [SourceFile[len(PathPrefix)+1:]\
+                      if SourceFile.startswith(PathPrefix)\
+                      else SourceFile for SourceFile in Data['files']]
+            Data['files'] = Paths
+            plistlib.writePlist(Data, Plist)
 
 # A plist file is created for each call to the analyzer(each source file).
 # We are only interested on the once that have bug reports, so delete the rest.
@@ -495,8 +478,7 @@ def checkBuild(SBOutputDir):
     if (Verbose > 0):
         print "  Creating the failures summary file %s" % (SummaryPath,)
 
-    SummaryLog = open(SummaryPath, "w+")
-    try:
+    with open(SummaryPath, "w+") as SummaryLog:
         SummaryLog.write("Total of %d failures discovered.\n" % (TotalFailed,))
         if TotalFailed > NumOfFailuresInSummary:
             SummaryLog.write("See the first %d below.\n"
@@ -510,13 +492,8 @@ def checkBuild(SBOutputDir):
                 break;
             Idx += 1
             SummaryLog.write("\n-- Error #%d -----------\n" % (Idx,));
-            FailLogI = open(FailLogPathI, "r");
-            try:
+            with open(FailLogPathI, "r") as FailLogI:
                 shutil.copyfileobj(FailLogI, SummaryLog);
-            finally:
-                FailLogI.close()
-    finally:
-        SummaryLog.close()
 
     print "Error: analysis failed. See ", SummaryPath
     sys.exit(-1)
@@ -605,10 +582,14 @@ def cleanupReferenceResults(SBOutputDir):
     # Remove the log file. It leaks absolute path names.
     removeLogFile(SBOutputDir)
 
-def updateSVN(Mode, ProjectsMap):
+def updateSVN(Mode, PMapFile):
+    """
+    svn delete or svn add (depending on `Mode`) all folders defined in the file
+    handler `PMapFile`.
+    Commit the result to SVN.
+    """
     try:
-        ProjectsMap.seek(0)
-        for I in csv.reader(ProjectsMap):
+        for I in iterateOverProjects(PMapFile):
             ProjName = I[0]
             Path = os.path.join(ProjName, getSBOutputDirName(True))
 
@@ -634,13 +615,12 @@ def updateSVN(Mode, ProjectsMap):
         print "Error: SVN update failed."
         sys.exit(-1)
 
-def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Dir=None, Strictness = 0):
+def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness = 0):
     print " \n\n--- Building project %s" % (ID,)
 
     TBegin = time.time()
 
-    if Dir is None :
-        Dir = getProjectDir(ID)
+    Dir = getProjectDir(ID)
     if Verbose == 1:
         print "  Build directory: %s." % (Dir,)
 
@@ -652,32 +632,52 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Dir=None, Strictne
 
     checkBuild(SBOutputDir)
 
-    if IsReferenceBuild == False:
-        runCmpResults(Dir, Strictness)
-    else:
+    if IsReferenceBuild:
         cleanupReferenceResults(SBOutputDir)
+    else:
+        runCmpResults(Dir, Strictness)
 
     print "Completed tests for project %s (time: %.2f)." % \
           (ID, (time.time()-TBegin))
 
 def isCommentCSVLine(Entries):
-  # Treat CSV lines starting with a '#' as a comment.
-  return len(Entries) > 0 and Entries[0].startswith("#")
+    # Treat CSV lines starting with a '#' as a comment.
+    return len(Entries) > 0 and Entries[0].startswith("#")
 
-def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
-    PMapFile = open(getProjectMapPath(), "rb")
+def projectFileHandler():
+    return open(getProjectMapPath(), "rb")
+
+def iterateOverProjects(PMapFile):
+    """
+    Iterate over all projects defined in the project file handler `PMapFile`
+    from the start.
+    """
+    PMapFile.seek(0)
     try:
-        # Validate the input.
         for I in csv.reader(PMapFile):
             if (isCommentCSVLine(I)):
                 continue
-            if (len(I) != 2) :
-                print "Error: Rows in the ProjectMapFile should have 3 entries."
-                raise Exception()
-            if (not ((I[1] == "0") | (I[1] == "1") | (I[1] == "2"))):
-                print "Error: Second entry in the ProjectMapFile should be 0" \
-                      " (single file), 1 (project), or 2(single file c++11)."
-                raise Exception()
+            yield I
+    except:
+        print "Error occurred. Premature termination."
+        raise
+
+def validateProjectFile(PMapFile):
+    """
+    Validate project file.
+    """
+    for I in iterateOverProjects(PMapFile):
+        if (len(I) != 2) :
+            print "Error: Rows in the ProjectMapFile should have 2 entries."
+            raise Exception()
+        if (not ((I[1] == "0") | (I[1] == "1") | (I[1] == "2"))):
+            print "Error: Second entry in the ProjectMapFile should be 0" \
+                    " (single file), 1 (project), or 2(single file c++11)."
+            raise Exception()
+
+def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
+    with projectFileHandler() as PMapFile:
+        validateProjectFile(PMapFile)
 
         # When we are regenerating the reference results, we might need to
         # update svn. Remove reference results from SVN.
@@ -686,21 +686,12 @@ def testAll(IsReferenceBuild = False, UpdateSVN = False, Strictness = 0):
             updateSVN("delete",  PMapFile);
 
         # Test the projects.
-        PMapFile.seek(0)
-        for I in csv.reader(PMapFile):
-            if isCommentCSVLine(I):
-              continue;
-            testProject(I[0], int(I[1]), IsReferenceBuild, None, Strictness)
+        for (ProjName, ProjBuildMode) in iterateOverProjects(PMapFile):
+            testProject(ProjName, int(ProjBuildMode), IsReferenceBuild, Strictness)
 
-        # Add reference results to SVN.
+        # Re-add reference results to SVN.
         if UpdateSVN == True:
             updateSVN("add",  PMapFile);
-
-    except:
-        print "Error occurred. Premature termination."
-        raise
-    finally:
-        PMapFile.close()
 
 if __name__ == '__main__':
     # Parse command line arguments.

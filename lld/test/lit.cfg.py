@@ -10,6 +10,7 @@ import lit.formats
 import lit.util
 
 from lit.llvm import llvm_config
+from lit.llvm import ToolFilter
 
 # Configuration file for the 'lit' test runner.
 
@@ -36,57 +37,29 @@ config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.lld_obj_root, 'test')
 
 # Tweak the PATH to include the tools dir and the scripts dir.
-llvm_config.with_environment('PATH', [config.llvm_tools_dir, config.lld_tools_dir], append_path=True)
+llvm_config.with_environment('PATH',
+                             [config.llvm_tools_dir, config.lld_tools_dir], append_path=True)
 
-llvm_config.with_environment('LD_LIBRARY_PATH', [config.lld_libs_dir, config.llvm_libs_dir], append_path=True)
+llvm_config.with_environment('LD_LIBRARY_PATH',
+                             [config.lld_libs_dir, config.llvm_libs_dir], append_path=True)
 
-# For each occurrence of a lld tool name as its own word, replace it
-# with the full path to the build directory holding that tool.  This
-# ensures that we are testing the tools just built and not some random
+# For each occurrence of a clang tool name, replace it with the full path to
+# the build directory holding that tool.  We explicitly specify the directories
+# to search to ensure that we get the tools just built and not some random
 # tools that might happen to be in the user's PATH.
-
-# Regex assertions to reject neighbor hyphens/dots (seen in some tests).
-# For example, we want to prefix 'lld' and 'ld.lld' but not the 'lld' inside
-# of 'ld.lld'.
-NoPreJunk = r"(?<!(-|\.|/))"
-NoPostJunk = r"(?!(-|\.))"
+tool_dirs = [config.lld_tools_dir, config.llvm_tools_dir]
 
 config.substitutions.append( (r"\bld.lld\b", 'ld.lld --full-shutdown') )
 
-tool_patterns = [r"\bFileCheck\b",
-                 r"\bnot\b",
-                 NoPreJunk + r"\blld\b" + NoPostJunk,
-                 r"\bld.lld\b",
-                 r"\blld-link\b",
-                 r"\bllvm-as\b",
-                 r"\bllvm-mc\b",
-                 r"\bllvm-nm\b",
-                 r"\bllvm-objdump\b",
-                 r"\bllvm-pdbutil\b",
-                 r"\bllvm-readobj\b",
-                 r"\bobj2yaml\b",
-                 r"\byaml2obj\b"]
+tool_patterns = [
+    'FileCheck', 'not', 'ld.lld', 'lld-link', 'llvm-as', 'llvm-mc', 'llvm-nm',
+    'llvm-objdump', 'llvm-pdbutil', 'llvm-readobj', 'obj2yaml', 'yaml2obj',
+    ToolFilter('lld', pre='-./', post='-.')]
 
-for pattern in tool_patterns:
-    # Extract the tool name from the pattern.  This relies on the tool
-    # name being surrounded by \b word match operators.  If the
-    # pattern starts with "| ", include it in the string to be
-    # substituted.
-    tool_match = re.match(r"^(\\)?((\| )?)\W+b([0-9A-Za-z-_\.]+)\\b\W*$",
-                          pattern)
-    tool_pipe = tool_match.group(2)
-    tool_name = tool_match.group(4)
-    tool_path = lit.util.which(tool_name, config.environment['PATH'])
-    if not tool_path:
-        # Warn, but still provide a substitution.
-        lit_config.note('Did not find ' + tool_name + ' in ' + path)
-        tool_path = config.llvm_tools_dir + '/' + tool_name
-    config.substitutions.append((pattern, tool_pipe + tool_path))
+llvm_config.add_tool_substitutions(tool_patterns, tool_dirs)
 
 # Add site-specific substitutions.
 config.substitutions.append( ('%python', config.python_executable) )
-
-###
 
 # When running under valgrind, we mangle '-vg' onto the end of the triple so we
 # can check it with XFAIL and XTARGET.

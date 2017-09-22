@@ -21,6 +21,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "static-analyzer-call-event"
 
 using namespace clang;
 using namespace ento;
@@ -343,7 +346,6 @@ ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   return D->parameters();
 }
 
-
 RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   const FunctionDecl *FD = getDecl();
   // Note that the AnalysisDeclContext will have the FunctionDecl with
@@ -352,8 +354,17 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     AnalysisDeclContext *AD =
       getLocationContext()->getAnalysisDeclContext()->
       getManager()->getContext(FD);
-    if (AD->getBody())
-      return RuntimeDefinition(AD->getDecl());
+    bool IsAutosynthesized;
+    Stmt* Body = AD->getBody(IsAutosynthesized);
+    DEBUG({
+        if (IsAutosynthesized)
+          llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
+                       << "\n";
+    });
+    if (Body) {
+      const Decl* Decl = AD->getDecl();
+      return RuntimeDefinition(Decl);
+    }
   }
 
   return RuntimeDefinition();

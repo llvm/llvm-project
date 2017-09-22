@@ -14087,8 +14087,21 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
 
 bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
                                              const CXXMethodDecl *Old) {
-  const FunctionType *NewFT = New->getType()->getAs<FunctionType>();
-  const FunctionType *OldFT = Old->getType()->getAs<FunctionType>();
+  const auto *NewFT = New->getType()->getAs<FunctionProtoType>();
+  const auto *OldFT = Old->getType()->getAs<FunctionProtoType>();
+
+  if (OldFT->hasExtParameterInfos()) {
+    for (unsigned I = 0, E = OldFT->getNumParams(); I != E; ++I)
+      // A parameter of the overriding method should be annotated with noescape
+      // if the corresponding parameter of the overridden method is annotated.
+      if (OldFT->getExtParameterInfo(I).isNoEscape() &&
+          !NewFT->getExtParameterInfo(I).isNoEscape()) {
+        Diag(New->getParamDecl(I)->getLocation(),
+             diag::warn_overriding_method_missing_noescape);
+        Diag(Old->getParamDecl(I)->getLocation(),
+             diag::note_overridden_marked_noescape);
+      }
+  }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();
 
