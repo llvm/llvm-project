@@ -19,8 +19,8 @@ Content-Length: 148
 # CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"000035bb","filterText":"bb","insertText":"bb","insertTextFormat":1}
 # CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"000035ccc","filterText":"ccc","insertText":"ccc","insertTextFormat":1}
-# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000034operator=","filterText":"operator=","insertText":"operator=","insertTextFormat":1}
-# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000034~fake","filterText":"~fake","insertText":"~fake","insertTextFormat":1}
+# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000079operator=","filterText":"operator=","insertText":"operator=","insertTextFormat":1}
+# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000079~fake","filterText":"~fake","insertText":"~fake","insertTextFormat":1}
 # CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"000035f","filterText":"f","insertText":"f","insertTextFormat":1}
 # CHECK: ]}
 Content-Length: 148
@@ -32,8 +32,8 @@ Content-Length: 148
 # CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
 # CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"000035bb","filterText":"bb","insertText":"bb","insertTextFormat":1}
 # CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"000035ccc","filterText":"ccc","insertText":"ccc","insertTextFormat":1}
-# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000034operator=","filterText":"operator=","insertText":"operator=","insertTextFormat":1}
-# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000034~fake","filterText":"~fake","insertText":"~fake","insertTextFormat":1}
+# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000079operator=","filterText":"operator=","insertText":"operator=","insertTextFormat":1}
+# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000079~fake","filterText":"~fake","insertText":"~fake","insertTextFormat":1}
 # CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"000035f","filterText":"f","insertText":"f","insertTextFormat":1}
 # CHECK: ]}
 # Update the source file and check for completions again.

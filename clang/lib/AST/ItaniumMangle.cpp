@@ -1698,8 +1698,7 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
             = cast<NamedDecl>(Context)->getIdentifier()) {
         mangleSourceName(Name);
         const TemplateArgumentList *TemplateArgs = nullptr;
-        if (const TemplateDecl *TD =
-                isTemplate(cast<NamedDecl>(Context), TemplateArgs))
+        if (isTemplate(cast<NamedDecl>(Context), TemplateArgs))
           mangleTemplateArgs(*TemplateArgs);
         Out << 'M';
       }

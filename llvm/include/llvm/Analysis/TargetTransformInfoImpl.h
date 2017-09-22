@@ -785,16 +785,27 @@ public:
     if (getUserCost(I, Operands) == TTI::TCC_Free)
       return 0;
 
-    if (isa<CallInst>(I))
-      return 40;
-
     if (isa<LoadInst>(I))
       return 4;
 
-    Type *dstTy = I->getType();
-    if (VectorType *VectorTy = dyn_cast<VectorType>(dstTy))
-      dstTy = VectorTy->getElementType();
-    if (dstTy->isFloatingPointTy())
+    Type *DstTy = I->getType();
+
+    // Usually an intrinsic is a simple instruction.
+    // A real function call is much slower.
+    if (auto *CI = dyn_cast<CallInst>(I)) {
+      const Function *F = CI->getCalledFunction();
+      if (static_cast<T *>(this)->isLoweredToCall(F))
+        return 40;
+      // Some intrinsics return a value and a flag, we use the value type
+      // to decide its latency.
+      if (StructType* StructTy = dyn_cast<StructType>(DstTy))
+        DstTy = StructTy->getElementType(0);
+      // Fall through to simple instructions.
+    }
+
+    if (VectorType *VectorTy = dyn_cast<VectorType>(DstTy))
+      DstTy = VectorTy->getElementType();
+    if (DstTy->isFloatingPointTy())
       return 3;
 
     return 1;

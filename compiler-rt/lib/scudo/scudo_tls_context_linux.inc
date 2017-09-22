@@ -20,7 +20,7 @@
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 
-struct ScudoThreadContextPlatform {
+struct ScudoTSDPlatform {
   ALWAYS_INLINE void unlock() {}
 };
 

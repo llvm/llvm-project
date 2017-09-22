@@ -1049,6 +1049,7 @@ def PATCHABLE_RET : Instruction {
   let AsmString = "# XRay Function Patchable RET.";
   let usesCustomInserter = 1;
   let hasSideEffects = 1;
+  let isTerminator = 1;
   let isReturn = 1;
 }
 def PATCHABLE_FUNCTION_EXIT : Instruction {
