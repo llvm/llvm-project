@@ -129,8 +129,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm1, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $61440, %ecx # imm = 0xF000
 ; X32-NEXT:    shrl $12, %ecx
+; X32-NEXT:    andl $15, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
@@ -151,8 +151,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm1, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $49152, %ecx # imm = 0xC000
 ; X32-NEXT:    shrl $14, %ecx
+; X32-NEXT:    andl $3, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
@@ -162,8 +162,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm1, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; X32-NEXT:    shrl $15, %ecx
+; X32-NEXT:    andl $1, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
@@ -483,8 +483,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $61440, %ecx # imm = 0xF000
 ; X32-NEXT:    shrl $12, %ecx
+; X32-NEXT:    andl $15, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
@@ -507,8 +507,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $49152, %ecx # imm = 0xC000
 ; X32-NEXT:    shrl $14, %ecx
+; X32-NEXT:    andl $3, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
@@ -519,8 +519,8 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; X32-NEXT:    shrl $15, %ecx
+; X32-NEXT:    andl $1, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
@@ -860,8 +860,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $61440, %ecx # imm = 0xF000
 ; X32-NEXT:    shrl $12, %ecx
+; X32-NEXT:    andl $15, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
@@ -882,8 +882,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $49152, %ecx # imm = 0xC000
 ; X32-NEXT:    shrl $14, %ecx
+; X32-NEXT:    andl $3, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
@@ -893,8 +893,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; X32-NEXT:    shrl $15, %ecx
+; X32-NEXT:    andl $1, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
@@ -1214,8 +1214,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $61440, %ecx # imm = 0xF000
 ; X32-NEXT:    shrl $12, %ecx
+; X32-NEXT:    andl $15, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
@@ -1238,8 +1238,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $49152, %ecx # imm = 0xC000
 ; X32-NEXT:    shrl $14, %ecx
+; X32-NEXT:    andl $3, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
@@ -1250,8 +1250,8 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; X32-NEXT:    shrl $15, %ecx
+; X32-NEXT:    andl $1, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
 ; X32-NEXT:    vpmovm2b %k1, %zmm0
 ; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]

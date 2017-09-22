@@ -10,7 +10,7 @@
 //  This file defines the code-completion semantic actions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/SemaInternal.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -23,6 +23,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -741,8 +742,18 @@ unsigned ResultBuilder::getBasePriority(const NamedDecl *ND) {
   }
 
   const DeclContext *DC = ND->getDeclContext()->getRedeclContext();
-  if (DC->isRecord() || isa<ObjCContainerDecl>(DC))
+  if (DC->isRecord() || isa<ObjCContainerDecl>(DC)) {
+    // Explicit destructor calls are very rare.
+    if (isa<CXXDestructorDecl>(ND))
+      return CCP_Unlikely;
+    // Explicit operator and conversion function calls are also very rare.
+    auto DeclNameKind = ND->getDeclName().getNameKind();
+    if (DeclNameKind == DeclarationName::CXXOperatorName ||
+        DeclNameKind == DeclarationName::CXXLiteralOperatorName ||
+        DeclNameKind == DeclarationName::CXXConversionFunctionName)
+      return CCP_Unlikely;
     return CCP_MemberDeclaration;
+  }
 
   // Content-based decisions.
   if (isa<EnumConstantDecl>(ND))

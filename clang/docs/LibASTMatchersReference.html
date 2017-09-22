@@ -2741,18 +2741,21 @@ functionDecl(isExplicitTemplateSpecialization())
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
 </pre></td></tr>
 
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isExternC0')"><a name="isExternC0Anchor">isExternC</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isExternC0"><pre>Matches extern "C" function declarations.
+<tr><td colspan="4" class="doc" id="isExternC0"><pre>Matches extern "C" function or variable declarations.
 
 Given:
   extern "C" void f() {}
   extern "C" { void g() {} }
   void h() {}
+  extern "C" int x = 1;
+  extern "C" int y = 2;
+  int z = 3;
 functionDecl(isExternC())
-  matches the declaration of f and g, but not the declaration h
+  matches the declaration of f and g, but not the declaration of h.
+varDecl(isExternC())
+  matches the declaration of x and y, but not the declaration of z.
 </pre></td></tr>
-
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isInline1')"><a name="isInline1Anchor">isInline</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInline1"><pre>Matches function and namespace declarations that are marked with
@@ -3680,18 +3683,21 @@ functionDecl(isExplicitTemplateSpecialization())
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
 </pre></td></tr>
 
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isExternC1')"><a name="isExternC1Anchor">isExternC</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isExternC1"><pre>Matches extern "C" function declarations.
+<tr><td colspan="4" class="doc" id="isExternC1"><pre>Matches extern "C" function or variable declarations.
 
 Given:
   extern "C" void f() {}
   extern "C" { void g() {} }
   void h() {}
+  extern "C" int x = 1;
+  extern "C" int y = 2;
+  int z = 3;
 functionDecl(isExternC())
-  matches the declaration of f and g, but not the declaration h
+  matches the declaration of f and g, but not the declaration of h.
+varDecl(isExternC())
+  matches the declaration of x and y, but not the declaration of z.
 </pre></td></tr>
-
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass1')"><a name="isStaticStorageClass1Anchor">isStaticStorageClass</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isStaticStorageClass1"><pre>Matches variablefunction declarations that have "static" storage

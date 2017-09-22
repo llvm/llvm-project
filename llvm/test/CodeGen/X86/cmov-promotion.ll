@@ -90,21 +90,19 @@ define i32 @cmov_zpromotion_16_to_32(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_16_to_32:
 ; CMOV:       # BB#0:
 ; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
-; CMOV-NEXT:    movw $-1, %cx
-; CMOV-NEXT:    cmovnew %ax, %cx
-; CMOV-NEXT:    movzwl %cx, %eax
+; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
+; CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; CMOV-NEXT:    cmovnel %ecx, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_32:
 ; NO_CMOV:       # BB#0:
 ; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
+; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
 ; NO_CMOV-NEXT:    jne .LBB3_2
 ; NO_CMOV-NEXT:  # BB#1:
-; NO_CMOV-NEXT:    movw $-1, %ax
+; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; NO_CMOV-NEXT:  .LBB3_2:
-; NO_CMOV-NEXT:    movzwl %ax, %eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
   %ret = zext i16 %t0 to i32
@@ -115,21 +113,19 @@ define i64 @cmov_zpromotion_16_to_64(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_16_to_64:
 ; CMOV:       # BB#0:
 ; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
-; CMOV-NEXT:    movw $-1, %cx
-; CMOV-NEXT:    cmovnew %ax, %cx
-; CMOV-NEXT:    movzwl %cx, %eax
+; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
+; CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; CMOV-NEXT:    cmovneq %rcx, %rax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_64:
 ; NO_CMOV:       # BB#0:
 ; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
+; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
 ; NO_CMOV-NEXT:    jne .LBB4_2
 ; NO_CMOV-NEXT:  # BB#1:
-; NO_CMOV-NEXT:    movw $-1, %ax
+; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; NO_CMOV-NEXT:  .LBB4_2:
-; NO_CMOV-NEXT:    movzwl %ax, %eax
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
@@ -250,21 +246,19 @@ define i32 @cmov_spromotion_16_to_32(i1 %c) {
 ; CMOV-LABEL: cmov_spromotion_16_to_32:
 ; CMOV:       # BB#0:
 ; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
-; CMOV-NEXT:    movw $-1, %cx
-; CMOV-NEXT:    cmovnew %ax, %cx
-; CMOV-NEXT:    movswl %cx, %eax
+; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
+; CMOV-NEXT:    movl $-1, %eax
+; CMOV-NEXT:    cmovnel %ecx, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_16_to_32:
 ; NO_CMOV:       # BB#0:
 ; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
+; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
 ; NO_CMOV-NEXT:    jne .LBB9_2
 ; NO_CMOV-NEXT:  # BB#1:
-; NO_CMOV-NEXT:    movw $-1, %ax
+; NO_CMOV-NEXT:    movl $-1, %eax
 ; NO_CMOV-NEXT:  .LBB9_2:
-; NO_CMOV-NEXT:    cwtl
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
   %ret = sext i16 %t0 to i32
@@ -275,21 +269,19 @@ define i64 @cmov_spromotion_16_to_64(i1 %c) {
 ; CMOV-LABEL: cmov_spromotion_16_to_64:
 ; CMOV:       # BB#0:
 ; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
-; CMOV-NEXT:    movw $-1, %cx
-; CMOV-NEXT:    cmovnew %ax, %cx
-; CMOV-NEXT:    movswq %cx, %rax
+; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
+; CMOV-NEXT:    movq $-1, %rax
+; CMOV-NEXT:    cmovneq %rcx, %rax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_16_to_64:
 ; NO_CMOV:       # BB#0:
 ; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movw $12414, %ax # imm = 0x307E
+; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
 ; NO_CMOV-NEXT:    jne .LBB10_2
 ; NO_CMOV-NEXT:  # BB#1:
-; NO_CMOV-NEXT:    movw $-1, %ax
+; NO_CMOV-NEXT:    movl $-1, %eax
 ; NO_CMOV-NEXT:  .LBB10_2:
-; NO_CMOV-NEXT:    cwtl
 ; NO_CMOV-NEXT:    movl %eax, %edx
 ; NO_CMOV-NEXT:    sarl $31, %edx
 ; NO_CMOV-NEXT:    retl

@@ -26,17 +26,16 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   initThread(MinimalInit);
 }
 
-ScudoThreadContext *getThreadContextAndLockSlow();
+ScudoTSD *getTSDAndLockSlow();
 
-ALWAYS_INLINE ScudoThreadContext *getThreadContextAndLock() {
-  ScudoThreadContext *ThreadContext =
-      reinterpret_cast<ScudoThreadContext *>(*get_android_tls_ptr());
-  CHECK(ThreadContext);
+ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
+  ScudoTSD *TSD = reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+  CHECK(TSD);
   // Try to lock the currently associated context.
-  if (ThreadContext->tryLock())
-    return ThreadContext;
+  if (TSD->tryLock())
+    return TSD;
   // If it failed, go the slow path.
-  return getThreadContextAndLockSlow();
+  return getTSDAndLockSlow();
 }
 
 #endif  // SANITIZER_LINUX && SANITIZER_ANDROID

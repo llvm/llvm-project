@@ -3921,14 +3921,16 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
 /// When performing a comparison against a constant, it is possible that not all
 /// the bits in the LHS are demanded. This helper method computes the mask that
 /// IS demanded.
-static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth,
-                                    bool isSignCheck) {
-  if (isSignCheck)
-    return APInt::getSignMask(BitWidth);
-
+static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   const APInt *RHS;
   if (!match(I.getOperand(1), m_APInt(RHS)))
     return APInt::getAllOnesValue(BitWidth);
+
+  // If this is a normal comparison, it demands all bits. If it is a sign bit
+  // comparison, it only demands the sign bit.
+  bool UnusedBit;
+  if (isSignBitCheck(I.getPredicate(), *RHS, UnusedBit))
+    return APInt::getSignMask(BitWidth);
 
   switch (I.getPredicate()) {
   // For a UGT comparison, we don't care about any bits that
@@ -4115,20 +4117,11 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   if (!BitWidth)
     return nullptr;
 
-  // If this is a normal comparison, it demands all bits. If it is a sign bit
-  // comparison, it only demands the sign bit.
-  bool IsSignBit = false;
-  const APInt *CmpC;
-  if (match(Op1, m_APInt(CmpC))) {
-    bool UnusedBit;
-    IsSignBit = isSignBitCheck(Pred, *CmpC, UnusedBit);
-  }
-
   KnownBits Op0Known(BitWidth);
   KnownBits Op1Known(BitWidth);
 
   if (SimplifyDemandedBits(&I, 0,
-                           getDemandedBitsLHSMask(I, BitWidth, IsSignBit),
+                           getDemandedBitsLHSMask(I, BitWidth),
                            Op0Known, 0))
     return &I;
 
@@ -4223,32 +4216,27 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
     if (Op1Min == Op0Max) // A <u B -> A != B if max(A) == min(B)
       return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
 
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
+    if (Op1Min == Op1Max) {
       // A <u C -> A == C-1 if min(A)+1 == C
-      if (Op1Max == Op0Min + 1) {
-        Constant *CMinus1 = ConstantInt::get(Op0->getType(), *CmpC - 1);
-        return new ICmpInst(ICmpInst::ICMP_EQ, Op0, CMinus1);
-      }
+      if (Op1Min == Op0Min + 1)
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            ConstantInt::get(Op0->getType(), Op1Min - 1));
     }
     break;
   }
   case ICmpInst::ICMP_UGT: {
     if (Op0Min.ugt(Op1Max)) // A >u B -> true if min(A) > max(B)
       return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
-
     if (Op0Max.ule(Op1Min)) // A >u B -> false if max(A) <= max(B)
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-
     if (Op1Max == Op0Min) // A >u B -> A != B if min(A) == max(B)
       return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
 
-    const APInt *CmpC;
-    if (match(Op1, m_APInt(CmpC))) {
+    if (Op1Min == Op1Max) {
       // A >u C -> A == C+1 if max(a)-1 == C
-      if (*CmpC == Op0Max - 1)
+      if (Op1Min == Op0Max - 1)
         return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                            ConstantInt::get(Op1->getType(), *CmpC + 1));
+                            ConstantInt::get(Op1->getType(), Op1Min + 1));
     }
     break;
   }

@@ -28,7 +28,7 @@ static pthread_key_t PThreadKey;
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL ThreadState ScudoThreadState = ThreadNotInitialized;
 __attribute__((tls_model("initial-exec")))
-THREADLOCAL ScudoThreadContext ThreadLocalContext;
+THREADLOCAL ScudoTSD TSD;
 
 static void teardownThread(void *Ptr) {
   uptr I = reinterpret_cast<uptr>(Ptr);
@@ -43,7 +43,7 @@ static void teardownThread(void *Ptr) {
                                    reinterpret_cast<void *>(I - 1)) == 0))
       return;
   }
-  ThreadLocalContext.commitBack();
+  TSD.commitBack();
   ScudoThreadState = ThreadTornDown;
 }
 
@@ -59,7 +59,7 @@ void initThread(bool MinimalInit) {
     return;
   CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(
       GetPthreadDestructorIterations())), 0);
-  ThreadLocalContext.init();
+  TSD.init();
   ScudoThreadState = ThreadInitialized;
 }
 

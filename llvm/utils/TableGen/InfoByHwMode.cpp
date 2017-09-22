@@ -70,41 +70,37 @@ MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
   return Map.insert(std::make_pair(Mode, Type)).first->second;
 }
 
-std::string ValueTypeByHwMode::getMVTName(MVT T) {
-  std::string N = llvm::getEnumName(T.SimpleTy);
-  if (N.substr(0,5) == "MVT::")
-    N = N.substr(5);
+StringRef ValueTypeByHwMode::getMVTName(MVT T) {
+  StringRef N = llvm::getEnumName(T.SimpleTy);
+  N.consume_front("MVT::");
   return N;
 }
 
-std::string ValueTypeByHwMode::getAsString() const {
-  if (isSimple())
-    return getMVTName(getSimple());
+void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
+  if (isSimple()) {
+    OS << getMVTName(getSimple());
+    return;
+  }
 
   std::vector<const PairType*> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
   std::sort(Pairs.begin(), Pairs.end(), deref<std::less<PairType>>());
 
-  std::stringstream str;
-  str << '{';
+  OS << '{';
   for (unsigned i = 0, e = Pairs.size(); i != e; ++i) {
     const PairType *P = Pairs[i];
-    str << '(' << getModeName(P->first)
-        << ':' << getMVTName(P->second) << ')';
+    OS << '(' << getModeName(P->first)
+       << ':' << getMVTName(P->second).str() << ')';
     if (i != e-1)
-      str << ',';
+      OS << ',';
   }
-  str << '}';
-  return str.str();
+  OS << '}';
 }
 
 LLVM_DUMP_METHOD
 void ValueTypeByHwMode::dump() const {
-  dbgs() << "size=" << Map.size() << '\n';
-  for (const auto &P : Map)
-    dbgs() << "  " << P.first << " -> "
-           << llvm::getEnumName(P.second.SimpleTy) << '\n';
+  dbgs() << *this << '\n';
 }
 
 ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
@@ -137,11 +133,9 @@ bool RegSizeInfo::isSubClassOf(const RegSizeInfo &I) const {
          SpillSize <= I.SpillSize;
 }
 
-std::string RegSizeInfo::getAsString() const {
-  std::stringstream str;
-  str << "[R=" << RegSize << ",S=" << SpillSize
-      << ",A=" << SpillAlignment << ']';
-  return str.str();
+void RegSizeInfo::writeToStream(raw_ostream &OS) const {
+  OS << "[R=" << RegSize << ",S=" << SpillSize
+     << ",A=" << SpillAlignment << ']';
 }
 
 RegSizeInfoByHwMode::RegSizeInfoByHwMode(Record *R,
@@ -178,22 +172,36 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(const RegSizeInfoByHwMode &I)
          std::tie(B0.SpillSize, B0.SpillAlignment);
 }
 
-std::string RegSizeInfoByHwMode::getAsString() const {
+void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   typedef typename decltype(Map)::value_type PairType;
   std::vector<const PairType*> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
   std::sort(Pairs.begin(), Pairs.end(), deref<std::less<PairType>>());
 
-  std::stringstream str;
-  str << '{';
+  OS << '{';
   for (unsigned i = 0, e = Pairs.size(); i != e; ++i) {
     const PairType *P = Pairs[i];
-    str << '(' << getModeName(P->first)
-        << ':' << P->second.getAsString() << ')';
+    OS << '(' << getModeName(P->first) << ':' << P->second << ')';
     if (i != e-1)
-      str << ',';
+      OS << ',';
   }
-  str << '}';
-  return str.str();
+  OS << '}';
+}
+
+namespace llvm {
+  raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
+
+  raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
+
+  raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
 }

@@ -3,10 +3,10 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefix=CHECK-32
 
 ; CHECK-64-LABEL: g64xh:
-; CHECK-64:   testb $8, {{%ah|%ch}}
+; CHECK-64:   btl $11
 ; CHECK-64:   ret
 ; CHECK-32-LABEL: g64xh:
-; CHECK-32:   testb $8, %ah
+; CHECK-32:   btl $11
 ; CHECK-32:   ret
 define void @g64xh(i64 inreg %x) nounwind {
   %t = and i64 %x, 2048
@@ -37,10 +37,10 @@ no:
   ret void
 }
 ; CHECK-64-LABEL: g32xh:
-; CHECK-64:   testb $8, {{%ah|%ch}}
+; CHECK-64:   btl $11
 ; CHECK-64:   ret
 ; CHECK-32-LABEL: g32xh:
-; CHECK-32:   testb $8, %ah
+; CHECK-32:   btl $11
 ; CHECK-32:   ret
 define void @g32xh(i32 inreg %x) nounwind {
   %t = and i32 %x, 2048
@@ -71,10 +71,10 @@ no:
   ret void
 }
 ; CHECK-64-LABEL: g16xh:
-; CHECK-64:   testb $8, {{%ah|%ch}}
+; CHECK-64:   btl $11
 ; CHECK-64:   ret
 ; CHECK-32-LABEL: g16xh:
-; CHECK-32:   testb $8, %ah
+; CHECK-32:   btl $11
 ; CHECK-32:   ret
 define void @g16xh(i16 inreg %x) nounwind {
   %t = and i16 %x, 2048

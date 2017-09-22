@@ -2,6 +2,9 @@
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC2
+//
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -mllvm -limited-coverage-experimental=true -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping.limited
+// RUN: FileCheck -input-file %tmapping.limited %s --check-prefix=CHECK-LIMITED
 
 #include "Inputs/header1.h"
 
@@ -22,3 +25,5 @@ int main() {
 
 // CHECK-STATIC-FUNC2: static_func2
 // CHECK-STATIC-FUNC2: File 0, 21:33 -> 29:2 = 0
+
+// CHECK-LIMITED-NOT: static_func2
