@@ -17,6 +17,7 @@ class MTCSimpleTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIfDarwinEmbedded  # Test file depends on AppKit which is not present on iOS etc.
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         if self.mtc_dylib_path == "":

@@ -499,8 +499,10 @@ static void createImportLibrary(bool AsLib) {
     Exports.push_back(E2);
   }
 
-  writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                     Config->Machine, false);
+  auto E = writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
+                              Config->Machine, false);
+  handleAllErrors(std::move(E),
+                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
 }
 
 static void parseModuleDefs(StringRef Path) {
@@ -604,12 +606,13 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   std::string Temp = S.str();
   TemporaryFiles.push_back(Temp);
 
-  std::error_code EC =
+  Error E =
       llvm::writeArchive(Temp, New, /*WriteSymtab=*/true, Archive::Kind::K_GNU,
                          /*Deterministics=*/true,
                          /*Thin=*/false);
-  if (EC)
-    error("failed to create a new archive " + S.str() + ": " + EC.message());
+  handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+    error("failed to create a new archive " + S.str() + ": " + EI.message());
+  });
   return Temp;
 }
 

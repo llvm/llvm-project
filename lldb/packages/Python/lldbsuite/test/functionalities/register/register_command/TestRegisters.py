@@ -45,7 +45,7 @@ class RegisterCommandsTestCase(TestBase):
             self.runCmd("register read xmm0")
             self.runCmd("register read ymm15")  # may be available
             self.runCmd("register read bnd0")  # may be available
-        elif self.getArchitecture() in ['arm']:
+        elif self.getArchitecture() in ['arm', 'armv7', 'arm64']:
             self.runCmd("register read s0")
             self.runCmd("register read q15")  # may be available
 
@@ -84,7 +84,10 @@ class RegisterCommandsTestCase(TestBase):
         if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
             gpr = "eax"
             vector = "xmm0"
-        elif self.getArchitecture() in ['arm']:
+        elif self.getArchitecture() in ['arm64', 'aarch64']:
+            gpr = "w0"
+            vector = "v0"
+        elif self.getArchitecture() in ['arm', 'armv7']:
             gpr = "r0"
             vector = "q0"
 
@@ -317,6 +320,34 @@ class RegisterCommandsTestCase(TestBase):
                     ("xmm15",
                      "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
                      False))
+        elif self.getArchitecture() in ['arm64', 'aarch64']:
+            reg_list = [
+                # reg      value
+                # must-have
+                ("fpsr", "0xfbf79f9f", True),
+                ("s0", "1.25", True),
+                ("s31", "0.75", True),
+                ("d1", "123", True),
+                ("d17", "987", False),
+                ("v1", "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x2f 0x2f}", True),
+                ("v14",
+                 "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
+                 False),
+            ]
+        elif self.getArchitecture() in ['armv7', 'armv7k'] and self.platformIsDarwin():
+            reg_list = [
+                # reg      value
+                # must-have
+                ("fpsr", "0xfbf79f9f", True),
+                ("s0", "1.25", True),
+                ("s31", "0.75", True),
+                ("d1", "123", True),
+                ("d17", "987", False),
+                ("q1", "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x2f 0x2f}", True),
+                ("q14",
+                 "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
+                 False),
+            ]
         elif self.getArchitecture() in ['arm']:
             reg_list = [
                 # reg      value

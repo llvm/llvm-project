@@ -12,8 +12,8 @@ import six
 import use_lldb_suite
 import lldb
 
-windows, linux, macosx, darwin, ios, darwin_all, freebsd, netbsd, bsd_all, android = range(
-    10)
+windows, linux, macosx, darwin, ios, tvos, watchos, bridgeos, darwin_all, darwin_embedded, freebsd, netbsd, bsd_all, android = range(
+    14)
 
 __name_lookup = {
     windows: ["windows"],
@@ -21,7 +21,11 @@ __name_lookup = {
     macosx: ["macosx"],
     darwin: ["darwin"],
     ios: ["ios"],
-    darwin_all: ["macosx", "darwin", "ios"],
+    tvos: ["tvos"],
+    watchos: ["watchos"],
+    bridgeos: ["bridgeos"],
+    darwin_all: ["macosx", "darwin", "ios", "tvos", "watchos", "bridgeos"],
+    darwin_embedded: ["ios", "tvos", "watchos", "bridgeos"],
     freebsd: ["freebsd"],
     netbsd: ["netbsd"],
     bsd_all: ["freebsd", "netbsd"],

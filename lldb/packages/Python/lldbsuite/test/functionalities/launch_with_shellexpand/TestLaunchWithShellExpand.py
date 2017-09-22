@@ -22,6 +22,7 @@ class LaunchWithShellExpandTestCase(TestBase):
             "linux",
             "freebsd"],
         bugnumber="llvm.org/pr24778 llvm.org/pr22627")
+    @skipIfDarwinEmbedded # iOS etc don't launch the binary via a shell, so arg expansion won't happen
     def test(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

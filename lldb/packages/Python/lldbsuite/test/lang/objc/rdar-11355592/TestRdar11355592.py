@@ -46,13 +46,13 @@ class Rdar10967107TestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         # check that we correctly see the const char*, even with dynamic types
         # on
-        self.expect("frame variable my_string", substrs=['const char *'])
+        self.expect("frame variable -raw-output my_string", substrs=['const char *'])
         self.expect(
-            "frame variable my_string --dynamic-type run-target",
+            "frame variable my_string --raw-output --dynamic-type run-target",
             substrs=['const char *'])
         # check that expr also gets it right
-        self.expect("expr my_string", substrs=['const char *'])
-        self.expect("expr -d run -- my_string", substrs=['const char *'])
+        self.expect("e -R -- my_string", substrs=['const char *'])
+        self.expect("expr -R -d run -- my_string", substrs=['const char *'])
         # but check that we get the real Foolie as such
         self.expect("frame variable my_foolie", substrs=['FoolMeOnce *'])
         self.expect(

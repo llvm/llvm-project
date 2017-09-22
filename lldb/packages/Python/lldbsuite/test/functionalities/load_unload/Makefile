@@ -12,6 +12,7 @@ a.out: lib_a lib_b lib_c lib_d hidden_lib_d
 
 lib_%:
 	$(MAKE) -f $*.mk
+	if [ "$(OS)" = "Darwin" -a -f libloadunload_d.dylib ]; then install_name_tool -id @executable_path/libloadunload_d.dylib libloadunload_d.dylib; fi
 
 hidden_lib_d:
 	$(MAKE) -C hidden
