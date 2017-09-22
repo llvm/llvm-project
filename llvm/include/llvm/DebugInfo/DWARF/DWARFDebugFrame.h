@@ -29,8 +29,8 @@ public:
   DWARFDebugFrame(bool IsEH);
   ~DWARFDebugFrame();
 
-  /// \brief Dump the section data into the given stream.
-  void dump(raw_ostream &OS) const;
+  /// Dump the section data into the given stream.
+  void dump(raw_ostream &OS, Optional<uint64_t> Offset) const;
 
   /// \brief Parse the section from raw data.
   /// data is assumed to be pointing to the beginning of the section.
@@ -38,6 +38,9 @@ public:
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }
+
+  /// Return the entry at the given offset or nullptr.
+  FrameEntry *getEntryAtOffset(uint64_t Offset) const;
 
 private:
   std::vector<std::unique_ptr<FrameEntry>> Entries;

@@ -11,7 +11,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -46,18 +45,25 @@ public:
   FrameKind getKind() const { return Kind; }
   virtual uint64_t getOffset() const { return Offset; }
 
-  /// \brief Parse and store a sequence of CFI instructions from Data,
+  /// Parse and store a sequence of CFI instructions from Data,
   /// starting at *Offset and ending at EndOffset. If everything
   /// goes well, *Offset should be equal to EndOffset when this method
   /// returns. Otherwise, an error occurred.
   virtual void parseInstructions(DataExtractor Data, uint32_t *Offset,
                                  uint32_t EndOffset);
 
-  /// \brief Dump the entry header to the given output stream.
+  /// Dump the entry header to the given output stream.
   virtual void dumpHeader(raw_ostream &OS) const = 0;
 
-  /// \brief Dump the entry's instructions to the given output stream.
+  /// Dump the entry's instructions to the given output stream.
   virtual void dumpInstructions(raw_ostream &OS) const;
+
+  /// Dump the entire entry to the given output stream.
+  void dump(raw_ostream &OS) const {
+    dumpHeader(OS);
+    dumpInstructions(OS);
+    OS << "\n";
+  }
 
 protected:
   const FrameKind Kind;
@@ -692,11 +698,24 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
   }
 }
 
-void DWARFDebugFrame::dump(raw_ostream &OS) const {
-  OS << "\n";
-  for (const auto &Entry : Entries) {
-    Entry->dumpHeader(OS);
-    Entry->dumpInstructions(OS);
-    OS << "\n";
+FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
+  auto It =
+      std::lower_bound(Entries.begin(), Entries.end(), Offset,
+                       [](const std::unique_ptr<FrameEntry> &E,
+                          uint64_t Offset) { return E->getOffset() < Offset; });
+  if (It != Entries.end() && (*It)->getOffset() == Offset)
+    return It->get();
+  return nullptr;
+}
+
+void DWARFDebugFrame::dump(raw_ostream &OS, Optional<uint64_t> Offset) const {
+  if (Offset) {
+    if (auto *Entry = getEntryAtOffset(*Offset))
+      Entry->dump(OS);
+    return;
   }
+
+  OS << "\n";
+  for (const auto &Entry : Entries)
+    Entry->dump(OS);
 }

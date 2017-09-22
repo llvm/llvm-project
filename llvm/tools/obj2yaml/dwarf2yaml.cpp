@@ -39,7 +39,7 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
           AttAbrv.Attribute = Attribute.Attr;
           AttAbrv.Form = Attribute.Form;
           if (AttAbrv.Form == dwarf::DW_FORM_implicit_const)
-            AttAbrv.Value = *Attribute.ByteSizeOrValue;
+            AttAbrv.Value = Attribute.getImplicitConstValue();
           Abbrv.Attributes.push_back(AttAbrv);
         }
         Y.AbbrevDecls.push_back(Abbrv);

@@ -188,6 +188,8 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   }
 
   // Dump symbols
+  if (!Symtab)
+    return Y.release(); // if the symbol table is missing return early
   auto StrTableOrErr = Obj.getStringTableForSymtab(*Symtab);
   if (!StrTableOrErr)
     return errorToErrorCode(StrTableOrErr.takeError());

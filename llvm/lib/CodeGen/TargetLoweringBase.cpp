@@ -1,4 +1,4 @@
-//===-- TargetLoweringBase.cpp - Implement the TargetLoweringBase class ---===//
+//===- TargetLoweringBase.cpp - Implement the TargetLoweringBase class ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,32 +13,55 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCExpr.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
-#include <cctype>
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 static cl::opt<bool> JumpIsExpensiveOverride(
@@ -78,7 +101,6 @@ static cl::opt<int> MinPercentageForPredictableBranch(
     cl::Hidden);
 
 /// InitLibcallNames - Set default libcall names.
-///
 static void InitLibcallNames(const char **Names, const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
   Names[RTLIB::code] = name;
@@ -428,7 +450,6 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 }
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.
-///
 static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
   memset(CCs, ISD::SETCC_INVALID, sizeof(ISD::CondCode)*RTLIB::UNKNOWN_LIBCALL);
   CCs[RTLIB::OEQ_F32] = ISD::SETEQ;
@@ -614,7 +635,6 @@ void TargetLoweringBase::initActions() {
 
   // On most systems, DEBUGTRAP and TRAP have no difference. The "Expand"
   // here is to inform DAG Legalizer to replace DEBUGTRAP with TRAP.
-  //
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Expand);
 }
 
@@ -726,7 +746,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // found, fallback to the usual mechanism of widening/splitting the
     // vector.
     EVT OldEltVT = EltVT;
-    while (1) {
+    while (true) {
       // Increase the bitwidth of the element to the next pow-of-two
       // (which is greater than 8 bits).
       EltVT = EVT::getIntegerVT(Context, 1 + EltVT.getSizeInBits())
@@ -754,7 +774,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
 
   // Try to widen the vector until a legal type is found.
   // If there is no wider legal type, split the vector.
-  while (1) {
+  while (true) {
     // Round up to the next power of 2.
     NumElts = (unsigned)NextPowerOf2(NumElts);
 
@@ -1065,7 +1085,7 @@ void TargetLoweringBase::computeRegisterProperties(
     bool IsLegalWiderType = false;
     LegalizeTypeAction PreferredAction = getPreferredVectorAction(VT);
     switch (PreferredAction) {
-    case TypePromoteInteger: {
+    case TypePromoteInteger:
       // Try to promote the elements of integer vectors. If no legal
       // promotion was found, fall through to the widen-vector method.
       for (unsigned nVT = i + 1; nVT <= MVT::LAST_INTEGER_VECTOR_VALUETYPE; ++nVT) {
@@ -1085,8 +1105,8 @@ void TargetLoweringBase::computeRegisterProperties(
       if (IsLegalWiderType)
         break;
       LLVM_FALLTHROUGH;
-    }
-    case TypeWidenVector: {
+
+    case TypeWidenVector:
       // Try to widen the vector.
       for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
         MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1103,7 +1123,7 @@ void TargetLoweringBase::computeRegisterProperties(
       if (IsLegalWiderType)
         break;
       LLVM_FALLTHROUGH;
-    }
+
     case TypeSplitVector:
     case TypeScalarizeVector: {
       MVT IntermediateVT;
@@ -1168,7 +1188,6 @@ MVT::SimpleValueType TargetLoweringBase::getCmpLibcallReturnType() const {
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-///
 unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
                                                 EVT &IntermediateVT,
                                                 unsigned &NumIntermediates,

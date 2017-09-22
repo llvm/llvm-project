@@ -217,7 +217,8 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr);
+    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+               raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;

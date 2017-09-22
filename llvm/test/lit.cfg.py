@@ -11,6 +11,7 @@ import subprocess
 import lit.util
 import lit.formats
 from lit.llvm import llvm_config
+from lit.llvm import ToolFilter
 
 # name: The name of this test suite.
 config.name = 'LLVM'
@@ -134,108 +135,39 @@ else:
 # The regex is a pre-assertion to avoid matching a preceding
 # dot, hyphen, carat, or slash (.foo, -foo, etc.).  Some patterns
 # also have a post-assertion to not match a trailing hyphen (foo-).
-NOJUNK = r"(?<!\.|-|\^|/|<)"
+JUNKCHARS = r".-^/<"
 
+required_tools = [
+    'lli', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
+    'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis', 'llvm-dsymutil',
+    'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-lib',
+    'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mcmarkup',
+    'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
+    'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-readobj',
+    'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings', 'llvm-tblgen',
+    'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
+    'FileCheck', 'yaml-bench', 'verify-uselistorder',
+    ToolFilter('bugpoint', post='-'),
+    ToolFilter('llc', pre=JUNKCHARS),
+    ToolFilter('llvm-symbolizer', pre=JUNKCHARS),
+    ToolFilter('opt', JUNKCHARS),
+    ToolFilter('sancov', pre=JUNKCHARS),
+    ToolFilter('sanstats', pre=JUNKCHARS),
+    # Handle these specially as they are strings searched for during testing.
+    ToolFilter(r'\| \bcount\b', verbatim=True),
+    ToolFilter(r'\| \bnot\b', verbatim=True)]
 
-def find_tool_substitution(pattern):
-    # Extract the tool name from the pattern.  This relies on the tool
-    # name being surrounded by \b word match operators.  If the
-    # pattern starts with "| ", include it in the string to be
-    # substituted.
-    tool_match = re.match(r"^(\\)?((\| )?)\W+b([0-9A-Za-z-_]+)\\b\W*$",
-                          pattern)
-    tool_pipe = tool_match.group(2)
-    tool_name = tool_match.group(4)
-    # Did the user specify the tool path + arguments? This allows things like
-    # llvm-lit "-Dllc=llc -enable-misched -verify-machineinstrs"
-    tool_path = lit_config.params.get(tool_name)
-    if tool_path is None:
-        tool_path = lit.util.which(tool_name, config.llvm_tools_dir)
-        if tool_path is None:
-            return tool_name, tool_path, tool_pipe
-    if (tool_name == "llc" and
-       'LLVM_ENABLE_MACHINE_VERIFIER' in os.environ and
-       os.environ['LLVM_ENABLE_MACHINE_VERIFIER'] == "1"):
-        tool_path += " -verify-machineinstrs"
-    if (tool_name == "llvm-go"):
-        tool_path += " go=" + config.go_executable
-    return tool_name, tool_path, tool_pipe
-
-
-for pattern in [r"\bbugpoint\b(?!-)",
-                NOJUNK + r"\bllc\b",
-                r"\blli\b",
-                r"\bllvm-ar\b",
-                r"\bllvm-as\b",
-                r"\bllvm-bcanalyzer\b",
-                r"\bllvm-config\b",
-                r"\bllvm-cov\b",
-                r"\bllvm-cxxdump\b",
-                r"\bllvm-cvtres\b",
-                r"\bllvm-diff\b",
-                r"\bllvm-dis\b",
-                r"\bllvm-dsymutil\b",
-                r"\bllvm-dwarfdump\b",
-                r"\bllvm-extract\b",
-                r"\bllvm-isel-fuzzer\b",
-                r"\bllvm-lib\b",
-                r"\bllvm-link\b",
-                r"\bllvm-lto\b",
-                r"\bllvm-lto2\b",
-                r"\bllvm-mc\b",
-                r"\bllvm-mcmarkup\b",
-                r"\bllvm-modextract\b",
-                r"\bllvm-nm\b",
-                r"\bllvm-objcopy\b",
-                r"\bllvm-objdump\b",
-                r"\bllvm-pdbutil\b",
-                r"\bllvm-profdata\b",
-                r"\bllvm-ranlib\b",
-                r"\bllvm-readobj\b",
-                r"\bllvm-rtdyld\b",
-                r"\bllvm-size\b",
-                r"\bllvm-split\b",
-                r"\bllvm-strings\b",
-                r"\bllvm-tblgen\b",
-                r"\bllvm-c-test\b",
-                r"\bllvm-cxxfilt\b",
-                r"\bllvm-xray\b",
-                NOJUNK + r"\bllvm-symbolizer\b",
-                NOJUNK + r"\bopt\b",
-                r"\bFileCheck\b",
-                r"\bobj2yaml\b",
-                NOJUNK + r"\bsancov\b",
-                NOJUNK + r"\bsanstats\b",
-                r"\byaml2obj\b",
-                r"\byaml-bench\b",
-                r"\bverify-uselistorder\b",
-                # Handle these specially as they are strings searched
-                # for during testing.
-                r"\| \bcount\b",
-                r"\| \bnot\b"]:
-    tool_name, tool_path, tool_pipe = find_tool_substitution(pattern)
-    if not tool_path:
-        # Warn, but still provide a substitution.
-        lit_config.note('Did not find ' + tool_name + ' in ' + config.llvm_tools_dir)
-        tool_path = config.llvm_tools_dir + '/' + tool_name
-    config.substitutions.append((pattern, tool_pipe + tool_path))
+llvm_config.add_tool_substitutions(required_tools, config.llvm_tools_dir)
 
 # For tools that are optional depending on the config, we won't warn
 # if they're missing.
-for pattern in [r"\bllvm-go\b",
-                r"\bllvm-mt\b",
-                r"\bKaleidoscope-Ch3\b",
-                r"\bKaleidoscope-Ch4\b",
-                r"\bKaleidoscope-Ch5\b",
-                r"\bKaleidoscope-Ch6\b",
-                r"\bKaleidoscope-Ch7\b",
-                r"\bKaleidoscope-Ch8\b"]:
-    tool_name, tool_path, tool_pipe = find_tool_substitution(pattern)
-    if not tool_path:
-        # Provide a substitution anyway, for the sake of consistent errors.
-        tool_path = config.llvm_tools_dir + '/' + tool_name
-    config.substitutions.append((pattern, tool_pipe + tool_path))
 
+optional_tools = [
+    'llvm-go', 'llvm-mt', 'Kaleidoscope-Ch3', 'Kaleidoscope-Ch4',
+    'Kaleidoscope-Ch5', 'Kaleidoscope-Ch6', 'Kaleidoscope-Ch7',
+    'Kaleidoscope-Ch8']
+llvm_config.add_tool_substitutions(optional_tools, config.llvm_tools_dir,
+                                   warn_missing=False)
 
 ### Targets
 

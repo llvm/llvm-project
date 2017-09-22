@@ -191,8 +191,8 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<MipsSubtarget>(TargetTriple, CPU, FS, isLittle,
-                                         *this, Options.StackAlignmentOverride);
+    I = llvm::make_unique<MipsSubtarget>(TargetTriple, CPU, FS, isLittle, *this,
+                                         Options.StackAlignmentOverride);
   }
   return I.get();
 }
@@ -210,7 +210,7 @@ namespace {
 class MipsPassConfig : public TargetPassConfig {
 public:
   MipsPassConfig(MipsTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {
+      : TargetPassConfig(TM, PM) {
     // The current implementation of long branch pass requires a scratch
     // register ($at) to be available before branch instructions. Tail merging
     // can break this requirement, so disable it when long branch pass is

@@ -43,8 +43,12 @@ MCCodeEmitter *createMipsMCCodeEmitterEL(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 
+MCAsmBackend *createMipsAsmBackend(const Target &T, const MCRegisterInfo &MRI,
+                                   const Triple &TT, StringRef CPU,
+                                   const MCTargetOptions &Options);
+
 MCObjectWriter *createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                          const Triple &TT);
+                                          const Triple &TT, bool IsN32);
 
 namespace MIPS_MC {
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
