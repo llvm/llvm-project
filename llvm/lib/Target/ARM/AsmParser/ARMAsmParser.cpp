@@ -8805,6 +8805,12 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresV8;
   }
 
+  // Use of SP for VMRS/VMSR is only allowed in ARM mode with the exception of
+  // ARMv8-A.
+  if ((Inst.getOpcode() == ARM::VMRS || Inst.getOpcode() == ARM::VMSR) &&
+      Inst.getOperand(0).getReg() == ARM::SP && (isThumb() && !hasV8Ops()))
+    return Match_InvalidOperand;
+
   for (unsigned I = 0; I < MCID.NumOperands; ++I)
     if (MCID.OpInfo[I].RegClass == ARM::rGPRRegClassID) {
       // rGPRRegClass excludes PC, and also excluded SP before ARMv8

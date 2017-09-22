@@ -145,6 +145,7 @@ enum IgnoreObjectResult {
 // Functions called from the parent tool.
 void InitCommonLsan();
 void DoLeakCheck();
+void DoRecoverableLeakCheckVoid();
 void DisableCounterUnderflow();
 bool DisabledInThisThread();
 

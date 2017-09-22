@@ -86,6 +86,77 @@ TEST_F(UsingDeclarationsSorterTest, SwapsTwoConsecutiveUsingDeclarations) {
                                   "using a, b;"));
 }
 
+TEST_F(UsingDeclarationsSorterTest, SortsCaseInsensitively) {
+  EXPECT_EQ("using A;\n"
+            "using a;",
+            sortUsingDeclarations("using A;\n"
+                                  "using a;"));
+  EXPECT_EQ("using a;\n"
+            "using A;",
+            sortUsingDeclarations("using a;\n"
+                                  "using A;"));
+  EXPECT_EQ("using a;\n"
+            "using B;",
+            sortUsingDeclarations("using B;\n"
+                                  "using a;"));
+  EXPECT_EQ("using _;\n"
+            "using a;",
+            sortUsingDeclarations("using a;\n"
+                                  "using _;"));
+  EXPECT_EQ("using a::_;\n"
+            "using a::a;",
+            sortUsingDeclarations("using a::a;\n"
+                                  "using a::_;"));
+
+  EXPECT_EQ("using ::testing::_;\n"
+            "using ::testing::Aardvark;\n"
+            "using ::testing::apple::Honeycrisp;\n"
+            "using ::testing::Xylophone;\n"
+            "using ::testing::zebra::Stripes;",
+            sortUsingDeclarations("using ::testing::Aardvark;\n"
+                                  "using ::testing::Xylophone;\n"
+                                  "using ::testing::_;\n"
+                                  "using ::testing::apple::Honeycrisp;\n"
+                                  "using ::testing::zebra::Stripes;"));
+}
+
+TEST_F(UsingDeclarationsSorterTest, SortsStably) {
+  EXPECT_EQ("using a;\n"
+            "using a;\n"
+            "using A;\n"
+            "using a;\n"
+            "using A;\n"
+            "using a;\n"
+            "using A;\n"
+            "using a;\n"
+            "using B;\n"
+            "using b;\n"
+            "using b;\n"
+            "using B;\n"
+            "using b;\n"
+            "using b;\n"
+            "using b;\n"
+            "using B;\n"
+            "using b;",
+            sortUsingDeclarations("using a;\n"
+                                  "using B;\n"
+                                  "using a;\n"
+                                  "using b;\n"
+                                  "using A;\n"
+                                  "using a;\n"
+                                  "using b;\n"
+                                  "using B;\n"
+                                  "using b;\n"
+                                  "using A;\n"
+                                  "using a;\n"
+                                  "using b;\n"
+                                  "using b;\n"
+                                  "using B;\n"
+                                  "using b;\n"
+                                  "using A;\n"
+                                  "using a;"));
+}
+
 TEST_F(UsingDeclarationsSorterTest, SortsMultipleTopLevelDeclarations) {
   EXPECT_EQ("using a;\n"
             "using b;\n"
