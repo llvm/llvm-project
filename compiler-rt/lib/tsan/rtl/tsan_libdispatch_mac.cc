@@ -176,7 +176,8 @@ static void invoke_and_release_block(void *param) {
   }
 
 #define DISPATCH_INTERCEPT_SYNC_B(name, barrier)                             \
-  TSAN_INTERCEPTOR(void, name, dispatch_queue_t q, dispatch_block_t block) { \
+  TSAN_INTERCEPTOR(void, name, dispatch_queue_t q,                           \
+                   DISPATCH_NOESCAPE dispatch_block_t block) {               \
     SCOPED_TSAN_INTERCEPTOR(name, q, block);                                 \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();                           \
     dispatch_block_t heap_block = Block_copy(block);                         \
@@ -266,7 +267,7 @@ TSAN_INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
 // need to undefine the macro.
 #undef dispatch_once
 TSAN_INTERCEPTOR(void, dispatch_once, dispatch_once_t *predicate,
-                 dispatch_block_t block) {
+                 DISPATCH_NOESCAPE dispatch_block_t block) {
   SCOPED_INTERCEPTOR_RAW(dispatch_once, predicate, block);
   atomic_uint32_t *a = reinterpret_cast<atomic_uint32_t *>(predicate);
   u32 v = atomic_load(a, memory_order_acquire);
@@ -476,7 +477,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler_f,
 }
 
 TSAN_INTERCEPTOR(void, dispatch_apply, size_t iterations,
-                 dispatch_queue_t queue, void (^block)(size_t)) {
+                 dispatch_queue_t queue,
+                 DISPATCH_NOESCAPE void (^block)(size_t)) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_apply, iterations, queue, block);
 
   void *parent_to_child_sync = nullptr;
