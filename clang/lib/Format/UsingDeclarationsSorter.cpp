@@ -34,7 +34,7 @@ struct UsingDeclaration {
       : Line(Line), Label(Label) {}
 
   bool operator<(const UsingDeclaration &Other) const {
-    return Label < Other.Label;
+    return StringRef(Label).compare_lower(Other.Label) < 0;
   }
 };
 
@@ -78,7 +78,8 @@ void endUsingDeclarationBlock(
     const SourceManager &SourceMgr, tooling::Replacements *Fixes) {
   SmallVector<UsingDeclaration, 4> SortedUsingDeclarations(
       UsingDeclarations->begin(), UsingDeclarations->end());
-  std::sort(SortedUsingDeclarations.begin(), SortedUsingDeclarations.end());
+  std::stable_sort(SortedUsingDeclarations.begin(),
+                   SortedUsingDeclarations.end());
   for (size_t I = 0, E = UsingDeclarations->size(); I < E; ++I) {
     if ((*UsingDeclarations)[I].Line == SortedUsingDeclarations[I].Line)
       continue;
