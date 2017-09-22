@@ -15119,8 +15119,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (CXXRecordDecl *CXXRecord = dyn_cast<CXXRecordDecl>(Record)) {
       auto *Dtor = CXXRecord->getDestructor();
       if (Dtor && Dtor->isImplicit() &&
-          ShouldDeleteSpecialMember(Dtor, CXXDestructor))
+          ShouldDeleteSpecialMember(Dtor, CXXDestructor)) {
+        CXXRecord->setImplicitDestructorIsDeleted();
         SetDeclDeleted(Dtor, CXXRecord->getLocation());
+      }
     }
 
     if (Record->hasAttrs()) {

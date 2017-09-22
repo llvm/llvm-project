@@ -73,6 +73,16 @@ namespace testTypeAliasTemplateDecl {
 // CHECK-NEXT:   TypeAliasDecl{{.*}} TestTypeAliasTemplateDecl 'A<T>'
 
 namespace testCXXRecordDecl {
+  class TestEmpty {};
+// CHECK:      CXXRecordDecl{{.*}} class TestEmpty
+// CHECK-NEXT:   DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT:     DefaultConstructor exists trivial constexpr
+// CHECK-NEXT:     CopyConstructor simple trivial has_const_param
+// CHECK-NEXT:     MoveConstructor exists simple trivial
+// CHECK-NEXT:     CopyAssignment trivial has_const_param
+// CHECK-NEXT:     MoveAssignment exists simple trivial
+// CHECK-NEXT:     Destructor simple irrelevant trivial
+
   class A { };
   class B { };
   class TestCXXRecordDecl : virtual A, public B {
@@ -80,6 +90,13 @@ namespace testCXXRecordDecl {
   };
 }
 // CHECK:      CXXRecordDecl{{.*}} class TestCXXRecordDecl
+// CHECK-NEXT:   DefinitionData{{$}}
+// CHECK-NEXT:     DefaultConstructor exists non_trivial
+// CHECK-NEXT:     CopyConstructor simple non_trivial has_const_param
+// CHECK-NEXT:     MoveConstructor exists simple non_trivial
+// CHECK-NEXT:     CopyAssignment non_trivial has_const_param
+// CHECK-NEXT:     MoveAssignment exists simple non_trivial
+// CHECK-NEXT:     Destructor simple irrelevant trivial
 // CHECK-NEXT:   virtual private 'class testCXXRecordDecl::A'
 // CHECK-NEXT:   public 'class testCXXRecordDecl::B'
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestCXXRecordDecl
@@ -89,7 +106,7 @@ template<class...T>
 class TestCXXRecordDeclPack : public T... {
 };
 // CHECK:      CXXRecordDecl{{.*}} class TestCXXRecordDeclPack
-// CHECK-NEXT:   public 'T'...
+// CHECK:        public 'T'...
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestCXXRecordDeclPack
 
 thread_local int TestThreadLocalInt;
@@ -250,14 +267,14 @@ namespace testClassTemplateDecl {
 // CHECK:      ClassTemplateDecl{{.*}} TestClassTemplate
 // CHECK-NEXT:   TemplateTypeParmDecl
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplate
-// CHECK-NEXT:     CXXRecordDecl{{.*}} class TestClassTemplate
+// CHECK:          CXXRecordDecl{{.*}} class TestClassTemplate
 // CHECK-NEXT:     AccessSpecDecl{{.*}} public
 // CHECK-NEXT:     CXXConstructorDecl{{.*}} <line:{{.*}}:5, col:23>
 // CHECK-NEXT:     CXXDestructorDecl{{.*}} <line:{{.*}}:5, col:24>
 // CHECK-NEXT:     CXXMethodDecl{{.*}} <line:{{.*}}:5, col:11>
 // CHECK-NEXT:     FieldDecl{{.*}} i
 // CHECK-NEXT:   ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
-// CHECK-NEXT:     TemplateArgument{{.*}}A
+// CHECK:          TemplateArgument{{.*}}A
 // CHECK-NEXT:     CXXRecordDecl{{.*}} class TestClassTemplate
 // CHECK-NEXT:     AccessSpecDecl{{.*}} public
 // CHECK-NEXT:     CXXConstructorDecl{{.*}} <line:{{.*}}:5, col:23>
@@ -269,12 +286,13 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:   ClassTemplateSpecialization{{.*}} 'TestClassTemplate'
 
 // CHECK:      ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
-// CHECK-NEXT:   TemplateArgument{{.*}}B
+// CHECK-NEXT:   DefinitionData
+// CHECK:        TemplateArgument{{.*}}B
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplate
 // CHECK-NEXT:   FieldDecl{{.*}} j
 
 // CHECK:      ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
-// CHECK-NEXT:   TemplateArgument{{.*}}C
+// CHECK:        TemplateArgument{{.*}}C
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplate
 // CHECK-NEXT:   AccessSpecDecl{{.*}} public
 // CHECK-NEXT:   CXXConstructorDecl{{.*}} <line:{{.*}}:5, col:23>
@@ -283,7 +301,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:   FieldDecl{{.*}} i
 
 // CHECK:      ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
-// CHECK-NEXT:   TemplateArgument{{.*}}D
+// CHECK:        TemplateArgument{{.*}}D
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplate
 // CHECK-NEXT:   AccessSpecDecl{{.*}} public
 // CHECK-NEXT:   CXXConstructorDecl{{.*}} <line:{{.*}}:5, col:23>
@@ -292,7 +310,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:   FieldDecl{{.*}} i
 
 // CHECK:      ClassTemplatePartialSpecializationDecl{{.*}} class TestClassTemplatePartial
-// CHECK-NEXT:   TemplateArgument
+// CHECK:        TemplateArgument
 // CHECK-NEXT:   TemplateArgument{{.*}}A
 // CHECK-NEXT:   TemplateTypeParmDecl
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplatePartial
@@ -326,13 +344,13 @@ namespace testCanonicalTemplate {
   // CHECK:      ClassTemplateDecl{{.*}} TestClassTemplate
   // CHECK-NEXT:   TemplateTypeParmDecl
   // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplate
-  // CHECK-NEXT:     CXXRecordDecl{{.*}} class TestClassTemplate
+  // CHECK:          CXXRecordDecl{{.*}} class TestClassTemplate
   // CHECK-NEXT:     FriendDecl
   // CHECK-NEXT:       ClassTemplateDecl{{.*}} TestClassTemplate
   // CHECK-NEXT:         TemplateTypeParmDecl
   // CHECK-NEXT:         CXXRecordDecl{{.*}} class TestClassTemplate
   // CHECK-NEXT:   ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
-  // CHECK-NEXT:     TemplateArgument{{.*}}A
+  // CHECK:          TemplateArgument{{.*}}A
   // CHECK-NEXT:     CXXRecordDecl{{.*}} class TestClassTemplate
 }
 
@@ -384,27 +402,27 @@ namespace TestTemplateArgument {
   template<typename> class testType { };
   template class testType<int>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testType
-  // CHECK-NEXT:   TemplateArgument{{.*}} type 'int'
+  // CHECK:        TemplateArgument{{.*}} type 'int'
 
   template<int fp(void)> class testDecl { };
   template class testDecl<foo>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testDecl
-  // CHECK-NEXT:   TemplateArgument{{.*}} decl
+  // CHECK:        TemplateArgument{{.*}} decl
   // CHECK-NEXT:     Function{{.*}}foo
 
   template class testDecl<nullptr>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testDecl
-  // CHECK-NEXT:   TemplateArgument{{.*}} nullptr
+  // CHECK:        TemplateArgument{{.*}} nullptr
 
   template<int> class testIntegral { };
   template class testIntegral<1>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testIntegral
-  // CHECK-NEXT:   TemplateArgument{{.*}} integral 1
+  // CHECK:        TemplateArgument{{.*}} integral 1
 
   template<template<typename> class> class testTemplate { };
   template class testTemplate<A>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testTemplate
-  // CHECK-NEXT:   TemplateArgument{{.*}} A
+  // CHECK:        TemplateArgument{{.*}} A
 
   template<template<typename> class ...T> class C {
     B<T...> testTemplateExpansion;
@@ -414,13 +432,13 @@ namespace TestTemplateArgument {
   template<int, int = 0> class testExpr;
   template<int I> class testExpr<I> { };
   // CHECK:      ClassTemplatePartialSpecializationDecl{{.*}} class testExpr
-  // CHECK-NEXT:   TemplateArgument{{.*}} expr
+  // CHECK:        TemplateArgument{{.*}} expr
   // CHECK-NEXT:     DeclRefExpr{{.*}}I
 
   template<int, int ...> class testPack { };
   template class testPack<0, 1, 2>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testPack
-  // CHECK-NEXT:   TemplateArgument{{.*}} integral 0
+  // CHECK:        TemplateArgument{{.*}} integral 0
   // CHECK-NEXT:   TemplateArgument{{.*}} pack
   // CHECK-NEXT:     TemplateArgument{{.*}} integral 1
   // CHECK-NEXT:     TemplateArgument{{.*}} integral 2
@@ -467,7 +485,7 @@ private:
 protected:
 };
 // CHECK:      CXXRecordDecl{{.*}} class TestAccessSpecDecl
-// CHECK-NEXT:    CXXRecordDecl{{.*}} class TestAccessSpecDecl
+// CHECK:         CXXRecordDecl{{.*}} class TestAccessSpecDecl
 // CHECK-NEXT:    AccessSpecDecl{{.*}} public
 // CHECK-NEXT:    AccessSpecDecl{{.*}} private
 // CHECK-NEXT:    AccessSpecDecl{{.*}} protected
@@ -478,7 +496,7 @@ template<typename T> class TestFriendDecl {
   friend T;
 };
 // CHECK:      CXXRecord{{.*}} TestFriendDecl
-// CHECK-NEXT:   CXXRecord{{.*}} TestFriendDecl
+// CHECK:        CXXRecord{{.*}} TestFriendDecl
 // CHECK-NEXT:   FriendDecl
 // CHECK-NEXT:     FunctionDecl{{.*}} foo
 // CHECK-NEXT:   FriendDecl{{.*}} 'class A':'class A'

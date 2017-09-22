@@ -1,4 +1,4 @@
-//===-- SpillPlacement.h - Optimal Spill Code Placement --------*- C++ -*--===//
+//===- SpillPlacement.h - Optimal Spill Code Placement ---------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -37,9 +37,9 @@ namespace llvm {
 
 class BitVector;
 class EdgeBundles;
-class MachineBasicBlock;
-class MachineLoopInfo;
 class MachineBlockFrequencyInfo;
+class MachineFunction;
+class MachineLoopInfo;
 
 class SpillPlacement : public MachineFunctionPass {
   struct Node;
@@ -47,7 +47,7 @@ class SpillPlacement : public MachineFunctionPass {
   const EdgeBundles *bundles;
   const MachineLoopInfo *loops;
   const MachineBlockFrequencyInfo *MBFI;
-  Node *nodes;
+  Node *nodes = nullptr;
 
   // Nodes that are active in the current computation. Owned by the prepare()
   // caller.
@@ -73,7 +73,7 @@ class SpillPlacement : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  SpillPlacement() : MachineFunctionPass(ID), nodes(nullptr) {}
+  SpillPlacement() : MachineFunctionPass(ID) {}
   ~SpillPlacement() override { releaseMemory(); }
 
   /// BorderConstraint - A basic block has separate constraints for entry and
@@ -155,16 +155,16 @@ public:
   }
 
 private:
-  bool runOnMachineFunction(MachineFunction&) override;
-  void getAnalysisUsage(AnalysisUsage&) const override;
+  bool runOnMachineFunction(MachineFunction &mf) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
 
-  void activate(unsigned);
+  void activate(unsigned n);
   void setThreshold(const BlockFrequency &Entry);
 
-  bool update(unsigned);
+  bool update(unsigned n);
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_CODEGEN_SPILLPLACEMENT_H

@@ -65,7 +65,7 @@ def addNewProject(ID, BuildMode) :
         sys.exit(-1)
 
     # Build the project.
-    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True, Dir=Dir)
+    SATestBuild.testProject(ID, BuildMode, IsReferenceBuild=True)
 
     # Add the project ID to the project map.
     ProjectMapPath = os.path.join(CurDir, SATestBuild.ProjectMapFile)
@@ -90,11 +90,12 @@ def addNewProject(ID, BuildMode) :
 # TODO: Add an option not to build.
 # TODO: Set the path to the Repository directory.
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print >> sys.stderr, 'Usage: ', sys.argv[0],\
-                             'project_ID <mode>' \
-                             'mode - 0 for single file project; ' \
-                             '1 for scan_build; ' \
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+        print >> sys.stderr, 'Add a new project for testing to static analyzer'\
+                             '\nUsage: ', sys.argv[0],\
+                             'project_ID <mode>\n' \
+                             'mode: 0 for single file project, ' \
+                             '1 for scan_build, ' \
                              '2 for single file c++11 project'
         sys.exit(-1)
 

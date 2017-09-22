@@ -1691,10 +1691,16 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // to emit that last part of the prefix here.
   if (Decl *Context = Lambda->getLambdaContextDecl()) {
     if ((isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
-        Context->getDeclContext()->isRecord()) {
+        !isa<ParmVarDecl>(Context)) {
+      // FIXME: 'inline auto [a, b] = []{ return ... };' does not get a
+      // reasonable mangling here.
       if (const IdentifierInfo *Name
             = cast<NamedDecl>(Context)->getIdentifier()) {
         mangleSourceName(Name);
+        const TemplateArgumentList *TemplateArgs = nullptr;
+        if (const TemplateDecl *TD =
+                isTemplate(cast<NamedDecl>(Context), TemplateArgs))
+          mangleTemplateArgs(*TemplateArgs);
         Out << 'M';
       }
     }
@@ -2643,6 +2649,9 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 
   if (PI.isConsumed())
     mangleVendorQualifier("ns_consumed");
+
+  if (PI.isNoEscape())
+    mangleVendorQualifier("noescape");
 }
 
 // <type>          ::= <function-type>
