@@ -337,7 +337,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
 
 Diag::~Diag() {
   // All diagnostics should be printed under report mutex.
-  CommonSanitizerReportMutex.CheckLocked();
+  ScopedReport::CheckLocked();
   Decorator Decor;
   InternalScopedString Buffer(1024);
 
@@ -365,17 +365,15 @@ Diag::~Diag() {
     PrintMemorySnippet(Decor, Loc.getMemoryLocation(), Ranges, NumRanges, Args);
 }
 
+ScopedReport::Initializer::Initializer() { InitAsStandaloneIfNecessary(); }
+
 ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
                            ErrorType Type)
-    : Opts(Opts), SummaryLoc(SummaryLoc), Type(Type) {
-  InitAsStandaloneIfNecessary();
-  CommonSanitizerReportMutex.Lock();
-}
+    : Opts(Opts), SummaryLoc(SummaryLoc), Type(Type) {}
 
 ScopedReport::~ScopedReport() {
   MaybePrintStackTrace(Opts.pc, Opts.bp);
   MaybeReportErrorSummary(SummaryLoc, Type);
-  CommonSanitizerReportMutex.Unlock();
   if (flags()->halt_on_error)
     Die();
 }

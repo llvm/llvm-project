@@ -24,9 +24,9 @@ namespace __scudo {
 static pthread_once_t GlobalInitialized = PTHREAD_ONCE_INIT;
 static pthread_key_t PThreadKey;
 
-static atomic_uint32_t ThreadContextCurrentIndex;
-static ScudoThreadContext *ThreadContexts;
-static uptr NumberOfContexts;
+static atomic_uint32_t CurrentIndex;
+static ScudoTSD *TSDs;
+static u32 NumberOfTSDs;
 
 // sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used as they allocate memory.
 static uptr getNumberOfCPUs() {
@@ -42,52 +42,55 @@ static void initOnce() {
   // TODO(kostyak): remove and restrict to N and above.
   CHECK_EQ(pthread_key_create(&PThreadKey, NULL), 0);
   initScudo();
-  NumberOfContexts = getNumberOfCPUs();
-  ThreadContexts = reinterpret_cast<ScudoThreadContext *>(
-      MmapOrDie(sizeof(ScudoThreadContext) * NumberOfContexts, __func__));
-  for (uptr i = 0; i < NumberOfContexts; i++)
-    ThreadContexts[i].init();
+  NumberOfTSDs = getNumberOfCPUs();
+  if (NumberOfTSDs == 0)
+    NumberOfTSDs = 1;
+  if (NumberOfTSDs > 32)
+    NumberOfTSDs = 32;
+  TSDs = reinterpret_cast<ScudoTSD *>(
+      MmapOrDie(sizeof(ScudoTSD) * NumberOfTSDs, "ScudoTSDs"));
+  for (u32 i = 0; i < NumberOfTSDs; i++)
+    TSDs[i].init();
 }
 
 void initThread(bool MinimalInit) {
   pthread_once(&GlobalInitialized, initOnce);
   // Initial context assignment is done in a plain round-robin fashion.
-  u32 Index = atomic_fetch_add(&ThreadContextCurrentIndex, 1,
-                               memory_order_relaxed);
-  ScudoThreadContext *ThreadContext =
-      &ThreadContexts[Index % NumberOfContexts];
-  *get_android_tls_ptr() = reinterpret_cast<uptr>(ThreadContext);
+  u32 Index = atomic_fetch_add(&CurrentIndex, 1, memory_order_relaxed);
+  ScudoTSD *TSD = &TSDs[Index % NumberOfTSDs];
+  *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
 }
 
-ScudoThreadContext *getThreadContextAndLockSlow() {
-  ScudoThreadContext *ThreadContext;
-  // Go through all the contexts and find the first unlocked one. 
-  for (u32 i = 0; i < NumberOfContexts; i++) {
-    ThreadContext = &ThreadContexts[i];
-    if (ThreadContext->tryLock()) {
-      *get_android_tls_ptr() = reinterpret_cast<uptr>(ThreadContext);
-      return ThreadContext;
+ScudoTSD *getTSDAndLockSlow() {
+  ScudoTSD *TSD;
+  if (NumberOfTSDs > 1) {
+    // Go through all the contexts and find the first unlocked one.
+    for (u32 i = 0; i < NumberOfTSDs; i++) {
+      TSD = &TSDs[i];
+      if (TSD->tryLock()) {
+        *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+        return TSD;
+      }
+    }
+    // No luck, find the one with the lowest Precedence, and slow lock it.
+    u64 LowestPrecedence = UINT64_MAX;
+    for (u32 i = 0; i < NumberOfTSDs; i++) {
+      u64 Precedence = TSDs[i].getPrecedence();
+      if (Precedence && Precedence < LowestPrecedence) {
+        TSD = &TSDs[i];
+        LowestPrecedence = Precedence;
+      }
+    }
+    if (LIKELY(LowestPrecedence != UINT64_MAX)) {
+      TSD->lock();
+      *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+      return TSD;
     }
   }
-  // No luck, find the one with the lowest precedence, and slow lock it.
-  u64 Precedence = UINT64_MAX;
-  for (u32 i = 0; i < NumberOfContexts; i++) {
-    u64 SlowLockPrecedence = ThreadContexts[i].getSlowLockPrecedence();
-    if (SlowLockPrecedence && SlowLockPrecedence < Precedence) {
-      ThreadContext = &ThreadContexts[i];
-      Precedence = SlowLockPrecedence;
-    }
-  }
-  if (LIKELY(Precedence != UINT64_MAX)) {
-    ThreadContext->lock();
-    *get_android_tls_ptr() = reinterpret_cast<uptr>(ThreadContext);
-    return ThreadContext;
-  }
-  // Last resort (can this happen?), stick with the current one.
-  ThreadContext =
-      reinterpret_cast<ScudoThreadContext *>(*get_android_tls_ptr());
-  ThreadContext->lock();
-  return ThreadContext;
+  // Last resort, stick with the current one.
+  TSD = reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+  TSD->lock();
+  return TSD;
 }
 
 }  // namespace __scudo

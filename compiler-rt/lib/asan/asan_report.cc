@@ -122,37 +122,15 @@ bool ParseFrameDescription(const char *frame_descr,
 // immediately after printing error report.
 class ScopedInErrorReport {
  public:
-  static const u32 kUnclaimedTid = 0xfffffe;
-  static_assert(kUnclaimedTid != kInvalidTid, "Must be different");
-
-  explicit ScopedInErrorReport(bool fatal = false) {
-    halt_on_error_ = fatal || flags()->halt_on_error;
-    u32 current_tid = GetCurrentTidOrInvalid();
-
-    for (;;) {
-      u32 expected_tid = kUnclaimedTid;
-      if (atomic_compare_exchange_strong(&reporting_thread_tid_, &expected_tid,
-                                         current_tid, memory_order_relaxed)) {
-        // We've claimed reporting_thread_tid_ so proceed.
-        StartReporting();
-        return;
-      }
-
-      if (expected_tid == current_tid) {
-        // This is either asynch signal or nested error during error reporting.
-        // Fail simple to avoid deadlocks in Report().
-
-        // Can't use Report() here because of potential deadlocks in nested
-        // signal handlers.
-        static const char msg[] =
-            "AddressSanitizer: nested bug in the same thread, aborting.\n";
-        CatastrophicErrorWrite(msg, sizeof(msg) - 1);
-
-        internal__exit(common_flags()->exitcode);
-      }
-
-      SleepForMillis(100);
-    }
+  explicit ScopedInErrorReport(bool fatal = false)
+      : halt_on_error_(fatal || flags()->halt_on_error) {
+    // Make sure the registry and sanitizer report mutexes are locked while
+    // we're printing an error report.
+    // We can lock them only here to avoid self-deadlock in case of
+    // recursive reports.
+    asanThreadRegistry().Lock();
+    Printf(
+        "=================================================================\n");
   }
 
   ~ScopedInErrorReport() {
@@ -204,9 +182,6 @@ class ScopedInErrorReport {
       Report("ABORTING\n");
       Die();
     }
-
-    atomic_store_relaxed(&reporting_thread_tid_, kUnclaimedTid);
-    CommonSanitizerReportMutex.Unlock();
   }
 
   void ReportError(const ErrorDescription &description) {
@@ -220,25 +195,13 @@ class ScopedInErrorReport {
   }
 
  private:
-  void StartReporting() {
-    CommonSanitizerReportMutex.Lock();
-    // Make sure the registry and sanitizer report mutexes are locked while
-    // we're printing an error report.
-    // We can lock them only here to avoid self-deadlock in case of
-    // recursive reports.
-    asanThreadRegistry().Lock();
-    Printf(
-        "=================================================================\n");
-  }
-
-  static atomic_uint32_t reporting_thread_tid_;
+  ScopedErrorReportLock error_report_lock_;
   // Error currently being reported. This enables the destructor to interact
   // with the debugger and point it to an error description.
   static ErrorDescription current_error_;
   bool halt_on_error_;
 };
 
-atomic_uint32_t ScopedInErrorReport::reporting_thread_tid_ = {kUnclaimedTid};
 ErrorDescription ScopedInErrorReport::current_error_;
 
 void ReportDeadlySignal(const SignalContext &sig) {

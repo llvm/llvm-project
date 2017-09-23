@@ -108,13 +108,13 @@ void MemoryMappingLayout::Reset() {
   // _dyld_image_count is thread-unsafe. We need to register callbacks for
   // adding and removing images which will invalidate the MemoryMappingLayout
   // state.
-  current_image_ = _dyld_image_count();
-  current_load_cmd_count_ = -1;
-  current_load_cmd_addr_ = 0;
-  current_magic_ = 0;
-  current_filetype_ = 0;
-  current_arch_ = kModuleArchUnknown;
-  internal_memset(current_uuid_, 0, kModuleUUIDSize);
+  data_.current_image = _dyld_image_count();
+  data_.current_load_cmd_count = -1;
+  data_.current_load_cmd_addr = 0;
+  data_.current_magic = 0;
+  data_.current_filetype = 0;
+  data_.current_arch = kModuleArchUnknown;
+  internal_memset(data_.current_uuid, 0, kModuleUUIDSize);
 }
 
 // The dyld load address should be unchanged throughout process execution,
@@ -183,14 +183,14 @@ const mach_header *get_dyld_hdr() {
 // segment.
 // Note that the segment addresses are not necessarily sorted.
 template <u32 kLCSegment, typename SegmentCommand>
-bool MemoryMappingLayout::NextSegmentLoad(MemoryMappedSegment *segment) {
-  const char *lc = current_load_cmd_addr_;
-  current_load_cmd_addr_ += ((const load_command *)lc)->cmdsize;
+static bool NextSegmentLoad(MemoryMappedSegment *segment,
+MemoryMappedSegmentData *seg_data, MemoryMappingLayoutData &layout_data) {
+  const char *lc = layout_data.current_load_cmd_addr;
+  layout_data.current_load_cmd_addr += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-
     uptr base_virt_addr, addr_mask;
-    if (current_image_ == kDyldImageIdx) {
+    if (layout_data.current_image == kDyldImageIdx) {
       base_virt_addr = (uptr)get_dyld_hdr();
       // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
       // it contains an absolute address rather than an offset for dyld.
@@ -200,37 +200,40 @@ bool MemoryMappingLayout::NextSegmentLoad(MemoryMappedSegment *segment) {
       // and the mask will give just this offset.
       addr_mask = 0xfffff;
     } else {
-      base_virt_addr = (uptr)_dyld_get_image_vmaddr_slide(current_image_);
+      base_virt_addr =
+          (uptr)_dyld_get_image_vmaddr_slide(layout_data.current_image);
       addr_mask = ~0;
     }
+
     segment->start = (sc->vmaddr & addr_mask) + base_virt_addr;
     segment->end = segment->start + sc->vmsize;
-
     // Most callers don't need section information, so only fill this struct
     // when required.
-    if (segment->data_) {
-      segment->data_->nsects = sc->nsects;
-      segment->data_->current_load_cmd_addr =
+    if (seg_data) {
+      seg_data->nsects = sc->nsects;
+      seg_data->current_load_cmd_addr =
           (char *)lc + sizeof(SegmentCommand);
-      segment->data_->lc_type = kLCSegment;
-      segment->data_->base_virt_addr = base_virt_addr;
-      segment->data_->addr_mask = addr_mask;
-      internal_strncpy(segment->data_->name, sc->segname,
-                       ARRAY_SIZE(segment->data_->name));
+      seg_data->lc_type = kLCSegment;
+      seg_data->base_virt_addr = base_virt_addr;
+      seg_data->addr_mask = addr_mask;
+      internal_strncpy(seg_data->name, sc->segname,
+                       ARRAY_SIZE(seg_data->name));
     }
 
     // Return the initial protection.
     segment->protection = sc->initprot;
-    segment->offset =
-        (current_filetype_ == /*MH_EXECUTE*/ 0x2) ? sc->vmaddr : sc->fileoff;
+    segment->offset = (layout_data.current_filetype ==
+                       /*MH_EXECUTE*/ 0x2)
+                          ? sc->vmaddr
+                          : sc->fileoff;
     if (segment->filename) {
-      const char *src = (current_image_ == kDyldImageIdx)
+      const char *src = (layout_data.current_image == kDyldImageIdx)
                             ? kDyldPath
-                            : _dyld_get_image_name(current_image_);
+                            : _dyld_get_image_name(layout_data.current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
     }
-    segment->arch = current_arch_;
-    internal_memcpy(segment->uuid, current_uuid_, kModuleUUIDSize);
+    segment->arch = layout_data.current_arch;
+    internal_memcpy(segment->uuid, layout_data.current_uuid, kModuleUUIDSize);
     return true;
   }
   return false;
@@ -292,50 +295,52 @@ static bool IsModuleInstrumented(const load_command *first_lc) {
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
-  for (; current_image_ >= kDyldImageIdx; current_image_--) {
-    const mach_header *hdr = (current_image_ == kDyldImageIdx)
+  for (; data_.current_image >= kDyldImageIdx; data_.current_image--) {
+    const mach_header *hdr = (data_.current_image == kDyldImageIdx)
                                  ? get_dyld_hdr()
-                                 : _dyld_get_image_header(current_image_);
+                                 : _dyld_get_image_header(data_.current_image);
     if (!hdr) continue;
-    if (current_load_cmd_count_ < 0) {
+    if (data_.current_load_cmd_count < 0) {
       // Set up for this image;
-      current_load_cmd_count_ = hdr->ncmds;
-      current_magic_ = hdr->magic;
-      current_filetype_ = hdr->filetype;
-      current_arch_ = ModuleArchFromCpuType(hdr->cputype, hdr->cpusubtype);
-      switch (current_magic_) {
+      data_.current_load_cmd_count = hdr->ncmds;
+      data_.current_magic = hdr->magic;
+      data_.current_filetype = hdr->filetype;
+      data_.current_arch = ModuleArchFromCpuType(hdr->cputype, hdr->cpusubtype);
+      switch (data_.current_magic) {
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
-          current_load_cmd_addr_ = (char*)hdr + sizeof(mach_header_64);
+          data_.current_load_cmd_addr = (char *)hdr + sizeof(mach_header_64);
           break;
         }
 #endif
         case MH_MAGIC: {
-          current_load_cmd_addr_ = (char*)hdr + sizeof(mach_header);
+          data_.current_load_cmd_addr = (char *)hdr + sizeof(mach_header);
           break;
         }
         default: {
           continue;
         }
       }
-      FindUUID((const load_command *)current_load_cmd_addr_, &current_uuid_[0]);
-      current_instrumented_ =
-          IsModuleInstrumented((const load_command *)current_load_cmd_addr_);
+      FindUUID((const load_command *)data_.current_load_cmd_addr,
+               data_.current_uuid);
+      data_.current_instrumented = IsModuleInstrumented(
+          (const load_command *)data_.current_load_cmd_addr);
     }
 
-    for (; current_load_cmd_count_ >= 0; current_load_cmd_count_--) {
-      switch (current_magic_) {
-        // current_magic_ may be only one of MH_MAGIC, MH_MAGIC_64.
+    for (; data_.current_load_cmd_count >= 0; data_.current_load_cmd_count--) {
+      switch (data_.current_magic) {
+        // data_.current_magic may be only one of MH_MAGIC, MH_MAGIC_64.
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
           if (NextSegmentLoad<LC_SEGMENT_64, struct segment_command_64>(
-                  segment))
+          segment, segment->data_, data_))
             return true;
           break;
         }
 #endif
         case MH_MAGIC: {
-          if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(segment))
+          if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(
+          segment, segment->data_, data_))
             return true;
           break;
         }
@@ -364,7 +369,7 @@ void MemoryMappingLayout::DumpListOfModules(
       modules->push_back(LoadedModule());
       cur_module = &modules->back();
       cur_module->set(segment.filename, segment.start, segment.arch,
-                      segment.uuid, current_instrumented_);
+                      segment.uuid, data_.current_instrumented);
     }
     segment.AddAddressRanges(cur_module);
   }
