@@ -84,6 +84,7 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         stub_socket.shutdown(socket.SHUT_RDWR)
 
     @debugserver_test
+    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_reverse_connect_works_debugserver(self):
         self.init_debugserver_test(use_named_pipe=False)
         self.set_inferior_startup_launch()

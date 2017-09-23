@@ -1,4 +1,4 @@
-//===--------------------- InterleavedAccessPass.cpp ----------------------===//
+//===- InterleavedAccessPass.cpp ------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -42,17 +42,32 @@
 //
 // Similarly, a set of interleaved stores can be transformed into an optimized
 // sequence of shuffles followed by a set of target specific stores for X86.
+//
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <utility>
 
 using namespace llvm;
 
@@ -66,10 +81,10 @@ static cl::opt<bool> LowerInterleavedAccesses(
 namespace {
 
 class InterleavedAccess : public FunctionPass {
-
 public:
   static char ID;
-  InterleavedAccess() : FunctionPass(ID), DT(nullptr), TLI(nullptr) {
+
+  InterleavedAccess() : FunctionPass(ID) {
     initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
   }
 
@@ -83,8 +98,8 @@ public:
   }
 
 private:
-  DominatorTree *DT;
-  const TargetLowering *TLI;
+  DominatorTree *DT = nullptr;
+  const TargetLowering *TLI = nullptr;
 
   /// The maximum supported interleave factor.
   unsigned MaxFactor;
@@ -104,9 +119,11 @@ private:
   bool tryReplaceExtracts(ArrayRef<ExtractElementInst *> Extracts,
                           ArrayRef<ShuffleVectorInst *> Shuffles);
 };
+
 } // end anonymous namespace.
 
 char InterleavedAccess::ID = 0;
+
 INITIALIZE_PASS_BEGIN(InterleavedAccess, DEBUG_TYPE,
     "Lower interleaved memory accesses to target specific intrinsics", false,
     false)
@@ -331,7 +348,6 @@ bool InterleavedAccess::lowerInterleavedLoad(
 bool InterleavedAccess::tryReplaceExtracts(
     ArrayRef<ExtractElementInst *> Extracts,
     ArrayRef<ShuffleVectorInst *> Shuffles) {
-
   // If there aren't any extractelement instructions to modify, there's nothing
   // to do.
   if (Extracts.empty())
@@ -342,7 +358,6 @@ bool InterleavedAccess::tryReplaceExtracts(
   DenseMap<ExtractElementInst *, std::pair<Value *, int>> ReplacementMap;
 
   for (auto *Extract : Extracts) {
-
     // The vector index that is extracted.
     auto *IndexOperand = cast<ConstantInt>(Extract->getIndexOperand());
     auto Index = IndexOperand->getSExtValue();
@@ -351,7 +366,6 @@ bool InterleavedAccess::tryReplaceExtracts(
     // extractelement instruction (which uses an interleaved load) to use one
     // of the shufflevector instructions instead of the load.
     for (auto *Shuffle : Shuffles) {
-
       // If the shufflevector instruction doesn't dominate the extract, we
       // can't create a use of it.
       if (!DT->dominates(Shuffle, Extract))

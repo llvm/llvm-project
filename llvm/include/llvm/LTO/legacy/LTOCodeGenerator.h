@@ -237,7 +237,7 @@ private:
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
   TargetMachine::CodeGenFileType FileType = TargetMachine::CGFT_ObjectFile;
-  std::unique_ptr<tool_output_file> DiagnosticOutputFile;
+  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   bool Freestanding = false;
 };
 }

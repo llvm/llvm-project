@@ -936,7 +936,7 @@ int main(int argc, char **argv) {
         error("writing merged module failed.");
     }
 
-    std::list<tool_output_file> OSs;
+    std::list<ToolOutputFile> OSs;
     std::vector<raw_pwrite_stream *> OSPtrs;
     for (unsigned I = 0; I != Parallelism; ++I) {
       std::string PartFilename = OutputFilename;
@@ -953,7 +953,7 @@ int main(int argc, char **argv) {
       // Diagnostic messages should have been printed by the handler.
       error("error compiling the code");
 
-    for (tool_output_file &OS : OSs)
+    for (ToolOutputFile &OS : OSs)
       OS.keep();
   } else {
     if (Parallelism != 1)

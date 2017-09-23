@@ -52,6 +52,13 @@ void use_visible_no_linkage() {
   visible_no_linkage3(); // expected-note {{used here}}
 }
 
+namespace {
+  struct InternalLinkage {};
+}
+InternalLinkage internal_linkage(); // expected-error {{used but not defined}}
+void use_internal_linkage() {
+  internal_linkage(); // expected-note {{used here}}
+}
 
 extern inline int not_defined; // expected-error {{not defined}}
 extern inline int defined_after_use;
@@ -60,3 +67,12 @@ void use_inline_vars() {
   defined_after_use = 2;
 }
 inline int defined_after_use;
+
+namespace {
+  template<typename T> struct A {
+    static const int n;
+  };
+  template<typename T> const int A<T>::n = 3;
+  static_assert(A<int>::n == 3);
+  int k = A<float>::n;
+}

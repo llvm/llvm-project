@@ -1,12 +1,28 @@
 LEVEL = ../../../make
 
-myclass.o: myclass.h myclass.m
-	$(CC) myclass.m -c -o myclass.o
+CC ?= clang
+ifeq "$(ARCH)" ""
+        ARCH = x86_64
+endif
 
-repro: myclass.o repro.m
-	$(CC) -g -O0 myclass.o repro.m -framework Foundation
+ifeq "$(OS)" ""
+        OS = $(shell uname -s)
+endif
 
-cleanup:
-	rm -r myclass.o
+CFLAGS ?= -g -O0
+CFLAGS_NO_DEBUG = 
+ifeq "$(OS)" "Darwin"
+        CFLAGS += -arch $(ARCH)
+		CFLAGS_NO_DEBUG += -arch $(ARCH)
+endif
+
+all: aout
+
+aout: 
+	$(CC) $(CFLAGS_NO_DEBUG) myclass.m -c -o myclass.o
+	$(CC) $(CFLAGS) myclass.o repro.m -framework Foundation
+
+clean::
+	rm -f myclass.o
 
 include $(LEVEL)/Makefile.rules

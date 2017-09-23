@@ -168,9 +168,8 @@ void RegisterPollyPasses(PassBuilder &);
 #endif
 
 bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
-                           tool_output_file *Out,
-                           tool_output_file *ThinLTOLinkOut,
-                           tool_output_file *OptRemarkFile,
+                           ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
+                           ToolOutputFile *OptRemarkFile,
                            StringRef PassPipeline, OutputKind OK,
                            VerifierKind VK,
                            bool ShouldPreserveAssemblyUseListOrder,

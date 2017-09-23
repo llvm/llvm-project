@@ -349,7 +349,7 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
 }
 
 static void
-finalizeOptimizationRemarks(std::unique_ptr<tool_output_file> DiagOutputFile) {
+finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)

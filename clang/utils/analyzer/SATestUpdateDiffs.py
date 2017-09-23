@@ -4,8 +4,9 @@
 Update reference results for static analyzer.
 """
 
-from subprocess import check_call, check_output, CalledProcessError
-import csv
+import SATestBuild
+
+from subprocess import check_call
 import os
 import sys
 
@@ -35,8 +36,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     runCmd('cp -r "%s" "%s"' % (CreatedResultsPath, RefResultsPath,))
 
     # Run cleanup script.
-    with open(SATestBuild.getBuildLogPath(RefResultsPath), "wb+")
-            as PBuildLogFile:
+    with open(SATestBuild.getBuildLogPath(RefResultsPath), "wb+") as PBuildLogFile:
         SATestBuild.runCleanupScript(ProjDir, PBuildLogFile)
 
     SATestBuild.normalizeReferenceResults(ProjDir, RefResultsPath, ProjBuildMode)
@@ -52,7 +52,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
 def main(argv):
     if len(argv) == 2 and argv[1] in ('-h', '--help'):
         print >> sys.stderr, "Update static analyzer reference results based "\
-                             "\non the previous run of SATestBuild.py.\n"
+                             "\non the previous run of SATestBuild.py.\n"\
                              "\nN.B.: Assumes that SATestBuild.py was just run."
         sys.exit(-1)
 

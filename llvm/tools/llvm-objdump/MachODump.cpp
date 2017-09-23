@@ -5950,7 +5950,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
     errs() << XarEC.message() << "\n";
     return;
   }
-  tool_output_file XarFile(XarFilename, FD);
+  ToolOutputFile XarFile(XarFilename, FD);
   raw_fd_ostream &XarOut = XarFile.os();
   StringRef XarContents(sect, size);
   XarOut << XarContents;

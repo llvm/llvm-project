@@ -11,6 +11,7 @@ class TestGdbRemoteExpeditedRegisters(
         gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
 
     def gather_expedited_registers(self):
         # Setup the stub and set the gdb remote command stream.
