@@ -250,19 +250,11 @@ struct QuarantineCallback {
 typedef Quarantine<QuarantineCallback, ScudoChunk> ScudoQuarantine;
 typedef ScudoQuarantine::Cache ScudoQuarantineCache;
 COMPILER_CHECK(sizeof(ScudoQuarantineCache) <=
-               sizeof(ScudoThreadContext::QuarantineCachePlaceHolder));
+               sizeof(ScudoTSD::QuarantineCachePlaceHolder));
 
-AllocatorCache *getAllocatorCache(ScudoThreadContext *ThreadContext) {
-  return &ThreadContext->Cache;
-}
-
-ScudoQuarantineCache *getQuarantineCache(ScudoThreadContext *ThreadContext) {
-  return reinterpret_cast<
-      ScudoQuarantineCache *>(ThreadContext->QuarantineCachePlaceHolder);
-}
-
-ScudoPrng *getPrng(ScudoThreadContext *ThreadContext) {
-  return &ThreadContext->Prng;
+ScudoQuarantineCache *getQuarantineCache(ScudoTSD *TSD) {
+  return reinterpret_cast<ScudoQuarantineCache *>(
+      TSD->QuarantineCachePlaceHolder);
 }
 
 struct ScudoAllocator {
@@ -381,12 +373,11 @@ struct ScudoAllocator {
     uptr AllocSize;
     if (FromPrimary) {
       AllocSize = AlignedSize;
-      ScudoThreadContext *ThreadContext = getThreadContextAndLock();
-      if (LIKELY(ThreadContext)) {
-        Salt = getPrng(ThreadContext)->getU8();
-        Ptr = BackendAllocator.allocatePrimary(getAllocatorCache(ThreadContext),
-                                               AllocSize);
-        ThreadContext->unlock();
+      ScudoTSD *TSD = getTSDAndLock();
+      if (LIKELY(TSD)) {
+        Salt = TSD->Prng.getU8();
+        Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, AllocSize);
+        TSD->unlock();
       } else {
         SpinMutexLock l(&FallbackMutex);
         Salt = FallbackPrng.getU8();
@@ -454,11 +445,10 @@ struct ScudoAllocator {
       Chunk->eraseHeader();
       void *Ptr = Chunk->getAllocBeg(Header);
       if (Header->FromPrimary) {
-        ScudoThreadContext *ThreadContext = getThreadContextAndLock();
-        if (LIKELY(ThreadContext)) {
-          getBackendAllocator().deallocatePrimary(
-              getAllocatorCache(ThreadContext), Ptr);
-          ThreadContext->unlock();
+        ScudoTSD *TSD = getTSDAndLock();
+        if (LIKELY(TSD)) {
+          getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr);
+          TSD->unlock();
         } else {
           SpinMutexLock Lock(&FallbackMutex);
           getBackendAllocator().deallocatePrimary(&FallbackAllocatorCache, Ptr);
@@ -476,13 +466,12 @@ struct ScudoAllocator {
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, Header);
-      ScudoThreadContext *ThreadContext = getThreadContextAndLock();
-      if (LIKELY(ThreadContext)) {
-        AllocatorQuarantine.Put(getQuarantineCache(ThreadContext),
-                                QuarantineCallback(
-                                    getAllocatorCache(ThreadContext)),
+      ScudoTSD *TSD = getTSDAndLock();
+      if (LIKELY(TSD)) {
+        AllocatorQuarantine.Put(getQuarantineCache(TSD),
+                                QuarantineCallback(&TSD->Cache),
                                 Chunk, EstimatedSize);
-        ThreadContext->unlock();
+        TSD->unlock();
       } else {
         SpinMutexLock l(&FallbackMutex);
         AllocatorQuarantine.Put(&FallbackQuarantineCache,
@@ -607,11 +596,10 @@ struct ScudoAllocator {
     return allocate(NMemB * Size, MinAlignment, FromMalloc, true);
   }
 
-  void commitBack(ScudoThreadContext *ThreadContext) {
-    AllocatorCache *Cache = getAllocatorCache(ThreadContext);
-    AllocatorQuarantine.Drain(getQuarantineCache(ThreadContext),
-                              QuarantineCallback(Cache));
-    BackendAllocator.destroyCache(Cache);
+  void commitBack(ScudoTSD *TSD) {
+    AllocatorQuarantine.Drain(getQuarantineCache(TSD),
+                              QuarantineCallback(&TSD->Cache));
+    BackendAllocator.destroyCache(&TSD->Cache);
   }
 
   uptr getStats(AllocatorStat StatType) {
@@ -637,13 +625,13 @@ static void initScudoInternal(const AllocatorOptions &Options) {
   Instance.init(Options);
 }
 
-void ScudoThreadContext::init() {
+void ScudoTSD::init() {
   getBackendAllocator().initCache(&Cache);
   Prng.init();
   memset(QuarantineCachePlaceHolder, 0, sizeof(QuarantineCachePlaceHolder));
 }
 
-void ScudoThreadContext::commitBack() {
+void ScudoTSD::commitBack() {
   Instance.commitBack(this);
 }
 

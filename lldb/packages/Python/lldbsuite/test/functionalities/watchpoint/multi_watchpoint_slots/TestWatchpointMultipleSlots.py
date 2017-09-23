@@ -67,9 +67,12 @@ class WatchpointSlotsTestCase(TestBase):
         # The hit count should be 0 initially.
         self.expect("watchpoint list -v 1", substrs=['hit_count = 0'])
 
-        # Try setting a watchpoint at byteArray[1]
-        self.expect("watchpoint set variable byteArray[1]", error=True,
-                    substrs=['Watchpoint creation failed'])
+        # debugserver on ios doesn't give an error, it creates another watchpoint,
+        # only expect errors on non-darwin platforms.
+        if not self.platformIsDarwin():
+            # Try setting a watchpoint at byteArray[1]
+            self.expect("watchpoint set variable byteArray[1]", error=True,
+                        substrs=['Watchpoint creation failed'])
 
         self.runCmd("process continue")
 
@@ -90,8 +93,13 @@ class WatchpointSlotsTestCase(TestBase):
 
         # We should be stopped due to the watchpoint.
         # The stop reason of the thread should be watchpoint.
-        self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
-                    substrs=['stopped', 'stop reason = watchpoint 3'])
+        if self.platformIsDarwin():
+            # On darwin we'll hit byteArray[3] which is watchpoint 2
+            self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
+                        substrs=['stopped', 'stop reason = watchpoint 2'])
+        else:
+            self.expect("thread list -v", STOPPED_DUE_TO_WATCHPOINT,
+                        substrs=['stopped', 'stop reason = watchpoint 3'])
    
         # Resume inferior.
         self.runCmd("process continue")

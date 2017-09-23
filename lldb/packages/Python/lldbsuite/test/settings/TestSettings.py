@@ -215,6 +215,7 @@ class SettingsCommandTestCase(TestBase):
         self.expect("disassemble -n numberfn",
                     substrs=["5ah"])
 
+    @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
     def test_run_args_and_env_vars(self):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()
@@ -286,6 +287,7 @@ class SettingsCommandTestCase(TestBase):
                 "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed.",
                 "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
 
+    @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
     def test_set_error_output_path(self):
         """Test that setting target.error/output-path for the launched process works."""
         self.build()

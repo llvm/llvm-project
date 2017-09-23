@@ -18,11 +18,17 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "ubsan_init.h"
+#include "ubsan_signals_standalone.h"
+
+namespace __ubsan {
 
 class UbsanStandaloneInitializer {
  public:
   UbsanStandaloneInitializer() {
-    __ubsan::InitAsStandalone();
+    InitAsStandalone();
+    InitializeDeadlySignals();
   }
 };
 static UbsanStandaloneInitializer ubsan_standalone_initializer;
+
+} // namespace __ubsan

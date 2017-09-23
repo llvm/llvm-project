@@ -225,7 +225,7 @@ CXXFLAGS += $(subst -fmodules,, $(CFLAGS))
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
-ifeq (,$(filter $(OS), Windows_NT Android))
+ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
 	endif

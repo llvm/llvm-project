@@ -28,7 +28,7 @@ namespace __scudo {
 #include "scudo_tls_context_android.inc"
 #include "scudo_tls_context_linux.inc"
 
-struct ALIGNED(64) ScudoThreadContext : public ScudoThreadContextPlatform {
+struct ALIGNED(64) ScudoTSD : public ScudoTSDPlatform {
   AllocatorCache Cache;
   ScudoPrng Prng;
   uptr QuarantineCachePlaceHolder[4];
@@ -38,7 +38,7 @@ struct ALIGNED(64) ScudoThreadContext : public ScudoThreadContextPlatform {
 
 void initThread(bool MinimalInit);
 
-// Platform specific dastpath functions definitions.
+// Platform specific fastpath functions definitions.
 #include "scudo_tls_android.inc"
 #include "scudo_tls_linux.inc"
 

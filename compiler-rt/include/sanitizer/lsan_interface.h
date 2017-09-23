@@ -68,6 +68,10 @@ extern "C" {
   // __attribute__((used))
   int __lsan_is_turned_off();
 
+  // This function may be optionally provided by user and should return
+  // a string containing LSan runtime options. See lsan_flags.inc for details.
+  const char *__lsan_default_options();
+
   // This function may be optionally provided by the user and should return
   // a string containing LSan suppressions.
   const char *__lsan_default_suppressions();

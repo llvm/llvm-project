@@ -118,6 +118,10 @@ void InitializeFlags() {
   const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
+#if CAN_SANITIZE_LEAKS
+  const char *lsan_default_options = __lsan::MaybeCallLsanDefaultOptions();
+  lsan_parser.ParseString(lsan_default_options);
+#endif
 
   // Override from command line.
   asan_parser.ParseString(GetEnv("ASAN_OPTIONS"));
