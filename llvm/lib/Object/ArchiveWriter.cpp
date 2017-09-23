@@ -277,6 +277,18 @@ static sys::TimePoint<std::chrono::seconds> now(bool Deterministic) {
   return sys::TimePoint<seconds>();
 }
 
+static bool isArchiveSymbol(const object::BasicSymbolRef &S) {
+  uint32_t Symflags = S.getFlags();
+  if (Symflags & object::SymbolRef::SF_FormatSpecific)
+    return false;
+  if (!(Symflags & object::SymbolRef::SF_Global))
+    return false;
+  if (Symflags & object::SymbolRef::SF_Undefined &&
+      !(Symflags & object::SymbolRef::SF_Indirect))
+    return false;
+  return true;
+}
+
 // Returns the offset of the first reference to a member offset.
 static Expected<unsigned>
 writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
@@ -310,13 +322,7 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
     }
 
     for (const object::BasicSymbolRef &S : Obj.symbols()) {
-      uint32_t Symflags = S.getFlags();
-      if (Symflags & object::SymbolRef::SF_FormatSpecific)
-        continue;
-      if (!(Symflags & object::SymbolRef::SF_Global))
-        continue;
-      if (Symflags & object::SymbolRef::SF_Undefined &&
-          !(Symflags & object::SymbolRef::SF_Indirect))
+      if (!isArchiveSymbol(S))
         continue;
 
       unsigned NameOffset = NameOS.tell();
@@ -349,9 +355,12 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
   if (StringTable.size() == 0)
     print32(Out, Kind, 0);
 
-  // ld64 requires the next member header to start at an offset that is
-  // 4 bytes aligned.
-  unsigned Pad = OffsetToAlignment(Out.tell(), 4);
+  // ld64 expects the members to be 8-byte aligned for 64-bit content and at
+  // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
+  // uniformly.
+  // We do this for all bsd formats because it simplifies aligning members.
+  unsigned Alignment = isBSDLike(Kind) ? 8 : 2;
+  unsigned Pad = OffsetToAlignment(Out.tell(), Alignment);
   while (Pad--)
     Out.write(uint8_t(0));
 
@@ -385,7 +394,7 @@ Error llvm::writeArchive(StringRef ArcName,
                                           TmpArchiveFD, TmpArchive))
     return errorCodeToError(EC);
 
-  tool_output_file Output(TmpArchive, TmpArchiveFD);
+  ToolOutputFile Output(TmpArchive, TmpArchiveFD);
   raw_fd_ostream &Out = Output.os();
   if (Thin)
     Out << "!<thin>\n";

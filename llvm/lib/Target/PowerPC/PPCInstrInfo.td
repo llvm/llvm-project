@@ -3951,6 +3951,7 @@ class PPCAsmPseudo<string asm, dag iops>
   let AsmString = asm;
   let isAsmParserOnly = 1;
   let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 def : InstAlias<"sc", (SC 0)>;
@@ -4259,7 +4260,7 @@ def : InstAlias<"rotld $rA, $rS, $rB", (RLDCL g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"rotld. $rA, $rS, $rB", (RLDCLo g8rc:$rA, g8rc:$rS, gprc:$rB, 0)>;
 def : InstAlias<"clrldi $rA, $rS, $n", (RLDICL g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"clrldi $rA, $rS, $n",
-                (RLDICL_32 gprc:$rA, gprc:$rS, 0, u6imm:$n)>;
+                (RLDICL_32_64 g8rc:$rA, gprc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"clrldi. $rA, $rS, $n", (RLDICLo g8rc:$rA, g8rc:$rS, 0, u6imm:$n)>;
 def : InstAlias<"lnia $RT", (ADDPCIS g8rc:$RT, 0)>;
 

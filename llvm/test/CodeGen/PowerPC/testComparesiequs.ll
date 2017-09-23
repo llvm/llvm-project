@@ -29,8 +29,8 @@ define signext i32 @test_iequs_sext(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
-; CHECK-NEXT:    rldicr r3, r3, 58, 0
-; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    srwi r3, r3, 5
+; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, %b
@@ -56,8 +56,8 @@ define signext i32 @test_iequs_sext_z(i16 zeroext %a) {
 ; CHECK-LABEL: test_iequs_sext_z:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
-; CHECK-NEXT:    rldicr r3, r3, 58, 0
-; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    srwi r3, r3, 5
+; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, 0
@@ -91,8 +91,8 @@ define void @test_iequs_sext_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
-; CHECK-NEXT:    rldicr r3, r3, 58, 0
-; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    srwi r3, r3, 5
+; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
@@ -126,8 +126,8 @@ define void @test_iequs_sext_z_store(i16 zeroext %a) {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    rldicr r3, r3, 58, 0
-; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    srwi r3, r3, 5
+; CHECK-NEXT:    neg r3, r3
 ; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:

@@ -4809,97 +4809,6 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
   return true;
 }
 
-/// Return true if the specified EXTRACT_SUBVECTOR operand specifies a vector
-/// extract that is suitable for instruction that extract 128 or 256 bit vectors
-static bool isVEXTRACTIndex(SDNode *N, unsigned vecWidth) {
-  assert((vecWidth == 128 || vecWidth == 256) && "Unexpected vector width");
-  if (!isa<ConstantSDNode>(N->getOperand(1).getNode()))
-    return false;
-
-  // The index should be aligned on a vecWidth-bit boundary.
-  uint64_t Index = N->getConstantOperandVal(1);
-  MVT VT = N->getSimpleValueType(0);
-  unsigned ElSize = VT.getScalarSizeInBits();
-  return (Index * ElSize) % vecWidth == 0;
-}
-
-/// Return true if the specified INSERT_SUBVECTOR
-/// operand specifies a subvector insert that is suitable for input to
-/// insertion of 128 or 256-bit subvectors
-static bool isVINSERTIndex(SDNode *N, unsigned vecWidth) {
-  assert((vecWidth == 128 || vecWidth == 256) && "Unexpected vector width");
-  if (!isa<ConstantSDNode>(N->getOperand(2).getNode()))
-    return false;
-
-  // The index should be aligned on a vecWidth-bit boundary.
-  uint64_t Index = N->getConstantOperandVal(2);
-  MVT VT = N->getSimpleValueType(0);
-  unsigned ElSize = VT.getScalarSizeInBits();
-  return (Index * ElSize) % vecWidth == 0;
-}
-
-bool X86::isVINSERT128Index(SDNode *N) {
-  return isVINSERTIndex(N, 128);
-}
-
-bool X86::isVINSERT256Index(SDNode *N) {
-  return isVINSERTIndex(N, 256);
-}
-
-bool X86::isVEXTRACT128Index(SDNode *N) {
-  return isVEXTRACTIndex(N, 128);
-}
-
-bool X86::isVEXTRACT256Index(SDNode *N) {
-  return isVEXTRACTIndex(N, 256);
-}
-
-static unsigned getExtractVEXTRACTImmediate(SDNode *N, unsigned vecWidth) {
-  assert((vecWidth == 128 || vecWidth == 256) && "Unsupported vector width");
-  assert(isa<ConstantSDNode>(N->getOperand(1).getNode()) &&
-         "Illegal extract subvector for VEXTRACT");
-
-  uint64_t Index = N->getConstantOperandVal(1);
-  MVT VecVT = N->getOperand(0).getSimpleValueType();
-  unsigned NumElemsPerChunk = vecWidth / VecVT.getScalarSizeInBits();
-  return Index / NumElemsPerChunk;
-}
-
-static unsigned getInsertVINSERTImmediate(SDNode *N, unsigned vecWidth) {
-  assert((vecWidth == 128 || vecWidth == 256) && "Unsupported vector width");
-  assert(isa<ConstantSDNode>(N->getOperand(2).getNode()) &&
-         "Illegal insert subvector for VINSERT");
-
-  uint64_t Index = N->getConstantOperandVal(2);
-  MVT VecVT = N->getSimpleValueType(0);
-  unsigned NumElemsPerChunk = vecWidth / VecVT.getScalarSizeInBits();
-  return Index / NumElemsPerChunk;
-}
-
-/// Return the appropriate immediate to extract the specified
-/// EXTRACT_SUBVECTOR index with VEXTRACTF128 and VINSERTI128 instructions.
-unsigned X86::getExtractVEXTRACT128Immediate(SDNode *N) {
-  return getExtractVEXTRACTImmediate(N, 128);
-}
-
-/// Return the appropriate immediate to extract the specified
-/// EXTRACT_SUBVECTOR index with VEXTRACTF64x4 and VINSERTI64x4 instructions.
-unsigned X86::getExtractVEXTRACT256Immediate(SDNode *N) {
-  return getExtractVEXTRACTImmediate(N, 256);
-}
-
-/// Return the appropriate immediate to insert at the specified
-/// INSERT_SUBVECTOR index with VINSERTF128 and VINSERTI128 instructions.
-unsigned X86::getInsertVINSERT128Immediate(SDNode *N) {
-  return getInsertVINSERTImmediate(N, 128);
-}
-
-/// Return the appropriate immediate to insert at the specified
-/// INSERT_SUBVECTOR index with VINSERTF46x4 and VINSERTI64x4 instructions.
-unsigned X86::getInsertVINSERT256Immediate(SDNode *N) {
-  return getInsertVINSERTImmediate(N, 256);
-}
-
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -31709,7 +31618,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue combineShiftRightAlgebraic(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
@@ -31762,6 +31671,40 @@ static SDValue combineShiftRightAlgebraic(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N0.getValueType();
+
+  // Try to improve a sequence of srl (and X, C1), C2 by inverting the order.
+  // TODO: This is a generic DAG combine that became an x86-only combine to
+  // avoid shortcomings in other folds such as bswap, bit-test ('bt'), and
+  // and-not ('andn').
+  if (N0.getOpcode() != ISD::AND || !N0.hasOneUse())
+    return SDValue();
+
+  auto *ShiftC = dyn_cast<ConstantSDNode>(N1);
+  auto *AndC = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  if (!ShiftC || !AndC)
+    return SDValue();
+
+  // If the 'and' mask is already smaller than a byte, then don't bother.
+  // If the new 'and' mask would be bigger than a byte, then don't bother.
+  // If the mask fits in a byte, then we know we can generate smaller and
+  // potentially better code by shifting first.
+  // TODO: Always try to shrink a mask that is over 32-bits?
+  APInt MaskVal = AndC->getAPIntValue();
+  APInt NewMaskVal = MaskVal.lshr(ShiftC->getAPIntValue());
+  if (MaskVal.getMinSignedBits() <= 8 || NewMaskVal.getMinSignedBits() > 8)
+    return SDValue();
+
+  // srl (and X, AndC), ShiftC --> and (srl X, ShiftC), (AndC >> ShiftC)
+  SDLoc DL(N);
+  SDValue NewMask = DAG.getConstant(NewMaskVal, DL, VT);
+  SDValue NewShift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1);
+  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewMask);
+}
+
 /// \brief Returns a vector of 0s if the node in input is a vector logical
 /// shift by a constant amount which is known to be bigger than or equal
 /// to the vector element size in bits.
@@ -31801,7 +31744,11 @@ static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
       return V;
 
   if (N->getOpcode() == ISD::SRA)
-    if (SDValue V = combineShiftRightAlgebraic(N, DAG))
+    if (SDValue V = combineShiftRightArithmetic(N, DAG))
+      return V;
+
+  if (N->getOpcode() == ISD::SRL)
+    if (SDValue V = combineShiftRightLogical(N, DAG))
       return V;
 
   // Try to fold this logical shift into a zero vector.
@@ -34491,6 +34438,47 @@ static SDValue getDivRem8(SDNode *N, SelectionDAG &DAG) {
   return R.getValue(1);
 }
 
+// If we face {ANY,SIGN,ZERO}_EXTEND that is applied to a CMOV with constant
+// operands and the result of CMOV is not used anywhere else - promote CMOV
+// itself instead of promoting its result. This could be beneficial, because:
+//     1) X86TargetLowering::EmitLoweredSelect later can do merging of two
+//        (or more) pseudo-CMOVs only when they go one-after-another and
+//        getting rid of result extension code after CMOV will help that.
+//     2) Promotion of constant CMOV arguments is free, hence the
+//        {ANY,SIGN,ZERO}_EXTEND will just be deleted.
+//     3) 16-bit CMOV encoding is 4 bytes, 32-bit CMOV is 3-byte, so this
+//        promotion is also good in terms of code-size.
+//        (64-bit CMOV is 4-bytes, that's why we don't do 32-bit => 64-bit
+//         promotion).
+static SDValue combineToExtendCMOV(SDNode *Extend, SelectionDAG &DAG) {
+  SDValue CMovN = Extend->getOperand(0);
+  if (CMovN.getOpcode() != X86ISD::CMOV)
+    return SDValue();
+
+  EVT TargetVT = Extend->getValueType(0);
+  unsigned ExtendOpcode = Extend->getOpcode();
+  SDLoc DL(Extend);
+
+  EVT VT = CMovN.getValueType();
+  SDValue CMovOp0 = CMovN.getOperand(0);
+  SDValue CMovOp1 = CMovN.getOperand(1);
+
+  bool DoPromoteCMOV =
+      (VT == MVT::i16 && (TargetVT == MVT::i32 || TargetVT == MVT::i64)) &&
+      CMovN.hasOneUse() &&
+      (isa<ConstantSDNode>(CMovOp0.getNode()) &&
+       isa<ConstantSDNode>(CMovOp1.getNode()));
+
+  if (!DoPromoteCMOV)
+    return SDValue();
+
+  CMovOp0 = DAG.getNode(ExtendOpcode, DL, TargetVT, CMovOp0);
+  CMovOp1 = DAG.getNode(ExtendOpcode, DL, TargetVT, CMovOp1);
+
+  return DAG.getNode(X86ISD::CMOV, DL, TargetVT, CMovOp0, CMovOp1,
+                     CMovN.getOperand(2), CMovN.getOperand(3));
+}
+
 /// Convert a SEXT or ZEXT of a vector to a SIGN_EXTEND_VECTOR_INREG or
 /// ZERO_EXTEND_VECTOR_INREG, this requires the splitting (or concatenating
 /// with UNDEFs) of the input to vectors of the same size as the target type
@@ -34604,6 +34592,9 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue DivRem8 = getDivRem8(N, DAG))
     return DivRem8;
+
+  if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
+    return NewCMov;
 
   if (!DCI.isBeforeLegalizeOps()) {
     if (InVT == MVT::i1) {
@@ -34756,6 +34747,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
                          DAG.getConstant(1, dl, VT));
     }
   }
+
+  if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
+    return NewCMov;
 
   if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))
     return V;

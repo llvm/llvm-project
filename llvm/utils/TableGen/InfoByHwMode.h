@@ -27,6 +27,7 @@ namespace llvm {
 
 struct CodeGenHwModes;
 class Record;
+class raw_ostream;
 
 template <typename InfoT> struct InfoByHwMode;
 
@@ -129,8 +130,8 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   MVT getType(unsigned Mode) const { return get(Mode); }
   MVT &getOrCreateTypeForMode(unsigned Mode, MVT Type);
 
-  static std::string getMVTName(MVT T);
-  std::string getAsString() const;
+  static StringRef getMVTName(MVT T);
+  void writeToStream(raw_ostream &OS) const;
   void dump() const;
 };
 
@@ -154,7 +155,7 @@ struct RegSizeInfo {
   }
 
   bool isSubClassOf(const RegSizeInfo &I) const;
-  std::string getAsString() const;
+  void writeToStream(raw_ostream &OS) const;
 };
 
 struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
@@ -169,8 +170,13 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   bool isSubClassOf(const RegSizeInfoByHwMode &I) const;
   bool hasStricterSpillThan(const RegSizeInfoByHwMode &I) const;
 
-  std::string getAsString() const;
+  void writeToStream(raw_ostream &OS) const;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
+raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
+raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
+
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H

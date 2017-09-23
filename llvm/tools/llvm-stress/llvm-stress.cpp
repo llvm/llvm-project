@@ -747,13 +747,13 @@ int main(int argc, char **argv) {
   IntroduceControlFlow(F, R);
 
   // Figure out what stream we are supposed to write to...
-  std::unique_ptr<tool_output_file> Out;
+  std::unique_ptr<ToolOutputFile> Out;
   // Default to standard output.
   if (OutputFilename.empty())
     OutputFilename = "-";
 
   std::error_code EC;
-  Out.reset(new tool_output_file(OutputFilename, EC, sys::fs::F_None));
+  Out.reset(new ToolOutputFile(OutputFilename, EC, sys::fs::F_None));
   if (EC) {
     errs() << EC.message() << '\n';
     return 1;

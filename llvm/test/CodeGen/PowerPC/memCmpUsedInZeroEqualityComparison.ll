@@ -115,10 +115,9 @@ define signext i32 @zeroEqualityTest04() {
 ; CHECK-NEXT:    li 12, -1
 ; CHECK-NEXT:    isel 5, 12, 11, 0
 ; CHECK-NEXT:  .LBB3_3: # %endblock
-; CHECK-NEXT:    cmpwi 5, 1
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    isel 3, 4, 3, 0
+; CHECK-NEXT:    neg 3, 5
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer2 to i8*), i64 16)
   %not.cmp = icmp slt i32 %call, 1

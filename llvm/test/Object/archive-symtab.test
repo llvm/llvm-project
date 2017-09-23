@@ -115,10 +115,26 @@ COFF-SHORT-IMPORT-NEXT: _foo in coff-short-import-code
 COFF-SHORT-IMPORT-NEXT: __imp__bar in coff-short-import-data
 COFF-SHORT-IMPORT-NOT:  _bar in coff-short-import-data
 
-Test that we pad the symbol table so that it ends in a multiple of 4 bytes:
+Test that we pad the symbol table so that it ends in a multiple of 8 bytes:
 8 + 60 + 36 == 104
 RUN: rm -f %t.a
 RUN: llvm-ar --format=bsd rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64
 RUN: FileCheck --check-prefix=MACHO-SYMTAB-ALIGN %s < %t.a
 MACHO-SYMTAB-ALIGN: !<arch>
 MACHO-SYMTAB-ALIGN-NEXT: #1/12           {{..........}}  0     0     0       36        `
+
+Test that we pad the symbol table so that it ends in a multiple of 8 bytes:
+8 + 60 + 52 == 120
+RUN: rm -f %t.a
+RUN: llvm-ar --format=bsd rcsD %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test.macho-x86-64
+RUN: FileCheck --check-prefix=MACHO-SYMTAB-ALIGN2 %s < %t.a
+MACHO-SYMTAB-ALIGN2: !<arch>
+MACHO-SYMTAB-ALIGN2-NEXT: #1/12           0           0     0     0       52        `
+
+With a gnu symbol table we only align to two
+8 + 60 + 14 = 82
+RUN: rm -f %t.a
+RUN: llvm-ar --format=gnu rcsD %t.a %p/Inputs/trivial-object-test.macho-x86-64
+RUN: FileCheck --check-prefix=GNU-SYMTAB-ALIGN %s < %t.a
+GNU-SYMTAB-ALIGN: !<arch>
+GNU-SYMTAB-ALIGN-NEXT: /               0           0     0     0       14        `
