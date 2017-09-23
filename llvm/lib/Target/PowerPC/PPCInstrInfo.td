@@ -3951,6 +3951,7 @@ class PPCAsmPseudo<string asm, dag iops>
   let AsmString = asm;
   let isAsmParserOnly = 1;
   let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 def : InstAlias<"sc", (SC 0)>;

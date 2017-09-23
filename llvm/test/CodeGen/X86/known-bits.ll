@@ -12,8 +12,8 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzbl (%eax), %eax
 ; X32-NEXT:    imull $101, %eax, %eax
-; X32-NEXT:    andl $16384, %eax # imm = 0x4000
 ; X32-NEXT:    shrl $14, %eax
+; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    vmovd %eax, %xmm0
 ; X32-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -50,8 +50,8 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X64:       # BB#0: # %BB
 ; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    imull $101, %eax, %eax
-; X64-NEXT:    andl $16384, %eax # imm = 0x4000
 ; X64-NEXT:    shrl $14, %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero

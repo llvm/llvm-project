@@ -269,12 +269,11 @@ namespace clang {
                            LangOpts, C.getTargetInfo().getDataLayout(),
                            getModule(), Action);
 
-      std::unique_ptr<llvm::tool_output_file> OptRecordFile;
+      std::unique_ptr<llvm::ToolOutputFile> OptRecordFile;
       if (!CodeGenOpts.OptRecordFile.empty()) {
         std::error_code EC;
-        OptRecordFile =
-          llvm::make_unique<llvm::tool_output_file>(CodeGenOpts.OptRecordFile,
-                                                    EC, sys::fs::F_None);
+        OptRecordFile = llvm::make_unique<llvm::ToolOutputFile>(
+            CodeGenOpts.OptRecordFile, EC, sys::fs::F_None);
         if (EC) {
           Diags.Report(diag::err_cannot_open_file) <<
             CodeGenOpts.OptRecordFile << EC.message();

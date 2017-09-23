@@ -2101,4 +2101,5 @@ class Pseudo<dag OOL, dag IOL, string asmstr, list<dag> pattern>
   let PPC64 = 0;
   let Pattern = pattern;
   let Inst{31-0} = 0;
+  let hasNoSchedulingInfo = 1;
 }

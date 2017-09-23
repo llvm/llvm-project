@@ -94,7 +94,10 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
   //
   // Although these might also cause ODR violations, we can be less certain and
   // should try to keep the false-positive rate down.
-  if (ND->getLinkageInternal() == InternalLinkage)
+  //
+  // FIXME: Should declarations in anonymous namespaces get the same treatment
+  // as static / const declarations?
+  if (!ND->hasExternalFormalLinkage() && !ND->isInAnonymousNamespace())
     return;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {

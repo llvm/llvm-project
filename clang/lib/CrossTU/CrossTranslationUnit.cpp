@@ -121,7 +121,7 @@ CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
 std::string CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
   SmallString<128> DeclUSR;
-  bool Ret = index::generateUSRForDecl(ND, DeclUSR);
+  bool Ret = index::generateUSRForDecl(ND, DeclUSR); (void)Ret;
   assert(!Ret && "Unable to generate USR");
   return DeclUSR.str();
 }

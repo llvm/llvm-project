@@ -12,10 +12,9 @@ define void @foo(i32 %a) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $23, %eax
-; CHECK-NEXT:    testb $1, %ah
-; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:    shrl $23, %edi
+; CHECK-NEXT:    btl $8, %edi
+; CHECK-NEXT:    jb .LBB0_2
 ; CHECK-NEXT:  # BB#1: # %true
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:  .LBB0_2: # %false

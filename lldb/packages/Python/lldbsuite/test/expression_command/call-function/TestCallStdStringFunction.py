@@ -44,5 +44,13 @@ class ExprCommandCallFunctionTestCase(TestBase):
 
         # Calling this function now succeeds, but we follow the typedef return type through to
         # const char *, and thus don't invoke the Summary formatter.
-        self.expect("print str.c_str()",
-                    substrs=['Hello world'])
+
+        # clang's libstdc++ on ios arm64 inlines std::string::c_str() always; 
+        # skip this part of the test.
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+        do_cstr_test = True
+        if triple == "arm64-apple-ios" or triple == "arm64-apple-tvos" or triple == "armv7k-apple-watchos" or triple == "arm64-apple-bridgeos":
+            do_cstr_test = False
+        if do_cstr_test:
+            self.expect("print str.c_str()",
+                        substrs=['Hello world'])

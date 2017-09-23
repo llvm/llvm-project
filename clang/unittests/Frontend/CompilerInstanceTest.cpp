@@ -24,7 +24,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   int FD;
   SmallString<256> FileName;
   ASSERT_FALSE(sys::fs::createTemporaryFile("vfs", "yaml", FD, FileName));
-  tool_output_file File(FileName, FD);
+  ToolOutputFile File(FileName, FD);
 
   SmallString<256> CurrentPath;
   sys::fs::current_path(CurrentPath);

@@ -1166,7 +1166,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   return BackendProc->wait();
 }
 
-Expected<std::unique_ptr<tool_output_file>>
+Expected<std::unique_ptr<ToolOutputFile>>
 lto::setupOptimizationRemarks(LLVMContext &Context,
                               StringRef LTORemarksFilename,
                               bool LTOPassRemarksWithHotness, int Count) {
@@ -1179,7 +1179,7 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
 
   std::error_code EC;
   auto DiagnosticFile =
-      llvm::make_unique<tool_output_file>(Filename, EC, sys::fs::F_None);
+      llvm::make_unique<ToolOutputFile>(Filename, EC, sys::fs::F_None);
   if (EC)
     return errorCodeToError(EC);
   Context.setDiagnosticsOutputFile(

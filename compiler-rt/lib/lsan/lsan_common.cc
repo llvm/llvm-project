@@ -107,6 +107,10 @@ void InitializeRootRegions() {
   root_regions = new(placeholder) InternalMmapVector<RootRegion>(1);
 }
 
+const char *MaybeCallLsanDefaultOptions() {
+  return (&__lsan_default_options) ? __lsan_default_options() : "";
+}
+
 void InitCommonLsan() {
   InitializeRootRegions();
   if (common_flags()->detect_leaks) {
@@ -855,6 +859,11 @@ int __lsan_do_recoverable_leak_check() {
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char * __lsan_default_options() {
+  return "";
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 int __lsan_is_turned_off() {
   return 0;

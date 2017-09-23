@@ -401,9 +401,14 @@ INTERCEPTOR(void, _exit, int status) {
   REAL(_exit)(status);
 }
 
+#define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
 namespace __lsan {
 
 void InitializeInterceptors() {
+  InitializeSignalInterceptors();
+
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(free);
   LSAN_MAYBE_INTERCEPT_CFREE;

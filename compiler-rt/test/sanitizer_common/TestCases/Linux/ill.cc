@@ -7,9 +7,8 @@
 // RUN: %env_tool_opts=handle_sigill=1 not         %run %t 2>&1 | FileCheck --check-prefix=CHECK1 %s
 // clang-format on
 
-// FIXME: implement in other sanitizers, not just asan.
+// FIXME: implement in other sanitizers.
 // XFAIL: msan
-// XFAIL: lsan
 // XFAIL: tsan
 // XFAIL: ubsan
 //
