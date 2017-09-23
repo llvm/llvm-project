@@ -125,6 +125,11 @@ config.substitutions.append( ('%clang_cl', ' ' + config.clang +
                               ' --driver-mode=cl '))
 config.substitutions.append( ('%clangxx', ' ' + config.clang +
                               ' --driver-mode=g++ '))
+
+clang_func_map = lit.util.which('clang-func-mapping', config.environment['PATH'])
+if clang_func_map:
+    config.substitutions.append( ('%clang_func_map', ' ' + clang_func_map + ' ') )
+
 config.substitutions.append( ('%clang', ' ' + config.clang + ' ') )
 config.substitutions.append( ('%test_debuginfo',
                              ' ' + config.llvm_src_root +  '/utils/test_debuginfo.pl ') )

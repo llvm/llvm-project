@@ -620,6 +620,7 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   Target->setSupportedOpenCLOpts();
   Target->setOpenCLExtensionOpts();
+  Target->setMaxAtomicWidth();
 
   if (!Target->validateTarget(Diags))
     return nullptr;
