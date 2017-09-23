@@ -24,12 +24,7 @@ class ObjCiVarIMPTestCase(TestBase):
     @expectedFailureDarwin("rdar://23590082")
     def test_imp_ivar_type(self):
         """Test that dynamically discovered ivars of type IMP do not crash LLDB"""
-        lldbutil.execute_command("make repro")
-
-        def cleanup():
-            lldbutil.execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
+        self.build()
         exe = os.path.join(os.getcwd(), "a.out")
 
         # Create a target from the debugger.

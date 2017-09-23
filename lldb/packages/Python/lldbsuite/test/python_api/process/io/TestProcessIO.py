@@ -59,6 +59,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT without specifying STDIN or STDERR."""
         self.build()
@@ -72,6 +73,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDERR without specifying STDIN or STDOUT."""
         self.build()
@@ -85,6 +87,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded # debugserver can't create/write files on the device
     def test_stdout_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT and STDERR without redirecting STDIN."""
         self.build()

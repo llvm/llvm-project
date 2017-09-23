@@ -19,6 +19,7 @@ class ExecTestCase(TestBase):
     @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
+    @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test(self):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join(os.getcwd(), "main.cpp")
@@ -88,5 +89,10 @@ class ExecTestCase(TestBase):
 
             threads = lldbutil.get_threads_stopped_at_breakpoint(
                 process, breakpoint)
+            if self.TraceOn():
+                for t in process.threads:
+                    print(t)
+                    if t.GetStopReason() != lldb.eStopReasonBreakpoint:
+                        self.runCmd("bt")
             self.assertTrue(len(threads) == 1,
                             "Stopped at breakpoint in exec'ed process.")
