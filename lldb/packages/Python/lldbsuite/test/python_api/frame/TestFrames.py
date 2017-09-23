@@ -90,7 +90,7 @@ class FrameAPITestCase(TestBase):
                 # Make sure on arm targets we dont mismatch PC value on the basis of thumb bit.
                 # Frame PC will not have thumb bit set in case of a thumb
                 # instruction as PC.
-                if self.getArchitecture() in ['arm']:
+                if self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
                     pc_value_int &= ~1
                 self.assertTrue(
                     pc_value_int == frame.GetPC(),

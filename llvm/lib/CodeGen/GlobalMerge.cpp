@@ -1,4 +1,4 @@
-//===-- GlobalMerge.cpp - Internal globals merging  -----------------------===//
+//===- GlobalMerge.cpp - Internal globals merging -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // This pass merges globals with internal linkage into one. This way all the
 // globals which were merged into a biggest one can be addressed using offsets
 // from the same base pointer (no need for separate base pointer for each of the
@@ -57,30 +58,45 @@
 // - it can increase register pressure when the uses are disparate enough.
 // 
 // We use heuristics to discover the best global grouping we can (cf cl::opts).
+//
 // ===---------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstddef>
+#include <string>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "global-merge"
@@ -117,9 +133,12 @@ EnableGlobalMergeOnExternal("global-merge-on-external", cl::Hidden,
      cl::desc("Enable global merge pass on external linkage"));
 
 STATISTIC(NumMerged, "Number of globals merged");
+
 namespace {
+
   class GlobalMerge : public FunctionPass {
-    const TargetMachine *TM;
+    const TargetMachine *TM = nullptr;
+
     // FIXME: Infer the maximum possible offset depending on the actual users
     // (these max offsets are different for the users inside Thumb or ARM
     // functions), see the code that passes in the offset in the ARM backend
@@ -130,15 +149,16 @@ namespace {
     /// Currently, this applies a dead simple heuristic: only consider globals
     /// used in minsize functions for merging.
     /// FIXME: This could learn about optsize, and be used in the cost model.
-    bool OnlyOptimizeForSize;
+    bool OnlyOptimizeForSize = false;
 
     /// Whether we should merge global variables that have external linkage.
-    bool MergeExternalGlobals;
+    bool MergeExternalGlobals = false;
 
     bool IsMachO;
 
     bool doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                  Module &M, bool isConst, unsigned AddrSpace) const;
+
     /// \brief Merge everything in \p Globals for which the corresponding bit
     /// in \p GlobalSet is set.
     bool doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
@@ -164,9 +184,9 @@ namespace {
 
   public:
     static char ID;             // Pass identification, replacement for typeid.
+
     explicit GlobalMerge()
-        : FunctionPass(ID), TM(nullptr), MaxOffset(GlobalMergeMaxOffset),
-          OnlyOptimizeForSize(false), MergeExternalGlobals(false) {
+        : FunctionPass(ID), MaxOffset(GlobalMergeMaxOffset) {
       initializeGlobalMergePass(*PassRegistry::getPassRegistry());
     }
 
@@ -189,9 +209,11 @@ namespace {
       FunctionPass::getAnalysisUsage(AU);
     }
   };
+
 } // end anonymous namespace
 
 char GlobalMerge::ID = 0;
+
 INITIALIZE_PASS(GlobalMerge, DEBUG_TYPE, "Merge global variables", false, false)
 
 bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
@@ -231,9 +253,10 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
 
   // We keep track of the sets of globals used together "close enough".
   struct UsedGlobalSet {
-    UsedGlobalSet(size_t Size) : Globals(Size), UsageCount(1) {}
     BitVector Globals;
-    unsigned UsageCount;
+    unsigned UsageCount = 1;
+
+    UsedGlobalSet(size_t Size) : Globals(Size) {}
   };
 
   // Each set is unique in UsedGlobalSets.
@@ -545,7 +568,7 @@ bool GlobalMerge::doInitialization(Module &M) {
   IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
-  DenseMap<unsigned, SmallVector<GlobalVariable*, 16> > Globals, ConstGlobals,
+  DenseMap<unsigned, SmallVector<GlobalVariable *, 16>> Globals, ConstGlobals,
                                                         BSSGlobals;
   bool Changed = false;
   setMustKeepGlobalVariables(M);

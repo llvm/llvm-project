@@ -168,7 +168,6 @@ define i1 @nsw_sgt1(i8 %a) {
   ret i1 %c
 }
 
-; FIXME: This should be 'eq 127' as above.
 define <2 x i1> @nsw_sgt1_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @nsw_sgt1_splat_vec(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], <i8 127, i8 127>

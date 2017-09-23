@@ -14,16 +14,18 @@ import platform
 import re
 import sys
 
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbtest
 from lldbsuite.test import lldbtest_config
 
 
-@decorators.skipUnlessDarwin
 class DarwinNSLogOutputTestCase(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
+
+    @skipUnlessDarwin
+    @skipIfRemote   # this test is currently written using lldb commands & assumes running on local system
 
     def setUp(self):
         # Call super's setUp().

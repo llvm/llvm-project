@@ -394,7 +394,7 @@ Error llvm::writeArchive(StringRef ArcName,
                                           TmpArchiveFD, TmpArchive))
     return errorCodeToError(EC);
 
-  tool_output_file Output(TmpArchive, TmpArchiveFD);
+  ToolOutputFile Output(TmpArchive, TmpArchiveFD);
   raw_fd_ostream &Out = Output.os();
   if (Thin)
     Out << "!<thin>\n";

@@ -44,13 +44,13 @@ public:
     llvm::SmallString<256> ASTFileName;
     ASSERT_FALSE(
         llvm::sys::fs::createTemporaryFile("f_ast", "ast", ASTFD, ASTFileName));
-    llvm::tool_output_file ASTFile(ASTFileName, ASTFD);
+    llvm::ToolOutputFile ASTFile(ASTFileName, ASTFD);
 
     int IndexFD;
     llvm::SmallString<256> IndexFileName;
     ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("index", "txt", IndexFD,
                                                     IndexFileName));
-    llvm::tool_output_file IndexFile(IndexFileName, IndexFD);
+    llvm::ToolOutputFile IndexFile(IndexFileName, IndexFD);
     IndexFile.os() << "c:@F@f#I# " << ASTFileName << "\n";
     IndexFile.os().flush();
     EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
@@ -61,7 +61,7 @@ public:
     llvm::SmallString<256> SourceFileName;
     ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("input", "cpp", SourceFD,
                                                     SourceFileName));
-    llvm::tool_output_file SourceFile(SourceFileName, SourceFD);
+    llvm::ToolOutputFile SourceFile(SourceFileName, SourceFD);
     SourceFile.os() << SourceText;
     SourceFile.os().flush();
     EXPECT_TRUE(llvm::sys::fs::exists(SourceFileName));
@@ -118,7 +118,7 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
   llvm::SmallString<256> IndexFileName;
   ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("index", "txt", IndexFD,
                                                   IndexFileName));
-  llvm::tool_output_file IndexFile(IndexFileName, IndexFD);
+  llvm::ToolOutputFile IndexFile(IndexFileName, IndexFD);
   IndexFile.os() << IndexText;
   IndexFile.os().flush();
   EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));

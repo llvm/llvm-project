@@ -46,6 +46,17 @@ void FUNC()
  }
 }
 
+void FUNC2() {
+  static void (^const block1)(int) = ^(int a){
+    if (a--)
+      block1(a);
+  };
+}
+
+// CHECK-LABEL-LP64: define void @FUNC2(
+// CHECK: define internal void @_block_invoke{{.*}}(
+// CHECK: call void %{{.*}}(i8* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor* }* @__block_literal_global{{.*}} to i8*), i32 %{{.*}})
+
 void FUNC1()
 {
  static  NSArray *(^ArrayRecurs)(NSArray *addresses, unsigned long level) = ^(NSArray *addresses, unsigned long level) {

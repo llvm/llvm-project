@@ -619,16 +619,16 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   if (D->isInAnonymousNamespace()) {
     const auto *Var = dyn_cast<VarDecl>(D);
     const auto *Func = dyn_cast<FunctionDecl>(D);
-    // FIXME: In C++11 onwards, anonymous namespaces should give decls
-    // within them (including those inside extern "C" contexts) internal
-    // linkage, not unique external linkage:
+    // FIXME: The check for extern "C" here is not justified by the standard
+    // wording, but we retain it from the pre-DR1113 model to avoid breaking
+    // code.
     //
     // C++11 [basic.link]p4:
     //   An unnamed namespace or a namespace declared directly or indirectly
     //   within an unnamed namespace has internal linkage.
     if ((!Var || !isFirstInExternCContext(Var)) &&
         (!Func || !isFirstInExternCContext(Func)))
-      return LinkageInfo::uniqueExternal();
+      return getInternalLinkageFor(D);
   }
 
   // Set up the defaults.
@@ -871,12 +871,11 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   LinkageInfo classLV =
     getLVForDecl(cast<RecordDecl>(D->getDeclContext()), classComputation);
-  // If the class already has unique-external linkage, we can't improve.
-  if (classLV.getLinkage() == UniqueExternalLinkage)
-    return LinkageInfo::uniqueExternal();
-
+  // The member has the same linkage as the class. If that's not externally
+  // visible, we don't need to compute anything about the linkage.
+  // FIXME: If we're only computing linkage, can we bail out here?
   if (!isExternallyVisible(classLV.getLinkage()))
-    return LinkageInfo::none();
+    return classLV;
 
 
   // Otherwise, don't merge in classLV yet, because in certain cases
@@ -1130,7 +1129,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
   if (const auto *Function = dyn_cast<FunctionDecl>(D)) {
     if (Function->isInAnonymousNamespace() &&
         !Function->isInExternCContext())
-      return LinkageInfo::uniqueExternal();
+      return getInternalLinkageFor(Function);
 
     // This is a "void f();" which got merged with a file static.
     if (Function->getCanonicalDecl()->getStorageClass() == SC_Static)
@@ -1153,7 +1152,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
     if (Var->hasExternalStorage()) {
       if (Var->isInAnonymousNamespace() && !Var->isInExternCContext())
-        return LinkageInfo::uniqueExternal();
+        return getInternalLinkageFor(Var);
 
       LinkageInfo LV;
       if (Var->getStorageClass() == SC_PrivateExtern)

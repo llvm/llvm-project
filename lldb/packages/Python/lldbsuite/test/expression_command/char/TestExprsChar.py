@@ -58,7 +58,10 @@ class ExprCharTestCase(TestBase):
     @expectedFailureAll(
         archs=[
             "i[3-6]86",
-            "x86_64"],
+            "x86_64",
+            "arm64",
+            'armv7',
+            'armv7k'],
         bugnumber="llvm.org/pr23069, <rdar://problem/28721938>")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")

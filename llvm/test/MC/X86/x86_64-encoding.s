@@ -251,3 +251,15 @@ sha256msg2 (%rax), %xmm2
 // CHECK: pinsrw $3, %ecx, %xmm5
 // CHECK: encoding: [0x66,0x0f,0xc4,0xe9,0x03]
           pinsrw $3, %rcx, %xmm5
+
+//CHECK   movq	12(%rdi), %rsi
+//CHECK   encoding: [0x48,0x8b,0x77,0x0c]
+    movq 	16+0-4(%rdi),%rsi
+
+//CHECK   movq	12(%rdi), %rsi
+//CHECK   encoding: [0x48,0x8b,0x77,0x0c]
+    movq 	(16+(0-4))(%rdi),%rsi
+
+//CHECK   movq	12(%rdi), %rsi
+//CHECK   encoding: [0x48,0x8b,0x77,0x0c]
+    movq 	(16+0)-1+1-2+2-3+3-4+4-5+5-6+6-(4)(%rdi),%rsi

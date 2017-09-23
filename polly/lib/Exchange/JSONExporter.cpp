@@ -181,7 +181,7 @@ static void exportScop(Scop &S) {
 
   // Write to file.
   std::error_code EC;
-  tool_output_file F(FileName, EC, llvm::sys::fs::F_Text);
+  ToolOutputFile F(FileName, EC, llvm::sys::fs::F_Text);
 
   std::string FunctionName = S.getFunction().getName();
   errs() << "Writing JScop '" << S.getNameStr() << "' in function '"

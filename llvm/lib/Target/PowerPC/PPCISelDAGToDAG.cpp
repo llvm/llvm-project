@@ -2870,6 +2870,8 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
                                              ISD::CondCode CC,
                                              int64_t RHSValue, SDLoc dl) {
   bool IsRHSZero = RHSValue == 0;
+  bool IsRHSOne = RHSValue == 1;
+  bool IsRHSNegOne = RHSValue == -1LL;
   switch (CC) {
   default: return SDValue();
   case ISD::SETEQ: {
@@ -2903,6 +2905,9 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     // (zext (setcc %a, 0, setge))  -> (lshr (~ %a), 31)
     if(IsRHSZero)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GEZExt);
+
+    // Not a special case (i.e. RHS == 0). Handle (%a >= %b) as (%b <= %a)
+    // by swapping inputs and falling through.
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isNullValue();
@@ -2926,6 +2931,55 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
       SDValue(CurDAG->getMachineNode(PPC::XORI8, dl,
                                      MVT::i64, Shift, getI32Imm(1, dl)), 0);
   }
+  case ISD::SETGT: {
+    // (zext (setcc %a, %b, setgt)) -> (lshr (sub %b, %a), 63)
+    // (zext (setcc %a, -1, setgt)) -> (lshr (~ %a), 31)
+    // (zext (setcc %a, 0, setgt))  -> (lshr (- %a), 63)
+    // Handle SETLT -1 (which is equivalent to SETGE 0).
+    if (IsRHSNegOne)
+      return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GEZExt);
+
+    if (IsRHSZero) {
+      // The upper 32-bits of the register can't be undefined for this sequence.
+      LHS = signExtendInputIfNeeded(LHS);
+      RHS = signExtendInputIfNeeded(RHS);
+      SDValue Neg =
+        SDValue(CurDAG->getMachineNode(PPC::NEG8, dl, MVT::i64, LHS), 0);
+      return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                     Neg, getI32Imm(1, dl), getI32Imm(63, dl)), 0);
+    }
+    // Not a special case (i.e. RHS == 0 or RHS == -1). Handle (%a > %b) as
+    // (%b < %a) by swapping inputs and falling through.
+    std::swap(LHS, RHS);
+    ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+    IsRHSZero = RHSConst && RHSConst->isNullValue();
+    IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
+    LLVM_FALLTHROUGH;
+  }
+  case ISD::SETLT: {
+    // (zext (setcc %a, %b, setlt)) -> (lshr (sub %a, %b), 63)
+    // (zext (setcc %a, 1, setlt))  -> (xor (lshr (- %a), 63), 1)
+    // (zext (setcc %a, 0, setlt))  -> (lshr %a, 31)
+    // Handle SETLT 1 (which is equivalent to SETLE 0).
+    if (IsRHSOne)
+      return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LEZExt);
+
+    if (IsRHSZero) {
+      SDValue ShiftOps[] = { LHS, getI32Imm(1, dl), getI32Imm(31, dl),
+                                  getI32Imm(31, dl) };
+      return SDValue(CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32,
+                                            ShiftOps), 0);
+    }
+
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = signExtendInputIfNeeded(LHS);
+    RHS = signExtendInputIfNeeded(RHS);
+    SDValue SUBFNode =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, RHS, LHS), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                    SUBFNode, getI64Imm(1, dl),
+                                    getI64Imm(63, dl)), 0);
+  }
   }
 }
 
@@ -2935,6 +2989,9 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
                                              ISD::CondCode CC,
                                              int64_t RHSValue, SDLoc dl) {
   bool IsRHSZero = RHSValue == 0;
+  bool IsRHSOne = RHSValue == 1;
+  bool IsRHSNegOne = RHSValue == -1LL;
+
   switch (CC) {
   default: return SDValue();
   case ISD::SETEQ: {
@@ -2978,6 +3035,9 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     // (sext (setcc %a, 0, setge))  -> (ashr (~ %a), 31)
     if (IsRHSZero)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GESExt);
+
+    // Not a special case (i.e. RHS == 0). Handle (%a >= %b) as (%b <= %a)
+    // by swapping inputs and falling through.
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isNullValue();
@@ -3001,6 +3061,47 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
                                      getI64Imm(63, dl)), 0);
     return SDValue(CurDAG->getMachineNode(PPC::ADDI8, dl, MVT::i64, Srdi,
                                           getI32Imm(-1, dl)), 0);
+  }
+  case ISD::SETGT: {
+    // (sext (setcc %a, %b, setgt)) -> (ashr (sub %b, %a), 63)
+    // (sext (setcc %a, -1, setgt)) -> (ashr (~ %a), 31)
+    // (sext (setcc %a, 0, setgt))  -> (ashr (- %a), 63)
+    if (IsRHSNegOne)
+      return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GESExt);
+    if (IsRHSZero) {
+      // The upper 32-bits of the register can't be undefined for this sequence.
+      LHS = signExtendInputIfNeeded(LHS);
+      RHS = signExtendInputIfNeeded(RHS);
+      SDValue Neg =
+        SDValue(CurDAG->getMachineNode(PPC::NEG8, dl, MVT::i64, LHS), 0);
+        return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64, Neg,
+                                              getI64Imm(63, dl)), 0);
+    }
+    // Not a special case (i.e. RHS == 0 or RHS == -1). Handle (%a > %b) as
+    // (%b < %a) by swapping inputs and falling through.
+    std::swap(LHS, RHS);
+    ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+    IsRHSZero = RHSConst && RHSConst->isNullValue();
+    IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
+    LLVM_FALLTHROUGH;
+  }
+  case ISD::SETLT: {
+    // (sext (setcc %a, %b, setgt)) -> (ashr (sub %a, %b), 63)
+    // (sext (setcc %a, 1, setgt))  -> (add (lshr (- %a), 63), -1)
+    // (sext (setcc %a, 0, setgt))  -> (ashr %a, 31)
+    if (IsRHSOne)
+      return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LESExt);
+    if (IsRHSZero)
+      return SDValue(CurDAG->getMachineNode(PPC::SRAWI, dl, MVT::i32, LHS,
+                                            getI32Imm(31, dl)), 0);
+
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = signExtendInputIfNeeded(LHS);
+    RHS = signExtendInputIfNeeded(RHS);
+    SDValue SUBFNode =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, RHS, LHS), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64,
+                                          SUBFNode, getI64Imm(63, dl)), 0);
   }
   }
 }

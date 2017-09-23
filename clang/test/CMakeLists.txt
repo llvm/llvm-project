@@ -54,12 +54,12 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
-  clang-func-mapping
   )
   
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
+    clang-func-mapping
     )
 endif()
 

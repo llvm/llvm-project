@@ -3068,3 +3068,142 @@ define <8 x i1> @bitreverse_vec_ne(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i1> %cmp
 }
 
+; These perform a comparison of a value known to be between 4 and 5 with a value between 5 and 7.
+; They should all simplify to equality compares.
+define i1 @knownbits1(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits1(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 5
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp uge i8 %a2, %b2
+  ret i1 %c
+}
+
+define i1 @knownbits2(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits2(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 5
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp ult i8 %a2, %b2
+  ret i1 %c
+}
+
+define i1 @knownbits3(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits3(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[B2]], [[A2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 5
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp ule i8 %b2, %a2
+  ret i1 %c
+}
+
+define <2 x i1> @knownbits4(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @knownbits4(
+; CHECK-NEXT:    [[A1:%.*]] = and <2 x i8> [[A:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[A2:%.*]] = or <2 x i8> [[A1]], <i8 4, i8 4>
+; CHECK-NEXT:    [[B1:%.*]] = and <2 x i8> [[B:%.*]], <i8 2, i8 2>
+; CHECK-NEXT:    [[B2:%.*]] = or <2 x i8> [[B1]], <i8 5, i8 5>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B2]], [[A2]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %a1 = and <2 x i8> %a, <i8 5, i8 5>
+  %a2 = or <2 x i8> %a1, <i8 4, i8 4>
+  %b1 = and <2 x i8> %b, <i8 7, i8 7>
+  %b2 = or <2 x i8> %b1, <i8 5, i8 5>
+  %c = icmp ugt <2 x i8> %b2, %a2
+  ret <2 x i1> %c
+}
+
+; These are the signed versions of the above. One value is less than or equal to 5, but maybe negative.
+; The other is known to be a value 5-7. These should simplify to equality comparisons.
+define i1 @knownbits5(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits5(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 133
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp sge i8 %a2, %b2
+  ret i1 %c
+}
+
+define i1 @knownbits6(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits6(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 133
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp slt i8 %a2, %b2
+  ret i1 %c
+}
+
+define <2 x i1> @knownbits7(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @knownbits7(
+; CHECK-NEXT:    [[A1:%.*]] = and <2 x i8> [[A:%.*]], <i8 -127, i8 -127>
+; CHECK-NEXT:    [[A2:%.*]] = or <2 x i8> [[A1]], <i8 4, i8 4>
+; CHECK-NEXT:    [[B1:%.*]] = and <2 x i8> [[B:%.*]], <i8 2, i8 2>
+; CHECK-NEXT:    [[B2:%.*]] = or <2 x i8> [[B1]], <i8 5, i8 5>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B2]], [[A2]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %a1 = and <2 x i8> %a, <i8 133, i8 133>
+  %a2 = or <2 x i8> %a1, <i8 4, i8 4>
+  %b1 = and <2 x i8> %b, <i8 7, i8 7>
+  %b2 = or <2 x i8> %b1, <i8 5, i8 5>
+  %c = icmp sle <2 x i8> %b2, %a2
+  ret <2 x i1> %c
+}
+
+define i1 @knownbits8(i8 %a, i8 %b) {
+; CHECK-LABEL: @knownbits8(
+; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
+; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[B2]], [[A2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a1 = and i8 %a, 133
+  %a2 = or i8 %a1, 4
+  %b1 = and i8 %b, 7
+  %b2 = or i8 %b1, 5
+  %c = icmp sgt i8 %b2, %a2
+  ret i1 %c
+}

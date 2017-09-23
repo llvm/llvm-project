@@ -122,12 +122,8 @@ bool ParseFrameDescription(const char *frame_descr,
 // immediately after printing error report.
 class ScopedInErrorReport {
  public:
-  static const u32 kUnclaimedTid = 0xfffffe;
-  static_assert(kUnclaimedTid != kInvalidTid, "Must be different");
-
   explicit ScopedInErrorReport(bool fatal = false)
-      : error_report_lock_(GetCurrentTidOrInvalid()),
-        halt_on_error_(fatal || flags()->halt_on_error) {
+      : halt_on_error_(fatal || flags()->halt_on_error) {
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
     // We can lock them only here to avoid self-deadlock in case of
