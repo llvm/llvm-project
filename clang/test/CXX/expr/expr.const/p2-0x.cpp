@@ -145,19 +145,19 @@ namespace UndefinedBehavior {
 
   constexpr int int_min = ~0x7fffffff;
   constexpr int minus_int_min = -int_min; // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
-  constexpr int div0 = 3 / 0; // expected-error {{constant expression}} expected-note {{division by zero}} expected-warning {{undefined}}
-  constexpr int mod0 = 3 % 0; // expected-error {{constant expression}} expected-note {{division by zero}} expected-warning {{undefined}}
+  constexpr int div0 = 3 / 0; // expected-error {{constant expression}} expected-note {{division by zero}}
+  constexpr int mod0 = 3 % 0; // expected-error {{constant expression}} expected-note {{division by zero}}
   constexpr int int_min_div_minus_1 = int_min / -1; // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
   constexpr int int_min_mod_minus_1 = int_min % -1; // expected-error {{constant expression}} expected-note {{value 2147483648 is outside the range}}
 
-  constexpr int shl_m1 = 0 << -1; // expected-error {{constant expression}} expected-note {{negative shift count -1}} expected-warning {{negative}}
+  constexpr int shl_m1 = 0 << -1; // expected-error {{constant expression}} expected-note {{negative shift count -1}}
   constexpr int shl_0 = 0 << 0; // ok
   constexpr int shl_31 = 0 << 31; // ok
-  constexpr int shl_32 = 0 << 32; // expected-error {{constant expression}} expected-note {{shift count 32 >= width of type 'int' (32}} expected-warning {{>= width of type}}
+  constexpr int shl_32 = 0 << 32; // expected-error {{constant expression}} expected-note {{shift count 32 >= width of type 'int' (32}}
   constexpr int shl_unsigned_negative = unsigned(-3) << 1; // ok
   constexpr int shl_unsigned_into_sign = 1u << 31; // ok
   constexpr int shl_unsigned_overflow = 1024u << 31; // ok
-  constexpr int shl_signed_negative = (-3) << 1; // expected-warning {{shifting a negative signed value is undefined}} // expected-error {{constant expression}} expected-note {{left shift of negative value -3}}
+  constexpr int shl_signed_negative = (-3) << 1; // expected-error {{constant expression}} expected-note {{left shift of negative value -3}}
   constexpr int shl_signed_ok = 1 << 30; // ok
   constexpr int shl_signed_into_sign = 1 << 31; // ok (DR1457)
   constexpr int shl_signed_into_sign_2 = 0x7fffffff << 1; // ok (DR1457)
@@ -166,10 +166,10 @@ namespace UndefinedBehavior {
   constexpr int shl_signed_overflow = 1024 << 31; // expected-error {{constant expression}} expected-note {{signed left shift discards bits}} expected-warning {{requires 43 bits to represent}}
   constexpr int shl_signed_ok2 = 1024 << 20; // ok
 
-  constexpr int shr_m1 = 0 >> -1; // expected-error {{constant expression}} expected-note {{negative shift count -1}} expected-warning {{negative}}
+  constexpr int shr_m1 = 0 >> -1; // expected-error {{constant expression}} expected-note {{negative shift count -1}}
   constexpr int shr_0 = 0 >> 0; // ok
   constexpr int shr_31 = 0 >> 31; // ok
-  constexpr int shr_32 = 0 >> 32; // expected-error {{constant expression}} expected-note {{shift count 32 >= width of type}} expected-warning {{>= width of type}}
+  constexpr int shr_32 = 0 >> 32; // expected-error {{constant expression}} expected-note {{shift count 32 >= width of type}}
 
   struct S {
     int m;

@@ -2779,9 +2779,11 @@ SDValue PPCDAGToDAGISel::zeroExtendInputIfNeeded(SDValue Input) {
   // - The value has already been zero-extended
   // - The value is a positive constant
   // - The value comes from a load that isn't a sign-extending load
-  // An ISD::TRUNCATE will be lowered to an EXTRACT_SUBREG so we have
-  // to conservatively actually clear the high bits.
-  if (Opc == ISD::AssertZext || Opc == ISD::ZERO_EXTEND)
+  // An ISD::TRUNCATE needs to be zero-extended unless it is fed by a zext.
+  bool IsTruncateOfZExt = Opc == ISD::TRUNCATE &&
+    (Input.getOperand(0).getOpcode() == ISD::AssertZext ||
+     Input.getOperand(0).getOpcode() == ISD::ZERO_EXTEND);
+  if (Opc == ISD::AssertZext || Opc == ISD::ZERO_EXTEND || IsTruncateOfZExt)
     return addExtOrTrunc(Input, ExtOrTruncConversion::Ext);
 
   ConstantSDNode *InputConst = dyn_cast<ConstantSDNode>(Input);
@@ -3036,6 +3038,21 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     return SDValue(CurDAG->getMachineNode(PPC::XORI8, dl, MVT::i64, SrdiNode,
                                             getI32Imm(1, dl)), 0);
   }
+  case ISD::SETUGT:
+    // (zext (setcc %a, %b, setugt)) -> (lshr (sub %b, %a), 63)
+    // (zext (setcc %a, %b, setult)) -> (lshr (sub %a, %b), 63)
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ISD::SETULT: {
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = zeroExtendInputIfNeeded(LHS);
+    RHS = zeroExtendInputIfNeeded(RHS);
+    SDValue Subtract =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, RHS, LHS), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                          Subtract, getI64Imm(1, dl),
+                                          getI64Imm(63, dl)), 0);
+  }
   }
 }
 
@@ -3175,6 +3192,20 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
                                      getI32Imm(1, dl), getI32Imm(63,dl)), 0);
     return SDValue(CurDAG->getMachineNode(PPC::ADDI8, dl, MVT::i64, Shift,
                                           getI32Imm(-1, dl)), 0);
+  }
+  case ISD::SETUGT:
+    // (sext (setcc %a, %b, setugt)) -> (ashr (sub %b, %a), 63)
+    // (sext (setcc %a, %b, setugt)) -> (ashr (sub %a, %b), 63)
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ISD::SETULT: {
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = zeroExtendInputIfNeeded(LHS);
+    RHS = zeroExtendInputIfNeeded(RHS);
+    SDValue Subtract =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, RHS, LHS), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64,
+                                          Subtract, getI64Imm(63, dl)), 0);
   }
   }
 }

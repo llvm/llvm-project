@@ -1030,6 +1030,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     // Source and destination are both expected to be vectors.
     llvm::Type *SrcElementTy = SrcTy->getVectorElementType();
     llvm::Type *DstElementTy = DstTy->getVectorElementType();
+    (void)DstElementTy;
 
     assert(((SrcElementTy->isIntegerTy() &&
              DstElementTy->isIntegerTy()) ||

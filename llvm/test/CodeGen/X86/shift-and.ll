@@ -193,3 +193,24 @@ define i64 @t6(i64 %key, i64* nocapture %val) nounwind {
   %and = and i64 %sub, %shr
   ret i64 %and
 }
+
+define i64 @big_mask_constant(i64 %x) nounwind {
+; X32-LABEL: big_mask_constant:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl $4, %eax
+; X32-NEXT:    shll $25, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: big_mask_constant:
+; X64:       # BB#0:
+; X64-NEXT:    shrq $7, %rdi
+; X64-NEXT:    andl $134217728, %edi # imm = 0x8000000
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    retq
+  %and = and i64 %x, 17179869184 ; 0x400000000
+  %sh = lshr i64 %and, 7
+  ret i64 %sh
+}
+
