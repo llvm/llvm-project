@@ -18,6 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CommentDiagnostic.h"
 #include "clang/Analysis/AnalysisDiagnostic.h"
+#include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/LexDiagnostic.h"

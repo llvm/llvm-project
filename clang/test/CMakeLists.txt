@@ -60,6 +60,7 @@ list(APPEND CLANG_TEST_DEPS
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
+    clang-func-mapping
     )
 endif()
 

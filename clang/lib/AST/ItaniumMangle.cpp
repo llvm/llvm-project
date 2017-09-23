@@ -1287,9 +1287,15 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       //
       //   void test() { extern void foo(); }
       //   static void foo();
+      //
+      // Don't bother with the L marker for names in anonymous namespaces; the
+      // 12_GLOBAL__N_1 mangling is quite sufficient there, and this better
+      // matches GCC anyway, because GCC does not treat anonymous namespaces as
+      // implying internal linkage.
       if (ND && ND->getFormalLinkage() == InternalLinkage &&
           !ND->isExternallyVisible() &&
-          getEffectiveDeclContext(ND)->isFileContext())
+          getEffectiveDeclContext(ND)->isFileContext() &&
+          !ND->isInAnonymousNamespace())
         Out << 'L';
 
       auto *FD = dyn_cast<FunctionDecl>(ND);
@@ -1698,8 +1704,7 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
             = cast<NamedDecl>(Context)->getIdentifier()) {
         mangleSourceName(Name);
         const TemplateArgumentList *TemplateArgs = nullptr;
-        if (const TemplateDecl *TD =
-                isTemplate(cast<NamedDecl>(Context), TemplateArgs))
+        if (isTemplate(cast<NamedDecl>(Context), TemplateArgs))
           mangleTemplateArgs(*TemplateArgs);
         Out << 'M';
       }

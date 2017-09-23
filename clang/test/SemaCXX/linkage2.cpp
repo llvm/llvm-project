@@ -143,9 +143,10 @@ namespace test13 {
 }
 
 namespace test14 {
+  // Anonymous namespace implies internal linkage, so 'static' has no effect.
   namespace {
-    void a(void); // expected-note {{previous declaration is here}}
-    static void a(void) {} // expected-error {{static declaration of 'a' follows non-static declaration}}
+    void a(void);
+    static void a(void) {}
   }
 }
 

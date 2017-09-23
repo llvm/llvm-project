@@ -814,7 +814,7 @@ public:
 
     // x86-64 has atomics up to 16 bytes.
     MaxAtomicPromoteWidth = 128;
-    MaxAtomicInlineWidth = 128;
+    MaxAtomicInlineWidth = 64;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -870,6 +870,12 @@ public:
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
+  }
+
+  void setMaxAtomicWidth() override {
+    if (hasFeature("cx16"))
+      MaxAtomicInlineWidth = 128;
+    return;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
