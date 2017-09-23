@@ -211,6 +211,7 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0x211", "kryo")
             .Case("0x800", "cortex-a73")
             .Case("0x801", "cortex-a73")
+            .Case("0xc00", "falkor")
             .Default("generic");
 
   return "generic";

@@ -11,9 +11,13 @@ entry:
   br i1 %or.cond, label %if.then, label %if.else
 
 ; CHECK-LABEL: @foo
-; CHECK: cmpwi
-; CHECK: cmpwi
-; CHECK: cror
+; CHECK: li
+; CHECK: li
+; CHECK: sub
+; CHECK: sub
+; CHECK: rldicl
+; CHECK: rldicl
+; CHECK: or.
 ; CHECK: blr
 
 if.then:                                          ; preds = %entry

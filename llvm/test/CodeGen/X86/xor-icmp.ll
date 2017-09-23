@@ -17,15 +17,13 @@ define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ;
 ; X64-LABEL: t:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %esi, %eax
-; X64-NEXT:    testb $64, %ah
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # BB#2: # %bb1
+; X64-NEXT:    xorl %esi, %edi
 ; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    btl $14, %edi
+; X64-NEXT:    jae .LBB0_1
+; X64-NEXT:  # BB#2: # %bb1
 ; X64-NEXT:    jmp bar # TAILCALL
 ; X64-NEXT:  .LBB0_1: # %bb
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo # TAILCALL
 entry:
   %0 = and i32 %a, 16384

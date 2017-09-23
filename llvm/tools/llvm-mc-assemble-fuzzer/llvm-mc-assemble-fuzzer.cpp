@@ -209,8 +209,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
     std::error_code EC;
     const std::string OutputFilename = "-";
-    auto Out = llvm::make_unique<tool_output_file>(OutputFilename, EC,
-                                                 sys::fs::F_None);
+    auto Out =
+        llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
     if (EC) {
       errs() << EC.message() << '\n';
       abort();

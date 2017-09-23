@@ -4003,6 +4003,7 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     break;
   case Intrinsic::dbg_addr: // llvm.dbg.addr
     visitDbgIntrinsic("addr", cast<DbgInfoIntrinsic>(*CS.getInstruction()));
+    break;
   case Intrinsic::dbg_value: // llvm.dbg.value
     visitDbgIntrinsic("value", cast<DbgInfoIntrinsic>(*CS.getInstruction()));
     break;

@@ -238,10 +238,16 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   return true;
 }
 
+namespace llvm {
+  raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
+    T.writeToStream(OS);
+    return OS;
+  }
+}
+
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const {
-  writeToStream(dbgs());
-  dbgs() << '\n';
+  dbgs() << *this << '\n';
 }
 
 bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
@@ -880,7 +886,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
       "    int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();\n";
     return Result + ImmCode;
   }
-  
+
   // Handle arbitrary node predicates.
   assert(!getPredCode().empty() && "Don't have any predicate code!");
   std::string ClassName;
@@ -895,7 +901,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
     Result = "    SDNode *N = Node;\n";
   else
     Result = "    auto *N = cast<" + ClassName + ">(Node);\n";
-  
+
   return Result + getPredCode();
 }
 
