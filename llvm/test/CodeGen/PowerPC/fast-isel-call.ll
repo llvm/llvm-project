@@ -29,17 +29,17 @@ define void @foo(i8 %a, i16 %b) nounwind {
   %1 = call i32 @t1(i8 signext %a)
 ; ELF64: extsb
   %2 = call i32 @t2(i8 zeroext %a)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
   %3 = call i32 @t3(i16 signext %b)
 ; ELF64: extsh
   %4 = call i32 @t4(i16 zeroext %b)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 
 ;; A few test to check materialization
   %5 = call i32 @t2(i8 zeroext 255)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
   %6 = call i32 @t4(i16 zeroext 65535)
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
   ret void
 }
 
@@ -66,12 +66,12 @@ entry:
 ; ELF64: li 6, 28
 ; ELF64: li 7, 40
 ; ELF64: li 8, 186
-; ELF64: rldicl 3, 3, 0, 56
-; ELF64: rldicl 4, 4, 0, 56
-; ELF64: rldicl 5, 5, 0, 56
-; ELF64: rldicl 6, 6, 0, 56
-; ELF64: rldicl 7, 7, 0, 56
-; ELF64: rldicl 8, 8, 0, 56
+; ELF64: clrldi 3, 3, 56
+; ELF64: clrldi 4, 4, 56
+; ELF64: clrldi 5, 5, 56
+; ELF64: clrldi 6, 6, 56
+; ELF64: clrldi 7, 7, 56
+; ELF64: clrldi 8, 8, 56
   ret i32 0
 }
 

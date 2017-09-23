@@ -75,6 +75,8 @@ STATISTIC(NumZextSetcc,
           "Number of (zext(setcc)) nodes expanded into GPR sequence.");
 STATISTIC(SignExtensionsAdded,
           "Number of sign extensions for compare inputs added.");
+STATISTIC(ZeroExtensionsAdded,
+          "Number of zero extensions for compare inputs added.");
 STATISTIC(NumLogicOpsOnComparison,
           "Number of logical ops on i1 values calculated in GPR.");
 STATISTIC(OmittedForNonExtendUses,
@@ -301,6 +303,7 @@ private:
     bool tryLogicOpOfCompares(SDNode *N);
     SDValue computeLogicOpInGPR(SDValue LogicOp);
     SDValue signExtendInputIfNeeded(SDValue Input);
+    SDValue zeroExtendInputIfNeeded(SDValue Input);
     SDValue addExtOrTrunc(SDValue NatWidthRes, ExtOrTruncConversion Conv);
     SDValue getCompoundZeroComparisonInGPR(SDValue LHS, SDLoc dl,
                                            ZeroCompare CmpTy);
@@ -2763,6 +2766,41 @@ SDValue PPCDAGToDAGISel::signExtendInputIfNeeded(SDValue Input) {
                                         MVT::i64, Input), 0);
 }
 
+/// If the value isn't guaranteed to be zero-extended to 64-bits, extend it.
+/// Otherwise just reinterpret it as a 64-bit value.
+/// Useful when emitting comparison code for 32-bit values without using
+/// the compare instruction (which only considers the lower 32-bits).
+SDValue PPCDAGToDAGISel::zeroExtendInputIfNeeded(SDValue Input) {
+  assert(Input.getValueType() == MVT::i32 &&
+         "Can only zero-extend 32-bit values here.");
+  unsigned Opc = Input.getOpcode();
+
+  // The only condition under which we can omit the actual extend instruction:
+  // - The value has already been zero-extended
+  // - The value is a positive constant
+  // - The value comes from a load that isn't a sign-extending load
+  // An ISD::TRUNCATE will be lowered to an EXTRACT_SUBREG so we have
+  // to conservatively actually clear the high bits.
+  if (Opc == ISD::AssertZext || Opc == ISD::ZERO_EXTEND)
+    return addExtOrTrunc(Input, ExtOrTruncConversion::Ext);
+
+  ConstantSDNode *InputConst = dyn_cast<ConstantSDNode>(Input);
+  if (InputConst && InputConst->getSExtValue() >= 0)
+    return addExtOrTrunc(Input, ExtOrTruncConversion::Ext);
+
+  LoadSDNode *InputLoad = dyn_cast<LoadSDNode>(Input);
+  // The input is a load that doesn't sign-extend (it will be zero-extended).
+  if (InputLoad && InputLoad->getExtensionType() != ISD::SEXTLOAD)
+    return addExtOrTrunc(Input, ExtOrTruncConversion::Ext);
+
+  // None of the above, need to zero-extend.
+  SDLoc dl(Input);
+  ZeroExtensionsAdded++;
+  return SDValue(CurDAG->getMachineNode(PPC::RLDICL_32_64, dl, MVT::i64, Input,
+                                        getI64Imm(0, dl), getI64Imm(32, dl)),
+                 0);
+}
+
 // Handle a 32-bit value in a 64-bit register and vice-versa. These are of
 // course not actual zero/sign extensions that will generate machine code,
 // they're just a way to reinterpret a 32 bit value in a register as a
@@ -2980,6 +3018,24 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
                                     SUBFNode, getI64Imm(1, dl),
                                     getI64Imm(63, dl)), 0);
   }
+  case ISD::SETUGE:
+    // (zext (setcc %a, %b, setuge)) -> (xor (lshr (sub %b, %a), 63), 1)
+    // (zext (setcc %a, %b, setule)) -> (xor (lshr (sub %a, %b), 63), 1)
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ISD::SETULE: {
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = zeroExtendInputIfNeeded(LHS);
+    RHS = zeroExtendInputIfNeeded(RHS);
+    SDValue Subtract =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue SrdiNode =
+      SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                          Subtract, getI64Imm(1, dl),
+                                          getI64Imm(63, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::XORI8, dl, MVT::i64, SrdiNode,
+                                            getI32Imm(1, dl)), 0);
+  }
   }
 }
 
@@ -3102,6 +3158,23 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
       SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, RHS, LHS), 0);
     return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64,
                                           SUBFNode, getI64Imm(63, dl)), 0);
+  }
+  case ISD::SETUGE:
+    // (sext (setcc %a, %b, setuge)) -> (add (lshr (sub %a, %b), 63), -1)
+    // (sext (setcc %a, %b, setule)) -> (add (lshr (sub %b, %a), 63), -1)
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ISD::SETULE: {
+    // The upper 32-bits of the register can't be undefined for this sequence.
+    LHS = zeroExtendInputIfNeeded(LHS);
+    RHS = zeroExtendInputIfNeeded(RHS);
+    SDValue Subtract =
+      SDValue(CurDAG->getMachineNode(PPC::SUBF8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue Shift =
+      SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, Subtract,
+                                     getI32Imm(1, dl), getI32Imm(63,dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::ADDI8, dl, MVT::i64, Shift,
+                                          getI32Imm(-1, dl)), 0);
   }
   }
 }
