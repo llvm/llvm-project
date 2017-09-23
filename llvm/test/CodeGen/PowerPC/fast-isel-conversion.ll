@@ -245,11 +245,11 @@ entry:
 ; PPC970: uitofp_single_i16
   %b.addr = alloca float, align 4
   %conv = uitofp i16 %a to float
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64: std
 ; ELF64: lfd
 ; ELF64: fcfidus
-; ELF64LE: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64LE: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64LE: std
 ; ELF64LE: lfd
 ; ELF64LE: fcfidus
@@ -269,11 +269,11 @@ entry:
 ; PPC970: uitofp_single_i8
   %b.addr = alloca float, align 4
   %conv = uitofp i8 %a to float
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
 ; ELF64: std
 ; ELF64: lfd
 ; ELF64: fcfidus
-; ELF64LE: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64LE: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
 ; ELF64LE: std
 ; ELF64LE: lfd
 ; ELF64LE: fcfidus
@@ -334,11 +334,11 @@ entry:
 ; PPC970: uitofp_double_i16
   %b.addr = alloca double, align 8
   %conv = uitofp i16 %a to double
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64: std
 ; ELF64: lfd
 ; ELF64: fcfidu
-; ELF64LE: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 48
+; ELF64LE: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
 ; ELF64LE: std
 ; ELF64LE: lfd
 ; ELF64LE: fcfidu
@@ -357,11 +357,11 @@ entry:
 ; PPC970: uitofp_double_i8
   %b.addr = alloca double, align 8
   %conv = uitofp i8 %a to double
-; ELF64: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
 ; ELF64: std
 ; ELF64: lfd
 ; ELF64: fcfidu
-; ELF64LE: rldicl {{[0-9]+}}, {{[0-9]+}}, 0, 56
+; ELF64LE: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
 ; ELF64LE: std
 ; ELF64LE: lfd
 ; ELF64LE: fcfidu
