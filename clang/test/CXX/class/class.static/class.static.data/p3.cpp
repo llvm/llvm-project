@@ -50,4 +50,4 @@ U<NonLit> u2; // expected-note {{here}}
 
 static_assert(U<int>::a == 0, "");
 
-constexpr int outofline = (U<NonLit>::d, 0); // expected-note {{here}} expected-warning {{unused}}
+constexpr int outofline = (U<NonLit>::d, 0); // expected-note {{here}}
