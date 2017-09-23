@@ -366,6 +366,24 @@ namespace {
       return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
     }
 
+    SDValue getExtractVEXTRACTImmediate(SDNode *N, unsigned VecWidth,
+                                        const SDLoc &DL) {
+      assert((VecWidth == 128 || VecWidth == 256) && "Unexpected vector width");
+      uint64_t Index = N->getConstantOperandVal(1);
+      MVT VecVT = N->getOperand(0).getSimpleValueType();
+      unsigned NumElemsPerChunk = VecWidth / VecVT.getScalarSizeInBits();
+      return getI8Imm(Index / NumElemsPerChunk, DL);
+    }
+
+    SDValue getInsertVINSERTImmediate(SDNode *N, unsigned VecWidth,
+                                      const SDLoc &DL) {
+      assert((VecWidth == 128 || VecWidth == 256) && "Unexpected vector width");
+      uint64_t Index = N->getConstantOperandVal(2);
+      MVT VecVT = N->getSimpleValueType(0);
+      unsigned NumElemsPerChunk = VecWidth / VecVT.getScalarSizeInBits();
+      return getI8Imm(Index / NumElemsPerChunk, DL);
+    }
+
     /// Return an SDNode that returns the value of the global base register.
     /// Output instructions required to initialize the global base register,
     /// if necessary.
