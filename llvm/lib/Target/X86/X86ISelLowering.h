@@ -467,6 +467,10 @@ namespace llvm {
 
       // Multiply and Add Packed Integers.
       VPMADDUBSW, VPMADDWD,
+
+      // AVX512IFMA multiply and add.
+      // NOTE: These are different than the instruction and perform
+      // op0 x op1 + op2.
       VPMADD52L, VPMADD52H,
 
       // FMA nodes.
