@@ -75,6 +75,11 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT LHSTy) const override {
     return MVT::i8;
   }
+
+  MVT::SimpleValueType getCmpLibcallReturnType() const override {
+    return MVT::i8;
+  }
+
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
