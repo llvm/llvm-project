@@ -1,7 +1,13 @@
-; Make sure we reject GVs without a type and we verify each exactly once.
+; Make sure we reject GVs without a type.
+; Currently the verifier when traversing the graph induced by the debug info
+; metadata can reach the GV both from a DICompileUnit and a DIGlobalVariable
+; expression, so we emit a diagnostic twice. This is, not ideal, but the
+; alternative is that of keeping a map of visited GVs, which has non trivial
+; memory usage consequences on large testcases, or when LTO is the mode of
+; operation.
 ; RUN: not llc %s 2>&1 | FileCheck %s
 ; CHECK: missing global variable type
-; CHECK-NOT: missing global variable type
+; CHECK: missing global variable type
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!63, !64}

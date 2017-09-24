@@ -31688,21 +31688,22 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG) {
   if (!ShiftC || !AndC)
     return SDValue();
 
-  // If the 'and' mask is already smaller than a byte, then don't bother.
-  // If the new 'and' mask would be bigger than a byte, then don't bother.
-  // If the mask fits in a byte, then we know we can generate smaller and
-  // potentially better code by shifting first.
-  // TODO: Always try to shrink a mask that is over 32-bits?
+  // If we can shrink the constant mask below 8-bits or 32-bits, then this
+  // transform should reduce code size. It may also enable secondary transforms
+  // from improved known-bits analysis or instruction selection.
   APInt MaskVal = AndC->getAPIntValue();
   APInt NewMaskVal = MaskVal.lshr(ShiftC->getAPIntValue());
-  if (MaskVal.getMinSignedBits() <= 8 || NewMaskVal.getMinSignedBits() > 8)
-    return SDValue();
-
-  // srl (and X, AndC), ShiftC --> and (srl X, ShiftC), (AndC >> ShiftC)
-  SDLoc DL(N);
-  SDValue NewMask = DAG.getConstant(NewMaskVal, DL, VT);
-  SDValue NewShift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1);
-  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewMask);
+  unsigned OldMaskSize = MaskVal.getMinSignedBits();
+  unsigned NewMaskSize = NewMaskVal.getMinSignedBits();
+  if ((OldMaskSize > 8 && NewMaskSize <= 8) ||
+      (OldMaskSize > 32 && NewMaskSize <= 32)) {
+    // srl (and X, AndC), ShiftC --> and (srl X, ShiftC), (AndC >> ShiftC)
+    SDLoc DL(N);
+    SDValue NewMask = DAG.getConstant(NewMaskVal, DL, VT);
+    SDValue NewShift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1);
+    return DAG.getNode(ISD::AND, DL, VT, NewShift, NewMask);
+  }
+  return SDValue();
 }
 
 /// \brief Returns a vector of 0s if the node in input is a vector logical
