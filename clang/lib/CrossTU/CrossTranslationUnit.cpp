@@ -185,6 +185,7 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   case index_error_code::invalid_index_format:
     Context.getDiagnostics().Report(diag::err_fnmap_parsing)
         << IE.getFileName() << IE.getLineNum();
+    break;
   case index_error_code::multiple_definitions:
     Context.getDiagnostics().Report(diag::err_multiple_def_index)
         << IE.getLineNum();
