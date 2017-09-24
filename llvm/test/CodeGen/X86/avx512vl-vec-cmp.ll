@@ -267,9 +267,8 @@ define <8 x i32> @test256_9(<8 x i32> %x, <8 x i32> %y, <8 x i32> %x1, <8 x i32>
 ; NoVLX-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
 ; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NoVLX-NEXT:    vpcmpeqd %zmm3, %zmm2, %k0
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
-; NoVLX-NEXT:    kandw %k0, %k1, %k1
+; NoVLX-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; NoVLX-NEXT:    retq
@@ -340,10 +339,9 @@ define <8 x i32> @test256_12(<8 x i32> %x, <8 x i32>* %y.ptr, <8 x i32> %x1, <8 
 ; NoVLX-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
 ; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k0
-; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
-; NoVLX-NEXT:    vpcmpleud %zmm2, %zmm0, %k1
-; NoVLX-NEXT:    kandw %k0, %k1, %k1
+; NoVLX-NEXT:    vmovdqu (%rdi), %ymm3
+; NoVLX-NEXT:    vpcmpleud %zmm3, %zmm0, %k1
+; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; NoVLX-NEXT:    retq
@@ -413,10 +411,9 @@ define <8 x i32> @test256_15(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1, <8 x i32
 ; NoVLX-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<def>
 ; NoVLX-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k0
-; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm2
-; NoVLX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k1
-; NoVLX-NEXT:    kandw %k0, %k1, %k1
+; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm3
+; NoVLX-NEXT:    vpcmpgtd %zmm3, %zmm0, %k1
+; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; NoVLX-NEXT:    retq
