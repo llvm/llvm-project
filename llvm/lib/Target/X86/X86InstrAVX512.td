@@ -3203,6 +3203,15 @@ def : Pat<(v8i1 (OpNode (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
             (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
             (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))), VK8)>;
 
+def : Pat<(v8i1 (and VK8:$mask,
+                     (OpNode (v8i32 VR256X:$src1), (v8i32 VR256X:$src2)))),
+          (COPY_TO_REGCLASS
+           (!cast<Instruction>(InstStr##Zrrk)
+            (COPY_TO_REGCLASS VK8:$mask, VK16),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
+           VK8)>;
+
 def : Pat<(insert_subvector (v16i1 immAllZerosV),
                             (v8i1 (OpNode (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
                             (i64 0)),
@@ -3226,6 +3235,14 @@ multiclass axv512_icmp_packed_cc_no_vlx_lowering<SDNode OpNode, string InstStr,
                                                 AVX512VLVectorVTInfo _> {
 def : Pat<(v8i1 (OpNode (_.info256.VT VR256X:$src1), (_.info256.VT VR256X:$src2), imm:$cc)),
             (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrri)
+            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
+            imm:$cc), VK8)>;
+
+def : Pat<(v8i1 (and VK8:$mask, (OpNode (_.info256.VT VR256X:$src1),
+                                        (_.info256.VT VR256X:$src2), imm:$cc))),
+            (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrrik)
+            (COPY_TO_REGCLASS VK8:$mask, VK16),
             (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
             (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
             imm:$cc), VK8)>;
