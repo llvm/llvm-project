@@ -44,10 +44,6 @@ CodeGenTypes::~CodeGenTypes() {
     delete &*I++;
 }
 
-const CodeGenOptions &CodeGenTypes::getCodeGenOpts() const {
-  return CGM.getCodeGenOpts();
-}
-
 void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
                                      llvm::StructType *Ty,
                                      StringRef suffix) {
