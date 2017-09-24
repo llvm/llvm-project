@@ -183,11 +183,7 @@ const TargetInfo &ABIInfo::getTarget() const {
   return CGT.getTarget();
 }
 
-const CodeGenOptions &ABIInfo::getCodeGenOpts() const {
-  return CGT.getCodeGenOpts();
-}
-
-bool ABIInfo::isAndroid() const { return getTarget().getTriple().isAndroid(); }
+bool ABIInfo:: isAndroid() const { return getTarget().getTriple().isAndroid(); }
 
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   return false;
@@ -2099,14 +2095,9 @@ class X86_64ABIInfo : public SwiftABIInfo {
     return !getTarget().getTriple().isOSDarwin();
   }
 
-  /// GCC classifies <1 x long long> as SSE but some platform ABIs choose to
-  /// classify it as INTEGER (for compatibility with older clang compilers).
+  /// GCC classifies <1 x long long> as SSE but compatibility with older clang
+  // compilers require us to classify it as INTEGER.
   bool classifyIntegerMMXAsSSE() const {
-    // Clang <= 3.8 did not do this.
-    if (getCodeGenOpts().getClangABICompat() <=
-        CodeGenOptions::ClangABI::Ver3_8)
-      return false;
-
     const llvm::Triple &Triple = getTarget().getTriple();
     if (Triple.isOSDarwin() || Triple.getOS() == llvm::Triple::PS4)
       return false;
