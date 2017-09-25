@@ -1187,8 +1187,6 @@ static void removeUnusedSyntheticSections() {
     OutputSection *OS = SS->getParent();
     if (!SS->empty() || !OS)
       continue;
-    if ((SS == InX::Got || SS == InX::MipsGot) && ElfSym::GlobalOffsetTable)
-      continue;
 
     std::vector<BaseCommand *>::iterator Empty = OS->Commands.end();
     for (auto I = OS->Commands.begin(), E = OS->Commands.end(); I != E; ++I) {

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <unistd.h>
+
 int main(int argc, char const *argv[])
 {
     lldb_enable_attach();
@@ -10,8 +10,9 @@ int main(int argc, char const *argv[])
 
     // Waiting to be attached by the debugger, otherwise.
     char line[100];
-    while (1) 
-        sleep (1); // Waiting to be attached...
+    while (fgets(line, sizeof(line), stdin)) { // Waiting to be attached...
+        printf("input line=>%s\n", line);
+    }
 
     printf("Exiting now\n");
 }

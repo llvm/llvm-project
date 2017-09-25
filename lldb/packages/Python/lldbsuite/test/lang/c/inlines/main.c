@@ -14,7 +14,7 @@ void test2(int b) {
 
 void test1(int a) {
     printf("test1(%d)\n",  a);
-    test2(a+1);//% self.runCmd("step")
+    test2(a+1);//% self.dbg.HandleCommand("step")
                //% self.expect("expression b", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["24"])
 }
 

@@ -49,9 +49,7 @@ class TlsGlobalTestCase(TestBase):
         """Test thread-local storage."""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
-        target = self.dbg.CreateTarget(exe)
-        if self.platformIsDarwin():
-            self.registerSharedLibrariesWithTarget(target, ['liba.dylib'])
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         line1 = line_number('main.c', '// thread breakpoint')
         lldbutil.run_break_set_by_file_and_line(

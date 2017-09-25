@@ -76,18 +76,17 @@ class RegistersIteratorTestCase(TestBase):
 
                     REGs = lldbutil.get_ESRs(frame)
                     if self.platformIsDarwin():
-                        if self.getArchitecture() != 'armv7' and self.getArchitecture() != 'armv7k':
-                            num = len(REGs)
+                        num = len(REGs)
+                        if self.TraceOn():
+                            print(
+                                "\nNumber of exception state registers: %d" %
+                                num)
+                        for reg in REGs:
+                            self.assertTrue(reg)
                             if self.TraceOn():
                                 print(
-                                    "\nNumber of exception state registers: %d" %
-                                    num)
-                            for reg in REGs:
-                                self.assertTrue(reg)
-                                if self.TraceOn():
-                                    print(
-                                        "%s => %s" %
-                                        (reg.GetName(), reg.GetValue()))
+                                    "%s => %s" %
+                                    (reg.GetName(), reg.GetValue()))
                     else:
                         self.assertIsNone(REGs)
 
@@ -100,8 +99,7 @@ class RegistersIteratorTestCase(TestBase):
                     REGs = lldbutil.get_registers(
                         frame, "Exception State Registers")
                     if self.platformIsDarwin():
-                        if self.getArchitecture() != 'armv7' and self.getArchitecture() != 'armv7k':
-                            self.assertIsNotNone(REGs)
+                        self.assertIsNotNone(REGs)
                     else:
                         self.assertIsNone(REGs)
 

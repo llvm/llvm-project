@@ -21,7 +21,6 @@ class AttachDeniedTestCase(TestBase):
 
     @skipIfWindows
     @skipIfiOSSimulator
-    @skipIfDarwinEmbedded  # ptrace(ATTACH_REQUEST...) won't work on ios/tvos/etc
     def test_attach_to_process_by_id_denied(self):
         """Test attach by process id denied"""
         self.build()

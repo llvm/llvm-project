@@ -14,7 +14,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_executable_option_file(self):
@@ -60,7 +59,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that lldb-mi is ready when executable was loaded
         self.expect(self.child_prompt, exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_executable_option_absolute_path(self):
@@ -85,7 +83,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         self.expect("\*stopped,reason=\"exited-normally\"")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_executable_option_relative_path(self):
@@ -129,7 +126,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that lldb-mi is ready when executable was loaded
         self.expect(self.child_prompt, exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
@@ -172,7 +168,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,value=\"10\"")
         self.expect(self.child_prompt, exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
@@ -237,7 +232,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that lldb-mi is ready after execution of --source start_script
         self.expect(self.child_prompt, exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_log_option(self):
@@ -270,7 +264,6 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         for f in logFile:
             os.remove(f)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_log_directory_option(self):

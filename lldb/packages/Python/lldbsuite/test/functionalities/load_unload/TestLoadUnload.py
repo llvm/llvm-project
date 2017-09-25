@@ -56,14 +56,10 @@ class LoadUnloadTestCase(TestBase):
         Does nothing in case of non-remote platforms.
         """
         if lldb.remote_platform:
-            ext = 'so'
-            if self.platformIsDarwin():
-                ext = 'dylib'
-
-            shlibs = ['libloadunload_a.' + ext, 'libloadunload_b.' + ext,
-                      'libloadunload_c.' + ext, 'libloadunload_d.' + ext]
-            wd = lldb.remote_platform.GetWorkingDirectory()
             cwd = os.getcwd()
+            shlibs = ['libloadunload_a.so', 'libloadunload_b.so',
+                      'libloadunload_c.so', 'libloadunload_d.so']
+            wd = lldb.remote_platform.GetWorkingDirectory()
             for f in shlibs:
                 err = lldb.remote_platform.Put(
                     lldb.SBFileSpec(os.path.join(cwd, f)),
@@ -73,7 +69,7 @@ class LoadUnloadTestCase(TestBase):
                         "Unable copy '%s' to '%s'.\n>>> %s" %
                         (f, wd, err.GetCString()))
             if hidden_dir:
-                shlib = 'libloadunload_d.' + ext
+                shlib = 'libloadunload_d.so'
                 hidden_dir = os.path.join(wd, 'hidden')
                 hidden_file = os.path.join(hidden_dir, shlib)
                 err = lldb.remote_platform.MakeDirectory(hidden_dir)

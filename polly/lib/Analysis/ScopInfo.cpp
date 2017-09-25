@@ -1541,7 +1541,16 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
                         DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
                         SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
   isl_set *ConsequenceCondSet = nullptr;
-  if (auto *CCond = dyn_cast<ConstantInt>(Condition)) {
+
+  if (auto *PHI = dyn_cast<PHINode>(Condition)) {
+    auto *Unique = dyn_cast<ConstantInt>(
+        getUniqueNonErrorValue(PHI, &S.getRegion(), *S.getLI(), *S.getDT()));
+
+    if (Unique->isZero())
+      ConsequenceCondSet = isl_set_empty(isl_set_get_space(Domain));
+    else
+      ConsequenceCondSet = isl_set_universe(isl_set_get_space(Domain));
+  } else if (auto *CCond = dyn_cast<ConstantInt>(Condition)) {
     if (CCond->isZero())
       ConsequenceCondSet = isl_set_empty(isl_set_get_space(Domain));
     else

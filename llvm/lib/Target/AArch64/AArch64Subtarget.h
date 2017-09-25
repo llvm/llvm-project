@@ -50,6 +50,7 @@ public:
     ExynosM1,
     Falkor,
     Kryo,
+    Saphira,
     ThunderX2T99,
     ThunderX,
     ThunderXT81,

@@ -11,9 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_TLS_ANDROID_H_
-#define SCUDO_TLS_ANDROID_H_
-
 #ifndef SCUDO_TLS_H_
 # error "This file must be included inside scudo_tls.h."
 #endif  // SCUDO_TLS_H_
@@ -30,7 +27,7 @@ ScudoTSD *getTSDAndLockSlow();
 
 ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   ScudoTSD *TSD = reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
-  CHECK(TSD);
+  CHECK(TSD && "No TSD associated with the current thread!");
   // Try to lock the currently associated context.
   if (TSD->tryLock())
     return TSD;
@@ -39,5 +36,3 @@ ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
 }
 
 #endif  // SANITIZER_LINUX && SANITIZER_ANDROID
-
-#endif  // SCUDO_TLS_ANDROID_H_

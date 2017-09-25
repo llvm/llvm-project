@@ -82,16 +82,16 @@ class SettingsCommandTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        self.runCmd("process launch -- " + args_in)
+        self.runCmd("process launch -o stdout.txt -- " + args_in)
 
         if lldb.remote_platform:
-            src_file_spec = lldb.SBFileSpec('output.txt', False)
-            dst_file_spec = lldb.SBFileSpec('output.txt', True)
+            src_file_spec = lldb.SBFileSpec('stdout.txt', False)
+            dst_file_spec = lldb.SBFileSpec('stdout.txt', True)
             lldb.remote_platform.Get(src_file_spec, dst_file_spec)
 
-        with open('output.txt', 'r') as f:
+        with open('stdout.txt', 'r') as f:
             output = f.read()
 
-        self.RemoveTempFile("output.txt")
+        self.RemoveTempFile("stdout.txt")
 
         self.assertEqual(output, args_out)

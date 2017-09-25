@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#import <Foundation/Foundation.h>
+#import <Cocoa/Cocoa.h>
 
 @interface ThisClassTestsThings : NSObject
 @end

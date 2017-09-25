@@ -53,7 +53,6 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
             self.fail("failed to launch inferior: " + fail_reason)
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_start_inferior_debugserver(self):
         self.init_debugserver_test()
         self.build()
@@ -81,7 +80,6 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_0_debugserver(self):
         self.init_debugserver_test()
         self.build()
@@ -114,7 +112,6 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_42_debugserver(self):
         self.init_debugserver_test()
         self.build()

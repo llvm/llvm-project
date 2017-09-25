@@ -15,7 +15,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFailureAll(
@@ -38,7 +37,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that lldb-mi is ready to execute next commands
         self.expect(self.child_prompt, exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_abort(self):
@@ -89,7 +87,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done")
         self.expect("\*stopped,reason=\"exited-normally\"")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_arguments_set(self):
@@ -134,7 +131,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-interpreter-exec command \"print argv[4]\"")
         self.expect("\\\"fourth=\\\\\\\"4th arg\\\\\\\"\\\"", exactly=True)
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_arguments_reset(self):
@@ -163,7 +159,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-data-evaluate-expression argc")
         self.expect("\^done,value=\"1\"")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_next(self):
@@ -219,7 +214,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-exec-next --frame 10")
         #self.expect("\^error: Frame index 10 is out of range")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_next_instruction(self):
@@ -279,7 +273,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-exec-next-instruction --frame 10")
         #self.expect("\^error: Frame index 10 is out of range")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_step(self):
@@ -362,7 +355,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-exec-step --frame 10")
         #self.expect("\^error: Frame index 10 is out of range")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_step_instruction(self):
@@ -438,7 +430,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-exec-step-instruction --frame 10")
         #self.expect("\^error: Frame index 10 is out of range")
 
-    @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_exec_finish(self):

@@ -36,7 +36,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertTrue(lldbgdbserverutils.process_is_running(pid, True))
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_returns_running_process_debugserver(self):
         self.init_debugserver_test()
         self.build()
@@ -68,7 +67,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(reported_pid, procs["inferior"].pid)
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_attach_commandline_qProcessInfo_reports_correct_pid_debugserver(
             self):
         self.init_debugserver_test()
@@ -101,7 +99,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertTrue(endian in ["little", "big", "pdp"])
 
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_reports_valid_endian_debugserver(self):
         self.init_debugserver_test()
         self.build()
@@ -162,7 +159,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipUnlessDarwin
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_contains_cputype_cpusubtype_debugserver_darwin(self):
         self.init_debugserver_test()
         self.build()
@@ -184,7 +180,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipUnlessDarwin
     @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_does_not_contain_triple_debugserver_darwin(self):
         self.init_debugserver_test()
         self.build()

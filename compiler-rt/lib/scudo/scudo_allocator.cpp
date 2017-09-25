@@ -269,14 +269,6 @@ struct ScudoAllocator {
   StaticSpinMutex GlobalPrngMutex;
   ScudoPrng GlobalPrng;
 
-  // The fallback caches are used when the thread local caches have been
-  // 'detroyed' on thread tear-down. They are protected by a Mutex as they can
-  // be accessed by different threads.
-  StaticSpinMutex FallbackMutex;
-  AllocatorCache FallbackAllocatorCache;
-  ScudoQuarantineCache FallbackQuarantineCache;
-  ScudoPrng FallbackPrng;
-
   u32 QuarantineChunksUpToSize;
 
   bool DeallocationTypeMismatch;
@@ -284,8 +276,7 @@ struct ScudoAllocator {
   bool DeleteSizeMismatch;
 
   explicit ScudoAllocator(LinkerInitialized)
-    : AllocatorQuarantine(LINKER_INITIALIZED),
-      FallbackQuarantineCache(LINKER_INITIALIZED) {}
+    : AllocatorQuarantine(LINKER_INITIALIZED) {}
 
   void init(const AllocatorOptions &Options) {
     // Verify that the header offset field can hold the maximum offset. In the
@@ -329,8 +320,6 @@ struct ScudoAllocator {
     QuarantineChunksUpToSize = Options.QuarantineChunksUpToSize;
     GlobalPrng.init();
     Cookie = GlobalPrng.getU64();
-    BackendAllocator.initCache(&FallbackAllocatorCache);
-    FallbackPrng.init();
   }
 
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
@@ -374,16 +363,9 @@ struct ScudoAllocator {
     if (FromPrimary) {
       AllocSize = AlignedSize;
       ScudoTSD *TSD = getTSDAndLock();
-      if (LIKELY(TSD)) {
-        Salt = TSD->Prng.getU8();
-        Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, AllocSize);
-        TSD->unlock();
-      } else {
-        SpinMutexLock l(&FallbackMutex);
-        Salt = FallbackPrng.getU8();
-        Ptr = BackendAllocator.allocatePrimary(&FallbackAllocatorCache,
-                                               AllocSize);
-      }
+      Salt = TSD->Prng.getU8();
+      Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, AllocSize);
+      TSD->unlock();
     } else {
       {
         SpinMutexLock l(&GlobalPrngMutex);
@@ -446,13 +428,8 @@ struct ScudoAllocator {
       void *Ptr = Chunk->getAllocBeg(Header);
       if (Header->FromPrimary) {
         ScudoTSD *TSD = getTSDAndLock();
-        if (LIKELY(TSD)) {
-          getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr);
-          TSD->unlock();
-        } else {
-          SpinMutexLock Lock(&FallbackMutex);
-          getBackendAllocator().deallocatePrimary(&FallbackAllocatorCache, Ptr);
-        }
+        getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr);
+        TSD->unlock();
       } else {
         getBackendAllocator().deallocateSecondary(Ptr);
       }
@@ -467,17 +444,10 @@ struct ScudoAllocator {
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, Header);
       ScudoTSD *TSD = getTSDAndLock();
-      if (LIKELY(TSD)) {
-        AllocatorQuarantine.Put(getQuarantineCache(TSD),
-                                QuarantineCallback(&TSD->Cache),
-                                Chunk, EstimatedSize);
-        TSD->unlock();
-      } else {
-        SpinMutexLock l(&FallbackMutex);
-        AllocatorQuarantine.Put(&FallbackQuarantineCache,
-                                QuarantineCallback(&FallbackAllocatorCache),
-                                Chunk, EstimatedSize);
-      }
+      AllocatorQuarantine.Put(getQuarantineCache(TSD),
+                              QuarantineCallback(&TSD->Cache),
+                              Chunk, EstimatedSize);
+      TSD->unlock();
     }
   }
 
@@ -625,7 +595,8 @@ static void initScudoInternal(const AllocatorOptions &Options) {
   Instance.init(Options);
 }
 
-void ScudoTSD::init() {
+void ScudoTSD::init(bool Shared) {
+  UnlockRequired = Shared;
   getBackendAllocator().initCache(&Cache);
   Prng.init();
   memset(QuarantineCachePlaceHolder, 0, sizeof(QuarantineCachePlaceHolder));

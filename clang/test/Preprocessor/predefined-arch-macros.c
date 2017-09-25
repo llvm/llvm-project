@@ -991,6 +991,7 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK_GLM_M32
 // CHECK_GLM_M32: #define __AES__ 1
 // CHECK_GLM_M32: #define __CLFLUSHOPT__ 1
+// CHECK_GLM_M32: #define __FSGSBASE__ 1
 // CHECK_GLM_M32: #define __FXSR__ 1
 // CHECK_GLM_M32: #define __MMX__ 1
 // CHECK_GLM_M32: #define __MPX__ 1
@@ -1030,6 +1031,7 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK_GLM_M64
 // CHECK_GLM_M64: #define __AES__ 1
 // CHECK_GLM_M64: #define __CLFLUSHOPT__ 1
+// CHECK_GLM_M64: #define __FSGSBASE__ 1
 // CHECK_GLM_M64: #define __FXSR__ 1
 // CHECK_GLM_M64: #define __MMX__ 1
 // CHECK_GLM_M64: #define __MPX__ 1

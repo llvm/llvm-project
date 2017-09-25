@@ -75,7 +75,12 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   ErrorCount = 0;
   ErrorOS = &Error;
   InputSections.clear();
+  OutputSections.clear();
   Tar = nullptr;
+  BinaryFiles.clear();
+  BitcodeFiles.clear();
+  ObjectFiles.clear();
+  SharedFiles.clear();
 
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();

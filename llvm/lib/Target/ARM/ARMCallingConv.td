@@ -247,6 +247,9 @@ def CSR_FPRegs : CalleeSavedRegs<(add (sequence "D%u", 0, 31))>;
 def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;
 
+// R8 is used to pass swifterror, remove it from CSR.
+def CSR_AAPCS_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS, R8)>;
+
 // The order of callee-saved registers needs to match the order we actually push
 // them in FrameLowering, because this order is what's used by
 // PrologEpilogInserter to allocate frame index slots. So when R7 is the frame

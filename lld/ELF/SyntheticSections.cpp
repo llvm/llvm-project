@@ -656,9 +656,10 @@ uint64_t GotSection::getGlobalDynOffset(const SymbolBody &B) const {
 void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
 
 bool GotSection::empty() const {
-  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
-  // we need to emit a GOT even if it's empty.
-  return NumEntries == 0 && !HasGotOffRel;
+  // We need to emit a GOT even if it's empty if there's a relocation that is
+  // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
+  // (i.e. _GLOBAL_OFFSET_TABLE_).
+  return NumEntries == 0 && !HasGotOffRel && !ElfSym::GlobalOffsetTable;
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
@@ -1797,14 +1798,15 @@ std::vector<std::vector<uint32_t>> GdbIndexSection::createCuVectors() {
         Off += Ent.Name.size() + 1;
         Ret.push_back({});
       }
-      Ret[Sym->CuVectorIndex].push_back((Ent.Type << 24) | Idx);
+
+      // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
+      // duplicate entries, so we want to dedup them.
+      std::vector<uint32_t> &Vec = Ret[Sym->CuVectorIndex];
+      uint32_t Val = (Ent.Type << 24) | Idx;
+      if (Vec.empty() || Vec.back() != Val)
+        Vec.push_back(Val);
     }
     Idx += Chunk.CompilationUnits.size();
-  }
-
-  for (std::vector<uint32_t> &V : Ret) {
-    std::sort(V.begin(), V.end());
-    V.erase(std::unique(V.begin(), V.end()), V.end());
   }
 
   StringPoolSize = Off;
