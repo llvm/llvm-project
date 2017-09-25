@@ -111,3 +111,9 @@ bool ptrAsIntegerSubtractionNoCrash(__UINTPTR_TYPE__ x, char *p) {
   __UINTPTR_TYPE__ y = (__UINTPTR_TYPE__)p - 1;
   return y == x;
 }
+
+// Bug 34374
+bool integerAsPtrSubtractionNoCrash(char *p, __UINTPTR_TYPE__ m) {
+  auto n = p - reinterpret_cast<char*>((__UINTPTR_TYPE__)1);
+  return n == m;
+}
