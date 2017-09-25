@@ -307,7 +307,7 @@ validity of the intermediate code, instructions are introduced:
 * ``G_SEQUENCE`` --- concatenate multiple registers into a single wider
   register.
 
-* ``G_EXTRACT`` --- extract multiple registers (as contiguous sequences of bits)
+* ``G_EXTRACT`` --- extract a simple register (as contiguous sequences of bits)
   from a single wider register.
 
 As they are expected to be temporary byproducts of the legalization process,
