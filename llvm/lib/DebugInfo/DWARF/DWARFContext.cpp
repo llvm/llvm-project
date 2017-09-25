@@ -335,8 +335,14 @@ void DWARFContext::dump(
                                     isLittleEndian(), savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
         uint32_t Offset = *StmtOffset;
-        LineTable.parse(lineData, &Offset);
-        LineTable.dump(OS);
+        // Verbose dumping is done during parsing and not on the intermediate
+        // representation.
+        if (DumpOpts.Verbose) {
+          LineTable.parse(lineData, &Offset, &OS);
+        } else {
+          LineTable.parse(lineData, &Offset);
+          LineTable.dump(OS);
+        }
       }
     }
   }
