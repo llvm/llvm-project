@@ -17,30 +17,35 @@ using namespace clang;
 
 SanitizerBlacklist::SanitizerBlacklist(
     const std::vector<std::string> &BlacklistPaths, SourceManager &SM)
-    : SCL(llvm::SpecialCaseList::createOrDie(BlacklistPaths)), SM(SM) {}
+    : SSCL(SanitizerSpecialCaseList::createOrDie(BlacklistPaths)), SM(SM) {}
 
-bool SanitizerBlacklist::isBlacklistedGlobal(StringRef GlobalName,
+bool SanitizerBlacklist::isBlacklistedGlobal(SanitizerMask Mask,
+                                             StringRef GlobalName,
                                              StringRef Category) const {
-  return SCL->inSection("global", GlobalName, Category);
+  return SSCL->inSection(Mask, "global", GlobalName, Category);
 }
 
-bool SanitizerBlacklist::isBlacklistedType(StringRef MangledTypeName,
+bool SanitizerBlacklist::isBlacklistedType(SanitizerMask Mask,
+                                           StringRef MangledTypeName,
                                            StringRef Category) const {
-  return SCL->inSection("type", MangledTypeName, Category);
+  return SSCL->inSection(Mask, "type", MangledTypeName, Category);
 }
 
-bool SanitizerBlacklist::isBlacklistedFunction(StringRef FunctionName) const {
-  return SCL->inSection("fun", FunctionName);
+bool SanitizerBlacklist::isBlacklistedFunction(SanitizerMask Mask,
+                                               StringRef FunctionName) const {
+  return SSCL->inSection(Mask, "fun", FunctionName);
 }
 
-bool SanitizerBlacklist::isBlacklistedFile(StringRef FileName,
+bool SanitizerBlacklist::isBlacklistedFile(SanitizerMask Mask,
+                                           StringRef FileName,
                                            StringRef Category) const {
-  return SCL->inSection("src", FileName, Category);
+  return SSCL->inSection(Mask, "src", FileName, Category);
 }
 
-bool SanitizerBlacklist::isBlacklistedLocation(SourceLocation Loc,
+bool SanitizerBlacklist::isBlacklistedLocation(SanitizerMask Mask,
+                                               SourceLocation Loc,
                                                StringRef Category) const {
   return Loc.isValid() &&
-         isBlacklistedFile(SM.getFilename(SM.getFileLoc(Loc)), Category);
+         isBlacklistedFile(Mask, SM.getFilename(SM.getFileLoc(Loc)), Category);
 }
 

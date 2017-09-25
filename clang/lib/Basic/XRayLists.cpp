@@ -26,11 +26,13 @@ XRayFunctionFilter::ImbueAttribute
 XRayFunctionFilter::shouldImbueFunction(StringRef FunctionName) const {
   // First apply the always instrument list, than if it isn't an "always" see
   // whether it's treated as a "never" instrument function.
-  if (AlwaysInstrument->inSection("fun", FunctionName, "arg1"))
+  if (AlwaysInstrument->inSection("xray_always_instrument", "fun", FunctionName,
+                                  "arg1"))
     return ImbueAttribute::ALWAYS_ARG1;
-  if (AlwaysInstrument->inSection("fun", FunctionName))
+  if (AlwaysInstrument->inSection("xray_always_instrument", "fun",
+                                  FunctionName))
     return ImbueAttribute::ALWAYS;
-  if (NeverInstrument->inSection("fun", FunctionName))
+  if (NeverInstrument->inSection("xray_never_instrument", "fun", FunctionName))
     return ImbueAttribute::NEVER;
   return ImbueAttribute::NONE;
 }
@@ -38,9 +40,11 @@ XRayFunctionFilter::shouldImbueFunction(StringRef FunctionName) const {
 XRayFunctionFilter::ImbueAttribute
 XRayFunctionFilter::shouldImbueFunctionsInFile(StringRef Filename,
                                                StringRef Category) const {
-  if (AlwaysInstrument->inSection("src", Filename, Category))
+  if (AlwaysInstrument->inSection("xray_always_instrument", "src", Filename,
+                                  Category))
     return ImbueAttribute::ALWAYS;
-  if (NeverInstrument->inSection("src", Filename, Category))
+  if (NeverInstrument->inSection("xray_never_instrument", "src", Filename,
+                                 Category))
     return ImbueAttribute::NEVER;
   return ImbueAttribute::NONE;
 }
