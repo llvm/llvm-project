@@ -595,6 +595,12 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
       return true;
   }
 
+  if (auto Load = dyn_cast<LoadInst>(Condition))
+    if (!IsLoopBranch) {
+      Context.RequiredILS.insert(Load);
+      return true;
+    }
+
   // Non constant conditions of branches need to be ICmpInst.
   if (!isa<ICmpInst>(Condition)) {
     if (!IsLoopBranch && AllowNonAffineSubRegions &&
