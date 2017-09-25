@@ -13,7 +13,7 @@
 ;
 ; CHECK:        ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_B[9 + val] };
-; CHECK-NEXT:   Execution Context: [val, ptr] -> {  : val <= 9223372036854775806 }
+; CHECK-NEXT:   Execution Context: [val, ptr] -> {  : val <= 32766 }
 ;
 ; CHECK:   ReadAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
@@ -21,22 +21,22 @@
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 ;
 ; IR:      polly.stmt.for.body:
-; IR-NEXT:  %p_tmp = ptrtoint i64* %scevgep to i64
-; IR-NEXT:  %p_add = add nsw i64 %p_tmp, 1
-; IR-NEXT:  %p_arrayidx3 = getelementptr inbounds i64, i64* %A, i64 %p_add
+; IR-NEXT:  %p_tmp = ptrtoint i64* %scevgep to i16
+; IR-NEXT:  %p_add = add nsw i16 %p_tmp, 1
+; IR-NEXT:  %p_arrayidx3 = getelementptr inbounds i64, i64* %A, i16 %p_add
 ; IR-NEXT:  %tmp4_p_scalar_ = load i64, i64* %p_arrayidx3
 ; IR-NEXT:  %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
 ; IR-NEXT:  store i64 %p_add4, i64* %p_arrayidx3
 ;
 ; IR:      polly.loop_preheader:
-; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i64 1
-; IR-NEXT:   %26 = add i64 %val, 1
+; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i16 1
+; IR-NEXT:   %35 = add i16 %val, 1
 ; IR-NEXT:   br label %polly.loop_header
 ;
 ;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-p:16:16:16-m:e-i64:64-f80:128-n8:16:16:64-S128"
 
-define void @f(i64* %A, i64* %B, i64* %ptr, i64 %val) {
+define void @f(i64* %A, i64* %B, i64* %ptr, i16 %val) {
 entry:
   br label %for.cond
 
@@ -47,15 +47,15 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %add.ptr = getelementptr inbounds i64, i64* %ptr, i64 1
-  %tmp = ptrtoint i64* %add.ptr to i64
-  %add = add nsw i64 %tmp, 1
-  %add1 = add nsw i64 %val, 1
-  %tmp1 = inttoptr i64 %add1 to i64*
+  %tmp = ptrtoint i64* %add.ptr to i16
+  %add = add nsw i16 %tmp, 1
+  %add1 = add nsw i16 %val, 1
+  %tmp1 = inttoptr i16 %add1 to i64*
   %add.ptr2 = getelementptr inbounds i64, i64* %tmp1, i64 1
-  %tmp2 = ptrtoint i64* %add.ptr2 to i64
-  %arrayidx = getelementptr inbounds i64, i64* %B, i64 %tmp2
+  %tmp2 = ptrtoint i64* %add.ptr2 to i16
+  %arrayidx = getelementptr inbounds i64, i64* %B, i16 %tmp2
   %tmp3 = load i64, i64* %arrayidx
-  %arrayidx3 = getelementptr inbounds i64, i64* %A, i64 %add
+  %arrayidx3 = getelementptr inbounds i64, i64* %A, i16 %add
   %tmp4 = load i64, i64* %arrayidx3
   %add4 = add nsw i64 %tmp4, %tmp3
   store i64 %add4, i64* %arrayidx3

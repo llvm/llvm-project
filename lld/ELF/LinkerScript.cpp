@@ -428,7 +428,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
 
 void LinkerScript::fabricateDefaultCommands() {
   // Define start address
-  uint64_t StartAddr = -1;
+  uint64_t StartAddr = UINT64_MAX;
 
   // The Sections with -T<section> have been sorted in order of ascending
   // address. We must lower StartAddr if the lowest -T<section address> as
@@ -436,15 +436,11 @@ void LinkerScript::fabricateDefaultCommands() {
   for (auto &KV : Config->SectionStartMap)
     StartAddr = std::min(StartAddr, KV.second);
 
+  auto Expr = [=] {
+    return std::min(StartAddr, Config->ImageBase + elf::getHeaderSize());
+  };
   Opt.Commands.insert(Opt.Commands.begin(),
-                      make<SymbolAssignment>(".",
-                                             [=] {
-                                               return std::min(
-                                                   StartAddr,
-                                                   Config->ImageBase +
-                                                       elf::getHeaderSize());
-                                             },
-                                             ""));
+                      make<SymbolAssignment>(".", Expr, ""));
 }
 
 // Add sections that didn't match any sections command.
@@ -460,6 +456,7 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
         return Sec->Name == Name;
       return false;
     });
+    log(toString(S) + " is being placed in '" + Name + "'");
     if (I == End) {
       Factory.addInputSec(S, Name);
       assert(S->getOutputSection()->SectionIndex == INT_MAX);

@@ -588,6 +588,13 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
     }
   }
 
+  if (auto PHI = dyn_cast<PHINode>(Condition)) {
+    auto *Unique = dyn_cast_or_null<ConstantInt>(
+        getUniqueNonErrorValue(PHI, &Context.CurRegion, LI, DT));
+    if (Unique && (Unique->isZero() || Unique->isOne()))
+      return true;
+  }
+
   // Non constant conditions of branches need to be ICmpInst.
   if (!isa<ICmpInst>(Condition)) {
     if (!IsLoopBranch && AllowNonAffineSubRegions &&
@@ -606,6 +613,9 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   Loop *L = LI.getLoopFor(&BB);
   const SCEV *LHS = SE.getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE.getSCEVAtScope(ICmp->getOperand(1), L);
+
+  LHS = tryForwardThroughPHI(LHS, Context.CurRegion, SE, LI, DT);
+  RHS = tryForwardThroughPHI(RHS, Context.CurRegion, SE, LI, DT);
 
   // If unsigned operations are not allowed try to approximate the region.
   if (ICmp->isUnsigned() && !PollyAllowUnsignedOperations)

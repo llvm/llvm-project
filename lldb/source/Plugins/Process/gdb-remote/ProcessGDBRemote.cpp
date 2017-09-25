@@ -3289,12 +3289,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   }
   return error;
 }
-#if defined(__APPLE__)
-// CI bots that use the code-signed debugserver from Xcode don't yet have a
-// debugserver that supports the socketpair "--fd" argument.  We need to
-// disable this until we have an Apple codesigned version of debugserver that
-// supports it.
-// #define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
+#if !defined(_WIN32)
+#define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
 #endif
 
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
@@ -3337,8 +3333,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     lldb_utility::CleanUp<int, int> our_socket(-1, -1, close);
     lldb_utility::CleanUp<int, int> gdb_socket(-1, -1, close);
 
-    // Use a socketpair on Apple for now until other platforms can verify it
-    // works and is fast enough
+    // Use a socketpair on non-Windows systems for security and performance
+    // reasons.
     {
       int sockets[2]; /* the pair of socket descriptors */
       if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1) {

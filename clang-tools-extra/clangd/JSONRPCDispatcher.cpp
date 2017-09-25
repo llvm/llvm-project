@@ -42,7 +42,7 @@ void Handler::handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) {
   // Return that this method is unsupported.
   writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID +
-      R"(,"error":{"code":-32601}})");
+      R"(,"error":{"code":-32601,"message":"method not found"}})");
 }
 
 void Handler::handleNotification(llvm::yaml::MappingNode *Params) {

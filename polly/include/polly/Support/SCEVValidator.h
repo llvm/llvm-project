@@ -94,6 +94,26 @@ ParameterSetTy getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
 /// @returns The constant factor in @p M and the rest of @p M.
 std::pair<const llvm::SCEVConstant *, const llvm::SCEV *>
 extractConstantFactor(const llvm::SCEV *M, llvm::ScalarEvolution &SE);
+
+/// Try to look through PHI nodes, where some incoming edges come from error
+/// blocks.
+///
+/// In case a PHI node follows an error block we can assume that the incoming
+/// value can only come from the node that is not an error block. As a result,
+/// conditions that seemed non-affine before are now in fact affine.
+const llvm::SCEV *tryForwardThroughPHI(const llvm::SCEV *Expr, llvm::Region &R,
+                                       llvm::ScalarEvolution &SE,
+                                       llvm::LoopInfo &LI,
+                                       const llvm::DominatorTree &DT);
+
+/// Return a unique non-error block incoming value for @p PHI if available.
+///
+/// @param R The region to run our code on.
+/// @param LI The loopinfo tree
+/// @param DT The dominator tree
+llvm::Value *getUniqueNonErrorValue(llvm::PHINode *PHI, llvm::Region *R,
+                                    llvm::LoopInfo &LI,
+                                    const llvm::DominatorTree &DT);
 } // namespace polly
 
 #endif
