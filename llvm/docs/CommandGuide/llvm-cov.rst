@@ -195,31 +195,32 @@ OPTIONS
 
 .. option:: -show-line-counts
 
- Show the execution counts for each line. This is enabled by default, unless
- another ``-show`` option is used.
+ Show the execution counts for each line. Defaults to true, unless another
+ ``-show`` option is used.
 
 .. option:: -show-expansions
 
  Expand inclusions, such as preprocessor macros or textual inclusions, inline
- in the display of the source file.
+ in the display of the source file. Defaults to false.
 
 .. option:: -show-instantiations
 
  For source regions that are instantiated multiple times, such as templates in
  ``C++``, show each instantiation separately as well as the combined summary.
- This option is enabled by default.
+ Defaults to true.
 
 .. option:: -show-regions
 
  Show the execution counts for each region by displaying a caret that points to
- the character where the region starts.
+ the character where the region starts. Defaults to false.
 
 .. option:: -show-line-counts-or-regions
 
  Show the execution counts for each line if there is only one region on the
  line, but show the individual regions if there are multiple on the line.
+ Defaults to false.
 
-.. option:: -use-color[=VALUE]
+.. option:: -use-color
 
  Enable or disable color output. By default this is autodetected.
 
@@ -344,7 +345,11 @@ OPTIONS
 
 .. option:: -show-functions
 
- Show coverage summaries for each function.
+ Show coverage summaries for each function. Defaults to false.
+
+.. option:: -show-instantiation-summary
+
+ Show statistics for all function instantiations. Defaults to false.
 
 .. program:: llvm-cov export
 
