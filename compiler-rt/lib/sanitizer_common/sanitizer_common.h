@@ -128,6 +128,14 @@ void CheckVMASize();
 void RunMallocHooks(const void *ptr, uptr size);
 void RunFreeHooks(const void *ptr);
 
+typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,
+                               /*out*/uptr *stats, uptr stats_size);
+
+// Parse the contents of /proc/self/smaps and generate a memory profile.
+// |cb| is a tool-specific callback that fills the |stats| array containing
+// |stats_size| elements.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size);
+
 // InternalScopedBuffer can be used instead of large stack arrays to
 // keep frame size low.
 // FIXME: use InternalAlloc instead of MmapOrDie once

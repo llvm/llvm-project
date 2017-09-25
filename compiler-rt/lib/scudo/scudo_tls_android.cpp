@@ -50,7 +50,7 @@ static void initOnce() {
   TSDs = reinterpret_cast<ScudoTSD *>(
       MmapOrDie(sizeof(ScudoTSD) * NumberOfTSDs, "ScudoTSDs"));
   for (u32 i = 0; i < NumberOfTSDs; i++)
-    TSDs[i].init();
+    TSDs[i].init(/*Shared=*/true);
 }
 
 void initThread(bool MinimalInit) {

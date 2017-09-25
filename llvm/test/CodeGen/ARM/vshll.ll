@@ -97,7 +97,7 @@ define <8 x i16> @vshllu8_bad(<8 x i8>* %A) nounwind {
 
 define <4 x i32> @vshlls16_bad(<4 x i16>* %A) nounwind {
 ; CHECK-LABEL: vshlls16_bad:
-; CHECK: vmovl.s16
+; CHECK: vmovl.u16
 ; CHECK: vshl.i32
         %tmp1 = load <4 x i16>, <4 x i16>* %A
         %sext = sext <4 x i16> %tmp1 to <4 x i32>

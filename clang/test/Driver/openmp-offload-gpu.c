@@ -89,7 +89,7 @@
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
 
-// CHK-TWOCUBIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+// CHK-TWOCUBIN: nvlink{{.*}}openmp-offload-{{.*}}.cubin" "{{.*}}openmp-offload-{{.*}}.cubin"
 
 /// ###########################################################################
 
@@ -99,7 +99,7 @@
 // RUN:   %clang -### -no-canonical-prefixes -target x86_64-apple-darwin17.0.0 -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN-DARWIN %s
 
-// CHK-TWOCUBIN-DARWIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+// CHK-TWOCUBIN-DARWIN: nvlink{{.*}}openmp-offload-{{.*}}.cubin" "{{.*}}openmp-offload-{{.*}}.cubin"
 
 /// ###########################################################################
 

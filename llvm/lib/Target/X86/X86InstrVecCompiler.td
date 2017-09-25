@@ -419,3 +419,84 @@ defm: subvector_zero_ellision<VR256, v8i64,  v4i64,  v16i32, sub_ymm, zeroupperv
 defm: subvector_zero_ellision<VR256, v16i32, v8i32,  v16i32, sub_ymm, zeroupperv8i32>;
 defm: subvector_zero_ellision<VR256, v32i16, v16i16, v16i32, sub_ymm, zeroupperv16i16>;
 defm: subvector_zero_ellision<VR256, v64i8,  v32i8,  v16i32, sub_ymm, zeroupperv32i8>;
+
+
+class maskzeroupper<ValueType vt, RegisterClass RC> :
+  PatLeaf<(vt RC:$src), [{
+    return isMaskZeroExtended(N);
+  }]>;
+
+def maskzeroupperv2i1  : maskzeroupper<v2i1,  VK2>;
+def maskzeroupperv4i1  : maskzeroupper<v4i1,  VK4>;
+def maskzeroupperv8i1  : maskzeroupper<v8i1,  VK8>;
+def maskzeroupperv16i1 : maskzeroupper<v16i1, VK16>;
+def maskzeroupperv32i1 : maskzeroupper<v32i1, VK32>;
+
+// The patterns determine if we can depend on the upper bits of a mask register
+// being zeroed by the previous operation so that we can skip explicit
+// zeroing.
+let Predicates = [HasBWI] in {
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     maskzeroupperv8i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK8:$src, VK32)>;
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     maskzeroupperv16i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK16:$src, VK32)>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv8i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK8:$src, VK64)>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv16i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK16:$src, VK64)>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv32i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK32:$src, VK64)>;
+}
+
+let Predicates = [HasAVX512] in {
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     maskzeroupperv8i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK8:$src, VK16)>;
+}
+
+let Predicates = [HasVLX] in {
+  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
+                                    maskzeroupperv2i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK2:$src, VK4)>;
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    maskzeroupperv2i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK2:$src, VK8)>;
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    maskzeroupperv4i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK4:$src, VK8)>;
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     maskzeroupperv2i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK2:$src, VK16)>;
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     maskzeroupperv4i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK4:$src, VK16)>;
+}
+
+let Predicates = [HasBWI, HasVLX] in {
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     maskzeroupperv2i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK2:$src, VK32)>;
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     maskzeroupperv4i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK4:$src, VK32)>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv2i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK2:$src, VK64)>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     maskzeroupperv4i1:$src, (iPTR 0))),
+            (COPY_TO_REGCLASS VK4:$src, VK64)>;
+}
+
+// If the bits are not zero we have to fall back to explicitly zeroing by
+// using shifts.
+let Predicates = [HasAVX512, NoVLX] in {
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     (v8i1 VK8:$mask), (iPTR 0))),
+            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK8:$mask, VK16),
+                                    (i8 8)), (i8 8))>;
+}

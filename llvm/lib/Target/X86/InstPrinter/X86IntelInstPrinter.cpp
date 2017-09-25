@@ -152,6 +152,7 @@ void X86IntelInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << formatImm((int64_t)Op.getImm());
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
+    O << "offset ";
     Op.getExpr()->print(O, &MAI);
   }
 }

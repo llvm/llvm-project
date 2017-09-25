@@ -105,6 +105,15 @@ const llvm::SCEV *tryForwardThroughPHI(const llvm::SCEV *Expr, llvm::Region &R,
                                        llvm::ScalarEvolution &SE,
                                        llvm::LoopInfo &LI,
                                        const llvm::DominatorTree &DT);
+
+/// Return a unique non-error block incoming value for @p PHI if available.
+///
+/// @param R The region to run our code on.
+/// @param LI The loopinfo tree
+/// @param DT The dominator tree
+llvm::Value *getUniqueNonErrorValue(llvm::PHINode *PHI, llvm::Region *R,
+                                    llvm::LoopInfo &LI,
+                                    const llvm::DominatorTree &DT);
 } // namespace polly
 
 #endif

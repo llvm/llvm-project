@@ -18,6 +18,7 @@ class StdTupleDataFormatterTestCase(TestBase):
     @skipIfFreeBSD
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfDarwin  # doesn't compile on Darwin
+    @skipIfwatchOS  # libstdcpp not ported to watchos
     def test_with_run_command(self):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)

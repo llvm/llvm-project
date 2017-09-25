@@ -47,9 +47,7 @@ define i8 @shrink_xor_constant2(i8 %x) {
 define <16 x i8> @shrink_xor_constant2_splat(<16 x i8> %x) {
 ; ALL-LABEL: shrink_xor_constant2_splat:
 ; ALL:       # BB#0:
-; ALL-NEXT:    psllw $5, %xmm0
-; ALL-NEXT:    pand {{.*}}(%rip), %xmm0
-; ALL-NEXT:    pandn {{.*}}(%rip), %xmm0
+; ALL-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; ALL-NEXT:    retq
   %sh = shl <16 x i8> %x, <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
   %not = xor <16 x i8> %sh, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
