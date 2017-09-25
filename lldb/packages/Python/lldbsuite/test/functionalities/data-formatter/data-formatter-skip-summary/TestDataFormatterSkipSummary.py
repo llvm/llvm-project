@@ -172,23 +172,6 @@ class SkipSummaryDataFormatterTestCase(TestBase):
                 'm_child2 = {',
                 'm_some_text = "Just a test"'])
 
-        # Expand within a standard string (might depend on the implementation
-        # of the C++ stdlib you use)
-        self.expect(
-            'frame variable data1.m_child1->m_child2.m_child1.m_child2 --no-summary-depth=2',
-            substrs=[
-                '(DeepData_5) data1.m_child1->m_child2.m_child1.m_child2 = {',
-                'm_some_text = {',
-                '_M_dataplus = (_M_p = "Just a test")'])
-
-        # Repeat the above, but only skip 1 level of summaries
-        self.expect(
-            'frame variable data1.m_child1->m_child2.m_child1.m_child2 --no-summary-depth=1',
-            substrs=[
-                '(DeepData_5) data1.m_child1->m_child2.m_child1.m_child2 = {',
-                'm_some_text = "Just a test"',
-                '}'])
-
         # Change summary and expand, first without --no-summary-depth then with
         # --no-summary-depth
         self.runCmd(

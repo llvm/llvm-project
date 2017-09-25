@@ -656,9 +656,10 @@ uint64_t GotSection::getGlobalDynOffset(const SymbolBody &B) const {
 void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
 
 bool GotSection::empty() const {
-  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
-  // we need to emit a GOT even if it's empty.
-  return NumEntries == 0 && !HasGotOffRel;
+  // We need to emit a GOT even if it's empty if there's a relocation that is
+  // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
+  // (i.e. _GLOBAL_OFFSET_TABLE_).
+  return NumEntries == 0 && !HasGotOffRel && !ElfSym::GlobalOffsetTable;
 }
 
 void GotSection::writeTo(uint8_t *Buf) {

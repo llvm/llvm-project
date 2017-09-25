@@ -12,9 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_TLS_LINUX_H_
-#define SCUDO_TLS_LINUX_H_
-
 #ifndef SCUDO_TLS_H_
 # error "This file must be included inside scudo_tls.h."
 #endif  // SCUDO_TLS_H_
@@ -31,6 +28,8 @@ extern THREADLOCAL ThreadState ScudoThreadState;
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL ScudoTSD TSD;
 
+extern ScudoTSD FallbackTSD;
+
 ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   if (LIKELY(ScudoThreadState != ThreadNotInitialized))
     return;
@@ -38,11 +37,11 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
 }
 
 ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
-  if (UNLIKELY(ScudoThreadState != ThreadInitialized))
-    return nullptr;
+  if (UNLIKELY(ScudoThreadState != ThreadInitialized)) {
+    FallbackTSD.lock();
+    return &FallbackTSD;
+  }
   return &TSD;
 }
 
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
-
-#endif  // SCUDO_TLS_LINUX_H_

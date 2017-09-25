@@ -18,7 +18,6 @@
 #include "sanitizer_common.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
-#include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 
 #include <limits.h>
