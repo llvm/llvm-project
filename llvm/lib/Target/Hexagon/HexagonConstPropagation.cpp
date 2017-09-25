@@ -1940,7 +1940,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   if (MI.isRegSequence()) {
     unsigned Sub1 = MI.getOperand(2).getImm();
     unsigned Sub2 = MI.getOperand(4).getImm();
-    const TargetRegisterClass *DefRC = MRI->getRegClass(DefR.Reg);
+    const TargetRegisterClass &DefRC = *MRI->getRegClass(DefR.Reg);
     unsigned SubLo = HRI.getHexagonSubRegIndex(DefRC, Hexagon::ps_sub_lo);
     unsigned SubHi = HRI.getHexagonSubRegIndex(DefRC, Hexagon::ps_sub_hi);
     if (Sub1 != SubLo && Sub1 != SubHi)

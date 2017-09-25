@@ -14,13 +14,13 @@
 #ifndef SANITIZER_PROCMAPS_H
 #define SANITIZER_PROCMAPS_H
 
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
-#include "sanitizer_fuchsia.h"
 #include "sanitizer_linux.h"
 #include "sanitizer_mac.h"
 #include "sanitizer_mutex.h"
-#include "sanitizer_win.h"
 
 namespace __sanitizer {
 
@@ -79,18 +79,8 @@ class MemoryMappingLayout {
  private:
   void LoadFromCache();
 
-  // FIXME: Hide implementation details for different platforms in
-  // platform-specific files.
   MemoryMappingLayoutData data_;
 };
-
-typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,
-                               /*out*/uptr *stats, uptr stats_size);
-
-// Parse the contents of /proc/self/smaps and generate a memory profile.
-// |cb| is a tool-specific callback that fills the |stats| array containing
-// |stats_size| elements.
-void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size);
 
 // Returns code range for the specified module.
 bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end);
@@ -102,4 +92,5 @@ uptr ParseHex(const char **p);
 
 }  // namespace __sanitizer
 
+#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
 #endif  // SANITIZER_PROCMAPS_H

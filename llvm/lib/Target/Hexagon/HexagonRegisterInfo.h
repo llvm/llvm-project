@@ -67,7 +67,7 @@ public:
   unsigned getFrameRegister() const;
   unsigned getStackRegister() const;
 
-  unsigned getHexagonSubRegIndex(const TargetRegisterClass *RC,
+  unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
         unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,

@@ -506,48 +506,48 @@ declare swiftcc void @params_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_e
 ; CHECK-ARMV7:  pop     {r4, r5, r6, r7, r10, r11, pc}
 
 ; CHECK-ANDROID-LABEL: params_and_return_in_reg
-; CHECK-ANDROID:  push	{r4, r5, r6, r7, r10, r11, lr}
-; CHECK-ANDROID:  sub	sp, sp, #12
-; CHECK-ANDROID:  mov	r5, r8
-; CHECK-ANDROID:  str	r10, [sp, #4]           @ 4-byte Spill
-; CHECK-ANDROID:  mov	r6, r3
-; CHECK-ANDROID:  mov	r7, r2
-; CHECK-ANDROID:  mov	r4, r1
-; CHECK-ANDROID:  mov	r11, r0
-; CHECK-ANDROID:  mov	r0, #1
-; CHECK-ANDROID:  mov	r1, #2
-; CHECK-ANDROID:  mov	r2, #3
-; CHECK-ANDROID:  mov	r3, #4
-; CHECK-ANDROID:  mov	r10, #0
-; CHECK-ANDROID:  mov	r8, #0
-; CHECK-ANDROID:  bl	params_in_reg2
-; CHECK-ANDROID:  ldr	r10, [sp, #4]           @ 4-byte Reload
-; CHECK-ANDROID:  mov	r0, r11
-; CHECK-ANDROID:  str	r8, [sp]                @ 4-byte Spill
-; CHECK-ANDROID:  mov	r1, r4
-; CHECK-ANDROID:  mov	r2, r7
-; CHECK-ANDROID:  mov	r3, r6
-; CHECK-ANDROID:  mov	r8, r5
-; CHECK-ANDROID:  bl	params_and_return_in_reg2
-; CHECK-ANDROID:  mov	r11, r8
-; CHECK-ANDROID:  ldr	r8, [sp]                @ 4-byte Reload
-; CHECK-ANDROID:  mov	r4, r0
-; CHECK-ANDROID:  mov	r6, r1
-; CHECK-ANDROID:  mov	r7, r2
-; CHECK-ANDROID:  mov	r5, r3
-; CHECK-ANDROID:  mov	r0, #1
-; CHECK-ANDROID:  mov	r1, #2
-; CHECK-ANDROID:  mov	r2, #3
-; CHECK-ANDROID:  mov	r3, #4
-; CHECK-ANDROID:  mov	r10, #0
-; CHECK-ANDROID:  bl	params_in_reg2
-; CHECK-ANDROID:  mov	r0, r4
-; CHECK-ANDROID:  mov	r1, r6
-; CHECK-ANDROID:  mov	r2, r7
-; CHECK-ANDROID:  mov	r3, r5
-; CHECK-ANDROID:  mov	r8, r11
-; CHECK-ANDROID:  add	sp, sp, #12
-; CHECK-ANDROID:  pop	{r4, r5, r6, r7, r10, r11, pc}
+; CHECK-ANDROID:  push    {r4, r5, r6, r7, r9, r10, r11, lr}
+; CHECK-ANDROID:  sub     sp, sp, #16
+; CHECK-ANDROID:  str     r8, [sp, #4]            @ 4-byte Spill
+; CHECK-ANDROID:  mov     r11, r10
+; CHECK-ANDROID:  mov     r6, r3
+; CHECK-ANDROID:  mov     r7, r2
+; CHECK-ANDROID:  mov     r4, r1
+; CHECK-ANDROID:  mov     r5, r0
+; CHECK-ANDROID:  mov     r0, #1
+; CHECK-ANDROID:  mov     r1, #2
+; CHECK-ANDROID:  mov     r2, #3
+; CHECK-ANDROID:  mov     r3, #4
+; CHECK-ANDROID:  mov     r10, #0
+; CHECK-ANDROID:  mov     r8, #0
+; CHECK-ANDROID:  bl      params_in_reg2
+; CHECK-ANDROID:  mov     r9, r8
+; CHECK-ANDROID:  ldr     r8, [sp, #4]            @ 4-byte Reload
+; CHECK-ANDROID:  mov     r0, r5
+; CHECK-ANDROID:  mov     r1, r4
+; CHECK-ANDROID:  mov     r2, r7
+; CHECK-ANDROID:  mov     r3, r6
+; CHECK-ANDROID:  mov     r10, r11
+; CHECK-ANDROID:  bl      params_and_return_in_reg2
+; CHECK-ANDROID:  mov     r4, r0
+; CHECK-ANDROID:  mov     r5, r1
+; CHECK-ANDROID:  mov     r6, r2
+; CHECK-ANDROID:  mov     r7, r3
+; CHECK-ANDROID:  mov     r11, r8
+; CHECK-ANDROID:  mov     r0, #1
+; CHECK-ANDROID:  mov     r1, #2
+; CHECK-ANDROID:  mov     r2, #3
+; CHECK-ANDROID:  mov     r3, #4
+; CHECK-ANDROID:  mov     r10, #0
+; CHECK-ANDROID:  mov     r8, r9
+; CHECK-ANDROID:  bl      params_in_reg2
+; CHECK-ANDROID:  mov     r0, r4
+; CHECK-ANDROID:  mov     r1, r5
+; CHECK-ANDROID:  mov     r2, r6
+; CHECK-ANDROID:  mov     r3, r7
+; CHECK-ANDROID:  mov     r8, r11
+; CHECK-ANDROID:  add     sp, sp, #16
+; CHECK-ANDROID:  pop	{r4, r5, r6, r7, r9, r10, r11, pc}
 
 define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err) {
   %error_ptr_ref = alloca swifterror %swift_error*, align 8

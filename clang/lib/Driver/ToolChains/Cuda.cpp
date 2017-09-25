@@ -438,7 +438,7 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!II.isFilename())
       continue;
 
-    SmallString<256> Name = llvm::sys::path::filename(II.getFilename());
+    SmallString<256> Name(II.getFilename());
     llvm::sys::path::replace_extension(Name, "cubin");
 
     const char *CubinF =

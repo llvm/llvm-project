@@ -162,11 +162,10 @@ template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
   Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
 
-  // Tell LTO not to eliminate this symbol
+  // Tell LTO not to eliminate this symbol.
   Wrap->IsUsedInRegularObj = true;
-
-  Config->RenamedSymbols[Real] = {Sym, Real->Binding};
-  Config->RenamedSymbols[Sym] = {Wrap, Sym->Binding};
+  defsym(Real, Sym);
+  defsym(Sym, Wrap);
 }
 
 // Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
@@ -177,12 +176,10 @@ void SymbolTable::addSymbolAlias(StringRef Alias, StringRef Name) {
     error("-defsym: undefined symbol: " + Name);
     return;
   }
-  Symbol *Sym = B->symbol();
-  Symbol *AliasSym = addUndefined<ELFT>(Alias);
 
-  // Tell LTO not to eliminate this symbol
-  Sym->IsUsedInRegularObj = true;
-  Config->RenamedSymbols[AliasSym] = {Sym, AliasSym->Binding};
+  // Tell LTO not to eliminate this symbol.
+  B->symbol()->IsUsedInRegularObj = true;
+  defsym(addUndefined<ELFT>(Alias), B->symbol());
 }
 
 // Apply symbol renames created by -wrap and -defsym. The renames are created
@@ -190,12 +187,10 @@ void SymbolTable::addSymbolAlias(StringRef Alias, StringRef Name) {
 // LTO (if LTO is running) not to include these symbols in IPO. Now that the
 // symbols are finalized, we can perform the replacement.
 void SymbolTable::applySymbolRenames() {
-  for (auto &KV : Config->RenamedSymbols) {
-    Symbol *Dst = KV.first;
-    Symbol *Src = KV.second.Target;
-    Dst->body()->copy(Src->body());
-    Dst->File = Src->File;
-    Dst->Binding = KV.second.OriginalBinding;
+  for (SymbolRenaming &S : Defsyms) {
+    S.Dst->body()->copyFrom(S.Src->body());
+    S.Dst->File = S.Src->File;
+    S.Dst->Binding = S.Binding;
   }
 }
 
@@ -233,6 +228,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
+    Sym->CanInline = true;
     Sym->Traced = V.Traced;
     Sym->VersionId = Config->DefaultSymbolVersion;
     SymVector.push_back(Sym);
@@ -523,6 +519,13 @@ SymbolBody *SymbolTable::find(StringRef Name) {
   if (V.Idx == -1)
     return nullptr;
   return SymVector[V.Idx]->body();
+}
+
+void SymbolTable::defsym(Symbol *Dst, Symbol *Src) {
+  // We want to tell LTO not to inline Dst symbol because LTO doesn't
+  // know the final symbol contents after renaming.
+  Dst->CanInline = false;
+  Defsyms.push_back({Dst, Src, Dst->Binding});
 }
 
 template <class ELFT>

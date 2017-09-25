@@ -72,6 +72,8 @@ class X86InterleavedAccessGroup {
   void interleave8bitStride4(ArrayRef<Instruction *> InputVectors,
                              SmallVectorImpl<Value *> &TransposedMatrix,
                              unsigned NumSubVecElems);
+  void interleave8bitStride4VF8(ArrayRef<Instruction *> InputVectors,
+                                SmallVectorImpl<Value *> &TransposedMatrix);
   void deinterleave8bitStride3(ArrayRef<Instruction *> InputVectors,
                                SmallVectorImpl<Value *> &TransposedMatrix,
                                unsigned NumSubVecElems);
@@ -127,7 +129,7 @@ bool X86InterleavedAccessGroup::isSupported() const {
      return true;
 
   if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) && Factor == 4 &&
-      (WideInstSize == 512 || WideInstSize == 1024))
+      (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024))
      return true;
 
   if (ShuffleElemSize == 8 && isa<LoadInst>(Inst) && Factor == 3 &&
@@ -216,6 +218,46 @@ static MVT scaleVectorType(MVT VT) {
   unsigned ScalarSize = VT.getVectorElementType().getScalarSizeInBits() * 2;
   return MVT::getVectorVT(MVT::getIntegerVT(ScalarSize),
                           VT.getVectorNumElements() / 2);
+}
+
+void X86InterleavedAccessGroup::interleave8bitStride4VF8(
+    ArrayRef<Instruction *> Matrix,
+    SmallVectorImpl<Value *> &TransposedMatrix) {
+  // Assuming we start from the following vectors:
+  // Matrix[0]= c0 c1 c2 c3 c4 ... c7
+  // Matrix[1]= m0 m1 m2 m3 m4 ... m7
+  // Matrix[2]= y0 y1 y2 y3 y4 ... y7
+  // Matrix[3]= k0 k1 k2 k3 k4 ... k7
+
+  MVT VT = MVT::v8i16;
+  TransposedMatrix.resize(2);
+  SmallVector<uint32_t, 16> MaskLow;
+  SmallVector<uint32_t, 32> MaskLowTemp1, MaskLowWord;
+  SmallVector<uint32_t, 32> MaskHighTemp1, MaskHighWord;
+
+  for (unsigned i = 0; i < 8; ++i) {
+    MaskLow.push_back(i);
+    MaskLow.push_back(i + 8);
+  }
+
+  createUnpackShuffleMask<uint32_t>(VT, MaskLowTemp1, true, false);
+  createUnpackShuffleMask<uint32_t>(VT, MaskHighTemp1, false, false);
+  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, MaskHighWord);
+  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, MaskLowWord);
+  // IntrVec1Low = c0 m0 c1 m1 c2 m2 c3 m3 c4 m4 c5 m5 c6 m6 c7 m7
+  // IntrVec2Low = y0 k0 y1 k1 y2 k2 y3 k3 y4 k4 y5 k5 y6 k6 y7 k7
+  Value *IntrVec1Low =
+      Builder.CreateShuffleVector(Matrix[0], Matrix[1], MaskLow);
+  Value *IntrVec2Low =
+      Builder.CreateShuffleVector(Matrix[2], Matrix[3], MaskLow);
+
+  // TransposedMatrix[0] = c0 m0 y0 k0 c1 m1 y1 k1 c2 m2 y2 k2 c3 m3 y3 k3
+  // TransposedMatrix[1] = c4 m4 y4 k4 c5 m5 y5 k5 c6 m6 y6 k6 c7 m7 y7 k7
+
+  TransposedMatrix[0] =
+      Builder.CreateShuffleVector(IntrVec1Low, IntrVec2Low, MaskLowWord);
+  TransposedMatrix[1] =
+      Builder.CreateShuffleVector(IntrVec1Low, IntrVec2Low, MaskHighWord);
 }
 
 void X86InterleavedAccessGroup::interleave8bitStride4(
@@ -537,6 +579,9 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   switch (NumSubVecElems) {
   case 4:
     transpose_4x4(DecomposedVectors, TransposedVectors);
+    break;
+  case 8:
+    interleave8bitStride4VF8(DecomposedVectors, TransposedVectors);
     break;
   case 16:
   case 32:
