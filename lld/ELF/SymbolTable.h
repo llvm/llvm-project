@@ -95,6 +95,7 @@ public:
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);
   std::vector<SymbolBody *> findAllByVersion(SymbolVersion Ver);
+  void defsym(Symbol *Dst, Symbol *Src);
 
   llvm::StringMap<std::vector<SymbolBody *>> &getDemangledSyms();
   void handleAnonymousVersion();
@@ -131,6 +132,15 @@ private:
   // can have the same name. We use this map to handle "extern C++ {}"
   // directive in version scripts.
   llvm::Optional<llvm::StringMap<std::vector<SymbolBody *>>> DemangledSyms;
+
+  struct SymbolRenaming {
+    Symbol *Dst;
+    Symbol *Src;
+    uint8_t Binding;
+  };
+
+  // For -defsym or -wrap.
+  std::vector<SymbolRenaming> Defsyms;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;

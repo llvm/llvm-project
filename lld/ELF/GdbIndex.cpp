@@ -24,32 +24,7 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
-  GdbSymbol *&Sym = Map[Offset];
-  if (Sym)
-    return {false, Sym};
-  Sym = make<GdbSymbol>(Hash, Offset);
-  return {true, Sym};
-}
-
-void GdbHashTab::finalizeContents() {
-  uint32_t Size = std::max<uint32_t>(1024, NextPowerOf2(Map.size() * 4 / 3));
-  uint32_t Mask = Size - 1;
-  Table.resize(Size);
-
-  for (auto &P : Map) {
-    GdbSymbol *Sym = P.second;
-    uint32_t I = Sym->NameHash & Mask;
-    uint32_t Step = ((Sym->NameHash * 17) & Mask) | 1;
-
-    while (Table[I])
-      I = (I + Step) & Mask;
-    Table[I] = Sym;
-  }
-}
-
-template <class ELFT>
-LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) : Obj(Obj) {
+template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
   for (InputSectionBase *Sec : Obj->getSections()) {
     if (!Sec)
       continue;
