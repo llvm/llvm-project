@@ -94,10 +94,8 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   if (STI.getTargetLowering()->supportSwiftError() &&
       F->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-    if (STI.isTargetDarwin())
-      return CSR_iOS_SwiftError_SaveList;
-    else
-      return CSR_AAPCS_SwiftError_SaveList;
+    return STI.isTargetDarwin() ? CSR_iOS_SwiftError_SaveList
+                                : CSR_AAPCS_SwiftError_SaveList;
 
   if (STI.isTargetDarwin() && F->getCallingConv() == CallingConv::CXX_FAST_TLS)
     return MF->getInfo<ARMFunctionInfo>()->isSplitCSR()
@@ -125,10 +123,8 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
   if (STI.getTargetLowering()->supportSwiftError() &&
       MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
-    if (STI.isTargetDarwin())
-      return CSR_iOS_SwiftError_RegMask;
-    else
-      return CSR_AAPCS_SwiftError_RegMask;
+    return STI.isTargetDarwin() ? CSR_iOS_SwiftError_RegMask
+                                : CSR_AAPCS_SwiftError_RegMask;
 
   if (STI.isTargetDarwin() && CC == CallingConv::CXX_FAST_TLS)
     return CSR_iOS_CXX_TLS_RegMask;
