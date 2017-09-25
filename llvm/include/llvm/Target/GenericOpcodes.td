@@ -511,6 +511,7 @@ def G_INSERT : Instruction {
   let hasSideEffects = 0;
 }
 
+/// Concatenante multiple registers of the same size into a wider register.
 def G_MERGE_VALUES : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
