@@ -1,4 +1,3 @@
-atomic/atomic.cl
 math/nextafter.cl
 math/sqrt.cl
 image/get_image_width.cl

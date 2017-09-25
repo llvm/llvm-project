@@ -1,7 +1,7 @@
 LEVEL = ../../../make
 
 CXX_SOURCES := main.cpp
-USE_LIBSTDCPP := 1
+USE_LIBSTDCPP := 0
 
 # clang-3.5+ outputs FullDebugInfo by default for Darwin/FreeBSD 
 # targets.  Other targets do not, which causes this test to fail.

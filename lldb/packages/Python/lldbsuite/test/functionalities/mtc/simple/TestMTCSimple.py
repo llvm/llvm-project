@@ -30,6 +30,7 @@ class MTCSimpleTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @skipIf(archs=['i386'])
     def mtc_tests(self):
         # Load the test
         exe = os.path.join(os.getcwd(), "a.out")

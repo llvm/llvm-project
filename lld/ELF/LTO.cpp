@@ -10,6 +10,7 @@
 #include "LTO.h"
 #include "Config.h"
 #include "Error.h"
+#include "LinkerScript.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -128,6 +129,11 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::vector<SymbolBody *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
+  DenseSet<StringRef> ScriptSymbols;
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
+      ScriptSymbols.insert(Cmd->Name);
+
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
     SymbolBody *B = Syms[SymNum];
@@ -153,7 +159,13 @@ void BitcodeCompiler::add(BitcodeFile &F) {
                             UsedStartStop.count(ObjSym.getSectionName());
     if (R.Prevailing)
       undefine(Sym);
-    R.LinkerRedefined = Config->RenamedSymbols.count(Sym);
+
+    // We tell LTO to not apply interprocedural optimization for following
+    // symbols because otherwise LTO would inline them while their values are
+    // still not final:
+    // 1) Aliased (with --defsym) or wrapped (with --wrap) symbols.
+    // 2) Symbols redefined in linker script.
+    R.LinkerRedefined = !Sym->CanInline || ScriptSymbols.count(B->getName());
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

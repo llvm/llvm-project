@@ -25,6 +25,7 @@ class StdMapDataFormatterTestCase(TestBase):
 
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfFreeBSD
+    @skipIfwatchOS  # libstdcpp not ported to watchos
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

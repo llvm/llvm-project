@@ -4,8 +4,15 @@ async/async_work_group_copy.cl
 async/async_work_group_strided_copy.cl
 async/prefetch.cl
 async/wait_group_events.cl
+atomic/atomic_add.cl
+atomic/atomic_and.cl
+atomic/atomic_cmpxchg.cl
+atomic/atomic_max.cl
+atomic/atomic_min.cl
+atomic/atomic_or.cl
+atomic/atomic_sub.cl
+atomic/atomic_xor.cl
 atomic/atomic_xchg.cl
-atomic/atomic_impl.ll
 cl_khr_global_int32_base_atomics/atom_add.cl
 cl_khr_global_int32_base_atomics/atom_cmpxchg.cl
 cl_khr_global_int32_base_atomics/atom_dec.cl
