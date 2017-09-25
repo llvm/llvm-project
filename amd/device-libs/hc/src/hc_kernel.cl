@@ -115,24 +115,7 @@ amp_get_group_id(int dim)
 ATTR uint
 amp_get_local_size(int dim)
 {
-    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
-    uint d;
-
-    switch(dim) {
-    case 0:
-        d = p->workgroup_size_x;
-        break;
-    case 1:
-        d = p->workgroup_size_y;
-        break;
-    case 2:
-        d = p->workgroup_size_z;
-        break;
-    default:
-        d = 1;
-        break;
-    }
-    return d;
+    return __ockl_get_local_size(dim);
 }
 
 ATTR uint
