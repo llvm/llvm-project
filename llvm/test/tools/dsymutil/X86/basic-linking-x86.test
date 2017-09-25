@@ -1,12 +1,12 @@
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t1
 RUN: llvm-dsymutil -f -oso-prepend-path=%p/.. %t1
-RUN: llvm-dwarfdump -v %t1.dwarf | FileCheck %s
+RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
 RUN: llvm-dsymutil -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
-RUN: llvm-dwarfdump -v %t2 | FileCheck %s
-RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -v - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
-RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -v - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
-RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dsymutil -f -y -o - - | llvm-dwarfdump -v - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
-RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dsymutil -f -o - -y - | llvm-dwarfdump -v - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
+RUN: llvm-dwarfdump -a %t2 | FileCheck %s
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
+RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dsymutil -f -y -o - - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
+RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dsymutil -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
 
 CHECK: file format Mach-O 64-bit x86-64
 
@@ -14,129 +14,129 @@ CHECK: debug_info contents
 
 CHECK:  Compile Unit:
 
-CHECK:  DW_TAG_compile_unit [1] *
-CHECK:    DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
-CHECK:    DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
-CHECK:    DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000040] = "basic1.c")
-CHECK:    DW_AT_stmt_list [DW_FORM_data4]   (0x00000000)
-CHECK:    DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x00000049] = "/Inputs")
-CHECK:    DW_AT_low_pc [DW_FORM_addr]       (0x0000000100000ea0)
-CHECK:    DW_TAG_subprogram [2] *
-CHECK:    DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000051] = "main")
-CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic1.c")
-CHECK:      DW_AT_decl_line [DW_FORM_data1]	(23)
-CHECK:      DW_AT_prototyped [DW_FORM_flag]	(0x01)
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0063 => {0x00000063})
-CHECK:      DW_AT_external [DW_FORM_flag]	(0x01)
-CHECK:      DW_AT_accessibility [DW_FORM_data1]	(DW_ACCESS_public)
-CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ea0)
-CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000ec4)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
-CHECK:      DW_TAG_formal_parameter [3]
-CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000056] = "argc")
-CHECK:        DW_AT_decl_file [DW_FORM_data1]       ("/Inputs{{[/\\]}}basic1.c")
-CHECK:        DW_AT_decl_line [DW_FORM_data1]	(23)
-CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x0063 => {0x00000063})
-CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_fbreg -8)
-CHECK:      DW_TAG_formal_parameter [3]
-CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000005b] = "argv")
-CHECK:        DW_AT_decl_file [DW_FORM_data1]	("/Inputs{{[/\\]}}basic1.c")
-CHECK:        DW_AT_decl_line [DW_FORM_data1]	(23)
-CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x006a => {0x0000006a})
-CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_fbreg -16)
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_language (DW_LANG_C99)
+CHECK:    DW_AT_name ("basic1.c")
+CHECK:    DW_AT_stmt_list (0x00000000)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000ea0)
+CHECK:    DW_TAG_subprogram
+CHECK:    DW_AT_name ("main")
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:      DW_AT_decl_line (23)
+CHECK:      DW_AT_prototyped (0x01)
+CHECK:      DW_AT_type (cu + 0x0063)
+CHECK:      DW_AT_external (0x01)
+CHECK:      DW_AT_accessibility (DW_ACCESS_public)
+CHECK:      DW_AT_low_pc (0x0000000100000ea0)
+CHECK:      DW_AT_high_pc (0x0000000100000ec4)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argc")
+CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:        DW_AT_decl_line (23)
+CHECK:        DW_AT_type (cu + 0x0063)
+CHECK:        DW_AT_location (DW_OP_fbreg -8)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argv")
+CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:        DW_AT_decl_line (23)
+CHECK:        DW_AT_type (cu + 0x006a)
+CHECK:        DW_AT_location (DW_OP_fbreg -16)
 CHECK:      NULL
-CHECK:    DW_TAG_base_type [4]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000060] = "int")
-CHECK:      DW_AT_encoding [DW_FORM_data1]	(DW_ATE_signed)
-CHECK:      DW_AT_byte_size [DW_FORM_data1]	(0x04)
-CHECK:    DW_TAG_pointer_type [5]
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x006f => {0x0000006f})
-CHECK:    DW_TAG_pointer_type [5]
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0074 => {0x00000074})
-CHECK:    DW_TAG_const_type [6]
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0079 => {0x00000079})
-CHECK:    DW_TAG_base_type [4]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000064] = "char")
-CHECK:      DW_AT_encoding [DW_FORM_data1]	(DW_ATE_signed_char)
-CHECK:      DW_AT_byte_size [DW_FORM_data1]	(0x01)
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:      DW_AT_encoding (DW_ATE_signed)
+CHECK:      DW_AT_byte_size (0x04)
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (cu + 0x006f)
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (cu + 0x0074)
+CHECK:    DW_TAG_const_type
+CHECK:      DW_AT_type (cu + 0x0079)
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("char")
+CHECK:      DW_AT_encoding (DW_ATE_signed_char)
+CHECK:      DW_AT_byte_size (0x01)
 CHECK:    NULL
 
 CHECK:  Compile Unit:
 
-CHECK:  DW_TAG_compile_unit [1] *
-CHECK:   DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
-CHECK:   DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000069] = "basic2.c")
-CHECK:   DW_AT_stmt_list [DW_FORM_data4]   (0x0000003f)
-CHECK:   DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x00000049] = "/Inputs")
-CHECK:   DW_AT_low_pc [DW_FORM_addr]       (0x0000000100000ed0)
-CHECK:    DW_TAG_base_type [4]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000060] = "int")
-CHECK:    DW_TAG_variable [7]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000072] = "private_int")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0026 => {0x000000a7})
-CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic2.c")
-BASIC:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001008)
-ARCHIVE:    DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001004)
-CHECK:    DW_TAG_variable [7]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000007e] = "baz")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0026 => {0x000000a7})
-CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic2.c")
-CHECK:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001000)
-CHECK:    DW_TAG_subprogram [2] *
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000082] = "foo")
-CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic2.c")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0026 => {0x000000a7})
-CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ed0)
-CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000f19)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
-CHECK:      DW_TAG_formal_parameter [3]
-CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000086] = "arg")
-CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x0026 => {0x000000a7})
-CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_fbreg -4)
+CHECK:  DW_TAG_compile_unit
+CHECK:   DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:   DW_AT_name ("basic2.c")
+CHECK:   DW_AT_stmt_list (0x0000003f)
+CHECK:   DW_AT_comp_dir ("/Inputs")
+CHECK:   DW_AT_low_pc (0x0000000100000ed0)
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("private_int")
+CHECK:      DW_AT_type (cu + 0x0026)
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+BASIC:      DW_AT_location (DW_OP_addr 0x100001008)
+ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001004)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("baz")
+CHECK:      DW_AT_type (cu + 0x0026)
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+CHECK:      DW_AT_location (DW_OP_addr 0x100001000)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("foo")
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+CHECK:      DW_AT_type (cu + 0x0026)
+CHECK:      DW_AT_low_pc (0x0000000100000ed0)
+CHECK:      DW_AT_high_pc (0x0000000100000f19)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (cu + 0x0026)
+CHECK:        DW_AT_location (DW_OP_fbreg -4)
 CHECK:      NULL
-CHECK:    DW_TAG_subprogram [8]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000008a] = "inc")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0026 => {0x000000a7})
-CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f20)
-CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000f37)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (cu + 0x0026)
+CHECK:      DW_AT_low_pc (0x0000000100000f20)
+CHECK:      DW_AT_high_pc (0x0000000100000f37)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:    NULL
 
 CHECK:  Compile Unit:
 
-CHECK:  DW_TAG_compile_unit [1] *
-CHECK:    DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
-CHECK:    DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000008e] = "basic3.c")
-CHECK:    DW_AT_stmt_list [DW_FORM_data4]   (0x00000093)
-CHECK:    DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x00000049] = "/Inputs")
-CHECK:    DW_AT_low_pc [DW_FORM_addr]       (0x0000000100000f40)
-CHECK:    DW_TAG_variable [9]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000097] = "val")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x003c => {0x00000162})
-CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic3.c")
-BASIC:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001004)
-ARCHIVE:    DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001008)
-CHECK:    DW_TAG_volatile_type [10]
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0041 => {0x00000167})
-CHECK:    DW_TAG_base_type [4]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000060] = "int")
-CHECK:    DW_TAG_subprogram [2] *
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000009b] = "bar")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0041 => {0x00000167})
-CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f40)
-CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000f84)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
-CHECK:      DW_TAG_formal_parameter [3]
-CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000086] = "arg")
-CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x0041 => {0x00000167})
-CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_fbreg -8)
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_name ("basic3.c")
+CHECK:    DW_AT_stmt_list (0x00000093)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000f40)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("val")
+CHECK:      DW_AT_type (cu + 0x003c)
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
+BASIC:      DW_AT_location (DW_OP_addr 0x100001004)
+ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001008)
+CHECK:    DW_TAG_volatile_type
+CHECK:      DW_AT_type (cu + 0x0041)
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("bar")
+CHECK:      DW_AT_type (cu + 0x0041)
+CHECK:      DW_AT_low_pc (0x0000000100000f40)
+CHECK:      DW_AT_high_pc (0x0000000100000f84)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (cu + 0x0041)
+CHECK:        DW_AT_location (DW_OP_fbreg -8)
 CHECK:      NULL
-CHECK:    DW_TAG_subprogram [8]
-CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000008a] = "inc")
-CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x0041 => {0x00000167})
-CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f90)
-CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000fa9)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (cu + 0x0041)
+CHECK:      DW_AT_low_pc (0x0000000100000f90)
+CHECK:      DW_AT_high_pc (0x0000000100000fa9)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 
 CHECK:    NULL
 
