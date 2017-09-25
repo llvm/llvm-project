@@ -1590,6 +1590,17 @@ Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
 /// of this run-time check to false to be conservatively correct,
 Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
   auto ExprBuilder = getExprBuilder();
+
+  // In case the AST expression has integers larger than 64 bit, bail out. The
+  // resulting LLVM-IR will contain operations on types that use more than 64
+  // bits. These are -- in case wrapping intrinsics are used -- translated to
+  // runtime library calls that are not available on all systems (e.g., Android)
+  // and consequently will result in linker errors.
+  if (ExprBuilder.hasLargeInts(isl::manage(isl_ast_expr_copy(Condition)))) {
+    isl_ast_expr_free(Condition);
+    return Builder.getFalse();
+  }
+
   ExprBuilder.setTrackOverflow(true);
   Value *RTC = ExprBuilder.create(Condition);
   if (!RTC->getType()->isIntegerTy(1))

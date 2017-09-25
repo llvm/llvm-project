@@ -183,7 +183,8 @@ namespace {
    friend raw_ostream &operator<< (raw_ostream &OS, const DepChain &D);
   };
 
- raw_ostream &operator<< (raw_ostream &OS, const DepChain &D) {
+  LLVM_ATTRIBUTE_UNUSED
+  raw_ostream &operator<<(raw_ostream &OS, const DepChain &D) {
     const ChainOfDependences &CD = D.Chain;
     int ChainSize = CD.size();
     OS << "**DepChain Start::**\n";
@@ -206,7 +207,8 @@ namespace {
     bool isDefined() { return Inst2Replace != nullptr; }
   };
   typedef struct ReuseValue ReuseValue;
-  raw_ostream &operator<< (raw_ostream &OS, const ReuseValue &RU) {
+  LLVM_ATTRIBUTE_UNUSED
+  raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
     OS << "** ReuseValue ***\n";
     OS << "Instruction to Replace: " << *(RU.Inst2Replace) << "\n";
     OS << "Backedge Instruction: " << *(RU.BackedgeInst) << "\n";
@@ -300,6 +302,21 @@ bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
         return false;
     }
   }
+
+  // If both the Instructions are of Vector Type and any of the element
+  // is integer constant, check their values too for equivalence.
+  if (I1->getType()->isVectorTy() && I2->getType()->isVectorTy()) {
+    unsigned NumOperands = I1->getNumOperands();
+    for (unsigned i = 0; i < NumOperands; ++i) {
+      ConstantInt *C1 = dyn_cast<ConstantInt>(I1->getOperand(i));
+      ConstantInt *C2 = dyn_cast<ConstantInt>(I2->getOperand(i));
+      if(!C1) continue;
+      assert(C2);
+      if (C1->getSExtValue() != C2->getSExtValue())
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -479,11 +496,10 @@ bool HexagonVectorLoopCarriedReuse::doVLCR() {
   assert((CurLoop->getNumBlocks() == 1) &&
          "Can do VLCR only on single block loops");
 
-  BasicBlock *HdrB = CurLoop->getHeader();
   bool Changed;
   bool Continue;
 
-  DEBUG(dbgs() << "Working on Loop: " << *HdrB << "\n");
+  DEBUG(dbgs() << "Working on Loop: " << *CurLoop->getHeader() << "\n");
   do {
     // Reset datastructures.
     Dependences.clear();

@@ -6,7 +6,8 @@ int f();
 
 namespace {
   // CHECK-1: @_ZN12_GLOBAL__N_11bE = internal global i32 0
-  // CHECK-1: @_ZN12_GLOBAL__N_1L1cE = internal global i32 0
+  // CHECK-1: @_ZN12_GLOBAL__N_11cE = internal global i32 0
+  // CHECK-1: @_ZN12_GLOBAL__N_12c2E = internal global i32 0
   // CHECK-1: @_ZN12_GLOBAL__N_11D1dE = internal global i32 0
   // CHECK-1: @_ZN12_GLOBAL__N_11aE = internal global i32 0
   int a = 0;
@@ -14,6 +15,12 @@ namespace {
   int b = f();
 
   static int c = f();
+
+  // Note, we can't use an 'L' mangling for c or c2 (like GCC does) based on
+  // the 'static' specifier, because the variable can be redeclared without it.
+  extern int c2;
+  int g() { return c2; }
+  static int c2 = f();
 
   class D {
     static int d;

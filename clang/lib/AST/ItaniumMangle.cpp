@@ -1287,9 +1287,15 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       //
       //   void test() { extern void foo(); }
       //   static void foo();
+      //
+      // Don't bother with the L marker for names in anonymous namespaces; the
+      // 12_GLOBAL__N_1 mangling is quite sufficient there, and this better
+      // matches GCC anyway, because GCC does not treat anonymous namespaces as
+      // implying internal linkage.
       if (ND && ND->getFormalLinkage() == InternalLinkage &&
           !ND->isExternallyVisible() &&
-          getEffectiveDeclContext(ND)->isFileContext())
+          getEffectiveDeclContext(ND)->isFileContext() &&
+          !ND->isInAnonymousNamespace())
         Out << 'L';
 
       auto *FD = dyn_cast<FunctionDecl>(ND);
@@ -1691,10 +1697,15 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // to emit that last part of the prefix here.
   if (Decl *Context = Lambda->getLambdaContextDecl()) {
     if ((isa<VarDecl>(Context) || isa<FieldDecl>(Context)) &&
-        Context->getDeclContext()->isRecord()) {
+        !isa<ParmVarDecl>(Context)) {
+      // FIXME: 'inline auto [a, b] = []{ return ... };' does not get a
+      // reasonable mangling here.
       if (const IdentifierInfo *Name
             = cast<NamedDecl>(Context)->getIdentifier()) {
         mangleSourceName(Name);
+        const TemplateArgumentList *TemplateArgs = nullptr;
+        if (isTemplate(cast<NamedDecl>(Context), TemplateArgs))
+          mangleTemplateArgs(*TemplateArgs);
         Out << 'M';
       }
     }
@@ -2643,6 +2654,9 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 
   if (PI.isConsumed())
     mangleVendorQualifier("ns_consumed");
+
+  if (PI.isNoEscape())
+    mangleVendorQualifier("noescape");
 }
 
 // <type>          ::= <function-type>

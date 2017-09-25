@@ -33,7 +33,7 @@ public:
 };
 
 AVRELFObjectWriter::AVRELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true, false) {}
+    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true) {}
 
 unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
                                           const MCValue &Target,

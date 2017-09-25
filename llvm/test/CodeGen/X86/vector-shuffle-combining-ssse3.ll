@@ -689,6 +689,62 @@ define <16 x i8> @constant_fold_pshufb_2() {
   ret <16 x i8> %1
 }
 
+define i32 @mask_zzz3_v16i8(<16 x i8> %a0) {
+; SSSE3-LABEL: mask_zzz3_v16i8:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,10,12,14,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSSE3-NEXT:    movd %xmm0, %eax
+; SSSE3-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: mask_zzz3_v16i8:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSE41-NEXT:    pextrd $3, %xmm0, %eax
+; SSE41-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: mask_zzz3_v16i8:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14, i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14>)
+  %2 = bitcast <16 x i8> %1 to <4 x i32>
+  %3 = extractelement <4 x i32> %2, i32 3
+  %4 = and i32 %3, 4278190080
+  ret i32 %4
+}
+
+define i32 @mask_z1z3_v16i8(<16 x i8> %a0) {
+; SSSE3-LABEL: mask_z1z3_v16i8:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,10,12,14,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSSE3-NEXT:    movd %xmm0, %eax
+; SSSE3-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: mask_z1z3_v16i8:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSE41-NEXT:    pextrd $3, %xmm0, %eax
+; SSE41-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: mask_z1z3_v16i8:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14, i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14>)
+  %2 = bitcast <16 x i8> %1 to <4 x i32>
+  %3 = extractelement <4 x i32> %2, i32 3
+  %4 = and i32 %3, 4278255360
+  ret i32 %4
+}
+
 define i32 @PR22415(double %a0) {
 ; SSE-LABEL: PR22415:
 ; SSE:       # BB#0:

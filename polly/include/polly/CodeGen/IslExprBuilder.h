@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "isl/ast.h"
+#include "isl/isl-noexceptions.h"
 
 namespace llvm {
 class DataLayout;
@@ -183,6 +184,13 @@ public:
   ///
   /// @return The llvm::Value* containing the result of the computation.
   llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
+
+  /// Check if an @p Expr contains integer constants larger than 64 bit.
+  ///
+  /// @param Expr The expression to check.
+  ///
+  /// @return True if the ast expression is larger than 64 bit.
+  bool hasLargeInts(isl::ast_expr Expr);
 
 private:
   Scop &S;

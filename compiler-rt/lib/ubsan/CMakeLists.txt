@@ -11,6 +11,7 @@ set(UBSAN_SOURCES
 set(UBSAN_STANDALONE_SOURCES
   ubsan_diag_standalone.cc
   ubsan_init_standalone.cc
+  ubsan_signals_standalone.cc
   )
 
 set(UBSAN_CXXABI_SOURCES
@@ -77,6 +78,7 @@ if(APPLE)
                   RTUbsan_standalone
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
+                  RTInterception
       LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
   endif()
@@ -144,6 +146,7 @@ else()
               RTSanitizerCommonLibc
               RTUbsan
               RTUbsan_standalone
+              RTInterception
       CFLAGS ${UBSAN_CFLAGS}
       PARENT_TARGET ubsan)
 
@@ -162,6 +165,7 @@ else()
               RTSanitizerCommonLibc
               RTUbsan
               RTUbsan_standalone
+              RTInterception
         CFLAGS ${UBSAN_CFLAGS}
         LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
         LINK_LIBS ${UBSAN_DYNAMIC_LIBS}

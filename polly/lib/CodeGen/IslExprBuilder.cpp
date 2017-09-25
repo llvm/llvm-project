@@ -73,6 +73,32 @@ Value *IslExprBuilder::getOverflowState() const {
   return OverflowState;
 }
 
+bool IslExprBuilder::hasLargeInts(isl::ast_expr Expr) {
+  enum isl_ast_expr_type Type = isl_ast_expr_get_type(Expr.get());
+
+  if (Type == isl_ast_expr_id)
+    return false;
+
+  if (Type == isl_ast_expr_int) {
+    isl::val Val = Expr.get_val();
+    APInt APValue = APIntFromVal(Val);
+    auto BitWidth = APValue.getBitWidth();
+    return BitWidth >= 64;
+  }
+
+  assert(Type == isl_ast_expr_op && "Expected isl_ast_expr of type operation");
+
+  int NumArgs = isl_ast_expr_get_op_n_arg(Expr.get());
+
+  for (int i = 0; i < NumArgs; i++) {
+    isl::ast_expr Operand = Expr.get_op_arg(i);
+    if (hasLargeInts(Operand))
+      return true;
+  }
+
+  return false;
+}
+
 Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
                                    Value *RHS, const Twine &Name) {
   // Handle the plain operation (without overflow tracking) first.

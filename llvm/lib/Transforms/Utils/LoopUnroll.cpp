@@ -813,7 +813,7 @@ LoopUnrollStatus llvm::UnrollLoop(
   Loop *OuterL = L->getParentLoop();
   // Update LoopInfo if the loop is completely removed.
   if (CompletelyUnroll)
-    LI->markAsErased(L);
+    LI->erase(L);
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -838,7 +838,7 @@ LoopUnrollStatus llvm::UnrollLoop(
       if (NeedToFixLCSSA) {
         // LCSSA must be performed on the outermost affected loop. The unrolled
         // loop's last loop latch is guaranteed to be in the outermost loop
-        // after LoopInfo's been updated by markAsErased.
+        // after LoopInfo's been updated by LoopInfo::erase.
         Loop *LatchLoop = LI->getLoopFor(Latches.back());
         Loop *FixLCSSALoop = OuterL;
         if (!FixLCSSALoop->contains(LatchLoop))

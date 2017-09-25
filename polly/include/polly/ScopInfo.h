@@ -1697,6 +1697,7 @@ private:
   friend class ScopBuilder;
 
   ScalarEvolution *SE;
+  DominatorTree *DT;
 
   /// The underlying Region.
   Region &R;
@@ -1933,11 +1934,8 @@ private:
   static int getNextID(std::string ParentFunc);
 
   /// Scop constructor; invoked from ScopBuilder::buildScop.
-  Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
+  Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
        ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE);
-
-  /// Return the LoopInfo used for this Scop.
-  LoopInfo *getLI() const { return Affinator.getLI(); }
 
   //@}
 
@@ -2420,7 +2418,14 @@ public:
   /// Remove the metadata stored for @p Access.
   void removeAccessData(MemoryAccess *Access);
 
+  /// Return the scalar evolution.
   ScalarEvolution *getSE() const;
+
+  /// Return the dominator tree.
+  DominatorTree *getDT() const { return DT; }
+
+  /// Return the LoopInfo used for this Scop.
+  LoopInfo *getLI() const { return Affinator.getLI(); }
 
   /// Get the count of parameters used in this Scop.
   ///

@@ -26,7 +26,7 @@ class StringRef;
 class LLVMContext;
 class Module;
 class TargetMachine;
-class tool_output_file;
+class ToolOutputFile;
 
 namespace opt_tool {
 enum OutputKind {
@@ -52,8 +52,8 @@ enum VerifierKind {
 /// ThinLTOLinkOut is only used when OK is OK_OutputThinLTOBitcode, and can be
 /// nullptr.
 bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
-                     tool_output_file *Out, tool_output_file *ThinLinkOut,
-                     tool_output_file *OptRemarkFile, StringRef PassPipeline,
+                     ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
+                     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
                      opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,

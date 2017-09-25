@@ -17,6 +17,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_list_arguments(self):
         """Test that 'lldb-mi --interpreter' can shows arguments."""
 
@@ -89,6 +90,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_list_locals(self):
         """Test that 'lldb-mi --interpreter' can shows local variables."""
 
@@ -243,6 +245,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_list_variables(self):
         """Test that 'lldb-mi --interpreter' can shows local variables and arguments."""
 
@@ -389,6 +392,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_info_depth(self):
         """Test that 'lldb-mi --interpreter' can shows depth of the stack."""
 
@@ -423,6 +427,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipUnlessDarwin
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_info_frame(self):
         """Test that 'lldb-mi --interpreter' can show information about current frame."""
 
@@ -465,6 +470,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_list_frames(self):
         """Test that 'lldb-mi --interpreter' can lists the frames on the stack."""
 
@@ -488,6 +494,7 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stack_select_frame(self):
         """Test that 'lldb-mi --interpreter' can choose current frame."""
 

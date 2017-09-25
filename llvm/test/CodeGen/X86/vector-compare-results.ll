@@ -5791,51 +5791,51 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm5, %edx
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    cmpw %cx, %dx
-; AVX512BW-NEXT:    movw $-1, %cx
+; AVX512BW-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm4, %esi
 ; AVX512BW-NEXT:    vmovd %xmm5, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm6
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $2, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $3, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $4, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $5, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $6, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $7, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm6, %xmm4
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm2, %xmm5
 ; AVX512BW-NEXT:    vpextrw $1, %xmm5, %edx
@@ -5843,49 +5843,49 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm5, %esi
 ; AVX512BW-NEXT:    vmovd %xmm6, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm7
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $2, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $3, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $4, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $5, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $6, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $7, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm7, %xmm5
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm2, %xmm5
@@ -5894,97 +5894,97 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm5, %esi
 ; AVX512BW-NEXT:    vmovd %xmm6, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm7
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $2, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $3, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $4, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $5, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $6, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm7, %xmm7
 ; AVX512BW-NEXT:    vpextrw $7, %xmm5, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm6, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm7, %xmm5
 ; AVX512BW-NEXT:    vpextrw $1, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $1, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm2, %esi
 ; AVX512BW-NEXT:    vmovd %xmm0, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm6
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $2, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $3, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $4, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $5, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $6, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $7, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm0, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm6, %xmm0
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
@@ -5995,49 +5995,49 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm2, %esi
 ; AVX512BW-NEXT:    vmovd %xmm4, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm5
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $2, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $3, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $4, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $5, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $6, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $7, %xmm2, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm4, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm5, %xmm2
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm3, %xmm4
 ; AVX512BW-NEXT:    vpextrw $1, %xmm4, %edx
@@ -6045,49 +6045,49 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm4, %esi
 ; AVX512BW-NEXT:    vmovd %xmm5, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm6
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $2, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $3, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $4, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $5, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $6, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $7, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm6, %xmm4
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm3, %xmm4
@@ -6096,96 +6096,96 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512BW-NEXT:    vpextrw $1, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm4, %esi
 ; AVX512BW-NEXT:    vmovd %xmm5, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm6
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $2, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $3, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $4, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $5, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $6, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm6, %xmm6
 ; AVX512BW-NEXT:    vpextrw $7, %xmm4, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm5, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $7, %edx, %xmm6, %xmm4
 ; AVX512BW-NEXT:    vpextrw $1, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $1, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vmovd %xmm3, %esi
 ; AVX512BW-NEXT:    vmovd %xmm1, %edi
 ; AVX512BW-NEXT:    cmpw %si, %di
 ; AVX512BW-NEXT:    movl $0, %esi
-; AVX512BW-NEXT:    cmovgw %cx, %si
+; AVX512BW-NEXT:    cmovgl %ecx, %esi
 ; AVX512BW-NEXT:    vmovd %esi, %xmm5
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $2, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $2, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $3, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $3, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $3, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $4, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $4, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $4, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $5, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $5, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $5, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $6, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $6, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
 ; AVX512BW-NEXT:    movl $0, %edx
-; AVX512BW-NEXT:    cmovgw %cx, %dx
+; AVX512BW-NEXT:    cmovgl %ecx, %edx
 ; AVX512BW-NEXT:    vpinsrw $6, %edx, %xmm5, %xmm5
 ; AVX512BW-NEXT:    vpextrw $7, %xmm3, %edx
 ; AVX512BW-NEXT:    vpextrw $7, %xmm1, %esi
 ; AVX512BW-NEXT:    cmpw %dx, %si
-; AVX512BW-NEXT:    cmovgw %cx, %ax
+; AVX512BW-NEXT:    cmovgl %ecx, %eax
 ; AVX512BW-NEXT:    vpinsrw $7, %eax, %xmm5, %xmm1
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm4, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1

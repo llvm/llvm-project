@@ -32,6 +32,7 @@ static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
              SFINAE,NOWERROR,SHOWINSYSHEADER,CATEGORY)            \
   { #ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t) },
 #include "clang/Basic/DiagnosticCommonKinds.inc"
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
 #include "clang/Basic/DiagnosticSerializationKinds.inc"

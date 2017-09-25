@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 #include <vector>
 
 int main (int argc, char const *argv[])

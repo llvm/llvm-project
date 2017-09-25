@@ -400,6 +400,8 @@ static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
                                 uint64_t Address, const void *Decoder);
 static DecodeStatus DecoderForMRRC2AndMCRR2(MCInst &Inst, unsigned Val,
                                             uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeForVMRSandVMSR(MCInst &Inst, unsigned Val,
+                                         uint64_t Address, const void *Decoder);
 
 #include "ARMGenDisassemblerTables.inc"
 
@@ -5281,6 +5283,28 @@ static DecodeStatus DecoderForMRRC2AndMCRR2(MCInst &Inst, unsigned Val,
       return MCDisassembler::Fail;
   }
   Inst.addOperand(MCOperand::createImm(CRm));
+
+  return S;
+}
+
+static DecodeStatus DecodeForVMRSandVMSR(MCInst &Inst, unsigned Val,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  const FeatureBitset &featureBits =
+      ((const MCDisassembler *)Decoder)->getSubtargetInfo().getFeatureBits();
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rt = fieldFromInstruction(Val, 12, 4);
+
+  if (featureBits[ARM::ModeThumb] && !featureBits[ARM::HasV8Ops]) {
+    if (Rt == 13 || Rt == 15)
+      S = MCDisassembler::SoftFail;
+    Check(S, DecodeGPRRegisterClass(Inst, Rt, Address, Decoder));
+  } else
+    Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder));
+
+  Inst.addOperand(MCOperand::createImm(ARMCC::AL));
+  Inst.addOperand(MCOperand::createReg(0));
 
   return S;
 }

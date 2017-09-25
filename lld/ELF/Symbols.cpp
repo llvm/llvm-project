@@ -152,7 +152,7 @@ InputFile *SymbolBody::getFile() const {
 // Overwrites all attributes with Other's so that this symbol becomes
 // an alias to Other. This is useful for handling some options such as
 // --wrap.
-void SymbolBody::copy(SymbolBody *Other) {
+void SymbolBody::copyFrom(SymbolBody *Other) {
   memcpy(symbol()->Body.buffer, Other->symbol()->Body.buffer,
          sizeof(Symbol::Body));
 }

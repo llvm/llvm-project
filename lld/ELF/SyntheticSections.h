@@ -27,8 +27,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 
-#include <set>
-
 namespace lld {
 namespace elf {
 
@@ -494,13 +492,40 @@ private:
   size_t HeaderSize;
 };
 
-class GdbIndexSection final : public SyntheticSection {
-  const unsigned OffsetTypeSize = 4;
-  const unsigned CuListOffset = 6 * OffsetTypeSize;
-  const unsigned CompilationUnitSize = 16;
-  const unsigned AddressEntrySize = 16 + OffsetTypeSize;
-  const unsigned SymTabEntrySize = 2 * OffsetTypeSize;
+// GdbIndexChunk is created for each .debug_info section and contains
+// information to create a part of .gdb_index for a given input section.
+struct GdbIndexChunk {
+  struct AddressEntry {
+    InputSection *Section;
+    uint64_t LowAddress;
+    uint64_t HighAddress;
+    uint32_t CuIndex;
+  };
 
+  struct CuEntry {
+    uint64_t CuOffset;
+    uint64_t CuLength;
+  };
+
+  struct NameTypeEntry {
+    llvm::CachedHashStringRef Name;
+    uint8_t Type;
+  };
+
+  InputSection *DebugInfoSec;
+  std::vector<AddressEntry> AddressAreas;
+  std::vector<CuEntry> CompilationUnits;
+  std::vector<NameTypeEntry> NamesAndTypes;
+};
+
+// The symbol type for the .gdb_index section.
+struct GdbSymbol {
+  uint32_t NameHash;
+  size_t NameOffset;
+  size_t CuVectorIndex;
+};
+
+class GdbIndexSection final : public SyntheticSection {
 public:
   GdbIndexSection(std::vector<GdbIndexChunk> &&Chunks);
   void writeTo(uint8_t *Buf) override;
@@ -508,29 +533,31 @@ public:
   bool empty() const override;
 
 private:
-  // Symbol table is a hash table for types and names.
-  // It is the area of gdb index.
-  GdbHashTab HashTab;
+  void fixCuIndex();
+  std::vector<std::vector<uint32_t>> createCuVectors();
+  std::vector<GdbSymbol *> createGdbSymtab();
+
+  // A symbol table for this .gdb_index section.
+  std::vector<GdbSymbol *> GdbSymtab;
 
   // CU vector is a part of constant pool area of section.
-  std::vector<std::set<uint32_t>> CuVectors;
+  std::vector<std::vector<uint32_t>> CuVectors;
 
-  // String pool is also a part of constant pool, it follows CU vectors.
-  llvm::StringTableBuilder StringPool;
+  // Symbol table contents.
+  llvm::DenseMap<llvm::CachedHashStringRef, GdbSymbol *> Symbols;
 
   // Each chunk contains information gathered from a debug sections of single
   // object and used to build different areas of gdb index.
   std::vector<GdbIndexChunk> Chunks;
 
-  void buildIndex();
-
+  static constexpr uint32_t CuListOffset = 24;
   uint32_t CuTypesOffset;
-  uint32_t SymTabOffset;
+  uint32_t SymtabOffset;
   uint32_t ConstantPoolOffset;
   uint32_t StringPoolOffset;
+  uint32_t StringPoolSize;
 
-  size_t CuVectorsSize = 0;
-  std::vector<size_t> CuVectorsOffset;
+  std::vector<size_t> CuVectorOffsets;
 };
 
 template <class ELFT> GdbIndexSection *createGdbIndex();

@@ -1,6 +1,9 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
 # RUN: | llvm-dwarfdump --debug-info --debug-line - \
 # RUN: | FileCheck %s
+# RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
+# RUN: | llvm-dwarfdump --debug-info --debug-line - -o %t
+# RUN: cat %t | FileCheck %s
 
 # CHECK-NOT: .debug_abbrev contents:
 #

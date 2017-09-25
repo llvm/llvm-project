@@ -153,7 +153,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
                             UsedStartStop.count(ObjSym.getSectionName());
     if (R.Prevailing)
       undefine(Sym);
-    R.LinkerRedefined = Config->RenamedSymbols.count(Sym);
+    R.LinkerRedefined = !Sym->CanInline;
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

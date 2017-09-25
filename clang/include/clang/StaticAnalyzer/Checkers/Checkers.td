@@ -284,6 +284,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
+  HelpText<"Reports destructions of polymorphic objects with a non-virtual "
+           "destructor in their base class">,
+  DescFile<"DeleteWithNonVirtualDtorChecker.cpp">;
+
 def IteratorRangeChecker : Checker<"IteratorRange">,
   HelpText<"Check for iterators used outside their valid ranges">,
   DescFile<"IteratorChecker.cpp">;

@@ -19,6 +19,7 @@ class SigtrampUnwind(TestBase):
     # On different platforms the "_sigtramp" and "__kill" frames are likely to be different.
     # This test could probably be adapted to run on linux/*bsd easily enough.
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=["ios", "tvos", "bridgeos"], bugnumber="<rdar://problem/34006863>")  # lldb skips 1 frame on arm64 above _sigtramp
     def test(self):
         """Test that we can backtrace correctly with _sigtramp on the stack"""
         self.build()

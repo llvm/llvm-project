@@ -21,7 +21,7 @@ namespace PR28795 {
 }
 
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct class2 definition
-// CHECK-NEXT: TemplateArgument type 'int'
+// CHECK: TemplateArgument type 'int'
 // CHECK: LambdaExpr {{.*}} 'class (lambda at
 // CHECK: ParmVarDecl {{.*}} used f 'enum foo' cinit
 // CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'

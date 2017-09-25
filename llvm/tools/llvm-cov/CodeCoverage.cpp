@@ -446,7 +446,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
     error(InputPath, EC.message());
     return;
   }
-  tool_output_file InputTOF{InputPath, InputFD};
+  ToolOutputFile InputTOF{InputPath, InputFD};
 
   unsigned NumSymbols = 0;
   for (const auto &Function : Coverage.getCoveredFunctions()) {
@@ -464,7 +464,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
     error(OutputPath, EC.message());
     return;
   }
-  tool_output_file OutputTOF{OutputPath, OutputFD};
+  ToolOutputFile OutputTOF{OutputPath, OutputFD};
   OutputTOF.os().close();
 
   // Invoke the demangler.

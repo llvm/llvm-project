@@ -29,7 +29,7 @@ enum ThreadState : u8 {
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL ThreadState ScudoThreadState;
 __attribute__((tls_model("initial-exec")))
-extern THREADLOCAL ScudoThreadContext ThreadLocalContext;
+extern THREADLOCAL ScudoTSD TSD;
 
 ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   if (LIKELY(ScudoThreadState != ThreadNotInitialized))
@@ -37,10 +37,10 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   initThread(MinimalInit);
 }
 
-ALWAYS_INLINE ScudoThreadContext *getThreadContextAndLock() {
+ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   if (UNLIKELY(ScudoThreadState != ThreadInitialized))
     return nullptr;
-  return &ThreadLocalContext;
+  return &TSD;
 }
 
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID

@@ -110,7 +110,7 @@ int foo(int n) {
   // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
-  #pragma omp target if(0)
+  #pragma omp target if(0) firstprivate(global)
   {
     global += 1;
   }

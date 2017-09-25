@@ -288,7 +288,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     Normal,
     DefaultArgument,
     DataMember,
-    StaticDataMember
+    StaticDataMember,
+    InlineVariable,
+    VariableTemplate
   } Kind = Normal;
 
   // Default arguments of member function parameters that appear in a class
@@ -303,6 +305,14 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getDeclContext()->isRecord())
         Kind = StaticDataMember;
+      else if (Var->getMostRecentDecl()->isInline())
+        Kind = InlineVariable;
+      else if (Var->getDescribedVarTemplate())
+        Kind = VariableTemplate;
+      else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+        if (!VTS->isExplicitSpecialization())
+          Kind = VariableTemplate;
+      }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       Kind = DataMember;
     }
@@ -343,6 +353,10 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     //  -- the in-class initializers of class members
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
+  case InlineVariable:
+    //  -- the initializers of inline variables
+  case VariableTemplate:
+    //  -- the initializers of templated variables
     return &ExprEvalContexts.back().getMangleNumberingContext(Context);
   }
 

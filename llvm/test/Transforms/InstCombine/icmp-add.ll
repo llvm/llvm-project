@@ -96,6 +96,16 @@ define i1 @nsw_slt1(i8 %a) {
   ret i1 %c
 }
 
+define <2 x i1> @nsw_slt1_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @nsw_slt1_splat_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = add nsw <2 x i8> %a, <i8 100, i8 100>
+  %c = icmp slt <2 x i8> %b, <i8 -27, i8 -27>
+  ret <2 x i1> %c
+}
+
 ; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
 ; This becomes equality because it's at the limit.
 
@@ -107,6 +117,16 @@ define i1 @nsw_slt2(i8 %a) {
   %b = add nsw i8 %a, -100
   %c = icmp slt i8 %b, 27
   ret i1 %c
+}
+
+define <2 x i1> @nsw_slt2_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @nsw_slt2_splat_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[A:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = add nsw <2 x i8> %a, <i8 -100, i8 -100>
+  %c = icmp slt <2 x i8> %b, <i8 27, i8 27>
+  ret <2 x i1> %c
 }
 
 ; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
@@ -148,9 +168,25 @@ define i1 @nsw_sgt1(i8 %a) {
   ret i1 %c
 }
 
-; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
-; Try a vector type to make sure that works too.
-; FIXME: This should be 'eq 127' as above.
+define <2 x i1> @nsw_sgt1_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @nsw_sgt1_splat_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[A:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = add nsw <2 x i8> %a, <i8 -100, i8 -100>
+  %c = icmp sgt <2 x i8> %b, <i8 26, i8 26>
+  ret <2 x i1> %c
+}
+
+define i1 @nsw_sgt2(i8 %a) {
+; CHECK-LABEL: @nsw_sgt2(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[A:%.*]], -126
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, 100
+  %c = icmp sgt i8 %b, -26
+  ret i1 %c
+}
 
 define <2 x i1> @nsw_sgt2_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @nsw_sgt2_splat_vec(

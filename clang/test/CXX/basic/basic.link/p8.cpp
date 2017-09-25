@@ -14,7 +14,7 @@ typedef decltype(f()) NoLinkage3;
 inline auto g() { return [] {}; }
 typedef decltype(g()) VisibleNoLinkage1;
 inline auto y = [] {};
-typedef decltype(x) VisibleNoLinkage2;
+typedef decltype(y) VisibleNoLinkage2;
 inline auto h() { struct {} x; return x; }
 typedef decltype(h()) VisibleNoLinkage3;
 
@@ -42,23 +42,23 @@ void use_no_linkage() {
   no_linkage3(); // expected-note {{used here}}
 }
 
-// FIXME: This should emit an extension warning. It does not because we
-// incorrectly give the lambda external linkage.
-extern VisibleNoLinkage1 visible_no_linkage1();
-
-// FIXME: We should accept this as an extension. We don't because we
-// incorrectly give the lambda no linkage instead of "VisibleNoLinkage".
-extern VisibleNoLinkage2 visible_no_linkage2(); // expected-error {{used but not defined}}
-
-// This case is correctly accepted as an extension.
+extern VisibleNoLinkage1 visible_no_linkage1(); // expected-warning {{ISO C++ requires a definition}}
+extern VisibleNoLinkage2 visible_no_linkage2(); // expected-warning {{ISO C++ requires a definition}}
 extern VisibleNoLinkage3 visible_no_linkage3(); // expected-warning {{ISO C++ requires a definition}}
 
 void use_visible_no_linkage() {
-  visible_no_linkage1();
+  visible_no_linkage1(); // expected-note {{used here}}
   visible_no_linkage2(); // expected-note {{used here}}
   visible_no_linkage3(); // expected-note {{used here}}
 }
 
+namespace {
+  struct InternalLinkage {};
+}
+InternalLinkage internal_linkage(); // expected-error {{used but not defined}}
+void use_internal_linkage() {
+  internal_linkage(); // expected-note {{used here}}
+}
 
 extern inline int not_defined; // expected-error {{not defined}}
 extern inline int defined_after_use;
@@ -67,3 +67,12 @@ void use_inline_vars() {
   defined_after_use = 2;
 }
 inline int defined_after_use;
+
+namespace {
+  template<typename T> struct A {
+    static const int n;
+  };
+  template<typename T> const int A<T>::n = 3;
+  static_assert(A<int>::n == 3);
+  int k = A<float>::n;
+}

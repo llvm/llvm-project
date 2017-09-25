@@ -25,6 +25,10 @@ namespace __sanitizer {
 extern uptr MainThreadStackBase, MainThreadStackSize;
 extern sanitizer_shadow_bounds_t ShadowBounds;
 
+// TODO(fjricci) Remove this struct by refactoring common functions
+// out of sanitizer_procmaps.h
+struct MemoryMappingLayoutData {};
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_FUCHSIA
