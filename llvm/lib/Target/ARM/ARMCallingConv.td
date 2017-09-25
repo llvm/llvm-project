@@ -258,6 +258,10 @@ def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
                                                R11, R10, R9, R8,
                                                (sequence "D%u", 15, 8))>;
 
+// R8 is used to pass swifterror, remove it from CSR.
+def CSR_AAPCS_SplitPush_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS_SplitPush,
+                                                      R8)>;
+
 // Constructors and destructors return 'this' in the ARM C++ ABI; since 'this'
 // and the pointer return value are both passed in R0 in these cases, this can
 // be partially modelled by treating R0 as a callee-saved register
