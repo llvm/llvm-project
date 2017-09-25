@@ -80,7 +80,7 @@ public:
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
-  void copy(SymbolBody *Other);
+  void copyFrom(SymbolBody *Other);
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
@@ -364,6 +364,11 @@ struct Symbol {
   // executables, by most symbols in DSOs and executables built with
   // --export-dynamic, and by dynamic lists.
   unsigned ExportDynamic : 1;
+
+  // False if LTO shouldn't inline whatever this symbol points to. If a symbol
+  // is overwritten after LTO, LTO shouldn't inline the symbol because it
+  // doesn't know the final contents of the symbol.
+  unsigned CanInline : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;

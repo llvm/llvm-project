@@ -2536,7 +2536,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
-bool X86TTIImpl::expandMemCmp(Instruction *I, unsigned &MaxLoadSize) {
+bool X86TTIImpl::enableMemCmpExpansion(unsigned &MaxLoadSize) {
   // TODO: We can increase these based on available vector ops.
   MaxLoadSize = ST->is64Bit() ? 8 : 4;
   return true;

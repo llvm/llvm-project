@@ -2315,7 +2315,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // TTI call to check if target would like to expand memcmp. Also, get the
   // MaxLoadSize.
   unsigned MaxLoadSize;
-  if (!TTI->expandMemCmp(CI, MaxLoadSize))
+  if (!TTI->enableMemCmpExpansion(MaxLoadSize))
     return false;
 
   // Early exit from expansion if -Oz.
