@@ -20,6 +20,7 @@ class ThreadSpecificBreakTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()

@@ -1,6 +1,20 @@
 LEVEL = ../../../make
 
-CFLAGS = -g -O0
+CC ?= clang
+ifeq "$(ARCH)" ""
+	ARCH = x86_64
+endif
+
+ifeq "$(OS)" ""
+	OS = $(shell uname -s)
+endif
+
+CFLAGS ?= -g -O0
+
+ifeq "$(OS)" "Darwin"
+	CFLAGS += -arch $(ARCH)
+endif
+
 LDFLAGS = $(CFLAGS) -lobjc -framework Foundation
 
 all: a.out libTest.dylib libTestExt.dylib

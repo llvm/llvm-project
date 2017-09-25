@@ -1,4 +1,10 @@
 #import <Foundation/Foundation.h>
+#include <TargetConditionals.h>
+
+#if TARGET_OS_IPHONE
+@import CoreGraphics;
+typedef CGRect NSRect;
+#endif
 
 struct things_to_sum {
     int a;

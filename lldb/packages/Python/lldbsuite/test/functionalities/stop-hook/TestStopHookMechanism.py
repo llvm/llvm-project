@@ -39,6 +39,7 @@ class StopHookMechanismTestCase(TestBase):
     @expectedFailureAll(
         hostoslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @skipIf(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'])  # <rdar://problem/34582291> problem with armv7 and step-over and stop-hook firing on ios etc systems
     def test(self):
         """Test the stop-hook mechanism."""
         self.build()

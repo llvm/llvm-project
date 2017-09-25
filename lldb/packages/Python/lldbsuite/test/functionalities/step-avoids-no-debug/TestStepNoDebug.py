@@ -52,6 +52,7 @@ class ReturnValueTestCase(TestBase):
             "3.9"],
         archs=["i386"],
         bugnumber="llvm.org/pr28549")
+    @expectedFailureAll(oslist=["ios", "tvos", "bridgeos"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()

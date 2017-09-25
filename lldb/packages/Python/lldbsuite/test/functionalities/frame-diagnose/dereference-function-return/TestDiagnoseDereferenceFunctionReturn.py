@@ -15,6 +15,7 @@ class TestDiagnoseDereferenceFunctionReturn(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIfDarwinEmbedded  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
     @expectedFailureAll(oslist=['macosx'], archs=['i386'], bugnumber="rdar://28656408")
     def test_diagnose_dereference_function_return(self):
         TestBase.setUp(self)
