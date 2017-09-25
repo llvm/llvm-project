@@ -30,6 +30,10 @@ THREADLOCAL ThreadState ScudoThreadState = ThreadNotInitialized;
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL ScudoTSD TSD;
 
+// Fallback TSD for when the thread isn't initialized yet or is torn down. It
+// can be shared between multiple threads and as such must be locked.
+ScudoTSD FallbackTSD;
+
 static void teardownThread(void *Ptr) {
   uptr I = reinterpret_cast<uptr>(Ptr);
   // The glibc POSIX thread-local-storage deallocation routine calls user
@@ -51,6 +55,7 @@ static void teardownThread(void *Ptr) {
 static void initOnce() {
   CHECK_EQ(pthread_key_create(&PThreadKey, teardownThread), 0);
   initScudo();
+  FallbackTSD.init(/*Shared=*/true);
 }
 
 void initThread(bool MinimalInit) {
@@ -59,7 +64,7 @@ void initThread(bool MinimalInit) {
     return;
   CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(
       GetPthreadDestructorIterations())), 0);
-  TSD.init();
+  TSD.init(/*Shared=*/false);
   ScudoThreadState = ThreadInitialized;
 }
 
