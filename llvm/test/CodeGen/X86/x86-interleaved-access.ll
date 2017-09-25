@@ -936,47 +936,37 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 define void @interleaved_store_vf8_i8_stride4(<8 x i8> %x1, <8 x i8> %x2, <8 x i8> %x3, <8 x i8> %x4, <32 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf8_i8_stride4:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <4,12,5,13,6,14,7,15,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,8,1,9,2,10,3,11,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpshufb %xmm4, %xmm3, %xmm1
+; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_store_vf8_i8_stride4:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <4,12,5,13,6,14,7,15,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
-; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,8,1,9,2,10,3,11,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX-NEXT:    vpshufb %xmm4, %xmm3, %xmm1
+; AVX-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
 ; AVX-NEXT:    vmovdqa %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 %v1 = shufflevector <8 x i8> %x1, <8 x i8> %x2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-%v2 = shufflevector <8 x i8> %x2, <8 x i8> %x3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+%v2 = shufflevector <8 x i8> %x3, <8 x i8> %x4, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %interleaved.vec = shufflevector <16 x i8> %v1, <16 x i8> %v2, <32 x i32> <i32 0,i32 8,i32 16,i32 24,i32 1,i32 9,i32 17,i32 25,i32 2,i32 10,i32 18,i32 26,i32 3,i32 11,i32 19,i32 27,i32 4,i32 12,i32 20,i32 28,i32 5,i32 13,i32 21,i32 29,i32 6,i32 14,i32 22,i32 30,i32 7,i32 15,i32 23,i32 31>
 store <32 x i8> %interleaved.vec, <32 x i8>* %p
 ret void

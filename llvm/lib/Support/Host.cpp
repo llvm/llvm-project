@@ -212,6 +212,7 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0x800", "cortex-a73")
             .Case("0x801", "cortex-a73")
             .Case("0xc00", "falkor")
+            .Case("0xc01", "saphira")
             .Default("generic");
 
   return "generic";

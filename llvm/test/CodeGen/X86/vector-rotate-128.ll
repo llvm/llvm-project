@@ -1559,13 +1559,8 @@ define <2 x i64> @splatconstant_rotate_mask_v2i64(<2 x i64> %a) nounwind {
 ;
 ; X32-SSE-LABEL: splatconstant_rotate_mask_v2i64:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
-; X32-SSE-NEXT:    psllq $15, %xmm1
 ; X32-SSE-NEXT:    psrlq $49, %xmm0
 ; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
-; X32-SSE-NEXT:    por %xmm0, %xmm1
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X32-SSE-NEXT:    retl
   %shl = shl <2 x i64> %a, <i64 15, i64 15>
   %lshr = lshr <2 x i64> %a, <i64 49, i64 49>
@@ -1581,7 +1576,6 @@ define <4 x i32> @splatconstant_rotate_mask_v4i32(<4 x i32> %a) nounwind {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pslld $4, %xmm1
 ; SSE-NEXT:    psrld $28, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    por %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -1591,7 +1585,6 @@ define <4 x i32> @splatconstant_rotate_mask_v4i32(<4 x i32> %a) nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpslld $4, %xmm0, %xmm1
 ; AVX-NEXT:    vpsrld $28, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
@@ -1621,7 +1614,6 @@ define <4 x i32> @splatconstant_rotate_mask_v4i32(<4 x i32> %a) nounwind {
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    pslld $4, %xmm1
 ; X32-SSE-NEXT:    psrld $28, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm1
 ; X32-SSE-NEXT:    por %xmm0, %xmm1
 ; X32-SSE-NEXT:    movdqa %xmm1, %xmm0

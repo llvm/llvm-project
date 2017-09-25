@@ -4275,27 +4275,27 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
   return None;
 }
 
-/// Helper function to createAddRecFromPHIWithCasts. We have a phi 
+/// Helper function to createAddRecFromPHIWithCasts. We have a phi
 /// node whose symbolic (unknown) SCEV is \p SymbolicPHI, which is updated via
-/// the loop backedge by a SCEVAddExpr, possibly also with a few casts on the 
-/// way. This function checks if \p Op, an operand of this SCEVAddExpr, 
+/// the loop backedge by a SCEVAddExpr, possibly also with a few casts on the
+/// way. This function checks if \p Op, an operand of this SCEVAddExpr,
 /// follows one of the following patterns:
 /// Op == (SExt ix (Trunc iy (%SymbolicPHI) to ix) to iy)
 /// Op == (ZExt ix (Trunc iy (%SymbolicPHI) to ix) to iy)
 /// If the SCEV expression of \p Op conforms with one of the expected patterns
 /// we return the type of the truncation operation, and indicate whether the
-/// truncated type should be treated as signed/unsigned by setting 
+/// truncated type should be treated as signed/unsigned by setting
 /// \p Signed to true/false, respectively.
 static Type *isSimpleCastedPHI(const SCEV *Op, const SCEVUnknown *SymbolicPHI,
                                bool &Signed, ScalarEvolution &SE) {
-  // The case where Op == SymbolicPHI (that is, with no type conversions on 
-  // the way) is handled by the regular add recurrence creating logic and 
+  // The case where Op == SymbolicPHI (that is, with no type conversions on
+  // the way) is handled by the regular add recurrence creating logic and
   // would have already been triggered in createAddRecForPHI. Reaching it here
-  // means that createAddRecFromPHI had failed for this PHI before (e.g., 
+  // means that createAddRecFromPHI had failed for this PHI before (e.g.,
   // because one of the other operands of the SCEVAddExpr updating this PHI is
-  // not invariant). 
+  // not invariant).
   //
-  // Here we look for the case where Op = (ext(trunc(SymbolicPHI))), and in 
+  // Here we look for the case where Op = (ext(trunc(SymbolicPHI))), and in
   // this case predicates that allow us to prove that Op == SymbolicPHI will
   // be added.
   if (Op == SymbolicPHI)
@@ -4347,7 +4347,7 @@ static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
 //    It will visitMul->visitAdd->visitSExt->visitTrunc->visitUnknown(%X),
 //    and call this function with %SymbolicPHI = %X.
 //
-//    The analysis will find that the value coming around the backedge has 
+//    The analysis will find that the value coming around the backedge has
 //    the following SCEV:
 //         BEValue = ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
 //    Upon concluding that this matches the desired pattern, the function
@@ -4360,21 +4360,21 @@ static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
 //    The returned pair means that SymbolicPHI can be rewritten into NewAddRec
 //    under the predicates {P1,P2,P3}.
 //    This predicated rewrite will be cached in PredicatedSCEVRewrites:
-//         PredicatedSCEVRewrites[{%X,L}] = {NewAddRec, {P1,P2,P3)} 
+//         PredicatedSCEVRewrites[{%X,L}] = {NewAddRec, {P1,P2,P3)}
 //
 // TODO's:
 //
 // 1) Extend the Induction descriptor to also support inductions that involve
-//    casts: When needed (namely, when we are called in the context of the 
-//    vectorizer induction analysis), a Set of cast instructions will be 
+//    casts: When needed (namely, when we are called in the context of the
+//    vectorizer induction analysis), a Set of cast instructions will be
 //    populated by this method, and provided back to isInductionPHI. This is
 //    needed to allow the vectorizer to properly record them to be ignored by
 //    the cost model and to avoid vectorizing them (otherwise these casts,
-//    which are redundant under the runtime overflow checks, will be 
-//    vectorized, which can be costly).  
+//    which are redundant under the runtime overflow checks, will be
+//    vectorized, which can be costly).
 //
 // 2) Support additional induction/PHISCEV patterns: We also want to support
-//    inductions where the sext-trunc / zext-trunc operations (partly) occur 
+//    inductions where the sext-trunc / zext-trunc operations (partly) occur
 //    after the induction update operation (the induction increment):
 //
 //      (Trunc iy (SExt/ZExt ix (%SymbolicPHI + InvariantAccum) to iy) to ix)
@@ -4388,9 +4388,9 @@ Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
 ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI) {
   SmallVector<const SCEVPredicate *, 3> Predicates;
 
-  // *** Part1: Analyze if we have a phi-with-cast pattern for which we can 
+  // *** Part1: Analyze if we have a phi-with-cast pattern for which we can
   // return an AddRec expression under some predicate.
- 
+
   auto *PN = cast<PHINode>(SymbolicPHI->getValue());
   const Loop *L = isIntegerLoopHeaderPHI(PN, LI);
   assert(L && "Expecting an integer loop header phi");
@@ -4428,12 +4428,12 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
     return None;
 
   // If there is a single occurrence of the symbolic value, possibly
-  // casted, replace it with a recurrence. 
+  // casted, replace it with a recurrence.
   unsigned FoundIndex = Add->getNumOperands();
   Type *TruncTy = nullptr;
   bool Signed;
   for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
-    if ((TruncTy = 
+    if ((TruncTy =
              isSimpleCastedPHI(Add->getOperand(i), SymbolicPHI, Signed, *this)))
       if (FoundIndex == e) {
         FoundIndex = i;
@@ -4455,52 +4455,52 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   if (!isLoopInvariant(Accum, L))
     return None;
 
-  // *** Part2: Create the predicates 
+  // *** Part2: Create the predicates
 
   // Analysis was successful: we have a phi-with-cast pattern for which we
   // can return an AddRec expression under the following predicates:
   //
   // P1: A Wrap predicate that guarantees that Trunc(Start) + i*Trunc(Accum)
   //     fits within the truncated type (does not overflow) for i = 0 to n-1.
-  // P2: An Equal predicate that guarantees that 
+  // P2: An Equal predicate that guarantees that
   //     Start = (Ext ix (Trunc iy (Start) to ix) to iy)
-  // P3: An Equal predicate that guarantees that 
+  // P3: An Equal predicate that guarantees that
   //     Accum = (Ext ix (Trunc iy (Accum) to ix) to iy)
   //
-  // As we next prove, the above predicates guarantee that: 
+  // As we next prove, the above predicates guarantee that:
   //     Start + i*Accum = (Ext ix (Trunc iy ( Start + i*Accum ) to ix) to iy)
   //
   //
   // More formally, we want to prove that:
-  //     Expr(i+1) = Start + (i+1) * Accum 
-  //               = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum 
+  //     Expr(i+1) = Start + (i+1) * Accum
+  //               = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum
   //
   // Given that:
-  // 1) Expr(0) = Start 
-  // 2) Expr(1) = Start + Accum 
+  // 1) Expr(0) = Start
+  // 2) Expr(1) = Start + Accum
   //            = (Ext ix (Trunc iy (Start) to ix) to iy) + Accum :: from P2
   // 3) Induction hypothesis (step i):
-  //    Expr(i) = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum 
+  //    Expr(i) = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum
   //
   // Proof:
   //  Expr(i+1) =
   //   = Start + (i+1)*Accum
   //   = (Start + i*Accum) + Accum
-  //   = Expr(i) + Accum  
-  //   = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum + Accum 
+  //   = Expr(i) + Accum
+  //   = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum + Accum
   //                                                             :: from step i
   //
-  //   = (Ext ix (Trunc iy (Start + (i-1)*Accum) to ix) to iy) + Accum + Accum 
+  //   = (Ext ix (Trunc iy (Start + (i-1)*Accum) to ix) to iy) + Accum + Accum
   //
   //   = (Ext ix (Trunc iy (Start + (i-1)*Accum) to ix) to iy)
   //     + (Ext ix (Trunc iy (Accum) to ix) to iy)
   //     + Accum                                                     :: from P3
   //
-  //   = (Ext ix (Trunc iy ((Start + (i-1)*Accum) + Accum) to ix) to iy) 
+  //   = (Ext ix (Trunc iy ((Start + (i-1)*Accum) + Accum) to ix) to iy)
   //     + Accum                            :: from P1: Ext(x)+Ext(y)=>Ext(x+y)
   //
   //   = (Ext ix (Trunc iy (Start + i*Accum) to ix) to iy) + Accum
-  //   = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum 
+  //   = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum
   //
   // By induction, the same applies to all iterations 1<=i<n:
   //
@@ -4583,7 +4583,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   // *** Part3: Predicates are ready. Now go ahead and create the new addrec in
   // which the casts had been folded away. The caller can rewrite SymbolicPHI
   // into NewAR if it will also add the runtime overflow checks specified in
-  // Predicates.  
+  // Predicates.
   auto *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagAnyWrap);
 
   std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> PredRewrite =
@@ -4606,7 +4606,7 @@ ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
     std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> Rewrite =
         I->second;
     // Analysis was done before and failed to create an AddRec:
-    if (Rewrite.first == SymbolicPHI) 
+    if (Rewrite.first == SymbolicPHI)
       return None;
     // Analysis was done before and succeeded to create an AddRec under
     // a predicate:
@@ -10985,7 +10985,7 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
   HasRecMap.erase(S);
   MinTrailingZerosCache.erase(S);
 
-  for (auto I = PredicatedSCEVRewrites.begin(); 
+  for (auto I = PredicatedSCEVRewrites.begin();
        I != PredicatedSCEVRewrites.end();) {
     std::pair<const SCEV *, const Loop *> Entry = I->first;
     if (Entry.first == S)
@@ -11282,10 +11282,10 @@ private:
   }
 
   // If \p Expr represents a PHINode, we try to see if it can be represented
-  // as an AddRec, possibly under a predicate (PHISCEVPred). If it is possible 
+  // as an AddRec, possibly under a predicate (PHISCEVPred). If it is possible
   // to add this predicate as a runtime overflow check, we return the AddRec.
-  // If \p Expr does not meet these conditions (is not a PHI node, or we 
-  // couldn't create an AddRec for it, or couldn't add the predicate), we just 
+  // If \p Expr does not meet these conditions (is not a PHI node, or we
+  // couldn't create an AddRec for it, or couldn't add the predicate), we just
   // return \p Expr.
   const SCEV *convertToAddRecWithPreds(const SCEVUnknown *Expr) {
     if (!isa<PHINode>(Expr->getValue()))
@@ -11300,7 +11300,7 @@ private:
     }
     return PredicatedRewrite->first;
   }
-  
+
   SmallPtrSetImpl<const SCEVPredicate *> *NewPreds;
   SCEVUnionPredicate *Pred;
   const Loop *L;

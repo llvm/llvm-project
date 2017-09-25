@@ -215,7 +215,7 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   return LoopHasReductions;
 }
 
-bool PPCTTIImpl::expandMemCmp(Instruction *I, unsigned &MaxLoadSize) {
+bool PPCTTIImpl::enableMemCmpExpansion(unsigned &MaxLoadSize) {
   MaxLoadSize = 8;
   return true;
 }

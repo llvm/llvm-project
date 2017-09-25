@@ -123,7 +123,7 @@ def getHostPlatform():
 
 
 def getDarwinOSTriples():
-    return ['darwin', 'macosx', 'ios']
+    return ['darwin', 'macosx', 'ios', 'watchos', 'tvos', 'bridgeos']
 
 
 def getPlatform():

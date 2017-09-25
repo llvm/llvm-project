@@ -476,7 +476,8 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureXSAVEOPT,
   FeatureXSAVEC,
   FeatureXSAVES,
-  FeatureCLFLUSHOPT
+  FeatureCLFLUSHOPT,
+  FeatureFSGSBase
 ]>;
 def : GoldmontProc<"goldmont">;
 

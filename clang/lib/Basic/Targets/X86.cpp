@@ -215,6 +215,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "mpx", true);
+    setFeatureEnabledImpl(Features, "fsgsbase", true);
     LLVM_FALLTHROUGH;
   case CK_Silvermont:
     setFeatureEnabledImpl(Features, "aes", true);

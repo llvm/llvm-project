@@ -789,6 +789,20 @@ TEST(TargetParserTest, testAArch64Extension) {
                                    AArch64::ArchKind::INVALID, "rdm"));
   EXPECT_FALSE(testAArch64Extension("kryo",
                                     AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                    AArch64::ArchKind::INVALID, "crc"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                    AArch64::ArchKind::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                   AArch64::ArchKind::INVALID, "rdm"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                   AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                   AArch64::ArchKind::INVALID, "rcpc"));
+  EXPECT_TRUE(testAArch64Extension("saphira",
+                                   AArch64::ArchKind::INVALID, "profile"));
+  EXPECT_FALSE(testAArch64Extension("saphira",
+                                    AArch64::ArchKind::INVALID, "fullfp16"));
   EXPECT_FALSE(testAArch64Extension("thunderx2t99",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("thunderx",

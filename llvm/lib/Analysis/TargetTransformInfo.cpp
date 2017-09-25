@@ -245,8 +245,8 @@ bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) c
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
 }
 
-bool TargetTransformInfo::expandMemCmp(Instruction *I, unsigned &MaxLoadSize) const {
-  return TTIImpl->expandMemCmp(I, MaxLoadSize);
+bool TargetTransformInfo::enableMemCmpExpansion(unsigned &MaxLoadSize) const {
+  return TTIImpl->enableMemCmpExpansion(MaxLoadSize);
 }
 
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {

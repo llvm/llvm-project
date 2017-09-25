@@ -170,22 +170,22 @@ inline __device__ void __barrier_sync_count(unsigned int id,
 }
 
 inline __device__ int __all_sync(unsigned int mask, int pred) {
-  return __nvvm_vote_sync_all(mask, pred);
+  return __nvvm_vote_all_sync(mask, pred);
 }
 
 inline __device__ int __any_sync(unsigned int mask, int pred) {
-  return __nvvm_vote_sync_any(mask, pred);
+  return __nvvm_vote_any_sync(mask, pred);
 }
 
 inline __device__ int __uni_sync(unsigned int mask, int pred) {
-  return __nvvm_vote_sync_uni(mask, pred);
+  return __nvvm_vote_uni_sync(mask, pred);
 }
 
 inline __device__ unsigned int __ballot_sync(unsigned int mask, int pred) {
-  return __nvvm_vote_sync_ballot(mask, pred);
+  return __nvvm_vote_ballot_sync(mask, pred);
 }
 
-inline __device__ activemask() { return __nvvm_vote.ballot(1); }
+inline __device__ unsigned int activemask() { return __nvvm_vote_ballot(1); }
 
 #endif // __CUDA_VERSION >= 9000 && (!defined(__CUDA_ARCH__) ||
        // __CUDA_ARCH__ >= 300)

@@ -19580,6 +19580,26 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                               Src3, Rnd),
                                   Mask, PassThru, Subtarget, DAG);
     }
+    case IFMA_OP_MASKZ:
+    case IFMA_OP_MASK: {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue Src3 = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
+      MVT VT = Op.getSimpleValueType();
+      SDValue PassThru = Src1;
+
+      // set PassThru element
+      if (IntrData->Type == IFMA_OP_MASKZ)
+        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
+
+      // Node we need to swizzle the operands to pass the multiply operands
+      // first.
+      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
+                                              dl, Op.getValueType(),
+                                              Src2, Src3, Src1),
+                                  Mask, PassThru, Subtarget, DAG);
+    }
     case TERLOG_OP_MASK:
     case TERLOG_OP_MASKZ: {
       SDValue Src1 = Op.getOperand(1);

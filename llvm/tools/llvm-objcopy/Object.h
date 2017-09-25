@@ -18,6 +18,24 @@
 #include <set>
 
 class Segment;
+class SectionBase;
+
+class SectionTableRef {
+private:
+  llvm::ArrayRef<std::unique_ptr<SectionBase>> Sections;
+
+public:
+  SectionTableRef(llvm::ArrayRef<std::unique_ptr<SectionBase>> Secs)
+      : Sections(Secs) {}
+  SectionTableRef(const SectionTableRef &) = default;
+
+  SectionBase *getSection(uint16_t Index, llvm::Twine ErrMsg);
+
+  template <class T>
+
+  T *getSectionOfType(uint16_t Index, llvm::Twine IndexErrMsg,
+                      llvm::Twine TypeErrMsg);
+};
 
 class SectionBase {
 public:
@@ -39,6 +57,7 @@ public:
   uint64_t Type = llvm::ELF::SHT_NULL;
 
   virtual ~SectionBase() {}
+  virtual void initialize(SectionTableRef SecTable);
   virtual void finalize();
   template <class ELFT> void writeHeader(llvm::FileOutputBuffer &Out) const;
   virtual void writeSection(llvm::FileOutputBuffer &Out) const = 0;
@@ -154,6 +173,7 @@ public:
                  uint64_t Sz);
   void addSymbolNames();
   const Symbol *getSymbolByIndex(uint32_t Index) const;
+  void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   static bool classof(const SectionBase *S) {
     return S->Type == llvm::ELF::SHT_SYMTAB;
@@ -187,6 +207,7 @@ public:
   void setSymTab(SymbolTableSection *StrTab) { Symbols = StrTab; }
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
+  void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   void writeSection(llvm::FileOutputBuffer &Out) const override;
   static bool classof(const SectionBase *S) {
@@ -201,6 +222,7 @@ private:
 public:
   SectionWithStrTab(llvm::ArrayRef<uint8_t> Data) : Section(Data) {}
   void setStrTab(StringTableSection *StringTable) { StrTab = StringTable; }
+  void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   static bool classof(const SectionBase *S);
 };
@@ -232,11 +254,11 @@ private:
   typedef typename ELFT::Phdr Elf_Phdr;
 
   void initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
-                       SymbolTableSection *SymTab);
+                       SymbolTableSection *SymTab, SectionTableRef SecTable);
   SecPtr makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                      const Elf_Shdr &Shdr);
   void readProgramHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
-  void readSectionHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
+  SectionTableRef readSectionHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
 
   SectionBase *getSection(uint16_t Index, llvm::Twine ErrMsg);
 
