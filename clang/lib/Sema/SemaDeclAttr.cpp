@@ -1518,19 +1518,23 @@ static void handleReturnsNonNullAttr(Sema &S, Decl *D,
 }
 
 static void handleNoEscapeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (D->isInvalidDecl())
+  ParmVarDecl *PD = dyn_cast<ParmVarDecl>(D);
+  if (!PD)
     return;
 
   // noescape only applies to pointer types.
-  QualType T = cast<ParmVarDecl>(D)->getType();
-  if (!S.isValidPointerAttrType(T, /* RefOkay */ true)) {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_pointers_only)
-        << Attr.getName() << Attr.getRange() << 0;
+  QualType T = PD->getType();
+  if (!T->isAnyPointerType() && !T->isBlockPointerType() && 
+      !T->isReferenceType() && !T->isArrayType() && 
+      !T->isMemberPointerType()) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_noescape_non_pointer)
+      << T;
     return;
   }
 
   D->addAttr(::new (S.Context) NoEscapeAttr(
-      Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+                                 Attr.getRange(), S.Context,
+                                 Attr.getAttributeSpellingListIndex()));
 }
 
 static void handleAssumeAlignedAttr(Sema &S, Decl *D,

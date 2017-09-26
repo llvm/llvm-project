@@ -2586,9 +2586,6 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 
   if (PI.isConsumed())
     mangleVendorQualifier("ns_consumed");
-
-  if (PI.isNoEscape())
-    mangleVendorQualifier("noescape");
 }
 
 // <type>          ::= <function-type>
