@@ -39,10 +39,10 @@ struct _Unwind_FunctionContext {
   struct _Unwind_FunctionContext *prev;
 
   // set by calling function before registering to be the landing pad
-  uintptr_t                       resumeLocation;
+  uint32_t                        resumeLocation;
 
   // set by personality handler to be parameters passed to landing pad function
-  uintptr_t                       resumeParameters[4];
+  uint32_t                        resumeParameters[4];
 
   // set by calling function before registering
   __personality_routine           personality; // arm offset=24
