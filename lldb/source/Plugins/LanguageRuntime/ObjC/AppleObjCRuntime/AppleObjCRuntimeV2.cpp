@@ -825,85 +825,43 @@ UtilityFunction *AppleObjCRuntimeV2::CreateObjectChecker(const char *name) {
 
   int len = 0;
   if (m_has_object_getClass) {
-    len = ::snprintf(check_function_code, sizeof(check_function_code),
-                     "extern \"C\" void *gdb_object_getClass(void *);          "
-                     "                                \n"
-                     "extern \"C\"  int printf(const char *format, ...);       "
-                     "                                \n"
-                     "extern \"C\" void                                        "
-                     "                                \n"
-                     "%s(void *$__lldb_arg_obj, void *$__lldb_arg_selector)    "
-                     "                                \n"
-                     "{                                                        "
-                     "                                \n"
-                     "   if ($__lldb_arg_obj == (void *)0)                     "
-                     "                                \n"
-                     "       return; // nil is ok                              "
-                     "                                \n"
-                     "   if (!gdb_object_getClass($__lldb_arg_obj))            "
-                     "                                \n"
-                     "       *((volatile int *)0) = 'ocgc';                    "
-                     "                                \n"
-                     "   else if ($__lldb_arg_selector != (void *)0)           "
-                     "                                \n"
-                     "   {                                                     "
-                     "                                \n"
-                     "        signed char responds = (signed char) [(id) "
-                     "$__lldb_arg_obj                       \n"
-                     "                                                "
-                     "respondsToSelector:                      \n"
-                     "                                       (struct "
-                     "objc_selector *) $__lldb_arg_selector];   \n"
-                     "       if (responds == (signed char) 0)                  "
-                     "                                \n"
-                     "           *((volatile int *)0) = 'ocgc';                "
-                     "                                \n"
-                     "   }                                                     "
-                     "                                \n"
-                     "}                                                        "
-                     "                                \n",
-                     name);
+    len = ::snprintf(check_function_code, sizeof(check_function_code), R"(
+                     extern "C" void *gdb_object_getClass(void *);
+                     extern "C" int printf(const char *format, ...);
+                     extern "C" void
+                     %s(void *$__lldb_arg_obj, void *$__lldb_arg_selector) {
+                       if ($__lldb_arg_obj == (void *)0)
+                         return; // nil is ok
+                       if (!gdb_object_getClass($__lldb_arg_obj)) {
+                         *((volatile int *)0) = 'ocgc';
+                       } else if ($__lldb_arg_selector != (void *)0) {
+                         signed char $responds = (signed char)
+                             [(id)$__lldb_arg_obj respondsToSelector:
+                                 (void *) $__lldb_arg_selector];
+                         if ($responds == (signed char) 0)
+                           *((volatile int *)0) = 'ocgc';
+                       }
+                     })", name);
   } else {
-    len = ::snprintf(check_function_code, sizeof(check_function_code),
-                     "extern \"C\" void *gdb_class_getClass(void *);           "
-                     "                                \n"
-                     "extern \"C\"  int printf(const char *format, ...);       "
-                     "                                \n"
-                     "extern \"C\"  void                                       "
-                     "                                \n"
-                     "%s(void *$__lldb_arg_obj, void *$__lldb_arg_selector)    "
-                     "                                \n"
-                     "{                                                        "
-                     "                                \n"
-                     "   if ($__lldb_arg_obj == (void *)0)                     "
-                     "                                \n"
-                     "       return; // nil is ok                              "
-                     "                                \n"
-                     "    void **$isa_ptr = (void **)$__lldb_arg_obj;          "
-                     "                                \n"
-                     "    if (*$isa_ptr == (void *)0 || "
-                     "!gdb_class_getClass(*$isa_ptr))                        \n"
-                     "       *((volatile int *)0) = 'ocgc';                    "
-                     "                                \n"
-                     "   else if ($__lldb_arg_selector != (void *)0)           "
-                     "                                \n"
-                     "   {                                                     "
-                     "                                \n"
-                     "        signed char responds = (signed char) [(id) "
-                     "$__lldb_arg_obj                       \n"
-                     "                                                "
-                     "respondsToSelector:                      \n"
-                     "                                        (struct "
-                     "objc_selector *) $__lldb_arg_selector];  \n"
-                     "       if (responds == (signed char) 0)                  "
-                     "                                \n"
-                     "           *((volatile int *)0) = 'ocgc';                "
-                     "                                \n"
-                     "   }                                                     "
-                     "                                \n"
-                     "}                                                        "
-                     "                                \n",
-                     name);
+    len = ::snprintf(check_function_code, sizeof(check_function_code), R"(
+                     extern "C" void *gdb_class_getClass(void *);
+                     extern "C" int printf(const char *format, ...);
+                     extern "C" void
+                     %s(void *$__lldb_arg_obj, void *$__lldb_arg_selector) {
+                       if ($__lldb_arg_obj == (void *)0)
+                         return; // nil is ok
+                       void **$isa_ptr = (void **)$__lldb_arg_obj;
+                       if (*$isa_ptr == (void *)0 ||
+                           !gdb_class_getClass(*$isa_ptr))
+                         *((volatile int *)0) = 'ocgc';
+                       else if ($__lldb_arg_selector != (void *)0) {
+                         signed char $responds = (signed char)
+                             [(id)$__lldb_arg_obj respondsToSelector:
+                                 (void *) $__lldb_arg_selector];
+                         if ($responds == (signed char) 0)
+                           *((volatile int *)0) = 'ocgc';
+                       }
+                     })", name);
   }
 
   assert(len < (int)sizeof(check_function_code));
