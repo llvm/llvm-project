@@ -2185,13 +2185,11 @@ void MergeSyntheticSection::addSection(MergeInputSection *MS) {
   Sections.push_back(MS);
 }
 
+size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
+
 void MergeSyntheticSection::writeTo(uint8_t *Buf) { Builder.write(Buf); }
 
-bool MergeSyntheticSection::shouldTailMerge() const {
-  return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
-}
-
-void MergeSyntheticSection::finalizeTailMerge() {
+void MergeTailSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
   for (MergeInputSection *Sec : Sections)
@@ -2211,7 +2209,7 @@ void MergeSyntheticSection::finalizeTailMerge() {
         Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
-void MergeSyntheticSection::finalizeNoTailMerge() {
+void MergeNoTailSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents. Because we are not tail-optimizing, offsets of strings are
   // fixed when they are added to the builder (string table builder contains
@@ -2224,14 +2222,15 @@ void MergeSyntheticSection::finalizeNoTailMerge() {
   Builder.finalizeInOrder();
 }
 
-void MergeSyntheticSection::finalizeContents() {
-  if (shouldTailMerge())
-    finalizeTailMerge();
-  else
-    finalizeNoTailMerge();
+static MergeSyntheticSection *createMergeSynthetic(StringRef Name,
+                                                   uint32_t Type,
+                                                   uint64_t Flags,
+                                                   uint32_t Alignment) {
+  bool ShouldTailMerge = (Flags & SHF_STRINGS) && Config->Optimize >= 2;
+  if (ShouldTailMerge)
+    return make<MergeTailSection>(Name, Type, Flags, Alignment);
+  return make<MergeNoTailSection>(Name, Type, Flags, Alignment);
 }
-
-size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
 
 // This function decompresses compressed sections and scans over the input
 // sections to create mergeable synthetic sections. It removes
@@ -2270,8 +2269,8 @@ void elf::decompressAndMergeSections() {
              Sec->Alignment == Alignment;
     });
     if (I == MergeSections.end()) {
-      MergeSyntheticSection *Syn = make<MergeSyntheticSection>(
-          OutsecName, MS->Type, MS->Flags, Alignment);
+      MergeSyntheticSection *Syn =
+          createMergeSynthetic(OutsecName, MS->Type, MS->Flags, Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;
