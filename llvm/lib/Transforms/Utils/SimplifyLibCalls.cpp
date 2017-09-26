@@ -508,6 +508,9 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilder<> &B) {
   Module &M = *CI->getParent()->getParent()->getParent();
   unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  // We cannot perform this optimization without wchar_size metadata.
+  if (WCharSize == 0)
+    return nullptr;
 
   return optimizeStringLength(CI, B, WCharSize);
 }

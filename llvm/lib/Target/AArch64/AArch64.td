@@ -348,6 +348,20 @@ def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    FeatureSlowSTRQro
                                    ]>;
 
+def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
+                                   "Qualcomm Saphira processors", [
+                                   FeatureCrypto,
+                                   FeatureCustomCheapAsMoveHandling,
+                                   FeatureFPARMv8,
+                                   FeatureNEON,
+                                   FeatureSPE,
+                                   FeaturePerfMon,
+                                   FeaturePostRAScheduler,
+                                   FeaturePredictableSelectIsExpensive,
+                                   FeatureZCZeroing,
+                                   FeatureLSLFast,
+                                   HasV8_3aOps]>;
+
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                          "ThunderX2T99",
                                          "Cavium ThunderX2 processors", [
@@ -426,6 +440,7 @@ def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
+def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
 // Cavium ThunderX/ThunderX T8X  Processors
 def : ProcessorModel<"thunderx", ThunderXT8XModel,  [ProcThunderX]>;

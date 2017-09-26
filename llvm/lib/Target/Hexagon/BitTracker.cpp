@@ -335,20 +335,13 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   // 1. find a physical register PhysR from the same class as RR.Reg,
   // 2. find a physical register PhysS that corresponds to PhysR:RR.Sub,
   // 3. find a register class that contains PhysS.
-  unsigned PhysR;
   if (TargetRegisterInfo::isVirtualRegister(RR.Reg)) {
-    const TargetRegisterClass *VC = MRI.getRegClass(RR.Reg);
-    assert(VC->begin() != VC->end() && "Empty register class");
-    PhysR = *VC->begin();
-  } else {
-    assert(TargetRegisterInfo::isPhysicalRegister(RR.Reg));
-    PhysR = RR.Reg;
+    const auto &VC = composeWithSubRegIndex(*MRI.getRegClass(RR.Reg), RR.Sub);
+    return TRI.getRegSizeInBits(VC);
   }
-
-  unsigned PhysS = (RR.Sub == 0) ? PhysR : TRI.getSubReg(PhysR, RR.Sub);
-  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PhysS);
-  uint16_t BW = TRI.getRegSizeInBits(*RC);
-  return BW;
+  assert(TargetRegisterInfo::isPhysicalRegister(RR.Reg));
+  unsigned PhysR = (RR.Sub == 0) ? RR.Reg : TRI.getSubReg(RR.Reg, RR.Sub);
+  return getPhysRegBitWidth(PhysR);
 }
 
 BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
@@ -715,6 +708,12 @@ BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   uint16_t W = getRegBitWidth(Reg);
   assert(W > 0 && "Cannot generate mask for empty register");
   return BitMask(0, W-1);
+}
+
+uint16_t BT::MachineEvaluator::getPhysRegBitWidth(unsigned Reg) const {
+  assert(TargetRegisterInfo::isPhysicalRegister(Reg));
+  const TargetRegisterClass &PC = *TRI.getMinimalPhysRegClass(Reg);
+  return TRI.getRegSizeInBits(PC);
 }
 
 bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,

@@ -435,6 +435,16 @@ struct BitTracker::MachineEvaluator {
   // has been successfully computed, "false" otherwise.
   virtual bool evaluate(const MachineInstr &BI, const CellMapType &Inputs,
                         BranchTargetList &Targets, bool &FallsThru) const = 0;
+  // Given a register class RC, return a register class that should be assumed
+  // when a register from class RC is used with a subregister of index Idx.
+  virtual const TargetRegisterClass&
+  composeWithSubRegIndex(const TargetRegisterClass &RC, unsigned Idx) const {
+    if (Idx == 0)
+      return RC;
+    llvm_unreachable("Unimplemented composeWithSubRegIndex");
+  }
+  // Return the size in bits of the physical register Reg.
+  virtual uint16_t getPhysRegBitWidth(unsigned Reg) const;
 
   const TargetRegisterInfo &TRI;
   MachineRegisterInfo &MRI;

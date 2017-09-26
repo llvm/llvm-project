@@ -193,17 +193,16 @@ define <4 x i32> @combine_vec_shl_shl_zero1(<4 x i32> %x) {
 define <8 x i32> @combine_vec_shl_ext_shl0(<8 x i16> %x) {
 ; SSE-LABEL: combine_vec_shl_ext_shl0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pmovsxwd %xmm0, %xmm2
-; SSE-NEXT:    pslld $20, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; SSE-NEXT:    pmovsxwd %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE-NEXT:    pslld $20, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pslld $20, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_shl_ext_shl0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-NEXT:    vpslld $20, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = shl <8 x i16> %x, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>

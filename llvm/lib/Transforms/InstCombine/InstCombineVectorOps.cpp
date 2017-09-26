@@ -255,39 +255,6 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
         Worklist.AddValue(EE);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
-    } else if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
-      if (SI->hasOneUse()) {
-        // TODO: For a select on vectors, it might be useful to do this if it
-        // has multiple extractelement uses. For vector select, that seems to
-        // fight the vectorizer.
-
-        // If we are extracting an element from a vector select or a select on
-        // vectors, create a select on the scalars extracted from the vector
-        // arguments.
-        Value *TrueVal = SI->getTrueValue();
-        Value *FalseVal = SI->getFalseValue();
-
-        Value *Cond = SI->getCondition();
-        if (Cond->getType()->isVectorTy()) {
-          Cond = Builder.CreateExtractElement(Cond,
-                                              EI.getIndexOperand(),
-                                              Cond->getName() + ".elt");
-        }
-
-        Value *V1Elem
-          = Builder.CreateExtractElement(TrueVal,
-                                         EI.getIndexOperand(),
-                                         TrueVal->getName() + ".elt");
-
-        Value *V2Elem
-          = Builder.CreateExtractElement(FalseVal,
-                                         EI.getIndexOperand(),
-                                         FalseVal->getName() + ".elt");
-        return SelectInst::Create(Cond,
-                                  V1Elem,
-                                  V2Elem,
-                                  SI->getName() + ".elt");
-      }
     }
   }
   return nullptr;

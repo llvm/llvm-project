@@ -439,7 +439,7 @@ bool HexagonBitSimplify::parseRegSequence(const MachineInstr &I,
       const MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::REG_SEQUENCE);
   unsigned Sub1 = I.getOperand(2).getImm(), Sub2 = I.getOperand(4).getImm();
-  auto *DstRC = MRI.getRegClass(I.getOperand(0).getReg());
+  auto &DstRC = *MRI.getRegClass(I.getOperand(0).getReg());
   auto &HRI = static_cast<const HexagonRegisterInfo&>(
                   *MRI.getTargetRegisterInfo());
   unsigned SubLo = HRI.getHexagonSubRegIndex(DstRC, Hexagon::ps_sub_lo);
@@ -909,8 +909,8 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
 
   auto VerifySR = [&HRI] (const TargetRegisterClass *RC, unsigned Sub) -> void {
     (void)HRI;
-    assert(Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo) ||
-           Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi));
+    assert(Sub == HRI.getHexagonSubRegIndex(*RC, Hexagon::ps_sub_lo) ||
+           Sub == HRI.getHexagonSubRegIndex(*RC, Hexagon::ps_sub_hi));
   };
 
   switch (RC->getID()) {
@@ -1625,8 +1625,8 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
       if (FRC == &Hexagon::DoubleRegsRegClass ||
           FRC == &Hexagon::HvxWRRegClass) {
         // Try to generate REG_SEQUENCE.
-        unsigned SubLo = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_lo);
-        unsigned SubHi = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_hi);
+        unsigned SubLo = HRI.getHexagonSubRegIndex(*FRC, Hexagon::ps_sub_lo);
+        unsigned SubHi = HRI.getHexagonSubRegIndex(*FRC, Hexagon::ps_sub_hi);
         BitTracker::RegisterRef TL = { R, SubLo };
         BitTracker::RegisterRef TH = { R, SubHi };
         BitTracker::RegisterRef ML, MH;
@@ -1689,7 +1689,7 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
     case TargetOpcode::REG_SEQUENCE: {
       BitTracker::RegisterRef SL, SH;
       if (HBS::parseRegSequence(MI, SL, SH, MRI)) {
-        const TargetRegisterClass *RC = MRI.getRegClass(RD.Reg);
+        const TargetRegisterClass &RC = *MRI.getRegClass(RD.Reg);
         unsigned SubLo = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo);
         unsigned SubHi = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi);
         Changed  = HBS::replaceSubWithSub(RD.Reg, SubLo, SL.Reg, SL.Sub, MRI);
@@ -1699,7 +1699,7 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
     }
     case Hexagon::A2_combinew:
     case Hexagon::V6_vcombine: {
-      const TargetRegisterClass *RC = MRI.getRegClass(RD.Reg);
+      const TargetRegisterClass &RC = *MRI.getRegClass(RD.Reg);
       unsigned SubLo = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo);
       unsigned SubHi = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi);
       BitTracker::RegisterRef RH = MI.getOperand(1), RL = MI.getOperand(2);

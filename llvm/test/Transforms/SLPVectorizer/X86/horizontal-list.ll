@@ -117,11 +117,11 @@ define float @bazz() {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP4]], [[CONV]]
-; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV6]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP4]], [[CONV]]
+; CHECK-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV6]]
 ; CHECK-NEXT:    [[ADD19_3:%.*]] = fadd fast float undef, [[ADD19_2]]
-; CHECK-NEXT:    store float [[BIN_EXTRA5]], float* @res, align 4
-; CHECK-NEXT:    ret float [[BIN_EXTRA5]]
+; CHECK-NEXT:    store float [[OP_EXTRA5]], float* @res, align 4
+; CHECK-NEXT:    ret float [[OP_EXTRA5]]
 ;
 ; THRESHOLD-LABEL: @bazz(
 ; THRESHOLD-NEXT:  entry:
@@ -148,11 +148,11 @@ define float @bazz() {
 ; THRESHOLD-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP4]], [[CONV]]
-; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV6]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP4]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV6]]
 ; THRESHOLD-NEXT:    [[ADD19_3:%.*]] = fadd fast float undef, [[ADD19_2]]
-; THRESHOLD-NEXT:    store float [[BIN_EXTRA5]], float* @res, align 4
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA5]]
+; THRESHOLD-NEXT:    store float [[OP_EXTRA5]], float* @res, align 4
+; THRESHOLD-NEXT:    ret float [[OP_EXTRA5]]
 ;
 entry:
   %0 = load i32, i32* @n, align 4
@@ -327,47 +327,45 @@ entry:
 define float @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr to <2 x float>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr1 to <2 x float>*), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float [[TMP3]], float [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[MUL3_1:%.*]] = fmul fast float [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], [[MUL3_1]]
-; CHECK-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float [[MUL3_1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[MUL3_2:%.*]] = fmul fast float [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], [[MUL3_2]]
-; CHECK-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float [[MUL3_2]]
-; CHECK-NEXT:    store float [[MAX_0_MUL3_2]], float* @res, align 4
-; CHECK-NEXT:    ret float [[MAX_0_MUL3_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr to <4 x float>*), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr1 to <4 x float>*), align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float undef, undef
+; CHECK-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float undef, float undef
+; CHECK-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], undef
+; CHECK-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float undef
+; CHECK-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], undef
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x float> [[TMP2]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP2]], <4 x float> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <4 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[RDX_MINMAX_SELECT3]], i32 0
+; CHECK-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float undef
+; CHECK-NEXT:    store float [[TMP3]], float* @res, align 4
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
 ; THRESHOLD-LABEL: @bar(
 ; THRESHOLD-NEXT:  entry:
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr to <2 x float>*), align 16
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr1 to <2 x float>*), align 16
-; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
-; THRESHOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; THRESHOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
-; THRESHOLD-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
-; THRESHOLD-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float [[TMP3]], float [[TMP4]]
-; THRESHOLD-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 2), align 8
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 2), align 8
-; THRESHOLD-NEXT:    [[MUL3_1:%.*]] = fmul fast float [[TMP6]], [[TMP5]]
-; THRESHOLD-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], [[MUL3_1]]
-; THRESHOLD-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float [[MUL3_1]]
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 3), align 4
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 3), align 4
-; THRESHOLD-NEXT:    [[MUL3_2:%.*]] = fmul fast float [[TMP8]], [[TMP7]]
-; THRESHOLD-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], [[MUL3_2]]
-; THRESHOLD-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float [[MUL3_2]]
-; THRESHOLD-NEXT:    store float [[MAX_0_MUL3_2]], float* @res, align 4
-; THRESHOLD-NEXT:    ret float [[MAX_0_MUL3_2]]
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr to <4 x float>*), align 16
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr1 to <4 x float>*), align 16
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
+; THRESHOLD-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float undef, undef
+; THRESHOLD-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float undef, float undef
+; THRESHOLD-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], undef
+; THRESHOLD-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float undef
+; THRESHOLD-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], undef
+; THRESHOLD-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x float> [[TMP2]], [[RDX_SHUF]]
+; THRESHOLD-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP2]], <4 x float> [[RDX_SHUF]]
+; THRESHOLD-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <4 x float> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
+; THRESHOLD-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[RDX_SHUF1]]
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[RDX_MINMAX_SELECT3]], i32 0
+; THRESHOLD-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float undef
+; THRESHOLD-NEXT:    store float [[TMP3]], float* @res, align 4
+; THRESHOLD-NEXT:    ret float [[TMP3]]
 ;
 entry:
   %0 = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 0), align 16
@@ -512,9 +510,9 @@ define float @f(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[RDX_SHUF15:%.*]] = shufflevector <16 x float> [[BIN_RDX14]], <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX16:%.*]] = fadd fast <16 x float> [[BIN_RDX14]], [[RDX_SHUF15]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[BIN_RDX16]], i32 0
-; CHECK-NEXT:    [[BIN_RDX17:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_47:%.*]] = fadd fast float undef, [[ADD_46]]
-; CHECK-NEXT:    ret float [[BIN_RDX17]]
+; CHECK-NEXT:    ret float [[OP_RDX]]
 ;
 ; THRESHOLD-LABEL: @f(
 ; THRESHOLD-NEXT:  entry:
@@ -635,9 +633,9 @@ define float @f(float* nocapture readonly %x) {
 ; THRESHOLD-NEXT:    [[RDX_SHUF15:%.*]] = shufflevector <16 x float> [[BIN_RDX14]], <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX16:%.*]] = fadd fast <16 x float> [[BIN_RDX14]], [[RDX_SHUF15]]
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = extractelement <16 x float> [[BIN_RDX16]], i32 0
-; THRESHOLD-NEXT:    [[BIN_RDX17:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
 ; THRESHOLD-NEXT:    [[ADD_47:%.*]] = fadd fast float undef, [[ADD_46]]
-; THRESHOLD-NEXT:    ret float [[BIN_RDX17]]
+; THRESHOLD-NEXT:    ret float [[OP_RDX]]
 ;
   entry:
   %0 = load float, float* %x, align 4
@@ -865,9 +863,9 @@ define float @f1(float* nocapture readonly %x, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x float> [[BIN_RDX6]], <32 x float> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = fadd fast <32 x float> [[BIN_RDX6]], [[RDX_SHUF7]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <32 x float> [[BIN_RDX8]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[CONV]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[CONV]]
 ; CHECK-NEXT:    [[ADD_31:%.*]] = fadd fast float undef, [[ADD_30]]
-; CHECK-NEXT:    ret float [[BIN_EXTRA]]
+; CHECK-NEXT:    ret float [[OP_EXTRA]]
 ;
 ; THRESHOLD-LABEL: @f1(
 ; THRESHOLD-NEXT:  entry:
@@ -948,9 +946,9 @@ define float @f1(float* nocapture readonly %x, i32 %a, i32 %b) {
 ; THRESHOLD-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x float> [[BIN_RDX6]], <32 x float> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX8:%.*]] = fadd fast <32 x float> [[BIN_RDX6]], [[RDX_SHUF7]]
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <32 x float> [[BIN_RDX8]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[CONV]]
 ; THRESHOLD-NEXT:    [[ADD_31:%.*]] = fadd fast float undef, [[ADD_30]]
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA]]
+; THRESHOLD-NEXT:    ret float [[OP_EXTRA]]
 ;
   entry:
   %rem = srem i32 %a, %b
@@ -1138,14 +1136,14 @@ define float @loadadd31(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[RDX_SHUF11:%.*]] = shufflevector <8 x float> [[BIN_RDX10]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX12:%.*]] = fadd fast <8 x float> [[BIN_RDX10]], [[RDX_SHUF11]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[BIN_RDX12]], i32 0
-; CHECK-NEXT:    [[BIN_RDX13:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[RDX_SHUF14:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX15:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF14]]
-; CHECK-NEXT:    [[RDX_SHUF16:%.*]] = shufflevector <4 x float> [[BIN_RDX15]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX17:%.*]] = fadd fast <4 x float> [[BIN_RDX15]], [[RDX_SHUF16]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[BIN_RDX17]], i32 0
-; CHECK-NEXT:    [[BIN_RDX18:%.*]] = fadd fast float [[BIN_RDX13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast float [[BIN_RDX18]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[RDX_SHUF13:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX14:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF13]]
+; CHECK-NEXT:    [[RDX_SHUF15:%.*]] = shufflevector <4 x float> [[BIN_RDX14]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX16:%.*]] = fadd fast <4 x float> [[BIN_RDX14]], [[RDX_SHUF15]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[BIN_RDX16]], i32 0
+; CHECK-NEXT:    [[OP_RDX17:%.*]] = fadd fast float [[OP_RDX]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast float [[OP_RDX17]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast float [[TMP11]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD_29:%.*]] = fadd fast float undef, [[ADD_28]]
 ; CHECK-NEXT:    ret float [[TMP12]]
@@ -1234,14 +1232,14 @@ define float @loadadd31(float* nocapture readonly %x) {
 ; THRESHOLD-NEXT:    [[RDX_SHUF11:%.*]] = shufflevector <8 x float> [[BIN_RDX10]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX12:%.*]] = fadd fast <8 x float> [[BIN_RDX10]], [[RDX_SHUF11]]
 ; THRESHOLD-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[BIN_RDX12]], i32 0
-; THRESHOLD-NEXT:    [[BIN_RDX13:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
-; THRESHOLD-NEXT:    [[RDX_SHUF14:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; THRESHOLD-NEXT:    [[BIN_RDX15:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF14]]
-; THRESHOLD-NEXT:    [[RDX_SHUF16:%.*]] = shufflevector <4 x float> [[BIN_RDX15]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; THRESHOLD-NEXT:    [[BIN_RDX17:%.*]] = fadd fast <4 x float> [[BIN_RDX15]], [[RDX_SHUF16]]
-; THRESHOLD-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[BIN_RDX17]], i32 0
-; THRESHOLD-NEXT:    [[BIN_RDX18:%.*]] = fadd fast float [[BIN_RDX13]], [[TMP10]]
-; THRESHOLD-NEXT:    [[TMP11:%.*]] = fadd fast float [[BIN_RDX18]], [[TMP1]]
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
+; THRESHOLD-NEXT:    [[RDX_SHUF13:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[BIN_RDX14:%.*]] = fadd fast <4 x float> [[TMP3]], [[RDX_SHUF13]]
+; THRESHOLD-NEXT:    [[RDX_SHUF15:%.*]] = shufflevector <4 x float> [[BIN_RDX14]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[BIN_RDX16:%.*]] = fadd fast <4 x float> [[BIN_RDX14]], [[RDX_SHUF15]]
+; THRESHOLD-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[BIN_RDX16]], i32 0
+; THRESHOLD-NEXT:    [[OP_RDX17:%.*]] = fadd fast float [[OP_RDX]], [[TMP10]]
+; THRESHOLD-NEXT:    [[TMP11:%.*]] = fadd fast float [[OP_RDX17]], [[TMP1]]
 ; THRESHOLD-NEXT:    [[TMP12:%.*]] = fadd fast float [[TMP11]], [[TMP0]]
 ; THRESHOLD-NEXT:    [[ADD_29:%.*]] = fadd fast float undef, [[ADD_28]]
 ; THRESHOLD-NEXT:    ret float [[TMP12]]
@@ -1369,10 +1367,10 @@ define float @extra_args(float* nocapture readonly %x, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV]]
 ; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; CHECK-NEXT:    ret float [[BIN_EXTRA5]]
+; CHECK-NEXT:    ret float [[OP_EXTRA5]]
 ;
 ; THRESHOLD-LABEL: @extra_args(
 ; THRESHOLD-NEXT:  entry:
@@ -1403,10 +1401,10 @@ define float @extra_args(float* nocapture readonly %x, i32 %a, i32 %b) {
 ; THRESHOLD-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; THRESHOLD-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV]]
 ; THRESHOLD-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA5]]
+; THRESHOLD-NEXT:    ret float [[OP_EXTRA5]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a
@@ -1471,12 +1469,12 @@ define float @extra_args_same_several_times(float* nocapture readonly %x, i32 %a
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
-; CHECK-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], 5.000000e+00
-; CHECK-NEXT:    [[BIN_EXTRA7:%.*]] = fadd fast float [[BIN_EXTRA6]], [[CONV]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], 5.000000e+00
+; CHECK-NEXT:    [[OP_EXTRA6:%.*]] = fadd fast float [[OP_EXTRA5]], 5.000000e+00
+; CHECK-NEXT:    [[OP_EXTRA7:%.*]] = fadd fast float [[OP_EXTRA6]], [[CONV]]
 ; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; CHECK-NEXT:    ret float [[BIN_EXTRA7]]
+; CHECK-NEXT:    ret float [[OP_EXTRA7]]
 ;
 ; THRESHOLD-LABEL: @extra_args_same_several_times(
 ; THRESHOLD-NEXT:  entry:
@@ -1509,12 +1507,12 @@ define float @extra_args_same_several_times(float* nocapture readonly %x, i32 %a
 ; THRESHOLD-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
-; THRESHOLD-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], 5.000000e+00
-; THRESHOLD-NEXT:    [[BIN_EXTRA7:%.*]] = fadd fast float [[BIN_EXTRA6]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; THRESHOLD-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], 5.000000e+00
+; THRESHOLD-NEXT:    [[OP_EXTRA6:%.*]] = fadd fast float [[OP_EXTRA5]], 5.000000e+00
+; THRESHOLD-NEXT:    [[OP_EXTRA7:%.*]] = fadd fast float [[OP_EXTRA6]], [[CONV]]
 ; THRESHOLD-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA7]]
+; THRESHOLD-NEXT:    ret float [[OP_EXTRA7]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a
@@ -1581,10 +1579,10 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV]]
 ; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; CHECK-NEXT:    ret float [[BIN_EXTRA5]]
+; CHECK-NEXT:    ret float [[OP_EXTRA5]]
 ;
 ; THRESHOLD-LABEL: @extra_args_no_replace(
 ; THRESHOLD-NEXT:  entry:
@@ -1617,10 +1615,10 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
 ; THRESHOLD-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
-; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], [[CONV]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; THRESHOLD-NEXT:    [[OP_EXTRA5:%.*]] = fadd fast float [[OP_EXTRA]], [[CONV]]
 ; THRESHOLD-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA5]]
+; THRESHOLD-NEXT:    ret float [[OP_EXTRA5]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a
@@ -1679,10 +1677,10 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
-; CHECK-NEXT:    [[BIN_EXTRA3:%.*]] = add nsw i32 [[BIN_EXTRA]], [[TMP9]]
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
+; CHECK-NEXT:    [[OP_EXTRA3:%.*]] = add nsw i32 [[OP_EXTRA]], [[TMP9]]
 ; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
-; CHECK-NEXT:    ret i32 [[BIN_EXTRA3]]
+; CHECK-NEXT:    ret i32 [[OP_EXTRA3]]
 ;
 ; THRESHOLD-LABEL: @wobble(
 ; THRESHOLD-NEXT:  bb:
@@ -1707,10 +1705,10 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; THRESHOLD-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; THRESHOLD-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
-; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
-; THRESHOLD-NEXT:    [[BIN_EXTRA3:%.*]] = add nsw i32 [[BIN_EXTRA]], [[TMP9]]
+; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
+; THRESHOLD-NEXT:    [[OP_EXTRA3:%.*]] = add nsw i32 [[OP_EXTRA]], [[TMP9]]
 ; THRESHOLD-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
-; THRESHOLD-NEXT:    ret i32 [[BIN_EXTRA3]]
+; THRESHOLD-NEXT:    ret i32 [[OP_EXTRA3]]
 ;
   bb:
   %x1 = xor i32 %arg, %bar
