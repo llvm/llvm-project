@@ -1615,6 +1615,25 @@ define <2 x i1> @icmp_add_and_shr_ne_0_vec(<2 x i32> %X) {
   ret <2 x i1> %tobool
 }
 
+; Variation of the above with an extra use of the shift
+define i1 @icmp_and_shr_multiuse(i32 %X) {
+; CHECK-LABEL: @icmp_and_shr_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 224
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND2]], 432
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %shr = lshr i32 %X, 4
+  %and = and i32 %shr, 15
+  %and2 = and i32 %shr, 31 ; second use of the shift
+  %tobool = icmp ne i32 %and, 14
+  %tobool2 = icmp ne i32 %and2, 27
+  %and3 = and i1 %tobool, %tobool2
+  ret i1 %and3
+}
+
 ; PR16244
 define i1 @test71(i8* %x) {
 ; CHECK-LABEL: @test71(

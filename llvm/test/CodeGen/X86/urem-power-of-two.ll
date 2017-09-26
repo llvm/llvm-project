@@ -83,7 +83,7 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X86-NEXT:    divb %cl
-; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    movzbl %ah, %eax # NOREX
 ; X86-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86-NEXT:    retl
 ;
@@ -93,7 +93,7 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %ah, %eax
+; X64-NEXT:    movzbl %ah, %eax # NOREX
 ; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X64-NEXT:    retq
   %and = and i8 %y, 4

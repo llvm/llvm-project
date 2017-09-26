@@ -1,4 +1,4 @@
-//===-- scudo_tls_linux.inc -------------------------------------*- C++ -*-===//
+//===-- scudo_tsd_exclusive.inc ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Scudo thread local structure fastpath functions implementation for platforms
-/// supporting thread_local.
+/// Scudo exclusive TSD fastpath functions implementation.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_TLS_H_
-# error "This file must be included inside scudo_tls.h."
-#endif  // SCUDO_TLS_H_
+#ifndef SCUDO_TSD_H_
+# error "This file must be included inside scudo_tsd.h."
+#endif  // SCUDO_TSD_H_
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SCUDO_TSD_EXCLUSIVE
 
 enum ThreadState : u8 {
   ThreadNotInitialized = 0,
@@ -44,4 +43,4 @@ ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   return &TSD;
 }
 
-#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif  // SCUDO_TSD_EXCLUSIVE

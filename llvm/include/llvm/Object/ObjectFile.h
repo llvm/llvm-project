@@ -109,6 +109,7 @@ public:
   bool isBSS() const;
   bool isVirtual() const;
   bool isBitcode() const;
+  bool isStripped() const;
 
   bool containsSymbol(SymbolRef S) const;
 
@@ -236,6 +237,7 @@ protected:
   // A section is 'virtual' if its contents aren't present in the object image.
   virtual bool isSectionVirtual(DataRefImpl Sec) const = 0;
   virtual bool isSectionBitcode(DataRefImpl Sec) const;
+  virtual bool isSectionStripped(DataRefImpl Sec) const;
   virtual relocation_iterator section_rel_begin(DataRefImpl Sec) const = 0;
   virtual relocation_iterator section_rel_end(DataRefImpl Sec) const = 0;
   virtual section_iterator getRelocatedSection(DataRefImpl Sec) const;
@@ -440,6 +442,10 @@ inline bool SectionRef::isVirtual() const {
 
 inline bool SectionRef::isBitcode() const {
   return OwningObject->isSectionBitcode(SectionPimpl);
+}
+
+inline bool SectionRef::isStripped() const {
+  return OwningObject->isSectionStripped(SectionPimpl);
 }
 
 inline relocation_iterator SectionRef::relocation_begin() const {

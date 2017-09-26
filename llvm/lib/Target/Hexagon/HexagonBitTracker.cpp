@@ -149,7 +149,7 @@ const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(
     default:
       break;
   }
-#ifndef DEBUG
+#ifndef NDEBUG
   dbgs() << "Reg class id: " << RC.getID() << " idx: " << Idx << '\n';
 #endif
   llvm_unreachable("Unimplemented combination of reg class/subreg idx");

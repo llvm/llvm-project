@@ -3842,4 +3842,31 @@ def int_nvvm_vote_ballot_sync :
             [IntrNoMem, IntrConvergent], "llvm.nvvm.vote.ballot.sync">,
   GCCBuiltin<"__nvvm_vote_ballot_sync">;
 
+//
+// MATCH.SYNC
+//
+// match.any.sync.b32 mask, value
+def int_nvvm_match_any_sync_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.match.any.sync.i32">,
+  GCCBuiltin<"__nvvm_match_any_sync_i32">;
+// match.any.sync.b64 mask, value
+def int_nvvm_match_any_sync_i64 :
+  Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i64_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.match.any.sync.i64">,
+  GCCBuiltin<"__nvvm_match_any_sync_i64">;
+
+// match.all instruction have two variants -- one returns a single value, another
+// returns a pair {value, predicate}. We currently only implement the latter as
+// that's the variant exposed by CUDA API.
+
+// match.all.sync.b32p mask, value
+def int_nvvm_match_all_sync_i32p :
+  Intrinsic<[llvm_i32_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.match.all.sync.i32p">;
+// match.all.sync.b64p mask, value
+def int_nvvm_match_all_sync_i64p :
+  Intrinsic<[llvm_i64_ty, llvm_i1_ty], [llvm_i32_ty, llvm_i64_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.match.all.sync.i64p">;
+
 } // let TargetPrefix = "nvvm"
