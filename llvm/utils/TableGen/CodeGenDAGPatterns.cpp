@@ -920,10 +920,8 @@ static unsigned getPatternSize(const TreePatternNode *P,
   if (P->isLeaf() && isa<IntInit>(P->getLeafValue()))
     Size += 2;
 
-  const ComplexPattern *AM = P->getComplexPatternInfo(CGP);
-  if (AM) {
+  if (const ComplexPattern *AM = P->getComplexPatternInfo(CGP)) {
     Size += AM->getComplexity();
-
     // We don't want to count any children twice, so return early.
     return Size;
   }

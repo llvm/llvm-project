@@ -308,7 +308,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   ret    x30                    // jump to pc
 
-#elif defined(__arm__) && !defined(__APPLE__)
+#elif defined(__arm__) && !(defined(__APPLE__) || defined(__USING_SJLJ_EXCEPTIONS__))
 
 #if !defined(__ARM_ARCH_ISA_ARM)
   .thumb

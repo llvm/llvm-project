@@ -396,46 +396,6 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0, i8 %x1) {
   ret i8 %res2
 }
 
-declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float>, <16 x float>, i16)
-
-define <16 x float>@test_int_x86_avx512_mask_broadcastf32x2_512(<4 x float> %x0, <16 x float> %x2, i16 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x2_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vaddps %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float>  %x0, <16 x float> %x2, i16 %x3)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float> %x0, <16 x float> zeroinitializer, i16 %x3)
-  %res2 = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float> %x0, <16 x float> %x2, i16 -1)
-  %res3 = fadd <16 x float> %res, %res1
-  %res4 = fadd <16 x float> %res3, %res2
-  ret <16 x float> %res4
-}
-
-declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32>, <16 x i32>, i16)
-
-define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x2_512(<4 x i32> %x0, <16 x i32> %x2, i16 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x2_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm2 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32>  %x0, <16 x i32> %x2, i16 %x3)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32> %x0, <16 x i32> zeroinitializer, i16 %x3)
-  %res2 = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32> %x0, <16 x i32> %x2, i16 -1)
-  %res3 = add <16 x i32> %res, %res1
-  %res4 = add <16 x i32> %res3, %res2
-  ret <16 x i32> %res4
-}
-
 declare i16 @llvm.x86.avx512.cvtd2mask.512(<16 x i32>)
 
 define i16@test_int_x86_avx512_cvtd2mask_512(<16 x i32> %x0) {

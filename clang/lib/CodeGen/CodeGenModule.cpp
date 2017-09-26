@@ -476,17 +476,11 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "Debug Info Version",
                               llvm::DEBUG_METADATA_VERSION);
 
-  // Width of wchar_t in bytes
-  uint64_t WCharWidth =
-      Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
-  assert((LangOpts.ShortWChar ||
-          llvm::TargetLibraryInfoImpl::getTargetWCharSize(Target.getTriple()) ==
-              Target.getWCharWidth() / 8) &&
-         "LLVM wchar_t size out of sync");
-
   // We need to record the widths of enums and wchar_t, so that we can generate
   // the correct build attributes in the ARM backend. wchar_size is also used by
   // TargetLibraryInfo.
+  uint64_t WCharWidth =
+      Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
