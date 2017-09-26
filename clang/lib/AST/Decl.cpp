@@ -3923,9 +3923,9 @@ void RecordDecl::LoadFieldsFromExternalStorage() const {
 
 bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
   ASTContext &Context = getASTContext();
-  if (!Context.getLangOpts().Sanitize.hasOneOf(
-          SanitizerKind::Address | SanitizerKind::KernelAddress) ||
-      !Context.getLangOpts().SanitizeAddressFieldPadding)
+  const SanitizerMask EnabledAsanMask = Context.getLangOpts().Sanitize.Mask &
+      (SanitizerKind::Address | SanitizerKind::KernelAddress);
+  if (!EnabledAsanMask || !Context.getLangOpts().SanitizeAddressFieldPadding)
     return false;
   const auto &Blacklist = Context.getSanitizerBlacklist();
   const auto *CXXRD = dyn_cast<CXXRecordDecl>(this);
@@ -3943,9 +3943,11 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
     ReasonToReject = 4;  // has trivial destructor.
   else if (CXXRD->isStandardLayout())
     ReasonToReject = 5;  // is standard layout.
-  else if (Blacklist.isBlacklistedLocation(getLocation(), "field-padding"))
+  else if (Blacklist.isBlacklistedLocation(EnabledAsanMask, getLocation(),
+                                           "field-padding"))
     ReasonToReject = 6;  // is in a blacklisted file.
-  else if (Blacklist.isBlacklistedType(getQualifiedNameAsString(),
+  else if (Blacklist.isBlacklistedType(EnabledAsanMask,
+                                       getQualifiedNameAsString(),
                                        "field-padding"))
     ReasonToReject = 7;  // is blacklisted.
 

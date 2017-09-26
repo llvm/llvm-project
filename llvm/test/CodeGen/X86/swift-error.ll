@@ -11,8 +11,8 @@ entry:
 }
 
 ; CHECK-LABEL: g
-; CHECK: pushq   %r12
+; CHECK-NOT: pushq   %r12
 ; CHECK: callq   f
-; CHECK: popq    %r12
+; CHECK-NOT: popq    %r12
 ; CHECK: retq
 

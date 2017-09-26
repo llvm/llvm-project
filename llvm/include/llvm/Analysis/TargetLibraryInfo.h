@@ -193,13 +193,9 @@ public:
     ShouldSignExtI32Param = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes.
+  /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
+  /// This queries the 'wchar_size' metadata.
   unsigned getWCharSize(const Module &M) const;
-
-  /// Returns size of the default wchar_t type on target \p T. This is mostly
-  /// intended to verify that the size in the frontend matches LLVM. All other
-  /// queries should use getWCharSize() instead.
-  static unsigned getTargetWCharSize(const Triple &T);
 };
 
 /// Provides information about what library functions are available for
