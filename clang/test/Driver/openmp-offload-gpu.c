@@ -89,7 +89,7 @@
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
 
-// CHK-TWOCUBIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+// CHK-TWOCUBIN: nvlink{{.*}}openmp-offload-{{.*}}.cubin" "{{.*}}openmp-offload-{{.*}}.cubin"
 
 /// ###########################################################################
 
@@ -99,7 +99,7 @@
 // RUN:   %clang -### -no-canonical-prefixes -target x86_64-apple-darwin17.0.0 -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN-DARWIN %s
 
-// CHK-TWOCUBIN-DARWIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+// CHK-TWOCUBIN-DARWIN: nvlink{{.*}}openmp-offload-{{.*}}.cubin" "{{.*}}openmp-offload-{{.*}}.cubin"
 
 /// ###########################################################################
 
@@ -125,3 +125,13 @@
 // RUN:   | FileCheck -check-prefix=CHK-PTXAS-RELO %s
 
 // CHK-PTXAS-RELO: ptxas{{.*}}" "-c"
+
+/// ###########################################################################
+
+/// Check that error is not thrown by toolchain when no cuda lib flag is used.
+/// Check that the flag is passed when -fopenmp-relocatable-target is used.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 \
+// RUN:   -nocudalib -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FLAG-NOLIBDEVICE %s
+
+// CHK-FLAG-NOLIBDEVICE-NOT: error:{{.*}}sm_60
