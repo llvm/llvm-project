@@ -323,6 +323,7 @@ void SimplifyIndvar::replaceSRemWithURem(BinaryOperator *Rem) {
   Rem->replaceAllUsesWith(URem);
   DEBUG(dbgs() << "INDVARS: Simplified srem: " << *Rem << '\n');
   ++NumSimplifiedSRem;
+  Changed = true;
   DeadInsts.emplace_back(Rem);
 }
 
@@ -398,7 +399,6 @@ void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
     return;
 
   replaceSRemWithURem(Rem);
-  Changed = true;
 }
 
 bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {

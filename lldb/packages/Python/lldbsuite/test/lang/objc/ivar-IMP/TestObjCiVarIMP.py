@@ -30,15 +30,11 @@ class ObjCiVarIMPTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIf(archs=['i386'])  # objc file does not build for i386
     @no_debug_info_test
     def test_imp_ivar_type(self):
         """Test that dynamically discovered ivars of type IMP do not crash LLDB"""
-        execute_command("make repro")
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
+        self.build()
         exe = os.path.join(os.getcwd(), "a.out")
 
         # Create a target from the debugger.

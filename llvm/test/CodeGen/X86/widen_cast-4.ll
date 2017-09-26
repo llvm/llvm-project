@@ -26,7 +26,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:    psubw %xmm0, %xmm2
 ; NARROW-NEXT:    psllw $8, %xmm2
 ; NARROW-NEXT:    psraw $8, %xmm2
-; NARROW-NEXT:    psraw $2, %xmm2
+; NARROW-NEXT:    psrlw $2, %xmm2
 ; NARROW-NEXT:    pshufb %xmm1, %xmm2
 ; NARROW-NEXT:    movq %xmm2, (%edx,%eax,8)
 ; NARROW-NEXT:    incl (%esp)

@@ -33,12 +33,12 @@ define i8 @global8_load() {
 
 define void @array8_store() {
 ; CHECK-LABEL: array8_store:
+; CHECK: ldi [[REG1:r[0-9]+]], 3
+; CHECK: sts char.array+2, [[REG1]]
+; CHECK: ldi [[REG3:r[0-9]+]], 1
 ; CHECK: ldi [[REG2:r[0-9]+]], 2
 ; CHECK: sts char.array+1, [[REG2]]
-; CHECK: ldi [[REG1:r[0-9]+]], 1
-; CHECK: sts char.array, [[REG1]]
-; CHECK: ldi [[REG:r[0-9]+]], 3
-; CHECK: sts char.array+2, [[REG]]
+; CHECK: sts char.array, [[REG3]]
   store i8 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 0)
   store i8 2, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 1)
   store i8 3, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 2)

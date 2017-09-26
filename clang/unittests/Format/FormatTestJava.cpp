@@ -412,6 +412,7 @@ TEST_F(FormatTestJava, SynchronizedKeyword) {
 
 TEST_F(FormatTestJava, AssertKeyword) {
   verifyFormat("assert a && b;");
+  verifyFormat("assert (a && b);");
 }
 
 TEST_F(FormatTestJava, PackageDeclarations) {

@@ -985,17 +985,15 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSE41-LABEL: blend_neg_logic_v4i32_2:
 ; SSE41:       # BB#0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    psrad $31, %xmm1
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    movaps %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_neg_logic_v4i32_2:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0

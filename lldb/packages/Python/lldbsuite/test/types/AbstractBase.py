@@ -98,7 +98,7 @@ class GenericTester(TestBase):
             remote_path = lldbutil.append_to_process_working_directory(
                 "lldb-stdout-redirect.txt")
             self.runCmd(
-                'process launch -o {remote}'.format(remote=remote_path))
+                'process launch -- {remote}'.format(remote=remote_path))
             # copy remote_path to local host
             self.runCmd('platform get-file {remote} "{local}"'.format(
                 remote=remote_path, local=self.golden_filename))
