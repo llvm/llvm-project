@@ -739,16 +739,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   SymbolContextList sc_list;
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
-
-  const char *name_unique_cstr = name.GetCString();
-
-  if (name_unique_cstr == NULL)
-    return;
-
-  static ConstString id_name("id");
-  static ConstString Class_name("Class");
-
-  if (name == id_name || name == Class_name)
+  if (IgnoreName(name, false))
     return;
 
   // Only look for functions by name out in our symbols if the function
@@ -809,7 +800,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     } while (0);
   }
 
-  if (name_unique_cstr[0] == '$' && !namespace_decl) {
+  if (name.GetCString()[0] == '$' && !namespace_decl) {
     static ConstString g_lldb_class_name("$__lldb_class");
 
     if (name == g_lldb_class_name) {
@@ -1041,7 +1032,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
         if (ast) {
           clang::NamespaceDecl *namespace_decl =
               ClangASTContext::GetUniqueNamespaceDeclaration(
-                  m_ast_context, name_unique_cstr, nullptr);
+                  m_ast_context, name.GetCString(), nullptr);
           if (namespace_decl) {
             context.AddNamedDecl(namespace_decl);
             clang::DeclContext *clang_decl_ctx =
@@ -1056,7 +1047,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     // any other $__lldb names should be weeded out now
-    if (!::strncmp(name_unique_cstr, "$__lldb", sizeof("$__lldb") - 1))
+    if (name.GetStringRef().startswith("$__lldb"))
       return;
 
     ExpressionVariableSP pvar_sp(

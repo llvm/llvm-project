@@ -1135,6 +1135,10 @@ public:
       if (Section.isBSS() || Section.isVirtual())
         continue;
 
+      // Skip sections stripped by dsymutil.
+      if (Section.isStripped())
+        continue;
+
       StringRef Data;
       section_iterator RelocatedSection = Section.getRelocatedSection();
       // Try to obtain an already relocated version of this section.

@@ -1646,7 +1646,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   if (!match(And->getOperand(1), m_APInt(C2)))
     return nullptr;
 
-  if (!And->hasOneUse() || !And->getOperand(0)->hasOneUse())
+  if (!And->hasOneUse())
     return nullptr;
 
   // If the LHS is an 'and' of a truncate and we can widen the and/compare to
@@ -1658,7 +1658,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   // set or if it is an equality comparison. Extending a relational comparison
   // when we're checking the sign bit would not work.
   Value *W;
-  if (match(And->getOperand(0), m_Trunc(m_Value(W))) &&
+  if (match(And->getOperand(0), m_OneUse(m_Trunc(m_Value(W)))) &&
       (Cmp.isEquality() || (!C1->isNegative() && !C2->isNegative()))) {
     // TODO: Is this a good transform for vectors? Wider types may reduce
     // throughput. Should this transform be limited (even for scalars) by using
@@ -1680,7 +1680,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   // (icmp pred (and A, (or (shl 1, B), 1), 0))
   //
   // iff pred isn't signed
-  if (!Cmp.isSigned() && C1->isNullValue() &&
+  if (!Cmp.isSigned() && C1->isNullValue() && And->getOperand(0)->hasOneUse() &&
       match(And->getOperand(1), m_One())) {
     Constant *One = cast<Constant>(And->getOperand(1));
     Value *Or = And->getOperand(0);

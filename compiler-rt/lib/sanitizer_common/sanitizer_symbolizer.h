@@ -121,6 +121,8 @@ class Symbolizer final {
 
   const LoadedModule *FindModuleForAddress(uptr address);
 
+  void InvalidateModuleList();
+
  private:
   // GetModuleNameAndOffsetForPC has to return a string to the caller.
   // Since the corresponding module might get unloaded later, we should create

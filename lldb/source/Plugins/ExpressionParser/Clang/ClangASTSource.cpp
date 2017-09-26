@@ -623,6 +623,25 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   }
 }
 
+bool ClangASTSource::IgnoreName(const ConstString name,
+                                bool ignore_all_dollar_names) {
+  static const ConstString id_name("id");
+  static const ConstString Class_name("Class");
+
+  if (name == id_name || name == Class_name)
+    return true;
+
+  StringRef name_string_ref = name.GetStringRef();
+
+  // The ClangASTSource is not responsible for finding $-names.
+  if (name_string_ref.empty() ||
+      (ignore_all_dollar_names && name_string_ref.startswith("$")) ||
+      name_string_ref.startswith("_$"))
+    return true;
+
+  return false;
+}
+
 void ClangASTSource::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     CompilerDeclContext &namespace_decl, unsigned int current_id) {
@@ -633,20 +652,7 @@ void ClangASTSource::FindExternalVisibleDecls(
   SymbolContextList sc_list;
 
   const ConstString name(context.m_decl_name.getAsString().c_str());
-
-  const char *name_unique_cstr = name.GetCString();
-
-  static ConstString id_name("id");
-  static ConstString Class_name("Class");
-
-  if (name == id_name || name == Class_name)
-    return;
-
-  if (name_unique_cstr == NULL)
-    return;
-
-  // The ClangASTSource is not responsible for finding $-names.
-  if (name_unique_cstr[0] == '$')
+  if (IgnoreName(name, true))
     return;
 
   if (module_sp && namespace_decl) {

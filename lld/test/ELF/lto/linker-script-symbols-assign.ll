@@ -10,8 +10,6 @@
 ; CHECK:         Name: foo
 ; CHECK-NEXT:    Value: 0x0
 ; CHECK-NEXT:    Size: 4
-; FIXME: Binding should be Global here. Symbols redefined in script does not
-;        receive correct binding and visibility, this is a known bug.
 ; CHECK-NEXT:    Binding: Weak
 ; CHECK-NEXT:    Type: Object
 ; CHECK-NEXT:    Other: 0

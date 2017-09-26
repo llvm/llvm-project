@@ -92,8 +92,9 @@ __MAKE_SHUFFLES(__shfl_xor, __nvvm_shfl_bfly_i32, __nvvm_shfl_bfly_f32, 0x1f);
 
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
 
+#if CUDA_VERSION >= 9000
+#if (!defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300)
 // __shfl_sync_* variants available in CUDA-9
-#if CUDA_VERSION >= 9000 && (!defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300)
 #pragma push_macro("__MAKE_SYNC_SHUFFLES")
 #define __MAKE_SYNC_SHUFFLES(__FnName, __IntIntrinsic, __FloatIntrinsic,       \
                              __Mask)                                           \
@@ -187,8 +188,33 @@ inline __device__ unsigned int __ballot_sync(unsigned int mask, int pred) {
 
 inline __device__ unsigned int activemask() { return __nvvm_vote_ballot(1); }
 
-#endif // __CUDA_VERSION >= 9000 && (!defined(__CUDA_ARCH__) ||
-       // __CUDA_ARCH__ >= 300)
+#endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
+
+// Define __match* builtins CUDA-9 headers expect to see.
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
+inline __device__ unsigned int __match32_any_sync(unsigned int mask,
+                                                  unsigned int value) {
+  return __nvvm_match_any_sync_i32(mask, value);
+}
+
+inline __device__ unsigned long long
+__match64_any_sync(unsigned int mask, unsigned long long value) {
+  return __nvvm_match_any_sync_i64(mask, value);
+}
+
+inline __device__ unsigned int
+__match32_all_sync(unsigned int mask, unsigned int value, int *pred) {
+  return __nvvm_match_all_sync_i32p(mask, value, pred);
+}
+
+inline __device__ unsigned long long
+__match64_all_sync(unsigned int mask, unsigned long long value, int *pred) {
+  return __nvvm_match_all_sync_i64p(mask, value, pred);
+}
+#include "crt/sm_70_rt.hpp"
+
+#endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
+#endif // __CUDA_VERSION >= 9000
 
 // sm_32 intrinsics: __ldg and __funnelshift_{l,lc,r,rc}.
 
