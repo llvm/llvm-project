@@ -661,22 +661,36 @@ public:
 // with different attributes in a single output sections. To do that
 // we put them into MergeSyntheticSection synthetic input sections which are
 // attached to regular output sections.
-class MergeSyntheticSection final : public SyntheticSection {
+class MergeSyntheticSection : public SyntheticSection {
 public:
+  void addSection(MergeInputSection *MS);
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) override;
+
+protected:
   MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
                         uint32_t Alignment);
-  void addSection(MergeInputSection *MS);
-  void writeTo(uint8_t *Buf) override;
-  void finalizeContents() override;
-  bool shouldTailMerge() const;
-  size_t getSize() const override;
 
-private:
-  void finalizeTailMerge();
-  void finalizeNoTailMerge();
-
-  llvm::StringTableBuilder Builder;
   std::vector<MergeInputSection *> Sections;
+  llvm::StringTableBuilder Builder;
+};
+
+class MergeTailSection final : public MergeSyntheticSection {
+public:
+  MergeTailSection(StringRef Name, uint32_t Type, uint64_t Flags,
+                   uint32_t Alignment)
+      : MergeSyntheticSection(Name, Type, Flags, Alignment) {}
+
+  void finalizeContents() override;
+};
+
+class MergeNoTailSection final : public MergeSyntheticSection {
+public:
+  MergeNoTailSection(StringRef Name, uint32_t Type, uint64_t Flags,
+                     uint32_t Alignment)
+      : MergeSyntheticSection(Name, Type, Flags, Alignment) {}
+
+  void finalizeContents() override;
 };
 
 // .MIPS.abiflags section.

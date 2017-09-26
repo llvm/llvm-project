@@ -5761,7 +5761,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mask_set1_epi64 (__m128i __O, __mmask8 __M, long long __A)
 {
   return (__m128i) __builtin_ia32_selectq_128(__M,
-                                              (__v2di) _mm_set1_epi8(__A),
+                                              (__v2di) _mm_set1_epi64x(__A),
                                               (__v2di) __O);
 }
 
@@ -5769,7 +5769,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maskz_set1_epi64 (__mmask8 __M, long long __A)
 {
   return (__m128i) __builtin_ia32_selectq_128(__M,
-                                              (__v2di) _mm_set1_epi8(__A),
+                                              (__v2di) _mm_set1_epi64x(__A),
                                               (__v2di) _mm_setzero_si128());
 }
 

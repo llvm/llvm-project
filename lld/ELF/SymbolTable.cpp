@@ -206,8 +206,12 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
-  size_t Pos = Name.find("@@");
-  if (Pos != StringRef::npos)
+  //
+  // Since this is a hot path, the following string search code is
+  // optimized for speed. StringRef::find(char) is much faster than
+  // StringRef::find(StringRef).
+  size_t Pos = Name.find('@');
+  if (Pos != StringRef::npos && Pos + 1 < Name.size() && Name[Pos + 1] == '@')
     Name = Name.take_front(Pos);
 
   auto P = Symtab.insert(

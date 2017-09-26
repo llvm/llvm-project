@@ -4563,22 +4563,8 @@ __m256i test_mm256_maskz_set1_epi32(__mmask8 __M) {
 #ifdef __x86_64__
 __m128i test_mm_mask_set1_epi64(__m128i __O, __mmask8 __M, long long __A) {
   // CHECK-LABEL: @test_mm_mask_set1_epi64
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 4
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 5
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 6
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 7
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 8
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 9
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 10
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 11
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 12
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 13
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 14
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 15
+  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_set1_epi64(__O, __M, __A); 
@@ -4586,22 +4572,8 @@ __m128i test_mm_mask_set1_epi64(__m128i __O, __mmask8 __M, long long __A) {
 
 __m128i test_mm_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK-LABEL: @test_mm_maskz_set1_epi64
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 0
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 2
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 3
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 4
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 5
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 6
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 7
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 8
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 9
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 10
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 11
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 12
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 13
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 14
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 15
+  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_set1_epi64(__M, __A); 
