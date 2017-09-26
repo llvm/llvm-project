@@ -7957,16 +7957,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getTypeQuals() != rproto->getTypeQuals())
       return QualType();
 
-    SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
-    bool canUseLeft, canUseRight;
-    if (!mergeExtParameterInfo(lproto, rproto, canUseLeft, canUseRight,
-                               newParamInfos))
+    if (!doFunctionTypesMatchOnExtParameterInfos(rproto, lproto))
       return QualType();
-
-    if (!canUseLeft)
-      allLTypes = false;
-    if (!canUseRight)
-      allRTypes = false;
 
     // Check parameter type compatibility
     SmallVector<QualType, 10> types;
@@ -7998,8 +7990,6 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     FunctionProtoType::ExtProtoInfo EPI = lproto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
-    EPI.ExtParameterInfos =
-        newParamInfos.empty() ? nullptr : newParamInfos.data();
     return getFunctionType(retType, types, EPI);
   }
 
@@ -8359,50 +8349,26 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   llvm_unreachable("Invalid Type::Class!");
 }
 
-bool ASTContext::mergeExtParameterInfo(
-    const FunctionProtoType *FirstFnType, const FunctionProtoType *SecondFnType,
-    bool &CanUseFirst, bool &CanUseSecond,
-    SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &NewParamInfos) {
-  assert(NewParamInfos.empty() && "param info list not empty");
-  CanUseFirst = CanUseSecond = true;
-  bool FirstHasInfo = FirstFnType->hasExtParameterInfos();
-  bool SecondHasInfo = SecondFnType->hasExtParameterInfos();
-
+bool ASTContext::doFunctionTypesMatchOnExtParameterInfos(
+                   const FunctionProtoType *firstFnType,
+                   const FunctionProtoType *secondFnType) {
   // Fast path: if the first type doesn't have ext parameter infos,
-  // we match if and only if the second type also doesn't have them.
-  if (!FirstHasInfo && !SecondHasInfo)
-    return true;
+  // we match if and only if they second type also doesn't have them.
+  if (!firstFnType->hasExtParameterInfos())
+    return !secondFnType->hasExtParameterInfos();
 
-  bool NeedParamInfo = false;
-  size_t E = FirstHasInfo ? FirstFnType->getExtParameterInfos().size()
-                          : SecondFnType->getExtParameterInfos().size();
+  // Otherwise, we can only match if the second type has them.
+  if (!secondFnType->hasExtParameterInfos())
+    return false;
 
-  for (size_t I = 0; I < E; ++I) {
-    FunctionProtoType::ExtParameterInfo FirstParam, SecondParam;
-    if (FirstHasInfo)
-      FirstParam = FirstFnType->getExtParameterInfo(I);
-    if (SecondHasInfo)
-      SecondParam = SecondFnType->getExtParameterInfo(I);
+  auto firstEPI = firstFnType->getExtParameterInfos();
+  auto secondEPI = secondFnType->getExtParameterInfos();
+  assert(firstEPI.size() == secondEPI.size());
 
-    // Cannot merge unless everything except the noescape flag matches.
-    if (FirstParam.withIsNoEscape(false) != SecondParam.withIsNoEscape(false))
+  for (size_t i = 0, n = firstEPI.size(); i != n; ++i) {
+    if (firstEPI[i] != secondEPI[i])
       return false;
-
-    bool FirstNoEscape = FirstParam.isNoEscape();
-    bool SecondNoEscape = SecondParam.isNoEscape();
-    bool IsNoEscape = FirstNoEscape && SecondNoEscape;
-    NewParamInfos.push_back(FirstParam.withIsNoEscape(IsNoEscape));
-    if (NewParamInfos.back().getOpaqueValue())
-      NeedParamInfo = true;
-    if (FirstNoEscape != IsNoEscape)
-      CanUseFirst = false;
-    if (SecondNoEscape != IsNoEscape)
-      CanUseSecond = false;
   }
-
-  if (!NeedParamInfo)
-    NewParamInfos.clear();
-
   return true;
 }
 
