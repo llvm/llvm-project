@@ -51,14 +51,23 @@ Example
 Format
 ======
 
-Each line contains an entity type, followed by a colon and a regular
-expression, specifying the names of the entities, optionally followed by
-an equals sign and a tool-specific category. Empty lines and lines starting
-with "#" are ignored. The meanining of ``*`` in regular expression for entity
-names is different - it is treated as in shell wildcarding. Two generic
-entity types are ``src`` and ``fun``, which allow user to add, respectively,
-source files and functions to special case list. Some sanitizer tools may
-introduce custom entity types - refer to tool-specific docs.
+Blacklists consist of entries, optionally grouped into sections. Empty lines and
+lines starting with "#" are ignored.
+
+Section names are regular expressions written in square brackets that denote
+which sanitizer the following entries apply to. For example, ``[address]``
+specifies AddressSanitizer while ``[cfi-vcall|cfi-icall]`` specifies Control
+Flow Integrity virtual and indirect call checking. Entries without a section
+will be placed under the ``[*]`` section applying to all enabled sanitizers.
+
+Entries contain an entity type, followed by a colon and a regular expression,
+specifying the names of the entities, optionally followed by an equals sign and
+a tool-specific category, e.g. ``fun:*ExampleFunc=example_category``.  The
+meaning of ``*`` in regular expression for entity names is different - it is
+treated as in shell wildcarding. Two generic entity types are ``src`` and
+``fun``, which allow users to specify source files and functions, respectively.
+Some sanitizer tools may introduce custom entity types and categories - refer to
+tool-specific docs.
 
 .. code-block:: bash
 
@@ -77,3 +86,10 @@ introduce custom entity types - refer to tool-specific docs.
     fun:*BadFunction*
     # Specific sanitizer tools may introduce categories.
     src:/special/path/*=special_sources
+    # Sections can be used to limit blacklist entries to specific sanitizers
+    [address]
+    fun:*BadASanFunc*
+    # Section names are regular expressions
+    [cfi-vcall|cfi-icall]
+    fun:*BadCfiCall
+    # Entries without sections are placed into [*] and apply to all sanitizers

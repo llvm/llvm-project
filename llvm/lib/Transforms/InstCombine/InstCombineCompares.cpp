@@ -1714,22 +1714,6 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
     }
   }
 
-  // (X & C2) > C1 --> (X & C2) != 0, if any bit set in (X & C2) will produce a
- // result greater than C1. Also handle (X & C2) < C1 --> (X & C2) == 0.
-  if (!C2->isNullValue()) {
-    unsigned NumTZ = C2->countTrailingZeros();
-    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT &&
-        NumTZ >= C1->getActiveBits()) {
-      Constant *Zero = Constant::getNullValue(And->getType());
-      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
-    }
-    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
-        NumTZ >= C1->ceilLogBase2()) {
-      Constant *Zero = Constant::getNullValue(And->getType());
-      return new ICmpInst(ICmpInst::ICMP_EQ, And, Zero);
-    }
-  }
-
   return nullptr;
 }
 
@@ -4221,6 +4205,11 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
       if (Op1Min == Op0Min + 1)
         return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
                             ConstantInt::get(Op0->getType(), Op1Min - 1));
+      // X <u C --> X == 0, if the number of zero bits in the bottom of X
+      // exceeds the log2 of C.
+      if (Op0Known.countMinTrailingZeros() >= Op1Min.ceilLogBase2())
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            Constant::getNullValue(Op1->getType()));
     }
     break;
   }
@@ -4237,6 +4226,11 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
       if (Op1Min == Op0Max - 1)
         return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
                             ConstantInt::get(Op1->getType(), Op1Min + 1));
+      // X >u C --> X != 0, if the number of zero bits in the bottom of X
+      // exceeds the log2 of C.
+      if (Op0Known.countMinTrailingZeros() >= Op1Min.getActiveBits())
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0,
+                            Constant::getNullValue(Op1->getType()));
     }
     break;
   }

@@ -7888,6 +7888,27 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+  case X86::MOV8rr_NOREX:
+    MI.setDesc(get(X86::MOV8rr));
+    return true;
+  case X86::MOV8rm_NOREX:
+    MI.setDesc(get(X86::MOV8rm));
+    return true;
+  case X86::MOV8mr_NOREX:
+    MI.setDesc(get(X86::MOV8mr));
+    return true;
+  case X86::MOVZX32_NOREXrr8:
+    MI.setDesc(get(X86::MOVZX32rr8));
+    return true;
+  case X86::MOVZX32_NOREXrm8:
+    MI.setDesc(get(X86::MOVZX32rm8));
+    return true;
+  case X86::MOVSX32_NOREXrr8:
+    MI.setDesc(get(X86::MOVSX32rr8));
+    return true;
+  case X86::MOVSX32_NOREXrm8:
+    MI.setDesc(get(X86::MOVSX32rm8));
+    return true;
   case X86::TEST8ri_NOREX:
     MI.setDesc(get(X86::TEST8ri));
     return true;
