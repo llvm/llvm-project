@@ -110,38 +110,32 @@ __ockl_get_local_size(uint dim)
 {
     // TODO save some effort if -cl-uniform-work-group-size is used
     __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
-    uint l, g, n, d;
+    uint g, n, d;
 
     switch(dim) {
     case 0:
-        l = __llvm_amdgcn_workitem_id_x();
         g = __llvm_amdgcn_workgroup_id_x();
         n = p->grid_size_x;
         d = p->workgroup_size_x;
         break;
     case 1:
-        l = __llvm_amdgcn_workitem_id_y();
         g = __llvm_amdgcn_workgroup_id_y();
         n = p->grid_size_y;
         d = p->workgroup_size_y;
         break;
     case 2:
-        l = __llvm_amdgcn_workitem_id_z();
         g = __llvm_amdgcn_workgroup_id_z();
         n = p->grid_size_z;
         d = p->workgroup_size_z;
         break;
     default:
-        l = 0;
         g = 0;
         n = 0;
         d = 1;
         break;
     }
-    uint q = n / d;
-    uint r = n - q*d;
-    uint i = g*d + l;
-    return (r > 0) & (i >= n-r) ? r : d;
+    uint r = n - g*d;
+    return (r < d) ? r : d;
 }
 
 ATTR size_t
