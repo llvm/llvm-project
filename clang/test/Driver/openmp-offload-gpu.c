@@ -125,3 +125,13 @@
 // RUN:   | FileCheck -check-prefix=CHK-PTXAS-RELO %s
 
 // CHK-PTXAS-RELO: ptxas{{.*}}" "-c"
+
+/// ###########################################################################
+
+/// Check that error is not thrown by toolchain when no cuda lib flag is used.
+/// Check that the flag is passed when -fopenmp-relocatable-target is used.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 \
+// RUN:   -nocudalib -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-FLAG-NOLIBDEVICE %s
+
+// CHK-FLAG-NOLIBDEVICE-NOT: error:{{.*}}sm_60

@@ -8306,52 +8306,52 @@ __m512d test_mm512_setzero_pd()
 __mmask16 test_mm512_int2mask(int __a)
 {
   // CHECK-LABEL: test_mm512_int2mask
-  // CHECK: trunc i32 %1 to i16
+  // CHECK: trunc i32 %{{.*}} to i16
   return _mm512_int2mask(__a);
 }
 
 int test_mm512_mask2int(__mmask16 __a)
 {
   // CHECK-LABEL: test_mm512_mask2int
-  // CHECK: zext i16 %1 to i32
+  // CHECK: zext i16 %{{.*}} to i32
   return _mm512_mask2int(__a);
 }
 
 __m128 test_mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
   // CHECK-LABEL: @test_mm_mask_move_ss
-  // CHECK: %vecext.i = extractelement <4 x float> %6, i32 0
-  // CHECK: %vecext1.i = extractelement <4 x float> %7, i32 0
-  // CHECK: %cond.i = phi float [ %vecext.i, %cond.true.i ], [ %vecext1.i, %cond.false.i ]
-  // CHECK: %vecins.i = insertelement <4 x float> %8, float %cond.i, i32 0
+  // CHECK:  extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK:  extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK:  phi float [ %{{.*}}, %{{.*}} ], [ %{{.*}}, %{{.*}} ]
+  // CHECK:  insertelement <4 x float> %{{.*}}, float %cond.i, i32 0
   return _mm_mask_move_ss ( __W,  __U,  __A,  __B);
 }
 
 __m128 test_mm_maskz_move_ss (__mmask8 __U, __m128 __A, __m128 __B)
 {
   // CHECK-LABEL: @test_mm_maskz_move_ss
-  // CHECK: %vecext.i = extractelement <4 x float> %5, i32 0
-  // CHECK: %cond.i = phi float [ %vecext.i, %cond.true.i ], [ 0.000000e+00, %cond.false.i ]
-  // CHECK: %vecins.i = insertelement <4 x float> %6, float %cond.i, i32 0
+  // CHECK:  extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK:  phi float [ %{{.*}}, %{{.*}} ], [ 0.000000e+00, %{{.*}} ]
+  // CHECK:  insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_maskz_move_ss (__U, __A, __B);
 }
 
 __m128d test_mm_mask_move_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
   // CHECK-LABEL: @test_mm_mask_move_sd
-  // CHECK: %vecext.i = extractelement <2 x double> %6, i32 0
-  // CHECK: %vecext1.i = extractelement <2 x double> %7, i32 0
-  // CHECK: %cond.i = phi double [ %vecext.i, %cond.true.i ], [ %vecext1.i, %cond.false.i ]
-  // CHECK: %vecins.i = insertelement <2 x double> %8, double %cond.i, i32 0
+  // CHECK:  extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK:  extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK:  phi double [ %{{.*}}, %{{.*}} ], [ %{{.*}}, %{{.*}} ]
+  // CHECK:  insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_mask_move_sd ( __W,  __U,  __A,  __B);
 }
 
 __m128d test_mm_maskz_move_sd (__mmask8 __U, __m128d __A, __m128d __B)
 {
   // CHECK-LABEL: @test_mm_maskz_move_sd
-  // CHECK: %vecext.i = extractelement <2 x double> %5, i32 0
-  // CHECK: %cond.i = phi double [ %vecext.i, %cond.true.i ], [ 0.000000e+00, %cond.false.i ]
-  // CHECK: %vecins.i = insertelement <2 x double> %6, double %cond.i, i32 0
+  // CHECK:  extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK:  phi double [ %{{.*}}, %{{.*}} ], [ 0.000000e+00, %{{.*}} ]
+  // CHECK:  insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_maskz_move_sd (__U, __A, __B);
 }
 

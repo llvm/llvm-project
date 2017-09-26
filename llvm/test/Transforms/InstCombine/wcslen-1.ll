@@ -7,6 +7,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 declare i64 @wcslen(i32*)
 
+!0 = !{i32 1, !"wchar_size", i32 4}
+!llvm.module.flags = !{!0}
+
 @hello = constant [6 x i32] [i32 104, i32 101, i32 108, i32 108, i32 111, i32 0]
 @longer = constant [7 x i32] [i32 108, i32 111, i32 110, i32 103, i32 101, i32 114, i32 0]
 @null = constant [1 x i32] zeroinitializer
