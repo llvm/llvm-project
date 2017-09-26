@@ -336,7 +336,6 @@ define <4 x i16> @sra_trunc_srl_v4i32(<4 x i32> %x) nounwind {
 define <4 x i32> @shl_zext_shl_v4i32(<4 x i16> %x) nounwind {
 ; CHECK-LABEL: shl_zext_shl_v4i32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pslld $19, %xmm0
 ; CHECK-NEXT:    retq
   %shl0 = shl <4 x i16> %x, <i16 2, i16 2, i16 2, i16 2>

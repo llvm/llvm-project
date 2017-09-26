@@ -3276,8 +3276,22 @@ SDValue PPCDAGToDAGISel::get64BitZExtCompare(SDValue LHS, SDValue RHS,
                                           ShiftR, ShiftL, SubtractCarry), 0);
   }
   case ISD::SETGT: {
+    // {subc.reg, subc.CA} = (subcarry %b, %a)
+    // (zext (setcc %a, %b, setgt)) ->
+    //   (xor (adde (lshr %a, 63), (ashr %b, 63), subc.CA), 1)
+    // (zext (setcc %a, 0, setgt)) -> (lshr (nor (add %a, -1), %a), 63)
     if (IsRHSNegOne)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GEZExt);
+    if (IsRHSZero) {
+      SDValue Addi =
+        SDValue(CurDAG->getMachineNode(PPC::ADDI8, dl, MVT::i64, LHS,
+                                       getI64Imm(~0ULL, dl)), 0);
+      SDValue Nor =
+        SDValue(CurDAG->getMachineNode(PPC::NOR8, dl, MVT::i64, Addi, LHS), 0);
+      return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, Nor,
+                                            getI64Imm(1, dl),
+                                            getI64Imm(63, dl)), 0);
+    }
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isNullValue();
@@ -3285,9 +3299,31 @@ SDValue PPCDAGToDAGISel::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     LLVM_FALLTHROUGH;
   }
   case ISD::SETLT: {
+    // {subc.reg, subc.CA} = (subcarry %a, %b)
+    // (zext (setcc %a, %b, setlt)) ->
+    //   (xor (adde (lshr %b, 63), (ashr %a, 63), subc.CA), 1)
+    // (zext (setcc %a, 0, setlt)) -> (lshr %a, 63)
     if (IsRHSOne)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LEZExt);
-    return SDValue();
+    if (IsRHSZero)
+      return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, LHS,
+                                            getI64Imm(1, dl),
+                                            getI64Imm(63, dl)), 0);
+    SDValue SRADINode =
+      SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64,
+                                     LHS, getI64Imm(63, dl)), 0);
+    SDValue SRDINode =
+      SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                     RHS, getI64Imm(1, dl),
+                                     getI64Imm(63, dl)), 0);
+    SDValue SUBFC8Carry =
+      SDValue(CurDAG->getMachineNode(PPC::SUBFC8, dl, MVT::i64, MVT::Glue,
+                                     RHS, LHS), 1);
+    SDValue ADDE8Node =
+      SDValue(CurDAG->getMachineNode(PPC::ADDE8, dl, MVT::i64, MVT::Glue,
+                                     SRDINode, SRADINode, SUBFC8Carry), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::XORI8, dl, MVT::i64,
+                                          ADDE8Node, getI64Imm(1, dl)), 0);
   }
   }
 }
@@ -3362,8 +3398,21 @@ SDValue PPCDAGToDAGISel::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     return SDValue(CurDAG->getMachineNode(PPC::NEG8, dl, MVT::i64, Adde), 0);
   }
   case ISD::SETGT: {
+    // {subc.reg, subc.CA} = (subcarry %b, %a)
+    // (zext (setcc %a, %b, setgt)) ->
+    //   -(xor (adde (lshr %a, 63), (ashr %b, 63), subc.CA), 1)
+    // (zext (setcc %a, 0, setgt)) -> (ashr (nor (add %a, -1), %a), 63)
     if (IsRHSNegOne)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GESExt);
+    if (IsRHSZero) {
+      SDValue Add =
+        SDValue(CurDAG->getMachineNode(PPC::ADDI8, dl, MVT::i64, LHS,
+                                       getI64Imm(-1, dl)), 0);
+      SDValue Nor =
+        SDValue(CurDAG->getMachineNode(PPC::NOR8, dl, MVT::i64, Add, LHS), 0);
+      return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64, Nor,
+                                            getI64Imm(63, dl)), 0);
+    }
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isNullValue();
@@ -3371,9 +3420,34 @@ SDValue PPCDAGToDAGISel::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     LLVM_FALLTHROUGH;
   }
   case ISD::SETLT: {
+    // {subc.reg, subc.CA} = (subcarry %a, %b)
+    // (zext (setcc %a, %b, setlt)) ->
+    //   -(xor (adde (lshr %b, 63), (ashr %a, 63), subc.CA), 1)
+    // (zext (setcc %a, 0, setlt)) -> (ashr %a, 63)
     if (IsRHSOne)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LESExt);
-    return SDValue();
+    if (IsRHSZero) {
+      return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64, LHS,
+                                            getI64Imm(63, dl)), 0);
+    }
+    SDValue SRADINode =
+      SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64,
+                                     LHS, getI64Imm(63, dl)), 0);
+    SDValue SRDINode =
+      SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
+                                     RHS, getI64Imm(1, dl),
+                                     getI64Imm(63, dl)), 0);
+    SDValue SUBFC8Carry =
+      SDValue(CurDAG->getMachineNode(PPC::SUBFC8, dl, MVT::i64, MVT::Glue,
+                                     RHS, LHS), 1);
+    SDValue ADDE8Node =
+      SDValue(CurDAG->getMachineNode(PPC::ADDE8, dl, MVT::i64,
+                                     SRDINode, SRADINode, SUBFC8Carry), 0);
+    SDValue XORI8Node =
+      SDValue(CurDAG->getMachineNode(PPC::XORI8, dl, MVT::i64,
+                                     ADDE8Node, getI64Imm(1, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::NEG8, dl, MVT::i64,
+                                          XORI8Node), 0);
   }
   }
 }

@@ -997,10 +997,10 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind {
 define <4 x i64> @splatconstant_rotate_mask_v4i64(<4 x i64> %a) nounwind {
 ; AVX1-LABEL: splatconstant_rotate_mask_v4i64:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpsrlq $49, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrlq $49, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlq $49, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

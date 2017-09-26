@@ -127,7 +127,7 @@ entry:
   ret i64 %conv1
 
 ; CHECK: @foo2l
-; CHECK: sld. 4, 3, 4
+; CHECK: sld 4, 3, 4
 ; CHECK: std 4, 0(5)
 }
 

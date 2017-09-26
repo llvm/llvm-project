@@ -5529,6 +5529,12 @@ def : Pat<(v4i32 (NEONvshl (sext (v4i16 DPR:$Rn)), (i32 16))),
           (VSHLLi16 DPR:$Rn, 16)>;
 def : Pat<(v2i64 (NEONvshl (sext (v2i32 DPR:$Rn)), (i32 32))),
           (VSHLLi32 DPR:$Rn, 32)>;
+def : Pat<(v8i16 (NEONvshl (anyext (v8i8 DPR:$Rn)), (i32 8))),
+          (VSHLLi8 DPR:$Rn, 8)>;
+def : Pat<(v4i32 (NEONvshl (anyext (v4i16 DPR:$Rn)), (i32 16))),
+          (VSHLLi16 DPR:$Rn, 16)>;
+def : Pat<(v2i64 (NEONvshl (anyext (v2i32 DPR:$Rn)), (i32 32))),
+          (VSHLLi32 DPR:$Rn, 32)>;
 
 //   VSHRN    : Vector Shift Right and Narrow
 defm VSHRN    : N2VNSh_HSD<0,1,0b1000,0,0,1, IIC_VSHLiD, "vshrn", "i",

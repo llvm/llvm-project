@@ -1434,6 +1434,9 @@ public:
   const APInt &getAPIntValue() const { return Value->getValue(); }
   uint64_t getZExtValue() const { return Value->getZExtValue(); }
   int64_t getSExtValue() const { return Value->getSExtValue(); }
+  uint64_t getLimitedValue(uint64_t Limit = UINT64_MAX) {
+    return Value->getLimitedValue(Limit);
+  }
 
   bool isOne() const { return Value->isOne(); }
   bool isNullValue() const { return Value->isZero(); }

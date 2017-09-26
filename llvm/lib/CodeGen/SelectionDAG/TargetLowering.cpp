@@ -779,33 +779,38 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     break;
   }
   case ISD::SHL:
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      unsigned ShAmt = SA->getZExtValue();
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op.getOperand(1))) {
       SDValue InOp = Op.getOperand(0);
 
       // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
+      if (SA->getAPIntValue().uge(BitWidth))
         break;
+
+      unsigned ShAmt = SA->getZExtValue();
 
       // If this is ((X >>u C1) << ShAmt), see if we can simplify this into a
       // single shift.  We can do this if the bottom bits (which are shifted
       // out) are never demanded.
-      if (InOp.getOpcode() == ISD::SRL &&
-          isa<ConstantSDNode>(InOp.getOperand(1))) {
-        if (ShAmt && (NewMask & APInt::getLowBitsSet(BitWidth, ShAmt)) == 0) {
-          unsigned C1= cast<ConstantSDNode>(InOp.getOperand(1))->getZExtValue();
-          unsigned Opc = ISD::SHL;
-          int Diff = ShAmt-C1;
-          if (Diff < 0) {
-            Diff = -Diff;
-            Opc = ISD::SRL;
-          }
+      if (InOp.getOpcode() == ISD::SRL) {
+        if (ConstantSDNode *SA2 = isConstOrConstSplat(InOp.getOperand(1))) {
+          if (ShAmt && (NewMask & APInt::getLowBitsSet(BitWidth, ShAmt)) == 0) {
+            if (SA2->getAPIntValue().ult(BitWidth)) {
+              unsigned C1 = SA2->getZExtValue();
+              unsigned Opc = ISD::SHL;
+              int Diff = ShAmt-C1;
+              if (Diff < 0) {
+                Diff = -Diff;
+                Opc = ISD::SRL;
+              }
 
-          SDValue NewSA =
-            TLO.DAG.getConstant(Diff, dl, Op.getOperand(1).getValueType());
-          EVT VT = Op.getValueType();
-          return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT,
-                                                   InOp.getOperand(0), NewSA));
+              SDValue NewSA =
+                TLO.DAG.getConstant(Diff, dl, Op.getOperand(1).getValueType());
+              EVT VT = Op.getValueType();
+              return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT,
+                                                       InOp.getOperand(0),
+                                                       NewSA));
+            }
+          }
         }
       }
 
@@ -817,7 +822,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       if (InOp.getNode()->getOpcode() == ISD::ANY_EXTEND) {
         SDValue InnerOp = InOp.getOperand(0);
         EVT InnerVT = InnerOp.getValueType();
-        unsigned InnerBits = InnerVT.getSizeInBits();
+        unsigned InnerBits = InnerVT.getScalarSizeInBits();
         if (ShAmt < InnerBits && NewMask.getActiveBits() <= InnerBits &&
             isTypeDesirableForOp(ISD::SHL, InnerVT)) {
           EVT ShTy = getShiftAmountTy(InnerVT, DL);
@@ -836,45 +841,42 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         // (shl (anyext x), c2-c1).  This requires that the bottom c1 bits
         // aren't demanded (as above) and that the shifted upper c1 bits of
         // x aren't demanded.
-        if (InOp.hasOneUse() &&
-            InnerOp.getOpcode() == ISD::SRL &&
-            InnerOp.hasOneUse() &&
-            isa<ConstantSDNode>(InnerOp.getOperand(1))) {
-          unsigned InnerShAmt = cast<ConstantSDNode>(InnerOp.getOperand(1))
-            ->getZExtValue();
-          if (InnerShAmt < ShAmt &&
-              InnerShAmt < InnerBits &&
-              NewMask.getActiveBits() <= (InnerBits - InnerShAmt + ShAmt) &&
-              NewMask.countTrailingZeros() >= ShAmt) {
-            SDValue NewSA =
-              TLO.DAG.getConstant(ShAmt - InnerShAmt, dl,
-                                  Op.getOperand(1).getValueType());
-            EVT VT = Op.getValueType();
-            SDValue NewExt = TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT,
-                                             InnerOp.getOperand(0));
-            return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SHL, dl, VT,
-                                                     NewExt, NewSA));
+        if (InOp.hasOneUse() && InnerOp.getOpcode() == ISD::SRL &&
+            InnerOp.hasOneUse()) {
+          if (ConstantSDNode *SA2 = isConstOrConstSplat(InnerOp.getOperand(1))) {
+            unsigned InnerShAmt = SA2->getLimitedValue(InnerBits);
+            if (InnerShAmt < ShAmt &&
+                InnerShAmt < InnerBits &&
+                NewMask.getActiveBits() <= (InnerBits - InnerShAmt + ShAmt) &&
+                NewMask.countTrailingZeros() >= ShAmt) {
+              SDValue NewSA =
+                TLO.DAG.getConstant(ShAmt - InnerShAmt, dl,
+                                    Op.getOperand(1).getValueType());
+              EVT VT = Op.getValueType();
+              SDValue NewExt = TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT,
+                                               InnerOp.getOperand(0));
+              return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SHL, dl, VT,
+                                                       NewExt, NewSA));
+            }
           }
         }
       }
 
-      Known.Zero <<= SA->getZExtValue();
-      Known.One  <<= SA->getZExtValue();
+      Known.Zero <<= ShAmt;
+      Known.One  <<= ShAmt;
       // low bits known zero.
-      Known.Zero.setLowBits(SA->getZExtValue());
+      Known.Zero.setLowBits(ShAmt);
     }
     break;
   case ISD::SRL:
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      EVT VT = Op.getValueType();
-      unsigned ShAmt = SA->getZExtValue();
-      unsigned VTSize = VT.getSizeInBits();
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op.getOperand(1))) {
       SDValue InOp = Op.getOperand(0);
 
       // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
+      if (SA->getAPIntValue().uge(BitWidth))
         break;
 
+      unsigned ShAmt = SA->getZExtValue();
       APInt InDemandedMask = (NewMask << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that
@@ -885,21 +887,27 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       // If this is ((X << C1) >>u ShAmt), see if we can simplify this into a
       // single shift.  We can do this if the top bits (which are shifted out)
       // are never demanded.
-      if (InOp.getOpcode() == ISD::SHL &&
-          isa<ConstantSDNode>(InOp.getOperand(1))) {
-        if (ShAmt && (NewMask & APInt::getHighBitsSet(VTSize, ShAmt)) == 0) {
-          unsigned C1= cast<ConstantSDNode>(InOp.getOperand(1))->getZExtValue();
-          unsigned Opc = ISD::SRL;
-          int Diff = ShAmt-C1;
-          if (Diff < 0) {
-            Diff = -Diff;
-            Opc = ISD::SHL;
-          }
+      if (InOp.getOpcode() == ISD::SHL) {
+        if (ConstantSDNode *SA2 = isConstOrConstSplat(InOp.getOperand(1))) {
+          if (ShAmt &&
+              (NewMask & APInt::getHighBitsSet(BitWidth, ShAmt)) == 0) {
+            if (SA2->getAPIntValue().ult(BitWidth)) {
+              unsigned C1 = SA2->getZExtValue();
+              unsigned Opc = ISD::SRL;
+              int Diff = ShAmt-C1;
+              if (Diff < 0) {
+                Diff = -Diff;
+                Opc = ISD::SHL;
+              }
 
-          SDValue NewSA =
-            TLO.DAG.getConstant(Diff, dl, Op.getOperand(1).getValueType());
-          return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT,
-                                                   InOp.getOperand(0), NewSA));
+              SDValue NewSA =
+                TLO.DAG.getConstant(Diff, dl, Op.getOperand(1).getValueType());
+              EVT VT = Op.getValueType();
+              return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT,
+                                                       InOp.getOperand(0),
+                                                       NewSA));
+            }
+          }
         }
       }
 
@@ -923,14 +931,14 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                            TLO.DAG.getNode(ISD::SRL, dl, Op.getValueType(),
                                            Op.getOperand(0), Op.getOperand(1)));
 
-    if (ConstantSDNode *SA = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op.getOperand(1))) {
       EVT VT = Op.getValueType();
-      unsigned ShAmt = SA->getZExtValue();
 
       // If the shift count is an invalid immediate, don't do anything.
-      if (ShAmt >= BitWidth)
+      if (SA->getAPIntValue().uge(BitWidth))
         break;
 
+      unsigned ShAmt = SA->getZExtValue();
       APInt InDemandedMask = (NewMask << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that

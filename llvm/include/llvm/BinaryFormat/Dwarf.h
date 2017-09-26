@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// \file
-// \brief This file contains constants used for implementing Dwarf
-// debug support.
-//
-// For details on the Dwarf specfication see the latest DWARF Debugging
-// Information Format standard document on http://www.dwarfstd.org. This
-// file often includes support for non-released standard features.
+/// \file
+/// This file contains constants used for implementing Dwarf
+/// debug support.
+///
+/// For details on the Dwarf specfication see the latest DWARF Debugging
+/// Information Format standard document on http://www.dwarfstd.org. This
+/// file often includes support for non-released standard features.
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,12 +57,14 @@ enum LLVMConstants : uint32_t {
   DWARF_VENDOR_MIPS = 6
 };
 
-// Special ID values that distinguish a CIE from a FDE in DWARF CFI.
-// Not inside an enum because a 64-bit value is needed.
+/// Special ID values that distinguish a CIE from a FDE in DWARF CFI.
+/// Not inside an enum because a 64-bit value is needed.
+/// @{
 const uint32_t DW_CIE_ID = UINT32_MAX;
 const uint64_t DW64_CIE_ID = UINT64_MAX;
+/// @}
 
-// Identifier of an invalid DIE offset in the .debug_info section.
+/// Identifier of an invalid DIE offset in the .debug_info section.
 const uint32_t DW_INVALID_OFFSET = UINT32_MAX;
 
 enum Tag : uint16_t {
@@ -70,7 +72,7 @@ enum Tag : uint16_t {
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_TAG_lo_user = 0x4080,
   DW_TAG_hi_user = 0xffff,
-  DW_TAG_user_base = 0x1000 // Recommended base for user tags.
+  DW_TAG_user_base = 0x1000 ///< Recommended base for user tags.
 };
 
 inline bool isType(Tag T) {
@@ -447,11 +449,11 @@ unsigned LanguageVendor(SourceLanguage L);
 /// or is an extension if extensions are allowed.
 bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
 
-/// \brief Returns the symbolic string representing Val when used as a value
+/// Returns the symbolic string representing Val when used as a value
 /// for attribute Attr.
 StringRef AttributeValueString(uint16_t Attr, unsigned Val);
 
-/// \brief Decsribes an entry of the various gnu_pub* debug sections.
+/// Describes an entry of the various gnu_pub* debug sections.
 ///
 /// The gnu_pub* kind looks like:
 ///
