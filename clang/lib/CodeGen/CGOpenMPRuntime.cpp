@@ -862,18 +862,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 }
 
 LValue ReductionCodeGen::emitSharedLValue(CodeGenFunction &CGF, const Expr *E) {
-  if (const auto *OASE = dyn_cast<OMPArraySectionExpr>(E))
-    return CGF.EmitOMPArraySectionExpr(OASE);
-  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return CGF.EmitLValue(ASE);
-  auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-  DeclRefExpr DRE(const_cast<VarDecl *>(OrigVD),
-                  CGF.CapturedStmtInfo &&
-                      CGF.CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                  E->getType(), VK_LValue, E->getExprLoc());
-  // Store the address of the original variable associated with the LHS
-  // implicit variable.
-  return CGF.EmitLValue(&DRE);
+  return CGF.EmitOMPSharedLValue(E);
 }
 
 LValue ReductionCodeGen::emitSharedLValueUB(CodeGenFunction &CGF,
@@ -5978,6 +5967,8 @@ public:
     OMP_MAP_PRIVATE_PTR = 0x80,
     /// \brief Pass the element to the device by value.
     OMP_MAP_PRIVATE_VAL = 0x100,
+    /// Implicit map
+    OMP_MAP_IMPLICIT = 0x200,
   };
 
   /// Class that associates information with a base pointer to be passed to the
@@ -6148,7 +6139,7 @@ private:
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
       MapBaseValuesArrayTy &BasePointers, MapValuesArrayTy &Pointers,
       MapValuesArrayTy &Sizes, MapFlagsArrayTy &Types,
-      bool IsFirstComponentList) const {
+      bool IsFirstComponentList, bool IsImplicit) const {
 
     // The following summarizes what has to be generated for each map and the
     // types bellow. The generated information is expressed in this order:
@@ -6283,8 +6274,7 @@ private:
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
-      BP = CGF.EmitLValue(cast<DeclRefExpr>(I->getAssociatedExpression()))
-               .getPointer();
+      BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getPointer();
 
       // If the variable is a pointer and is being dereferenced (i.e. is not
       // the last component), the base has to be the pointer itself, not its
@@ -6303,6 +6293,7 @@ private:
       }
     }
 
+    unsigned DefaultFlags = IsImplicit ? OMP_MAP_IMPLICIT : 0;
     for (; I != CE; ++I) {
       auto Next = std::next(I);
 
@@ -6337,7 +6328,8 @@ private:
                 isa<OMPArraySectionExpr>(Next->getAssociatedExpression())) &&
                "Unexpected expression");
 
-        auto *LB = CGF.EmitLValue(I->getAssociatedExpression()).getPointer();
+        llvm::Value *LB =
+            CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getPointer();
         auto *Size = getExprTypeSize(I->getAssociatedExpression());
 
         // If we have a member expression and the current component is a
@@ -6352,9 +6344,11 @@ private:
           BasePointers.push_back(BP);
           Pointers.push_back(RefAddr);
           Sizes.push_back(CGF.getTypeSize(CGF.getContext().VoidPtrTy));
-          Types.push_back(getMapTypeBits(
-              /*MapType*/ OMPC_MAP_alloc, /*MapTypeModifier=*/OMPC_MAP_unknown,
-              !IsExpressionFirstInfo, IsCaptureFirstInfo));
+          Types.push_back(DefaultFlags |
+                          getMapTypeBits(
+                              /*MapType*/ OMPC_MAP_alloc,
+                              /*MapTypeModifier=*/OMPC_MAP_unknown,
+                              !IsExpressionFirstInfo, IsCaptureFirstInfo));
           IsExpressionFirstInfo = false;
           IsCaptureFirstInfo = false;
           // The reference will be the next base address.
@@ -6369,9 +6363,9 @@ private:
         // same expression except for the first one. We also need to signal
         // this map is the first one that relates with the current capture
         // (there is a set of entries for each capture).
-        Types.push_back(getMapTypeBits(MapType, MapTypeModifier,
-                                       !IsExpressionFirstInfo,
-                                       IsCaptureFirstInfo));
+        Types.push_back(DefaultFlags | getMapTypeBits(MapType, MapTypeModifier,
+                                                      !IsExpressionFirstInfo,
+                                                      IsCaptureFirstInfo));
 
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
@@ -6383,7 +6377,6 @@ private:
 
         IsExpressionFirstInfo = false;
         IsCaptureFirstInfo = false;
-        continue;
       }
     }
   }
@@ -6445,20 +6438,19 @@ public:
         RPK_MemberReference,
       };
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
-      OpenMPMapClauseKind MapType;
-      OpenMPMapClauseKind MapTypeModifier;
-      ReturnPointerKind ReturnDevicePointer;
+      OpenMPMapClauseKind MapType = OMPC_MAP_unknown;
+      OpenMPMapClauseKind MapTypeModifier = OMPC_MAP_unknown;
+      ReturnPointerKind ReturnDevicePointer = RPK_None;
+      bool IsImplicit = false;
 
-      MapInfo()
-          : MapType(OMPC_MAP_unknown), MapTypeModifier(OMPC_MAP_unknown),
-            ReturnDevicePointer(RPK_None) {}
+      MapInfo() = default;
       MapInfo(
           OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
           OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapTypeModifier,
-          ReturnPointerKind ReturnDevicePointer)
+          ReturnPointerKind ReturnDevicePointer, bool IsImplicit)
           : Components(Components), MapType(MapType),
             MapTypeModifier(MapTypeModifier),
-            ReturnDevicePointer(ReturnDevicePointer) {}
+            ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit) {}
     };
 
     // We have to process the component lists that relate with the same
@@ -6472,25 +6464,29 @@ public:
         const ValueDecl *D,
         OMPClauseMappableExprCommon::MappableExprComponentListRef L,
         OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapModifier,
-        MapInfo::ReturnPointerKind ReturnDevicePointer) {
+        MapInfo::ReturnPointerKind ReturnDevicePointer, bool IsImplicit) {
       const ValueDecl *VD =
           D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
-      Info[VD].push_back({L, MapType, MapModifier, ReturnDevicePointer});
+      Info[VD].emplace_back(L, MapType, MapModifier, ReturnDevicePointer,
+                            IsImplicit);
     };
 
     // FIXME: MSVC 2013 seems to require this-> to find member CurDir.
     for (auto *C : this->CurDir.getClausesOfKind<OMPMapClause>())
-      for (auto L : C->component_lists())
+      for (auto L : C->component_lists()) {
         InfoGen(L.first, L.second, C->getMapType(), C->getMapTypeModifier(),
-                MapInfo::RPK_None);
+                MapInfo::RPK_None, C->isImplicit());
+      }
     for (auto *C : this->CurDir.getClausesOfKind<OMPToClause>())
-      for (auto L : C->component_lists())
+      for (auto L : C->component_lists()) {
         InfoGen(L.first, L.second, OMPC_MAP_to, OMPC_MAP_unknown,
-                MapInfo::RPK_None);
+                MapInfo::RPK_None, C->isImplicit());
+      }
     for (auto *C : this->CurDir.getClausesOfKind<OMPFromClause>())
-      for (auto L : C->component_lists())
+      for (auto L : C->component_lists()) {
         InfoGen(L.first, L.second, OMPC_MAP_from, OMPC_MAP_unknown,
-                MapInfo::RPK_None);
+                MapInfo::RPK_None, C->isImplicit());
+      }
 
     // Look at the use_device_ptr clause information and mark the existing map
     // entries as such. If there is no map information for an entry in the
@@ -6551,9 +6547,9 @@ public:
         // Remember the current base pointer index.
         unsigned CurrentBasePointersIdx = BasePointers.size();
         // FIXME: MSVC 2013 seems to require this-> to find the member method.
-        this->generateInfoForComponentList(L.MapType, L.MapTypeModifier,
-                                           L.Components, BasePointers, Pointers,
-                                           Sizes, Types, IsFirstComponentList);
+        this->generateInfoForComponentList(
+            L.MapType, L.MapTypeModifier, L.Components, BasePointers, Pointers,
+            Sizes, Types, IsFirstComponentList, L.IsImplicit);
 
         // If this entry relates with a device pointer, set the relevant
         // declaration and add the 'return pointer' flag.
@@ -6617,7 +6613,8 @@ public:
         for (auto L : It->second) {
           generateInfoForComponentList(
               /*MapType=*/OMPC_MAP_to, /*MapTypeModifier=*/OMPC_MAP_unknown, L,
-              BasePointers, Pointers, Sizes, Types, IsFirstComponentList);
+              BasePointers, Pointers, Sizes, Types, IsFirstComponentList,
+              /*IsImplicit=*/false);
           IsFirstComponentList = false;
         }
         return;
@@ -6637,9 +6634,9 @@ public:
                "We got information for the wrong declaration??");
         assert(!L.second.empty() &&
                "Not expecting declaration with no component lists.");
-        generateInfoForComponentList(C->getMapType(), C->getMapTypeModifier(),
-                                     L.second, BasePointers, Pointers, Sizes,
-                                     Types, IsFirstComponentList);
+        generateInfoForComponentList(
+            C->getMapType(), C->getMapTypeModifier(), L.second, BasePointers,
+            Pointers, Sizes, Types, IsFirstComponentList, C->isImplicit());
         IsFirstComponentList = false;
       }
 

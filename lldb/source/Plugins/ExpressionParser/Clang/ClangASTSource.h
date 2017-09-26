@@ -376,6 +376,22 @@ protected:
   //------------------------------------------------------------------
   CompilerType GuardedCopyType(const CompilerType &src_type);
 
+  
+  //------------------------------------------------------------------
+  /// Returns true if a name should be ignored by name lookup.
+  ///
+  /// @param[in] name
+  ///     The name to be considered.
+  ///
+  /// @param[in] ignore_all_dollar_nmmes
+  ///     True if $-names of all sorts should be ignored.
+  ///
+  /// @return
+  ///     True if the name is one of a class of names that are ignored by
+  ///     global lookup for performance reasons.
+  //------------------------------------------------------------------
+  bool IgnoreName(const ConstString name, bool ignore_all_dollar_names);
+
   friend struct NameSearchContext;
 
   bool m_import_in_progress;

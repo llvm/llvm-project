@@ -454,6 +454,25 @@ T tmain(T argc) {
   return 0;
 }
 
+struct SA1{
+  int a;
+  struct SA1 *p;
+  int b[10];
+};
+struct SB1{
+  int a;
+  struct SA1 s;
+  struct SA1 sa[10];
+  struct SA1 *sp[10];
+  struct SA1 *p;
+};
+struct SC1{
+  int a;
+  struct SB1 s;
+  struct SB1 *p;
+  int b[10];
+};
+
 int main(int argc, char **argv) {
   const int d = 5;
   const int da[5] = { 0 };
@@ -467,6 +486,8 @@ int main(int argc, char **argv) {
   int y;
   int to, tofrom, always;
   const int (&l)[5] = da;
+  SC1 s;
+  SC1 *p;
 #pragma omp target data map // expected-error {{expected '(' after 'map'}} expected-error {{expected at least one 'map' or 'use_device_ptr' clause for '#pragma omp target data'}}
 #pragma omp target data map( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
 #pragma omp target data map() // expected-error {{expected expression}}
@@ -527,6 +548,53 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target map(m)
   {}
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.s)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.s.a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.b[:5])
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.p[:5])
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.sa[3].a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.sp[3]->a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.p->a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.p->a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.s.b[:2])
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.s.p->b[:2])
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+// expected-note@+1 {{used here}}
+#pragma omp target map(s.p->p->p->a)
+// expected-error@+1 {{variable already marked as mapped in current construct}}
+  { s.a++; }
+#pragma omp target map(s.s.s.b[:2])
+  { s.s.s.b[0]++; }
+
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }
 #endif

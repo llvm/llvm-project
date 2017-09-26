@@ -1491,7 +1491,8 @@ bool CXXRecordDecl::isInterfaceLike() const {
 
   // Check "Special" types.
   const auto *Uuid = getAttr<UuidAttr>();
-  if (Uuid && isStruct() && getDeclContext()->isTranslationUnit() &&
+  if (Uuid && isStruct() && (getDeclContext()->isTranslationUnit() ||
+                             getDeclContext()->isExternCXXContext()) &&
       ((getName() == "IUnknown" &&
         Uuid->getGuid() == "00000000-0000-0000-C000-000000000046") ||
        (getName() == "IDispatch" &&

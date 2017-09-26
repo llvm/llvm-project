@@ -74,6 +74,9 @@ class X86InterleavedAccessGroup {
                              unsigned NumSubVecElems);
   void interleave8bitStride4VF8(ArrayRef<Instruction *> InputVectors,
                                 SmallVectorImpl<Value *> &TransposedMatrix);
+  void interleave8bitStride3(ArrayRef<Instruction *> InputVectors,
+                             SmallVectorImpl<Value *> &TransposedMatrix,
+                             unsigned NumSubVecElems);
   void deinterleave8bitStride3(ArrayRef<Instruction *> InputVectors,
                                SmallVectorImpl<Value *> &TransposedMatrix,
                                unsigned NumSubVecElems);
@@ -132,9 +135,9 @@ bool X86InterleavedAccessGroup::isSupported() const {
       (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024))
      return true;
 
-  if (ShuffleElemSize == 8 && isa<LoadInst>(Inst) && Factor == 3 &&
+  if (ShuffleElemSize == 8 && Factor == 3 &&
       (WideInstSize == 384 || WideInstSize == 768))
-     return true;
+    return true;
 
   return false;
 }
@@ -495,6 +498,134 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
   return;
 }
 
+// group2Shuffle reorder the shuffle stride back into continuous order.
+// For example For VF16 with Mask1 = {0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13} =>
+// MaskResult = {0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5}.
+static void group2Shuffle(MVT VT, SmallVectorImpl<uint32_t> &Mask,
+                          SmallVectorImpl<uint32_t> &Output) {
+  int IndexGroup[3] = {0, 0, 0};
+  int Index = 0;
+  int VectorWidth = VT.getSizeInBits();
+  int VF = VT.getVectorNumElements();
+  // Find the index of the different groups.
+  int Lane = (VectorWidth / 128 > 0) ? VectorWidth / 128 : 1;
+  for (int i = 0; i < 3; i++) {
+    IndexGroup[(Index * 3) % (VF / Lane)] = Index;
+    Index += Mask[i];
+  }
+  // According to the index compute the convert mask.
+  for (int i = 0; i < VF / Lane; i++) {
+    Output.push_back(IndexGroup[i % 3]);
+    IndexGroup[i % 3]++;
+  }
+}
+
+// genShuffleBland - Creates shuffle according to two vectors.This function is
+// only works on instructions with lane inside 256 registers. According to
+// the mask 'Mask' creates a new Mask 'Out' by the offset of the mask. The
+// offset amount depends on the two integer, 'LowOffset' and 'HighOffset'.
+// Where the 'LowOffset' refers to the first vector and the highOffset refers to
+// the second vector.
+// |a0....a5,b0....b4,c0....c4|a16..a21,b16..b20,c16..c20|
+// |c5...c10,a5....a9,b5....b9|c21..c26,a22..a26,b21..b25|
+// |b10..b15,c11..c15,a10..a15|b26..b31,c27..c31,a27..a31|
+// For the sequence to work as a mirror to the load.
+// We must consider the elements order as above.
+// In this function we are combining two types of shuffles.
+// The first one is vpshufed and the second is a type of "blend" shuffle.
+// By computing the shuffle on a sequence of 16 elements(one lane) and add the
+// correct offset. We are creating a vpsuffed + blend sequence between two
+// shuffles.
+static void genShuffleBland(MVT VT, SmallVectorImpl<uint32_t> &Mask,
+                            SmallVectorImpl<uint32_t> &Out, int LowOffset,
+                            int HighOffset) {
+  assert(VT.getSizeInBits() == 256 &&
+         "This function works on only width of 256");
+  unsigned NumOfElm = VT.getVectorNumElements();
+  for (unsigned i = 0; i < Mask.size(); i++)
+    Out.push_back(Mask[i] + LowOffset);
+  for (unsigned i = 0; i < Mask.size(); i++)
+    Out.push_back(Mask[i] + HighOffset + NumOfElm);
+}
+
+void X86InterleavedAccessGroup::interleave8bitStride3(
+    ArrayRef<Instruction *> InVec, SmallVectorImpl<Value *> &TransposedMatrix,
+    unsigned VecElems) {
+
+  // Example: Assuming we start from the following vectors:
+  // Matrix[0]= a0 a1 a2 a3 a4 a5 a6 a7
+  // Matrix[1]= b0 b1 b2 b3 b4 b5 b6 b7
+  // Matrix[2]= c0 c1 c2 c3 c3 a7 b7 c7
+
+  TransposedMatrix.resize(3);
+  SmallVector<uint32_t, 3> GroupSize;
+  SmallVector<uint32_t, 32> VPShuf;
+  SmallVector<uint32_t, 32> VPAlign[3];
+  SmallVector<uint32_t, 32> VPAlign2;
+  SmallVector<uint32_t, 32> VPAlign3;
+  SmallVector<uint32_t, 32> OptimizeShuf[3];
+  Value *Vec[3], *TempVector[3];
+  MVT VT = MVT::getVectorVT(MVT::i8, VecElems);
+
+  setGroupSize(VT, GroupSize);
+
+  for (int i = 0; i < 3; i++)
+    DecodePALIGNRMask(VT, GroupSize[i], VPAlign[i]);
+
+  DecodePALIGNRMask(VT, GroupSize[1] + GroupSize[2], VPAlign2, false, true);
+  DecodePALIGNRMask(VT, GroupSize[1], VPAlign3, false, true);
+
+  // Vec[0]= a3 a4 a5 a6 a7 a0 a1 a2
+  // Vec[1]= c5 c6 c7 c0 c1 c2 c3 c4
+  // Vec[2]= b0 b1 b2 b3 b4 b5 b6 b7
+
+  Vec[0] = Builder.CreateShuffleVector(
+      InVec[0], UndefValue::get(InVec[0]->getType()), VPAlign2);
+  Vec[1] = Builder.CreateShuffleVector(
+      InVec[1], UndefValue::get(InVec[1]->getType()), VPAlign3);
+  Vec[2] = InVec[2];
+
+  // Vec[0]= a6 a7 a0 a1 a2 b0 b1 b2
+  // Vec[1]= c0 c1 c2 c3 c4 a3 a4 a5
+  // Vec[2]= b3 b4 b5 b6 b7 c5 c6 c7
+
+  for (int i = 0; i < 3; i++)
+    TempVector[i] =
+        Builder.CreateShuffleVector(Vec[i], Vec[(i + 2) % 3], VPAlign[1]);
+
+  // Vec[0]= a0 a1 a2 b0 b1 b2 c0 c1
+  // Vec[1]= c2 c3 c4 a3 a4 a5 b3 b4
+  // Vec[2]= b5 b6 b7 c5 c6 c7 a6 a7
+
+  for (int i = 0; i < 3; i++)
+    Vec[i] = Builder.CreateShuffleVector(TempVector[i], TempVector[(i + 1) % 3],
+                                         VPAlign[2]);
+
+  // TransposedMatrix[0] = a0 b0 c0 a1 b1 c1 a2 b2
+  // TransposedMatrix[1] = c2 a3 b3 c3 a4 b4 c4 a5
+  // TransposedMatrix[2] = b5 c5 a6 b6 c6 a7 b7 c7
+
+  group2Shuffle(VT, GroupSize, VPShuf);
+
+  if (VT.getSizeInBits() <= 128) {
+    for (int i = 0; i < 3; i++)
+      TransposedMatrix[i] = Builder.CreateShuffleVector(
+          Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
+    return;
+  }
+
+  unsigned NumOfElm = VT.getVectorNumElements();
+  genShuffleBland(VT, VPShuf, OptimizeShuf[0], 0, 0);
+  genShuffleBland(VT, VPShuf, OptimizeShuf[1], 0, NumOfElm / 2);
+  genShuffleBland(VT, VPShuf, OptimizeShuf[2], NumOfElm / 2, NumOfElm / 2);
+
+  for (int i = 0; i < 3; i++)
+    TransposedMatrix[i] = Builder.CreateShuffleVector(
+        Vec[(i * 2) % 3], Vec[(i * 2 + 1) % 3], OptimizeShuf[i]);
+
+  return;
+}
+
 void X86InterleavedAccessGroup::transpose_4x4(
     ArrayRef<Instruction *> Matrix,
     SmallVectorImpl<Value *> &TransposedMatrix) {
@@ -585,7 +716,12 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
     break;
   case 16:
   case 32:
-    interleave8bitStride4(DecomposedVectors, TransposedVectors, NumSubVecElems);
+    if (Factor == 4)
+      interleave8bitStride4(DecomposedVectors, TransposedVectors,
+                            NumSubVecElems);
+    if (Factor == 3)
+      interleave8bitStride3(DecomposedVectors, TransposedVectors,
+                            NumSubVecElems);
     break;
   default:
     return false;

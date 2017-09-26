@@ -500,6 +500,10 @@ void CudaToolChain::addClangTargetOptions(
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
 
   if (LibDeviceFile.empty()) {
+    if (DeviceOffloadingKind == Action::OFK_OpenMP &&
+        DriverArgs.hasArg(options::OPT_S))
+      return;
+
     getDriver().Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
     return;
   }

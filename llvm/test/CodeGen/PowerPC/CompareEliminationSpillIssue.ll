@@ -1,3 +1,4 @@
+; XFAIL: *
 ; The purpose of the test case is to ensure that a spill that happens during
 ; intermediate calculations for a comparison performed in a GPR spills the
 ; full register. Some i32 comparisons performed in GPRs use code that uses

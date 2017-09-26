@@ -10,6 +10,8 @@
 #define __shared__ __attribute__((shared))
 #define __constant__ __attribute__((constant))
 
+typedef unsigned long long uint64_t;
+
 // We have to keep all builtins that depend on particular target feature in the
 // same function, because the codegen will stop after the very first function
 // that encounters an error, so -verify will not be able to find errors in
@@ -17,7 +19,8 @@
 
 // CHECK-LABEL: nvvm_sync
 __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
-                          bool pred) {
+                          bool pred, uint64_t i64) {
+
   // CHECK: call void @llvm.nvvm.bar.warp.sync(i32
   // expected-error@+1 {{'__nvvm_bar_warp_sync' needs target feature ptx60}}
   __nvvm_bar_warp_sync(mask);
@@ -72,6 +75,23 @@ __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
   // CHECK: call i32 @llvm.nvvm.vote.ballot.sync(i32
   // expected-error@+1 {{'__nvvm_vote_ballot_sync' needs target feature ptx60}}
   __nvvm_vote_ballot_sync(mask, pred);
+
+  //
+  // MATCH.{ALL,ANY}.SYNC
+  //
+
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32
+  // expected-error@+1 {{'__nvvm_match_any_sync_i32' needs target feature ptx60}}
+  __nvvm_match_any_sync_i32(mask, i);
+  // CHECK: call i64 @llvm.nvvm.match.any.sync.i64(i32
+  // expected-error@+1 {{'__nvvm_match_any_sync_i64' needs target feature ptx60}}
+  __nvvm_match_any_sync_i64(mask, i64);
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i32p(i32
+  // expected-error@+1 {{'__nvvm_match_all_sync_i32p' needs target feature ptx60}}
+  __nvvm_match_all_sync_i32p(mask, i, &i);
+  // CHECK: call { i64, i1 } @llvm.nvvm.match.all.sync.i64p(i32
+  // expected-error@+1 {{'__nvvm_match_all_sync_i64p' needs target feature ptx60}}
+  __nvvm_match_all_sync_i64p(mask, i64, &i);
 
   // CHECK: ret void
 }

@@ -38,12 +38,12 @@
 // CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i32] [i32 288]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2]
 // CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i32] [i32 288, i32 288]
-// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i32] [i32 288, i32 35, i32 288, i32 35, i32 35, i32 288, i32 288, i32 35, i32 35]
+// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [9 x i32] [i32 288, i32 547, i32 288, i32 547, i32 547, i32 288, i32 288, i32 547, i32 547]
 // CHECK-DAG: [[SIZET5:@.+]] = private unnamed_addr constant [3 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i32] [i32 288, i32 288, i32 35]
+// CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i32] [i32 288, i32 288, i32 547]
 // CHECK-DAG: [[SIZET6:@.+]] = private unnamed_addr constant [4 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 1, i[[SZ]] 40]
-// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i32] [i32 288, i32 288, i32 288, i32 35]
-// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [5 x i32] [i32 35, i32 288, i32 288, i32 288, i32 35]
+// CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i32] [i32 288, i32 288, i32 288, i32 547]
+// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [5 x i32] [i32 547, i32 288, i32 288, i32 288, i32 547]
 // CHECK-DAG: @{{.*}} = private constant i8 0
 // CHECK-DAG: @{{.*}} = private constant i8 0
 // CHECK-DAG: @{{.*}} = private constant i8 0
@@ -510,9 +510,9 @@ int bar(int n){
 // CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* [[SADDR1]]
 
 // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S1]]**
-// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S1]]**
+// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to double**
 // CHECK-DAG:   store [[S1]]* %{{.+}}, [[S1]]** [[CBPADDR0]]
-// CHECK-DAG:   store [[S1]]* %{{.+}}, [[S1]]** [[CPADDR0]]
+// CHECK-DAG:   store double* %{{.+}}, double** [[CPADDR0]]
 // CHECK-DAG:   store i[[SZ]] 8, i[[SZ]]* [[SADDR0]]
 
 // CHECK-DAG:   [[CBPADDR4:%.+]] = bitcast i8** [[BPADDR4]] to i16**

@@ -310,6 +310,16 @@ public:
   bool isSectionBSS(DataRefImpl Sec) const override;
   bool isSectionVirtual(DataRefImpl Sec) const override;
   bool isSectionBitcode(DataRefImpl Sec) const override;
+
+  /// When dsymutil generates the companion file, it strips all unnecessary
+  /// sections (e.g. everything in the _TEXT segment) by omitting their body
+  /// and setting the offset in their corresponding load command to zero.
+  ///
+  /// While the load command itself is valid, reading the section corresponds
+  /// to reading the number of bytes specified in the load command, starting
+  /// from offset 0 (i.e. the Mach-O header at the beginning of the file).
+  bool isSectionStripped(DataRefImpl Sec) const override;
+
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
 

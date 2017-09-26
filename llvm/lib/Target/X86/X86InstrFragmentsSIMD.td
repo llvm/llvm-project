@@ -213,9 +213,6 @@ def X86kshiftr : SDNode<"X86ISD::KSHIFTR",
 def X86vrotli  : SDNode<"X86ISD::VROTLI", X86vshiftimm>;
 def X86vrotri  : SDNode<"X86ISD::VROTRI", X86vshiftimm>;
 
-def X86vprot   : SDNode<"X86ISD::VPROT", X86vshiftvariable>;
-def X86vproti  : SDNode<"X86ISD::VPROTI", X86vshiftimm>;
-
 def X86vpshl   : SDNode<"X86ISD::VPSHL", X86vshiftvariable>;
 def X86vpsha   : SDNode<"X86ISD::VPSHA", X86vshiftvariable>;
 
