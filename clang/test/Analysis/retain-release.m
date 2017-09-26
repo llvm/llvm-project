@@ -1776,15 +1776,15 @@ CFArrayRef camel_copymachine() {
 
 // rdar://problem/8024350
 @protocol F18P
-- (id) clone; // expected-note 2 {{method declared here}}
+- (id) clone;
 @end
 @interface F18 : NSObject<F18P> @end
 @interface F18(Cat)
-- (id) clone NS_RETURNS_RETAINED; // expected-warning {{overriding method has mismatched ns_returns_retained attributes}}
+- (id) clone NS_RETURNS_RETAINED;
 @end
 
 @implementation F18
-- (id) clone { // expected-warning {{overriding method has mismatched ns_returns_retained attributes}}
+- (id) clone {
   return [F18 alloc];
 }
 @end

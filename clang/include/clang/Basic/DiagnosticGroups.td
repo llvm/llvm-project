@@ -88,7 +88,6 @@ def GNUStringLiteralOperatorTemplate :
   DiagGroup<"gnu-string-literal-operator-template">;
 def UndefinedVarTemplate : DiagGroup<"undefined-var-template">;
 def UndefinedFuncTemplate : DiagGroup<"undefined-func-template">;
-def MissingNoEscape : DiagGroup<"missing-noescape">;
 
 def DeleteIncomplete : DiagGroup<"delete-incomplete">;
 def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor">;
@@ -484,9 +483,6 @@ def Pragmas : DiagGroup<"pragmas", [UnknownPragmas, IgnoredPragmas,
                                     PragmaClangAttribute]>;
 def UnknownWarningOption : DiagGroup<"unknown-warning-option">;
 def NSobjectAttribute : DiagGroup<"NSObject-attribute">;
-def NSConsumedMismatch : DiagGroup<"nsconsumed-mismatch">;
-def NSReturnsMismatch : DiagGroup<"nsreturns-mismatch">;
-
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
 def UnknownAttributes : DiagGroup<"unknown-attributes">;
 def IgnoredAttributes : DiagGroup<"ignored-attributes">;

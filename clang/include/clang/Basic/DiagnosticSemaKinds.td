@@ -1645,11 +1645,6 @@ def err_conflicting_overriding_cc_attributes : Error<
   "virtual function %0 has different calling convention attributes "
   "%diff{($) than the function it overrides (which has calling convention $)|"
   "than the function it overrides}1,2">;
-def warn_overriding_method_missing_noescape : Warning<
-  "parameter of overriding method should be annotated with "
-  "__attribute__((noescape))">, InGroup<MissingNoEscape>;
-def note_overridden_marked_noescape : Note<
-  "parameter of overridden method is annotated with __attribute__((noescape))">;
 
 def err_covariant_return_inaccessible_base : Error<
   "invalid covariant return for virtual function: %1 is a "
@@ -8277,12 +8272,12 @@ def err_c99_array_usage_cxx : Error<
   "feature, not permitted in C++">;
 def err_type_unsupported : Error<
   "%0 is not supported on this target">;
-def warn_nsconsumed_attribute_mismatch : Warning<
+def err_nsconsumed_attribute_mismatch : Error<
   "overriding method has mismatched ns_consumed attribute on its"
-  " parameter">, InGroup<NSConsumedMismatch>;
-def warn_nsreturns_retained_attribute_mismatch : Warning<
+  " parameter">;
+def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
-  " attributes">, InGroup<NSReturnsMismatch>;
+  " attributes">;
 
 def err_nserrordomain_not_tagdecl : Error<
   "ns_error_domain attribute only valid on "
