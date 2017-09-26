@@ -32,8 +32,14 @@ void SigHandler(int signum) { handler = "TestSigHandler"; }
 void SigAction(int, siginfo_t *, void *) { handler = "TestSigAction"; }
 
 struct KernelSigaction {
+
+#if defined(__mips__)
+  unsigned long flags;
+  __sighandler_t handler;
+#else
   __sighandler_t handler;
   unsigned long flags;
+#endif
   void (*restorer)();
   char unused[1024];
 };
