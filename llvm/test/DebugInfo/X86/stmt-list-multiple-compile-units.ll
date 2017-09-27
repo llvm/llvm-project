@@ -24,11 +24,11 @@
 
 
 ; CHECK: .debug_line contents:
-; CHECK-NEXT: debug_line[0x00000000]
+; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000038
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; CHECK: debug_line[0x0000003c]
+; CHECK: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000039
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple2.c
@@ -43,11 +43,11 @@
 
 
 ; DWARF3: .debug_line contents:
-; DWARF3-NEXT: debug_line[0x00000000]
+; DWARF3-NEXT: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000038
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; DWARF3: debug_line[0x0000003c]
+; DWARF3: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000039
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple2.c
