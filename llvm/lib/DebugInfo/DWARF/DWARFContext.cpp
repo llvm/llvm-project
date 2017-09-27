@@ -291,11 +291,11 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                  DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo());
+    getDebugLoc()->dump(OS, getRegisterInfo(), DumpOffset);
   }
   if (shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                  DObj->getLocDWOSection().Data)) {
-    getDebugLocDWO()->dump(OS, getRegisterInfo());
+    getDebugLocDWO()->dump(OS, getRegisterInfo(), DumpOffset);
   }
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
@@ -331,12 +331,15 @@ void DWARFContext::dump(
       if (!CUDIE)
         continue;
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list))) {
+        if (DumpOffset && *StmtOffset != *DumpOffset)
+          continue;
         DWARFDataExtractor lineData(*DObj, DObj->getLineSection(),
                                     isLittleEndian(), savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
         uint32_t Offset = *StmtOffset;
         // Verbose dumping is done during parsing and not on the intermediate
         // representation.
+        OS << "debug_line[" << format("%16.16" PRIx64, Offset) << "]\n";
         if (DumpOpts.Verbose) {
           LineTable.parse(lineData, &Offset, &OS);
         } else {
@@ -1133,6 +1136,10 @@ public:
 
       // Skip BSS and Virtual sections, they aren't interesting.
       if (Section.isBSS() || Section.isVirtual())
+        continue;
+
+      // Skip sections stripped by dsymutil.
+      if (Section.isStripped())
         continue;
 
       StringRef Data;

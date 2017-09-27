@@ -321,7 +321,8 @@ public:
                                     AccountRecordState *state) {
     auto &TS = ThreadStackMap[R.TId];
     switch (R.Type) {
-    case RecordTypes::ENTER: {
+    case RecordTypes::ENTER:
+    case RecordTypes::ENTER_ARG: {
       state->wasLastRecordExit = false;
       // When we encounter a new function entry, we want to record the TSC for
       // that entry, and the function id. Before doing so we check the top of

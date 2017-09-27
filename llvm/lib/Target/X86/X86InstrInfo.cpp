@@ -6600,16 +6600,14 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (X86::GR16RegClass.contains(DestReg, SrcReg))
     Opc = X86::MOV16rr;
   else if (X86::GR8RegClass.contains(DestReg, SrcReg)) {
-    // Copying to or from a physical H register on x86-64 requires a NOREX
-    // move.  Otherwise use a normal move.
-    if ((isHReg(DestReg) || isHReg(SrcReg)) &&
-        Subtarget.is64Bit()) {
-      Opc = X86::MOV8rr_NOREX;
+    // Copying to or from a physical H register on x86-64 must ensure it
+    // doesn't require a REX prefix for the other register.
+    if ((isHReg(DestReg) || isHReg(SrcReg)) && Subtarget.is64Bit()) {
       // Both operands must be encodable without an REX prefix.
       assert(X86::GR8_NOREXRegClass.contains(SrcReg, DestReg) &&
              "8-bit H register can not be copied outside GR8_NOREX");
-    } else
-      Opc = X86::MOV8rr;
+    }
+    Opc = X86::MOV8rr;
   }
   else if (X86::VR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MMX_MOVQ64rr;

@@ -82,8 +82,6 @@ private:
   HexagonFrameLowering FrameLowering;
   InstrItineraryData InstrItins;
 
-  void initializeEnvironment();
-
 public:
   HexagonSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                    const TargetMachine &TM);
