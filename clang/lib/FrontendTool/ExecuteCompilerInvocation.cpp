@@ -166,9 +166,8 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   if (!FEOpts.IndexStorePath.empty()) {
-#if defined(__APPLE__)
     Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
-#endif
+    CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
   }
 
   // If there are any AST files to merge, create a frontend action
