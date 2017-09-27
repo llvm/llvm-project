@@ -94,26 +94,22 @@ def MOVZX32rm16: I<0xB7, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
 // These are the same as the regular MOVZX32rr8 and MOVZX32rm8
 // except that they use GR32_NOREX for the output operand register class
 // instead of GR32. This allows them to operate on h registers on x86-64.
-let hasSideEffects = 0, isCodeGenOnly = 1 in {
-def MOVZX32_NOREXrr8 : I<0xB6, MRMSrcReg,
+let hasSideEffects = 0, isPseudo = 1 in {
+def MOVZX32_NOREXrr8 : I<0, Pseudo,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALU]>;
+                         "", [], IIC_MOVZX>, Sched<[WriteALU]>;
 let mayLoad = 1 in
-def MOVZX32_NOREXrm8 : I<0xB6, MRMSrcMem,
+def MOVZX32_NOREXrm8 : I<0, Pseudo,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALULd]>;
+                         "", [], IIC_MOVZX>, Sched<[WriteALULd]>;
 
-def MOVSX32_NOREXrr8 : I<0xBE, MRMSrcReg,
+def MOVSX32_NOREXrr8 : I<0, Pseudo,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALU]>;
+                         "", [], IIC_MOVSX>, Sched<[WriteALU]>;
 let mayLoad = 1 in
-def MOVSX32_NOREXrm8 : I<0xBE, MRMSrcMem,
+def MOVSX32_NOREXrm8 : I<0, Pseudo,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
-                         [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALULd]>;
+                         "", [], IIC_MOVSX>, Sched<[WriteALULd]>;
 }
 
 // MOVSX64rr8 always has a REX prefix and it has an 8-bit register

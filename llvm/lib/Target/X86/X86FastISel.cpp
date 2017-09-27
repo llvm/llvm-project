@@ -1984,7 +1984,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
   // instead to prevent AH references in a REX instruction.
   //
   // The current assumption of the fast register allocator is that isel
-  // won't generate explicit references to the GPR8_NOREX registers. If
+  // won't generate explicit references to the GR8_NOREX registers. If
   // the allocator and/or the backend get enhanced to be more robust in
   // that regard, this can be, and should be, removed.
   unsigned ResultReg = 0;

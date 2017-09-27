@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
- 
+
 template <class S, class SV>
 void
 test(S s, typename S::size_type pos, SV sv, S expected)

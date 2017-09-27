@@ -19,3 +19,7 @@ void __attribute__((section("foo,zed"))) test2(void); // expected-note {{previou
 void __attribute__((section("bar,zed"))) test2(void) {} // expected-warning {{section does not match previous declaration}}
 
 enum __attribute__((section("NEAR,x"))) e { one }; // expected-error {{'section' attribute only applies to functions, methods, properties, and global variables}}
+
+extern int a; // expected-note {{previous declaration is here}}
+int *b = &a;
+extern int a __attribute__((section("foo,zed"))); // expected-warning {{section attribute is specified on redeclared variable}}
