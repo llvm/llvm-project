@@ -29,7 +29,7 @@ public:
 
   /// \brief Return true if the function passes the requirements of this filter.
   virtual bool matches(const coverage::CoverageMapping &CM,
-                       const coverage::FunctionRecord &Function) {
+                       const coverage::FunctionRecord &Function) const {
     return true;
   }
 };
@@ -42,7 +42,7 @@ public:
   NameCoverageFilter(StringRef Name) : Name(Name) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief Matches functions whose name matches a certain regular expression.
@@ -53,7 +53,7 @@ public:
   NameRegexCoverageFilter(StringRef Regex) : Regex(Regex) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief Matches functions whose name appears in a SpecialCaseList in the
@@ -66,7 +66,7 @@ public:
       : Whitelist(Whitelist) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief Matches numbers that pass a certain threshold.
@@ -103,7 +103,7 @@ public:
       : StatisticThresholdFilter(Op, Threshold) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief Matches functions whose line coverage percentage
@@ -115,7 +115,7 @@ public:
       : StatisticThresholdFilter(Op, Threshold) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief A collection of filters.
@@ -132,7 +132,7 @@ public:
   bool empty() const { return Filters.empty(); }
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 /// \brief A collection of filters.
@@ -141,7 +141,7 @@ public:
 class CoverageFiltersMatchAll : public CoverageFilters {
 public:
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) override;
+               const coverage::FunctionRecord &Function) const override;
 };
 
 } // namespace llvm
