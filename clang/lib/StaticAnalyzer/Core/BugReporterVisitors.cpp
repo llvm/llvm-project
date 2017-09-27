@@ -66,12 +66,24 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
         break;
       }
       E = CE->getSubExpr();
-    } else if (isa<BinaryOperator>(E)) {
-      // Probably more arithmetic can be pattern-matched here,
-      // but for now give up.
-      break;
+    } else if (const BinaryOperator *B = dyn_cast<BinaryOperator>(E)) {
+      // Pointer arithmetic: '*(x + 2)' -> 'x') etc.
+      if (B->getType()->isPointerType()) {
+        if (B->getLHS()->getType()->isPointerType()) {
+          E = B->getLHS();
+        } else if (B->getRHS()->getType()->isPointerType()) {
+          E = B->getRHS();
+        } else {
+          break;
+        }
+      } else {
+        // Probably more arithmetic can be pattern-matched here,
+        // but for now give up.
+        break;
+      }
     } else if (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
-      if (U->getOpcode() == UO_Deref) {
+      if (U->getOpcode() == UO_Deref || U->getOpcode() == UO_AddrOf ||
+          (U->isIncrementDecrementOp() && U->getType()->isPointerType())) {
         // Operators '*' and '&' don't actually mean anything.
         // We look at casts instead.
         E = U->getSubExpr();

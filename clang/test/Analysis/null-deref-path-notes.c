@@ -4,7 +4,7 @@
 // of the null pointer for path notes. Apparently, not much actual tracking
 // needs to be done in this example.
 void pr34373() {
-  int *a = 0;
+  int *a = 0; // expected-note{{'a' initialized to a null pointer value}}
   (a + 0)[0]; // expected-warning{{Array access results in a null pointer dereference}}
               // expected-note@-1{{Array access results in a null pointer dereference}}
 }
