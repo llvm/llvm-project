@@ -46,7 +46,7 @@ class RegisterCommandsTestCase(TestBase):
             self.runCmd("register read xmm0")
             self.runCmd("register read ymm15")  # may be available
             self.runCmd("register read bnd0")  # may be available
-        elif self.getArchitecture() in ['arm', 'armv7', 'arm64']:
+        elif self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'arm64']:
             self.runCmd("register read s0")
             self.runCmd("register read q15")  # may be available
 
@@ -92,7 +92,7 @@ class RegisterCommandsTestCase(TestBase):
         elif self.getArchitecture() in ['arm64', 'aarch64']:
             gpr = "w0"
             vector = "v0"
-        elif self.getArchitecture() in ['arm', 'armv7']:
+        elif self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
             gpr = "r0"
             vector = "q0"
 
@@ -339,7 +339,7 @@ class RegisterCommandsTestCase(TestBase):
                  "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
                  False),
             ]
-        elif self.getArchitecture() in ['armv7', 'armv7k'] and self.platformIsDarwin():
+        elif self.getArchitecture() in ['armv7'] and self.platformIsDarwin():
             reg_list = [
                 # reg      value
                 # must-have
@@ -353,7 +353,7 @@ class RegisterCommandsTestCase(TestBase):
                  "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
                  False),
             ]
-        elif self.getArchitecture() in ['arm']:
+        elif self.getArchitecture() in ['arm', 'armv7k']:
             reg_list = [
                 # reg      value
                 # must-have
