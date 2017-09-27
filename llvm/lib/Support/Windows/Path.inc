@@ -700,7 +700,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   return std::error_code();
 }
 
-mapped_file_region::mapped_file_region(int fd, mapmode mode, uint64_t length,
+mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mapping() {
   ec = init(fd, offset, mode);
@@ -713,7 +713,7 @@ mapped_file_region::~mapped_file_region() {
     ::UnmapViewOfFile(Mapping);
 }
 
-uint64_t mapped_file_region::size() const {
+size_t mapped_file_region::size() const {
   assert(Mapping && "Mapping failed but used anyway!");
   return Size;
 }

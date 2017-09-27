@@ -51,18 +51,26 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
 
   DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
   if (!Entry) {
+    SmallVector<Arg *, 4> AllocatedArgs;
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
-    DerivedArgList *OpenMPArgs = TC->TranslateOpenMPTargetArgs(*TranslatedArgs,
-        DeviceOffloadKind);
+    DerivedArgList *OpenMPArgs = TC->TranslateOpenMPTargetArgs(
+        *TranslatedArgs, DeviceOffloadKind, AllocatedArgs);
     if (!OpenMPArgs) {
       Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+      if (!Entry)
+        Entry = TranslatedArgs;
     } else {
       Entry = TC->TranslateArgs(*OpenMPArgs, BoundArch, DeviceOffloadKind);
-      delete OpenMPArgs;
+      if (!Entry)
+        Entry = OpenMPArgs;
+      else
+        delete OpenMPArgs;
     }
 
-    if (!Entry)
-      Entry = TranslatedArgs;
+    // Add allocated arguments to the final DAL.
+    for (auto ArgPtr : AllocatedArgs) {
+      Entry->AddSynthesizedArg(ArgPtr);
+    }
   }
 
   return *Entry;

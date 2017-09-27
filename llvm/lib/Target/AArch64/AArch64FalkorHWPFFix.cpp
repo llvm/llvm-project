@@ -638,9 +638,14 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
     break;
   }
 
+  // Loads from the stack pointer don't get prefetched.
+  unsigned BaseReg = MI.getOperand(BaseRegIdx).getReg();
+  if (BaseReg == AArch64::SP || BaseReg == AArch64::WSP)
+    return None;
+
   LoadInfo LI;
   LI.DestReg = DestRegIdx == -1 ? 0 : MI.getOperand(DestRegIdx).getReg();
-  LI.BaseReg = MI.getOperand(BaseRegIdx).getReg();
+  LI.BaseReg = BaseReg;
   LI.BaseRegIdx = BaseRegIdx;
   LI.OffsetOpnd = OffsetIdx == -1 ? nullptr : &MI.getOperand(OffsetIdx);
   LI.IsPrePost = IsPrePost;

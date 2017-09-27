@@ -286,6 +286,63 @@ std::string TextEdit::unparse(const TextEdit &P) {
   return Result;
 }
 
+namespace {
+TraceLevel getTraceLevel(llvm::StringRef TraceLevelStr,
+                         clangd::Logger &Logger) {
+  if (TraceLevelStr == "off")
+    return TraceLevel::Off;
+  else if (TraceLevelStr == "messages")
+    return TraceLevel::Messages;
+  else if (TraceLevelStr == "verbose")
+    return TraceLevel::Verbose;
+
+  Logger.log(llvm::formatv("Unknown trace level \"{0}\"\n", TraceLevelStr));
+  return TraceLevel::Off;
+}
+} // namespace
+
+llvm::Optional<InitializeParams>
+InitializeParams::parse(llvm::yaml::MappingNode *Params,
+                        clangd::Logger &Logger) {
+  InitializeParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+    if (!Value)
+      continue;
+
+    if (KeyValue == "processId") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+      if (!Value)
+        return llvm::None;
+      long long Val;
+      if (llvm::getAsSignedInteger(Value->getValue(KeyStorage), 0, Val))
+        return llvm::None;
+      Result.processId = Val;
+    } else if (KeyValue == "rootPath") {
+      Result.rootPath = Value->getValue(KeyStorage);
+    } else if (KeyValue == "rootUri") {
+      Result.rootUri = URI::parse(Value);
+    } else if (KeyValue == "initializationOptions") {
+      // Not used
+    } else if (KeyValue == "capabilities") {
+      // Not used
+    } else if (KeyValue == "trace") {
+      Result.trace = getTraceLevel(Value->getValue(KeyStorage), Logger);
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<DidOpenTextDocumentParams>
 DidOpenTextDocumentParams::parse(llvm::yaml::MappingNode *Params,
                                  clangd::Logger &Logger) {

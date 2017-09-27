@@ -745,7 +745,7 @@ public:
 
 private:
   /// Platform-specific mapping state.
-  uint64_t Size;
+  size_t Size;
   void *Mapping;
 
   std::error_code init(int FD, uint64_t Offset, mapmode Mode);
@@ -758,12 +758,12 @@ public:
   /// \param fd An open file descriptor to map. mapped_file_region takes
   ///   ownership if closefd is true. It must have been opended in the correct
   ///   mode.
-  mapped_file_region(int fd, mapmode mode, uint64_t length, uint64_t offset,
+  mapped_file_region(int fd, mapmode mode, size_t length, uint64_t offset,
                      std::error_code &ec);
 
   ~mapped_file_region();
 
-  uint64_t size() const;
+  size_t size() const;
   char *data() const;
 
   /// Get a const view of the data. Modifying this memory has undefined

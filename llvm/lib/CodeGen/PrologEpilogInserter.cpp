@@ -994,7 +994,11 @@ void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   if (Fn.shouldSplitStack()) {
     for (MachineBasicBlock *SaveBlock : SaveBlocks)
       TFI.adjustForSegmentedStacks(Fn, *SaveBlock);
-  }
+    // Record that there are split-stack functions, so we will emit a
+    // special section to tell the linker.
+    Fn.getMMI().setHasSplitStack(true);
+  } else
+    Fn.getMMI().setHasNosplitStack(true);
 
   // Emit additional code that is required to explicitly handle the stack in
   // HiPE native code (if needed) when loaded in the Erlang/OTP runtime. The

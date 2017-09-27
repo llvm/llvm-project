@@ -12085,12 +12085,12 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
                                                 Zeroable, Subtarget, DAG))
     return Blend;
 
-  bool IsV1Zero = ISD::isBuildVectorAllZeros(V1.getNode());
-  bool IsV2Zero = ISD::isBuildVectorAllZeros(V2.getNode());
+  bool IsLowZero = (Zeroable & 0x3) == 0x3;
+  bool IsHighZero = (Zeroable & 0xc) == 0xc;
 
   // If either input operand is a zero vector, use VPERM2X128 because its mask
   // allows us to replace the zero input with an implicit zero.
-  if (!IsV1Zero && !IsV2Zero) {
+  if (!IsLowZero && !IsHighZero) {
     // Check for patterns which can be matched with a single insert of a 128-bit
     // subvector.
     bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1});
@@ -12124,30 +12124,17 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   //    [6]   - ignore
   //    [7]   - zero high half of destination
 
-  int MaskLO = WidenedMask[0] < 0 ? 0 : WidenedMask[0];
-  int MaskHI = WidenedMask[1] < 0 ? 0 : WidenedMask[1];
+  assert(WidenedMask[0] >= 0 && WidenedMask[1] >= 0 && "Undef half?");
 
-  unsigned PermMask = MaskLO | (MaskHI << 4);
+  unsigned PermMask = 0;
+  PermMask |= IsLowZero  ? 0x08 : (WidenedMask[0] << 0);
+  PermMask |= IsHighZero ? 0x80 : (WidenedMask[1] << 4);
 
-  // If either input is a zero vector, replace it with an undef input.
-  // Shuffle mask values <  4 are selecting elements of V1.
-  // Shuffle mask values >= 4 are selecting elements of V2.
-  // Adjust each half of the permute mask by clearing the half that was
-  // selecting the zero vector and setting the zero mask bit.
-  if (IsV1Zero) {
+  // Check the immediate mask and replace unused sources with undef.
+  if ((PermMask & 0x0a) != 0x00 && (PermMask & 0xa0) != 0x00)
     V1 = DAG.getUNDEF(VT);
-    if (MaskLO < 2)
-      PermMask = (PermMask & 0xf0) | 0x08;
-    if (MaskHI < 2)
-      PermMask = (PermMask & 0x0f) | 0x80;
-  }
-  if (IsV2Zero) {
+  if ((PermMask & 0x0a) != 0x02 && (PermMask & 0xa0) != 0x20)
     V2 = DAG.getUNDEF(VT);
-    if (MaskLO >= 2)
-      PermMask = (PermMask & 0xf0) | 0x08;
-    if (MaskHI >= 2)
-      PermMask = (PermMask & 0x0f) | 0x80;
-  }
 
   return DAG.getNode(X86ISD::VPERM2X128, DL, VT, V1, V2,
                      DAG.getConstant(PermMask, DL, MVT::i8));
@@ -35536,16 +35523,13 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
     Sad = DAG.getNode(ISD::TRUNCATE, DL, VT, Sad);
 
   if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
-    // Update part of elements of the reduction vector. This is done by first
-    // extracting a sub-vector from it, updating this sub-vector, and inserting
-    // it back.
-    SDValue SubPhi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, Phi,
-                                 DAG.getIntPtrConstant(0, DL));
-    SDValue Res = DAG.getNode(ISD::ADD, DL, ResVT, Sad, SubPhi);
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Phi, Res,
-                       DAG.getIntPtrConstant(0, DL));
-  } else
-    return DAG.getNode(ISD::ADD, DL, VT, Sad, Phi);
+    // Fill the upper elements with zero to match the add width.
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    Sad = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Zero, Sad,
+                      DAG.getIntPtrConstant(0, DL));
+  }
+
+  return DAG.getNode(ISD::ADD, DL, VT, Sad, Phi);
 }
 
 /// Convert vector increment or decrement to sub/add with an all-ones constant:

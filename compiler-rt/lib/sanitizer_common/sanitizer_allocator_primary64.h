@@ -62,10 +62,10 @@ class SizeClassAllocator64 {
   // as a 4-byte integer (offset from the region start shifted right by 4).
   typedef u32 CompactPtrT;
   static const uptr kCompactPtrScale = 4;
-  CompactPtrT PointerToCompactPtr(uptr base, uptr ptr) {
+  CompactPtrT PointerToCompactPtr(uptr base, uptr ptr) const {
     return static_cast<CompactPtrT>((ptr - base) >> kCompactPtrScale);
   }
-  uptr CompactPtrToPointer(uptr base, CompactPtrT ptr32) {
+  uptr CompactPtrToPointer(uptr base, CompactPtrT ptr32) const {
     return base + (static_cast<uptr>(ptr32) << kCompactPtrScale);
   }
 
@@ -155,7 +155,7 @@ class SizeClassAllocator64 {
         space_beg;
   }
 
-  uptr GetRegionBeginBySizeClass(uptr class_id) {
+  uptr GetRegionBeginBySizeClass(uptr class_id) const {
     return SpaceBeg() + kRegionSize * class_id;
   }
 
@@ -294,7 +294,240 @@ class SizeClassAllocator64 {
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
   static const uptr kNumClassesRounded = SizeClassMap::kNumClassesRounded;
 
+  // A packed array of counters. Each counter occupies 2^n bits, enough to store
+  // counter's max_value. Ctor will try to allocate the required buffer via
+  // mapper->MapPackedCounterArrayBuffer and the caller is expected to check
+  // whether the initialization was successful by checking IsAllocated() result.
+  // For the performance sake, none of the accessors check the validity of the
+  // arguments, it is assumed that index is always in [0, n) range and the value
+  // is not incremented past max_value.
+  template<class MemoryMapperT>
+  class PackedCounterArray {
+   public:
+    PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapperT *mapper)
+        : n(num_counters), memory_mapper(mapper) {
+      CHECK_GT(num_counters, 0);
+      CHECK_GT(max_value, 0);
+      constexpr u64 kMaxCounterBits = sizeof(*buffer) * 8ULL;
+      // Rounding counter storage size up to the power of two allows for using
+      // bit shifts calculating particular counter's index and offset.
+      uptr counter_size_bits =
+          RoundUpToPowerOfTwo(MostSignificantSetBitIndex(max_value) + 1);
+      CHECK_LE(counter_size_bits, kMaxCounterBits);
+      counter_size_bits_log = Log2(counter_size_bits);
+      counter_mask = ~0ULL >> (kMaxCounterBits - counter_size_bits);
+
+      uptr packing_ratio = kMaxCounterBits >> counter_size_bits_log;
+      CHECK_GT(packing_ratio, 0);
+      packing_ratio_log = Log2(packing_ratio);
+      bit_offset_mask = packing_ratio - 1;
+
+      buffer_size =
+          (RoundUpTo(n, 1ULL << packing_ratio_log) >> packing_ratio_log) *
+          sizeof(*buffer);
+      buffer = reinterpret_cast<u64*>(
+          memory_mapper->MapPackedCounterArrayBuffer(buffer_size));
+    }
+    ~PackedCounterArray() {
+      if (buffer) {
+        memory_mapper->UnmapPackedCounterArrayBuffer(
+            reinterpret_cast<uptr>(buffer), buffer_size);
+      }
+    }
+
+    bool IsAllocated() const {
+      return !!buffer;
+    }
+
+    u64 GetCount() const {
+      return n;
+    }
+
+    uptr Get(uptr i) const {
+      DCHECK_LT(i, n);
+      uptr index = i >> packing_ratio_log;
+      uptr bit_offset = (i & bit_offset_mask) << counter_size_bits_log;
+      return (buffer[index] >> bit_offset) & counter_mask;
+    }
+
+    void Inc(uptr i) const {
+      DCHECK_LT(Get(i), counter_mask);
+      uptr index = i >> packing_ratio_log;
+      uptr bit_offset = (i & bit_offset_mask) << counter_size_bits_log;
+      buffer[index] += 1ULL << bit_offset;
+    }
+
+    void IncRange(uptr from, uptr to) const {
+      DCHECK_LE(from, to);
+      for (uptr i = from; i <= to; i++)
+        Inc(i);
+    }
+
+   private:
+    const u64 n;
+    u64 counter_size_bits_log;
+    u64 counter_mask;
+    u64 packing_ratio_log;
+    u64 bit_offset_mask;
+
+    MemoryMapperT* const memory_mapper;
+    u64 buffer_size;
+    u64* buffer;
+  };
+
+  template<class MemoryMapperT>
+  class FreePagesRangeTracker {
+   public:
+    explicit FreePagesRangeTracker(MemoryMapperT* mapper)
+        : memory_mapper(mapper),
+          page_size_scaled_log(Log2(GetPageSizeCached() >> kCompactPtrScale)),
+          in_the_range(false), current_page(0), current_range_start_page(0) {}
+
+    void NextPage(bool freed) {
+      if (freed) {
+        if (!in_the_range) {
+          current_range_start_page = current_page;
+          in_the_range = true;
+        }
+      } else {
+        CloseOpenedRange();
+      }
+      current_page++;
+    }
+
+    void Done() {
+      CloseOpenedRange();
+    }
+
+   private:
+    void CloseOpenedRange() {
+      if (in_the_range) {
+        memory_mapper->ReleasePageRangeToOS(
+            current_range_start_page << page_size_scaled_log,
+            current_page << page_size_scaled_log);
+        in_the_range = false;
+      }
+    }
+
+    MemoryMapperT* const memory_mapper;
+    const uptr page_size_scaled_log;
+    bool in_the_range;
+    uptr current_page;
+    uptr current_range_start_page;
+  };
+
+  // Iterates over the free_array to identify memory pages containing freed
+  // chunks only and returns these pages back to OS.
+  // allocated_pages_count is the total number of pages allocated for the
+  // current bucket.
+  template<class MemoryMapperT>
+  static void ReleaseFreeMemoryToOS(CompactPtrT *free_array,
+                                    uptr free_array_count, uptr chunk_size,
+                                    uptr allocated_pages_count,
+                                    MemoryMapperT *memory_mapper) {
+    const uptr page_size = GetPageSizeCached();
+
+    // Figure out the number of chunks per page and whether we can take a fast
+    // path (the number of chunks per page is the same for all pages).
+    uptr full_pages_chunk_count_max;
+    bool same_chunk_count_per_page;
+    if (chunk_size <= page_size && page_size % chunk_size == 0) {
+      // Same number of chunks per page, no cross overs.
+      full_pages_chunk_count_max = page_size / chunk_size;
+      same_chunk_count_per_page = true;
+    } else if (chunk_size <= page_size && page_size % chunk_size != 0 &&
+        chunk_size % (page_size % chunk_size) == 0) {
+      // Some chunks are crossing page boundaries, which means that the page
+      // contains one or two partial chunks, but all pages contain the same
+      // number of chunks.
+      full_pages_chunk_count_max = page_size / chunk_size + 1;
+      same_chunk_count_per_page = true;
+    } else if (chunk_size <= page_size) {
+      // Some chunks are crossing page boundaries, which means that the page
+      // contains one or two partial chunks.
+      full_pages_chunk_count_max = page_size / chunk_size + 2;
+      same_chunk_count_per_page = false;
+    } else if (chunk_size > page_size && chunk_size % page_size == 0) {
+      // One chunk covers multiple pages, no cross overs.
+      full_pages_chunk_count_max = 1;
+      same_chunk_count_per_page = true;
+    } else if (chunk_size > page_size) {
+      // One chunk covers multiple pages, Some chunks are crossing page
+      // boundaries. Some pages contain one chunk, some contain two.
+      full_pages_chunk_count_max = 2;
+      same_chunk_count_per_page = false;
+    } else {
+      UNREACHABLE("All chunk_size/page_size ratios must be handled.");
+    }
+
+    PackedCounterArray<MemoryMapperT> counters(allocated_pages_count,
+                                               full_pages_chunk_count_max,
+                                               memory_mapper);
+    if (!counters.IsAllocated())
+      return;
+
+    const uptr chunk_size_scaled = chunk_size >> kCompactPtrScale;
+    const uptr page_size_scaled = page_size >> kCompactPtrScale;
+    const uptr page_size_scaled_log = Log2(page_size_scaled);
+
+    // Iterate over free chunks and count how many free chunks affect each
+    // allocated page.
+    if (chunk_size <= page_size && page_size % chunk_size == 0) {
+      // Each chunk affects one page only.
+      for (uptr i = 0; i < free_array_count; i++)
+        counters.Inc(free_array[i] >> page_size_scaled_log);
+    } else {
+      // In all other cases chunks might affect more than one page.
+      for (uptr i = 0; i < free_array_count; i++) {
+        counters.IncRange(
+            free_array[i] >> page_size_scaled_log,
+            (free_array[i] + chunk_size_scaled - 1) >> page_size_scaled_log);
+      }
+    }
+
+    // Iterate over pages detecting ranges of pages with chunk counters equal
+    // to the expected number of chunks for the particular page.
+    FreePagesRangeTracker<MemoryMapperT> range_tracker(memory_mapper);
+    if (same_chunk_count_per_page) {
+      // Fast path, every page has the same number of chunks affecting it.
+      for (uptr i = 0; i < counters.GetCount(); i++)
+        range_tracker.NextPage(counters.Get(i) == full_pages_chunk_count_max);
+    } else {
+      // Show path, go through the pages keeping count how many chunks affect
+      // each page.
+      const uptr pn =
+          chunk_size < page_size ? page_size_scaled / chunk_size_scaled : 1;
+      const uptr pnc = pn * chunk_size_scaled;
+      // The idea is to increment the current page pointer by the first chunk
+      // size, middle portion size (the portion of the page covered by chunks
+      // except the first and the last one) and then the last chunk size, adding
+      // up the number of chunks on the current page and checking on every step
+      // whether the page boundary was crossed.
+      uptr prev_page_boundary = 0;
+      uptr current_boundary = 0;
+      for (uptr i = 0; i < counters.GetCount(); i++) {
+        uptr page_boundary = prev_page_boundary + page_size_scaled;
+        uptr chunks_per_page = pn;
+        if (current_boundary < page_boundary) {
+          if (current_boundary > prev_page_boundary)
+            chunks_per_page++;
+          current_boundary += pnc;
+          if (current_boundary < page_boundary) {
+            chunks_per_page++;
+            current_boundary += chunk_size_scaled;
+          }
+        }
+        prev_page_boundary = page_boundary;
+
+        range_tracker.NextPage(counters.Get(i) == chunks_per_page);
+      }
+    }
+    range_tracker.Done();
+  }
+
  private:
+  friend class MemoryMapper;
+
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
   // FreeArray is the array of free-d chunks (stored as 4-byte offsets).
   // In the worst case it may reguire kRegionSize/SizeClassMap::kMinSize
@@ -359,18 +592,18 @@ class SizeClassAllocator64 {
       Swap(a[i], a[RandN(rand_state, i + 1)]);
   }
 
-  RegionInfo *GetRegionInfo(uptr class_id) {
+  RegionInfo *GetRegionInfo(uptr class_id) const {
     CHECK_LT(class_id, kNumClasses);
     RegionInfo *regions =
         reinterpret_cast<RegionInfo *>(SpaceBeg() + kSpaceSize);
     return &regions[class_id];
   }
 
-  uptr GetMetadataEnd(uptr region_beg) {
+  uptr GetMetadataEnd(uptr region_beg) const {
     return region_beg + kRegionSize - kFreeArraySize;
   }
 
-  uptr GetChunkIdx(uptr chunk, uptr size) {
+  uptr GetChunkIdx(uptr chunk, uptr size) const {
     if (!kUsingConstantSpaceBeg)
       chunk -= SpaceBeg();
 
@@ -382,9 +615,8 @@ class SizeClassAllocator64 {
     return (u32)offset / (u32)size;
   }
 
-  CompactPtrT *GetFreeArray(uptr region_beg) {
-    return reinterpret_cast<CompactPtrT *>(region_beg + kRegionSize -
-                                           kFreeArraySize);
+  CompactPtrT *GetFreeArray(uptr region_beg) const {
+    return reinterpret_cast<CompactPtrT *>(GetMetadataEnd(region_beg));
   }
 
   bool MapWithCallback(uptr beg, uptr size) {
@@ -410,8 +642,8 @@ class SizeClassAllocator64 {
                             uptr num_freed_chunks) {
     uptr needed_space = num_freed_chunks * sizeof(CompactPtrT);
     if (region->mapped_free_array < needed_space) {
-      CHECK_LE(needed_space, kFreeArraySize);
       uptr new_mapped_free_array = RoundUpTo(needed_space, kFreeArrayMapSize);
+      CHECK_LE(new_mapped_free_array, kFreeArraySize);
       uptr current_map_end = reinterpret_cast<uptr>(GetFreeArray(region_beg)) +
                              region->mapped_free_array;
       uptr new_map_size = new_mapped_free_array - region->mapped_free_array;
@@ -495,22 +727,54 @@ class SizeClassAllocator64 {
     CHECK_LE(region->allocated_meta, region->mapped_meta);
     region->exhausted = false;
 
+    // TODO(alekseyshl): Consider bumping last_release_at_ns here to prevent
+    // MaybeReleaseToOS from releasing just allocated pages or protect these
+    // not yet used chunks some other way.
+
     return true;
   }
 
-  void MaybeReleaseChunkRange(uptr region_beg, uptr chunk_size,
-                              CompactPtrT first, CompactPtrT last) {
-    uptr beg_ptr = CompactPtrToPointer(region_beg, first);
-    uptr end_ptr = CompactPtrToPointer(region_beg, last) + chunk_size;
-    ReleaseMemoryPagesToOS(beg_ptr, end_ptr);
-  }
+  class MemoryMapper {
+   public:
+    MemoryMapper(const ThisT& base_allocator, uptr class_id)
+        : allocator(base_allocator),
+          region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
+          released_ranges_count(0) {
+    }
 
-  // Attempts to release some RAM back to OS. The region is expected to be
-  // locked.
-  // Algorithm:
-  // * Sort the chunks.
-  // * Find ranges fully covered by free-d chunks
-  // * Release them to OS with madvise.
+    uptr GetReleasedRangesCount() const {
+      return released_ranges_count;
+    }
+
+    uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+      // TODO(alekseyshl): The idea to explore is to check if we have enough
+      // space between num_freed_chunks*sizeof(CompactPtrT) and
+      // mapped_free_array to fit buffer_size bytes and use that space instead
+      // of mapping a temporary one.
+      return reinterpret_cast<uptr>(
+          MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters"));
+    }
+
+    void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {
+      UnmapOrDie(reinterpret_cast<void *>(buffer), buffer_size);
+    }
+
+    // Releases [from, to) range of pages back to OS.
+    void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
+      ReleaseMemoryPagesToOS(
+          allocator.CompactPtrToPointer(region_base, from),
+          allocator.CompactPtrToPointer(region_base, to));
+      released_ranges_count++;
+    }
+
+   private:
+    const ThisT& allocator;
+    const uptr region_base;
+    uptr released_ranges_count;
+  };
+
+  // Attempts to release RAM occupied by freed chunks back to OS. The region is
+  // expected to be locked.
   void MaybeReleaseToOS(uptr class_id) {
     RegionInfo *region = GetRegionInfo(class_id);
     const uptr chunk_size = ClassIdToSize(class_id);
@@ -528,33 +792,20 @@ class SizeClassAllocator64 {
     if (interval_ms < 0)
       return;
 
-    u64 now_ns = NanoTime();
-    if (region->rtoi.last_release_at_ns + interval_ms * 1000000ULL > now_ns)
+    if (region->rtoi.last_release_at_ns + interval_ms * 1000000ULL > NanoTime())
       return;  // Memory was returned recently.
-    region->rtoi.last_release_at_ns = now_ns;
 
-    uptr region_beg = GetRegionBeginBySizeClass(class_id);
-    CompactPtrT *free_array = GetFreeArray(region_beg);
-    SortArray(free_array, n);
+    MemoryMapper memory_mapper(*this, class_id);
 
-    const uptr scaled_chunk_size = chunk_size >> kCompactPtrScale;
-    const uptr kScaledGranularity = page_size >> kCompactPtrScale;
+    ReleaseFreeMemoryToOS<MemoryMapper>(
+        GetFreeArray(GetRegionBeginBySizeClass(class_id)), n, chunk_size,
+        RoundUpTo(region->allocated_user, page_size) / page_size,
+        &memory_mapper);
 
-    uptr range_beg = free_array[0];
-    uptr prev = free_array[0];
-    for (uptr i = 1; i < n; i++) {
-      uptr chunk = free_array[i];
-      CHECK_GT(chunk, prev);
-      if (chunk - prev != scaled_chunk_size) {
-        CHECK_GT(chunk - prev, scaled_chunk_size);
-        if (prev + scaled_chunk_size - range_beg >= kScaledGranularity) {
-          MaybeReleaseChunkRange(region_beg, chunk_size, range_beg, prev);
-          region->rtoi.n_freed_at_last_release = region->stats.n_freed;
-          region->rtoi.num_releases++;
-        }
-        range_beg = chunk;
-      }
-      prev = chunk;
+    if (memory_mapper.GetReleasedRangesCount() > 0) {
+      region->rtoi.n_freed_at_last_release = region->stats.n_freed;
+      region->rtoi.num_releases += memory_mapper.GetReleasedRangesCount();
     }
+    region->rtoi.last_release_at_ns = NanoTime();
   }
 };
