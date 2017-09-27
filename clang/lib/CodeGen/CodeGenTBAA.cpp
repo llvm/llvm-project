@@ -145,10 +145,10 @@ CodeGenTBAA::getTBAAInfo(QualType QTy) {
   if (Ty->isStdByteType())
     return MetadataCache[Ty] = getChar();
 
-  // Handle pointers.
+  // Handle pointers and references.
   // TODO: Implement C++'s type "similarity" and consider dis-"similar"
   // pointers distinct.
-  if (Ty->isPointerType())
+  if (Ty->isPointerType() || Ty->isReferenceType())
     return MetadataCache[Ty] = createTBAAScalarType("any pointer",
                                                     getChar());
 

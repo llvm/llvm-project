@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-extensions %s 
 
-struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {
+extern "C++" struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {
   void foo();
 };
 struct IPropertyPageBase : public IUnknown {};
