@@ -21,7 +21,13 @@ struct InitializeHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    Callbacks.onInitialize(ID, Output);
+    auto IP = InitializeParams::parse(Params, Output);
+    if (!IP) {
+      Output.log("Failed to decode InitializeParams!\n");
+      IP = InitializeParams();
+    }
+
+    Callbacks.onInitialize(ID, *IP, Output);
   }
 
 private:

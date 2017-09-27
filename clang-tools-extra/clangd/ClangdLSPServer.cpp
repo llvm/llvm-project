@@ -51,7 +51,8 @@ class ClangdLSPServer::LSPProtocolCallbacks : public ProtocolCallbacks {
 public:
   LSPProtocolCallbacks(ClangdLSPServer &LangServer) : LangServer(LangServer) {}
 
-  void onInitialize(StringRef ID, JSONOutput &Out) override;
+  void onInitialize(StringRef ID, InitializeParams IP,
+                    JSONOutput &Out) override;
   void onShutdown(JSONOutput &Out) override;
   void onDocumentDidOpen(DidOpenTextDocumentParams Params,
                          JSONOutput &Out) override;
@@ -77,6 +78,7 @@ private:
 };
 
 void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
+                                                         InitializeParams IP,
                                                          JSONOutput &Out) {
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID +
@@ -89,6 +91,10 @@ void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
           "definitionProvider": true
         }}})");
+  if (IP.rootUri && !IP.rootUri->file.empty())
+    LangServer.Server.setRootPath(IP.rootUri->file);
+  else if (IP.rootPath && !IP.rootPath->empty())
+    LangServer.Server.setRootPath(*IP.rootPath);
 }
 
 void ClangdLSPServer::LSPProtocolCallbacks::onShutdown(JSONOutput &Out) {
