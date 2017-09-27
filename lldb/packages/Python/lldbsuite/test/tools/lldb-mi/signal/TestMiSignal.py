@@ -170,6 +170,7 @@ class MiSignalTestCase(lldbmi_testcase.MiTestCaseBase):
                      "\*stopped,reason=\"exception-received\",exception=\"invalid address \(fault address: 0x0\)\",thread-id=\"1\",stopped-threads=\"all\""])
 
     @skipUnlessDarwin
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_stopped_when_segfault_remote(self):
         """Test that 'lldb-mi --interpreter' notifies after it was stopped when segfault occurred (remote)."""
 

@@ -15,6 +15,7 @@ class TestBadReference(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @skipIfDarwinEmbedded  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
     def test_bad_reference(self):
         TestBase.setUp(self)
         self.build()

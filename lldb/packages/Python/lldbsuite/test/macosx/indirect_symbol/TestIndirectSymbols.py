@@ -31,6 +31,11 @@ class TestIndirectFunctions(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        if self.platformIsDarwin():
+            lib1 = os.path.join(os.getcwd(), 'libindirect.dylib')
+            lib2 = os.path.join(os.getcwd(), 'libreexport.dylib')
+            self.registerSharedLibrariesWithTarget(target, [lib1, lib2])
+
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
         break1 = target.BreakpointCreateBySourceRegex(

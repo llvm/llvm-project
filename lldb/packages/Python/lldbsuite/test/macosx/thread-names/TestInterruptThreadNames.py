@@ -70,7 +70,14 @@ class TestInterruptThreadNames(TestBase):
         inferior_set_up = lldb.SBValue()
         retry = 5
         while retry > 0:
-            time.sleep(1)
+            arch = self.getArchitecture()
+            # when running the testsuite against a remote arm device, it may take
+            # a little longer for the process to start up.  Use a "can't possibly take
+            # longer than this" value.
+            if arch == 'arm64' or arch == 'armv7':
+                time.sleep(10)
+            else:
+                time.sleep(1)
             process.SendAsyncInterrupt()
             self.assertTrue(self.wait_for_stop(process, listener), "Check that process is paused")
             inferior_set_up = process.GetTarget().CreateValueFromExpression("threads_up_and_running", "threads_up_and_running")

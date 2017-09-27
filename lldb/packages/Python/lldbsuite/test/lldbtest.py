@@ -706,7 +706,7 @@ class Base(unittest2.TestCase):
 
         # This function removes all files from the current working directory while leaving
         # the directories in place. The cleaup is required to reduce the disk space required
-        # by the test suit while leaving the directories untached is neccessary because
+        # by the test suite while leaving the directories untouched is neccessary because
         # sub-directories might belong to an other test
         def clean_working_directory():
             # TODO: Make it working on Windows when we need it for remote debugging support
