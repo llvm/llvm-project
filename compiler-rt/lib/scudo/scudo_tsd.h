@@ -1,4 +1,4 @@
-//===-- scudo_tls.h ---------------------------------------------*- C++ -*-===//
+//===-- scudo_tsd.h ---------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Scudo thread local structure definition.
+/// Scudo thread specific data definition.
 /// Implementation will differ based on the thread local storage primitives
 /// offered by the underlying platform.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_TLS_H_
-#define SCUDO_TLS_H_
+#ifndef SCUDO_TSD_H_
+#define SCUDO_TSD_H_
 
 #include "scudo_allocator.h"
 #include "scudo_utils.h"
-
-#include "sanitizer_common/sanitizer_linux.h"
-#include "sanitizer_common/sanitizer_platform.h"
 
 namespace __scudo {
 
@@ -65,10 +62,10 @@ struct ALIGNED(64) ScudoTSD {
 
 void initThread(bool MinimalInit);
 
-// Platform specific fastpath functions definitions.
-#include "scudo_tls_android.inc"
-#include "scudo_tls_linux.inc"
+// TSD model specific fastpath functions definitions.
+#include "scudo_tsd_exclusive.inc"
+#include "scudo_tsd_shared.inc"
 
 }  // namespace __scudo
 
-#endif  // SCUDO_TLS_H_
+#endif  // SCUDO_TSD_H_

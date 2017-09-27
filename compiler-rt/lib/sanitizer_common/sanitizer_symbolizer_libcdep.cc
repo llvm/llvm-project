@@ -176,14 +176,15 @@ const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
       return &modules_[i];
     }
   }
-  // Reload the modules and look up again, if we haven't tried it yet.
+  // dlopen/dlclose interceptors invalidate the module list, but when
+  // interception is disabled, we need to retry if the lookup fails in
+  // case the module list changed.
+#if !SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
   if (!modules_were_reloaded) {
-    // FIXME: set modules_fresh_ from dlopen()/dlclose() interceptors.
-    // It's too aggressive to reload the list of modules each time we fail
-    // to find a module for a given address.
     modules_fresh_ = false;
     return FindModuleForAddress(address);
   }
+#endif
   return 0;
 }
 
