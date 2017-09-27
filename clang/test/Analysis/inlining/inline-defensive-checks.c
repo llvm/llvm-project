@@ -169,6 +169,18 @@ void idcTrackZeroValueThroughUnaryPointerOperatorsWithAssignment(struct S *s) {
   *x = 7; // no-warning
 }
 
+void idcTrackZeroValueThroughManyUnaryPointerOperatorsWithAssignment(struct S *s) {
+  idc(s);
+  int *x = &*&(s->f1);
+  *x = 7; // no-warning
+}
+
+void idcTrackZeroValueThroughManyUnaryPointerOperatorsWithAssignmentAndUnaryIncrement(struct S *s) {
+  idc(s);
+  int *x = &*&((++s)->f1);
+  *x = 7; // no-warning
+}
+
 
 struct S2 {
   int a[1];
