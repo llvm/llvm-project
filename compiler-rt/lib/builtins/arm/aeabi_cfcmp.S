@@ -48,7 +48,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         // NaN has been ruled out, so __aeabi_cfcmple can't trap
         bne __aeabi_cfcmple
 
-#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+#if defined(USE_THUMB_2)
         mov ip, #APSR_C
         msr APSR_nzcvq, ip
 #else

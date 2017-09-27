@@ -1413,7 +1413,7 @@ TEST_F(FormatTest, FormatsTypedefEnum) {
   verifyFormat("typedef enum {} EmptyEnum;");
   verifyFormat("typedef enum { A, B, C } ShortEnum;");
   verifyFormat("typedef enum {\n"
-               "  ZERO = 0,\n"             
+               "  ZERO = 0,\n"
                "  ONE = 1,\n"
                "  TWO = 2,\n"
                "  THREE = 3\n"
@@ -1425,7 +1425,7 @@ TEST_F(FormatTest, FormatsTypedefEnum) {
   verifyFormat("typedef enum { A, B, C } ShortEnum;");
   verifyFormat("typedef enum\n"
                "{\n"
-               "  ZERO = 0,\n"             
+               "  ZERO = 0,\n"
                "  ONE = 1,\n"
                "  TWO = 2,\n"
                "  THREE = 3\n"
@@ -9323,7 +9323,7 @@ TEST_F(FormatTest, LinuxBraceBreaking) {
                "struct B {\n"
                "  int x;\n"
                "};\n"
-               "}\n",
+               "} // namespace a\n",
                LinuxBraceStyle);
   verifyFormat("enum X {\n"
                "  Y = 0,\n"
@@ -9453,6 +9453,19 @@ TEST_F(FormatTest, StroustrupBraceBreaking) {
 TEST_F(FormatTest, AllmanBraceBreaking) {
   FormatStyle AllmanBraceStyle = getLLVMStyle();
   AllmanBraceStyle.BreakBeforeBraces = FormatStyle::BS_Allman;
+
+  EXPECT_EQ("namespace a\n"
+            "{\n"
+            "void f();\n"
+            "void g();\n"
+            "} // namespace a\n",
+            format("namespace a\n"
+                   "{\n"
+                   "void f();\n"
+                   "void g();\n"
+                   "}\n",
+                   AllmanBraceStyle));
+
   verifyFormat("namespace a\n"
                "{\n"
                "class A\n"
@@ -9471,7 +9484,7 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                "{\n"
                "  int x;\n"
                "};\n"
-               "}",
+               "} // namespace a",
                AllmanBraceStyle);
 
   verifyFormat("void f()\n"
@@ -9677,7 +9690,7 @@ TEST_F(FormatTest, GNUBraceBreaking) {
                "  }\n"
                "  void g() { return; }\n"
                "}\n"
-               "}",
+               "} // namespace a",
                GNUBraceStyle);
 
   verifyFormat("void f()\n"

@@ -12320,18 +12320,18 @@ EVT ARMTargetLowering::getOptimalMemOpType(uint64_t Size,
 bool ARMTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
   if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
     return false;
-  unsigned NumBits1 = SrcTy->getPrimitiveSizeInBits();
-  unsigned NumBits2 = DstTy->getPrimitiveSizeInBits();
-  return NumBits1 > NumBits2;
+  unsigned SrcBits = SrcTy->getPrimitiveSizeInBits();
+  unsigned DestBits = DstTy->getPrimitiveSizeInBits();
+  return (SrcBits == 64 && DestBits == 32);
 }
 
 bool ARMTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
   if (SrcVT.isVector() || DstVT.isVector() || !SrcVT.isInteger() ||
       !DstVT.isInteger())
     return false;
-  unsigned NumBits1 = SrcVT.getSizeInBits();
-  unsigned NumBits2 = DstVT.getSizeInBits();
-  return NumBits1 > NumBits2;
+  unsigned SrcBits = SrcVT.getSizeInBits();
+  unsigned DestBits = DstVT.getSizeInBits();
+  return (SrcBits == 64 && DestBits == 32);
 }
 
 bool ARMTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
