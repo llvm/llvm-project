@@ -418,6 +418,10 @@ protected:
   std::vector<SymbolTableEntry> Symbols;
 
   StringTableSection &StrTabSec;
+
+  llvm::once_flag OnceFlag;
+  llvm::DenseMap<SymbolBody *, size_t> SymbolIndexMap;
+  llvm::DenseMap<OutputSection *, size_t> SectionIndexMap;
 };
 
 template <class ELFT>
@@ -460,7 +464,7 @@ private:
   size_t Size = 0;
 };
 
-template <class ELFT> class HashTableSection final : public SyntheticSection {
+class HashTableSection final : public SyntheticSection {
 public:
   HashTableSection();
   void finalizeContents() override;
@@ -800,6 +804,7 @@ struct InX {
   static StringTableSection *DynStrTab;
   static SymbolTableBaseSection *DynSymTab;
   static GnuHashTableSection *GnuHashTab;
+  static HashTableSection *HashTab;
   static InputSection *Interp;
   static GdbIndexSection *GdbIndex;
   static GotSection *Got;
@@ -817,7 +822,6 @@ struct InX {
 template <class ELFT> struct In : public InX {
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhFrameSection<ELFT> *EhFrame;
-  static HashTableSection<ELFT> *HashTab;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static RelocationSection<ELFT> *RelaIplt;
@@ -828,7 +832,6 @@ template <class ELFT> struct In : public InX {
 
 template <class ELFT> EhFrameHeader<ELFT> *In<ELFT>::EhFrameHdr;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;
-template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaIplt;

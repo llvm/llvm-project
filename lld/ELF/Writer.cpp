@@ -333,8 +333,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     }
 
     if (Config->SysvHash) {
-      In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
-      Add(In<ELFT>::HashTab);
+      InX::HashTab = make<HashTableSection>();
+      Add(InX::HashTab);
     }
 
     Add(InX::Dynamic);
@@ -1353,7 +1353,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic({InX::DynSymTab,    InX::Bss,
                   InX::BssRelRo,     InX::GnuHashTab,
-                  In<ELFT>::HashTab, InX::SymTab,
+                  InX::HashTab,      InX::SymTab,
                   InX::ShStrTab,     InX::StrTab,
                   In<ELFT>::VerDef,  InX::DynStrTab,
                   InX::Got,          InX::MipsGot,

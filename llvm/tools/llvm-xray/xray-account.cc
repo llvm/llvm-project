@@ -146,7 +146,8 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
   switch (Record.Type) {
-  case RecordTypes::ENTER: {
+  case RecordTypes::ENTER:
+  case RecordTypes::ENTER_ARG: {
     ThreadStack.emplace_back(Record.FuncId, Record.TSC);
     break;
   }
@@ -416,6 +417,9 @@ template <> struct format_provider<llvm::xray::RecordTypes> {
     switch(T) {
       case RecordTypes::ENTER:
         Stream << "enter";
+        break;
+      case RecordTypes::ENTER_ARG:
+        Stream << "enter-arg";
         break;
       case RecordTypes::EXIT:
         Stream << "exit";

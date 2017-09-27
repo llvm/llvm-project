@@ -128,6 +128,7 @@ struct FDRState {
     FUNCTION_SEQUENCE,
     SCAN_TO_END_OF_THREAD_BUF,
     CUSTOM_EVENT_DATA,
+    CALL_ARGUMENT,
   };
   Token Expects;
 
@@ -151,6 +152,8 @@ const char *fdrStateToTwine(const FDRState::Token &state) {
     return "SCAN_TO_END_OF_THREAD_BUF";
   case FDRState::Token::CUSTOM_EVENT_DATA:
     return "CUSTOM_EVENT_DATA";
+  case FDRState::Token::CALL_ARGUMENT:
+    return "CALL_ARGUMENT";
   }
   return "UNKNOWN";
 }
@@ -238,6 +241,22 @@ Error processCustomEventMarker(FDRState &State, uint8_t RecordFirstByte,
   return Error::success();
 }
 
+/// State transition when a CallArgumentRecord is encountered.
+Error processFDRCallArgumentRecord(FDRState &State, uint8_t RecordFirstByte,
+                                   DataExtractor &RecordExtractor,
+                                   std::vector<XRayRecord> &Records) {
+  uint32_t OffsetPtr = 1; // Read starting after the first byte.
+  auto &Enter = Records.back();
+
+  if (Enter.Type != RecordTypes::ENTER)
+    return make_error<StringError>(
+        "CallArgument needs to be right after a function entry",
+        std::make_error_code(std::errc::executable_format_error));
+  Enter.Type = RecordTypes::ENTER_ARG;
+  Enter.CallArgs.emplace_back(RecordExtractor.getU64(&OffsetPtr));
+  return Error::success();
+}
+
 /// Advances the state machine for reading the FDR record type by reading one
 /// Metadata Record and updating the State appropriately based on the kind of
 /// record encountered. The RecordKind is encoded in the first byte of the
@@ -245,7 +264,8 @@ Error processCustomEventMarker(FDRState &State, uint8_t RecordFirstByte,
 /// to determine that this is a metadata record as opposed to a function record.
 Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
                                DataExtractor &RecordExtractor,
-                               size_t &RecordSize) {
+                               size_t &RecordSize,
+                               std::vector<XRayRecord> &Records) {
   // The remaining 7 bits are the RecordKind enum.
   uint8_t RecordKind = RecordFirstByte >> 1;
   switch (RecordKind) {
@@ -277,6 +297,11 @@ Error processFDRMetadataRecord(FDRState &State, uint8_t RecordFirstByte,
   case 5: // CustomEventMarker
     if (auto E = processCustomEventMarker(State, RecordFirstByte,
                                           RecordExtractor, RecordSize))
+      return E;
+    break;
+  case 6: // CallArgument
+    if (auto E = processFDRCallArgumentRecord(State, RecordFirstByte,
+                                              RecordExtractor, Records))
       return E;
     break;
   default:
@@ -434,7 +459,7 @@ Error loadFDRLog(StringRef Data, XRayFileHeader &FileHeader,
     if (isMetadataRecord) {
       RecordSize = 16;
       if (auto E = processFDRMetadataRecord(State, BitField, RecordExtractor,
-                                            RecordSize))
+                                            RecordSize, Records))
         return E;
     } else { // Process Function Record
       RecordSize = 8;
@@ -483,7 +508,7 @@ Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
   std::transform(Trace.Records.begin(), Trace.Records.end(),
                  std::back_inserter(Records), [&](const YAMLXRayRecord &R) {
                    return XRayRecord{R.RecordType, R.CPU, R.Type,
-                                     R.FuncId,     R.TSC, R.TId};
+                                     R.FuncId,     R.TSC, R.TId, R.CallArgs};
                  });
   return Error::success();
 }

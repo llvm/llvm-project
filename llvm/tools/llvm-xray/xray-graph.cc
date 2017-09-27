@@ -208,7 +208,8 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
 
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
   switch (Record.Type) {
-  case RecordTypes::ENTER: {
+  case RecordTypes::ENTER:
+  case RecordTypes::ENTER_ARG: {
     if (Record.FuncId != 0 && G.count(Record.FuncId) == 0)
       G[Record.FuncId].SymbolName = FuncIdHelper.SymbolOrNumber(Record.FuncId);
     ThreadStack.push_back({Record.FuncId, Record.TSC});
