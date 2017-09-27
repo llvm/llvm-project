@@ -81,7 +81,8 @@ llvm_bindir = llvm_config(['--bindir'])
 llvm_core_libs = llvm_config(['--libs', 'core', 'bitreader', 'bitwriter']) + ' ' + \
                  llvm_system_libs + ' ' + \
                  llvm_config(['--ldflags'])
-llvm_cxxflags = llvm_config(['--cxxflags']) + ' -fno-exceptions -fno-rtti'
+llvm_cxxflags = llvm_config(['--cxxflags']) + ' -fno-exceptions -fno-rtti ' + \
+                '-DHAVE_LLVM=0x{:0=4}'.format(llvm_int_version)
 llvm_libdir = llvm_config(['--libdir'])
 
 llvm_clang = os.path.join(llvm_bindir, 'clang')
