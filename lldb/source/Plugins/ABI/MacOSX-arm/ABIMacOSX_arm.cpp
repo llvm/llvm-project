@@ -1413,10 +1413,6 @@ bool ABIMacOSX_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx->WriteRegisterFromUnsigned(ra_reg_num, return_addr))
     return false;
 
-  // Set "sp" to the requested value
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp))
-    return false;
-
   // If bit zero or 1 is set, this must be a thumb function, no need to figure
   // this out from the symbols.
   so_addr.SetLoadAddress(function_addr, target_sp.get());
@@ -1440,6 +1436,11 @@ bool ABIMacOSX_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   function_addr &=
       ~1ull; // clear bit zero since the CPSR will take care of the mode for us
+
+  // Update the sp - stack pointer - to be aligned to 16-bytes
+  sp &= ~(0xfull);
+  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp))
+    return false;
 
   // Set "pc" to the address requested
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, function_addr))

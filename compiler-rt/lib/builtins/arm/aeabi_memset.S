@@ -24,6 +24,7 @@ END_COMPILERRT_FUNCTION(__aeabi_memset)
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_memset4, __aeabi_memset)
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_memset8, __aeabi_memset)
 
+        .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_memclr)
         mov     r2, r1
         movs    r1, #0

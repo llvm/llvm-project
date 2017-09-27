@@ -89,10 +89,10 @@ void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
 
 #define DEBUG_TYPE "selectiondag"
 
-static void NewSDValueDbgMsg(SDValue V, StringRef Msg) {
+static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   DEBUG(
     dbgs() << Msg;
-    V.dump();
+    V.getNode()->dump(G);
   );
 }
 
@@ -1167,7 +1167,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
       Ops.insert(Ops.end(), EltParts.begin(), EltParts.end());
 
     SDValue V = getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
-    NewSDValueDbgMsg(V, "Creating constant: ");
+    NewSDValueDbgMsg(V, "Creating constant: ", this);
     return V;
   }
 
@@ -1194,7 +1194,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
 
-  NewSDValueDbgMsg(Result, "Creating constant: ");
+  NewSDValueDbgMsg(Result, "Creating constant: ", this);
   return Result;
 }
 
@@ -1236,7 +1236,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   SDValue Result(N, 0);
   if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
-  NewSDValueDbgMsg(Result, "Creating fp constant: ");
+  NewSDValueDbgMsg(Result, "Creating fp constant: ", this);
   return Result;
 }
 
@@ -3499,7 +3499,7 @@ static SDValue FoldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
                : DAG.getSExtOrTrunc(Op, DL, SVT);
 
   SDValue V = DAG.getBuildVector(VT, DL, Elts);
-  NewSDValueDbgMsg(V, "New node fold concat vectors: ");
+  NewSDValueDbgMsg(V, "New node fold concat vectors: ", &DAG);
   return V;
 }
 
@@ -3517,7 +3517,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ");
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
 }
 
@@ -3880,7 +3880,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ");
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
 }
 
@@ -4155,7 +4155,7 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   }
 
   SDValue V = getBuildVector(VT, DL, ScalarResults);
-  NewSDValueDbgMsg(V, "New node fold constant vector: ");
+  NewSDValueDbgMsg(V, "New node fold constant vector: ", this);
   return V;
 }
 
@@ -4657,7 +4657,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ");
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
 }
 
@@ -4694,7 +4694,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Vector constant folding.
     SDValue Ops[] = {N1, N2, N3};
     if (SDValue V = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops)) {
-      NewSDValueDbgMsg(V, "New node vector constant folding: ");
+      NewSDValueDbgMsg(V, "New node vector constant folding: ", this);
       return V;
     }
     break;
@@ -4769,7 +4769,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   InsertNode(N);
   SDValue V = SDValue(N, 0);
-  NewSDValueDbgMsg(V, "Creating new node: ");
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
 }
 

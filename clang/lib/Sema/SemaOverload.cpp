@@ -10271,7 +10271,7 @@ struct CompareOverloadCandidatesForDisplay {
   CompareOverloadCandidatesForDisplay(
       Sema &S, SourceLocation Loc, size_t NArgs,
       OverloadCandidateSet::CandidateSetKind CSK)
-      : S(S), NumArgs(NArgs) {}
+      : S(S), NumArgs(NArgs), CSK(CSK) {}
 
   bool operator()(const OverloadCandidate *L,
                   const OverloadCandidate *R) {

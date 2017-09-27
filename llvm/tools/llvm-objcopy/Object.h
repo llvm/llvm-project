@@ -148,7 +148,7 @@ enum SymbolShndxType {
 
 struct Symbol {
   uint8_t Binding;
-  SectionBase *DefinedIn;
+  SectionBase *DefinedIn = nullptr;
   SymbolShndxType ShndxType;
   uint32_t Index;
   llvm::StringRef Name;
@@ -163,7 +163,7 @@ struct Symbol {
 class SymbolTableSection : public SectionBase {
 protected:
   std::vector<std::unique_ptr<Symbol>> Symbols;
-  StringTableSection *SymbolNames;
+  StringTableSection *SymbolNames = nullptr;
 
 public:
   void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
@@ -185,7 +185,7 @@ template <class ELFT> class SymbolTableSectionImpl : public SymbolTableSection {
 };
 
 struct Relocation {
-  const Symbol *RelocSymbol;
+  const Symbol *RelocSymbol = nullptr;
   uint64_t Offset;
   uint64_t Addend;
   uint32_t Type;
@@ -193,8 +193,8 @@ struct Relocation {
 
 template <class SymTabType> class RelocationSectionBase : public SectionBase {
 private:
-  SymTabType *Symbols;
-  SectionBase *SecToApplyRel;
+  SymTabType *Symbols = nullptr;
+  SectionBase *SecToApplyRel = nullptr;
 
 public:
   void setSymTab(SymTabType *StrTab) { Symbols = StrTab; }
@@ -226,7 +226,7 @@ public:
 
 class SectionWithStrTab : public Section {
 private:
-  StringTableSection *StrTab;
+  StringTableSection *StrTab = nullptr;
 
 public:
   SectionWithStrTab(llvm::ArrayRef<uint8_t> Data) : Section(Data) {}
@@ -285,8 +285,8 @@ private:
   SectionTableRef readSectionHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
 
 protected:
-  StringTableSection *SectionNames;
-  SymbolTableSection *SymbolTable;
+  StringTableSection *SectionNames = nullptr;
+  SymbolTableSection *SymbolTable = nullptr;
   std::vector<SecPtr> Sections;
   std::vector<SegPtr> Segments;
 

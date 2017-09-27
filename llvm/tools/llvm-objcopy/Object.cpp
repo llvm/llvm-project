@@ -218,6 +218,8 @@ void RelocationSectionBase<SymTabType>::initialize(SectionTableRef SecTable) {
     setSection(SecTable.getSection(Info,
                                    "Info field value " + Twine(Info) +
                                        " in section " + Name + " is invalid"));
+  else
+    setSection(nullptr);
 }
 
 template <class SymTabType> void RelocationSectionBase<SymTabType>::finalize() {
