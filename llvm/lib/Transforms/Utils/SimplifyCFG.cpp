@@ -167,11 +167,10 @@ struct ValueEqualityComparisonCase {
 class SimplifyCFGOpt {
   const TargetTransformInfo &TTI;
   const DataLayout &DL;
-  unsigned BonusInstThreshold;
   AssumptionCache *AC;
   SmallPtrSetImpl<BasicBlock *> *LoopHeaders;
-  // See comments in SimplifyCFGOpt::SimplifySwitch.
-  bool LateSimplifyCFG;
+  const SimplifyCFGOptions &Options;
+
   Value *isValueEqualityComparison(TerminatorInst *TI);
   BasicBlock *GetValueEqualityComparisonCases(
       TerminatorInst *TI, std::vector<ValueEqualityComparisonCase> &Cases);
@@ -194,11 +193,10 @@ class SimplifyCFGOpt {
 
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, const DataLayout &DL,
-                 unsigned BonusInstThreshold, AssumptionCache *AC,
+                 AssumptionCache *AC,
                  SmallPtrSetImpl<BasicBlock *> *LoopHeaders,
-                 bool LateSimplifyCFG)
-      : TTI(TTI), DL(DL), BonusInstThreshold(BonusInstThreshold), AC(AC),
-        LoopHeaders(LoopHeaders), LateSimplifyCFG(LateSimplifyCFG) {}
+                 const SimplifyCFGOptions &Opts)
+      : TTI(TTI), DL(DL), AC(AC), LoopHeaders(LoopHeaders), Options(Opts) {}
 
   bool run(BasicBlock *BB);
 };
@@ -3491,8 +3489,8 @@ static bool SimplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI) {
 /// the PHI, merging the third icmp into the switch.
 static bool TryToSimplifyUncondBranchWithICmpInIt(
     ICmpInst *ICI, IRBuilder<> &Builder, const DataLayout &DL,
-    const TargetTransformInfo &TTI, unsigned BonusInstThreshold,
-    AssumptionCache *AC) {
+    const TargetTransformInfo &TTI, AssumptionCache *AC,
+    const SimplifyCFGOptions &Options) {
   BasicBlock *BB = ICI->getParent();
 
   // If the block has any PHIs in it or the icmp has multiple uses, it is too
@@ -3527,7 +3525,7 @@ static bool TryToSimplifyUncondBranchWithICmpInIt(
       ICI->eraseFromParent();
     }
     // BB is now empty, so it is likely to simplify away.
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
   }
 
   // Ok, the block is reachable from the default dest.  If the constant we're
@@ -3543,7 +3541,7 @@ static bool TryToSimplifyUncondBranchWithICmpInIt(
     ICI->replaceAllUsesWith(V);
     ICI->eraseFromParent();
     // BB is now empty, so it is likely to simplify away.
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
   }
 
   // The use of the icmp has to be in the 'end' block, by the only PHI node in
@@ -5522,12 +5520,12 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     // see if that predecessor totally determines the outcome of this switch.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (SimplifyEqualityComparisonWithOnlyPredecessor(SI, OnlyPred, Builder))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
 
     Value *Cond = SI->getCondition();
     if (SelectInst *Select = dyn_cast<SelectInst>(Cond))
       if (SimplifySwitchOnSelect(SI, Select))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
 
     // If the block only contains the switch, see if we can fold the block
     // away into any preds.
@@ -5537,33 +5535,34 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
       ++BBI;
     if (SI == &*BBI)
       if (FoldValueComparisonIntoPredecessors(SI, Builder))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
   }
 
   // Try to transform the switch into an icmp and a branch.
   if (TurnSwitchRangeIntoICmp(SI, Builder))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   // Remove unreachable cases.
   if (EliminateDeadSwitchCases(SI, AC, DL))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   if (SwitchToSelect(SI, Builder, AC, DL, TTI))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   if (ForwardSwitchConditionToPHI(SI))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   // The conversion from switch to lookup tables results in difficult-to-analyze
   // code and makes pruning branches much harder. This is a problem if the
   // switch expression itself can still be restricted as a result of inlining or
   // CVP. Therefore, only apply this transformation during late stages of the
   // optimisation pipeline.
-  if (LateSimplifyCFG && SwitchToLookupTable(SI, Builder, DL, TTI))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+  if (Options.ConvertSwitchToLookupTable &&
+      SwitchToLookupTable(SI, Builder, DL, TTI))
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   if (ReduceSwitchRange(SI, Builder, DL, TTI))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   return false;
 }
@@ -5601,7 +5600,7 @@ bool SimplifyCFGOpt::SimplifyIndirectBr(IndirectBrInst *IBI) {
 
   if (SelectInst *SI = dyn_cast<SelectInst>(IBI->getAddress())) {
     if (SimplifyIndirectBrOnSelect(IBI, SI))
-      return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+      return SimplifyCFG(BB, TTI, AC, Options) | true;
   }
   return Changed;
 }
@@ -5697,7 +5696,7 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
   // vectorization to keep canonical loop forms for nested loops. These blocks
   // can be eliminated when the pass is invoked later in the back-end.)
   bool NeedCanonicalLoop =
-      !LateSimplifyCFG &&
+      Options.NeedCanonicalLoop &&
       (LoopHeaders && (LoopHeaders->count(BB) || LoopHeaders->count(Succ)));
   BasicBlock::iterator I = BB->getFirstNonPHIOrDbg()->getIterator();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
@@ -5711,8 +5710,8 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
       for (++I; isa<DbgInfoIntrinsic>(I); ++I)
         ;
       if (I->isTerminator() &&
-          TryToSimplifyUncondBranchWithICmpInIt(ICI, Builder, DL, TTI,
-                                                BonusInstThreshold, AC))
+          TryToSimplifyUncondBranchWithICmpInIt(ICI, Builder, DL, TTI, AC,
+                                                Options))
         return true;
     }
 
@@ -5729,8 +5728,8 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
   // branches to us and our successor, fold the comparison into the
   // predecessor and use logical operations to update the incoming value
   // for PHI nodes in common successor.
-  if (FoldBranchToCommonDest(BI, BonusInstThreshold))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+  if (FoldBranchToCommonDest(BI, Options.BonusInstThreshold))
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
   return false;
 }
 
@@ -5755,7 +5754,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     // switch.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (SimplifyEqualityComparisonWithOnlyPredecessor(BI, OnlyPred, Builder))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
 
     // This block must be empty, except for the setcond inst, if it exists.
     // Ignore dbg intrinsics.
@@ -5765,14 +5764,14 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       ++I;
     if (&*I == BI) {
       if (FoldValueComparisonIntoPredecessors(BI, Builder))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
     } else if (&*I == cast<Instruction>(BI->getCondition())) {
       ++I;
       // Ignore dbg intrinsics.
       while (isa<DbgInfoIntrinsic>(I))
         ++I;
       if (&*I == BI && FoldValueComparisonIntoPredecessors(BI, Builder))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
     }
   }
 
@@ -5799,7 +5798,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
                               : ConstantInt::getFalse(BB->getContext());
         BI->setCondition(CI);
         RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
       }
     }
   }
@@ -5807,8 +5806,8 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this basic block is ONLY a compare and a branch, and if a predecessor
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
-  if (FoldBranchToCommonDest(BI, BonusInstThreshold))
-    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+  if (FoldBranchToCommonDest(BI, Options.BonusInstThreshold))
+    return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   // We have a conditional branch to two blocks that are only reachable
   // from BI.  We know that the condbr dominates the two blocks, so see if
@@ -5817,7 +5816,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   if (BI->getSuccessor(0)->getSinglePredecessor()) {
     if (BI->getSuccessor(1)->getSinglePredecessor()) {
       if (HoistThenElseCodeToIf(BI, TTI))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
@@ -5825,7 +5824,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (Succ0TI->getNumSuccessors() == 1 &&
           Succ0TI->getSuccessor(0) == BI->getSuccessor(1))
         if (SpeculativelyExecuteBB(BI, BI->getSuccessor(0), TTI))
-          return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+          return SimplifyCFG(BB, TTI, AC, Options) | true;
     }
   } else if (BI->getSuccessor(1)->getSinglePredecessor()) {
     // If Successor #0 has multiple preds, we may be able to conditionally
@@ -5834,7 +5833,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     if (Succ1TI->getNumSuccessors() == 1 &&
         Succ1TI->getSuccessor(0) == BI->getSuccessor(0))
       if (SpeculativelyExecuteBB(BI, BI->getSuccessor(1), TTI))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
   }
 
   // If this is a branch on a phi node in the current block, thread control
@@ -5842,14 +5841,14 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   if (PHINode *PN = dyn_cast<PHINode>(BI->getCondition()))
     if (PN->getParent() == BI->getParent())
       if (FoldCondBranchOnPHI(BI, DL, AC))
-        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+        return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   // Scan predecessor blocks for conditional branches.
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI)
     if (BranchInst *PBI = dyn_cast<BranchInst>((*PI)->getTerminator()))
       if (PBI != BI && PBI->isConditional())
         if (SimplifyCondBranchToCondBranch(PBI, BI, DL))
-          return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+          return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   // Look for diamond patterns.
   if (MergeCondStores)
@@ -5857,7 +5856,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (BranchInst *PBI = dyn_cast<BranchInst>(PrevBB->getTerminator()))
         if (PBI != BI && PBI->isConditional())
           if (mergeConditionalStores(PBI, BI, DL))
-            return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+            return SimplifyCFG(BB, TTI, AC, Options) | true;
 
   return false;
 }
@@ -6013,16 +6012,10 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
   return Changed;
 }
 
-/// This function is used to do simplification of a CFG.
-/// For example, it adjusts branches to branches to eliminate the extra hop,
-/// eliminates unreachable basic blocks, and does other "peephole" optimization
-/// of the CFG.  It returns true if a modification was made.
-///
 bool llvm::SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                       unsigned BonusInstThreshold, AssumptionCache *AC,
-                       SmallPtrSetImpl<BasicBlock *> *LoopHeaders,
-                       bool LateSimplifyCFG) {
-  return SimplifyCFGOpt(TTI, BB->getModule()->getDataLayout(),
-                        BonusInstThreshold, AC, LoopHeaders, LateSimplifyCFG)
+                       AssumptionCache *AC, const SimplifyCFGOptions &Options,
+                       SmallPtrSetImpl<BasicBlock *> *LoopHeaders) {
+  return SimplifyCFGOpt(TTI, BB->getModule()->getDataLayout(), AC, LoopHeaders,
+                        Options)
       .run(BB);
 }

@@ -27,7 +27,8 @@ class ProtocolCallbacks {
 public:
   virtual ~ProtocolCallbacks() = default;
 
-  virtual void onInitialize(StringRef ID, JSONOutput &Out) = 0;
+  virtual void onInitialize(StringRef ID, InitializeParams IP,
+                            JSONOutput &Out) = 0;
   virtual void onShutdown(JSONOutput &Out) = 0;
   virtual void onDocumentDidOpen(DidOpenTextDocumentParams Params,
                                  JSONOutput &Out) = 0;

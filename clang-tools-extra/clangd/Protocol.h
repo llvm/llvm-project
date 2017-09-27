@@ -160,6 +160,43 @@ struct TextDocumentItem {
                                                 clangd::Logger &Logger);
 };
 
+enum class TraceLevel {
+  Off = 0,
+  Messages = 1,
+  Verbose = 2,
+};
+
+struct InitializeParams {
+  /// The process Id of the parent process that started
+  /// the server. Is null if the process has not been started by another
+  /// process. If the parent process is not alive then the server should exit
+  /// (see exit notification) its process.
+  llvm::Optional<int> processId;
+
+  /// The rootPath of the workspace. Is null
+  /// if no folder is open.
+  ///
+  /// @deprecated in favour of rootUri.
+  llvm::Optional<std::string> rootPath;
+
+  /// The rootUri of the workspace. Is null if no
+  /// folder is open. If both `rootPath` and `rootUri` are set
+  /// `rootUri` wins.
+  llvm::Optional<URI> rootUri;
+
+  // User provided initialization options.
+  // initializationOptions?: any;
+
+  /// The capabilities provided by the client (editor or tool)
+  /// Note: Not currently used by clangd
+  // ClientCapabilities capabilities;
+
+  /// The initial trace setting. If omitted trace is disabled ('off').
+  llvm::Optional<TraceLevel> trace;
+  static llvm::Optional<InitializeParams> parse(llvm::yaml::MappingNode *Params,
+                                                clangd::Logger &Logger);
+};
+
 struct DidOpenTextDocumentParams {
   /// The document that was opened.
   TextDocumentItem textDocument;

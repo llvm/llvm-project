@@ -96,14 +96,14 @@ define i32 @main() #0 {
 
 attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="true" }
 
-; CHECK-LABEL: l_OUTLINED_FUNCTION_1:
+; CHECK-LABEL: l_OUTLINED_FUNCTION_{{[0-9]+}}:
 ; CHECK:      movl  $1, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: movl  $2, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: movl  $3, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: movl  $4, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: retq
 
-; CHECK-LABEL: l_OUTLINED_FUNCTION_0:
+; CHECK-LABEL: l_OUTLINED_FUNCTION_{{[0-9]+}}:
 ; CHECK:      movl  $1, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: movl  $2, -{{[0-9]+}}(%rbp)
 ; CHECK-NEXT: movl  $3, -{{[0-9]+}}(%rbp)

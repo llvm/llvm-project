@@ -15,6 +15,23 @@
 /// instructions. If a sequence of instructions appears often, then it ought
 /// to be beneficial to pull out into a function.
 ///
+/// The MachineOutliner communicates with a given target using hooks defined in
+/// TargetInstrInfo.h. The target supplies the outliner with information on how
+/// a specific sequence of instructions should be outlined. This information
+/// is used to deduce the number of instructions necessary to
+///
+/// * Create an outlined function
+/// * Call that outlined function
+///
+/// Targets must implement
+///   * getOutliningCandidateInfo
+///   * insertOutlinerEpilogue
+///   * insertOutlinedCall
+///   * insertOutlinerPrologue
+///   * isFunctionSafeToOutlineFrom
+///
+/// in order to make use of the MachineOutliner.
+///
 /// This was originally presented at the 2016 LLVM Developers' Meeting in the
 /// talk "Reducing Code Size Using Outlining". For a high-level overview of
 /// how this pass works, the talk is available on YouTube at
@@ -80,17 +97,17 @@ struct Candidate {
   bool InCandidateList = true;
 
   /// The start index of this \p Candidate.
-  size_t StartIdx;
+  unsigned StartIdx;
 
   /// The number of instructions in this \p Candidate.
-  size_t Len;
+  unsigned Len;
 
   /// The index of this \p Candidate's \p OutlinedFunction in the list of
   /// \p OutlinedFunctions.
-  size_t FunctionIdx;
+  unsigned FunctionIdx;
 
-  /// Target-defined unsigned defining how to emit a call for this candidate.
-  unsigned CallClass = 0;
+  /// Contains all target-specific information for this \p Candidate.
+  TargetInstrInfo::MachineOutlinerInfo MInfo;
 
   /// \brief The number of instructions that would be saved by outlining every
   /// candidate of this type.
@@ -101,9 +118,8 @@ struct Candidate {
   /// for some given candidate.
   unsigned Benefit = 0;
 
-  Candidate(size_t StartIdx, size_t Len, size_t FunctionIdx, unsigned CallClass)
-      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx),
-        CallClass(CallClass) {}
+  Candidate(unsigned StartIdx, unsigned Len, unsigned FunctionIdx)
+      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx) {}
 
   Candidate() {}
 
@@ -120,11 +136,11 @@ struct OutlinedFunction {
   /// This is initialized after we go through and create the actual function.
   MachineFunction *MF = nullptr;
 
-  /// A numbefr assigned to this function which appears at the end of its name.
-  size_t Name;
+  /// A number assigned to this function which appears at the end of its name.
+  unsigned Name;
 
   /// The number of candidates for this OutlinedFunction.
-  size_t OccurrenceCount = 0;
+  unsigned OccurrenceCount = 0;
 
   /// \brief The sequence of integers corresponding to the instructions in this
   /// function.
@@ -133,18 +149,18 @@ struct OutlinedFunction {
   /// The number of instructions this function would save.
   unsigned Benefit = 0;
 
-  /// Target-defined unsigned defining how to emit the frame for this function.
-  unsigned FrameClass = 0;
+  /// Contains all target-specific information for this \p OutlinedFunction.
+  TargetInstrInfo::MachineOutlinerInfo MInfo;
 
-  OutlinedFunction(size_t Name, size_t OccurrenceCount,
+  OutlinedFunction(unsigned Name, unsigned OccurrenceCount,
                    const std::vector<unsigned> &Sequence, unsigned Benefit,
-                   unsigned FrameClass)
+                   TargetInstrInfo::MachineOutlinerInfo &MInfo)
       : Name(Name), OccurrenceCount(OccurrenceCount), Sequence(Sequence),
-        Benefit(Benefit), FrameClass(FrameClass) {}
+        Benefit(Benefit), MInfo(MInfo) {}
 };
 
 /// Represents an undefined index in the suffix tree.
-const size_t EmptyIdx = -1;
+const unsigned EmptyIdx = -1;
 
 /// A node in a suffix tree which represents a substring or suffix.
 ///
@@ -174,7 +190,7 @@ struct SuffixTreeNode {
   bool IsInTree = true;
 
   /// The start index of this node's substring in the main string.
-  size_t StartIdx = EmptyIdx;
+  unsigned StartIdx = EmptyIdx;
 
   /// The end index of this node's substring in the main string.
   ///
@@ -182,12 +198,12 @@ struct SuffixTreeNode {
   /// step in the construction algorithm. To avoid having to update O(N)
   /// nodes individually at the end of every step, the end index is stored
   /// as a pointer.
-  size_t *EndIdx = nullptr;
+  unsigned *EndIdx = nullptr;
 
   /// For leaves, the start index of the suffix represented by this node.
   ///
   /// For all other nodes, this is ignored.
-  size_t SuffixIdx = EmptyIdx;
+  unsigned SuffixIdx = EmptyIdx;
 
   /// \brief For internal nodes, a pointer to the internal node representing
   /// the same sequence with the first character chopped off.
@@ -216,11 +232,11 @@ struct SuffixTreeNode {
   ///
   /// This is equal to the number of leaf children of the string. It represents
   /// the number of suffixes that the node's string is a prefix of.
-  size_t OccurrenceCount = 0;
+  unsigned OccurrenceCount = 0;
 
   /// The length of the string formed by concatenating the edge labels from the
   /// root to this node.
-  size_t ConcatLen = 0;
+  unsigned ConcatLen = 0;
 
   /// Returns true if this node is a leaf.
   bool isLeaf() const { return SuffixIdx != EmptyIdx; }
@@ -242,7 +258,7 @@ struct SuffixTreeNode {
     return *EndIdx - StartIdx + 1;
   }
 
-  SuffixTreeNode(size_t StartIdx, size_t *EndIdx, SuffixTreeNode *Link,
+  SuffixTreeNode(unsigned StartIdx, unsigned *EndIdx, SuffixTreeNode *Link,
                  SuffixTreeNode *Parent)
       : StartIdx(StartIdx), EndIdx(EndIdx), Link(Link), Parent(Parent) {}
 
@@ -301,7 +317,7 @@ private:
   BumpPtrAllocator InternalEndIdxAllocator;
 
   /// The end index of each leaf in the tree.
-  size_t LeafEndIdx = -1;
+  unsigned LeafEndIdx = -1;
 
   /// \brief Helper struct which keeps track of the next insertion point in
   /// Ukkonen's algorithm.
@@ -310,10 +326,10 @@ private:
     SuffixTreeNode *Node;
 
     /// The index of the first character in the substring currently being added.
-    size_t Idx = EmptyIdx;
+    unsigned Idx = EmptyIdx;
 
     /// The length of the substring we have to add at the current step.
-    size_t Len = 0;
+    unsigned Len = 0;
   };
 
   /// \brief The point the next insertion will take place at in the
@@ -327,7 +343,7 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated leaf node.
-  SuffixTreeNode *insertLeaf(SuffixTreeNode &Parent, size_t StartIdx,
+  SuffixTreeNode *insertLeaf(SuffixTreeNode &Parent, unsigned StartIdx,
                              unsigned Edge) {
 
     assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
@@ -347,14 +363,14 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated internal node.
-  SuffixTreeNode *insertInternalNode(SuffixTreeNode *Parent, size_t StartIdx,
-                                     size_t EndIdx, unsigned Edge) {
+  SuffixTreeNode *insertInternalNode(SuffixTreeNode *Parent, unsigned StartIdx,
+                                     unsigned EndIdx, unsigned Edge) {
 
     assert(StartIdx <= EndIdx && "String can't start after it ends!");
     assert(!(!Parent && StartIdx != EmptyIdx) &&
            "Non-root internal nodes must have parents!");
 
-    size_t *E = new (InternalEndIdxAllocator) size_t(EndIdx);
+    unsigned *E = new (InternalEndIdxAllocator) unsigned(EndIdx);
     SuffixTreeNode *N = new (NodeAllocator.Allocate())
         SuffixTreeNode(StartIdx, E, Root, Parent);
     if (Parent)
@@ -369,7 +385,7 @@ private:
   ///
   /// \param[in] CurrNode The node currently being visited.
   /// \param CurrIdx The current index of the string being visited.
-  void setSuffixIndices(SuffixTreeNode &CurrNode, size_t CurrIdx) {
+  void setSuffixIndices(SuffixTreeNode &CurrNode, unsigned CurrIdx) {
 
     bool IsLeaf = CurrNode.Children.size() == 0 && !CurrNode.isRoot();
 
@@ -415,7 +431,7 @@ private:
   ///
   /// \returns The number of suffixes that have not been added at the end of
   /// this step.
-  unsigned extend(size_t EndIdx, size_t SuffixesToAdd) {
+  unsigned extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     SuffixTreeNode *NeedsLink = nullptr;
 
     while (SuffixesToAdd > 0) {
@@ -447,7 +463,7 @@ private:
         // insert a new node.
         SuffixTreeNode *NextNode = Active.Node->Children[FirstChar];
 
-        size_t SubstringLen = NextNode->size();
+        unsigned SubstringLen = NextNode->size();
 
         // Is the current suffix we're trying to insert longer than the size of
         // the child we want to move to?
@@ -543,13 +559,14 @@ public:
 
     // Keep track of the number of suffixes we have to add of the current
     // prefix.
-    size_t SuffixesToAdd = 0;
+    unsigned SuffixesToAdd = 0;
     Active.Node = Root;
 
     // Construct the suffix tree iteratively on each prefix of the string.
     // PfxEndIdx is the end index of the current prefix.
     // End is one past the last element in the string.
-    for (size_t PfxEndIdx = 0, End = Str.size(); PfxEndIdx < End; PfxEndIdx++) {
+    for (unsigned PfxEndIdx = 0, End = Str.size(); PfxEndIdx < End;
+         PfxEndIdx++) {
       SuffixesToAdd++;
       LeafEndIdx = PfxEndIdx; // Extend each of the leaves.
       SuffixesToAdd = extend(PfxEndIdx, SuffixesToAdd);
@@ -747,10 +764,10 @@ struct MachineOutliner : public ModulePass {
   /// type of candidate.
   ///
   /// \returns The length of the longest candidate found.
-  size_t findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
-                        InstructionMapper &Mapper,
-                        std::vector<Candidate> &CandidateList,
-                        std::vector<OutlinedFunction> &FunctionList);
+  unsigned findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
+                          InstructionMapper &Mapper,
+                          std::vector<Candidate> &CandidateList,
+                          std::vector<OutlinedFunction> &FunctionList);
 
   /// \brief Replace the sequences of instructions represented by the
   /// \p Candidates in \p CandidateList with calls to \p MachineFunctions
@@ -820,16 +837,15 @@ ModulePass *createMachineOutlinerPass() { return new MachineOutliner(); }
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
                 false)
 
-size_t
+unsigned
 MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
                                 InstructionMapper &Mapper,
                                 std::vector<Candidate> &CandidateList,
                                 std::vector<OutlinedFunction> &FunctionList) {
-
   CandidateList.clear();
   FunctionList.clear();
-  size_t FnIdx = 0;
-  size_t MaxLen = 0;
+  unsigned FnIdx = 0;
+  unsigned MaxLen = 0;
 
   // FIXME: Visit internal nodes instead of leaves.
   for (SuffixTreeNode *Leaf : ST.LeafVector) {
@@ -845,7 +861,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       continue;
 
     // Figure out if this candidate is beneficial.
-    size_t StringLen = Leaf->ConcatLen - Leaf->size();
+    unsigned StringLen = Leaf->ConcatLen - (unsigned)Leaf->size();
 
     // Too short to be beneficial; skip it.
     // FIXME: This isn't necessarily true for, say, X86. If we factor in
@@ -853,18 +869,17 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     if (StringLen < 2)
       continue;
 
-    size_t CallOverhead = 0;
-    size_t SequenceOverhead = StringLen;
-
     // If this is a beneficial class of candidate, then every one is stored in
     // this vector.
     std::vector<Candidate> CandidatesForRepeatedSeq;
 
-    // Used for getOutliningFrameOverhead.
+    // Describes the start and end point of each candidate. This allows the
+    // target to infer some information about each occurrence of each repeated
+    // sequence.
     // FIXME: CandidatesForRepeatedSeq and this should be combined.
     std::vector<
         std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-        CandidateClass;
+        RepeatedSequenceLocs;
 
     // Figure out the call overhead for each instance of the sequence.
     for (auto &ChildPair : Parent.Children) {
@@ -876,26 +891,21 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
         MachineBasicBlock::iterator EndIt =
             Mapper.InstrList[M->SuffixIdx + StringLen - 1];
 
-        // Get the overhead for calling a function for this sequence and any
-        // target-specified data for how to construct the call.
-        std::pair<size_t, unsigned> CallOverheadPair =
-            TII.getOutliningCallOverhead(StartIt, EndIt);
-        CallOverhead += CallOverheadPair.first;
-        CandidatesForRepeatedSeq.emplace_back(M->SuffixIdx, StringLen, FnIdx,
-                                              CallOverheadPair.second);
-        CandidateClass.emplace_back(std::make_pair(StartIt, EndIt));
+        CandidatesForRepeatedSeq.emplace_back(M->SuffixIdx, StringLen, FnIdx);
+        RepeatedSequenceLocs.emplace_back(std::make_pair(StartIt, EndIt));
 
         // Never visit this leaf again.
         M->IsInTree = false;
       }
     }
 
-    std::pair<size_t, unsigned> FrameOverheadPair =
-        TII.getOutliningFrameOverhead(CandidateClass);
-    size_t FrameOverhead = FrameOverheadPair.first;
+    unsigned SequenceOverhead = StringLen;
+    TargetInstrInfo::MachineOutlinerInfo MInfo =
+        TII.getOutlininingCandidateInfo(RepeatedSequenceLocs);
 
-    size_t OutliningCost = CallOverhead + FrameOverhead + SequenceOverhead;
-    size_t NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
+    unsigned OutliningCost =
+        (MInfo.CallOverhead * Parent.OccurrenceCount) + MInfo.FrameOverhead;
+    unsigned NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
 
     // Is it better to outline this candidate than not?
     if (NotOutliningCost <= OutliningCost) {
@@ -903,14 +913,14 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       // outlining.
       // Emit a remark explaining why we didn't outline this candidate.
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator> C =
-          CandidateClass[0];
+          RepeatedSequenceLocs[0];
       MachineOptimizationRemarkEmitter MORE(
           *(C.first->getParent()->getParent()), nullptr);
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
                                         C.first->getDebugLoc(),
                                         C.first->getParent());
       R << "Did not outline " << NV("Length", StringLen) << " instructions"
-        << " from " << NV("NumOccurrences", CandidateClass.size())
+        << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
         << " locations."
         << " Instructions from outlining all occurrences ("
         << NV("OutliningCost", OutliningCost) << ")"
@@ -919,9 +929,9 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
         << " (Also found at: ";
 
       // Tell the user the other places the candidate was found.
-      for (size_t i = 1, e = CandidateClass.size(); i < e; i++) {
+      for (unsigned i = 1, e = RepeatedSequenceLocs.size(); i < e; i++) {
         R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
-                CandidateClass[i].first->getDebugLoc());
+                RepeatedSequenceLocs[i].first->getDebugLoc());
         if (i != e - 1)
           R << ", ";
       }
@@ -933,7 +943,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       continue;
     }
 
-    size_t Benefit = NotOutliningCost - OutliningCost;
+    unsigned Benefit = NotOutliningCost - OutliningCost;
 
     if (StringLen > MaxLen)
       MaxLen = StringLen;
@@ -942,6 +952,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     // benefit values and save them in the candidate list.
     for (Candidate &C : CandidatesForRepeatedSeq) {
       C.Benefit = Benefit;
+      C.MInfo = MInfo;
       CandidateList.push_back(C);
     }
 
@@ -951,8 +962,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       CandidateSequence.push_back(ST.Str[i]);
 
     FunctionList.emplace_back(FnIdx, CandidatesForRepeatedSeq.size(),
-                              CandidateSequence, Benefit,
-                              FrameOverheadPair.second);
+                              CandidateSequence, Benefit, MInfo);
 
     // Move to the next function.
     FnIdx++;
@@ -1023,7 +1033,7 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         continue;
       }
 
-      size_t C2End = C2.StartIdx + C2.Len - 1;
+      unsigned C2End = C2.StartIdx + C2.Len - 1;
 
       // Do C1 and C2 overlap?
       //
@@ -1050,13 +1060,9 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         F2.OccurrenceCount--;
 
         // Remove the call overhead from the removed sequence.
-        MachineBasicBlock::iterator StartIt = Mapper.InstrList[C2.StartIdx];
-        MachineBasicBlock::iterator EndIt =
-            Mapper.InstrList[C2.StartIdx + C2.Len - 1];
+        F2.Benefit += C2.MInfo.CallOverhead;
 
-        F2.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt).first;
         // Add back one instance of the sequence.
-
         if (F2.Sequence.size() > F2.Benefit)
           F2.Benefit = 0;
         else
@@ -1077,11 +1083,7 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
         F1.OccurrenceCount--;
 
         // Remove the call overhead from the removed sequence.
-        MachineBasicBlock::iterator StartIt = Mapper.InstrList[C1.StartIdx];
-        MachineBasicBlock::iterator EndIt =
-            Mapper.InstrList[C1.StartIdx + C1.Len - 1];
-
-        F1.Benefit += TII.getOutliningCallOverhead(StartIt, EndIt).first;
+        F1.Benefit += C1.MInfo.CallOverhead;
 
         // Add back one instance of the sequence.
         if (F1.Sequence.size() > F1.Benefit)
@@ -1110,7 +1112,7 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
                                     const TargetInstrInfo &TII) {
 
   std::vector<unsigned> CandidateSequence; // Current outlining candidate.
-  size_t MaxCandidateLen = 0;              // Length of the longest candidate.
+  unsigned MaxCandidateLen = 0;            // Length of the longest candidate.
 
   MaxCandidateLen =
       findCandidates(ST, TII, Mapper, CandidateList, FunctionList);
@@ -1157,7 +1159,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  TII.insertOutlinerPrologue(MBB, MF, OF.FrameClass);
+  TII.insertOutlinerPrologue(MBB, MF, OF.MInfo);
 
   // Copy over the instructions for the function using the integer mappings in
   // its sequence.
@@ -1172,7 +1174,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.insertOutlinerEpilogue(MBB, MF, OF.FrameClass);
+  TII.insertOutlinerEpilogue(MBB, MF, OF.MInfo);
 
   return &MF;
 }
@@ -1183,7 +1185,6 @@ bool MachineOutliner::outline(Module &M,
                               InstructionMapper &Mapper) {
 
   bool OutlinedSomething = false;
-
   // Replace the candidates with calls to their respective outlined functions.
   for (const Candidate &C : CandidateList) {
 
@@ -1221,7 +1222,7 @@ bool MachineOutliner::outline(Module &M,
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Insert a call to the new function and erase the old sequence.
-    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, C.CallClass);
+    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, C.MInfo);
     StartIt = Mapper.InstrList[C.StartIdx];
     MBB->erase(StartIt, EndIt);
 

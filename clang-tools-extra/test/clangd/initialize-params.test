@@ -1,0 +1,21 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test initialize request parameters with rootUri
+Content-Length: 143
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
+# CHECK: Content-Length: 466
+# CHECK: {"jsonrpc":"2.0","id":0,"result":{"capabilities":{
+# CHECK:   "textDocumentSync": 1,
+# CHECK:   "documentFormattingProvider": true,
+# CHECK:   "documentRangeFormattingProvider": true,
+# CHECK:   "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
+# CHECK:   "codeActionProvider": true,
+# CHECK:   "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+# CHECK:   "definitionProvider": true
+# CHECK: }}}
+#
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
