@@ -20,7 +20,7 @@ class SigtrampUnwind(TestBase):
     # This test could probably be adapted to run on linux/*bsd easily enough.
     @skipUnlessDarwin
     @skipIfSmooshbase
-    @expectedFailureAll(oslist=["ios", "tvos", "bridgeos"], bugnumber="<rdar://problem/34006863>")  # lldb skips 1 frame on arm64 above _sigtramp
+    @expectedFailureAll(oslist=["ios", "watchos", "tvos", "bridgeos"], bugnumber="<rdar://problem/34006863>")  # lldb skips 1 frame on arm64 above _sigtramp
     def test(self):
         """Test that we can backtrace correctly with _sigtramp on the stack"""
         self.build()
