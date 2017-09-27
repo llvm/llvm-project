@@ -79,6 +79,24 @@ ifneq "$(TRIPLE)" ""
 				endif
 			endif
 		endif
+		ifeq "$(TRIPLE_OS)" "watchos"
+		    ifeq "$(SDKROOT)" ""
+				# Set SDKROOT if it wasn't set
+				ifneq (,$(findstring arm,$(ARCH)))
+					SDKROOT = $(shell xcrun --sdk watchos --show-sdk-path)
+					ifeq "$(TRIPLE_VERSION)" ""
+						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
+					endif
+					ARCH_CFLAGS :=-mwatchos-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+				else
+					SDKROOT = $(shell xcrun --sdk watchsimulator --show-sdk-path)
+					ifeq "$(TRIPLE_VERSION)" ""
+						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
+					endif
+					ARCH_CFLAGS :=-mwatchos-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+				endif
+			endif
+		endif
 	endif
 endif
 ifeq "$(OS)" "Android"
@@ -281,7 +299,7 @@ CXXFLAGS += $(subst -fmodules,, $(subst -fmodules-cache-path=./clang-module-cach
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
-ifeq (,$(filter $(OS), Windows_NT Android))
+ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
 	endif

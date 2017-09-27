@@ -45,7 +45,7 @@ class DisassemblyTestCase(TestBase):
         if arch in ["", 'x86_64', 'i386', 'i686']:
             breakpoint_opcodes = ["int3"]
             instructions = [' mov', ' addl ', 'ret']
-        elif arch in ["arm", "aarch64"]:
+        elif arch in ["arm", "aarch64", "arm64", "armv7", "armv7k"]:
             breakpoint_opcodes = ["brk", "udf"]
             instructions = [' add ', ' ldr ', ' str ']
         elif re.match("mips", arch):

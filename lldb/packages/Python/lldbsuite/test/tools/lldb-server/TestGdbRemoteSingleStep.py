@@ -11,6 +11,7 @@ class TestGdbRemoteSingleStep(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_single_step_only_steps_one_instruction_with_s_debugserver(self):
         self.init_debugserver_test()

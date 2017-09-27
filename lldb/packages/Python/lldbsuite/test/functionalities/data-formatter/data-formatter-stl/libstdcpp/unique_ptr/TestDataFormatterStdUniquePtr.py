@@ -18,6 +18,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
     @skipIfFreeBSD
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfDarwin  # doesn't compile on Darwin
+    @skipIfwatchOS  # libstdcpp not ported to watchos
     def test_with_run_command(self):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
@@ -67,6 +68,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
     @skipIfFreeBSD
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfDarwin  # doesn't compile on Darwin
+    @skipIfwatchOS  # libstdcpp not ported to watchos
     def test_recursive_unique_ptr(self):
         # Tests that LLDB can handle when we have a loop in the unique_ptr
         # reference chain and that it correctly handles the different options

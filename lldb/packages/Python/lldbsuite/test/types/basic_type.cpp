@@ -89,6 +89,16 @@ typedef struct a_union_nonzero_tag {
 int 
 main (int argc, char const *argv[])
 {
+    FILE *out = stdout;
+
+    // By default, output to stdout
+    // If a filename is provided as the command line argument,
+    // output to that file.
+    if (argc == 2 && argv[1] && argv[1][0] != '\0')
+    {
+        out = fopen (argv[1], "w");
+    }
+
     T a = T_VALUE_1;
     T* a_ptr = &a;
     T& a_ref = a;
@@ -123,89 +133,93 @@ main (int argc, char const *argv[])
     a_union_zero_t a_union_zero_array_unbounded[] = {{ T_VALUE_1 }, { T_VALUE_2 }};
     
 #ifdef T_PRINTF_FORMAT
-    printf ("%s: a = '" T_PRINTF_FORMAT "'\n", T_CSTR, a);
-    printf ("%s*: %p => *a_ptr = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_ptr, *a_ptr);
-    printf ("%s&: @%p => a_ref = '" T_PRINTF_FORMAT "'\n", T_CSTR, &a_ref, a_ref);
+    fprintf (out, "%s: a = '" T_PRINTF_FORMAT "'\n", T_CSTR, a);
+    fprintf (out, "%s*: %p => *a_ptr = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_ptr, *a_ptr);
+    fprintf (out, "%s&: @%p => a_ref = '" T_PRINTF_FORMAT "'\n", T_CSTR, &a_ref, a_ref);
 
-    printf ("%s[2]: a_array_bounded[0] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_bounded[0]);
-    printf ("%s[2]: a_array_bounded[1] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_bounded[1]);
+    fprintf (out, "%s[2]: a_array_bounded[0] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_bounded[0]);
+    fprintf (out, "%s[2]: a_array_bounded[1] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_bounded[1]);
 
-    printf ("%s[]: a_array_unbounded[0] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_unbounded[0]);
-    printf ("%s[]: a_array_unbounded[1] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_unbounded[1]);
+    fprintf (out, "%s[]: a_array_unbounded[0] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_unbounded[0]);
+    fprintf (out, "%s[]: a_array_unbounded[1] = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_array_unbounded[1]);
 
-    printf ("(a_class) a_class_instance.m_a = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_a());
-    printf ("(a_class) a_class_instance.m_b = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_b());
-    printf ("(a_class*) a_class_ptr = %p, a_class_ptr->m_a = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_a());
-    printf ("(a_class*) a_class_ptr = %p, a_class_ptr->m_b = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_b());
-    printf ("(a_class&) a_class_ref = %p, a_class_ref.m_a = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_a());
-    printf ("(a_class&) a_class_ref = %p, a_class_ref.m_b = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_b());
+    fprintf (out, "(a_class) a_class_instance.m_a = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_a());
+    fprintf (out, "(a_class) a_class_instance.m_b = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_b());
+    fprintf (out, "(a_class*) a_class_ptr = %p, a_class_ptr->m_a = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_a());
+    fprintf (out, "(a_class*) a_class_ptr = %p, a_class_ptr->m_b = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_b());
+    fprintf (out, "(a_class&) a_class_ref = %p, a_class_ref.m_a = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_a());
+    fprintf (out, "(a_class&) a_class_ref = %p, a_class_ref.m_b = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_b());
 
-    printf ("(a_struct_t) a_struct.a = '" T_PRINTF_FORMAT "'\n", a_struct.a);
-    printf ("(a_struct_t) a_struct.b = '" T_PRINTF_FORMAT "'\n", a_struct.b);
-    printf ("(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->a = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->a);
-    printf ("(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->b = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->b);
-    printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.a = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.a);
-    printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.b = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.b);
+    fprintf (out, "(a_struct_t) a_struct.a = '" T_PRINTF_FORMAT "'\n", a_struct.a);
+    fprintf (out, "(a_struct_t) a_struct.b = '" T_PRINTF_FORMAT "'\n", a_struct.b);
+    fprintf (out, "(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->a = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->a);
+    fprintf (out, "(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->b = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->b);
+    fprintf (out, "(a_struct_t&) a_struct_ref = %p, a_struct_ref.a = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.a);
+    fprintf (out, "(a_struct_t&) a_struct_ref = %p, a_struct_ref.b = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.b);
     
-    printf ("(a_union_zero_t) a_union_zero.a = '" T_PRINTF_FORMAT "'\n", a_union_zero.a);
-    printf ("(a_union_zero_t*) a_union_zero_ptr = %p, a_union_zero_ptr->a = '" T_PRINTF_FORMAT "'\n", a_union_zero_ptr, a_union_zero_ptr->a);
-    printf ("(a_union_zero_t&) a_union_zero_ref = %p, a_union_zero_ref.a = '" T_PRINTF_FORMAT "'\n", &a_union_zero_ref, a_union_zero_ref.a);
+    fprintf (out, "(a_union_zero_t) a_union_zero.a = '" T_PRINTF_FORMAT "'\n", a_union_zero.a);
+    fprintf (out, "(a_union_zero_t*) a_union_zero_ptr = %p, a_union_zero_ptr->a = '" T_PRINTF_FORMAT "'\n", a_union_zero_ptr, a_union_zero_ptr->a);
+    fprintf (out, "(a_union_zero_t&) a_union_zero_ref = %p, a_union_zero_ref.a = '" T_PRINTF_FORMAT "'\n", &a_union_zero_ref, a_union_zero_ref.a);
 
-    printf ("(a_union_nonzero_t) a_union_nonzero.u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero.u.a);
-    printf ("(a_union_nonzero_t*) a_union_nonzero_ptr = %p, a_union_nonzero_ptr->u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero_ptr, a_union_nonzero_ptr->u.a);
-    printf ("(a_union_nonzero_t&) a_union_nonzero_ref = %p, a_union_nonzero_ref.u.a = '" T_PRINTF_FORMAT "'\n", &a_union_nonzero_ref, a_union_nonzero_ref.u.a);
+    fprintf (out, "(a_union_nonzero_t) a_union_nonzero.u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero.u.a);
+    fprintf (out, "(a_union_nonzero_t*) a_union_nonzero_ptr = %p, a_union_nonzero_ptr->u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero_ptr, a_union_nonzero_ptr->u.a);
+    fprintf (out, "(a_union_nonzero_t&) a_union_nonzero_ref = %p, a_union_nonzero_ref.u.a = '" T_PRINTF_FORMAT "'\n", &a_union_nonzero_ref, a_union_nonzero_ref.u.a);
 
-    printf ("(a_struct_t[2]) a_struct_array_bounded[0].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[0].a);
-    printf ("(a_struct_t[2]) a_struct_array_bounded[0].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[0].b);
-    printf ("(a_struct_t[2]) a_struct_array_bounded[1].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[1].a);
-    printf ("(a_struct_t[2]) a_struct_array_bounded[1].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[1].b);
+    fprintf (out, "(a_struct_t[2]) a_struct_array_bounded[0].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[0].a);
+    fprintf (out, "(a_struct_t[2]) a_struct_array_bounded[0].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[0].b);
+    fprintf (out, "(a_struct_t[2]) a_struct_array_bounded[1].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[1].a);
+    fprintf (out, "(a_struct_t[2]) a_struct_array_bounded[1].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_bounded[1].b);
 
-    printf ("(a_struct_t[]) a_struct_array_unbounded[0].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[0].a);
-    printf ("(a_struct_t[]) a_struct_array_unbounded[0].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[0].b);
-    printf ("(a_struct_t[]) a_struct_array_unbounded[1].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[1].a);
-    printf ("(a_struct_t[]) a_struct_array_unbounded[1].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[1].b);
+    fprintf (out, "(a_struct_t[]) a_struct_array_unbounded[0].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[0].a);
+    fprintf (out, "(a_struct_t[]) a_struct_array_unbounded[0].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[0].b);
+    fprintf (out, "(a_struct_t[]) a_struct_array_unbounded[1].a = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[1].a);
+    fprintf (out, "(a_struct_t[]) a_struct_array_unbounded[1].b = '" T_PRINTF_FORMAT "'\n", a_struct_array_unbounded[1].b);
 
-    printf ("(a_union_zero_t[2]) a_union_zero_array_bounded[0].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_bounded[0].a);
-    printf ("(a_union_zero_t[2]) a_union_zero_array_bounded[1].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_bounded[1].a);
+    fprintf (out, "(a_union_zero_t[2]) a_union_zero_array_bounded[0].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_bounded[0].a);
+    fprintf (out, "(a_union_zero_t[2]) a_union_zero_array_bounded[1].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_bounded[1].a);
 
-    printf ("(a_union_zero_t[]) a_union_zero_array_unbounded[0].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_unbounded[0].a);
-    printf ("(a_union_zero_t[]) a_union_zero_array_unbounded[1].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_unbounded[1].a);
+    fprintf (out, "(a_union_zero_t[]) a_union_zero_array_unbounded[0].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_unbounded[0].a);
+    fprintf (out, "(a_union_zero_t[]) a_union_zero_array_unbounded[1].a = '" T_PRINTF_FORMAT "'\n", a_union_zero_array_unbounded[1].a);
 
 #endif
     puts("About to exit, break here to check values..."); // Here is the line we will break on to check variables.
 
 #ifdef TEST_BLOCK_CAPTURED_VARS
     void (^myBlock)() = ^() {
-        printf ("%s: a = '" T_PRINTF_FORMAT "'\n", T_CSTR, a);
-        printf ("%s*: %p => *a_ptr = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_ptr, *a_ptr);
-        printf ("%s&: @%p => a_ref = '" T_PRINTF_FORMAT "'\n", T_CSTR, &a_ref, a_ref);
+        fprintf (out, "%s: a = '" T_PRINTF_FORMAT "'\n", T_CSTR, a);
+        fprintf (out, "%s*: %p => *a_ptr = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_ptr, *a_ptr);
+        fprintf (out, "%s&: @%p => a_ref = '" T_PRINTF_FORMAT "'\n", T_CSTR, &a_ref, a_ref);
 
-        printf ("(a_class) a_class_instance.m_a = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_a());
-        printf ("(a_class) a_class_instance.m_b = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_b());
-        printf ("(a_class*) a_class_ptr = %p, a_class_ptr->m_a = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_a());
-        printf ("(a_class*) a_class_ptr = %p, a_class_ptr->m_b = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_b());
-        printf ("(a_class&) a_class_ref = %p, a_class_ref.m_a = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_a());
-        printf ("(a_class&) a_class_ref = %p, a_class_ref.m_b = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_b());
+        fprintf (out, "(a_class) a_class_instance.m_a = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_a());
+        fprintf (out, "(a_class) a_class_instance.m_b = '" T_PRINTF_FORMAT "'\n", a_class_instance.get_b());
+        fprintf (out, "(a_class*) a_class_ptr = %p, a_class_ptr->m_a = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_a());
+        fprintf (out, "(a_class*) a_class_ptr = %p, a_class_ptr->m_b = '" T_PRINTF_FORMAT "'\n", a_class_ptr, a_class_ptr->get_b());
+        fprintf (out, "(a_class&) a_class_ref = %p, a_class_ref.m_a = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_a());
+        fprintf (out, "(a_class&) a_class_ref = %p, a_class_ref.m_b = '" T_PRINTF_FORMAT "'\n", &a_class_ref, a_class_ref.get_b());
     
-        printf ("(a_struct_t) a_struct.a = '" T_PRINTF_FORMAT "'\n", a_struct.a);
-        printf ("(a_struct_t) a_struct.b = '" T_PRINTF_FORMAT "'\n", a_struct.b);
-        printf ("(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->a = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->a);
-        printf ("(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->b = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->b);
-        printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.a = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.a);
-        printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.b = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.b);
+        fprintf (out, "(a_struct_t) a_struct.a = '" T_PRINTF_FORMAT "'\n", a_struct.a);
+        fprintf (out, "(a_struct_t) a_struct.b = '" T_PRINTF_FORMAT "'\n", a_struct.b);
+        fprintf (out, "(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->a = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->a);
+        fprintf (out, "(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->b = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->b);
+        fprintf (out, "(a_struct_t&) a_struct_ref = %p, a_struct_ref.a = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.a);
+        fprintf (out, "(a_struct_t&) a_struct_ref = %p, a_struct_ref.b = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.b);
     
-        printf ("(a_union_zero_t) a_union_zero.a = '" T_PRINTF_FORMAT "'\n", a_union_zero.a);
-        printf ("(a_union_zero_t*) a_union_zero_ptr = %p, a_union_zero_ptr->a = '" T_PRINTF_FORMAT "'\n", a_union_zero_ptr, a_union_zero_ptr->a);
-        printf ("(a_union_zero_t&) a_union_zero_ref = %p, a_union_zero_ref.a = '" T_PRINTF_FORMAT "'\n", &a_union_zero_ref, a_union_zero_ref.a);
+        fprintf (out, "(a_union_zero_t) a_union_zero.a = '" T_PRINTF_FORMAT "'\n", a_union_zero.a);
+        fprintf (out, "(a_union_zero_t*) a_union_zero_ptr = %p, a_union_zero_ptr->a = '" T_PRINTF_FORMAT "'\n", a_union_zero_ptr, a_union_zero_ptr->a);
+        fprintf (out, "(a_union_zero_t&) a_union_zero_ref = %p, a_union_zero_ref.a = '" T_PRINTF_FORMAT "'\n", &a_union_zero_ref, a_union_zero_ref.a);
 
-        printf ("(a_union_nonzero_t) a_union_nonzero.u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero.u.a);
-        printf ("(a_union_nonzero_t*) a_union_nonzero_ptr = %p, a_union_nonzero_ptr->u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero_ptr, a_union_nonzero_ptr->u.a);
-        printf ("(a_union_nonzero_t&) a_union_nonzero_ref = %p, a_union_nonzero_ref.u.a = '" T_PRINTF_FORMAT "'\n", &a_union_nonzero_ref, a_union_nonzero_ref.u.a);
+        fprintf (out, "(a_union_nonzero_t) a_union_nonzero.u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero.u.a);
+        fprintf (out, "(a_union_nonzero_t*) a_union_nonzero_ptr = %p, a_union_nonzero_ptr->u.a = '" T_PRINTF_FORMAT "'\n", a_union_nonzero_ptr, a_union_nonzero_ptr->u.a);
+        fprintf (out, "(a_union_nonzero_t&) a_union_nonzero_ref = %p, a_union_nonzero_ref.u.a = '" T_PRINTF_FORMAT "'\n", &a_union_nonzero_ref, a_union_nonzero_ref.u.a);
 
-        printf ("That's All Folks!\n"); // Break here to test block captured variables.
+        fprintf (out, "That's All Folks!\n"); // Break here to test block captured variables.
     };
 
     myBlock();
 #endif
+
+    if (out != stdout)
+        fclose (out);
+
     return 0;
 }
