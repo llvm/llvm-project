@@ -1,4 +1,4 @@
-; RUN: opt -S -dse < %s | FileCheck %s
+; RUN: opt -S -dse -enable-dse-partial-store-merging=false < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-bgq-linux"
 

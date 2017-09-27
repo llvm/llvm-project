@@ -17,7 +17,7 @@
 #include "scudo_allocator.h"
 #include "scudo_crc32.h"
 #include "scudo_flags.h"
-#include "scudo_tls.h"
+#include "scudo_tsd.h"
 #include "scudo_utils.h"
 
 #include "sanitizer_common/sanitizer_allocator_checks.h"

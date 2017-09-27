@@ -413,6 +413,13 @@ TARGET_BUILTIN(__nvvm_vote_any_sync, "bUib", "", "ptx60")
 TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", "ptx60")
 TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", "ptx60")
 
+// Match
+TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", "ptx60")
+TARGET_BUILTIN(__nvvm_match_any_sync_i64, "WiUiWi", "", "ptx60")
+// These return a pair {value, predicate}, which requires custom lowering.
+TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", "ptx60")
+TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "WiUiWii*", "", "ptx60")
+
 // Membar
 
 BUILTIN(__nvvm_membar_cta, "v", "")

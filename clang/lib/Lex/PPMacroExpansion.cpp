@@ -1023,7 +1023,7 @@ Token *Preprocessor::cacheMacroExpandedTokens(TokenLexer *tokLexer,
 
   size_t newIndex = MacroExpandedTokens.size();
   bool cacheNeedsToGrow = tokens.size() >
-                      MacroExpandedTokens.capacity()-MacroExpandedTokens.size(); 
+                      MacroExpandedTokens.capacity()-MacroExpandedTokens.size();
   MacroExpandedTokens.append(tokens.begin(), tokens.end());
 
   if (cacheNeedsToGrow) {

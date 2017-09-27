@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s  -fdelayed-template-parsing -fcxx-exceptions -fsyntax-only -Wexceptions -verify -std=c++11
+// RUN: %clang_cc1 %s  -fdelayed-template-parsing -fcxx-exceptions -fsyntax-only -Wexceptions -verify -fdeclspec -std=c++11
 struct A_ShouldDiag {
   ~A_ShouldDiag(); // implicitly noexcept(true)
 };
@@ -13,6 +13,15 @@ struct R_ShouldDiag : A_ShouldDiag {
   B_ShouldDiag b;
   ~R_ShouldDiag() { // expected-note  {{destructor has a implicit non-throwing exception specification}}
     throw 1; // expected-warning {{has a non-throwing exception specification but}}
+  }
+  __attribute__((nothrow)) R_ShouldDiag() {// expected-note {{function declared non-throwing here}}
+    throw 1;// expected-warning {{has a non-throwing exception specification but}}
+  }
+  void __attribute__((nothrow)) SomeThrow() {// expected-note {{function declared non-throwing here}}
+   throw 1; // expected-warning {{has a non-throwing exception specification but}}
+  }
+  void __declspec(nothrow) SomeDeclspecThrow() {// expected-note {{function declared non-throwing here}}
+   throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 

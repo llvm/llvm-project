@@ -1928,6 +1928,12 @@ bool MachOObjectFile::isSectionBitcode(DataRefImpl Sec) const {
   return false;
 }
 
+bool MachOObjectFile::isSectionStripped(DataRefImpl Sec) const {
+  if (is64Bit())
+    return getSection64(Sec).offset == 0;
+  return getSection(Sec).offset == 0;
+}
+
 relocation_iterator MachOObjectFile::section_rel_begin(DataRefImpl Sec) const {
   DataRefImpl Ret;
   Ret.d.a = Sec.d.a;

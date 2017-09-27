@@ -384,11 +384,6 @@ InputSectionBase *InputSection::getRelocatedSection() {
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   InputSectionBase *RelocatedSection = getRelocatedSection();
-
-  // Loop is slow and have complexity O(N*M), where N - amount of
-  // relocations and M - amount of symbols in symbol table.
-  // That happens because getSymbolIndex(...) call below performs
-  // simple linear search.
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->IsMips64EL);
     SymbolBody &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);

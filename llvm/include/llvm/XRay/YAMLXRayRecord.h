@@ -37,6 +37,7 @@ struct YAMLXRayRecord {
   std::string Function;
   uint64_t TSC;
   uint32_t TId;
+  std::vector<uint64_t> CallArgs;
 };
 
 struct YAMLXRayTrace {
@@ -55,6 +56,7 @@ template <> struct ScalarEnumerationTraits<xray::RecordTypes> {
     IO.enumCase(Type, "function-enter", xray::RecordTypes::ENTER);
     IO.enumCase(Type, "function-exit", xray::RecordTypes::EXIT);
     IO.enumCase(Type, "function-tail-exit", xray::RecordTypes::TAIL_EXIT);
+    IO.enumCase(Type, "function-enter-arg", xray::RecordTypes::ENTER_ARG);
   }
 };
 
@@ -74,6 +76,7 @@ template <> struct MappingTraits<xray::YAMLXRayRecord> {
     IO.mapRequired("type", Record.RecordType);
     IO.mapRequired("func-id", Record.FuncId);
     IO.mapOptional("function", Record.Function);
+    IO.mapOptional("args", Record.CallArgs);
     IO.mapRequired("cpu", Record.CPU);
     IO.mapRequired("thread", Record.TId);
     IO.mapRequired("kind", Record.Type);
@@ -81,6 +84,16 @@ template <> struct MappingTraits<xray::YAMLXRayRecord> {
   }
 
   static constexpr bool flow = true;
+};
+
+template <> struct SequenceTraits<std::vector<uint64_t>> {
+  static constexpr bool flow = true;
+  static size_t size(IO &IO, std::vector<uint64_t> &V) { return V.size(); }
+  static uint64_t &element(IO &IO, std::vector<uint64_t> &V, size_t Index) {
+    if (Index >= V.size())
+      V.resize(Index + 1);
+    return V[Index];
+  }
 };
 
 template <> struct MappingTraits<xray::YAMLXRayTrace> {

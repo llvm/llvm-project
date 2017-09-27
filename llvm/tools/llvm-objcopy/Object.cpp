@@ -206,22 +206,26 @@ void SymbolTableSectionImpl<ELFT>::writeSection(
   }
 }
 
-template <class ELFT>
-void RelocationSection<ELFT>::initialize(SectionTableRef SecTable) {
-  setSymTab(SecTable.getSectionOfType<SymbolTableSection>(
+template <class SymTabType>
+void RelocationSectionBase<SymTabType>::initialize(SectionTableRef SecTable) {
+  setSymTab(SecTable.getSectionOfType<SymTabType>(
       Link,
       "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
       "Link field value " + Twine(Link) + " in section " + Name +
           " is not a symbol table"));
 
-  setSection(SecTable.getSection(Info,
-                                 "Info field value " + Twine(Info) +
-                                     " in section " + Name + " is invalid"));
+  if (Info != SHN_UNDEF)
+    setSection(SecTable.getSection(Info,
+                                   "Info field value " + Twine(Info) +
+                                       " in section " + Name + " is invalid"));
+  else
+    setSection(nullptr);
 }
 
-template <class ELFT> void RelocationSection<ELFT>::finalize() {
+template <class SymTabType> void RelocationSectionBase<SymTabType>::finalize() {
   this->Link = Symbols->Index;
-  this->Info = SecToApplyRel->Index;
+  if (SecToApplyRel != nullptr)
+    this->Info = SecToApplyRel->Index;
 }
 
 template <class ELFT>
@@ -250,6 +254,11 @@ void RelocationSection<ELFT>::writeSection(llvm::FileOutputBuffer &Out) const {
     writeRel(reinterpret_cast<Elf_Rel *>(Buf));
   else
     writeRel(reinterpret_cast<Elf_Rela *>(Buf));
+}
+
+void DynamicRelocationSection::writeSection(llvm::FileOutputBuffer &Out) const {
+  std::copy(std::begin(Contents), std::end(Contents),
+            Out.getBufferStart() + Offset);
 }
 
 bool SectionWithStrTab::classof(const SectionBase *S) {
@@ -401,25 +410,9 @@ SectionBase *SectionTableRef::getSection(uint16_t Index, Twine ErrMsg) {
 
 template <class T>
 T *SectionTableRef::getSectionOfType(uint16_t Index, Twine IndexErrMsg,
-                                  Twine TypeErrMsg) {
+                                     Twine TypeErrMsg) {
   if (T *Sec = llvm::dyn_cast<T>(getSection(Index, IndexErrMsg)))
     return Sec;
-  error(TypeErrMsg);
-}
-
-template <class ELFT>
-SectionBase *Object<ELFT>::getSection(uint16_t Index, Twine ErrMsg) {
-  if (Index == SHN_UNDEF || Index > Sections.size())
-    error(ErrMsg);
-  return Sections[Index - 1].get();
-}
-
-template <class ELFT>
-template <class T>
-T *Object<ELFT>::getSectionOfType(uint16_t Index, Twine IndexErrMsg,
-                                  Twine TypeErrMsg) {
-  if (T *TSec = llvm::dyn_cast<T>(getSection(Index, IndexErrMsg)))
-    return TSec;
   error(TypeErrMsg);
 }
 
@@ -431,6 +424,10 @@ Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
   switch (Shdr.sh_type) {
   case SHT_REL:
   case SHT_RELA:
+    if (Shdr.sh_flags & SHF_ALLOC) {
+      Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+      return llvm::make_unique<DynamicRelocationSection>(Data);
+    }
     return llvm::make_unique<RelocationSection<ELFT>>();
   case SHT_STRTAB:
     // If a string table is allocated we don't want to mess with it. That would
@@ -517,7 +514,7 @@ SectionTableRef Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
     }
 
     if (auto Sec = dyn_cast<SectionWithStrTab>(Section.get())) {
-      Sec->setStrTab(getSectionOfType<StringTableSection>(
+      Sec->setStrTab(SecTable.getSectionOfType<StringTableSection>(
           Sec->Link,
           "Link field value " + Twine(Sec->Link) + " in section " + Sec->Name +
               " is invalid",

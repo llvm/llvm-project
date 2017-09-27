@@ -2536,7 +2536,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   KMP_ALIGN_CACHE kmp_ordered_team_t t_ordered;
   kmp_balign_team_t t_bar[bs_last_barrier];
   volatile int t_construct; // count of single directive encountered by team
-  kmp_lock_t t_single_lock; // team specific lock
+  char pad[sizeof(kmp_lock_t)]; // padding to maintain performance on big iron
 
   // Master only
   // ---------------------------------------------------------------------------

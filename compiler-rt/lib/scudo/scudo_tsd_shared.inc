@@ -1,4 +1,4 @@
-//===-- scudo_tls_android.inc -----------------------------------*- C++ -*-===//
+//===-- scudo_tsd_shared.inc ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Scudo thread local structure fastpath functions implementation for Android.
+/// Scudo shared TSD fastpath functions implementation.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_TLS_H_
-# error "This file must be included inside scudo_tls.h."
-#endif  // SCUDO_TLS_H_
+#ifndef SCUDO_TSD_H_
+# error "This file must be included inside scudo_tsd.h."
+#endif  // SCUDO_TSD_H_
 
-#if SANITIZER_LINUX && SANITIZER_ANDROID
+#if !SCUDO_TSD_EXCLUSIVE
 
 ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   if (LIKELY(*get_android_tls_ptr()))
@@ -35,4 +35,4 @@ ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   return getTSDAndLockSlow();
 }
 
-#endif  // SANITIZER_LINUX && SANITIZER_ANDROID
+#endif  // !SCUDO_TSD_EXCLUSIVE

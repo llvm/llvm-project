@@ -85,12 +85,11 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(BasicBlock *BB) {
         unsigned i = 0;
         for (auto *Pred : predecessors(BB))
           Phi->addIncoming(PhiOps[i++], Pred);
+        InsertedPHIs.push_back(Phi);
       }
-
       Result = Phi;
     }
-    if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Result))
-      InsertedPHIs.push_back(MP);
+
     // Set ourselves up for the next variable by resetting visited state.
     VisitedBlocks.erase(BB);
     return Result;

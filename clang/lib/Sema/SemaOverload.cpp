@@ -837,12 +837,13 @@ void OverloadCandidateSet::destroyCandidates() {
   }
 }
 
-void OverloadCandidateSet::clear() {
+void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   destroyCandidates();
   SlabAllocator.Reset();
   NumInlineBytesUsed = 0;
   Candidates.clear();
   Functions.clear();
+  Kind = CSK;
 }
 
 namespace {
@@ -3175,6 +3176,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
                                        UserDefinedConversionSequence &User,
                                        OverloadCandidateSet &CandidateSet,
                                        bool AllowExplicit) {
+  CandidateSet.clear(OverloadCandidateSet::CSK_InitByUserDefinedConversion);
   for (auto *D : S.LookupConstructors(To)) {
     auto Info = getConstructorInfo(D);
     if (!Info)
@@ -3203,7 +3205,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
   OverloadCandidateSet::iterator Best;
   switch (auto Result =
             CandidateSet.BestViableFunction(S, From->getLocStart(),
-                                            Best, true)) {
+                                            Best)) {
   case OR_Deleted:
   case OR_Success: {
     // Record the standard conversion we used and the conversion function.
@@ -3250,6 +3252,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                         bool AllowExplicit,
                         bool AllowObjCConversionOnExplicit) {
   assert(AllowExplicit || !AllowObjCConversionOnExplicit);
+  CandidateSet.clear(OverloadCandidateSet::CSK_InitByUserDefinedConversion);
 
   // Whether we will only visit constructors.
   bool ConstructorsOnly = false;
@@ -3285,7 +3288,8 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         if (Result != OR_No_Viable_Function)
           return Result;
         // Never mind.
-        CandidateSet.clear();
+        CandidateSet.clear(
+            OverloadCandidateSet::CSK_InitByUserDefinedConversion);
 
         // If we're list-initializing, we pass the individual elements as
         // arguments, not the entire list.
@@ -3375,7 +3379,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
   OverloadCandidateSet::iterator Best;
   switch (auto Result = CandidateSet.BestViableFunction(S, From->getLocStart(),
-                                                        Best, true)) {
+                                                        Best)) {
   case OR_Success:
   case OR_Deleted:
     // Record the standard conversion we used and the conversion function.
@@ -4309,7 +4313,8 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
   CXXRecordDecl *T2RecordDecl
     = dyn_cast<CXXRecordDecl>(T2->getAs<RecordType>()->getDecl());
 
-  OverloadCandidateSet CandidateSet(DeclLoc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(
+      DeclLoc, OverloadCandidateSet::CSK_InitByUserDefinedConversion);
   const auto &Conversions = T2RecordDecl->getVisibleConversionFunctions();
   for (auto I = Conversions.begin(), E = Conversions.end(); I != E; ++I) {
     NamedDecl *D = *I;
@@ -4379,7 +4384,7 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
   OverloadCandidateSet::iterator Best;
-  switch (CandidateSet.BestViableFunction(S, DeclLoc, Best, true)) {
+  switch (CandidateSet.BestViableFunction(S, DeclLoc, Best)) {
   case OR_Success:
     // C++ [over.ics.ref]p1:
     //
@@ -6788,7 +6793,8 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
                              CXXRecordDecl *ActingContext,
                              Expr *From, QualType ToType,
                              OverloadCandidateSet& CandidateSet,
-                             bool AllowObjCConversionOnExplicit) {
+                             bool AllowObjCConversionOnExplicit,
+                             bool AllowResultConversion) {
   assert(!Conversion->getDescribedFunctionTemplate() &&
          "Conversion function templates use AddTemplateConversionCandidate");
   QualType ConvType = Conversion->getConversionType().getNonReferenceType();
@@ -6802,6 +6808,12 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
       return;
     ConvType = Conversion->getConversionType().getNonReferenceType();
   }
+
+  // If we don't allow any conversion of the result type, ignore conversion
+  // functions that don't convert to exactly (possibly cv-qualified) T.
+  if (!AllowResultConversion &&
+      !Context.hasSameUnqualifiedType(Conversion->getConversionType(), ToType))
+    return;
 
   // Per C++ [over.match.conv]p1, [over.match.ref]p1, an explicit conversion
   // operator is only a candidate if its return type is the target type or
@@ -6956,7 +6968,8 @@ Sema::AddTemplateConversionCandidate(FunctionTemplateDecl *FunctionTemplate,
                                      CXXRecordDecl *ActingDC,
                                      Expr *From, QualType ToType,
                                      OverloadCandidateSet &CandidateSet,
-                                     bool AllowObjCConversionOnExplicit) {
+                                     bool AllowObjCConversionOnExplicit,
+                                     bool AllowResultConversion) {
   assert(isa<CXXConversionDecl>(FunctionTemplate->getTemplatedDecl()) &&
          "Only conversion function templates permitted here");
 
@@ -6985,7 +6998,8 @@ Sema::AddTemplateConversionCandidate(FunctionTemplateDecl *FunctionTemplate,
   // template argument deduction as a candidate.
   assert(Specialization && "Missing function template specialization?");
   AddConversionCandidate(Specialization, FoundDecl, ActingDC, From, ToType,
-                         CandidateSet, AllowObjCConversionOnExplicit);
+                         CandidateSet, AllowObjCConversionOnExplicit,
+                         AllowResultConversion);
 }
 
 /// AddSurrogateCandidate - Adds a "surrogate" candidate function that
@@ -8844,10 +8858,9 @@ static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
 
 /// isBetterOverloadCandidate - Determines whether the first overload
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
-bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
-                                      const OverloadCandidate &Cand2,
-                                      SourceLocation Loc,
-                                      bool UserDefinedConversion) {
+bool clang::isBetterOverloadCandidate(
+    Sema &S, const OverloadCandidate &Cand1, const OverloadCandidate &Cand2,
+    SourceLocation Loc, OverloadCandidateSet::CandidateSetKind Kind) {
   // Define viable functions to be better candidates than non-viable
   // functions.
   if (!Cand2.Viable)
@@ -8929,7 +8942,8 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
   //      the type of the entity being initialized) is a better
   //      conversion sequence than the standard conversion sequence
   //      from the return type of F2 to the destination type.
-  if (UserDefinedConversion && Cand1.Function && Cand2.Function &&
+  if (Kind == OverloadCandidateSet::CSK_InitByUserDefinedConversion &&
+      Cand1.Function && Cand2.Function &&
       isa<CXXConversionDecl>(Cand1.Function) &&
       isa<CXXConversionDecl>(Cand2.Function)) {
     // First check whether we prefer one of the conversion functions over the
@@ -9000,6 +9014,18 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
       return false;
     // Inherited from sibling base classes: still ambiguous.
   }
+
+  // FIXME: Work around a defect in the C++17 guaranteed copy elision wording,
+  // as combined with the resolution to CWG issue 243.
+  //
+  // When the context is initialization by constructor ([over.match.ctor] or
+  // either phase of [over.match.list]), a constructor is preferred over
+  // a conversion function.
+  if (Kind == OverloadCandidateSet::CSK_InitByConstructor && NumArgs == 1 &&
+      Cand1.Function && Cand2.Function &&
+      isa<CXXConstructorDecl>(Cand1.Function) !=
+          isa<CXXConstructorDecl>(Cand2.Function))
+    return isa<CXXConstructorDecl>(Cand1.Function);
 
   // Check for enable_if value-based overload resolution.
   if (Cand1.Function && Cand2.Function) {
@@ -9100,8 +9126,7 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
 /// \returns The result of overload resolution.
 OverloadingResult
 OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
-                                         iterator &Best,
-                                         bool UserDefinedConversion) {
+                                         iterator &Best) {
   llvm::SmallVector<OverloadCandidate *, 16> Candidates;
   std::transform(begin(), end(), std::back_inserter(Candidates),
                  [](OverloadCandidate &Cand) { return &Cand; });
@@ -9135,8 +9160,8 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   Best = end();
   for (auto *Cand : Candidates)
     if (Cand->Viable)
-      if (Best == end() || isBetterOverloadCandidate(S, *Cand, *Best, Loc,
-                                                     UserDefinedConversion))
+      if (Best == end() ||
+          isBetterOverloadCandidate(S, *Cand, *Best, Loc, Kind))
         Best = Cand;
 
   // If we didn't find any viable functions, abort.
@@ -9148,10 +9173,8 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Make sure that this function is better than every other viable
   // function. If not, we have an ambiguity.
   for (auto *Cand : Candidates) {
-    if (Cand->Viable &&
-        Cand != Best &&
-        !isBetterOverloadCandidate(S, *Best, *Cand, Loc,
-                                   UserDefinedConversion)) {
+    if (Cand->Viable && Cand != Best &&
+        !isBetterOverloadCandidate(S, *Best, *Cand, Loc, Kind)) {
       if (S.isEquivalentInternalLinkageDeclaration(Best->Function,
                                                    Cand->Function)) {
         EquivalentCands.push_back(Cand->Function);
@@ -10243,9 +10266,12 @@ struct CompareOverloadCandidatesForDisplay {
   Sema &S;
   SourceLocation Loc;
   size_t NumArgs;
+  OverloadCandidateSet::CandidateSetKind CSK;
 
-  CompareOverloadCandidatesForDisplay(Sema &S, SourceLocation Loc, size_t nArgs)
-      : S(S), NumArgs(nArgs) {}
+  CompareOverloadCandidatesForDisplay(
+      Sema &S, SourceLocation Loc, size_t NArgs,
+      OverloadCandidateSet::CandidateSetKind CSK)
+      : S(S), NumArgs(NArgs), CSK(CSK) {}
 
   bool operator()(const OverloadCandidate *L,
                   const OverloadCandidate *R) {
@@ -10259,8 +10285,10 @@ struct CompareOverloadCandidatesForDisplay {
       // TODO: introduce a tri-valued comparison for overload
       // candidates.  Would be more worthwhile if we had a sort
       // that could exploit it.
-      if (isBetterOverloadCandidate(S, *L, *R, SourceLocation())) return true;
-      if (isBetterOverloadCandidate(S, *R, *L, SourceLocation())) return false;
+      if (isBetterOverloadCandidate(S, *L, *R, SourceLocation(), CSK))
+        return true;
+      if (isBetterOverloadCandidate(S, *R, *L, SourceLocation(), CSK))
+        return false;
     } else if (R->Viable)
       return false;
 
@@ -10468,7 +10496,7 @@ void OverloadCandidateSet::NoteCandidates(
   }
 
   std::sort(Cands.begin(), Cands.end(),
-            CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size()));
+            CompareOverloadCandidatesForDisplay(S, OpLoc, Args.size(), Kind));
 
   bool ReportedAmbiguousConversions = false;
 
@@ -12917,7 +12945,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // Perform overload resolution.
   OverloadCandidateSet::iterator Best;
   switch (CandidateSet.BestViableFunction(*this, Object.get()->getLocStart(),
-                             Best)) {
+                                          Best)) {
   case OR_Success:
     // Overload resolution succeeded; we'll build the appropriate call
     // below.
@@ -13311,7 +13339,7 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
                                 Expr *Range, ExprResult *CallExpr) {
   Scope *S = nullptr;
 
-  CandidateSet->clear();
+  CandidateSet->clear(OverloadCandidateSet::CSK_Normal);
   if (!MemberLookup.empty()) {
     ExprResult MemberRef =
         BuildMemberReferenceExpr(Range, Range->getType(), Loc,
