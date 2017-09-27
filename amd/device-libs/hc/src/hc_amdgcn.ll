@@ -192,20 +192,20 @@ define i32 @__atomic_wrapdec(i32 addrspace(4)* nocapture %addr, i32 %val) #1 {
 ; llvm.amdgcn.atomic.dec.i32.p4i32 <addr> <val> <ordering> <scope> <is_volatile>
 declare i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture, i32, i32, i32, i1) #4
 
-define i64 @__clock_u64() #1 {
+define i64 @__clock_u64() #8 {
   %ret = tail call i64 @llvm.amdgcn.s.memrealtime()
   ret i64 %ret
 }
 
-declare i64 @llvm.amdgcn.s.memrealtime() #1
+declare i64 @llvm.amdgcn.s.memrealtime() #8
 
 
-define i64 @__cycle_u64() #1 {
+define i64 @__cycle_u64() #8 {
   %ret = tail call i64 @llvm.amdgcn.s.memtime()
   ret i64 %ret
 }
 
-declare i64 @llvm.amdgcn.s.memtime() #1
+declare i64 @llvm.amdgcn.s.memtime() #8
 
 define i32 @get_group_segment_size() #0 {
   %1 = call i32 @llvm.amdgcn.s.getreg(i32 17158) #0
@@ -253,4 +253,5 @@ attributes #4 = { convergent nounwind }
 attributes #5 = { alwaysinline nounwind }
 attributes #6 = { alwaysinline norecurse nounwind readnone }
 attributes #7 = { norecurse nounwind readnone }
+attributes #8 = { alwaysinline nounwind inaccessiblememonly norecurse }
 attributes #9 = { convergent nounwind readnone }
