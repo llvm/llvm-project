@@ -923,6 +923,8 @@ struct SemiNCAInfo {
     // To dominates From -- nothing to do.
     if (ToTN == NCD) return;
 
+    DT.DFSInfoValid = false;
+
     const TreeNodePtr ToIDom = ToTN->getIDom();
     DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
                  << BlockNamePrinter(ToIDom) << "\n");

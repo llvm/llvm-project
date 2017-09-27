@@ -337,19 +337,11 @@ void WasmObjectFile::populateSymbolTable() {
           Export.Kind == wasm::WASM_EXTERNAL_FUNCTION
               ? WasmSymbol::SymbolType::FUNCTION_EXPORT
               : WasmSymbol::SymbolType::GLOBAL_EXPORT;
-      auto Pair = SymbolMap.try_emplace(Export.Name, Symbols.size());
-      if (Pair.second) {
-        Symbols.emplace_back(Export.Name, ExportType,
-                             ExportSection, Export.Index);
-        DEBUG(dbgs() << "Adding export: " << Symbols.back()
-                     << " sym index:" << Symbols.size() << "\n");
-      } else {
-        uint32_t SymIndex = Pair.first->second;
-        Symbols[SymIndex] =
-            WasmSymbol(Export.Name, ExportType, ExportSection, Export.Index);
-        DEBUG(dbgs() << "Replacing existing symbol:  " << Symbols[SymIndex]
-                     << " sym index:" << SymIndex << "\n");
-      }
+      SymbolMap.try_emplace(Export.Name, Symbols.size());
+      Symbols.emplace_back(Export.Name, ExportType,
+                           ExportSection, Export.Index);
+      DEBUG(dbgs() << "Adding export: " << Symbols.back()
+                   << " sym index:" << Symbols.size() << "\n");
     }
   }
 }

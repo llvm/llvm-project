@@ -54,6 +54,7 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
     // Silence compiler warnings.
     #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
+    #pragma warning(disable: 4324) // structure was padded due to alignment specifier
     #pragma warning(disable: 4521) // multiple copy constructors specified
     #pragma warning(disable: 4702) // unreachable code
     #pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.

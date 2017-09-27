@@ -35,6 +35,7 @@ using namespace llvm;
 
 STATISTIC(NumElimIdentity, "Number of IV identities eliminated");
 STATISTIC(NumElimOperand,  "Number of IV operands folded into a use");
+STATISTIC(NumFoldedUser, "Number of IV users folded into a constant");
 STATISTIC(NumElimRem     , "Number of IV remainder operations eliminated");
 STATISTIC(
     NumSimplifiedSDiv,
@@ -76,6 +77,7 @@ namespace {
     Value *foldIVUser(Instruction *UseInst, Instruction *IVOperand);
 
     bool eliminateIdentitySCEV(Instruction *UseInst, Instruction *IVOperand);
+    bool foldConstantSCEV(Instruction *UseInst);
 
     bool eliminateOverflowIntrinsic(CallInst *CI);
     bool eliminateIVUser(Instruction *UseInst, Instruction *IVOperand);
@@ -534,6 +536,30 @@ bool SimplifyIndvar::eliminateIVUser(Instruction *UseInst,
   return false;
 }
 
+/// Replace the UseInst with a constant if possible
+bool SimplifyIndvar::foldConstantSCEV(Instruction *I) {
+  if (!SE->isSCEVable(I->getType()))
+    return false;
+
+  // Get the symbolic expression for this instruction.
+  const SCEV *S = SE->getSCEV(I);
+
+  const Loop *L = LI->getLoopFor(I->getParent());
+  S = SE->getSCEVAtScope(S, L);
+
+  if (auto *C = dyn_cast<SCEVConstant>(S)) {
+    I->replaceAllUsesWith(C->getValue());
+    DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
+                 << " with constant: " << *C << '\n');
+    ++NumFoldedUser;
+    Changed = true;
+    DeadInsts.emplace_back(I);
+    return true;
+  }
+
+  return false;
+}
+
 /// Eliminate any operation that SCEV can prove is an identity function.
 bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
                                            Instruction *IVOperand) {
@@ -740,6 +766,10 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
 
     // Bypass back edges to avoid extra work.
     if (UseInst == CurrIV) continue;
+
+    // Try to replace UseInst with a constant before any other simplifications
+    if (foldConstantSCEV(UseInst))
+      continue;
 
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
