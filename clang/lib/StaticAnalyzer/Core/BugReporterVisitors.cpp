@@ -42,48 +42,68 @@ bool bugreporter::isDeclRefExprToReference(const Expr *E) {
   return false;
 }
 
+/// Given that expression S represents a pointer that would be dereferenced,
+/// try to find a sub-expression from which the pointer came from.
+/// This is used for tracking down origins of a null or undefined value:
+/// "this is null because that is null because that is null" etc.
+/// We wipe away field and element offsets because they merely add offsets.
+/// We also wipe away all casts except lvalue-to-rvalue casts, because the
+/// latter represent an actual pointer dereference; however, we remove
+/// the final lvalue-to-rvalue cast before returning from this function
+/// because it demonstrates more clearly from where the pointer rvalue was
+/// loaded. Examples:
+///   x->y.z      ==>  x (lvalue)
+///   foo()->y.z  ==>  foo() (rvalue)
 const Expr *bugreporter::getDerefExpr(const Stmt *S) {
-  // Pattern match for a few useful cases:
-  //   a[0], p->f, *p
   const Expr *E = dyn_cast<Expr>(S);
   if (!E)
     return nullptr;
-  E = E->IgnoreParenCasts();
 
   while (true) {
-    if (const BinaryOperator *B = dyn_cast<BinaryOperator>(E)) {
-      assert(B->isAssignmentOp());
-      E = B->getLHS()->IgnoreParenCasts();
-      continue;
-    }
-    else if (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
-      if (U->getOpcode() == UO_Deref)
-        return U->getSubExpr()->IgnoreParenCasts();
-    }
-    else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
-      if (ME->isImplicitAccess()) {
-        return ME;
-      } else if (ME->isArrow() || isDeclRefExprToReference(ME->getBase())) {
-        return ME->getBase()->IgnoreParenCasts();
+    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+      if (CE->getCastKind() == CK_LValueToRValue) {
+        // This cast represents the load we're looking for.
+        break;
+      }
+      E = CE->getSubExpr();
+    } else if (isa<BinaryOperator>(E)) {
+      // Probably more arithmetic can be pattern-matched here,
+      // but for now give up.
+      break;
+    } else if (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
+      if (U->getOpcode() == UO_Deref) {
+        // Operators '*' and '&' don't actually mean anything.
+        // We look at casts instead.
+        E = U->getSubExpr();
       } else {
-        // If we have a member expr with a dot, the base must have been
-        // dereferenced.
-        return getDerefExpr(ME->getBase());
+        // Probably more arithmetic can be pattern-matched here,
+        // but for now give up.
+        break;
       }
     }
-    else if (const ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
-      return IvarRef->getBase()->IgnoreParenCasts();
+    // Pattern match for a few useful cases: a[0], p->f, *p etc.
+    else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+      E = ME->getBase();
+    } else if (const ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
+      E = IvarRef->getBase();
+    } else if (const ArraySubscriptExpr *AE = dyn_cast<ArraySubscriptExpr>(E)) {
+      E = AE->getBase();
+    } else if (const ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
+      E = PE->getSubExpr();
+    } else {
+      // Other arbitrary stuff.
+      break;
     }
-    else if (const ArraySubscriptExpr *AE = dyn_cast<ArraySubscriptExpr>(E)) {
-      return getDerefExpr(AE->getBase());
-    }
-    else if (isa<DeclRefExpr>(E)) {
-      return E;
-    }
-    break;
   }
 
-  return nullptr;
+  // Special case: remove the final lvalue-to-rvalue cast, but do not recurse
+  // deeper into the sub-expression. This way we return the lvalue from which
+  // our pointer rvalue was loaded.
+  if (const ImplicitCastExpr *CE = dyn_cast<ImplicitCastExpr>(E))
+    if (CE->getCastKind() == CK_LValueToRValue)
+      E = CE->getSubExpr();
+
+  return E;
 }
 
 const Stmt *bugreporter::GetDenomExpr(const ExplodedNode *N) {
