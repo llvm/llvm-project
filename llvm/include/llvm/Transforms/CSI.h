@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 
@@ -31,9 +32,18 @@ static const char *const CsiBasicBlockBaseIdName = "__csi_unit_bb_base_id";
 static const char *const CsiCallsiteBaseIdName = "__csi_unit_callsite_base_id";
 static const char *const CsiLoadBaseIdName = "__csi_unit_load_base_id";
 static const char *const CsiStoreBaseIdName = "__csi_unit_store_base_id";
+static const char *const CsiDetachBaseIdName = "__csi_unit_detach_base_id";
+static const char *const CsiTaskBaseIdName = "__csi_unit_task_base_id";
+static const char *const CsiTaskExitBaseIdName =
+  "__csi_unit_task_exit_base_id";
+static const char *const CsiDetachContinueBaseIdName =
+  "__csi_unit_detach_continue_base_id";
+static const char *const CsiSyncBaseIdName = "__csi_unit_sync_base_id";
+static const char *const CsiUnitSizeTableName = "__csi_unit_size_table";
 static const char *const CsiUnitFedTableName = "__csi_unit_fed_table";
 static const char *const CsiFuncIdVariablePrefix = "__csi_func_id_";
 static const char *const CsiUnitFedTableArrayName = "__csi_unit_fed_tables";
+static const char *const CsiUnitSizeTableArrayName = "__csi_unit_size_tables";
 static const char *const CsiInitCallsiteToFunctionName =
     "__csi_init_callsite_to_function";
 static const char *const CsiDisableInstrumentationName =
@@ -145,6 +155,54 @@ private:
   void add(uint64_t ID, int32_t Line = -1, int32_t Column = -1,
            StringRef Filename = "", StringRef Directory = "",
            StringRef Name = "");
+};
+
+/// Maintains a mapping from CSI ID of a basic block to the size of that basic
+/// block in LLVM IR instructions.
+class SizeTable : public ForensicTable {
+public:
+  SizeTable() : ForensicTable() {}
+  SizeTable(Module &M, StringRef BaseIdName)
+      : ForensicTable(M, BaseIdName) {}
+
+  /// The number of entries in this table
+  uint64_t size() const { return LocalIdToSizeMap.size(); }
+
+  /// Add the given basic block  to this table.
+  /// \returns The local ID of the basic block.
+  uint64_t add(const BasicBlock &BB);
+
+  /// Get the Type for a pointer to a table entry.
+  ///
+  /// A table entry is just a source location.
+  static PointerType *getPointerType(LLVMContext &C);
+
+  /// Insert this table into the given Module.
+  ///
+  /// The table is constructed as a ConstantArray indexed by local IDs.  The
+  /// runtime is responsible for performing the mapping that allows the table to
+  /// be indexed by global ID.
+  Constant *insertIntoModule(Module &M) const;
+
+private:
+  struct SizeInformation {
+    // This count includes every IR instruction.
+    int32_t FullIRSize;
+    // This count excludes IR instructions that don't lower to any real
+    // instructions, e.g., PHI instructions, debug intrinsics, and lifetime
+    // intrinsics.
+    int32_t NonEmptyIRSize;
+  };
+
+  /// Map of local ID to size.
+  DenseMap<uint64_t, SizeInformation> LocalIdToSizeMap;
+
+  /// Create a struct type to match the "struct SourceLocation" type.
+  /// (and the source_loc_t type in csi.h).
+  static StructType *getSizeStructType(LLVMContext &C);
+
+  /// Append the size information to the table.
+  void add(uint64_t ID, int32_t FullIRSize = 0, int32_t NonEmptyIRSize = 0);
 };
 
 /// Represents a property value passed to hooks.
@@ -493,8 +551,10 @@ private:
 struct CSIImpl {
 public:
   CSIImpl(Module &M, CallGraph *CG,
+          function_ref<DominatorTree &(Function &)> GetDomTree,
           const CSIOptions &Options = CSIOptions())
-      : M(M), DL(M.getDataLayout()), CG(CG), Options(Options),
+      : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
+        Options(Options),
         CsiFuncEntry(nullptr), CsiFuncExit(nullptr), CsiBBEntry(nullptr),
         CsiBBExit(nullptr), CsiBeforeCallsite(nullptr),
         CsiAfterCallsite(nullptr), CsiBeforeRead(nullptr),
@@ -526,6 +586,7 @@ protected:
   void initializeBasicBlockHooks();
   void initializeCallsiteHooks();
   void initializeMemIntrinsicsHooks();
+  void initializeTapirHooks();
   /// @}
 
   static StructType *getUnitFedTableType(LLVMContext &C,
@@ -533,10 +594,19 @@ protected:
   static Constant *fedTableToUnitFedTable(Module &M,
                                           StructType *UnitFedTableType,
                                           FrontEndDataTable &FedTable);
+  static StructType *getUnitSizeTableType(LLVMContext &C,
+                                          PointerType *EntryPointerType);
+  static Constant *sizeTableToUnitSizeTable(Module &M,
+                                            StructType *UnitSizeTableType,
+                                            SizeTable &SzTable);
   /// Initialize the front-end data table structures.
   void initializeFEDTables();
   /// Collect unit front-end data table structures for finalization.
   void collectUnitFEDTables();
+  /// Initialize the front-end data table structures.
+  void initializeSizeTables();
+  /// Collect unit front-end data table structures for finalization.
+  void collectUnitSizeTables();
 
   virtual CallInst *createRTUnitInitCall(IRBuilder<> &IRB);
 
@@ -565,6 +635,8 @@ protected:
   bool instrumentMemIntrinsic(Instruction *I);
   void instrumentCallsite(Instruction *I);
   void instrumentBasicBlock(BasicBlock &BB);
+  void instrumentDetach(DetachInst *DI, DominatorTree *DT);
+  void instrumentSync(SyncInst *SI);
   void instrumentFunction(Function &F);
   /// @}
 
@@ -580,12 +652,17 @@ protected:
   Module &M;
   const DataLayout &DL;
   CallGraph *CG;
+  function_ref<DominatorTree &(Function &)> GetDomTree;
   CSIOptions Options;
 
   FrontEndDataTable FunctionFED, FunctionExitFED, BasicBlockFED, CallsiteFED,
-      LoadFED, StoreFED;
+    LoadFED, StoreFED, DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
+    SyncFED;
 
-  SmallVector<Constant *, 6> UnitFedTables;
+  SmallVector<Constant *, 11> UnitFedTables;
+
+  SizeTable BBSize;
+  SmallVector<Constant *, 1> UnitSizeTables;
 
   // Instrumentation hooks
   Function *CsiFuncEntry, *CsiFuncExit;
@@ -593,6 +670,9 @@ protected:
   Function *CsiBeforeCallsite, *CsiAfterCallsite;
   Function *CsiBeforeRead, *CsiAfterRead;
   Function *CsiBeforeWrite, *CsiAfterWrite;
+  Function *CsiDetach, *CsiDetachContinue;
+  Function *CsiTaskEntry, *CsiTaskExit;
+  Function *CsiSync;
 
   Function *MemmoveFn, *MemcpyFn, *MemsetFn;
   Function *InitCallsiteToFunction;

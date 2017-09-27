@@ -25,6 +25,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 
 using namespace llvm;
 
@@ -48,6 +49,9 @@ static cl::opt<bool>  ClInstrumentAtomics(
 static cl::opt<bool>  ClInstrumentMemIntrinsics(
     "csi-instrument-memintrinsics", cl::init(true),
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
+static cl::opt<bool>  ClInstrumentTapir(
+    "csi-instrument-tapir", cl::init(true),
+    cl::desc("Instrument tapir constructs"), cl::Hidden);
 
 namespace {
 
@@ -58,6 +62,7 @@ static CSIOptions OverrideFromCL(CSIOptions Options) {
   Options.InstrumentCalls |= ClInstrumentCalls;
   Options.InstrumentAtomics |= ClInstrumentAtomics;
   Options.InstrumentMemIntrinsics |= ClInstrumentMemIntrinsics;
+  Options.InstrumentTapir |= ClInstrumentTapir;
   return Options;
 }
 
@@ -151,6 +156,7 @@ bool CSIImpl::run() {
     instrumentFunction(F);
 
   collectUnitFEDTables();
+  collectUnitSizeTables();
   finalizeCsi();
   return true; // We always insert the unit constructor.
 }
@@ -159,8 +165,10 @@ ForensicTable::ForensicTable(Module &M, StringRef BaseIdName) {
   LLVMContext &C = M.getContext();
   IntegerType *Int64Ty = IntegerType::get(C, 64);
   IdCounter = 0;
-  BaseId = new GlobalVariable(M, Int64Ty, false, GlobalValue::InternalLinkage,
-                              ConstantInt::get(Int64Ty, 0), BaseIdName);
+  BaseId = M.getGlobalVariable(BaseIdName, true);
+  if (NULL == BaseId)
+    BaseId = new GlobalVariable(M, Int64Ty, false, GlobalValue::InternalLinkage,
+                                ConstantInt::get(Int64Ty, 0), BaseIdName);
   assert(BaseId);
 }
 
@@ -180,6 +188,67 @@ Value *ForensicTable::localToGlobalId(uint64_t LocalId,
   Base->setMetadata(LLVMContext::MD_invariant_load, MD);
   Value *Offset = IRB.getInt64(LocalId);
   return IRB.CreateAdd(Base, Offset);
+}
+
+uint64_t SizeTable::add(const BasicBlock &BB) {
+  uint64_t ID = getId(&BB);
+  // Count the LLVM IR instructions
+  int32_t NonEmptyIRSize = 0;
+  for (const Instruction &I : BB) {
+    if (isa<PHINode>(I)) continue;
+    if (isa<DbgInfoIntrinsic>(I)) continue;
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+      if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
+          Intrinsic::lifetime_start == II->getIntrinsicID() ||
+          Intrinsic::lifetime_end == II->getIntrinsicID())
+        continue;
+    NonEmptyIRSize++;
+  }
+  add(ID, BB.size(), NonEmptyIRSize);
+  return ID;
+}
+
+PointerType *SizeTable::getPointerType(LLVMContext &C) {
+  return PointerType::get(getSizeStructType(C), 0);
+}
+
+StructType *SizeTable::getSizeStructType(LLVMContext &C) {
+  return StructType::get(
+      /* FullIRSize */ IntegerType::get(C, 32),
+      /* NonEmptyIRSize */ IntegerType::get(C, 32));
+}
+
+void SizeTable::add(uint64_t ID, int32_t FullIRSize, int32_t NonEmptyIRSize) {
+  assert(NonEmptyIRSize <= FullIRSize && "Broken basic block IR sizes");
+  assert(LocalIdToSizeMap.find(ID) == LocalIdToSizeMap.end() &&
+         "ID already exists in FED table.");
+  LocalIdToSizeMap[ID] = { FullIRSize, NonEmptyIRSize };
+}
+
+Constant *SizeTable::insertIntoModule(Module &M) const {
+  LLVMContext &C = M.getContext();
+  StructType *TableType = getSizeStructType(C);
+  IntegerType *Int32Ty = IntegerType::get(C, 32);
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  Value *GepArgs[] = {Zero, Zero};
+  SmallVector<Constant *, 1> TableEntries;
+
+  for (uint64_t LocalID = 0; LocalID < IdCounter; ++LocalID) {
+    const SizeInformation &E = LocalIdToSizeMap.find(LocalID)->second;
+    Constant *FullIRSize = ConstantInt::get(Int32Ty, E.FullIRSize);
+    Constant *NonEmptyIRSize = ConstantInt::get(Int32Ty, E.NonEmptyIRSize);
+    // The order of arguments to ConstantStruct::get() must match the
+    // sizeinfo_t type in csi.h.
+    TableEntries.push_back(ConstantStruct::get(TableType, FullIRSize,
+                                               NonEmptyIRSize));
+  }
+
+  ArrayType *TableArrayType = ArrayType::get(TableType, TableEntries.size());
+  Constant *Table = ConstantArray::get(TableArrayType, TableEntries);
+  GlobalVariable *GV =
+    new GlobalVariable(M, TableArrayType, false, GlobalValue::InternalLinkage,
+                       Table, CsiUnitSizeTableName);
+  return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
 }
 
 uint64_t FrontEndDataTable::add(const Function &F) {
@@ -245,7 +314,7 @@ Constant *FrontEndDataTable::insertIntoModule(Module &M) const {
   IntegerType *Int32Ty = IntegerType::get(C, 32);
   Constant *Zero = ConstantInt::get(Int32Ty, 0);
   Value *GepArgs[] = {Zero, Zero};
-  SmallVector<Constant *, 6> FEDEntries;
+  SmallVector<Constant *, 11> FEDEntries;
 
   for (uint64_t LocalID = 0; LocalID < IdCounter; ++LocalID) {
     const SourceLocation &E = LocalIdToSourceLocationMap.find(LocalID)->second;
@@ -303,22 +372,26 @@ Constant *FrontEndDataTable::insertIntoModule(Module &M) const {
   Constant *Table = ConstantArray::get(FedArrayType, FEDEntries);
   GlobalVariable *GV =
     new GlobalVariable(M, FedArrayType, false, GlobalValue::InternalLinkage,
-                       Table, CsiUnitFedTableName);
+                       Table, CsiUnitFedTableName + BaseId->getName());
   return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
 }
 
+/// Function entry and exit hook initialization
 void CSIImpl::initializeFuncHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
+  // Initialize function entry hook
   Type *FuncPropertyTy = CsiFuncProperty::getType(C);
   CsiFuncEntry = M.getOrInsertFunction("__csi_func_entry", IRB.getVoidTy(),
                                        IRB.getInt64Ty(), FuncPropertyTy);
+  // Initialize function exit hook
   Type *FuncExitPropertyTy = CsiFuncExitProperty::getType(C);
   CsiFuncExit =  M.getOrInsertFunction("__csi_func_exit", IRB.getVoidTy(),
                                        IRB.getInt64Ty(), IRB.getInt64Ty(),
                                        FuncExitPropertyTy);
 }
 
+/// Basic-block hook initialization
 void CSIImpl::initializeBasicBlockHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -329,6 +402,7 @@ void CSIImpl::initializeBasicBlockHooks() {
                                     IRB.getInt64Ty(), PropertyTy);
 }
 
+// Call-site hook initialization
 void CSIImpl::initializeCallsiteHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -341,6 +415,7 @@ void CSIImpl::initializeCallsiteHooks() {
                                            PropertyTy);
 }
 
+// Load and store hook initialization
 void CSIImpl::initializeLoadStoreHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -365,6 +440,7 @@ void CSIImpl::initializeLoadStoreHooks() {
                                         NumBytesType, StorePropertyTy);
 }
 
+// Initialization of hooks for LLVM memory intrinsics
 void CSIImpl::initializeMemIntrinsicsHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -378,6 +454,33 @@ void CSIImpl::initializeMemIntrinsicsHooks() {
   MemsetFn = M.getOrInsertFunction("memset", IRB.getInt8PtrTy(),
                                    IRB.getInt8PtrTy(), IRB.getInt32Ty(),
                                    IntptrTy);
+}
+
+// Initialization of Tapir hooks
+void CSIImpl::initializeTapirHooks() {
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
+  Type *IDType = IRB.getInt64Ty();
+  Type *RetType = IRB.getVoidTy();
+
+  CsiDetach = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_detach", RetType,
+                            /* detach_id */ IDType));
+  CsiTaskEntry = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_task", RetType,
+                            /* task_id */ IDType,
+                            /* detach_id */ IDType));
+  CsiTaskExit = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_task_exit", RetType,
+                            /* task_exit_id */ IDType,
+                            /* task_id */ IDType,
+                            /* detach_id */ IDType));
+  CsiDetachContinue = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_detach_continue", RetType,
+                            /* detach_continue_id */ IDType,
+                            /* detach_id */ IDType));
+  CsiSync = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_sync", RetType, IDType));
 }
 
 int CSIImpl::getNumBytesAccessed(Value *Addr, const DataLayout &DL) {
@@ -452,19 +555,19 @@ bool CSIImpl::instrumentMemIntrinsic(Instruction *I) {
   IRBuilder<> IRB(I);
   if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
     Instruction *Call = IRB.CreateCall(
-                                       MemsetFn,
-                                       {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
-                                           IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false),
-                                           IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+        MemsetFn,
+        {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
+            IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false),
+            IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
     setInstrumentationDebugLoc(I, Call);
     I->eraseFromParent();
     return true;
   } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
     Instruction *Call = IRB.CreateCall(
-                                       isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
-                                       {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
-                                           IRB.CreatePointerCast(M->getArgOperand(1), IRB.getInt8PtrTy()),
-                                           IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+        isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
+        {IRB.CreatePointerCast(M->getArgOperand(0), IRB.getInt8PtrTy()),
+            IRB.CreatePointerCast(M->getArgOperand(1), IRB.getInt8PtrTy()),
+            IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
     setInstrumentationDebugLoc(I, Call);
     I->eraseFromParent();
     return true;
@@ -474,8 +577,10 @@ bool CSIImpl::instrumentMemIntrinsic(Instruction *I) {
 
 void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
   IRBuilder<> IRB(&*BB.getFirstInsertionPt());
-  //LLVMContext &C = IRB.getContext();
   uint64_t LocalId = BasicBlockFED.add(BB);
+  uint64_t BBSizeId = BBSize.add(BB);
+  assert(LocalId == BBSizeId &&
+         "BB recieved different ID's in FED and sizeinfo tables.");
   Value *CsiId = BasicBlockFED.localToGlobalId(LocalId, IRB);
   CsiBBProperty Prop;
   TerminatorInst *TI = BB.getTerminator();
@@ -576,6 +681,73 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
   }
 }
 
+void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
+  // Instrument the detach instruction itself
+  Value *DetachID;
+  {
+    IRBuilder<> IRB(DI);
+    uint64_t LocalID = DetachFED.add(*DI);
+    DetachID = DetachFED.localToGlobalId(LocalID, IRB);
+    Instruction *Call = IRB.CreateCall(CsiDetach, {DetachID});
+    IRB.SetInstDebugLocation(Call);
+  }
+
+  // Find the detached block, continuation, and associated reattaches.
+  BasicBlock *DetachedBlock = DI->getDetached();
+  BasicBlock *ContinueBlock = DI->getContinue();
+  SmallVector<BasicBlock *, 8> TaskExits;
+  // TODO: Extend this loop to find EH exits of the detached task.
+  for (BasicBlock *Pred : predecessors(ContinueBlock))
+    if (isa<ReattachInst>(Pred->getTerminator()))
+      TaskExits.push_back(Pred);
+
+  // Instrument the entry and exit points of the detached task.
+  {
+    // Instrument the entry point of the detached task.
+    IRBuilder<> IRB(&*DetachedBlock->getFirstInsertionPt());
+    uint64_t LocalID = TaskFED.add(*DetachedBlock);
+    Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
+    Instruction *Call = IRB.CreateCall(CsiTaskEntry,
+                                       {TaskID, DetachID});
+    IRB.SetInstDebugLocation(Call);
+
+    // Instrument the exit points of the detached tasks.
+    for (BasicBlock *TaskExit : TaskExits) {
+      IRBuilder<> IRB(TaskExit->getTerminator());
+      uint64_t LocalID = TaskExitFED.add(*TaskExit->getTerminator());
+      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Instruction *Call = IRB.CreateCall(CsiTaskExit,
+                                         {TaskExitID, TaskID, DetachID});
+      IRB.SetInstDebugLocation(Call);
+    }
+  }
+
+  // Instrument the continuation of the detach.
+  {
+    if (isCriticalContinueEdge(DI, 1))
+      ContinueBlock = SplitCriticalEdge(
+          DI, 1,
+          CriticalEdgeSplittingOptions(DT).setSplitDetachContinue());
+
+    IRBuilder<> IRB(&*ContinueBlock->getFirstInsertionPt());
+    uint64_t LocalID = DetachContinueFED.add(*ContinueBlock);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Instruction *Call = IRB.CreateCall(CsiDetachContinue,
+                                       {ContinueID, DetachID});
+    IRB.SetInstDebugLocation(Call);
+  }
+}
+
+void CSIImpl::instrumentSync(SyncInst *SI) {
+  IRBuilder<> IRB(SI);
+  // Get the ID of this sync.
+  uint64_t LocalID = SyncFED.add(*SI);
+  Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
+  // Insert instrumentation before the sync.
+  Instruction *Call = IRB.CreateCall(CsiSync, {SyncID});
+  IRB.SetInstDebugLocation(Call);
+}
+
 void CSIImpl::insertConditionalHookCall(Instruction *I, Function *HookFunction,
                                         ArrayRef<Value *> HookArgs) {
   IRBuilder<> IRB(I);
@@ -596,6 +768,15 @@ void CSIImpl::initializeFEDTables() {
   CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName);
   LoadFED = FrontEndDataTable(M, CsiLoadBaseIdName);
   StoreFED = FrontEndDataTable(M, CsiStoreBaseIdName);
+  DetachFED = FrontEndDataTable(M, CsiDetachBaseIdName);
+  TaskFED = FrontEndDataTable(M, CsiTaskBaseIdName);
+  TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName);
+  DetachContinueFED = FrontEndDataTable(M, CsiDetachContinueBaseIdName);
+  SyncFED = FrontEndDataTable(M, CsiSyncBaseIdName);
+}
+
+void CSIImpl::initializeSizeTables() {
+  BBSize = SizeTable(M, CsiBasicBlockBaseIdName);
 }
 
 uint64_t CSIImpl::getLocalFunctionID(Function &F) {
@@ -631,6 +812,7 @@ void CSIImpl::initializeCsi() {
   IntptrTy = DL.getIntPtrType(M.getContext());
 
   initializeFEDTables();
+  initializeSizeTables();
   if (Options.InstrumentFuncEntryExit)
     initializeFuncHooks();
   if (Options.InstrumentMemoryAccesses)
@@ -641,6 +823,8 @@ void CSIImpl::initializeCsi() {
     initializeCallsiteHooks();
   if (Options.InstrumentMemIntrinsics)
     initializeMemIntrinsicsHooks();
+  if (Options.InstrumentTapir)
+    initializeTapirHooks();
 
   FunctionType *FnType =
     FunctionType::get(Type::getVoidTy(M.getContext()), {}, false);
@@ -699,6 +883,44 @@ void CSIImpl::collectUnitFEDTables() {
       fedTableToUnitFedTable(M, UnitFedTableType, LoadFED));
   UnitFedTables.push_back(
       fedTableToUnitFedTable(M, UnitFedTableType, StoreFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, DetachFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, TaskFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, TaskExitFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, DetachContinueFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
+}
+
+// Create a struct type to match the unit_obj_entry_t type in csirt.c.
+StructType *CSIImpl::getUnitSizeTableType(LLVMContext &C,
+                                          PointerType *EntryPointerType) {
+  return StructType::get(IntegerType::get(C, 64),
+                         EntryPointerType);
+}
+
+Constant *CSIImpl::sizeTableToUnitSizeTable(
+    Module &M, StructType *UnitSizeTableType, SizeTable &SzTable) {
+  Constant *NumEntries =
+    ConstantInt::get(IntegerType::get(M.getContext(), 64), SzTable.size());
+  // Constant *BaseIdPtr =
+  //   ConstantExpr::getPointerCast(FedTable.baseId(),
+  //                                Type::getInt8PtrTy(M.getContext(), 0));
+  Constant *InsertedTable = SzTable.insertIntoModule(M);
+  return ConstantStruct::get(UnitSizeTableType, NumEntries,
+                             InsertedTable);
+}
+
+void CSIImpl::collectUnitSizeTables() {
+  LLVMContext &C = M.getContext();
+  StructType *UnitSizeTableType =
+      getUnitSizeTableType(C, SizeTable::getPointerType(C));
+
+  UnitSizeTables.push_back(
+      sizeTableToUnitSizeTable(M, UnitSizeTableType, BBSize));
 }
 
 CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
@@ -706,11 +928,14 @@ CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
 
   StructType *UnitFedTableType =
       getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
+  StructType *UnitSizeTableType =
+      getUnitSizeTableType(C, SizeTable::getPointerType(C));
 
   // Lookup __csirt_unit_init
   SmallVector<Type *, 4> InitArgTypes({IRB.getInt8PtrTy(),
-                                       PointerType::get(UnitFedTableType, 0),
-                                       InitCallsiteToFunction->getType()});
+        PointerType::get(UnitFedTableType, 0),
+        PointerType::get(UnitSizeTableType, 0),
+        InitCallsiteToFunction->getType()});
   FunctionType *InitFunctionTy =
       FunctionType::get(IRB.getVoidTy(), InitArgTypes, false);
   RTUnitInit = M.getOrInsertFunction(CsiRtUnitInitName, InitFunctionTy);
@@ -718,10 +943,18 @@ CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
 
   ArrayType *UnitFedTableArrayType =
       ArrayType::get(UnitFedTableType, UnitFedTables.size());
-  Constant *Table = ConstantArray::get(UnitFedTableArrayType, UnitFedTables);
-  GlobalVariable *GV = new GlobalVariable(M, UnitFedTableArrayType, false,
-                                          GlobalValue::InternalLinkage, Table,
-                                          CsiUnitFedTableArrayName);
+  Constant *FEDTable = ConstantArray::get(UnitFedTableArrayType, UnitFedTables);
+  GlobalVariable *FEDGV = new GlobalVariable(M, UnitFedTableArrayType, false,
+                                             GlobalValue::InternalLinkage,
+                                             FEDTable,
+                                             CsiUnitFedTableArrayName);
+  ArrayType *UnitSizeTableArrayType =
+      ArrayType::get(UnitSizeTableType, UnitSizeTables.size());
+  Constant *SzTable = ConstantArray::get(UnitSizeTableArrayType, UnitSizeTables);
+  GlobalVariable *SizeGV = new GlobalVariable(M, UnitSizeTableArrayType, false,
+                                              GlobalValue::InternalLinkage,
+                                              SzTable,
+                                              CsiUnitSizeTableArrayName);
 
   Constant *Zero = ConstantInt::get(IRB.getInt32Ty(), 0);
   Value *GepArgs[] = {Zero, Zero};
@@ -730,7 +963,8 @@ CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
   return IRB.CreateCall(
       RTUnitInit,
       {IRB.CreateGlobalStringPtr(M.getName()),
-          ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs),
+          ConstantExpr::getGetElementPtr(FEDGV->getValueType(), FEDGV, GepArgs),
+          ConstantExpr::getGetElementPtr(SizeGV->getValueType(), SizeGV, GepArgs),
           InitCallsiteToFunction});
 }
 
@@ -884,9 +1118,10 @@ void CSIImpl::computeLoadAndStoreProperties(
 void CSIImpl::instrumentFunction(Function &F) {
   // This is required to prevent instrumenting the call to
   // __csi_module_init from within the module constructor.
-  if (F.empty() || shouldNotInstrumentFunction(F)) {
+  if (F.empty() || shouldNotInstrumentFunction(F))
     return;
-  }
+
+  DominatorTree *DT = &GetDomTree(F);
 
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
     LoadAndStoreProperties;
@@ -895,6 +1130,9 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<Instruction *, 8> Callsites;
   SmallVector<BasicBlock *, 8> BasicBlocks;
   SmallVector<Instruction*, 8> AtomicAccesses;
+  SmallVector<DetachInst*, 8> Detaches;
+  SmallVector<SyncInst*, 8> Syncs;
+  bool MaySpawn = false;
 
   // Compile lists of all instrumentation points before anything is modified.
   for (BasicBlock &BB : F) {
@@ -906,6 +1144,11 @@ void CSIImpl::instrumentFunction(Function &F) {
         BBLoadsAndStores.push_back(&I);
       } else if (isa<ReturnInst>(I)) {
         ReturnInstructions.push_back(&I);
+      } else if (DetachInst *DI = dyn_cast<DetachInst>(&I)) {
+        MaySpawn = true;
+        Detaches.push_back(DI);
+      } else if (SyncInst *SI = dyn_cast<SyncInst>(&I)) {
+        Syncs.push_back(SI);
       } else if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
         if (isa<MemIntrinsic>(I)) {
           MemIntrinsics.push_back(&I);
@@ -928,6 +1171,14 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (Options.InstrumentBasicBlocks)
     for (BasicBlock *BB : BasicBlocks)
       instrumentBasicBlock(*BB);
+
+  // Instrument Tapir constructs.
+  if (Options.InstrumentTapir) {
+    for (DetachInst *DI : Detaches)
+      instrumentDetach(DI, DT);
+    for (SyncInst *SI : Syncs)
+      instrumentSync(SI);
+  }
 
   // Do this work in a separate loop after copying the iterators so that we
   // aren't modifying the list as we're iterating.
@@ -954,6 +1205,7 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (Options.InstrumentFuncEntryExit) {
     IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
     CsiFuncProperty FuncEntryProp;
+    FuncEntryProp.setMaySpawn(MaySpawn);
     CsiFuncExitProperty FuncExitProp;
     Value *FuncId = FunctionFED.localToGlobalId(LocalId, IRB);
     Value *PropVal = FuncEntryProp.getValue(IRB);
@@ -975,6 +1227,7 @@ void CSIImpl::instrumentFunction(Function &F) {
 void ComprehensiveStaticInstrumentation::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
+  AU.addRequired<DominatorTreeWrapperPass>();
 }
 
 bool ComprehensiveStaticInstrumentation::runOnModule(Module &M) {
@@ -982,6 +1235,9 @@ bool ComprehensiveStaticInstrumentation::runOnModule(Module &M) {
     return false;
 
   CallGraph *CG = &getAnalysis<CallGraphWrapperPass>().getCallGraph();
+  auto GetDomTree = [this](Function &F) -> DominatorTree & {
+    return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+  };
 
-  return CSIImpl(M, CG, Options).run();
+  return CSIImpl(M, CG, GetDomTree, Options).run();
 }

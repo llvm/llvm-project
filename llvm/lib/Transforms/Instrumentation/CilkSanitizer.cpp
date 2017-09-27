@@ -125,7 +125,7 @@ struct CilkSanitizerImpl : public CSIImpl {
   CilkSanitizerImpl(Module &M, CallGraph *CG,
                     function_ref<DominatorTree &(Function &)> GetDomTree,
                     const TargetLibraryInfo *TLI)
-      : CSIImpl(M, CG), GetDomTree(GetDomTree), TLI(TLI),
+      : CSIImpl(M, CG, GetDomTree), TLI(TLI),
         CsanFuncEntry(nullptr), CsanFuncExit(nullptr), CsanRead(nullptr),
         CsanWrite(nullptr), CsanDetach(nullptr), CsanDetachContinue(nullptr),
         CsanTaskEntry(nullptr), CsanTaskExit(nullptr), CsanSync(nullptr) {
@@ -137,6 +137,7 @@ struct CilkSanitizerImpl : public CSIImpl {
     // Options.InstrumentCalls = false;
     Options.InstrumentMemoryAccesses = false;
     Options.InstrumentMemIntrinsics = false;
+    Options.InstrumentTapir = false;
   }
   bool run();
 
@@ -148,7 +149,7 @@ struct CilkSanitizerImpl : public CSIImpl {
 
   // Methods for handling FED tables
   void initializeCsanFEDTables();
-  void collectUnitFEDTables();
+  // void collectUnitFEDTables();
 
   // Methods for handling object tables
   void initializeCsanObjectTables();
@@ -176,7 +177,7 @@ private:
   // Analysis results
   // function_ref<DetachSSA &(Function &)> GetDSSA;
   // function_ref<MemorySSA &(Function &)> GetMSSA;
-  function_ref<DominatorTree &(Function &)> GetDomTree;
+  // function_ref<DominatorTree &(Function &)> GetDomTree;
   const TargetLibraryInfo *TLI;
 
   // Instrumentation hooks
@@ -188,8 +189,8 @@ private:
   Function *CsanSync;
 
   // CilkSanitizer FED tables
-  FrontEndDataTable DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
-    SyncFED; 
+  // FrontEndDataTable DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
+  //   SyncFED;
 
   // CilkSanitizer custom forensic tables
   ObjectTable LoadObj, StoreObj;
@@ -380,7 +381,7 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
 
 bool CilkSanitizerImpl::run() {
   initializeCsi();
-  initializeCsanFEDTables();
+  // initializeCsanFEDTables();
   initializeCsanObjectTables();
   initializeCsanHooks();
 
@@ -395,38 +396,38 @@ bool CilkSanitizerImpl::run() {
   return true;
 }
 
-void CilkSanitizerImpl::initializeCsanFEDTables() {
-  DetachFED = FrontEndDataTable(M, CsanDetachBaseIdName);
-  TaskFED = FrontEndDataTable(M, CsanTaskBaseIdName);
-  TaskExitFED = FrontEndDataTable(M, CsanTaskExitBaseIdName);
-  DetachContinueFED = FrontEndDataTable(M, CsanDetachContinueBaseIdName);
-  SyncFED = FrontEndDataTable(M, CsanSyncBaseIdName);
-}
+// void CilkSanitizerImpl::initializeCsanFEDTables() {
+//   DetachFED = FrontEndDataTable(M, CsanDetachBaseIdName);
+//   TaskFED = FrontEndDataTable(M, CsanTaskBaseIdName);
+//   TaskExitFED = FrontEndDataTable(M, CsanTaskExitBaseIdName);
+//   DetachContinueFED = FrontEndDataTable(M, CsanDetachContinueBaseIdName);
+//   SyncFED = FrontEndDataTable(M, CsanSyncBaseIdName);
+// }
 
 void CilkSanitizerImpl::initializeCsanObjectTables() {
   LoadObj = ObjectTable(M, CsiLoadBaseIdName);
   StoreObj = ObjectTable(M, CsiStoreBaseIdName);
 }
 
-void CilkSanitizerImpl::collectUnitFEDTables() {
-  CSIImpl::collectUnitFEDTables();
-  LLVMContext &C = M.getContext();
-  StructType *UnitFedTableType =
-      getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
+// void CilkSanitizerImpl::collectUnitFEDTables() {
+//   CSIImpl::collectUnitFEDTables();
+//   LLVMContext &C = M.getContext();
+//   StructType *UnitFedTableType =
+//       getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
 
-  // The order of the FED tables here must match the enum in csanrt.c and the
-  // csan_instrumentation_counts_t in csan.h.
-  UnitFedTables.push_back(
-      fedTableToUnitFedTable(M, UnitFedTableType, DetachFED));
-  UnitFedTables.push_back(
-      fedTableToUnitFedTable(M, UnitFedTableType, TaskFED));
-  UnitFedTables.push_back(
-      fedTableToUnitFedTable(M, UnitFedTableType, TaskExitFED));
-  UnitFedTables.push_back(
-      fedTableToUnitFedTable(M, UnitFedTableType, DetachContinueFED));
-  UnitFedTables.push_back(
-      fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
-}
+//   // The order of the FED tables here must match the enum in csanrt.c and the
+//   // csan_instrumentation_counts_t in csan.h.
+//   UnitFedTables.push_back(
+//       fedTableToUnitFedTable(M, UnitFedTableType, DetachFED));
+//   UnitFedTables.push_back(
+//       fedTableToUnitFedTable(M, UnitFedTableType, TaskFED));
+//   UnitFedTables.push_back(
+//       fedTableToUnitFedTable(M, UnitFedTableType, TaskExitFED));
+//   UnitFedTables.push_back(
+//       fedTableToUnitFedTable(M, UnitFedTableType, DetachContinueFED));
+//   UnitFedTables.push_back(
+//       fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
+// }
 
 // Create a struct type to match the unit_obj_entry_t type in csanrt.c.
 StructType *CilkSanitizerImpl::getUnitObjTableType(LLVMContext &C,
