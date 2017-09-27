@@ -4444,7 +4444,6 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
   team->t.t_construct = 0;
-  __kmp_init_lock(&team->t.t_single_lock);
 
   team->t.t_ordered.dt.t_value = 0;
   team->t.t_master_active = FALSE;
