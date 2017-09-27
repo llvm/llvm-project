@@ -15,6 +15,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
 
@@ -154,12 +155,19 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       SnippetCompletions(SnippetCompletions), WorkScheduler(AsyncThreadsCount) {
 }
 
+void ClangdServer::setRootPath(PathRef RootPath) {
+  std::string NewRootPath = llvm::sys::path::convert_to_slash(
+      RootPath, llvm::sys::path::Style::posix);
+  if (llvm::sys::fs::is_directory(NewRootPath))
+    this->RootPath = NewRootPath;
+}
+
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  std::shared_ptr<CppFile> Resources =
-      Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
+  std::shared_ptr<CppFile> Resources = Units.getOrCreateFile(
+      File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
   return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
                                  std::move(Resources), std::move(TaggedFS));
 }

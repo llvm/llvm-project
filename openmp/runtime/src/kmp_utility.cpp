@@ -103,7 +103,7 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
 
   if (frequency == NULL) {
     return result;
-  }; // if
+  }
   value = strtod(frequency,
                  CCAST(char **, &unit)); // strtod() does not like "const"
   if (0 < value &&
@@ -116,12 +116,12 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
       value = value * 1.0E+12;
     } else { // Wrong unit.
       return result;
-    }; // if
+    }
     result = value;
-  }; // if
+  }
   return result;
 
-}; // func __kmp_parse_cpu_frequency
+} // func __kmp_parse_cpu_frequency
 
 void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
   struct kmp_cpuid buf;
@@ -171,7 +171,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
 
     for (t = buf.ebx, i = 0; i < 4; t >>= 8, ++i) {
       data[i] = (t & 0xff);
-    }; // for
+    }
 
     p->sse2 = (buf.edx >> 26) & 1;
 
@@ -270,7 +270,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       KA_TRACE(trace_level, (" RTM"));
     }
 #endif
-  }; // if
+  }
 
   { // Parse CPU brand string for frequency, saving the string for later.
     int i;
@@ -279,7 +279,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
     // Get CPU brand string.
     for (i = 0; i < 3; ++i) {
       __kmp_x86_cpuid(0x80000002 + i, 0, base + i);
-    }; // for
+    }
     p->name[sizeof(p->name) - 1] = 0; // Just in case. ;-)
     KA_TRACE(trace_level, ("cpu brand string: \"%s\"\n", &p->name[0]));
 

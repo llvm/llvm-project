@@ -34,7 +34,7 @@ public:
     explicit tsc_interval_t(int64_t _value) : value(_value) {}
 
   public:
-    tsc_interval_t() : value(0){}; // Construct 0 time duration
+    tsc_interval_t() : value(0) {} // Construct 0 time duration
 #if KMP_HAVE_TICK_TIME
     double seconds() const; // Return the length of a time interval in seconds
 #endif
@@ -59,11 +59,11 @@ public:
   tsc_tick_count()
       : my_count(static_cast<int64_t>(__builtin_readcyclecounter())) {}
 #elif KMP_HAVE___RDTSC
-  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())){};
+  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())){}
 #else
 #error Must have high resolution timer defined
 #endif
-  tsc_tick_count(int64_t value) : my_count(value){};
+  tsc_tick_count(int64_t value) : my_count(value){}
   int64_t getValue() const { return my_count; }
   tsc_tick_count later(tsc_tick_count const other) const {
     return my_count > other.my_count ? (*this) : other;

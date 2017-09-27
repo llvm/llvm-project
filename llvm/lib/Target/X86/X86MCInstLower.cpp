@@ -604,7 +604,9 @@ ReSimplify:
   // Note, we are currently not handling the following instructions:
   // MOV64ao8, MOV64o8a
   // XCHG16ar, XCHG32ar, XCHG64ar
+  case X86::MOV8mr_NOREX:
   case X86::MOV8mr:
+  case X86::MOV8rm_NOREX:
   case X86::MOV8rm:
   case X86::MOV16mr:
   case X86::MOV16rm:
@@ -613,7 +615,9 @@ ReSimplify:
     unsigned NewOpc;
     switch (OutMI.getOpcode()) {
     default: llvm_unreachable("Invalid opcode");
+    case X86::MOV8mr_NOREX:
     case X86::MOV8mr:     NewOpc = X86::MOV8o32a; break;
+    case X86::MOV8rm_NOREX:
     case X86::MOV8rm:     NewOpc = X86::MOV8ao32; break;
     case X86::MOV16mr:    NewOpc = X86::MOV16o32a; break;
     case X86::MOV16rm:    NewOpc = X86::MOV16ao32; break;

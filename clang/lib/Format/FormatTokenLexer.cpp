@@ -96,12 +96,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   }
 
   if (Style.Language == FormatStyle::LK_Java) {
-    static const tok::TokenKind JavaRightLogicalShift[] = {
-        tok::greater, tok::greater, tok::greater};
     static const tok::TokenKind JavaRightLogicalShiftAssign[] = {
         tok::greater, tok::greater, tok::greaterequal};
-    if (tryMergeTokens(JavaRightLogicalShift, TT_BinaryOperator))
-      return;
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
       return;
   }

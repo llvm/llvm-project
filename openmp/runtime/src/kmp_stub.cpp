@@ -72,13 +72,13 @@ static size_t __kmps_init() {
     BOOL status = QueryPerformanceFrequency(&freq);
     if (status) {
       frequency = double(freq.QuadPart);
-    }; // if
+    }
 #endif
 
     initialized = 1;
-  }; // if
+  }
   return dummy;
-}; // __kmps_init
+} // __kmps_init
 
 #define i __kmps_init();
 
@@ -272,8 +272,8 @@ double __kmps_get_wtime(void) {
     BOOL status = QueryPerformanceCounter(&now);
     if (status) {
       wtime = double(now.QuadPart) / frequency;
-    }; // if
-  }; // if
+    }
+  }
 #else
   // gettimeofday() returns seconds and microseconds since the Epoch.
   struct timeval tval;
@@ -283,10 +283,10 @@ double __kmps_get_wtime(void) {
     wtime = (double)(tval.tv_sec) + 1.0E-06 * (double)(tval.tv_usec);
   } else {
     // TODO: Assert or abort here.
-  }; // if
+  }
 #endif
   return wtime;
-}; // __kmps_get_wtime
+} // __kmps_get_wtime
 
 double __kmps_get_wtick(void) {
   // Number of seconds between successive clock ticks.
@@ -304,13 +304,13 @@ double __kmps_get_wtick(void) {
     } else {
       // TODO: Assert or abort here.
       wtick = 1.0E-03;
-    }; // if
+    }
   }
 #else
   // TODO: gettimeofday() returns in microseconds, but what the precision?
   wtick = 1.0E-06;
 #endif
   return wtick;
-}; // __kmps_get_wtick
+} // __kmps_get_wtick
 
 // end of file //
