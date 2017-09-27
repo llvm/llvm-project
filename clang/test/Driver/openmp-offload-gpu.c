@@ -135,3 +135,13 @@
 // RUN:   | FileCheck -check-prefix=CHK-FLAG-NOLIBDEVICE %s
 
 // CHK-FLAG-NOLIBDEVICE-NOT: error:{{.*}}sm_60
+
+/// ###########################################################################
+
+/// Check that error is not thrown by toolchain when no cuda lib device is found when using -S.
+/// Check that the flag is passed when -fopenmp-relocatable-target is used.
+// RUN:   %clang -### -S -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 \
+// RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NOLIBDEVICE %s
+
+// CHK-NOLIBDEVICE-NOT: error:{{.*}}sm_60

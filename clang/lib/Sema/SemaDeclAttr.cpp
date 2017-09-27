@@ -1969,20 +1969,20 @@ static void handleNakedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                                          Attr.getAttributeSpellingListIndex()));
 }
 
-static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &attr) {
+static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
   if (hasDeclarator(D)) return;
 
-  if (S.CheckNoReturnAttr(attr))
+  if (S.CheckNoReturnAttr(Attrs))
     return;
 
   if (!isa<ObjCMethodDecl>(D)) {
-    S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
-        << attr.getName() << ExpectedFunctionOrMethod;
+    S.Diag(Attrs.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attrs.getName() << ExpectedFunctionOrMethod;
     return;
   }
 
   D->addAttr(::new (S.Context) NoReturnAttr(
-      attr.getRange(), S.Context, attr.getAttributeSpellingListIndex()));
+      Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
 static void handleNoCallerSavedRegsAttr(Sema &S, Decl *D,
@@ -1994,9 +1994,9 @@ static void handleNoCallerSavedRegsAttr(Sema &S, Decl *D,
       Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
 }
 
-bool Sema::CheckNoReturnAttr(const AttributeList &attr) {
-  if (!checkAttributeNumArgs(*this, attr, 0)) {
-    attr.setInvalid();
+bool Sema::CheckNoReturnAttr(const AttributeList &Attrs) {
+  if (!checkAttributeNumArgs(*this, Attrs, 0)) {
+    Attrs.setInvalid();
     return true;
   }
 
@@ -4333,24 +4333,24 @@ static void handleSuppressAttr(Sema &S, Decl *D, const AttributeList &Attr) {
       DiagnosticIdentifiers.size(), Attr.getAttributeSpellingListIndex()));
 }
 
-bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC, 
+bool Sema::CheckCallingConvAttr(const AttributeList &Attrs, CallingConv &CC, 
                                 const FunctionDecl *FD) {
-  if (attr.isInvalid())
+  if (Attrs.isInvalid())
     return true;
 
-  if (attr.hasProcessingCache()) {
-    CC = (CallingConv) attr.getProcessingCache();
+  if (Attrs.hasProcessingCache()) {
+    CC = (CallingConv) Attrs.getProcessingCache();
     return false;
   }
 
-  unsigned ReqArgs = attr.getKind() == AttributeList::AT_Pcs ? 1 : 0;
-  if (!checkAttributeNumArgs(*this, attr, ReqArgs)) {
-    attr.setInvalid();
+  unsigned ReqArgs = Attrs.getKind() == AttributeList::AT_Pcs ? 1 : 0;
+  if (!checkAttributeNumArgs(*this, Attrs, ReqArgs)) {
+    Attrs.setInvalid();
     return true;
   }
 
   // TODO: diagnose uses of these conventions on the wrong target.
-  switch (attr.getKind()) {
+  switch (Attrs.getKind()) {
   case AttributeList::AT_CDecl: CC = CC_C; break;
   case AttributeList::AT_FastCall: CC = CC_X86FastCall; break;
   case AttributeList::AT_StdCall: CC = CC_X86StdCall; break;
@@ -4369,8 +4369,8 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
     break;
   case AttributeList::AT_Pcs: {
     StringRef StrRef;
-    if (!checkStringLiteralArgumentAttr(attr, 0, StrRef)) {
-      attr.setInvalid();
+    if (!checkStringLiteralArgumentAttr(Attrs, 0, StrRef)) {
+      Attrs.setInvalid();
       return true;
     }
     if (StrRef == "aapcs") {
@@ -4381,8 +4381,8 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
       break;
     }
 
-    attr.setInvalid();
-    Diag(attr.getLoc(), diag::err_invalid_pcs);
+    Attrs.setInvalid();
+    Diag(Attrs.getLoc(), diag::err_invalid_pcs);
     return true;
   }
   case AttributeList::AT_IntelOclBicc: CC = CC_IntelOclBicc; break;
@@ -4395,7 +4395,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
   TargetInfo::CallingConvCheckResult A = TI.checkCallingConvention(CC);
   if (A != TargetInfo::CCCR_OK) {
     if (A == TargetInfo::CCCR_Warning)
-      Diag(attr.getLoc(), diag::warn_cconv_ignored) << attr.getName();
+      Diag(Attrs.getLoc(), diag::warn_cconv_ignored) << Attrs.getName();
 
     // This convention is not valid for the target. Use the default function or
     // method calling convention.
@@ -4407,7 +4407,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
     CC = Context.getDefaultCallingConvention(IsVariadic, IsCXXMethod);
   }
 
-  attr.setProcessingCache((unsigned) CC);
+  Attrs.setProcessingCache((unsigned) CC);
   return false;
 }
 
@@ -4444,10 +4444,10 @@ static bool isValidSwiftErrorResultType(QualType type) {
   return isValidSwiftContextType(type);
 }
 
-static void handleParameterABIAttr(Sema &S, Decl *D, const AttributeList &attr,
-                                   ParameterABI abi) {
-  S.AddParameterABIAttr(attr.getRange(), D, abi,
-                        attr.getAttributeSpellingListIndex());
+static void handleParameterABIAttr(Sema &S, Decl *D, const AttributeList &Attrs,
+                                   ParameterABI Abi) {
+  S.AddParameterABIAttr(Attrs.getRange(), D, Abi,
+                        Attrs.getAttributeSpellingListIndex());
 }
 
 void Sema::AddParameterABIAttr(SourceRange range, Decl *D, ParameterABI abi,
@@ -4888,11 +4888,11 @@ static void handleNSReturnsRetainedAttr(Sema &S, Decl *D,
 }
 
 static void handleObjCReturnsInnerPointerAttr(Sema &S, Decl *D,
-                                              const AttributeList &attr) {
+                                              const AttributeList &Attrs) {
   const int EP_ObjCMethod = 1;
   const int EP_ObjCProperty = 2;
   
-  SourceLocation loc = attr.getLoc();
+  SourceLocation loc = Attrs.getLoc();
   QualType resultType;
   if (isa<ObjCMethodDecl>(D))
     resultType = cast<ObjCMethodDecl>(D)->getReturnType();
@@ -4903,7 +4903,7 @@ static void handleObjCReturnsInnerPointerAttr(Sema &S, Decl *D,
       (!resultType->isPointerType() || resultType->isObjCRetainableType())) {
     S.Diag(D->getLocStart(), diag::warn_ns_attribute_wrong_return_type)
       << SourceRange(loc)
-    << attr.getName()
+    << Attrs.getName()
     << (isa<ObjCMethodDecl>(D) ? EP_ObjCMethod : EP_ObjCProperty)
     << /*non-retainable pointer*/ 2;
 
@@ -4912,29 +4912,29 @@ static void handleObjCReturnsInnerPointerAttr(Sema &S, Decl *D,
   }
 
   D->addAttr(::new (S.Context) ObjCReturnsInnerPointerAttr(
-      attr.getRange(), S.Context, attr.getAttributeSpellingListIndex()));
+      Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
 static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
-                                        const AttributeList &attr) {
+                                        const AttributeList &Attrs) {
   ObjCMethodDecl *method = cast<ObjCMethodDecl>(D);
   
   DeclContext *DC = method->getDeclContext();
   if (const ObjCProtocolDecl *PDecl = dyn_cast_or_null<ObjCProtocolDecl>(DC)) {
     S.Diag(D->getLocStart(), diag::warn_objc_requires_super_protocol)
-    << attr.getName() << 0;
+    << Attrs.getName() << 0;
     S.Diag(PDecl->getLocation(), diag::note_protocol_decl);
     return;
   }
   if (method->getMethodFamily() == OMF_dealloc) {
     S.Diag(D->getLocStart(), diag::warn_objc_requires_super_protocol)
-    << attr.getName() << 1;
+    << Attrs.getName() << 1;
     return;
   }
   
   method->addAttr(::new (S.Context)
-                  ObjCRequiresSuperAttr(attr.getRange(), S.Context,
-                                        attr.getAttributeSpellingListIndex()));
+                  ObjCRequiresSuperAttr(Attrs.getRange(), S.Context,
+                                        Attrs.getAttributeSpellingListIndex()));
 }
 
 static void handleNSErrorDomain(Sema &S, Decl *D, const AttributeList &Attr) {
@@ -7738,8 +7738,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;
     available_here_select_kind = /* deprecated */ 2;
-    if (const auto *attr = OffendingDecl->getAttr<DeprecatedAttr>())
-      NoteLocation = attr->getLocation();
+    if (const auto *Attr = OffendingDecl->getAttr<DeprecatedAttr>())
+      NoteLocation = Attr->getLocation();
     break;
 
   case AR_Unavailable:
@@ -7750,8 +7750,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     property_note_select = /* unavailable */ 1;
     available_here_select_kind = /* unavailable */ 0;
 
-    if (auto attr = OffendingDecl->getAttr<UnavailableAttr>()) {
-      if (attr->isImplicit() && attr->getImplicitReason()) {
+    if (auto Attr = OffendingDecl->getAttr<UnavailableAttr>()) {
+      if (Attr->isImplicit() && Attr->getImplicitReason()) {
         // Most of these failures are due to extra restrictions in ARC;
         // reflect that in the primary diagnostic when applicable.
         auto flagARCError = [&] {
@@ -7761,7 +7761,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
             diag = diag::err_unavailable_in_arc;
         };
 
-        switch (attr->getImplicitReason()) {
+        switch (Attr->getImplicitReason()) {
         case UnavailableAttr::IR_None: break;
 
         case UnavailableAttr::IR_ARCForbiddenType:
@@ -7802,10 +7802,10 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   CharSourceRange UseRange;
   StringRef Replacement;
   if (K == AR_Deprecated) {
-    if (auto attr = OffendingDecl->getAttr<DeprecatedAttr>())
-      Replacement = attr->getReplacement();
-    if (auto attr = getAttrForPlatform(S.Context, OffendingDecl))
-      Replacement = attr->getReplacement();
+    if (auto Attr = OffendingDecl->getAttr<DeprecatedAttr>())
+      Replacement = Attr->getReplacement();
+    if (auto Attr = getAttrForPlatform(S.Context, OffendingDecl))
+      Replacement = Attr->getReplacement();
 
     if (!Replacement.empty())
       UseRange =

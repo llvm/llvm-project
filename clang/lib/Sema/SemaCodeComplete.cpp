@@ -4245,7 +4245,8 @@ static void mergeCandidatesWithResults(Sema &SemaRef,
     std::stable_sort(
         CandidateSet.begin(), CandidateSet.end(),
         [&](const OverloadCandidate &X, const OverloadCandidate &Y) {
-          return isBetterOverloadCandidate(SemaRef, X, Y, Loc);
+          return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
+                                           CandidateSet.getKind());
         });
 
     // Add the remaining viable overload candidates as code-completion results.
