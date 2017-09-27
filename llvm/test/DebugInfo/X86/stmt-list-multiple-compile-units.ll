@@ -24,10 +24,12 @@
 
 
 ; CHECK: .debug_line contents:
+; CHECK-NEXT: debug_line[0000000000000000]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000038
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; CHECK: Line table prologue:
+; CHECK: debug_line[000000000000003c]
+; CHECK-NEXT: Line table prologue:
 ; CHECK-NEXT: total_length: 0x00000039
 ; CHECK: file_names[  1]    0 0x00000000 0x00000000 simple2.c
 ; CHECK-NOT: file_names
@@ -41,10 +43,12 @@
 
 
 ; DWARF3: .debug_line contents:
+; DWARF3-NEXT: debug_line[0000000000000000]
 ; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000038
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple.c
-; DWARF3: Line table prologue:
+; DWARF3: debug_line[000000000000003c]
+; DWARF3-NEXT: Line table prologue:
 ; DWARF3-NEXT: total_length: 0x00000039
 ; DWARF3: file_names[  1]    0 0x00000000 0x00000000 simple2.c
 ; DWARF3-NOT: file_names

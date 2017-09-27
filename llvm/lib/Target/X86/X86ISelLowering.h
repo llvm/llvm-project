@@ -447,8 +447,6 @@ namespace llvm {
       /// SSE4A Extraction and Insertion.
       EXTRQI, INSERTQI,
 
-      // XOP variable/immediate rotations.
-      VPROT, VPROTI,
       // XOP arithmetic/logical shifts.
       VPSHA, VPSHL,
       // XOP signed/unsigned integer comparisons.

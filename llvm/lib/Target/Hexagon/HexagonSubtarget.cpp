@@ -98,16 +98,20 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
   cl::desc("Enable checking for cache bank conflicts"));
 
 
-void HexagonSubtarget::initializeEnvironment() {
-  UseMemOps = false;
-  ModeIEEERndNear = false;
-  UseBSBScheduling = false;
+HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
+                                   StringRef FS, const TargetMachine &TM)
+    : HexagonGenSubtargetInfo(TT, CPU, FS),
+      CPUString(Hexagon_MC::selectHexagonCPU(TT, CPU)),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      RegInfo(getHwMode()), TLInfo(TM, *this),
+      InstrItins(getInstrItineraryForCPU(CPUString)) {
+  // Beware of the default constructor of InstrItineraryData: it will
+  // reset all members to 0.
+  assert(InstrItins.Itineraries != nullptr && "InstrItins not initialized");
 }
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  CPUString = Hexagon_MC::selectHexagonCPU(getTargetTriple(), CPU);
-
   static std::map<StringRef, HexagonArchEnum> CpuTable {
     { "hexagonv4", V4 },
     { "hexagonv5", V5 },
@@ -116,15 +120,20 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     { "hexagonv62", V62 },
   };
 
-  auto foundIt = CpuTable.find(CPUString);
-  if (foundIt != CpuTable.end())
-    HexagonArchVersion = foundIt->second;
+  auto FoundIt = CpuTable.find(CPUString);
+  if (FoundIt != CpuTable.end())
+    HexagonArchVersion = FoundIt->second;
   else
     llvm_unreachable("Unrecognized Hexagon processor version");
 
   UseHVXOps = false;
   UseHVXDblOps = false;
   UseLongCalls = false;
+
+  UseMemOps = DisableMemOps ? false : EnableMemOps;
+  ModeIEEERndNear = EnableIEEERndNear;
+  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
+
   ParseSubtargetFeatures(CPUString, FS);
 
   if (EnableHexagonHVX.getPosition())
@@ -295,33 +304,6 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
       S1.addPred(A, true);
     }
   }
-}
-
-
-HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
-                                   StringRef FS, const TargetMachine &TM)
-    : HexagonGenSubtargetInfo(TT, CPU, FS), CPUString(CPU),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      RegInfo(getHwMode()), TLInfo(TM, *this) {
-  initializeEnvironment();
-
-  // Initialize scheduling itinerary for the specified CPU.
-  InstrItins = getInstrItineraryForCPU(CPUString);
-
-  // UseMemOps on by default unless disabled explicitly
-  if (DisableMemOps)
-    UseMemOps = false;
-  else if (EnableMemOps)
-    UseMemOps = true;
-  else
-    UseMemOps = false;
-
-  if (EnableIEEERndNear)
-    ModeIEEERndNear = true;
-  else
-    ModeIEEERndNear = false;
-
-  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
 }
 
 /// \brief Perform target specific adjustments to the latency of a schedule

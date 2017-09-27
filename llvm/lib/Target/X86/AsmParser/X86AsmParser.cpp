@@ -2285,7 +2285,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Determine whether this is an instruction prefix.
   // FIXME:
-  // Enhace prefixes integrity robustness. for example, following forms
+  // Enhance prefixes integrity robustness. for example, following forms
   // are currently tolerated:
   // repz repnz <insn>    ; GAS errors for the use of two similar prefixes
   // lock addq %rax, %rbx ; Destination operand must be of memory type

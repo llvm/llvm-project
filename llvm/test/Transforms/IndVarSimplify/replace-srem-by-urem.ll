@@ -71,7 +71,7 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %mul = mul nsw i32 %i.01, 64
-  %rem = srem i32 %mul, 8
+  %rem = srem i32 %mul, 7
 ; CHECK:     urem
 ; CHECK-NOT: srem
   %idxprom = sext i32 %rem to i64
