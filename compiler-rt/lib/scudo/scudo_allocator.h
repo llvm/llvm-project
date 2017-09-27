@@ -14,11 +14,7 @@
 #ifndef SCUDO_ALLOCATOR_H_
 #define SCUDO_ALLOCATOR_H_
 
-#include "sanitizer_common/sanitizer_allocator.h"
-
-#if !SANITIZER_LINUX
-# error "The Scudo hardened allocator is currently only supported on Linux."
-#endif
+#include "scudo_platform.h"
 
 namespace __scudo {
 
@@ -70,14 +66,6 @@ const uptr AlignedChunkHeaderSize =
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
 const uptr AllocatorSpace = ~0ULL;
-# if defined(__aarch64__) && SANITIZER_ANDROID
-const uptr AllocatorSize = 0x4000000000ULL;  // 256G.
-# elif defined(__aarch64__)
-const uptr AllocatorSize = 0x10000000000ULL;  // 1T.
-# else
-const uptr AllocatorSize = 0x40000000000ULL;  // 4T.
-# endif
-typedef DefaultSizeClassMap SizeClassMap;
 struct AP64 {
   static const uptr kSpaceBeg = AllocatorSpace;
   static const uptr kSpaceSize = AllocatorSize;
@@ -92,14 +80,12 @@ typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 // Currently, the 32-bit Sanitizer allocator has not yet benefited from all the
 // security improvements brought to the 64-bit one. This makes the 32-bit
 // version of Scudo slightly less toughened.
-static const uptr RegionSizeLog = 20;
 static const uptr NumRegions = SANITIZER_MMAP_RANGE_SIZE >> RegionSizeLog;
 # if SANITIZER_WORDSIZE == 32
 typedef FlatByteMap<NumRegions> ByteMap;
 # elif SANITIZER_WORDSIZE == 64
 typedef TwoLevelByteMap<(NumRegions >> 12), 1 << 12> ByteMap;
 # endif  // SANITIZER_WORDSIZE
-typedef DefaultSizeClassMap SizeClassMap;
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;

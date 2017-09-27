@@ -43,6 +43,7 @@
 #include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
+#include "sanitizer_symbolizer.h"
 #include "sanitizer_tls_get_addr.h"
 
 #include <stdarg.h>
@@ -5575,6 +5576,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   if (filename) COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
   COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag);
   void *res = REAL(dlopen)(filename, flag);
+  Symbolizer::GetOrInit()->InvalidateModuleList();
   COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);
   return res;
 }
@@ -5583,6 +5585,7 @@ INTERCEPTOR(int, dlclose, void *handle) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlclose, handle);
   int res = REAL(dlclose)(handle);
+  Symbolizer::GetOrInit()->InvalidateModuleList();
   COMMON_INTERCEPTOR_LIBRARY_UNLOADED();
   return res;
 }

@@ -1,4 +1,4 @@
-//===-- scudo_tls_linux.cpp -------------------------------------*- C++ -*-===//
+//===-- scudo_tsd_exclusive.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Scudo thread local structure implementation for platforms supporting
-/// thread_local.
+/// Scudo exclusive TSD implementation.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_platform.h"
+#include "scudo_tsd.h"
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
-
-#include "scudo_tls.h"
+#if SCUDO_TSD_EXCLUSIVE
 
 #include <pthread.h>
 
@@ -70,4 +67,4 @@ void initThread(bool MinimalInit) {
 
 }  // namespace __scudo
 
-#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif  // SCUDO_TSD_EXCLUSIVE
