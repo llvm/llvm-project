@@ -179,9 +179,14 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
     }
   }
 
-  DieRangeInfo RI;
-  DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
-  NumUnitErrors += verifyDieRanges(Die, RI);
+  if (DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false)) {
+    DieRangeInfo RI;
+    NumUnitErrors += verifyDieRanges(Die, RI);
+  } else {
+    OS << "error: Compilation unit without unit DIE.\n";
+    NumUnitErrors++;
+  }
+
   return NumUnitErrors == 0;
 }
 
