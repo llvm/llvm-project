@@ -729,6 +729,17 @@ public:
 
   /// True if fast-isel is used.
   bool useFastISel() const;
+
+  /// Returns the correct return opcode for the current feature set.
+  /// Use BX if available to allow mixing thumb/arm code, but fall back
+  /// to plain mov pc,lr on ARMv4.
+  unsigned getReturnOpcode() const {
+    if (isThumb())
+      return ARM::tBX_RET;
+    if (hasV4TOps())
+      return ARM::BX_RET;
+    return ARM::MOVPCLR;
+  }
 };
 
 } // end namespace llvm

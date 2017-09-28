@@ -1909,6 +1909,7 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 
   for (auto Use : Prev->uses())
     if (Use.isKill()) {
+      assert(STI->hasV4TOps());
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(ARM::tBX))
           .addReg(Use.getReg(), RegState::Kill)
           .add(predOps(ARMCC::AL))

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -verify-machineinstrs -filetype=asm | FileCheck %s -check-prefix=ARM-linux
-; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -filetype=obj
+; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t -verify-machineinstrs -filetype=asm | FileCheck %s -check-prefix=ARM-linux
+; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t -filetype=obj
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
