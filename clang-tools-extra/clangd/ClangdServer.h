@@ -248,6 +248,10 @@ public:
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
   Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 
+  /// Helper function that returns a path to the corresponding source file when
+  /// given a header file and vice versa.
+  llvm::Optional<Path> switchSourceHeader(PathRef Path);
+
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);
   /// Run formatting for the whole \p File.

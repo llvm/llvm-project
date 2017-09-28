@@ -13,6 +13,15 @@ lui a0, 2
 # CHECK-INST: lui s11, 552960
 # CHECK: encoding: [0xb7,0x0d,0x00,0x87]
 lui s11, (0x87000000>>12)
+# CHECK-INST: lui a0, 0
+# CHECK: encoding: [0x37,0x05,0x00,0x00]
+lui a0, %hi(2)
+# CHECK-INST: lui s11, 552960
+# CHECK: encoding: [0xb7,0x0d,0x00,0x87]
+lui s11, (0x87000000>>12)
+# CHECK-INST: lui s11, 552960
+# CHECK: encoding: [0xb7,0x0d,0x00,0x87]
+lui s11, %hi(0x87000000)
 # CHECK-INST: lui t0, 1048575
 # CHECK: encoding: [0xb7,0xf2,0xff,0xff]
 lui t0, 1048575
@@ -43,6 +52,9 @@ jal a3, 256
 # CHECK-INST: jalr a0, a1, -2048
 # CHECK: encoding: [0x67,0x85,0x05,0x80]
 jalr a0, a1, -2048
+# CHECK-INST: jalr a0, a1, -2048
+# CHECK: encoding: [0x67,0x85,0x05,0x80]
+jalr a0, a1, %lo(2048)
 # CHECK-INST: jalr t2, t1, 2047
 # CHECK: encoding: [0xe7,0x03,0xf3,0x7f]
 jalr t2, t1, 2047
@@ -78,6 +90,9 @@ lb s3, +4(ra)
 # CHECK-INST: lh t1, -2048(zero)
 # CHECK: encoding: [0x03,0x13,0x00,0x80]
 lh t1, -2048(zero)
+# CHECK-INST: lh t1, -2048(zero)
+# CHECK: encoding: [0x03,0x13,0x00,0x80]
+lh t1, %lo(2048)(zero)
 # CHECK-INST: lh sp, 2047(a0)
 # CHECK: encoding: [0x03,0x11,0xf5,0x7f]
 lh sp, 2047(a0)
@@ -97,6 +112,9 @@ sb a0, 2047(a2)
 # CHECK-INST: sh t3, -2048(t5)
 # CHECK: encoding: [0x23,0x10,0xcf,0x81]
 sh t3, -2048(t5)
+# CHECK-INST: sh t3, -2048(t5)
+# CHECK: encoding: [0x23,0x10,0xcf,0x81]
+sh t3, %lo(2048)(t5)
 # CHECK-INST: sw ra, 999(zero)
 # CHECK: encoding: [0xa3,0x23,0x10,0x3e]
 sw ra, 999(zero)
@@ -116,6 +134,9 @@ xori tp, t1, -99
 # CHECK-INST: ori a0, a1, -2048
 # CHECK: encoding: [0x13,0xe5,0x05,0x80]
 ori a0, a1, -2048
+# CHECK-INST: ori a0, a1, -2048
+# CHECK: encoding: [0x13,0xe5,0x05,0x80]
+ori a0, a1, %lo(2048)
 # CHECK-INST: andi ra, sp, 2047
 # CHECK: encoding: [0x93,0x70,0xf1,0x7f]
 andi ra, sp, 2047

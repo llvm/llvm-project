@@ -67,6 +67,11 @@ void TargetInstrInfo::insertNoop(MachineBasicBlock &MBB,
   llvm_unreachable("Target didn't implement insertNoop!");
 }
 
+static bool isAsmComment(const char *Str, const MCAsmInfo &MAI) {
+  return strncmp(Str, MAI.getCommentString().data(),
+                 MAI.getCommentString().size()) == 0;
+}
+
 /// Measure the specified inline asm to determine an approximation of its
 /// length.
 /// Comments (which run till the next SeparatorString or newline) do not
@@ -75,29 +80,46 @@ void TargetInstrInfo::insertNoop(MachineBasicBlock &MBB,
 /// multiple instructions separated by SeparatorString or newlines.
 /// Variable-length instructions are not handled here; this function
 /// may be overloaded in the target code to do that.
+/// We implement a special case of the .space directive which takes only a
+/// single integer argument in base 10 that is the size in bytes. This is a
+/// restricted form of the GAS directive in that we only interpret
+/// simple--i.e. not a logical or arithmetic expression--size values without
+/// the optional fill value. This is primarily used for creating arbitrary
+/// sized inline asm blocks for testing purposes.
 unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
                                              const MCAsmInfo &MAI) const {
   // Count the number of instructions in the asm.
-  bool atInsnStart = true;
-  unsigned InstCount = 0;
+  bool AtInsnStart = true;
+  unsigned Length = 0;
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0) {
-      atInsnStart = true;
-    } else if (strncmp(Str, MAI.getCommentString().data(),
-                       MAI.getCommentString().size()) == 0) {
+      AtInsnStart = true;
+    } else if (isAsmComment(Str, MAI)) {
       // Stop counting as an instruction after a comment until the next
       // separator.
-      atInsnStart = false;
+      AtInsnStart = false;
     }
 
-    if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
-      ++InstCount;
-      atInsnStart = false;
+    if (AtInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
+      unsigned AddLength = MAI.getMaxInstLength();
+      if (strncmp(Str, ".space", 6) == 0) {
+        char *EStr;
+        int SpaceSize;
+        SpaceSize = strtol(Str + 6, &EStr, 10);
+        SpaceSize = SpaceSize < 0 ? 0 : SpaceSize;
+        while (*EStr != '\n' && std::isspace(static_cast<unsigned char>(*EStr)))
+          ++EStr;
+        if (*EStr == '\0' || *EStr == '\n' ||
+            isAsmComment(EStr, MAI)) // Successfully parsed .space argument
+          AddLength = SpaceSize;
+      }
+      Length += AddLength;
+      AtInsnStart = false;
     }
   }
 
-  return InstCount * MAI.getMaxInstLength();
+  return Length;
 }
 
 /// ReplaceTailWithBranchTo - Delete the instruction OldInst and everything

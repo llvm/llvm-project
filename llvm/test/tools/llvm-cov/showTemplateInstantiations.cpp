@@ -41,9 +41,9 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 
 // Test html output.
 // RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %s -format html -o %t.html.dir
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %s -format html -o %t.html.dir
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %s -format html -o %t.html.filtered.dir
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-ALL -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
-// RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.dir/functions.html %s
+// RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.filtered.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 
 // HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
 // HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-45]]' href='#L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
