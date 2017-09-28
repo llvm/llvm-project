@@ -29,7 +29,7 @@ int main() {
 
   __xray_set_handler_arg1(arg1logger);
   foo(nullptr);
-  // CHECK: Arg1: 0, XRayEntryType 0
+  // CHECK: Arg1: 0, XRayEntryType 3
 
   __xray_remove_handler_arg1();
   foo((void *) 0xBADC0DE);
@@ -37,7 +37,7 @@ int main() {
 
   __xray_set_handler_arg1(arg1logger);
   foo((void *) 0xDEADBEEFCAFE);
-  // CHECK-NEXT: Arg1: deadbeefcafe, XRayEntryType 0
+  // CHECK-NEXT: Arg1: deadbeefcafe, XRayEntryType 3
   foo((void *) -1);
-  // CHECK-NEXT: Arg1: ffffffffffffffff, XRayEntryType 0
+  // CHECK-NEXT: Arg1: ffffffffffffffff, XRayEntryType 3
 }

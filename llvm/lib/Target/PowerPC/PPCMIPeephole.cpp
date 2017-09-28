@@ -542,7 +542,44 @@ static unsigned getPredicateToIncImm(MachineInstr *BI, MachineInstr *CMPI) {
   return 0;
 }
 
+// This takes a Phi node and returns a register value for the spefied BB.
+static unsigned getIncomingRegForBlock(MachineInstr *Phi,
+                                       MachineBasicBlock *MBB) {
+  for (unsigned I = 2, E = Phi->getNumOperands() + 1; I != E; I += 2) {
+    MachineOperand &MO = Phi->getOperand(I);
+    if (MO.getMBB() == MBB)
+      return Phi->getOperand(I-1).getReg();
+  }
+  llvm_unreachable("invalid src basic block for this Phi node\n");
+  return 0;
+}
+
+// This function tracks the source of the register through register copy.
+// If BB1 and BB2 are non-NULL, we also track PHI instruction in BB2
+// assuming that the control comes from BB1 into BB2.
+static unsigned getSrcVReg(unsigned Reg, MachineBasicBlock *BB1,
+                           MachineBasicBlock *BB2, MachineRegisterInfo *MRI) {
+  unsigned SrcReg = Reg;
+  while (1) {
+    unsigned NextReg = SrcReg;
+    MachineInstr *Inst = MRI->getVRegDef(SrcReg);
+    if (BB1 && Inst->getOpcode() == PPC::PHI && Inst->getParent() == BB2) {
+      NextReg = getIncomingRegForBlock(Inst, BB1);
+      // We track through PHI only once to avoid infinite loop.
+      BB1 = nullptr;
+    }
+    else if (Inst->isFullCopy())
+      NextReg = Inst->getOperand(1).getReg();
+    if (NextReg == SrcReg || !TargetRegisterInfo::isVirtualRegister(NextReg))
+      break;
+    SrcReg = NextReg;
+  }
+  return SrcReg;
+}
+
 static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
+                                          MachineBasicBlock *&PredMBB,
+                                          MachineBasicBlock *&MBBtoMoveCmp,
                                           MachineRegisterInfo *MRI) {
 
   auto isEligibleBB = [&](MachineBasicBlock &BB) {
@@ -571,12 +608,61 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
     return false;
   };
 
-  if (MBB.pred_size() != 1)
+  // If this BB has more than one successor, we can create a new BB and
+  // move the compare instruction in the new BB.
+  // So far, we do not move compare instruction to a BB having multiple
+  // successors to avoid potentially increasing code size.
+  auto isEligibleForMoveCmp = [](MachineBasicBlock &BB) {
+    return BB.succ_size() == 1;
+  };
+
+  if (!isEligibleBB(MBB))
     return false;
 
-  MachineBasicBlock *PredMBB = *MBB.pred_begin();
-  if (isEligibleBB(MBB) && isEligibleBB(*PredMBB))
+  unsigned NumPredBBs = MBB.pred_size();
+  if (NumPredBBs == 1) {
+    MachineBasicBlock *TmpMBB = *MBB.pred_begin();
+    if (isEligibleBB(*TmpMBB)) {
+      PredMBB = TmpMBB;
+      MBBtoMoveCmp = nullptr;
+      return true;
+    }
+  }
+  else if (NumPredBBs == 2) {
+    // We check for partially redundant case.
+    // So far, we support cases with only two predecessors
+    // to avoid increasing the number of instructions.
+    MachineBasicBlock::pred_iterator PI = MBB.pred_begin();
+    MachineBasicBlock *Pred1MBB = *PI;
+    MachineBasicBlock *Pred2MBB = *(PI+1);
+
+    if (isEligibleBB(*Pred1MBB) && isEligibleForMoveCmp(*Pred2MBB)) {
+      // We assume Pred1MBB is the BB containing the compare to be merged and
+      // Pred2MBB is the BB to which we will append a compare instruction.
+      // Hence we can proceed as is.
+    }
+    else if (isEligibleBB(*Pred2MBB) && isEligibleForMoveCmp(*Pred1MBB)) {
+      // We need to swap Pred1MBB and Pred2MBB to canonicalize.
+      std::swap(Pred1MBB, Pred2MBB);
+    }
+    else return false;
+
+    // Here, Pred2MBB is the BB to which we need to append a compare inst.
+    // We cannot move the compare instruction if operands are not available
+    // in Pred2MBB (i.e. defined in MBB by an instruction other than PHI).
+    MachineInstr *BI = &*MBB.getFirstInstrTerminator();
+    MachineInstr *CMPI = MRI->getVRegDef(BI->getOperand(1).getReg());
+    for (int I = 1; I <= 2; I++)
+      if (CMPI->getOperand(I).isReg()) {
+        MachineInstr *Inst = MRI->getVRegDef(CMPI->getOperand(I).getReg());
+        if (Inst->getParent() == &MBB && Inst->getOpcode() != PPC::PHI)
+          return false;
+      }
+
+    PredMBB = Pred1MBB;
+    MBBtoMoveCmp = Pred2MBB;
     return true;
+  }
 
   return false;
 }
@@ -607,19 +693,44 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
   bool Simplified = false;
 
   for (MachineBasicBlock &MBB2 : *MF) {
-    // We only consider two basic blocks MBB1 and MBB2 if
+    MachineBasicBlock *MBB1 = nullptr, *MBBtoMoveCmp = nullptr;
+
+    // For fully redundant case, we select two basic blocks MBB1 and MBB2
+    // as an optimization target if
     // - both MBBs end with a conditional branch,
     // - MBB1 is the only predecessor of MBB2, and
     // - compare does not take a physical register as a operand in both MBBs.
-    if (!eligibleForCompareElimination(MBB2, MRI))
+    // In this case, eligibleForCompareElimination sets MBBtoMoveCmp nullptr.
+    //
+    // As partially redundant case, we additionally handle if MBB2 has one
+    // additional predecessor, which has only one successor (MBB2).
+    // In this case, we move the compre instruction originally in MBB2 into
+    // MBBtoMoveCmp. This partially redundant case is typically appear by
+    // compiling a while loop; here, MBBtoMoveCmp is the loop preheader.
+    //
+    // Overview of CFG of related basic blocks
+    // Fully redundant case        Partially redundant case
+    //   --------                   ----------------  --------
+    //   | MBB1 | (w/ 2 succ)       | MBBtoMoveCmp |  | MBB1 | (w/ 2 succ)
+    //   --------                   ----------------  --------
+    //      |    \                     (w/ 1 succ) \     |    \
+    //      |     \                                 \    |     \
+    //      |                                        \   |
+    //   --------                                     --------
+    //   | MBB2 | (w/ 1 pred                          | MBB2 | (w/ 2 pred
+    //   -------- and 2 succ)                         -------- and 2 succ)
+    //      |    \                                       |    \
+    //      |     \                                      |     \
+    //
+    if (!eligibleForCompareElimination(MBB2, MBB1, MBBtoMoveCmp, MRI))
       continue;
 
-    MachineBasicBlock *MBB1 = *MBB2.pred_begin();
     MachineInstr *BI1   = &*MBB1->getFirstInstrTerminator();
     MachineInstr *CMPI1 = MRI->getVRegDef(BI1->getOperand(1).getReg());
 
     MachineInstr *BI2   = &*MBB2.getFirstInstrTerminator();
     MachineInstr *CMPI2 = MRI->getVRegDef(BI2->getOperand(1).getReg());
+    bool IsPartiallyRedundant = (MBBtoMoveCmp != nullptr);
 
     // We cannot optimize an unsupported compare opcode or
     // a mix of 32-bit and 64-bit comaprisons
@@ -631,6 +742,7 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
     unsigned NewOpCode = 0;
     unsigned NewPredicate1 = 0, NewPredicate2 = 0;
     int16_t Imm1 = 0, NewImm1 = 0, Imm2 = 0, NewImm2 = 0;
+    bool SwapOperands = false;
 
     if (CMPI1->getOpcode() != CMPI2->getOpcode()) {
       // Typically, unsigned comparison is used for equality check, but
@@ -649,10 +761,15 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
     if (CMPI1->getOperand(2).isReg() && CMPI2->getOperand(2).isReg()) {
       // In case of comparisons between two registers, these two registers
       // must be same to merge two comparisons.
-      unsigned Cmp1Operand1 = CMPI1->getOperand(1).getReg();
-      unsigned Cmp1Operand2 = CMPI1->getOperand(2).getReg();
-      unsigned Cmp2Operand1 = CMPI2->getOperand(1).getReg();
-      unsigned Cmp2Operand2 = CMPI2->getOperand(2).getReg();
+      unsigned Cmp1Operand1 = getSrcVReg(CMPI1->getOperand(1).getReg(),
+                                         nullptr, nullptr, MRI);
+      unsigned Cmp1Operand2 = getSrcVReg(CMPI1->getOperand(2).getReg(),
+                                         nullptr, nullptr, MRI);
+      unsigned Cmp2Operand1 = getSrcVReg(CMPI2->getOperand(1).getReg(),
+                                         MBB1, &MBB2, MRI);
+      unsigned Cmp2Operand2 = getSrcVReg(CMPI2->getOperand(2).getReg(),
+                                         MBB1, &MBB2, MRI);
+
       if (Cmp1Operand1 == Cmp2Operand1 && Cmp1Operand2 == Cmp2Operand2) {
         // Same pair of registers in the same order; ready to merge as is.
       }
@@ -661,13 +778,20 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
         // We reverse the predicate to merge compare instructions.
         PPC::Predicate Pred = (PPC::Predicate)BI2->getOperand(0).getImm();
         NewPredicate2 = (unsigned)PPC::getSwappedPredicate(Pred);
+        // In case of partial redundancy, we need to swap operands
+        // in another compare instruction.
+        SwapOperands = true;
       }
       else continue;
     }
     else if (CMPI1->getOperand(2).isImm() && CMPI2->getOperand(2).isImm()){
       // In case of comparisons between a register and an immediate,
       // the operand register must be same for two compare instructions.
-      if (CMPI1->getOperand(1).getReg() != CMPI2->getOperand(1).getReg())
+      unsigned Cmp1Operand1 = getSrcVReg(CMPI1->getOperand(1).getReg(),
+                                         nullptr, nullptr, MRI);
+      unsigned Cmp2Operand1 = getSrcVReg(CMPI2->getOperand(1).getReg(),
+                                         MBB1, &MBB2, MRI);
+      if (Cmp1Operand1 != Cmp2Operand1)
         continue;
 
       NewImm1 = Imm1 = (int16_t)CMPI1->getOperand(2).getImm();
@@ -747,16 +871,58 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
       CMPI1->getOperand(2).setImm(NewImm1);
     }
 
-    // We finally eliminate compare instruction in MBB2.
-    BI2->getOperand(1).setReg(BI1->getOperand(1).getReg());
+    if (IsPartiallyRedundant) {
+      // We touch up the compare instruction in MBB2 and move it to
+      // a previous BB to handle partially redundant case.
+      if (SwapOperands) {
+        unsigned Op1 = CMPI2->getOperand(1).getReg();
+        unsigned Op2 = CMPI2->getOperand(2).getReg();
+        CMPI2->getOperand(1).setReg(Op2);
+        CMPI2->getOperand(2).setReg(Op1);
+      }
+      if (NewImm2 != Imm2)
+        CMPI2->getOperand(2).setImm(NewImm2);
+
+      for (int I = 1; I <= 2; I++) {
+        if (CMPI2->getOperand(I).isReg()) {
+          MachineInstr *Inst = MRI->getVRegDef(CMPI2->getOperand(I).getReg());
+          if (Inst->getParent() != &MBB2)
+            continue;
+
+          assert(Inst->getOpcode() == PPC::PHI &&
+                 "We cannot support if an operand comes from this BB.");
+          unsigned SrcReg = getIncomingRegForBlock(Inst, MBBtoMoveCmp);
+          CMPI2->getOperand(I).setReg(SrcReg);
+        }
+      }
+      auto I = MachineBasicBlock::iterator(MBBtoMoveCmp->getFirstTerminator());
+      MBBtoMoveCmp->splice(I, &MBB2, MachineBasicBlock::iterator(CMPI2));
+
+      DebugLoc DL = CMPI2->getDebugLoc();
+      unsigned NewVReg = MRI->createVirtualRegister(&PPC::CRRCRegClass);
+      BuildMI(MBB2, MBB2.begin(), DL,
+              TII->get(PPC::PHI), NewVReg)
+        .addReg(BI1->getOperand(1).getReg()).addMBB(MBB1)
+        .addReg(BI2->getOperand(1).getReg()).addMBB(MBBtoMoveCmp);
+      BI2->getOperand(1).setReg(NewVReg);
+    }
+    else {
+      // We finally eliminate compare instruction in MBB2.
+      BI2->getOperand(1).setReg(BI1->getOperand(1).getReg());
+      CMPI2->eraseFromParent();
+    }
     BI2->getOperand(1).setIsKill(true);
     BI1->getOperand(1).setIsKill(false);
-    CMPI2->eraseFromParent();
 
     DEBUG(dbgs() << "into a compare and two branches:\n");
     DEBUG(CMPI1->dump());
     DEBUG(BI1->dump());
     DEBUG(BI2->dump());
+    if (IsPartiallyRedundant) {
+      DEBUG(dbgs() << "The following compare is moved into BB#" <<
+            MBBtoMoveCmp->getNumber() << " to handle partial redundancy.\n");
+      DEBUG(CMPI2->dump());
+    }
 
     Simplified = true;
   }

@@ -200,7 +200,7 @@ const Loop* llvm::addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
     assert(OriginalBB == OldLoop->getHeader() &&
            "Header should be first in RPO");
 
-    NewLoop = new Loop();
+    NewLoop = LI->AllocateLoop();
     Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
 
     if (NewLoopParent)

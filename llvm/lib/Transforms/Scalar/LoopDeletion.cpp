@@ -348,12 +348,13 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
 
   DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   DEBUG(L.dump());
+  std::string LoopName = L.getName();
   auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI);
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();
 
   if (Result == LoopDeletionResult::Deleted)
-    Updater.markLoopAsDeleted(L);
+    Updater.markLoopAsDeleted(L, LoopName);
 
   return getLoopPassPreservedAnalyses();
 }
@@ -384,7 +385,7 @@ INITIALIZE_PASS_END(LoopDeletionLegacyPass, "loop-deletion",
 
 Pass *llvm::createLoopDeletionPass() { return new LoopDeletionLegacyPass(); }
 
-bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &) {
+bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (skipLoop(L))
     return false;
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -393,5 +394,11 @@ bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &) {
 
   DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   DEBUG(L->dump());
-  return deleteLoopIfDead(L, DT, SE, LI) != LoopDeletionResult::Unmodified;
+
+  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI);
+
+  if (Result == LoopDeletionResult::Deleted)
+    LPM.markLoopAsDeleted(*L);
+
+  return Result != LoopDeletionResult::Unmodified;
 }
