@@ -223,3 +223,60 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
 
   return getIslCompatibleName(Prefix, ValStr, Suffix);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// To call a inline dump() method in a debugger, at it must have been
+/// instantiated in at least one translation unit. Because isl's dump() method
+/// are meant to be called from a debugger only, but not from code, no such
+/// instantiation would exist. We use this method to force an instantiation in
+/// this translation unit. Because it has non-static linking, the compiler does
+/// not know that it is never called, and therefore must ensure the existence of
+/// the dump functions.
+void neverCalled() {
+  isl::aff().dump();
+  isl::aff_list().dump();
+  isl::ast_expr().dump();
+  isl::ast_expr_list().dump();
+  isl::ast_node().dump();
+  isl::ast_node_list().dump();
+  isl::band_list().dump();
+  isl::basic_map().dump();
+  isl::basic_map_list().dump();
+  isl::basic_set().dump();
+  isl::basic_set_list().dump();
+  isl::constraint().dump();
+  isl::constraint_list().dump();
+  isl::id().dump();
+  isl::id_list().dump();
+  isl::id_to_ast_expr().dump();
+  isl::local_space().dump();
+  isl::map().dump();
+  isl::map_list().dump();
+  isl::multi_aff().dump();
+  isl::multi_pw_aff().dump();
+  isl::multi_union_pw_aff().dump();
+  isl::multi_val().dump();
+  isl::point().dump();
+  isl::pw_aff().dump();
+  isl::pw_aff_list().dump();
+  isl::pw_multi_aff().dump();
+  isl::pw_qpolynomial().dump();
+  isl::qpolynomial().dump();
+  isl::schedule().dump();
+  isl::schedule_constraints().dump();
+  isl::schedule_node().dump();
+  isl::set().dump();
+  isl::set_list().dump();
+  isl::space().dump();
+  isl::union_map().dump();
+  isl::union_map_list().dump();
+  isl::union_pw_aff().dump();
+  isl::union_pw_aff_list().dump();
+  isl::union_pw_multi_aff().dump();
+  isl::union_pw_multi_aff_list().dump();
+  isl::union_set().dump();
+  isl::union_set_list().dump();
+  isl::val().dump();
+  isl::val_list().dump();
+}
+#endif
