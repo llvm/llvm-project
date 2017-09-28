@@ -33,7 +33,7 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
   // See if we have an entry with a big enough argument list to reuse on the
   // free list.  If so, reuse it.
   for (MacroArgs **Entry = &PP.MacroArgCache; *Entry;
-       Entry = &(*Entry)->ArgCache)
+       Entry = &(*Entry)->ArgCache) {
     if ((*Entry)->NumUnexpArgTokens >= UnexpArgTokens.size() &&
         (*Entry)->NumUnexpArgTokens < ClosestMatch) {
       ResultEnt = Entry;
@@ -44,14 +44,12 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
       // Otherwise, use the best fit.
       ClosestMatch = (*Entry)->NumUnexpArgTokens;
     }
-
+  }
   MacroArgs *Result;
   if (!ResultEnt) {
-    // Allocate memory for a MacroArgs object with the lexer tokens at the end.
-    Result = (MacroArgs *)malloc(sizeof(MacroArgs) +
-                                 UnexpArgTokens.size() * sizeof(Token));
-    // Construct the MacroArgs object.
-    new (Result)
+    // Allocate memory for a MacroArgs object with the lexer tokens at the end,
+    // and construct the MacroArgs object.
+    Result = new (std::malloc(totalSizeToAlloc<Token>(UnexpArgTokens.size())))
         MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumParams());
   } else {
     Result = *ResultEnt;
@@ -63,9 +61,14 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
   }
 
   // Copy the actual unexpanded tokens to immediately after the result ptr.
-  if (!UnexpArgTokens.empty())
-    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(), 
-              const_cast<Token*>(Result->getUnexpArgument(0)));
+  if (!UnexpArgTokens.empty()) {
+    static_assert(std::is_trivial<Token>::value,
+                  "assume trivial copyability if copying into the "
+                  "uninitialized array (as opposed to reusing a cached "
+                  "MacroArgs)");
+    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(),
+              Result->getTrailingObjects<Token>());
+  }
 
   return Result;
 }
@@ -93,6 +96,8 @@ MacroArgs *MacroArgs::deallocate() {
   // Run the dtor to deallocate the vectors.
   this->~MacroArgs();
   // Release the memory for the object.
+  static_assert(std::is_trivially_destructible<Token>::value,
+                "assume trivially destructible and forego destructors");
   free(this);
   
   return Next;
@@ -115,7 +120,7 @@ unsigned MacroArgs::getArgLength(const Token *ArgPtr) {
 const Token *MacroArgs::getUnexpArgument(unsigned Arg) const {
   // The unexpanded argument tokens start immediately after the MacroArgs object
   // in memory.
-  const Token *Start = (const Token *)(this+1);
+  const Token *Start = getTrailingObjects<Token>();
   const Token *Result = Start;
   // Scan to find Arg.
   for (; Arg; ++Result) {

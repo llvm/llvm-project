@@ -249,9 +249,10 @@ public:
   ///
   /// \param DeviceOffloadKind - The device offload kind used for the
   /// translation.
-  virtual llvm::opt::DerivedArgList *
-  TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
-      Action::OffloadKind DeviceOffloadKind) const;
+  virtual llvm::opt::DerivedArgList *TranslateOpenMPTargetArgs(
+      const llvm::opt::DerivedArgList &Args,
+      Action::OffloadKind DeviceOffloadKind,
+      SmallVector<llvm::opt::Arg *, 4> &AllocatedArgs) const;
 
   /// Choose a tool to use to handle the action \p JA.
   ///

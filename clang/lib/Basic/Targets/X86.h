@@ -875,7 +875,6 @@ public:
   void setMaxAtomicWidth() override {
     if (hasFeature("cx16"))
       MaxAtomicInlineWidth = 128;
-    return;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
