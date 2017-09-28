@@ -464,7 +464,7 @@ static void *bget(kmp_info_t *th, bufsize requested_size) {
 
   if (size < 0 || size + sizeof(bhead_t) > MaxSize) {
     return NULL;
-  }; // if
+  }
 
   __kmp_bget_dequeue(th); /* Release any queued buffers */
 
@@ -716,7 +716,7 @@ static void *bgetr(kmp_info_t *th, void *buf, bufsize size) {
     osize = bd->tsize - (bufsize)sizeof(bdhead_t);
   } else {
     osize -= sizeof(bhead_t);
-  };
+  }
 
   KMP_DEBUG_ASSERT(osize > 0);
 
@@ -1258,7 +1258,7 @@ void __kmp_finalize_bget(kmp_info_t *th) {
   if (th->th.th_local.bget_data != NULL) {
     __kmp_free(th->th.th_local.bget_data);
     th->th.th_local.bget_data = NULL;
-  }; // if
+  }
 }
 
 void kmpc_set_poolsize(size_t size) {
@@ -1385,7 +1385,7 @@ void *kmpc_realloc(void *ptr, size_t size) {
       *(void **)result = result;
       result = (void **)result + 1;
     }
-  }; // if
+  }
   return result;
 }
 
@@ -1393,14 +1393,14 @@ void *kmpc_realloc(void *ptr, size_t size) {
 void kmpc_free(void *ptr) {
   if (!__kmp_init_serial) {
     return;
-  }; // if
+  }
   if (ptr != NULL) {
     kmp_info_t *th = __kmp_get_thread();
     __kmp_bget_dequeue(th); /* Release any queued buffers */
     // extract allocated pointer and free it
     KMP_ASSERT(*((void **)ptr - 1));
     brel(th, *((void **)ptr - 1));
-  };
+  }
 }
 
 void *___kmp_thread_malloc(kmp_info_t *th, size_t size KMP_SRC_LOC_DECL) {
@@ -1499,7 +1499,7 @@ static void *___kmp_allocate_align(size_t size,
                 descr.ptr_allocated));
   if (descr.ptr_allocated == NULL) {
     KMP_FATAL(OutOfHeapMemory);
-  };
+  }
 
   addr_allocated = (kmp_uintptr_t)descr.ptr_allocated;
   addr_aligned =
@@ -1689,7 +1689,7 @@ void *___kmp_fast_allocate(kmp_info_t *this_thr, size_t size KMP_SRC_LOC_DECL) {
         ((kmp_mem_descr_t *)((kmp_uintptr_t)ptr - sizeof(kmp_mem_descr_t)))
             ->ptr_aligned);
     goto end;
-  };
+  }
   ptr = TCR_SYNC_PTR(this_thr->th.th_free_lists[index].th_free_list_sync);
   if (ptr != NULL) {
     // no-sync free list is empty, use sync free list (filled in by other

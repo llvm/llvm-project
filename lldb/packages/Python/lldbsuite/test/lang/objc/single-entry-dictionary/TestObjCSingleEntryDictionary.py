@@ -27,6 +27,7 @@ class ObjCSingleEntryDictionaryTestCase(TestBase):
         self.line = line_number('main.m', '// break here')
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=['watchos'], bugnumber="rdar://problem/34642736") # bug in NSDictionary formatting on watchos
     def test_single_entry_dict(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

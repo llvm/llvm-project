@@ -1166,7 +1166,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 #if USE_ITT_BUILD
     if (pr->ordered) {
       __kmp_itt_ordered_init(gtid);
-    }; // if
+    }
     // Report loop metadata
     if (itt_need_metadata_reporting) {
       // Only report metadata by master of active team at level 1
@@ -1195,7 +1195,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
       __kmp_itt_metadata_loop(loc, schedtype, tc, cur_chunk);
     }
 #endif /* USE_ITT_BUILD */
-  }; // if
+  }
 
 #ifdef KMP_DEBUG
   {
@@ -1620,7 +1620,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
                 victim = reinterpret_cast<dispatch_private_info_template<T> *>(
                     other_threads[victimIdx]
                         ->th.th_dispatch->th_dispatch_pr_current);
-              };
+              }
               if (!victim ||
                   (*(volatile T *)&victim->u.p.static_steal_counter !=
                    *(volatile T *)&pr->u.p.static_steal_counter)) {
@@ -1721,7 +1721,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
                 victim = reinterpret_cast<dispatch_private_info_template<T> *>(
                     other_threads[victimIdx]
                         ->th.th_dispatch->th_dispatch_pr_current);
-              };
+              }
               if (!victim ||
                   (*(volatile T *)&victim->u.p.static_steal_counter !=
                    *(volatile T *)&pr->u.p.static_steal_counter)) {

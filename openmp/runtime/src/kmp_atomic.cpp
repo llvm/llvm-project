@@ -611,16 +611,16 @@ kmp_atomic_lock_t __kmp_atomic_lock_32c;
 
 static inline void operator+=(Quad_a4_t &lhs, Quad_a4_t &rhs) {
   lhs.q += rhs.q;
-};
+}
 static inline void operator-=(Quad_a4_t &lhs, Quad_a4_t &rhs) {
   lhs.q -= rhs.q;
-};
+}
 static inline void operator*=(Quad_a4_t &lhs, Quad_a4_t &rhs) {
   lhs.q *= rhs.q;
-};
+}
 static inline void operator/=(Quad_a4_t &lhs, Quad_a4_t &rhs) {
   lhs.q /= rhs.q;
-};
+}
 static inline bool operator<(Quad_a4_t &lhs, Quad_a4_t &rhs) {
   return lhs.q < rhs.q;
 }
@@ -630,16 +630,16 @@ static inline bool operator>(Quad_a4_t &lhs, Quad_a4_t &rhs) {
 
 static inline void operator+=(Quad_a16_t &lhs, Quad_a16_t &rhs) {
   lhs.q += rhs.q;
-};
+}
 static inline void operator-=(Quad_a16_t &lhs, Quad_a16_t &rhs) {
   lhs.q -= rhs.q;
-};
+}
 static inline void operator*=(Quad_a16_t &lhs, Quad_a16_t &rhs) {
   lhs.q *= rhs.q;
-};
+}
 static inline void operator/=(Quad_a16_t &lhs, Quad_a16_t &rhs) {
   lhs.q /= rhs.q;
-};
+}
 static inline bool operator<(Quad_a16_t &lhs, Quad_a16_t &rhs) {
   return lhs.q < rhs.q;
 }
@@ -649,33 +649,33 @@ static inline bool operator>(Quad_a16_t &lhs, Quad_a16_t &rhs) {
 
 static inline void operator+=(kmp_cmplx128_a4_t &lhs, kmp_cmplx128_a4_t &rhs) {
   lhs.q += rhs.q;
-};
+}
 static inline void operator-=(kmp_cmplx128_a4_t &lhs, kmp_cmplx128_a4_t &rhs) {
   lhs.q -= rhs.q;
-};
+}
 static inline void operator*=(kmp_cmplx128_a4_t &lhs, kmp_cmplx128_a4_t &rhs) {
   lhs.q *= rhs.q;
-};
+}
 static inline void operator/=(kmp_cmplx128_a4_t &lhs, kmp_cmplx128_a4_t &rhs) {
   lhs.q /= rhs.q;
-};
+}
 
 static inline void operator+=(kmp_cmplx128_a16_t &lhs,
                               kmp_cmplx128_a16_t &rhs) {
   lhs.q += rhs.q;
-};
+}
 static inline void operator-=(kmp_cmplx128_a16_t &lhs,
                               kmp_cmplx128_a16_t &rhs) {
   lhs.q -= rhs.q;
-};
+}
 static inline void operator*=(kmp_cmplx128_a16_t &lhs,
                               kmp_cmplx128_a16_t &rhs) {
   lhs.q *= rhs.q;
-};
+}
 static inline void operator/=(kmp_cmplx128_a16_t &lhs,
                               kmp_cmplx128_a16_t &rhs) {
   lhs.q /= rhs.q;
-};
+}
 
 #endif
 

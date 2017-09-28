@@ -914,8 +914,8 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
     size &= ~(val - 1);
     if (size <= KMP_SIZE_T_MAX - val) {
       size += val; // Round up if there is no overflow.
-    }; // if
-  }; // if
+    }
+  }
   return size;
 } // __kmp_round_up_to_va
 

@@ -54,7 +54,7 @@ class DataFormatterBoolRefPtr(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        isiOS = (lldbplatformutil.getPlatform() == 'ios')
+        isiOS = (lldbplatformutil.getPlatform() == 'ios' or lldbplatformutil.getPlatform() == 'watchos')
 
         # Now check that we use the right summary for BOOL&
         self.expect('frame variable yes_ref',
