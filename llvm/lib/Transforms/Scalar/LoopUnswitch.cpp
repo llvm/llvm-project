@@ -881,7 +881,7 @@ bool LoopUnswitch::UnswitchIfProfitable(Value *LoopCond, Constant *Val,
 /// mapping the blocks with the specified map.
 static Loop *CloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
                        LoopInfo *LI, LPPassManager *LPM) {
-  Loop &New = *new Loop();
+  Loop &New = *LI->AllocateLoop();
   if (PL)
     PL->addChildLoop(&New);
   else

@@ -498,7 +498,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     }
     // Perform a backward CFG traversal to discover and map blocks in this loop.
     if (!Backedges.empty()) {
-      LoopT *L = new LoopT(Header);
+      LoopT *L = AllocateLoop(Header);
       discoverAndMapSubloop(L, ArrayRef<BlockT *>(Backedges), this, DomTree);
     }
   }

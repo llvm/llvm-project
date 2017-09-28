@@ -494,6 +494,20 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   if (!isUnpredicatedTerminator(*I))
     return false;
 
+  if (AllowModify) {
+    // If the BB ends with an unconditional branch to the fallthrough BB,
+    // we eliminate the branch instruction.
+    if (I->getOpcode() == PPC::B &&
+        MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
+      I->eraseFromParent();
+
+      // We update iterator after deleting the last branch.
+      I = MBB.getLastNonDebugInstr();
+      if (I == MBB.end() || !isUnpredicatedTerminator(*I))
+        return false;
+    }
+  }
+
   // Get the last instruction in the block.
   MachineInstr &LastInst = *I;
 

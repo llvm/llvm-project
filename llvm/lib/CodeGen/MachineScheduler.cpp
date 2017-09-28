@@ -2363,7 +2363,7 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
     ResCount = getResourceCount(ZoneCritResIdx);
   } else {
     ResFactor = SchedModel->getMicroOpFactor();
-    ResCount = RetiredMOps * SchedModel->getMicroOpFactor();
+    ResCount = RetiredMOps * ResFactor;
   }
   unsigned LFactor = SchedModel->getLatencyFactor();
   dbgs() << Available.getName() << " @" << CurrCycle << "c\n"

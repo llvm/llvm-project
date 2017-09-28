@@ -355,7 +355,7 @@ public:
 
 } // end anonymous namespace
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)

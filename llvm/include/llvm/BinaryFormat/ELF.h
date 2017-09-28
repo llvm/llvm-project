@@ -612,6 +612,17 @@ enum {
 #include "ELFRelocs/Lanai.def"
 };
 
+// RISCV Specific e_flags
+enum : unsigned {
+  EF_RISCV_RVC = 0x0001,
+  EF_RISCV_FLOAT_ABI = 0x0006,
+  EF_RISCV_FLOAT_ABI_SOFT = 0x0000,
+  EF_RISCV_FLOAT_ABI_SINGLE = 0x0002,
+  EF_RISCV_FLOAT_ABI_DOUBLE = 0x0004,
+  EF_RISCV_FLOAT_ABI_QUAD = 0x0006,
+  EF_RISCV_RVE = 0x0008
+};
+
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"

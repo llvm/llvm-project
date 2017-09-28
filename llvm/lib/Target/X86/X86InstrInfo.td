@@ -1618,20 +1618,23 @@ def MOV64mr : RI<0x89, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 // Versions of MOV8rr, MOV8mr, and MOV8rm that use i8mem_NOREX and GR8_NOREX so
 // that they can be used for copying and storing h registers, which can't be
 // encoded when a REX prefix is present.
-let isPseudo = 1 in {
+let isCodeGenOnly = 1 in {
 let hasSideEffects = 0 in
-def MOV8rr_NOREX : I<0, Pseudo,
+def MOV8rr_NOREX : I<0x88, MRMDestReg,
                      (outs GR8_NOREX:$dst), (ins GR8_NOREX:$src),
-                     "", [], IIC_MOV>, Sched<[WriteMove]>;
+                     "mov{b}\t{$src, $dst|$dst, $src}  # NOREX", [], IIC_MOV>,
+                   Sched<[WriteMove]>;
 let mayStore = 1, hasSideEffects = 0 in
-def MOV8mr_NOREX : I<0, Pseudo,
+def MOV8mr_NOREX : I<0x88, MRMDestMem,
                      (outs), (ins i8mem_NOREX:$dst, GR8_NOREX:$src),
-                     "", [], IIC_MOV_MEM>, Sched<[WriteStore]>;
+                     "mov{b}\t{$src, $dst|$dst, $src}  # NOREX", [],
+                     IIC_MOV_MEM>, Sched<[WriteStore]>;
 let mayLoad = 1, hasSideEffects = 0,
     canFoldAsLoad = 1, isReMaterializable = 1 in
-def MOV8rm_NOREX : I<0, Pseudo,
+def MOV8rm_NOREX : I<0x8A, MRMSrcMem,
                      (outs GR8_NOREX:$dst), (ins i8mem_NOREX:$src),
-                     "", [], IIC_MOV_MEM>, Sched<[WriteLoad]>;
+                     "mov{b}\t{$src, $dst|$dst, $src}  # NOREX", [],
+                     IIC_MOV_MEM>, Sched<[WriteLoad]>;
 }
 
 
@@ -2769,6 +2772,7 @@ def : MnemonicAlias<"pop",   "popq",  "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popf",  "popfw", "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"popf",  "popfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"popf",  "popfq", "att">, Requires<[In64BitMode]>;
+def : MnemonicAlias<"popf",  "popfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popfd", "popfl", "att">;
 
 // FIXME: This is wrong for "push reg".  "push %bx" should turn into pushw in
@@ -2780,6 +2784,7 @@ def : MnemonicAlias<"push",   "pushq",  "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfw", "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfq", "att">, Requires<[In64BitMode]>;
+def : MnemonicAlias<"pushf",  "pushfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushfd", "pushfl", "att">;
 
 def : MnemonicAlias<"popad",  "popal",  "intel">, Requires<[Not64BitMode]>;

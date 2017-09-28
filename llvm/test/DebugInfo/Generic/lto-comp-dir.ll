@@ -8,13 +8,13 @@
 ; to refer to it.
 
 ; CHECK: .debug_line contents:
-; CHECK-NEXT: debug_line[0000000000000000]
+; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NOT: include_directories
 ; CHECK: file_names[   1]   0 {{.*}} a.cpp
 ; CHECK-NOT: file_names
 
-; CHECK: debug_line[0000000000000039]
+; CHECK: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
 ; CHECK-NOT: include_directories
 ; CHECK: file_names[   1]   0 {{.*}} b.cpp

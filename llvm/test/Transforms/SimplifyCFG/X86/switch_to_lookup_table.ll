@@ -1173,10 +1173,10 @@ return:
   ret i32 %retval.0
 ; CHECK-LABEL: @reuse_cmp2(
 ; CHECK: entry:
-; CHECK-NEXT: %switch = icmp ult i32 %x, 4
-; CHECK-NEXT: %x. = select i1 %switch, i32 %x, i32 4
+; CHECK-NEXT: %0 = icmp ult i32 %x, 4
+; CHECK-NEXT: %x. = select i1 %0, i32 %x, i32 4
 ; CHECK-NEXT: [[C:%.+]] = icmp ne i32 %x., 4
-; CHECK:      [[R:%.+]] = select i1 [[C]], i32 {{.*}}, i32 100
+; CHECK:      [[R:%.+]] = select i1 %0, i32 {{.*}}, i32 100
 ; CHECK-NEXT: ret i32 [[R]]
 }
 

@@ -51,6 +51,22 @@ class LazyValueInfo;
 
 template<typename T> class SmallVectorImpl;
 
+/// A set of parameters used to control the transforms in the SimplifyCFG pass.
+/// Options may change depending on the position in the optimization pipeline.
+/// For example, canonical form that includes switches and branches may later be
+/// replaced by lookup tables and selects.
+struct SimplifyCFGOptions {
+  int BonusInstThreshold;
+  bool ConvertSwitchToLookupTable;
+  bool NeedCanonicalLoop;
+
+  SimplifyCFGOptions(int BonusThreshold = 1, bool SwitchToLookup = false,
+                     bool CanonicalLoops = true)
+      : BonusInstThreshold(BonusThreshold),
+        ConvertSwitchToLookupTable(SwitchToLookup),
+        NeedCanonicalLoop(CanonicalLoops) {}
+};
+
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
 //
@@ -135,17 +151,16 @@ bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB);
 /// values, but instcombine orders them so it usually won't matter.
 bool EliminateDuplicatePHINodes(BasicBlock *BB);
 
-/// This function is used to do simplification of a CFG.  For
-/// example, it adjusts branches to branches to eliminate the extra hop, it
-/// eliminates unreachable basic blocks, and does other "peephole" optimization
-/// of the CFG.  It returns true if a modification was made, possibly deleting
-/// the basic block that was pointed to. LoopHeaders is an optional input
-/// parameter, providing the set of loop header that SimplifyCFG should not
-/// eliminate.
+/// This function is used to do simplification of a CFG.  For example, it
+/// adjusts branches to branches to eliminate the extra hop, it eliminates
+/// unreachable basic blocks, and does other peephole optimization of the CFG.
+/// It returns true if a modification was made, possibly deleting the basic
+/// block that was pointed to. LoopHeaders is an optional input parameter
+/// providing the set of loop headers that SimplifyCFG should not eliminate.
 bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 unsigned BonusInstThreshold, AssumptionCache *AC = nullptr,
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr,
-                 bool LateSimplifyCFG = false);
+                 AssumptionCache *AC = nullptr,
+                 const SimplifyCFGOptions &Options = {},
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with

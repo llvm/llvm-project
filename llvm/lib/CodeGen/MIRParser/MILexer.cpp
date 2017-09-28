@@ -1,4 +1,4 @@
-//===- MILexer.cpp - Machine instructions lexer implementation ----------===//
+//===- MILexer.cpp - Machine instructions lexer implementation ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,27 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "MILexer.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <algorithm>
+#include <cassert>
 #include <cctype>
+#include <string>
 
 using namespace llvm;
 
 namespace {
 
-typedef function_ref<void(StringRef::iterator Loc, const Twine &)>
-    ErrorCallbackType;
+using ErrorCallbackType =
+    function_ref<void(StringRef::iterator Loc, const Twine &)>;
 
 /// This class provides a way to iterate and get characters from the source
 /// string.
 class Cursor {
-  const char *Ptr;
-  const char *End;
+  const char *Ptr = nullptr;
+  const char *End = nullptr;
 
 public:
-  Cursor(NoneType) : Ptr(nullptr), End(nullptr) {}
+  Cursor(NoneType) {}
 
   explicit Cursor(StringRef Str) {
     Ptr = Str.data();

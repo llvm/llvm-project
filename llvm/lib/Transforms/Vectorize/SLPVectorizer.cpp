@@ -1436,10 +1436,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check that none of the instructions in the bundle are already in the tree.
   for (unsigned i = 0, e = VL.size(); i != e; ++i) {
-      auto *I = dyn_cast<Instruction>(VL[i]);
-      if (!I)
-        continue;
-      if (getTreeEntry(I)) {
+    auto *I = dyn_cast<Instruction>(VL[i]);
+    if (!I)
+      continue;
+    if (getTreeEntry(I)) {
       DEBUG(dbgs() << "SLP: The instruction (" << *VL[i] <<
             ") is already in tree.\n");
       newTreeEntry(VL, false, UserTreeIdx);
@@ -1447,7 +1447,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
 
-  // If any of the scalars is marked as a value that needs to stay scalar then
+  // If any of the scalars is marked as a value that needs to stay scalar, then
   // we need to gather the scalars.
   for (unsigned i = 0, e = VL.size(); i != e; ++i) {
     if (MustGather.count(VL[i])) {
@@ -1470,9 +1470,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
   }
 
-  // Check that every instructions appears once in this bundle.
+  // Check that every instruction appears once in this bundle.
   for (unsigned i = 0, e = VL.size(); i < e; ++i)
-    for (unsigned j = i+1; j < e; ++j)
+    for (unsigned j = i + 1; j < e; ++j)
       if (VL[i] == VL[j]) {
         DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
         newTreeEntry(VL, false, UserTreeIdx);
@@ -1480,9 +1480,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
 
   auto &BSRef = BlocksSchedules[BB];
-  if (!BSRef) {
+  if (!BSRef)
     BSRef = llvm::make_unique<BlockScheduling>(BB);
-  }
+
   BlockScheduling &BS = *BSRef.get();
 
   if (!BS.tryScheduleBundle(VL, this, S.OpValue)) {
@@ -1541,11 +1541,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::Load: {
       // Check that a vectorized load would load the same memory as a scalar
-      // load.
-      // For example we don't want vectorize loads that are smaller than 8 bit.
-      // Even though we have a packed struct {<i2, i2, i2, i2>} LLVM treats
-      // loading/storing it as an i8 struct. If we vectorize loads/stores from
-      // such a struct we read/write packed bits disagreeing with the
+      // load. For example, we don't want to vectorize loads that are smaller
+      // than 8-bit. Even though we have a packed struct {<i2, i2, i2, i2>} LLVM
+      // treats loading/storing it as an i8 struct. If we vectorize loads/stores
+      // from such a struct, we read/write packed bits disagreeing with the
       // unvectorized version.
       Type *ScalarTy = VL0->getType();
 
@@ -4939,7 +4938,8 @@ class HorizontalReduction {
       case RK_Max:
       case RK_UMin:
       case RK_UMax:
-        propagateIRFlags(cast<SelectInst>(Op)->getCondition(), ReductionOps[0]);
+        if (auto *SI = dyn_cast<SelectInst>(Op))
+          propagateIRFlags(SI->getCondition(), ReductionOps[0]);
         propagateIRFlags(Op, ReductionOps[1]);
         return Op;
       case RK_None:
@@ -4962,8 +4962,10 @@ class HorizontalReduction {
       case RK_Max:
       case RK_UMin:
       case RK_UMax:
-        propagateIRFlags(cast<SelectInst>(Op)->getCondition(),
-                         cast<SelectInst>(I)->getCondition());
+        if (auto *SI = dyn_cast<SelectInst>(Op)) {
+          propagateIRFlags(SI->getCondition(),
+                           cast<SelectInst>(I)->getCondition());
+        }
         propagateIRFlags(Op, I);
         return Op;
       case RK_None:
