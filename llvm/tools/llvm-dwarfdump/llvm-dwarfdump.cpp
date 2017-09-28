@@ -246,7 +246,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
-    DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> Optional<uint64_t> {
+    DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
       for (auto Name : Find)
         for (auto Entry : DICtx.getAppleNames().equal_range(Name))
           for (auto Atom : Entry)
