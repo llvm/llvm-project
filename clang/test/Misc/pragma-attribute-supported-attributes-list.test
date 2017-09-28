@@ -40,6 +40,7 @@
 // CHECK-NEXT: NoSanitize (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: NoSanitizeSpecific (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: NoSplitStack (SubjectMatchRule_function)
+// CHECK-NEXT: NoThrow (SubjectMatchRule_function)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
 // CHECK-NEXT: ObjCBoxable (SubjectMatchRule_record)
 // CHECK-NEXT: ObjCMethodFamily (SubjectMatchRule_objc_method)

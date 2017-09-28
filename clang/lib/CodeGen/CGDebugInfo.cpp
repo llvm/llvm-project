@@ -833,6 +833,10 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align,
       llvm::DINode::FlagFwdDecl, FullName);
+  if (CGM.getCodeGenOpts().DebugFwdTemplateParams)
+    if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      DBuilder.replaceArrays(RetTy, llvm::DINodeArray(),
+                             CollectCXXTemplateParams(TSpecial, DefUnit));
   ReplaceMap.emplace_back(
       std::piecewise_construct, std::make_tuple(Ty),
       std::make_tuple(static_cast<llvm::Metadata *>(RetTy)));
