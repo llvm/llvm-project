@@ -57,7 +57,7 @@ bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
     // those results. Note that the order doesn't matter here as this will just
     // directly destroy the results without calling methods on them.
     for (Loop *L : PreOrderLoops)
-      InnerAM->clear(*L);
+      InnerAM->clear(*L, L->getName());
 
     // We also need to null out the inner AM so that when the object gets
     // destroyed as invalid we don't try to clear the inner AM again. At that

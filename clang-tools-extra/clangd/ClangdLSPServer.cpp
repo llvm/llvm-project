@@ -51,7 +51,8 @@ class ClangdLSPServer::LSPProtocolCallbacks : public ProtocolCallbacks {
 public:
   LSPProtocolCallbacks(ClangdLSPServer &LangServer) : LangServer(LangServer) {}
 
-  void onInitialize(StringRef ID, JSONOutput &Out) override;
+  void onInitialize(StringRef ID, InitializeParams IP,
+                    JSONOutput &Out) override;
   void onShutdown(JSONOutput &Out) override;
   void onDocumentDidOpen(DidOpenTextDocumentParams Params,
                          JSONOutput &Out) override;
@@ -71,12 +72,15 @@ public:
                     JSONOutput &Out) override;
   void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
                         JSONOutput &Out) override;
+  void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
+                        JSONOutput &Out) override;                      
 
 private:
   ClangdLSPServer &LangServer;
 };
 
 void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
+                                                         InitializeParams IP,
                                                          JSONOutput &Out) {
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID +
@@ -89,6 +93,10 @@ void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
           "definitionProvider": true
         }}})");
+  if (IP.rootUri && !IP.rootUri->file.empty())
+    LangServer.Server.setRootPath(IP.rootUri->file);
+  else if (IP.rootPath && !IP.rootPath->empty())
+    LangServer.Server.setRootPath(*IP.rootPath);
 }
 
 void ClangdLSPServer::LSPProtocolCallbacks::onShutdown(JSONOutput &Out) {
@@ -218,6 +226,21 @@ void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID.str() +
       R"(,"result":[)" + Locations + R"(]})");
+}
+
+void ClangdLSPServer::LSPProtocolCallbacks::onSwitchSourceHeader(
+    TextDocumentIdentifier Params, StringRef ID, JSONOutput &Out) {
+  llvm::Optional<Path> Result =
+      LangServer.Server.switchSourceHeader(Params.uri.file);
+  std::string ResultUri;
+  if (Result)
+    ResultUri = URI::unparse(URI::fromFile(*Result));
+  else
+    ResultUri = "\"\"";
+
+  Out.writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(,"result":)" + ResultUri + R"(})");
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

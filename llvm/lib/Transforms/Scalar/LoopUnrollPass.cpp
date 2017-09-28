@@ -943,7 +943,7 @@ static bool computeUnrollCount(
   return ExplicitUnroll;
 }
 
-static bool tryToUnrollLoop(
+static LoopUnrollResult tryToUnrollLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC,
     OptimizationRemarkEmitter &ORE, bool PreserveLCSSA, int OptLevel,
@@ -952,12 +952,12 @@ static bool tryToUnrollLoop(
     Optional<bool> ProvidedUpperBound, Optional<bool> ProvidedAllowPeeling) {
   DEBUG(dbgs() << "Loop Unroll: F[" << L->getHeader()->getParent()->getName()
                << "] Loop %" << L->getHeader()->getName() << "\n");
-  if (HasUnrollDisablePragma(L)) 
-    return false;
+  if (HasUnrollDisablePragma(L))
+    return LoopUnrollResult::Unmodified;
   if (!L->isLoopSimplifyForm()) { 
     DEBUG(
         dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   unsigned NumInlineCandidates;
@@ -969,18 +969,18 @@ static bool tryToUnrollLoop(
       ProvidedAllowPeeling);
   // Exit early if unrolling is disabled.
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
-    return false;
+    return LoopUnrollResult::Unmodified;
   unsigned LoopSize = ApproximateLoopSize(
       L, NumInlineCandidates, NotDuplicatable, Convergent, TTI, &AC, UP.BEInsns);
   DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
   if (NotDuplicatable) {
     DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable"
                  << " instructions.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
   if (NumInlineCandidates != 0) {
     DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");
-    return false;
+    return LoopUnrollResult::Unmodified;
   }
 
   // Find trip count and trip multiple if count is not available
@@ -1039,28 +1039,28 @@ static bool tryToUnrollLoop(
       computeUnrollCount(L, TTI, DT, LI, SE, &ORE, TripCount, MaxTripCount,
                          TripMultiple, LoopSize, UP, UseUpperBound);
   if (!UP.Count)
-    return false;
+    return LoopUnrollResult::Unmodified;
   // Unroll factor (Count) must be less or equal to TripCount.
   if (TripCount && UP.Count > TripCount)
     UP.Count = TripCount;
 
   // Unroll the loop.
-  LoopUnrollStatus UnrollStatus = UnrollLoop(
+  LoopUnrollResult UnrollResult = UnrollLoop(
       L, UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
       UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
       LI, &SE, &DT, &AC, &ORE, PreserveLCSSA);
-  if (UnrollStatus == LoopUnrollStatus::Unmodified)
-    return false;
+  if (UnrollResult == LoopUnrollResult::Unmodified)
+    return LoopUnrollResult::Unmodified;
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.
   // If the loop was peeled, we already "used up" the profile information
   // we had, so we don't want to unroll or peel again.
-  if (UnrollStatus != LoopUnrollStatus::FullyUnrolled &&
+  if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
       (IsCountSetExplicitly || UP.PeelCount))
     SetLoopAlreadyUnrolled(L);
 
-  return true;
+  return UnrollResult;
 }
 
 namespace {
@@ -1087,7 +1087,7 @@ public:
   Optional<bool> ProvidedUpperBound;
   Optional<bool> ProvidedAllowPeeling;
 
-  bool runOnLoop(Loop *L, LPPassManager &) override {
+  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
     if (skipLoop(L))
       return false;
 
@@ -1105,10 +1105,15 @@ public:
     OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel,
-                           ProvidedCount, ProvidedThreshold,
-                           ProvidedAllowPartial, ProvidedRuntime,
-                           ProvidedUpperBound, ProvidedAllowPeeling);
+    LoopUnrollResult Result = tryToUnrollLoop(
+        L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel, ProvidedCount,
+        ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
+        ProvidedUpperBound, ProvidedAllowPeeling);
+
+    if (Result == LoopUnrollResult::FullyUnrolled)
+      LPM.markLoopAsDeleted(*L);
+
+    return Result != LoopUnrollResult::Unmodified;
   }
 
   /// This transformation requires natural loop information & requires that
@@ -1173,12 +1178,14 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   else
     OldLoops.insert(AR.LI.begin(), AR.LI.end());
 
+  std::string LoopName = L.getName();
+
   bool Changed =
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                       /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
                       /*Runtime*/ false, /*UpperBound*/ false,
-                      /*AllowPeeling*/ false);
+                      /*AllowPeeling*/ false) != LoopUnrollResult::Unmodified;
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1222,7 +1229,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   Updater.addSiblingLoops(SibLoops);
 
   if (!IsCurrentLoopValid) {
-    Updater.markLoopAsDeleted(L);
+    Updater.markLoopAsDeleted(L, LoopName);
   } else {
     // We can only walk child loops if the current loop remained valid.
     if (UnrollRevisitChildLoops) {
@@ -1297,7 +1304,6 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // for unrolling is only needed to get optimization remarks emitted in
     // a forward order.
     Loop &L = *Worklist.pop_back_val();
-    Loop *ParentL = L.getParentLoop();
 
     // The API here is quite complex to call, but there are only two interesting
     // states we support: partial and full (or "simple") unrolling. However, to
@@ -1310,32 +1316,24 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // bloating it further.
     if (PSI && PSI->hasHugeWorkingSetSize())
       AllowPeeling = false;
-    bool CurChanged =
+    std::string LoopName = L.getName();
+    LoopUnrollResult Result =
         tryToUnrollLoop(&L, DT, &LI, SE, TTI, AC, ORE,
                         /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
                         /*Threshold*/ None, AllowPartialParam, RuntimeParam,
                         UpperBoundParam, AllowPeeling);
-    Changed |= CurChanged;
+    Changed |= Result != LoopUnrollResult::Unmodified;
 
     // The parent must not be damaged by unrolling!
 #ifndef NDEBUG
-    if (CurChanged && ParentL)
+    Loop *ParentL = L.getParentLoop();
+    if (Result != LoopUnrollResult::Unmodified && ParentL)
       ParentL->verifyLoop();
 #endif
 
-    // Walk the parent or top-level loops after unrolling to check whether we
-    // actually removed a loop, and if so clear any cached analysis results for
-    // it. We have to do this immediately as the next unrolling could allocate
-    // a new loop object that ends up with the same address as the deleted loop
-    // object causing cache collisions.
-    if (LAM) {
-      bool IsCurLoopValid =
-          ParentL
-              ? llvm::any_of(*ParentL, [&](Loop *SibL) { return SibL == &L; })
-              : llvm::any_of(LI, [&](Loop *SibL) { return SibL == &L; });
-      if (!IsCurLoopValid)
-        LAM->clear(L);
-    }
+    // Clear any cached analysis results for L if we removed it completely.
+    if (LAM && Result == LoopUnrollResult::FullyUnrolled)
+      LAM->clear(L, LoopName);
   }
 
   if (!Changed)

@@ -159,7 +159,7 @@ KMP_NORETURN void __kmp_fatal(kmp_msg_t message, ...);
   {                                                                            \
     if (error) {                                                               \
       KMP_SYSFAIL(func, error);                                                \
-    };                                                                         \
+    }                                                                          \
   }
 
 // Check status, if not zero, generate fatal error message using errno.
@@ -168,7 +168,7 @@ KMP_NORETURN void __kmp_fatal(kmp_msg_t message, ...);
     if (status != 0) {                                                         \
       int error = errno;                                                       \
       KMP_SYSFAIL(func, error);                                                \
-    };                                                                         \
+    }                                                                          \
   }
 
 #ifdef KMP_DEBUG

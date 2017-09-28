@@ -65,9 +65,9 @@ void __kmp_i18n_catopen() {
     __kmp_acquire_bootstrap_lock(&lock);
     if (status == KMP_I18N_CLOSED) {
       __kmp_i18n_do_catopen();
-    }; // if
+    }
     __kmp_release_bootstrap_lock(&lock);
-  }; // if
+  }
 } // func __kmp_i18n_catopen
 
 /* Linux* OS and OS X* part */
@@ -109,7 +109,7 @@ void __kmp_i18n_do_catopen() {
     __kmp_str_split(lang, '.', &lang, &tail);
     __kmp_str_split(lang, '_', &lang, &tail);
     english = (strcmp(lang, "en") == 0);
-  }; // if
+  }
 
   KMP_INTERNAL_FREE(lang);
 
@@ -171,9 +171,9 @@ void __kmp_i18n_do_catopen() {
         KMP_INFORM(WillUseDefaultMessages);
         KMP_INTERNAL_FREE(CCAST(char *, nlspath));
       } // __kmp_generate_warnings
-    }; // if
+    }
     __kmp_str_buf_free(&version);
-  }; // if
+  }
 } // func __kmp_i18n_do_catopen
 
 void __kmp_i18n_catclose() {
@@ -181,7 +181,7 @@ void __kmp_i18n_catclose() {
     KMP_DEBUG_ASSERT(cat != KMP_I18N_NULLCAT);
     catclose(cat);
     cat = KMP_I18N_NULLCAT;
-  }; // if
+  }
   status = KMP_I18N_CLOSED;
 } // func __kmp_i18n_catclose
 
@@ -195,19 +195,19 @@ char const *__kmp_i18n_catgets(kmp_i18n_id_t id) {
     if (1 <= number && number <= __kmp_i18n_default_table.sect[section].size) {
       if (status == KMP_I18N_CLOSED) {
         __kmp_i18n_catopen();
-      }; // if
+      }
       if (status == KMP_I18N_OPENED) {
         message = catgets(cat, section, number,
                           __kmp_i18n_default_table.sect[section].str[number]);
-      }; // if
+      }
       if (message == NULL) {
         message = __kmp_i18n_default_table.sect[section].str[number];
-      }; // if
-    }; // if
-  }; // if
+      }
+    }
+  }
   if (message == NULL) {
     message = no_message_available;
-  }; // if
+  }
   return message;
 
 } // func __kmp_i18n_catgets
@@ -253,8 +253,8 @@ static UINT get_code_page() {
       cp = CP_UTF7;
     } else {
       // !!! TODO: Issue a warning?
-    }; // if
-  }; // if
+    }
+  }
   KMP_INTERNAL_FREE((void *)value);
   return cp;
 
@@ -268,12 +268,12 @@ static void kmp_i18n_table_free(kmp_i18n_table_t *table) {
       // Free message.
       KMP_INTERNAL_FREE((void *)table->sect[s].str[m]);
       table->sect[s].str[m] = NULL;
-    }; // for m
+    }
     table->sect[s].size = 0;
     // Free section itself.
     KMP_INTERNAL_FREE((void *)table->sect[s].str);
     table->sect[s].str = NULL;
-  }; // for s
+  }
   table->size = 0;
   KMP_INTERNAL_FREE((void *)table->sect);
   table->sect = NULL;
@@ -297,7 +297,7 @@ void __kmp_i18n_do_catopen() {
     status = KMP_I18N_ABSENT; // mark catalog as absent so it will not
     // be re-opened.
     goto end;
-  }; // if
+  }
 
   // Construct resource DLL name.
   /* Simple LoadLibrary( name ) is not suitable due to security issue (see
@@ -316,7 +316,7 @@ void __kmp_i18n_do_catopen() {
       goto end;
       // TODO: Enable multiple messages (KMP_MSG) to be passed to __kmp_msg; and
       // print a proper warning.
-    }; // if
+    }
 
     // Now get path to the our DLL.
     for (;;) {
@@ -324,13 +324,13 @@ void __kmp_i18n_do_catopen() {
       if (drc == 0) { // Error occurred.
         status = KMP_I18N_ABSENT;
         goto end;
-      }; // if
+      }
       if (drc < path.size) {
         path.used = drc;
         break;
-      }; // if
+      }
       __kmp_str_buf_reserve(&path, path.size * 2);
-    }; // forever
+    }
 
     // Now construct the name of message catalog.
     kmp_str_fname fname;
@@ -394,10 +394,9 @@ void __kmp_i18n_do_catopen() {
                   __kmp_msg_null);
         KMP_INFORM(WillUseDefaultMessages);
       } // __kmp_generate_warnings
-    }; // if
+    }
     __kmp_str_buf_free(&version);
-
-  }; // if
+  }
   code_page = get_code_page();
 
 end:
@@ -411,7 +410,7 @@ void __kmp_i18n_catclose() {
     kmp_i18n_table_free(&table);
     FreeLibrary(cat);
     cat = KMP_I18N_NULLCAT;
-  }; // if
+  }
   code_page = default_code_page;
   status = KMP_I18N_CLOSED;
 } // func __kmp_i18n_catclose
@@ -449,12 +448,12 @@ static int ___strip_crs(char *str) {
     if (str[in] != '\r') {
       str[out] = str[in];
       ++out;
-    }; // if
+    }
     if (str[in] == 0) {
       break;
-    }; // if
+    }
     ++in;
-  }; // forever
+  }
   return out - 1;
 } // func __strip_crs
 
@@ -480,7 +479,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
                      NULL);
   if (wlen <= 0) {
     goto end;
-  }; // if
+  }
   wmsg = (wchar_t *)addr; // Warning: wmsg may be not nul-terminated!
 
   // Calculate length of multibyte message.
@@ -493,7 +492,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
                             );
   if (len <= 0) {
     goto end;
-  }; // if
+  }
 
   // Allocate memory.
   msg = (char *)KMP_INTERNAL_MALLOC(len + 1);
@@ -507,7 +506,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
                            );
   if (rc <= 0 || rc > len) {
     goto end;
-  }; // if
+  }
   KMP_DEBUG_ASSERT(rc == len);
   len = rc;
   msg[len] = 0; // Put terminating null to the end.
@@ -519,7 +518,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
   if (len >= 1 && msg[len - 1] == '\n') {
     --len;
     msg[len] = 0;
-  }; // if
+  }
 
   // Everything looks ok.
   result = msg;
@@ -529,10 +528,10 @@ end:
 
   if (msg != NULL) {
     KMP_INTERNAL_FREE(msg);
-  }; // if
+  }
   if (wmsg != NULL) {
     LocalFree(wmsg);
-  }; // if
+  }
 
   return result;
 
@@ -548,35 +547,35 @@ char const *__kmp_i18n_catgets(kmp_i18n_id_t id) {
     if (1 <= number && number <= __kmp_i18n_default_table.sect[section].size) {
       if (status == KMP_I18N_CLOSED) {
         __kmp_i18n_catopen();
-      }; // if
+      }
       if (cat != KMP_I18N_NULLCAT) {
         if (table.size == 0) {
           table.sect = (kmp_i18n_section_t *)KMP_INTERNAL_CALLOC(
               (__kmp_i18n_default_table.size + 2), sizeof(kmp_i18n_section_t));
           table.size = __kmp_i18n_default_table.size;
-        }; // if
+        }
         if (table.sect[section].size == 0) {
           table.sect[section].str = (const char **)KMP_INTERNAL_CALLOC(
               __kmp_i18n_default_table.sect[section].size + 2,
               sizeof(char const *));
           table.sect[section].size =
               __kmp_i18n_default_table.sect[section].size;
-        }; // if
+        }
         if (table.sect[section].str[number] == NULL) {
           table.sect[section].str[number] = ___catgets(id);
-        }; // if
+        }
         message = table.sect[section].str[number];
-      }; // if
+      }
       if (message == NULL) {
         // Catalog is not opened or message is not found, return default
         // message.
         message = __kmp_i18n_default_table.sect[section].str[number];
-      }; // if
-    }; // if
-  }; // if
+      }
+    }
+  }
   if (message == NULL) {
     message = no_message_available;
-  }; // if
+  }
   return message;
 
 } // func __kmp_i18n_catgets
@@ -614,8 +613,8 @@ void __kmp_i18n_dump_catalog(kmp_str_buf_t *buffer) {
     for (id = (kmp_i18n_id_t)(ranges[range].first + 1); id < ranges[range].last;
          id = (kmp_i18n_id_t)(id + 1)) {
       __kmp_str_buf_print(buffer, "%d: <<%s>>\n", id, __kmp_i18n_catgets(id));
-    }; // for id
-  }; // for range
+    }
+  }
 
   __kmp_printf("%s", buffer->str);
 
@@ -689,17 +688,17 @@ static char *sys_error(int err) {
     // Strip trailing newlines.
     while (len > 0 && message[len - 1] == '\n') {
       --len;
-    }; // while
+    }
     message[len] = 0;
   } else {
     // FormatMessage() failed to format system error message. GetLastError()
     // would give us error code, which we would convert to message... this it
     // dangerous recursion, which cannot clarify original error, so we will not
     // even start it.
-  }; // if
+  }
   if (buffer != NULL) {
     LocalFree(buffer);
-  }; // if
+  }
 
 #else // Non-Windows* OS: Linux* OS or OS X*
 
@@ -732,7 +731,7 @@ static char *sys_error(int err) {
   rc = strerror_r(err, buffer, size);
   if (rc == -1) {
     rc = errno; // XSI version sets errno.
-  }; // if
+  }
   while (rc == ERANGE) { // ERANGE means the buffer is too small.
     KMP_INTERNAL_FREE(buffer);
     size *= 2;
@@ -743,13 +742,13 @@ static char *sys_error(int err) {
     rc = strerror_r(err, buffer, size);
     if (rc == -1) {
       rc = errno; // XSI version sets errno.
-    }; // if
-  }; // while
+    }
+  }
   if (rc == 0) {
     message = buffer;
   } else { // Buffer is unused. Free it.
     KMP_INTERNAL_FREE(buffer);
-  }; // if
+  }
 
 #endif
 
@@ -758,7 +757,7 @@ static char *sys_error(int err) {
   if (message == NULL) {
     // TODO: I18n this message.
     message = __kmp_str_format("%s", "(No system error message available)");
-  }; // if
+  }
   return message;
 } // sys_error
 
@@ -810,8 +809,8 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
   case kmp_ms_fatal: {
     format = kmp_i18n_fmt_Fatal;
   } break;
-  default: { KMP_DEBUG_ASSERT(0); };
-  }; // switch
+  default: { KMP_DEBUG_ASSERT(0); }
+  }
   fmsg = __kmp_msg_format(format, message.num, message.str);
   __kmp_str_free(&message.str);
   __kmp_str_buf_cat(&buffer, fmsg.str, fmsg.len);
@@ -823,10 +822,10 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
     message = va_arg(args, kmp_msg_t);
     if (message.type == kmp_mt_dummy && message.str == NULL) {
       break;
-    }; // if
+    }
     if (message.type == kmp_mt_dummy && message.str == __kmp_msg_empty.str) {
       continue;
-    }; // if
+    }
     switch (message.type) {
     case kmp_mt_hint: {
       format = kmp_i18n_fmt_Hint;
@@ -834,13 +833,13 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
     case kmp_mt_syserr: {
       format = kmp_i18n_fmt_SysErr;
     } break;
-    default: { KMP_DEBUG_ASSERT(0); };
-    }; // switch
+    default: { KMP_DEBUG_ASSERT(0); }
+    }
     fmsg = __kmp_msg_format(format, message.num, message.str);
     __kmp_str_free(&message.str);
     __kmp_str_buf_cat(&buffer, fmsg.str, fmsg.len);
     __kmp_str_free(&fmsg.str);
-  }; // forever
+  }
   va_end(args);
 
   // Print formatted messages.

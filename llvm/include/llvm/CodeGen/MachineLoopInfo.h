@@ -44,8 +44,6 @@ extern template class LoopBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoop : public LoopBase<MachineBasicBlock, MachineLoop> {
 public:
-  MachineLoop();
-
   /// Return the "top" block in the loop, which is the first block in the linear
   /// layout, ignoring any parts of the loop not contiguous with the part that
   /// contains the header.
@@ -76,6 +74,8 @@ private:
 
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
+
+  MachineLoop() = default;
 };
 
 // Implementation in LoopInfoImpl.h

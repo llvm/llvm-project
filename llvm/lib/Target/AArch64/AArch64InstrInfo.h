@@ -350,24 +350,23 @@ public:
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
+  bool
+  canOutlineWithoutLRSave(MachineBasicBlock::iterator &CallInsertionPt) const;
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
-  std::pair<size_t, unsigned>
-  getOutliningCallOverhead(MachineBasicBlock::iterator &StartIt,
-                           MachineBasicBlock::iterator &EndIt) const override;
-  std::pair<size_t, unsigned> getOutliningFrameOverhead(
+  MachineOutlinerInfo getOutlininingCandidateInfo(
       std::vector<
           std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-          &CandidateClass) const override;
+          &RepeatedSequenceLocs) const override;
   AArch64GenInstrInfo::MachineOutlinerInstrType
   getOutliningType(MachineInstr &MI) const override;
   void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              unsigned FrameClass) const override;
+                              const MachineOutlinerInfo &MInfo) const override;
   void insertOutlinerPrologue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              unsigned FrameClass) const override;
+                              const MachineOutlinerInfo &MInfo) const override;
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     unsigned CallClass) const override;
+                     const MachineOutlinerInfo &MInfo) const override;
   /// Returns true if the instruction has a shift left that can be executed
   /// more efficiently.
   bool isExynosShiftLeftFast(const MachineInstr &MI) const;

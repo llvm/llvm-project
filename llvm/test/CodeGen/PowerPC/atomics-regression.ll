@@ -409,7 +409,6 @@ define void @test40(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB40_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB40_2
 ; PPC64LE-NEXT:  .LBB40_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -472,7 +471,6 @@ define void @test43(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB43_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB43_2
 ; PPC64LE-NEXT:  .LBB43_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -493,7 +491,6 @@ define void @test44(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB44_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB44_2
 ; PPC64LE-NEXT:  .LBB44_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -623,7 +620,6 @@ define void @test50(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB50_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB50_2
 ; PPC64LE-NEXT:  .LBB50_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -686,7 +682,6 @@ define void @test53(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB53_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB53_2
 ; PPC64LE-NEXT:  .LBB53_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -707,7 +702,6 @@ define void @test54(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB54_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB54_2
 ; PPC64LE-NEXT:  .LBB54_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -837,7 +831,6 @@ define void @test60(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB60_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB60_2
 ; PPC64LE-NEXT:  .LBB60_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -900,7 +893,6 @@ define void @test63(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB63_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB63_2
 ; PPC64LE-NEXT:  .LBB63_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -921,7 +913,6 @@ define void @test64(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB64_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB64_2
 ; PPC64LE-NEXT:  .LBB64_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1051,7 +1042,6 @@ define void @test70(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB70_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB70_2
 ; PPC64LE-NEXT:  .LBB70_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
@@ -1114,7 +1104,6 @@ define void @test73(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB73_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB73_2
 ; PPC64LE-NEXT:  .LBB73_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
@@ -1135,7 +1124,6 @@ define void @test74(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB74_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB74_2
 ; PPC64LE-NEXT:  .LBB74_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
@@ -1265,7 +1253,6 @@ define void @test80(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB80_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB80_2
 ; PPC64LE-NEXT:  .LBB80_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1328,7 +1315,6 @@ define void @test83(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB83_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB83_2
 ; PPC64LE-NEXT:  .LBB83_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1349,7 +1335,6 @@ define void @test84(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB84_1:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB84_2
 ; PPC64LE-NEXT:  .LBB84_2:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1479,7 +1464,6 @@ define void @test90(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB90_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB90_2
 ; PPC64LE-NEXT:  .LBB90_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1542,7 +1526,6 @@ define void @test93(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB93_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB93_2
 ; PPC64LE-NEXT:  .LBB93_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1563,7 +1546,6 @@ define void @test94(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB94_1:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB94_2
 ; PPC64LE-NEXT:  .LBB94_2:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1693,7 +1675,6 @@ define void @test100(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB100_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB100_2
 ; PPC64LE-NEXT:  .LBB100_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1756,7 +1737,6 @@ define void @test103(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB103_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB103_2
 ; PPC64LE-NEXT:  .LBB103_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1777,7 +1757,6 @@ define void @test104(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB104_1:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB104_2
 ; PPC64LE-NEXT:  .LBB104_2:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
@@ -1907,7 +1886,6 @@ define void @test110(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB110_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB110_2
 ; PPC64LE-NEXT:  .LBB110_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
@@ -1970,7 +1948,6 @@ define void @test113(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB113_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB113_2
 ; PPC64LE-NEXT:  .LBB113_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
@@ -1991,7 +1968,6 @@ define void @test114(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB114_1:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
 ; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB114_2
 ; PPC64LE-NEXT:  .LBB114_2:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6

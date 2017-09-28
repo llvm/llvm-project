@@ -668,7 +668,7 @@ public:
   virtual api_type get_api_type() const {
     KMP_ASSERT(0);
     return NATIVE_OS;
-  };
+  }
 
 private:
   static bool picked_api;

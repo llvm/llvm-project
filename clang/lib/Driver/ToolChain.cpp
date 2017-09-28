@@ -800,22 +800,26 @@ ToolChain::computeMSVCVersion(const Driver *D,
   return VersionTuple();
 }
 
-llvm::opt::DerivedArgList *
-ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
+    const llvm::opt::DerivedArgList &Args,
+    Action::OffloadKind DeviceOffloadKind,
+    SmallVector<llvm::opt::Arg *, 4> &AllocatedArgs) const {
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
     DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
     const OptTable &Opts = getDriver().getOpts();
-    bool NewArgAdded = false;
+    bool Modified = false;
 
     // Handle -Xopenmp-target flags
     for (Arg *A : Args) {
       // Exclude flags which may only apply to the host toolchain.
-      // Do not exclude flags when the host triple (AuxTriple),
-      // matches the current toolchain triple.
+      // Do not exclude flags when the host triple (AuxTriple)
+      // matches the current toolchain triple. If it is not present
+      // at all, target and host share a toolchain.
       if (A->getOption().matches(options::OPT_m_Group)) {
-        if (getAuxTriple() && getAuxTriple()->str() == getTriple().str())
+        if (!getAuxTriple() || getAuxTriple()->str() == getTriple().str())
           DAL->append(A);
+        else
+          Modified = true;
         continue;
       }
 
@@ -854,11 +858,12 @@ ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
       }
       XOpenMPTargetArg->setBaseArg(A);
       A = XOpenMPTargetArg.release();
+      AllocatedArgs.push_back(A);
       DAL->append(A);
-      NewArgAdded = true;
+      Modified = true;
     }
 
-    if (NewArgAdded) {
+    if (Modified) {
       return DAL;
     } else {
       delete DAL;

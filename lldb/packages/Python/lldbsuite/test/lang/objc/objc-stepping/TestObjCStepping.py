@@ -162,6 +162,7 @@ class TestObjCStepping(TestBase):
         newClassName = mySource_isa.GetSummary()
 
         if self.TraceOn():
+            print("className is %s, newClassName is %s" % (className, newClassName))
             print(mySource_isa)
 
         self.assertTrue(

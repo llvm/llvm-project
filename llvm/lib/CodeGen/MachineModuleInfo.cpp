@@ -208,6 +208,7 @@ bool MachineModuleInfo::doInitialization(Module &M) {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
   DbgInfoAvailable = UsesVAFloatArgument = UsesMorestackAddr = false;
+  HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
   return false;

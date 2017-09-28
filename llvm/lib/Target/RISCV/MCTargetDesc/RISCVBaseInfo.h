@@ -32,6 +32,7 @@ enum {
 
   InstFormatMask = 15
 };
+
 enum {
   MO_None,
   MO_LO,

@@ -62,6 +62,11 @@
 #include "AppleObjCTrampolineHandler.h"
 #include "AppleObjCTypeEncodingParser.h"
 
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclObjC.h"
+
+#include <vector>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -394,7 +399,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
 }
 
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
-    ValueObject &in_value, DynamicValueType use_dynamic,
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
     Value::ValueType &value_type) {
   // We should never get here with a null process...
@@ -1980,6 +1985,8 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
 
   Status error;
 
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
   auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
   if (error.Fail())
@@ -1996,12 +2003,47 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
   if (error.Fail())
     return NULL;
 
+  if (log)
+    log->PutCString("AOCRT::NPI: Found all the non-indexed ISA masks");
+
+  bool foundError = false;
+  auto objc_debug_indexed_isa_magic_mask = ExtractRuntimeGlobalSymbol(
+      process, ConstString("objc_debug_indexed_isa_magic_mask"), objc_module_sp,
+      error);
+  foundError |= error.Fail();
+
+  auto objc_debug_indexed_isa_magic_value = ExtractRuntimeGlobalSymbol(
+      process, ConstString("objc_debug_indexed_isa_magic_value"),
+      objc_module_sp, error);
+  foundError |= error.Fail();
+
+  auto objc_debug_indexed_isa_index_mask = ExtractRuntimeGlobalSymbol(
+      process, ConstString("objc_debug_indexed_isa_index_mask"), objc_module_sp,
+      error);
+  foundError |= error.Fail();
+
+  auto objc_debug_indexed_isa_index_shift = ExtractRuntimeGlobalSymbol(
+      process, ConstString("objc_debug_indexed_isa_index_shift"),
+      objc_module_sp, error);
+  foundError |= error.Fail();
+
+  auto objc_indexed_classes =
+      ExtractRuntimeGlobalSymbol(process, ConstString("objc_indexed_classes"),
+                                 objc_module_sp, error, false);
+  foundError |= error.Fail();
+
+  if (log)
+    log->PutCString("AOCRT::NPI: Found all the indexed ISA masks");
+
   // we might want to have some rules to outlaw these other values (e.g if the
   // mask is zero but the value is non-zero, ...)
 
-  return new NonPointerISACache(runtime, objc_debug_isa_class_mask,
-                                objc_debug_isa_magic_mask,
-                                objc_debug_isa_magic_value);
+  return new NonPointerISACache(
+      runtime, objc_module_sp, objc_debug_isa_class_mask,
+      objc_debug_isa_magic_mask, objc_debug_isa_magic_value,
+      objc_debug_indexed_isa_magic_mask, objc_debug_indexed_isa_magic_value,
+      objc_debug_indexed_isa_index_mask, objc_debug_indexed_isa_index_shift,
+      foundError ? 0 : objc_indexed_classes);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorV2 *
@@ -2329,12 +2371,23 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
 }
 
 AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(
-    AppleObjCRuntimeV2 &runtime, uint64_t objc_debug_isa_class_mask,
-    uint64_t objc_debug_isa_magic_mask, uint64_t objc_debug_isa_magic_value)
-    : m_runtime(runtime), m_cache(),
+    AppleObjCRuntimeV2 &runtime, const ModuleSP &objc_module_sp,
+    uint64_t objc_debug_isa_class_mask, uint64_t objc_debug_isa_magic_mask,
+    uint64_t objc_debug_isa_magic_value,
+    uint64_t objc_debug_indexed_isa_magic_mask,
+    uint64_t objc_debug_indexed_isa_magic_value,
+    uint64_t objc_debug_indexed_isa_index_mask,
+    uint64_t objc_debug_indexed_isa_index_shift,
+    lldb::addr_t objc_indexed_classes)
+    : m_runtime(runtime), m_cache(), m_objc_module_wp(objc_module_sp),
       m_objc_debug_isa_class_mask(objc_debug_isa_class_mask),
       m_objc_debug_isa_magic_mask(objc_debug_isa_magic_mask),
-      m_objc_debug_isa_magic_value(objc_debug_isa_magic_value) {}
+      m_objc_debug_isa_magic_value(objc_debug_isa_magic_value),
+      m_objc_debug_indexed_isa_magic_mask(objc_debug_indexed_isa_magic_mask),
+      m_objc_debug_indexed_isa_magic_value(objc_debug_indexed_isa_magic_value),
+      m_objc_debug_indexed_isa_index_mask(objc_debug_indexed_isa_index_mask),
+      m_objc_debug_indexed_isa_index_shift(objc_debug_indexed_isa_index_shift),
+      m_objc_indexed_classes(objc_indexed_classes), m_indexed_isa_cache() {}
 
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::NonPointerISACache::GetClassDescriptor(ObjCISA isa) {
@@ -2353,8 +2406,106 @@ AppleObjCRuntimeV2::NonPointerISACache::GetClassDescriptor(ObjCISA isa) {
 
 bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+  if (log)
+    log->Printf("AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
+
   if ((isa & ~m_objc_debug_isa_class_mask) == 0)
     return false;
+
+  // If all of the indexed ISA variables are set, then its possible that
+  // this ISA is indexed, and we should first try to get its value using
+  // the index.
+  // Note, we check these varaibles first as the ObjC runtime will set at
+  // least one of their values to 0 if they aren't needed.
+  if (m_objc_debug_indexed_isa_magic_mask &&
+      m_objc_debug_indexed_isa_magic_value &&
+      m_objc_debug_indexed_isa_index_mask &&
+      m_objc_debug_indexed_isa_index_shift && m_objc_indexed_classes) {
+    if ((isa & ~m_objc_debug_indexed_isa_index_mask) == 0)
+      return false;
+
+    if ((isa & m_objc_debug_indexed_isa_magic_mask) ==
+        m_objc_debug_indexed_isa_magic_value) {
+      // Magic bits are correct, so try extract the index.
+      uintptr_t index = (isa & m_objc_debug_indexed_isa_index_mask) >>
+                        m_objc_debug_indexed_isa_index_shift;
+      // If the index is out of bounds of the length of the array then
+      // check if the array has been updated.  If that is the case then
+      // we should try read the count again, and update the cache if the
+      // count has been updated.
+      if (index > m_indexed_isa_cache.size()) {
+        if (log)
+          log->Printf("AOCRT::NPI (index = %" PRIu64
+                      ") exceeds cache (size = %" PRIu64 ")",
+                      (uint64_t)index, (uint64_t)m_indexed_isa_cache.size());
+
+        Process *process(m_runtime.GetProcess());
+
+        ModuleSP objc_module_sp(m_objc_module_wp.lock());
+        if (!objc_module_sp)
+          return false;
+
+        Status error;
+        auto objc_indexed_classes_count = ExtractRuntimeGlobalSymbol(
+            process, ConstString("objc_indexed_classes_count"), objc_module_sp,
+            error);
+        if (error.Fail())
+          return false;
+
+        if (log)
+          log->Printf("AOCRT::NPI (new class count = %" PRIu64 ")",
+                      (uint64_t)objc_indexed_classes_count);
+
+        if (objc_indexed_classes_count > m_indexed_isa_cache.size()) {
+          // Read the class entries we don't have.  We should just
+          // read all of them instead of just the one we need as then
+          // we can cache those we may need later.
+          auto num_new_classes =
+              objc_indexed_classes_count - m_indexed_isa_cache.size();
+          const uint32_t addr_size = process->GetAddressByteSize();
+          DataBufferHeap buffer(num_new_classes * addr_size, 0);
+
+          lldb::addr_t last_read_class =
+              m_objc_indexed_classes + (m_indexed_isa_cache.size() * addr_size);
+          size_t bytes_read = process->ReadMemory(
+              last_read_class, buffer.GetBytes(), buffer.GetByteSize(), error);
+          if (error.Fail() || bytes_read != buffer.GetByteSize())
+            return false;
+
+          if (log)
+            log->Printf("AOCRT::NPI (read new classes count = %" PRIu64 ")",
+                        (uint64_t)num_new_classes);
+
+          // Append the new entries to the existing cache.
+          DataExtractor data(buffer.GetBytes(), buffer.GetByteSize(),
+                             process->GetByteOrder(),
+                             process->GetAddressByteSize());
+
+          lldb::offset_t offset = 0;
+          for (unsigned i = 0; i != num_new_classes; ++i)
+            m_indexed_isa_cache.push_back(data.GetPointer(&offset));
+        }
+      }
+
+      // If the index is still out of range then this isn't a pointer.
+      if (index > m_indexed_isa_cache.size())
+        return false;
+
+      if (log)
+        log->Printf("AOCRT::NPI Evalulate(ret_isa = 0x%" PRIx64 ")",
+                    (uint64_t)m_indexed_isa_cache[index]);
+
+      ret_isa = m_indexed_isa_cache[index];
+      return (ret_isa != 0); // this is a pointer so 0 is not a valid value
+    }
+
+    return false;
+  }
+
+  // Definately not an indexed ISA, so try to use a mask to extract
+  // the pointer from the ISA.
   if ((isa & m_objc_debug_isa_magic_mask) == m_objc_debug_isa_magic_value) {
     ret_isa = isa & m_objc_debug_isa_class_mask;
     return (ret_isa != 0); // this is a pointer so 0 is not a valid value

@@ -47,7 +47,7 @@ private:
     if (NonTemplateLess.count(CurrentToken->Previous))
       return false;
 
-    const FormatToken &Previous = *CurrentToken->Previous;
+    const FormatToken &Previous = *CurrentToken->Previous;  // The '<'.
     if (Previous.Previous) {
       if (Previous.Previous->Tok.isLiteral())
         return false;
@@ -2323,7 +2323,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(TT_TemplateCloser) && Left.MatchingParen &&
       Left.MatchingParen->Previous &&
       Left.MatchingParen->Previous->is(tok::period))
-    // A.<B>DoSomething();
+    // A.<B<C<...>>>DoSomething();
     return false;
   if (Left.is(TT_TemplateCloser) && Right.is(tok::l_square))
     return false;

@@ -58,12 +58,16 @@ private:
 
 public:
   /// Print the location lists found within the debug_loc section.
-  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo) const;
+  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+            Optional<uint64_t> Offset) const;
 
   /// Parse the debug_loc section accessible via the 'data' parameter using the
   /// address size also given in 'data' to interpret the address ranges.
   void parse(const DWARFDataExtractor &data);
-  
+
+  /// Return the location list at the given offset or nullptr.
+  LocationList const *getLocationListAtOffset(uint64_t Offset) const;
+
   Optional<LocationList> parseOneLocationList(DWARFDataExtractor Data,
                                               uint32_t *Offset);
 };
@@ -94,7 +98,11 @@ private:
 
 public:
   void parse(DataExtractor data);
-  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo) const;
+  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+            Optional<uint64_t> Offset) const;
+
+  /// Return the location list at the given offset or nullptr.
+  LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
   static Optional<LocationList> parseOneLocationList(DataExtractor Data,
                                                      uint32_t *Offset);

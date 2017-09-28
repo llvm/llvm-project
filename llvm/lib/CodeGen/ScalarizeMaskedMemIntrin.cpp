@@ -1,5 +1,5 @@
-//=== ScalarizeMaskedMemIntrin.cpp - Scalarize unsupported masked mem      ===//
-//===                                instrinsics                           ===//
+//===- ScalarizeMaskedMemIntrin.cpp - Scalarize unsupported masked mem ----===//
+//                                    instrinsics
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,10 +14,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace llvm;
 
@@ -26,13 +42,15 @@ using namespace llvm;
 namespace {
 
 class ScalarizeMaskedMemIntrin : public FunctionPass {
-  const TargetTransformInfo *TTI;
+  const TargetTransformInfo *TTI = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit ScalarizeMaskedMemIntrin() : FunctionPass(ID), TTI(nullptr) {
+
+  explicit ScalarizeMaskedMemIntrin() : FunctionPass(ID) {
     initializeScalarizeMaskedMemIntrinPass(*PassRegistry::getPassRegistry());
   }
+
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override {
@@ -47,9 +65,11 @@ private:
   bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
   bool optimizeCallInst(CallInst *CI, bool &ModifiedDT);
 };
-} // namespace
+
+} // end anonymous namespace
 
 char ScalarizeMaskedMemIntrin::ID = 0;
+
 INITIALIZE_PASS(ScalarizeMaskedMemIntrin, DEBUG_TYPE,
                 "Scalarize unsupported masked memory intrinsics", false, false)
 
@@ -157,7 +177,6 @@ static void scalarizeMaskedLoad(CallInst *CI) {
   Value *PrevPhi = UndefVal;
 
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-
     // Fill the "else" block, created in the previous iteration
     //
     //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else, %else ]
@@ -289,7 +308,6 @@ static void scalarizeMaskedStore(CallInst *CI) {
   }
 
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-
     // Fill the "else" block, created in the previous iteration
     //
     //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
@@ -409,7 +427,6 @@ static void scalarizeMaskedGather(CallInst *CI) {
   Value *PrevPhi = UndefVal;
 
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-
     // Fill the "else" block, created in the previous iteration
     //
     //  %Mask1 = extractelement <16 x i1> %Mask, i32 1
@@ -611,13 +628,12 @@ bool ScalarizeMaskedMemIntrin::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
 
 bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
                                                 bool &ModifiedDT) {
-
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
     switch (II->getIntrinsicID()) {
     default:
       break;
-    case Intrinsic::masked_load: {
+    case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
       if (!TTI->isLegalMaskedLoad(CI->getType())) {
         scalarizeMaskedLoad(CI);
@@ -625,31 +641,27 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
         return true;
       }
       return false;
-    }
-    case Intrinsic::masked_store: {
+    case Intrinsic::masked_store:
       if (!TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType())) {
         scalarizeMaskedStore(CI);
         ModifiedDT = true;
         return true;
       }
       return false;
-    }
-    case Intrinsic::masked_gather: {
+    case Intrinsic::masked_gather:
       if (!TTI->isLegalMaskedGather(CI->getType())) {
         scalarizeMaskedGather(CI);
         ModifiedDT = true;
         return true;
       }
       return false;
-    }
-    case Intrinsic::masked_scatter: {
+    case Intrinsic::masked_scatter:
       if (!TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType())) {
         scalarizeMaskedScatter(CI);
         ModifiedDT = true;
         return true;
       }
       return false;
-    }
     }
   }
 

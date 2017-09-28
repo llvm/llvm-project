@@ -451,12 +451,14 @@ template <class ELFT> void OutputSection::finalize() {
   // but sort must consider them all at once.
   std::vector<InputSection **> ScriptSections;
   std::vector<InputSection *> Sections;
-  for (BaseCommand *Base : Commands)
-    if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+  for (BaseCommand *Base : Commands) {
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
       for (InputSection *&IS : ISD->Sections) {
         ScriptSections.push_back(&IS);
         Sections.push_back(IS);
       }
+    }
+  }
 
   if (Flags & SHF_LINK_ORDER) {
     std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);

@@ -15,6 +15,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
 
@@ -154,12 +155,19 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       SnippetCompletions(SnippetCompletions), WorkScheduler(AsyncThreadsCount) {
 }
 
+void ClangdServer::setRootPath(PathRef RootPath) {
+  std::string NewRootPath = llvm::sys::path::convert_to_slash(
+      RootPath, llvm::sys::path::Style::posix);
+  if (llvm::sys::fs::is_directory(NewRootPath))
+    this->RootPath = NewRootPath;
+}
+
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  std::shared_ptr<CppFile> Resources =
-      Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
+  std::shared_ptr<CppFile> Resources = Units.getOrCreateFile(
+      File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
   return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
                                  std::move(Resources), std::move(TaggedFS));
 }
@@ -286,6 +294,66 @@ Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
     Result = clangd::findDefinitions(*AST, Pos, Logger);
   });
   return make_tagged(std::move(Result), TaggedFS.Tag);
+}
+
+llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
+
+  StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
+                                  ".c++", ".m", ".mm"};
+  StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
+
+  StringRef PathExt = llvm::sys::path::extension(Path);
+
+  // Lookup in a list of known extensions.
+  auto SourceIter =
+      std::find_if(std::begin(SourceExtensions), std::end(SourceExtensions),
+                   [&PathExt](PathRef SourceExt) {
+                     return SourceExt.equals_lower(PathExt);
+                   });
+  bool IsSource = SourceIter != std::end(SourceExtensions);
+
+  auto HeaderIter =
+      std::find_if(std::begin(HeaderExtensions), std::end(HeaderExtensions),
+                   [&PathExt](PathRef HeaderExt) {
+                     return HeaderExt.equals_lower(PathExt);
+                   });
+
+  bool IsHeader = HeaderIter != std::end(HeaderExtensions);
+
+  // We can only switch between extensions known extensions.
+  if (!IsSource && !IsHeader)
+    return llvm::None;
+
+  // Array to lookup extensions for the switch. An opposite of where original
+  // extension was found.
+  ArrayRef<StringRef> NewExts;
+  if (IsSource)
+    NewExts = HeaderExtensions;
+  else
+    NewExts = SourceExtensions;
+
+  // Storage for the new path.
+  SmallString<128> NewPath = StringRef(Path);
+
+  // Instance of vfs::FileSystem, used for file existence checks.
+  auto FS = FSProvider.getTaggedFileSystem(Path).Value;
+
+  // Loop through switched extension candidates.
+  for (StringRef NewExt : NewExts) {
+    llvm::sys::path::replace_extension(NewPath, NewExt);
+    if (FS->exists(NewPath))
+      return NewPath.str().str(); // First str() to convert from SmallString to
+                                  // StringRef, second to convert from StringRef
+                                  // to std::string
+    
+    // Also check NewExt in upper-case, just in case.
+    llvm::sys::path::replace_extension(NewPath, NewExt.upper());
+    if (FS->exists(NewPath))
+      return NewPath.str().str();
+
+  }
+
+  return llvm::None;
 }
 
 std::future<void> ClangdServer::scheduleReparseAndDiags(

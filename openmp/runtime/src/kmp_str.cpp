@@ -76,7 +76,7 @@ void __kmp_str_buf_clear(kmp_str_buf_t *buffer) {
   if (buffer->used > 0) {
     buffer->used = 0;
     buffer->str[0] = 0;
-  }; // if
+  }
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_clear
 
@@ -95,16 +95,15 @@ void __kmp_str_buf_reserve(kmp_str_buf_t *buffer, int size) {
       buffer->str = (char *)KMP_INTERNAL_MALLOC(buffer->size);
       if (buffer->str == NULL) {
         KMP_FATAL(MemoryAllocFailed);
-      }; // if
+      }
       KMP_MEMCPY_S(buffer->str, buffer->size, buffer->bulk, buffer->used + 1);
     } else {
       buffer->str = (char *)KMP_INTERNAL_REALLOC(buffer->str, buffer->size);
       if (buffer->str == NULL) {
         KMP_FATAL(MemoryAllocFailed);
-      }; // if
-    }; // if
-
-  }; // if
+      }
+    }
+  }
 
   KMP_DEBUG_ASSERT(buffer->size > 0);
   KMP_DEBUG_ASSERT(buffer->size >= (unsigned)size);
@@ -119,16 +118,16 @@ void __kmp_str_buf_detach(kmp_str_buf_t *buffer) {
     buffer->str = (char *)KMP_INTERNAL_MALLOC(buffer->size);
     if (buffer->str == NULL) {
       KMP_FATAL(MemoryAllocFailed);
-    }; // if
+    }
     KMP_MEMCPY_S(buffer->str, buffer->size, buffer->bulk, buffer->used + 1);
-  }; // if
+  }
 } // __kmp_str_buf_detach
 
 void __kmp_str_buf_free(kmp_str_buf_t *buffer) {
   KMP_STR_BUF_INVARIANT(buffer);
   if (buffer->size > sizeof(buffer->bulk)) {
     KMP_INTERNAL_FREE(buffer->str);
-  }; // if
+  }
   buffer->str = buffer->bulk;
   buffer->size = sizeof(buffer->bulk);
   buffer->used = 0;
@@ -182,7 +181,7 @@ void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
     if (rc >= 0 && rc < free) {
       buffer->used += rc;
       break;
-    }; // if
+    }
 
     // Error occurred, buffer is too small.
     if (rc >= 0) {
@@ -191,13 +190,13 @@ void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
     } else {
       // Older implementations just return -1. Double buffer size.
       size = buffer->size * 2;
-    }; // if
+    }
 
     // Enlarge buffer.
     __kmp_str_buf_reserve(buffer, size);
 
     // And try again.
-  }; // forever
+  }
 
   KMP_DEBUG_ASSERT(buffer->size > 0);
   KMP_STR_BUF_INVARIANT(buffer);
@@ -220,8 +219,8 @@ void __kmp_str_buf_print_size(kmp_str_buf_t *buf, size_t size) {
     while ((size % 1024 == 0) && (u + 1 < units)) {
       size = size / 1024;
       ++u;
-    }; // while
-  }; // if
+    }
+  }
 
   __kmp_str_buf_print(buf, "%" KMP_SIZE_T_SPEC "%s", size, names[u]);
 } // __kmp_str_buf_print_size
@@ -240,7 +239,7 @@ void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path) {
     // strdup with __kmp_str_format().
     if (KMP_OS_WINDOWS) {
       __kmp_str_replace(fname->path, '\\', '/');
-    }; // if
+    }
     fname->dir = __kmp_str_format("%s", fname->path);
     slash = strrchr(fname->dir, '/');
     if (KMP_OS_WINDOWS &&
@@ -248,12 +247,12 @@ void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path) {
       char first = TOLOWER(fname->dir[0]); // look for drive.
       if ('a' <= first && first <= 'z' && fname->dir[1] == ':') {
         slash = &fname->dir[1];
-      }; // if
-    }; // if
+      }
+    }
     base = (slash == NULL ? fname->dir : slash + 1);
     fname->base = __kmp_str_format("%s", base); // Copy basename
     *base = 0; // and truncate dir.
-  }; // if
+  }
 
 } // kmp_str_fname_init
 
@@ -275,7 +274,7 @@ int __kmp_str_fname_match(kmp_str_fname_t const *fname, char const *pattern) {
     base_match = strcmp(ptrn.base, "*") == 0 ||
                  (fname->base != NULL && __kmp_str_eqf(fname->base, ptrn.base));
     __kmp_str_fname_free(&ptrn);
-  }; // if
+  }
 
   return dir_match && base_match;
 } // __kmp_str_fname_match
@@ -311,16 +310,15 @@ kmp_str_loc_t __kmp_str_loc_init(char const *psource, int init_fname) {
       loc.line = atoi(line);
       if (loc.line < 0) {
         loc.line = 0;
-      }; // if
-    }; // if
+      }
+    }
     if (col != NULL) {
       loc.col = atoi(col);
       if (loc.col < 0) {
         loc.col = 0;
-      }; // if
-    }; // if
-
-  }; // if
+      }
+    }
+  }
 
   __kmp_str_fname_init(&loc.fname, init_fname ? loc.file : NULL);
 
@@ -395,7 +393,7 @@ char *__kmp_str_format( // Allocated string.
   buffer = (char *)KMP_INTERNAL_MALLOC(size);
   if (buffer == NULL) {
     KMP_FATAL(MemoryAllocFailed);
-  }; // if
+  }
 
   for (;;) {
     // Try to format string.
@@ -406,7 +404,7 @@ char *__kmp_str_format( // Allocated string.
     // No errors, string has been formatted.
     if (rc >= 0 && rc < size) {
       break;
-    }; // if
+    }
 
     // Error occurred, buffer is too small.
     if (rc >= 0) {
@@ -416,14 +414,14 @@ char *__kmp_str_format( // Allocated string.
     } else {
       // Older implementations just return -1.
       size = size * 2;
-    }; // if
+    }
 
     // Enlarge buffer and try again.
     buffer = (char *)KMP_INTERNAL_REALLOC(buffer, size);
     if (buffer == NULL) {
       KMP_FATAL(MemoryAllocFailed);
-    }; // if
-  }; // forever
+    }
+  }
 
   return buffer;
 } // func __kmp_str_format
@@ -443,12 +441,12 @@ int __kmp_str_match(char const *target, int len, char const *data) {
   int i;
   if (target == NULL || data == NULL) {
     return FALSE;
-  }; // if
+  }
   for (i = 0; target[i] && data[i]; ++i) {
     if (TOLOWER(target[i]) != TOLOWER(data[i])) {
       return FALSE;
-    }; // if
-  }; // for i
+    }
+  }
   return ((len > 0) ? i >= len : (!target[i] && (len || !data[i])));
 } // __kmp_str_match
 
@@ -475,7 +473,7 @@ void __kmp_str_replace(char *str, char search_for, char replace_with) {
   while (found) {
     *found = replace_with;
     found = strchr(found + 1, search_for);
-  }; // while
+  }
 } // __kmp_str_replace
 
 void __kmp_str_split(char *str, // I: String to split.
@@ -490,14 +488,14 @@ void __kmp_str_split(char *str, // I: String to split.
     if (ptr != NULL) {
       *ptr = 0;
       t = ptr + 1;
-    }; // if
-  }; // if
+    }
+  }
   if (head != NULL) {
     *head = h;
-  }; // if
+  }
   if (tail != NULL) {
     *tail = t;
-  }; // if
+  }
 } // __kmp_str_split
 
 /* strtok_r() is not available on Windows* OS. This function reimplements
@@ -512,7 +510,7 @@ char *__kmp_str_token(
   // On Windows* OS there is no strtok_r() function. Let us implement it.
   if (str != NULL) {
     *buf = str; // First call, initialize buf.
-  }; // if
+  }
   *buf += strspn(*buf, delim); // Skip leading delimiters.
   if (**buf != 0) { // Rest of the string is not yet empty.
     token = *buf; // Use it as result.
@@ -520,14 +518,14 @@ char *__kmp_str_token(
     if (**buf != 0) { // Rest of the string is not yet empty.
       **buf = 0; // Terminate token here.
       *buf += 1; // Advance buf to start with the next token next time.
-    }; // if
-  }; // if
+    }
+  }
 #else
   // On Linux* OS and OS X*, strtok_r() is available. Let us use it.
   token = strtok_r(str, delim, buf);
 #endif
   return token;
-}; // __kmp_str_token
+} // __kmp_str_token
 
 int __kmp_str_to_int(char const *str, char sentinel) {
   int result, factor;
@@ -601,13 +599,13 @@ void __kmp_str_to_size( // R: Error code.
   // Skip spaces.
   while (str[i] == ' ' || str[i] == '\t') {
     ++i;
-  }; // while
+  }
 
   // Parse number.
   if (str[i] < '0' || str[i] > '9') {
     *error = KMP_I18N_STR(NotANumber);
     return;
-  }; // if
+  }
   do {
     digit = str[i] - '0';
     overflow = overflow || (value > (KMP_SIZE_T_MAX - digit) / 10);
@@ -618,7 +616,7 @@ void __kmp_str_to_size( // R: Error code.
   // Skip spaces.
   while (str[i] == ' ' || str[i] == '\t') {
     ++i;
-  }; // while
+  }
 
 // Parse unit.
 #define _case(ch, exp)                                                         \
@@ -630,7 +628,7 @@ void __kmp_str_to_size( // R: Error code.
       factor = (size_t)(1) << shift;                                           \
     } else {                                                                   \
       overflow = 1;                                                            \
-    };                                                                         \
+    }                                                                          \
   } break;
   switch (str[i]) {
     _case('k', 1); // Kilo
@@ -642,18 +640,18 @@ void __kmp_str_to_size( // R: Error code.
     _case('z', 7); // Zetta
     _case('y', 8); // Yotta
     // Oops. No more units...
-  }; // switch
+  }
 #undef _case
   if (str[i] == 'b' || str[i] == 'B') { // Skip optional "b".
     if (factor == 0) {
       factor = 1;
     }
     ++i;
-  }; // if
+  }
   if (!(str[i] == ' ' || str[i] == '\t' || str[i] == 0)) { // Bad unit
     *error = KMP_I18N_STR(BadUnit);
     return;
-  }; // if
+  }
 
   if (factor == 0) {
     factor = dfactor;
@@ -666,18 +664,18 @@ void __kmp_str_to_size( // R: Error code.
   // Skip spaces.
   while (str[i] == ' ' || str[i] == '\t') {
     ++i;
-  }; // while
+  }
 
   if (str[i] != 0) {
     *error = KMP_I18N_STR(IllegalCharacters);
     return;
-  }; // if
+  }
 
   if (overflow) {
     *error = KMP_I18N_STR(ValueTooLarge);
     *out = KMP_SIZE_T_MAX;
     return;
-  }; // if
+  }
 
   *error = NULL;
   *out = value;
@@ -698,13 +696,13 @@ void __kmp_str_to_uint( // R: Error code.
   // Skip spaces.
   while (str[i] == ' ' || str[i] == '\t') {
     ++i;
-  }; // while
+  }
 
   // Parse number.
   if (str[i] < '0' || str[i] > '9') {
     *error = KMP_I18N_STR(NotANumber);
     return;
-  }; // if
+  }
   do {
     digit = str[i] - '0';
     overflow = overflow || (value > (KMP_SIZE_T_MAX - digit) / 10);
@@ -715,18 +713,18 @@ void __kmp_str_to_uint( // R: Error code.
   // Skip spaces.
   while (str[i] == ' ' || str[i] == '\t') {
     ++i;
-  }; // while
+  }
 
   if (str[i] != 0) {
     *error = KMP_I18N_STR(IllegalCharacters);
     return;
-  }; // if
+  }
 
   if (overflow) {
     *error = KMP_I18N_STR(ValueTooLarge);
     *out = (kmp_uint64)-1;
     return;
-  }; // if
+  }
 
   *error = NULL;
   *out = value;

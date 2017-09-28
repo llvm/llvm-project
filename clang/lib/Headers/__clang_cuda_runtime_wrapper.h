@@ -173,7 +173,18 @@ inline __host__ double __signbitd(double x) {
 // __device__.
 #pragma push_macro("__forceinline__")
 #define __forceinline__ __device__ __inline__ __attribute__((always_inline))
+
+#pragma push_macro("__float2half_rn")
+#if CUDA_VERSION >= 9000
+// CUDA-9 has conflicting prototypes for __float2half_rn(float f) in
+// cuda_fp16.h[pp] and device_functions.hpp. We need to get the one in
+// device_functions.hpp out of the way.
+#define __float2half_rn  __float2half_rn_disabled
+#endif
+
 #include "device_functions.hpp"
+#pragma pop_macro("__float2half_rn")
+
 
 // math_function.hpp uses the __USE_FAST_MATH__ macro to determine whether we
 // get the slow-but-accurate or fast-but-inaccurate versions of functions like

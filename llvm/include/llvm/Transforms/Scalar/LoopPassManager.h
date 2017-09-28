@@ -164,8 +164,8 @@ public:
   /// If this is called for the current loop, in addition to clearing any
   /// state, this routine will mark that the current loop should be skipped by
   /// the rest of the pass management infrastructure.
-  void markLoopAsDeleted(Loop &L) {
-    LAM.clear(L);
+  void markLoopAsDeleted(Loop &L, llvm::StringRef Name) {
+    LAM.clear(L, Name);
     assert((&L == CurrentL || CurrentL->contains(&L)) &&
            "Cannot delete a loop outside of the "
            "subloop tree currently being processed.");

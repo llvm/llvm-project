@@ -714,9 +714,43 @@ if.end:
   ret void
 }
 
+; partially redundant case
+define void @func28(i32 signext %a) {
+; CHECK-LABEL: @func28
+; CHECK: cmplwi	 [[REG1:[0-9]+]], [[REG2:[0-9]+]]
+; CHECK: .[[LABEL1:[A-Z0-9_]+]]:
+; CHECK-NOT: cmp
+; CHECK: bne	 0, .[[LABEL2:[A-Z0-9_]+]]
+; CHECK: bl dummy1
+; CHECK: .[[LABEL2]]:
+; CHECK: cmpwi	 [[REG1]], [[REG2]]
+; CHECK: bgt	 0, .[[LABEL1]]
+; CHECK: blr
+entry:
+  br label %do.body
+
+do.body:
+  %a.addr.0 = phi i32 [ %a, %entry ], [ %call, %if.end ]
+  %cmp = icmp eq i32 %a.addr.0, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @dummy1() #2
+  br label %if.end
+
+if.end:
+  %call = tail call signext i32 @func(i32 signext %a.addr.0) #2
+  %cmp1 = icmp sgt i32 %call, 0
+  br i1 %cmp1, label %do.body, label %do.end
+
+do.end:
+  ret void
+}
+
 declare void @dummy1()
 declare void @dummy2()
 declare void @dummy3()
+declare signext i32 @func(i32 signext)
 
 !1 = !{!"branch_weights", i32 2000, i32 1}
 !2 = !{!"branch_weights", i32 1, i32 2000}

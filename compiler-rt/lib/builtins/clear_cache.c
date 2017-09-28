@@ -9,6 +9,7 @@
  */
 
 #include "int_lib.h"
+#include <assert.h>
 #include <stddef.h>
 
 #if __APPLE__
@@ -121,9 +122,7 @@ void __clear_cache(void *start, void *end) {
                           : "=r"(start_reg)
                           : "r"(syscall_nr), "r"(start_reg), "r"(end_reg),
                             "r"(flags));
-         if (start_reg != 0) {
-             compilerrt_abort();
-         }
+         assert(start_reg == 0 && "Cache flush syscall failed.");
     #elif defined(_WIN32)
         FlushInstructionCache(GetCurrentProcess(), start, end - start);
     #else

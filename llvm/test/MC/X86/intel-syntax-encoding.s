@@ -61,6 +61,11 @@
 // CHECK: encoding: [0xf0]
 // CHECK: encoding: [0x48,0x01,0x00]
 
+// CHECK: encoding: [0x9c]
+// CHECK: encoding: [0x9d]
+pushf
+popf
+
 LBB0_3:
 // CHECK: encoding: [0xeb,A]
 	jmp	LBB0_3

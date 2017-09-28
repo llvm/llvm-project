@@ -200,7 +200,7 @@ const Loop* llvm::addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
     assert(OriginalBB == OldLoop->getHeader() &&
            "Header should be first in RPO");
 
-    NewLoop = new Loop();
+    NewLoop = LI->AllocateLoop();
     Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
 
     if (NewLoopParent)
@@ -291,7 +291,7 @@ static bool isEpilogProfitable(Loop *L) {
 ///
 /// This utility preserves LoopInfo. It will also preserve ScalarEvolution and
 /// DominatorTree if they are non-null.
-LoopUnrollStatus llvm::UnrollLoop(
+LoopUnrollResult llvm::UnrollLoop(
     Loop *L, unsigned Count, unsigned TripCount, bool Force, bool AllowRuntime,
     bool AllowExpensiveTripCount, bool PreserveCondBr, bool PreserveOnlyFirst,
     unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
@@ -301,19 +301,19 @@ LoopUnrollStatus llvm::UnrollLoop(
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   BasicBlock *LatchBlock = L->getLoopLatch();
   if (!LatchBlock) {
     DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   // Loops with indirectbr cannot be cloned.
   if (!L->isSafeToClone()) {
     DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   // The current loop unroll pass can only unroll loops with a single latch
@@ -327,7 +327,7 @@ LoopUnrollStatus llvm::UnrollLoop(
     // The loop-rotate pass can be helpful to avoid this in many cases.
     DEBUG(dbgs() <<
              "  Can't unroll; loop not terminated by a conditional branch.\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   auto CheckSuccessors = [&](unsigned S1, unsigned S2) {
@@ -337,14 +337,14 @@ LoopUnrollStatus llvm::UnrollLoop(
   if (!CheckSuccessors(0, 1) && !CheckSuccessors(1, 0)) {
     DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
                     " exiting the loop can be unrolled\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   if (Header->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
     DEBUG(dbgs() <<
           "  Won't unroll loop: address of header block is taken.\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   if (TripCount != 0)
@@ -360,7 +360,7 @@ LoopUnrollStatus llvm::UnrollLoop(
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2 && PeelCount == 0) {
     DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
-    return LoopUnrollStatus::Unmodified;
+    return LoopUnrollResult::Unmodified;
   }
 
   assert(Count > 0);
@@ -436,7 +436,7 @@ LoopUnrollStatus llvm::UnrollLoop(
       DEBUG(
           dbgs() << "Wont unroll; remainder loop could not be generated"
                     "when assuming runtime trip count\n");
-      return LoopUnrollStatus::Unmodified;
+      return LoopUnrollResult::Unmodified;
     }
   }
 
@@ -861,8 +861,8 @@ LoopUnrollStatus llvm::UnrollLoop(
     }
   }
 
-  return CompletelyUnroll ? LoopUnrollStatus::FullyUnrolled
-                          : LoopUnrollStatus::PartiallyUnrolled;
+  return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled
+                          : LoopUnrollResult::PartiallyUnrolled;
 }
 
 /// Given an llvm.loop loop id metadata node, returns the loop hint metadata
