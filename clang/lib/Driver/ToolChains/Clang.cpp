@@ -2969,6 +2969,11 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-generate-type-units");
   }
 
+  // Decide how to render forward declarations of template instantiations.
+  // SCE wants full descriptions, others just get them in the name.
+  if (DebuggerTuning == llvm::DebuggerKind::SCE)
+    CmdArgs.push_back("-debug-forward-template-params");
+
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D);
 }
 

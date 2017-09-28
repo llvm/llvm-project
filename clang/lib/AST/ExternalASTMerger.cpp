@@ -212,7 +212,7 @@ void ExternalASTMerger::ForEachMatchingDC(const DeclContext *DC,
     }
     if (!DidCallback && LoggingEnabled())
       logs() << "(ExternalASTMerger*)" << (void*)this
-             << " asserting for (DeclContext*)" << (void*)DC
+             << " asserting for (DeclContext*)" << (const void*)DC
              << ", (ASTContext*)" << (void*)&Target.AST
              << "\n";
     assert(DidCallback && "Couldn't find a source context matching our DC");
