@@ -1109,8 +1109,8 @@ def getPathForSDK(sdk):
 def setDefaultTripleForPlatform():
     infix = getInfixForPlatform(configuration.lldb_platform_name)
     sdk = getSDKForPlatform(configuration.lldb_platform_name)
-    if infix != None and sdk != None and len(configuration.archs) > 0:
-        triple_str = configuration.archs[0] + infix + getVersionForSDK(sdk)
+    if infix != None and sdk != None and len(configuration.arch) > 0:
+        triple_str = configuration.arch + infix + getVersionForSDK(sdk)
         os.environ['TRIPLE'] = triple_str
         return {'TRIPLE': triple_str}
     return {}
