@@ -31,9 +31,9 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 
 // Test -output-dir.
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.filtered.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
-// RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.dir/functions.txt %s
+// RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.filtered.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
 //
 // RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -name=main 2>/dev/null > %t.export.json
 // RUN: FileCheck -input-file %t.export.json %S/Inputs/lineExecutionCounts.json
@@ -41,9 +41,9 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 //
 // Test html output.
 // RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.filtered.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
-// RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.dir/functions.html %s
+// RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.filtered.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 //
 // HTML-WHOLE-FILE: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
 // HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-45]]' href='#L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before

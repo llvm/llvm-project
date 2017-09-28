@@ -24,5 +24,5 @@ int main(int argc, char ** argv) {
 // RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata -project-title "Test Suite" -path-equivalence=/tmp,%S %s
 // RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FILE,HTML-HEADER -input-file %t.dir/coverage/tmp/showProjectSummary.cpp.html %S/Inputs/showProjectSummary.test
 // RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FOOTER -input-file %t.dir/index.html %S/Inputs/showProjectSummary.test
-// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.dir -instr-profile %t.profdata  -project-title "Test Suite" -path-equivalence=/tmp,%S -name=main %s
-// RUN: FileCheck -check-prefixes=HTML-FUNCTION,HTML-HEADER -input-file %t.dir/functions.html %S/Inputs/showProjectSummary.test
+// RUN: llvm-cov show %S/Inputs/showProjectSummary.covmapping -format=html -o %t.filtered.dir -instr-profile %t.profdata  -project-title "Test Suite" -path-equivalence=/tmp,%S -name=main %s
+// RUN: FileCheck -check-prefixes=HTML-TITLE,HTML,HTML-FOOTER -input-file %t.filtered.dir/index.html %S/Inputs/showProjectSummary.test

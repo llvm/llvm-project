@@ -91,19 +91,6 @@ static void writeEOBMetadata();
 /// TSC Wrap records are written when a TSC delta encoding scheme overflows.
 static void writeTSCWrapMetadata(uint64_t TSC);
 
-/// Here's where the meat of the processing happens. The writer captures
-/// function entry, exit and tail exit points with a time and will create
-/// TSCWrap, NewCPUId and Function records as necessary. The writer might
-/// walk backward through its buffer and erase trivial functions to avoid
-/// polluting the log and may use the buffer queue to obtain or release a
-/// buffer.
-static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
-                                uint64_t TSC, unsigned char CPU,
-                                int (*wall_clock_reader)(clockid_t,
-                                                         struct timespec *),
-                                __sanitizer::atomic_sint32_t &LoggingStatus,
-                                const std::shared_ptr<BufferQueue> &BQ);
-
 // Group together thread-local-data in a struct, then hide it behind a function
 // call so that it can be initialized on first use instead of as a global.
 struct ThreadLocalData {
@@ -331,9 +318,22 @@ inline void writeTSCWrapMetadata(uint64_t TSC) XRAY_NEVER_INSTRUMENT {
   writeTSCWrapMetadata(TSC, getThreadLocalData().RecordPtr);
 }
 
-inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
-                                XRayEntryType EntryType,
-                                char *&MemPtr) XRAY_NEVER_INSTRUMENT {
+// Call Argument metadata records store the arguments to a function in the
+// order of their appearance; holes are not supported by the buffer format.
+static inline void writeCallArgumentMetadata(uint64_t A) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  MetadataRecord CallArg;
+  CallArg.Type = uint8_t(RecordType::Metadata);
+  CallArg.RecordKind = uint8_t(MetadataRecord::RecordKinds::CallArgument);
+
+  std::memcpy(CallArg.Data, &A, sizeof(A));
+  std::memcpy(TLD.RecordPtr, &CallArg, sizeof(MetadataRecord));
+  TLD.RecordPtr += sizeof(MetadataRecord);
+}
+
+static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
+                                       XRayEntryType EntryType,
+                                       char *&MemPtr) XRAY_NEVER_INSTRUMENT {
   std::aligned_storage<sizeof(FunctionRecord), alignof(FunctionRecord)>::type
       AlignedFuncRecordBuffer;
   auto &FuncRecord =
@@ -560,6 +560,41 @@ inline bool isLogInitializedAndReady(
   return true;
 } // namespace __xray_fdr_internal
 
+// Compute the TSC difference between the time of measurement and the previous
+// event. There are a few interesting situations we need to account for:
+//
+//   - The thread has migrated to a different CPU. If this is the case, then
+//     we write down the following records:
+//
+//       1. A 'NewCPUId' Metadata record.
+//       2. A FunctionRecord with a 0 for the TSCDelta field.
+//
+//   - The TSC delta is greater than the 32 bits we can store in a
+//     FunctionRecord. In this case we write down the following records:
+//
+//       1. A 'TSCWrap' Metadata record.
+//       2. A FunctionRecord with a 0 for the TSCDelta field.
+//
+//   - The TSC delta is representable within the 32 bits we can store in a
+//     FunctionRecord. In this case we write down just a FunctionRecord with
+//     the correct TSC delta.
+inline uint32_t writeCurrentCPUTSC(ThreadLocalData &TLD, uint64_t TSC, uint8_t CPU) {
+  if (CPU != TLD.CurrentCPU) {
+    // We've moved to a new CPU.
+    writeNewCPUIdMetadata(CPU, TSC);
+    return 0;
+  }
+  // If the delta is greater than the range for a uint32_t, then we write out
+  // the TSC wrap metadata entry with the full TSC, and the TSC for the
+  // function record be 0.
+  uint64_t Delta = TSC - TLD.LastTSC;
+  if (Delta <= std::numeric_limits<uint32_t>::max())
+    return Delta;
+
+  writeTSCWrapMetadata(TSC);
+  return 0;
+}
+
 inline void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
   auto BufferStart = static_cast<char *>(TLD.Buffer.Buffer);
@@ -573,10 +608,15 @@ inline void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
 
 thread_local volatile bool Running = false;
 
+/// Here's where the meat of the processing happens. The writer captures
+/// function entry, exit and tail exit points with a time and will create
+/// TSCWrap, NewCPUId and Function records as necessary. The writer might
+/// walk backward through its buffer and erase trivial functions to avoid
+/// polluting the log and may use the buffer queue to obtain or release a
+/// buffer.
 inline void processFunctionHook(
     int32_t FuncId, XRayEntryType Entry, uint64_t TSC, unsigned char CPU,
-    int (*wall_clock_reader)(clockid_t, struct timespec *),
-    __sanitizer::atomic_sint32_t &LoggingStatus,
+    uint64_t Arg1, int (*wall_clock_reader)(clockid_t, struct timespec *),
     const std::shared_ptr<BufferQueue> &BQ) XRAY_NEVER_INSTRUMENT {
   // Prevent signal handler recursion, so in case we're already in a log writing
   // mode and the signal handler comes in (and is also instrumented) then we
@@ -609,10 +649,10 @@ inline void processFunctionHook(
   //   - The least number of bytes we will ever write is 8
   //     (sizeof(FunctionRecord)) only if the delta between the previous entry
   //     and this entry is within 32 bits.
-  //   - The most number of bytes we will ever write is 8 + 16 = 24. This is
-  //     computed by:
+  //   - The most number of bytes we will ever write is 8 + 16 + 16 = 40.
+  //     This is computed by:
   //
-  //       sizeof(FunctionRecord) + sizeof(MetadataRecord)
+  //       MaxSize = sizeof(FunctionRecord) + 2 * sizeof(MetadataRecord)
   //
   //     These arise in the following cases:
   //
@@ -626,6 +666,7 @@ inline void processFunctionHook(
   //          FunctionRecord.
   //       3. When we learn about a new CPU ID, we need to write down a "new cpu
   //          id" MetadataRecord before writing out the actual FunctionRecord.
+  //       4. The second MetadataRecord is the optional function call argument.
   //
   //   - An End-of-Buffer (EOB) MetadataRecord is 16 bytes.
   //
@@ -634,53 +675,18 @@ inline void processFunctionHook(
   // MetadataRecord. If we don't have enough space after writing as much as 24
   // bytes in the end of the buffer, we need to write out the EOB, get a new
   // Buffer, set it up properly before doing any further writing.
-  //
-  if (!prepareBuffer(wall_clock_reader, FunctionRecSize + MetadataRecSize)) {
+  size_t MaxSize = FunctionRecSize + 2 * MetadataRecSize;
+  if (!prepareBuffer(wall_clock_reader, MaxSize)) {
     TLD.LocalBQ = nullptr;
     return;
   }
 
-  // By this point, we are now ready to write at most 24 bytes (one metadata
-  // record and one function record).
-  assert((TLD.RecordPtr + (MetadataRecSize + FunctionRecSize)) -
-                 static_cast<char *>(TLD.Buffer.Buffer) >=
+  // By this point, we are now ready to write up to 40 bytes (explained above).
+  assert((TLD.RecordPtr + MaxSize) - static_cast<char *>(TLD.Buffer.Buffer) >=
              static_cast<ptrdiff_t>(MetadataRecSize) &&
          "Misconfigured BufferQueue provided; Buffer size not large enough.");
 
-  // Here we compute the TSC Delta. There are a few interesting situations we
-  // need to account for:
-  //
-  //   - The thread has migrated to a different CPU. If this is the case, then
-  //     we write down the following records:
-  //
-  //       1. A 'NewCPUId' Metadata record.
-  //       2. A FunctionRecord with a 0 for the TSCDelta field.
-  //
-  //   - The TSC delta is greater than the 32 bits we can store in a
-  //     FunctionRecord. In this case we write down the following records:
-  //
-  //       1. A 'TSCWrap' Metadata record.
-  //       2. A FunctionRecord with a 0 for the TSCDelta field.
-  //
-  //   - The TSC delta is representable within the 32 bits we can store in a
-  //     FunctionRecord. In this case we write down just a FunctionRecord with
-  //     the correct TSC delta.
-  //
-  uint32_t RecordTSCDelta = 0;
-  if (CPU != TLD.CurrentCPU) {
-    // We've moved to a new CPU.
-    writeNewCPUIdMetadata(CPU, TSC);
-  } else {
-    // If the delta is greater than the range for a uint32_t, then we write out
-    // the TSC wrap metadata entry with the full TSC, and the TSC for the
-    // function record be 0.
-    auto Delta = TSC - TLD.LastTSC;
-    if (Delta > (1ULL << 32) - 1)
-      writeTSCWrapMetadata(TSC);
-    else
-      RecordTSCDelta = Delta;
-  }
-
+  auto RecordTSCDelta = writeCurrentCPUTSC(TLD, TSC, CPU);
   TLD.LastTSC = TSC;
   TLD.CurrentCPU = CPU;
   switch (Entry) {
@@ -711,6 +717,8 @@ inline void processFunctionHook(
   }
 
   writeFunctionRecord(FuncId, RecordTSCDelta, Entry, TLD.RecordPtr);
+  if (Entry == XRayEntryType::LOG_ARGS_ENTRY)
+    writeCallArgumentMetadata(Arg1);
 
   // If we've exhausted the buffer by this time, we then release the buffer to
   // make sure that other threads may start using this buffer.

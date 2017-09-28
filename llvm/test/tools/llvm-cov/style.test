@@ -1,13 +1,16 @@
 RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html -o %t.dir
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %S/showTemplateInstantiations.cpp -format html -o %t.dir
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %S/showTemplateInstantiations.cpp -format html -o %t.filtered.dir
 
 RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html | FileCheck %s -check-prefix=NODIR
 
 RUN: FileCheck %s -input-file=%t.dir/style.css -check-prefix=STYLE
-RUN: FileCheck %s -input-file=%t.dir/functions.html -check-prefix=TOPLEVEL
 RUN: FileCheck %s -input-file=%t.dir/index.html -check-prefix=TOPLEVEL
 RUN: FileCheck %s -input-file=%t.dir/coverage/tmp/showTemplateInstantiations.cpp.html -check-prefix=FILEVIEW
+
+RUN: FileCheck %s -input-file=%t.filtered.dir/style.css -check-prefix=STYLE
+RUN: FileCheck %s -input-file=%t.filtered.dir/index.html -check-prefix=TOPLEVEL
+RUN: FileCheck %s -input-file=%t.filtered.dir/coverage/tmp/showTemplateInstantiations.cpp.html -check-prefix=FILEVIEW
 
 STYLE-DAG: .red
 STYLE-DAG: .cyan

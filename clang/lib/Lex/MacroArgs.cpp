@@ -62,11 +62,11 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
 
   // Copy the actual unexpanded tokens to immediately after the result ptr.
   if (!UnexpArgTokens.empty()) {
-    static_assert(std::is_trivially_copyable<Token>::value,
+    static_assert(std::is_trivial<Token>::value,
                   "assume trivial copyability if copying into the "
                   "uninitialized array (as opposed to reusing a cached "
                   "MacroArgs)");
-    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(), 
+    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(),
               Result->getTrailingObjects<Token>());
   }
 

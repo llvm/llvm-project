@@ -662,12 +662,12 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
       continue;
     }
 
-    // For physregs, use the live range of the first regunit as a guide.
-    unsigned Unit = *MCRegUnitIterator(Loc.getReg(), &TRI);
-    LiveRange *LR = &LIS.getRegUnit(Unit);
-    const VNInfo *VNI = LR->getVNInfoAt(Idx);
-    // Don't track copies from physregs, it is too expensive.
-    extendDef(Idx, LocNo, LR, VNI, nullptr, LIS);
+    // For physregs, we only mark the start slot idx. DwarfDebug will see it
+    // as if the DBG_VALUE is valid up until the end of the basic block, or
+    // the next def of the physical register. So we do not need to extend the
+    // range. It might actually happen that the DBG_VALUE is the last use of
+    // the physical register (e.g. if this is an unused input argument to a
+    // function).
   }
 
   // Erase all the undefs.
