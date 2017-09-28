@@ -33,7 +33,7 @@ cd ..
 for patch_file in ../scripts/llvm.*.diff
 do
 	echo "Applying patch from '$patch_file'"
-    patch -p0 < "$patch_file"
+    patch -p1 < "$patch_file"
 done
 
 # change directory to "./llvm/tools/clang"
@@ -41,7 +41,7 @@ cd tools/clang
 for patch_file in ../../../scripts/clang.*.diff
 do
 	echo "Applying patch from '$patch_file'"
-    patch -p0 < "$patch_file"
+    patch -p1 < "$patch_file"
 done
 
 # change directory to "./"

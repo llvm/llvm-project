@@ -384,6 +384,10 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
     }
     RegisterGlobal(&globals[i]);
   }
+
+  // Poison the metadata. It should not be accessible to user code.
+  PoisonShadow(reinterpret_cast<uptr>(globals), n * sizeof(__asan_global),
+               kAsanGlobalRedzoneMagic);
 }
 
 // Unregister an array of globals.

@@ -143,6 +143,8 @@ public:
                      ArrayRef<int> Ids) override;
   void PragmaWarningPush(SourceLocation Loc, int Level) override;
   void PragmaWarningPop(SourceLocation Loc) override;
+  void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
+  void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
 
   bool HandleFirstTokOnLine(Token &Tok);
 
@@ -546,6 +548,22 @@ void PrintPPOutputPPCallbacks::PragmaWarningPop(SourceLocation Loc) {
   startNewLineIfNeeded();
   MoveToLine(Loc);
   OS << "#pragma warning(pop)";
+  setEmittedDirectiveOnThisLine();
+}
+
+void PrintPPOutputPPCallbacks::
+PragmaAssumeNonNullBegin(SourceLocation Loc) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma clang assume_nonnull begin";
+  setEmittedDirectiveOnThisLine();
+}
+
+void PrintPPOutputPPCallbacks::
+PragmaAssumeNonNullEnd(SourceLocation Loc) {
+  startNewLineIfNeeded();
+  MoveToLine(Loc);
+  OS << "#pragma clang assume_nonnull end";
   setEmittedDirectiveOnThisLine();
 }
 

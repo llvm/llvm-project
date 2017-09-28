@@ -35,6 +35,17 @@ define void @test_geps() {
 ;CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds <4 x double>, <4 x double>*
   %a12 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 0
 
+  ; Check that we handle outlandishly large GEPs properly.  This is unlikely to
+  ; be a valid pointer, but LLVM still generates GEPs like this sometimes in
+  ; dead code.
+  ;
+  ; This GEP has index INT64_MAX, which is cost 1.
+;CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %giant_gep0 = getelementptr inbounds i8, i8* undef, i64 9223372036854775807
+
+  ; This GEP index wraps around to -1, which is cost 0.
+;CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %giant_gep1 = getelementptr inbounds i8, i8* undef, i128 295147905179352825855
 
   ret void
 }

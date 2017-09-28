@@ -235,6 +235,14 @@ public:
   virtual void PragmaWarningPop(SourceLocation Loc) {
   }
 
+  /// \brief Callback invoked when a \#pragma clang assume_nonnull begin directive
+  /// is read.
+  virtual void PragmaAssumeNonNullBegin(SourceLocation Loc) {}
+
+  /// \brief Callback invoked when a \#pragma clang assume_nonnull end directive
+  /// is read.
+  virtual void PragmaAssumeNonNullEnd(SourceLocation Loc) {}
+
   /// \brief Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
   virtual void MacroExpands(const Token &MacroNameTok,
@@ -444,6 +452,16 @@ public:
   void PragmaWarningPop(SourceLocation Loc) override {
     First->PragmaWarningPop(Loc);
     Second->PragmaWarningPop(Loc);
+  }
+
+  void PragmaAssumeNonNullBegin(SourceLocation Loc) override {
+    First->PragmaAssumeNonNullBegin(Loc);
+    Second->PragmaAssumeNonNullBegin(Loc);
+  }
+
+  void PragmaAssumeNonNullEnd(SourceLocation Loc) override {
+    First->PragmaAssumeNonNullEnd(Loc);
+    Second->PragmaAssumeNonNullEnd(Loc);
   }
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
