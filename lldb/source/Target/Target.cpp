@@ -3838,9 +3838,11 @@ static PropertyDefinition g_experimental_properties[]{
      "This will fix symbol resolution when there are name collisions between "
      "ivars and local variables.  "
      "But it can make expressions run much more slowly."},
+    {"use-modern-type-lookup", OptionValue::eTypeBoolean, true, false, nullptr,
+     nullptr, "If true, use Clang's modern type lookup infrastructure."},
     {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
 
-enum { ePropertyInjectLocalVars = 0 };
+enum { ePropertyInjectLocalVars = 0, ePropertyUseModernTypeLookup };
 
 class TargetExperimentalOptionValueProperties : public OptionValueProperties {
 public:
@@ -3949,6 +3951,18 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
   if (exp_values)
     exp_values->SetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars,
                                             true);
+}
+
+bool TargetProperties::GetUseModernTypeLookup() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertyUseModernTypeLookup, true);
+  else
+    return true;
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {

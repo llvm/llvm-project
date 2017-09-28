@@ -216,6 +216,8 @@ public:
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
 
+  bool GetUseModernTypeLookup() const;
+
 private:
   //------------------------------------------------------------------
   // Callbacks for m_launch_info.

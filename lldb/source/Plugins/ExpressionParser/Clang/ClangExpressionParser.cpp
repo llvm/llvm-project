@@ -588,7 +588,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   if (decl_map) {
     llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source(
         decl_map->CreateProxy());
-    decl_map->InstallASTContext(ast_context.get());
+    decl_map->InstallASTContext(*ast_context, m_compiler->getFileManager());
     ast_context->setExternalSource(ast_source);
   }
 
