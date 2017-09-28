@@ -19,6 +19,8 @@ class MCStreamer;
 class AVRTargetStreamer : public MCTargetStreamer {
 public:
   explicit AVRTargetStreamer(MCStreamer &S);
+
+  void finish() override;
 };
 
 /// A target streamer for textual AVR assembly code.
