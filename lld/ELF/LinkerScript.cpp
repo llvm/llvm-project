@@ -752,8 +752,7 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
   // unless there's a space for them.
   uint64_t Base = Opt.HasSections ? alignDown(Min, Config->MaxPageSize) : 0;
   if (HeaderSize <= Min - Base || Script->hasPhdrsCommands()) {
-    Min = Opt.HasSections ? Base
-                          : alignDown(Min - HeaderSize, Config->MaxPageSize);
+    Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
     return;

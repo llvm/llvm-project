@@ -409,6 +409,11 @@ private:
 
 }; // CompletionItemsCollector
 
+bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
+  return Chunk.Kind == CodeCompletionString::CK_Informative &&
+         StringRef(Chunk.Text).endswith("::");
+}
+
 class PlainTextCompletionItemsCollector final
     : public CompletionItemsCollector {
 
@@ -421,6 +426,11 @@ private:
   void ProcessChunks(const CodeCompletionString &CCS,
                      CompletionItem &Item) const override {
     for (const auto &Chunk : CCS) {
+      // Informative qualifier chunks only clutter completion results, skip
+      // them.
+      if (isInformativeQualifierChunk(Chunk))
+        continue;
+
       switch (Chunk.Kind) {
       case CodeCompletionString::CK_TypedText:
         // There's always exactly one CK_TypedText chunk.
@@ -453,6 +463,11 @@ private:
                      CompletionItem &Item) const override {
     unsigned ArgCount = 0;
     for (const auto &Chunk : CCS) {
+      // Informative qualifier chunks only clutter completion results, skip
+      // them.
+      if (isInformativeQualifierChunk(Chunk))
+        continue;
+
       switch (Chunk.Kind) {
       case CodeCompletionString::CK_TypedText:
         // The piece of text that the user is expected to type to match
