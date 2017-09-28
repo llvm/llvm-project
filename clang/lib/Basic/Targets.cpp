@@ -4881,7 +4881,7 @@ public:
 
     // x86-64 has atomics up to 16 bytes.
     MaxAtomicPromoteWidth = 128;
-    MaxAtomicInlineWidth = 128;
+    MaxAtomicInlineWidth = 64;
   }
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::X86_64ABIBuiltinVaList;
@@ -4938,6 +4938,13 @@ public:
     return llvm::makeArrayRef(BuiltinInfoX86,
                               X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
   }
+
+  void setMaxAtomicWidth() override {
+    if (hasFeature("cx16"))
+      MaxAtomicInlineWidth = 128;
+    return;
+  }
+
 };
 
 // x86-64 Windows target
@@ -10029,6 +10036,7 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   Target->setSupportedOpenCLOpts();
   Target->setOpenCLExtensionOpts();
+  Target->setMaxAtomicWidth();
 
   if (!Target->validateTarget(Diags))
     return nullptr;
