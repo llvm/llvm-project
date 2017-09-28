@@ -4944,7 +4944,6 @@ public:
       MaxAtomicInlineWidth = 128;
     return;
   }
-}
 
 };
 
