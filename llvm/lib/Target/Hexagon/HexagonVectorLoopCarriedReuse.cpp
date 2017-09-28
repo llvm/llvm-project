@@ -302,21 +302,6 @@ bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
         return false;
     }
   }
-
-  // If both the Instructions are of Vector Type and any of the element
-  // is integer constant, check their values too for equivalence.
-  if (I1->getType()->isVectorTy() && I2->getType()->isVectorTy()) {
-    unsigned NumOperands = I1->getNumOperands();
-    for (unsigned i = 0; i < NumOperands; ++i) {
-      ConstantInt *C1 = dyn_cast<ConstantInt>(I1->getOperand(i));
-      ConstantInt *C2 = dyn_cast<ConstantInt>(I2->getOperand(i));
-      if(!C1) continue;
-      assert(C2);
-      if (C1->getSExtValue() != C2->getSExtValue())
-        return false;
-    }
-  }
-
   return true;
 }
 

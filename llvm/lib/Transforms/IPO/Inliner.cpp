@@ -1044,8 +1044,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     FunctionAnalysisManager &FAM =
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(DeadC, CG)
             .getManager();
-    FAM.clear(*DeadF);
-    AM.clear(DeadC);
+    FAM.clear(*DeadF, DeadF->getName());
+    AM.clear(DeadC, DeadC.getName());
     auto &DeadRC = DeadC.getOuterRefSCC();
     CG.removeDeadFunction(*DeadF);
 

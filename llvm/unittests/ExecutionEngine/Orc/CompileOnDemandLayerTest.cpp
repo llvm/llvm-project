@@ -49,21 +49,18 @@ public:
 };
 
 TEST(CompileOnDemandLayerTest, FindSymbol) {
-  auto MockBaseLayer = createMockBaseLayer<int>(
-      DoNothingAndReturn<int>(0),
-      [](int Handle) { return Error::success(); },
-      [](const std::string &Name, bool) {
-        if (Name == "foo")
-          return JITSymbol(1, JITSymbolFlags::Exported);
-        return JITSymbol(nullptr);
-      },
-      ReturnNullJITSymbol());
+  MockBaseLayer<int, std::shared_ptr<Module>> TestBaseLayer;
+  TestBaseLayer.findSymbolImpl =
+    [](const std::string &Name, bool) {
+      if (Name == "foo")
+        return JITSymbol(1, JITSymbolFlags::Exported);
+      return JITSymbol(nullptr);
+    };
 
-  typedef decltype(MockBaseLayer) MockBaseLayerT;
   DummyCallbackManager CallbackMgr;
 
-  llvm::orc::CompileOnDemandLayer<MockBaseLayerT> COD(
-      MockBaseLayer, [](Function &F) { return std::set<Function *>{&F}; },
+  llvm::orc::CompileOnDemandLayer<decltype(TestBaseLayer)> COD(
+      TestBaseLayer, [](Function &F) { return std::set<Function *>{&F}; },
       CallbackMgr, [] { return llvm::make_unique<DummyStubsManager>(); }, true);
 
   auto Sym = COD.findSymbol("foo", true);

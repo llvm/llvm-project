@@ -118,6 +118,7 @@
 // CHECK: 3f 43 00 00 00 00 00 00 	r3 /= r4
 
 Llabel0 :
+  r0 = -r0    // BPF_NEG
   r4 |= r5    // BPF_OR   | BPF_X
   r5 &= r6    // BPF_AND  | BPF_X
   r6 <<= r7   // BPF_LSH  | BPF_X
@@ -126,6 +127,7 @@ Llabel0 :
   r9 = r10    // BPF_MOV  | BPF_X
   r10 s>>= r0 // BPF_ARSH | BPF_X
 // CHECK:Llabel0:
+// CHECK: 87 00 00 00 00 00 00 00	r0 = -r0
 // CHECK: 4f 54 00 00 00 00 00 00 	r4 |= r5
 // CHECK: 5f 65 00 00 00 00 00 00 	r5 &= r6
 // CHECK: 6f 76 00 00 00 00 00 00 	r6 <<= r7
@@ -134,12 +136,12 @@ Llabel0 :
 // CHECK: bf a9 00 00 00 00 00 00 	r9 = r10
 // CHECK: cf 0a 00 00 00 00 00 00 	r10 s>>= r0
 
-  bswap16 r1  // BPF_END  | BPF_TO_BE
-  bswap32 r2  // BPF_END  | BPF_TO_BE
-  bswap64 r3  // BPF_END  | BPF_TO_BE
-// CHECK: dc 01 00 00 10 00 00 00 	bswap16	r1
-// CHECK: dc 02 00 00 20 00 00 00 	bswap32	r2
-// CHECK: dc 03 00 00 40 00 00 00 	bswap64	r3
+  r1 = be16 r1  // BPF_END  | BPF_TO_BE
+  r2 = be32 r2  // BPF_END  | BPF_TO_BE
+  r3 = be64 r3  // BPF_END  | BPF_TO_BE
+// CHECK: dc 01 00 00 10 00 00 00 	r1 = be16 r1
+// CHECK: dc 02 00 00 20 00 00 00 	r2 = be32 r2
+// CHECK: dc 03 00 00 40 00 00 00 	r3 = be64 r3
 
   r0 += 1           // BPF_ADD  | BPF_K
   r1 -= 0x1         // BPF_SUB  | BPF_K

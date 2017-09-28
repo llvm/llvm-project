@@ -946,7 +946,7 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.addChildLoop(NewLoop);
         auto *NewLoop010PHBB =
             BasicBlock::Create(Context, "loop.0.1.0.ph", &F, &Loop02PHBB);
@@ -992,7 +992,7 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.addChildLoop(NewLoop);
         auto *NewLoop011PHBB = BasicBlock::Create(Context, "loop.0.1.1.ph", &F, NewLoop01LatchBB);
         auto *NewLoop011BB = BasicBlock::Create(Context, "loop.0.1.1", &F, NewLoop01LatchBB);
@@ -1139,7 +1139,7 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         L.getParentLoop()->addChildLoop(NewLoop);
         auto *NewLoop01PHBB = BasicBlock::Create(Context, "loop.0.1.ph", &F, &Loop02PHBB);
         auto *NewLoop01BB = BasicBlock::Create(Context, "loop.0.1", &F, &Loop02PHBB);
@@ -1181,7 +1181,8 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        Loop *NewLoops[] = {new Loop(), new Loop(), new Loop()};
+        Loop *NewLoops[] = {AR.LI.AllocateLoop(), AR.LI.AllocateLoop(),
+                            AR.LI.AllocateLoop()};
         L.getParentLoop()->addChildLoop(NewLoops[0]);
         L.getParentLoop()->addChildLoop(NewLoops[1]);
         NewLoops[1]->addChildLoop(NewLoops[2]);
@@ -1260,7 +1261,7 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
-        auto *NewLoop = new Loop();
+        auto *NewLoop = AR.LI.AllocateLoop();
         AR.LI.addTopLevelLoop(NewLoop);
         auto *NewLoop1PHBB = BasicBlock::Create(Context, "loop.1.ph", &F, &Loop2BB);
         auto *NewLoop1BB = BasicBlock::Create(Context, "loop.1", &F, &Loop2BB);
@@ -1378,7 +1379,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
                       LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
     assert(L.empty() && "Can only delete leaf loops with this routine!");
     SmallVector<BasicBlock *, 4> LoopBBs(L.block_begin(), L.block_end());
-    Updater.markLoopAsDeleted(L);
+    Updater.markLoopAsDeleted(L, L.getName());
     IDomBB.getTerminator()->replaceUsesOfWith(L.getHeader(),
                                               L.getUniqueExitBlock());
     for (BasicBlock *LoopBB : LoopBBs) {
@@ -1491,7 +1492,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
             EraseLoop(L, Loop02PHBB, AR, Updater);
 
             // Now insert a new sibling loop.
-            auto *NewSibling = new Loop;
+            auto *NewSibling = AR.LI.AllocateLoop();
             ParentL->addChildLoop(NewSibling);
             NewLoop03PHBB =
                 BasicBlock::Create(Context, "loop.0.3.ph", &F, &Loop0LatchBB);

@@ -575,9 +575,7 @@ public:
   /// preserve conservative kill flag information.
   void clearKillFlags(unsigned Reg) const;
 
-#ifndef NDEBUG
   void dumpUses(unsigned RegNo) const;
-#endif
 
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function. Writing to a constant register has no effect.

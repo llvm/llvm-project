@@ -1386,7 +1386,7 @@ void LoopConstrainer::addToParentLoopIfNeeded(ArrayRef<BasicBlock *> BBs) {
 
 Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
                                                  ValueToValueMapTy &VM) {
-  Loop &New = *new Loop();
+  Loop &New = *LI.AllocateLoop();
   if (Parent)
     Parent->addChildLoop(&New);
   else
