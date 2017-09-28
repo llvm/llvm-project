@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <vector>
 
 namespace clang {
@@ -26,7 +27,10 @@ namespace clang {
 
 /// MacroArgs - An instance of this class captures information about
 /// the formal arguments specified to a function-like macro invocation.
-class MacroArgs {
+class MacroArgs final 
+    : private llvm::TrailingObjects<MacroArgs, Token> {
+
+  friend TrailingObjects;
   /// NumUnexpArgTokens - The number of raw, unexpanded tokens for the
   /// arguments.  All of the actual argument tokens are allocated immediately
   /// after the MacroArgs object in memory.  This is all of the arguments

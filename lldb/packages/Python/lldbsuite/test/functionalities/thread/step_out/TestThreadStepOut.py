@@ -40,6 +40,7 @@ class ThreadStepOutTestCase(TestBase):
         oslist=["freebsd"],
         bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["watchos"], archs=['armv7k'], bugnumber="rdar://problem/34674488") # stop reason is trace when it should be step-out
     def test_step_all_threads(self):
         """Test thread step out on all threads via command interpreter. """
         self.build(dictionary=self.getBuildFlags())

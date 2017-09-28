@@ -776,9 +776,7 @@ public:
   /// available instruction, or NULL if there are multiple candidates.
   SUnit *pickOnlyChoice();
 
-#ifndef NDEBUG
   void dumpScheduledState() const;
-#endif
 };
 
 /// Base class for GenericScheduler. This class maintains information about

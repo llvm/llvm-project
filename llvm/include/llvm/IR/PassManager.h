@@ -654,9 +654,9 @@ public:
   /// This doesn't invalidate, but instead simply deletes, the relevant results.
   /// It is useful when the IR is being removed and we want to clear out all the
   /// memory pinned for it.
-  void clear(IRUnitT &IR) {
+  void clear(IRUnitT &IR, llvm::StringRef Name) {
     if (DebugLogging)
-      dbgs() << "Clearing all analysis results for: " << IR.getName() << "\n";
+      dbgs() << "Clearing all analysis results for: " << Name << "\n";
 
     auto ResultsListI = AnalysisResultLists.find(&IR);
     if (ResultsListI == AnalysisResultLists.end())

@@ -40,7 +40,7 @@ const Loop* addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
                                      NewLoopsMap &NewLoops);
 
 /// Represents the result of a \c UnrollLoop invocation.
-enum class LoopUnrollStatus {
+enum class LoopUnrollResult {
   /// The loop was not modified.
   Unmodified,
 
@@ -54,7 +54,7 @@ enum class LoopUnrollStatus {
   FullyUnrolled
 };
 
-LoopUnrollStatus UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
+LoopUnrollResult UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
                             bool Force, bool AllowRuntime,
                             bool AllowExpensiveTripCount, bool PreserveCondBr,
                             bool PreserveOnlyFirst, unsigned TripMultiple,
