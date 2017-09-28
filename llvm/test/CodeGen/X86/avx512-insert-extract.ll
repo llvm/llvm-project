@@ -2183,3 +2183,14 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
   ret i8 %res
 }
 
+define <8 x i64> @insert_double_zero(<2 x i64> %a) nounwind {
+; CHECK-LABEL: insert_double_zero:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vinsertf32x4 $2, %xmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %b = shufflevector <2 x i64> %a, <2 x i64> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %d = shufflevector <4 x i64> %b, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %e = shufflevector <8 x i64> %d, <8 x i64> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3>
+  ret <8 x i64> %e
+}

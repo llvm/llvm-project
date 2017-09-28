@@ -12262,7 +12262,7 @@ Debugger Intrinsics
 
 The LLVM debugger intrinsics (which all start with ``llvm.dbg.``
 prefix), are described in the `LLVM Source Level
-Debugging <SourceLevelDebugging.html#format_common_intrinsics>`_
+Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
 document.
 
 Exception Handling Intrinsics
@@ -12270,7 +12270,7 @@ Exception Handling Intrinsics
 
 The LLVM exception handling intrinsics (which all start with
 ``llvm.eh.`` prefix), are described in the `LLVM Exception
-Handling <ExceptionHandling.html#format_common_intrinsics>`_ document.
+Handling <ExceptionHandling.html#format-common-intrinsics>`_ document.
 
 .. _int_trampoline:
 

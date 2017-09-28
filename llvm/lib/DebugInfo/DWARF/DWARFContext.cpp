@@ -453,8 +453,7 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".apple_names", DIDT_ID_AppleNames,
                  DObj->getAppleNamesSection().Data))
-    dumpAccelSection(OS, *DObj, DObj->getAppleNamesSection(),
-                     DObj->getStringSection(), isLittleEndian());
+    getAppleNames().dump(OS);
 
   if (shouldDump(Explicit, ".apple_types", DIDT_ID_AppleTypes,
                  DObj->getAppleTypesSection().Data))
@@ -636,6 +635,24 @@ const DWARFDebugMacro *DWARFContext::getDebugMacro() {
   Macro.reset(new DWARFDebugMacro());
   Macro->parse(MacinfoData);
   return Macro.get();
+}
+
+static DWARFAcceleratorTable &
+getAccelTable(std::unique_ptr<DWARFAcceleratorTable> &Cache,
+              const DWARFObject &Obj, const DWARFSection &Section,
+              StringRef StringSection, bool IsLittleEndian) {
+  if (Cache)
+    return *Cache;
+  DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
+  DataExtractor StrData(StringSection, IsLittleEndian, 0);
+  Cache.reset(new DWARFAcceleratorTable(AccelSection, StrData));
+  Cache->extract();
+  return *Cache;
+}
+
+const DWARFAcceleratorTable &DWARFContext::getAppleNames() {
+  return getAccelTable(AppleNames, *DObj, DObj->getAppleNamesSection(),
+                       DObj->getStringSection(), isLittleEndian());
 }
 
 const DWARFLineTable *
