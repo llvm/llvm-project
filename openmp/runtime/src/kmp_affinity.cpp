@@ -1686,7 +1686,7 @@ static int __kmp_affinity_cmp_ProcCpuInfo_os_id(const void *a, const void *b) {
   if (aa[osIdIndex] > bb[osIdIndex])
     return 1;
   return 0;
-};
+}
 
 static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
                                                   const void *b) {

@@ -72,6 +72,8 @@ public:
                     JSONOutput &Out) override;
   void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
                         JSONOutput &Out) override;
+  void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
+                        JSONOutput &Out) override;                      
 
 private:
   ClangdLSPServer &LangServer;
@@ -224,6 +226,21 @@ void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID.str() +
       R"(,"result":[)" + Locations + R"(]})");
+}
+
+void ClangdLSPServer::LSPProtocolCallbacks::onSwitchSourceHeader(
+    TextDocumentIdentifier Params, StringRef ID, JSONOutput &Out) {
+  llvm::Optional<Path> Result =
+      LangServer.Server.switchSourceHeader(Params.uri.file);
+  std::string ResultUri;
+  if (Result)
+    ResultUri = URI::unparse(URI::fromFile(*Result));
+  else
+    ResultUri = "\"\"";
+
+  Out.writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(,"result":)" + ResultUri + R"(})");
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

@@ -80,7 +80,7 @@ static inline void *allocate(size_t size) {
   void *ptr = KMP_INTERNAL_MALLOC(size);
   if (ptr == NULL) {
     KMP_FATAL(MemoryAllocFailed);
-  }; // if
+  }
   return ptr;
 } // allocate
 
@@ -95,9 +95,9 @@ char *__kmp_env_get(char const *name) {
     result = (char *)KMP_INTERNAL_MALLOC(len);
     if (result == NULL) {
       KMP_FATAL(MemoryAllocFailed);
-    }; // if
+    }
     KMP_STRNCPY_S(result, len, value, len);
-  }; // if
+  }
 #elif KMP_OS_WINDOWS
   /* We use GetEnvironmentVariable for Windows* OS instead of getenv because the
      act of loading a DLL on Windows* OS makes any user-set environment
@@ -110,14 +110,14 @@ char *__kmp_env_get(char const *name) {
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
       __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
-    }; // if
+    }
     // Variable is not found, it's ok, just continue.
   } else {
     DWORD len = rc;
     result = (char *)KMP_INTERNAL_MALLOC(len);
     if (result == NULL) {
       KMP_FATAL(MemoryAllocFailed);
-    }; // if
+    }
     rc = GetEnvironmentVariable(name, result, len);
     if (!rc) {
       // GetEnvironmentVariable() may return 0 if variable is empty.
@@ -130,9 +130,9 @@ char *__kmp_env_get(char const *name) {
                     __kmp_msg_null);
         KMP_INTERNAL_FREE((void *)result);
         result = NULL;
-      }; // if
-    }; // if
-  }; // if
+      }
+    }
+  }
 #else
 #error Unknown or unsupported OS.
 #endif
@@ -163,9 +163,9 @@ int __kmp_env_exists(char const *name) {
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
       __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
-    }; // if
+    }
     return 0;
-  }; // if
+  }
   return 1;
 #else
 #error Unknown or unsupported OS.
@@ -185,7 +185,7 @@ void __kmp_env_set(char const *name, char const *value, int overwrite) {
     // responding... But this error message never appears. --ln
     __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_HNT(NotEnoughMemory),
                 __kmp_msg_null);
-  }; // if
+  }
 #elif KMP_OS_WINDOWS
   BOOL rc;
   if (!overwrite) {
@@ -193,17 +193,17 @@ void __kmp_env_set(char const *name, char const *value, int overwrite) {
     if (rc) {
       // Variable exists, do not overwrite.
       return;
-    }; // if
+    }
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
       __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
-    }; // if
-  }; // if
+    }
+  }
   rc = SetEnvironmentVariable(name, value);
   if (!rc) {
     DWORD error = GetLastError();
     __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
-  }; // if
+  }
 #else
 #error Unknown or unsupported OS.
 #endif
@@ -219,7 +219,7 @@ void __kmp_env_unset(char const *name) {
   if (!rc) {
     DWORD error = GetLastError();
     __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
-  }; // if
+  }
 #else
 #error Unknown or unsupported OS.
 #endif
@@ -260,10 +260,10 @@ ___kmp_env_blk_parse_string(kmp_env_blk_t *block, // M: Env block to fill.
       ptr = strchr(ptr, chr_delimiter);
       if (ptr == NULL) {
         break;
-      }; // if
+      }
       ++delimiters;
       ptr += 1;
-    }; // forever
+    }
   }
 
   // Allocate vars array.
@@ -285,15 +285,14 @@ ___kmp_env_blk_parse_string(kmp_env_blk_t *block, // M: Env block to fill.
       ++count;
       // Get the next var.
       var = __kmp_str_token(NULL, str_delimiter, &buf);
-    }; // while
+    }
   }
 
   // Fill out result.
   block->bulk = bulk;
   block->vars = vars;
   block->count = count;
-
-}; // ___kmp_env_blk_parse_string
+}
 
 /* Windows* OS (actually, DOS) environment block is a piece of memory with
    environment variables. Each variable is terminated with zero byte, entire
@@ -336,7 +335,7 @@ static void ___kmp_env_blk_parse_windows(
         var = var + len +
               1; // Move pointer to the beginning of the next variable.
         len = KMP_STRLEN(var);
-      }; // while
+      }
       size =
           size + 1; // Total size of env block, including terminating zero byte.
     }
@@ -363,17 +362,15 @@ static void ___kmp_env_blk_parse_windows(
         // Get the next var.
         var = var + len + 1;
         len = KMP_STRLEN(var);
-      }; // while
+      }
     }
-
-  }; // if
+  }
 
   // Fill out result.
   block->bulk = bulk;
   block->vars = vars;
   block->count = count;
-
-}; // ___kmp_env_blk_parse_windows
+}
 #endif
 
 /* Unix environment block is a array of pointers to variables, last pointer in
@@ -399,7 +396,7 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
     while (env[count] != NULL) {
       size += KMP_STRLEN(env[count]) + 1;
       ++count;
-    }; // while
+    }
   }
 
   // Allocate memory.
@@ -424,15 +421,14 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
       vars[i].value = value;
       // Move pointer.
       var += len + 1;
-    }; // for
+    }
   }
 
   // Fill out result.
   block->bulk = bulk;
   block->vars = vars;
   block->count = count;
-
-}; // ___kmp_env_blk_parse_unix
+}
 
 void __kmp_env_blk_init(kmp_env_blk_t *block, // M: Block to initialize.
                         char const *bulk // I: Initialization string, or NULL.
@@ -450,14 +446,14 @@ void __kmp_env_blk_init(kmp_env_blk_t *block, // M: Block to initialize.
         DWORD error = GetLastError();
         __kmp_fatal(KMP_MSG(CantGetEnvironment), KMP_ERR(error),
                     __kmp_msg_null);
-      }; // if
+      }
       ___kmp_env_blk_parse_windows(block, mem);
       FreeEnvironmentStrings(mem);
     }
 #else
 #error Unknown or unsupported OS.
 #endif
-  }; // if
+  }
 
 } // __kmp_env_blk_init
 
@@ -498,8 +494,8 @@ char const * // R: Value of variable or NULL if variable does not exist.
   for (i = 0; i < block->count; ++i) {
     if (strcmp(block->vars[i].name, name) == 0) {
       return block->vars[i].value;
-    }; // if
-  }; // for
+    }
+  }
   return NULL;
 
 } // __kmp_env_block_var

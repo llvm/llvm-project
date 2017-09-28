@@ -89,7 +89,7 @@ static char const *__kmp_pragma(int ct, ident_t const *ident) {
     cons = cons_text_c[ct];
   } else {
     KMP_DEBUG_ASSERT(0);
-  };
+  }
   if (ident != NULL && ident->psource != NULL) {
     char *tail = NULL;
     __kmp_str_buf_print(&buffer, "%s",
@@ -100,7 +100,7 @@ static char const *__kmp_pragma(int ct, ident_t const *ident) {
     __kmp_str_split(tail, ';', &file, &tail);
     __kmp_str_split(tail, ';', &func, &tail);
     __kmp_str_split(tail, ';', &line, &tail);
-  }; // if
+  }
   prgm = __kmp_msg_format(kmp_i18n_fmt_Pragma, cons, file, func, line);
   __kmp_str_buf_free(&buffer);
   return prgm.str;
@@ -135,7 +135,7 @@ struct cons_header *__kmp_allocate_cons_stack(int gtid) {
   /* TODO for monitor perhaps? */
   if (gtid < 0) {
     __kmp_check_null_func();
-  }; // if
+  }
   KE_TRACE(10, ("allocate cons_stack (%d)\n", gtid));
   p = (struct cons_header *)__kmp_allocate(sizeof(struct cons_header));
   p->p_top = p->w_top = p->s_top = 0;
@@ -155,9 +155,9 @@ void __kmp_free_cons_stack(void *ptr) {
     if (p->stack_data != NULL) {
       __kmp_free(p->stack_data);
       p->stack_data = NULL;
-    }; // if
+    }
     __kmp_free(p);
-  }; // if
+  }
 }
 
 #if KMP_DEBUG
@@ -179,7 +179,7 @@ static void dump_cons_stack(int gtid, struct cons_header *p) {
     __kmp_str_buf_print(
         &buffer, "        stack_data[%2d] = { %s (%s) %d %p }\n", i,
         cons_text_c[c->type], get_src(c->ident), c->prev, c->name);
-  }; // for i
+  }
   __kmp_str_buf_print(&buffer, "End construct stack for thread %d\n", gtid);
   __kmp_str_buf_print(
       &buffer,
@@ -198,7 +198,7 @@ void __kmp_push_parallel(int gtid, ident_t const *ident) {
   KE_TRACE(100, (PUSH_MSG(ct_parallel, ident)));
   if (p->stack_top >= p->stack_size) {
     __kmp_expand_cons_stack(gtid, p);
-  }; // if
+  }
   tos = ++p->stack_top;
   p->stack_data[tos].type = ct_parallel;
   p->stack_data[tos].prev = p->p_top;
@@ -216,19 +216,19 @@ void __kmp_check_workshare(int gtid, enum cons_type ct, ident_t const *ident) {
 
   if (p->stack_top >= p->stack_size) {
     __kmp_expand_cons_stack(gtid, p);
-  }; // if
+  }
   if (p->w_top > p->p_top &&
       !(IS_CONS_TYPE_TASKQ(p->stack_data[p->w_top].type) &&
         IS_CONS_TYPE_TASKQ(ct))) {
     // We are already in a WORKSHARE construct for this PARALLEL region.
     __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,
                            &p->stack_data[p->w_top]);
-  }; // if
+  }
   if (p->s_top > p->p_top) {
     // We are already in a SYNC construct for this PARALLEL region.
     __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,
                            &p->stack_data[p->s_top]);
-  }; // if
+  }
 }
 
 void __kmp_push_workshare(int gtid, enum cons_type ct, ident_t const *ident) {
@@ -336,8 +336,8 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
       /* inside a another SYNC construct for this PARALLEL region */
       __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,
                              &p->stack_data[p->s_top]);
-    }; // if
-  }; // if
+    }
+  }
 }
 
 void
@@ -425,15 +425,15 @@ void __kmp_pop_sync(int gtid, enum cons_type ct, ident_t const *ident) {
   KE_TRACE(10, ("__kmp_pop_sync (%d %d)\n", gtid, __kmp_get_gtid()));
   if (tos == 0 || p->s_top == 0) {
     __kmp_error_construct(kmp_i18n_msg_CnsDetectedEnd, ct, ident);
-  };
+  }
   if (tos != p->s_top || p->stack_data[tos].type != ct) {
     __kmp_check_null_func();
     __kmp_error_construct2(kmp_i18n_msg_CnsExpectedEnd, ct, ident,
                            &p->stack_data[tos]);
-  };
+  }
   if (gtid < 0) {
     __kmp_check_null_func();
-  };
+  }
   KE_TRACE(100, (POP_MSG(p)));
   p->s_top = p->stack_data[tos].prev;
   p->stack_data[tos].type = ct_none;
