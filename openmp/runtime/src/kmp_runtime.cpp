@@ -418,7 +418,7 @@ void __kmp_abort_process() {
 
   if (__kmp_debug_buf) {
     __kmp_dump_debug_buffer();
-  }; // if
+  }
 
   if (KMP_OS_WINDOWS) {
     // Let other threads know of abnormal termination and prevent deadlock
@@ -438,7 +438,7 @@ void __kmp_abort_process() {
     _exit(3); // Just in case, if signal ignored, exit anyway.
   } else {
     abort();
-  }; // if
+  }
 
   __kmp_infinite_loop();
   __kmp_release_bootstrap_lock(&__kmp_exit_lock);
@@ -1081,7 +1081,7 @@ static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
 #if USE_DEBUGGER
           balign[b].bb.b_worker_arrived = team->t.t_bar[b].b_team_arrived;
 #endif
-        }; // for b
+        }
       }
     }
 
@@ -1601,8 +1601,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         int nth = __kmp_omp_num_threads(loc);
         if (nth > 0) { // 0 means debugger doesn't want to change num threads
           master_set_numthreads = nth;
-        }; // if
-      }; // if
+        }
+      }
 #endif
 
       KF_TRACE(10, ("__kmp_fork_call: before internal fork: root=%p, team=%p, "
@@ -3051,8 +3051,8 @@ static void __kmp_free_team_arrays(kmp_team_t *team) {
     if (team->t.t_dispatch[i].th_disp_buffer != NULL) {
       __kmp_free(team->t.t_dispatch[i].th_disp_buffer);
       team->t.t_dispatch[i].th_disp_buffer = NULL;
-    }; // if
-  }; // for
+    }
+  }
   __kmp_free(team->t.t_threads);
   __kmp_free(team->t.t_disp_buffer);
   __kmp_free(team->t.t_dispatch);
@@ -3218,7 +3218,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   hot_team_max_nth = hot_team->t.t_max_nproc;
   for (f = 0; f < hot_team_max_nth; ++f) {
     hot_team->t.t_threads[f] = NULL;
-  }; // for
+  }
   hot_team->t.t_nproc = 1;
   // TODO???: hot_team->t.t_max_active_levels = __kmp_dflt_max_active_levels;
   hot_team->t.t_sched.r_sched_type = r_sched.r_sched_type;
@@ -3249,7 +3249,7 @@ static void __kmp_print_structure_team_accum( // Add team to list of teams.
   KMP_DEBUG_ASSERT(list != NULL);
   if (team == NULL) {
     return;
-  }; // if
+  }
 
   __kmp_print_structure_team_accum(list, team->t.t_parent);
   __kmp_print_structure_team_accum(list, team->t.t_next_pool);
@@ -3258,16 +3258,16 @@ static void __kmp_print_structure_team_accum( // Add team to list of teams.
   l = list;
   while (l->next != NULL && l->entry != team) {
     l = l->next;
-  }; // while
+  }
   if (l->next != NULL) {
     return; // Team has been added before, exit.
-  }; // if
+  }
 
   // Team is not found. Search list again for insertion point.
   l = list;
   while (l->next != NULL && l->entry->t.t_id <= team->t.t_id) {
     l = l->next;
-  }; // while
+  }
 
   // Insert team.
   {
@@ -3287,7 +3287,7 @@ static void __kmp_print_structure_team(char const *title, kmp_team_p const *team
     __kmp_printf("%2x %p\n", team->t.t_id, team);
   } else {
     __kmp_printf(" - (nil)\n");
-  }; // if
+  }
 }
 
 static void __kmp_print_structure_thread(char const *title,
@@ -3297,7 +3297,7 @@ static void __kmp_print_structure_thread(char const *title,
     __kmp_printf("%2d %p\n", thread->th.th_info.ds.ds_gtid, thread);
   } else {
     __kmp_printf(" - (nil)\n");
-  }; // if
+  }
 }
 
 void __kmp_print_structure(void) {
@@ -3318,12 +3318,12 @@ void __kmp_print_structure(void) {
       __kmp_printf("%2d", gtid);
       if (__kmp_threads != NULL) {
         __kmp_printf(" %p", __kmp_threads[gtid]);
-      }; // if
+      }
       if (__kmp_root != NULL) {
         __kmp_printf(" %p", __kmp_root[gtid]);
-      }; // if
+      }
       __kmp_printf("\n");
-    }; // for gtid
+    }
   }
 
   // Print out __kmp_threads array.
@@ -3352,11 +3352,11 @@ void __kmp_print_structure(void) {
         __kmp_printf("\n");
         __kmp_print_structure_team_accum(list, thread->th.th_team);
         __kmp_print_structure_team_accum(list, thread->th.th_serial_team);
-      }; // if
-    }; // for gtid
+      }
+    }
   } else {
     __kmp_printf("Threads array is not allocated.\n");
-  }; // if
+  }
 
   // Print out __kmp_root array.
   __kmp_printf("\n------------------------------\nUbers\n----------------------"
@@ -3377,11 +3377,11 @@ void __kmp_print_structure(void) {
         __kmp_printf("\n");
         __kmp_print_structure_team_accum(list, root->r.r_root_team);
         __kmp_print_structure_team_accum(list, root->r.r_hot_team);
-      }; // if
-    }; // for gtid
+      }
+    }
   } else {
     __kmp_printf("Ubers array is not allocated.\n");
-  }; // if
+  }
 
   __kmp_printf("\n------------------------------\nTeams\n----------------------"
                "--------\n");
@@ -3397,11 +3397,11 @@ void __kmp_print_structure(void) {
     for (i = 0; i < team->t.t_nproc; ++i) {
       __kmp_printf("    Thread %2d:      ", i);
       __kmp_print_structure_thread("", team->t.t_threads[i]);
-    }; // for i
+    }
     __kmp_print_structure_team("    Next in pool:     ", team->t.t_next_pool);
     __kmp_printf("\n");
     list = list->next;
-  }; // while
+  }
 
   // Print out __kmp_thread_pool and __kmp_team_pool.
   __kmp_printf("\n------------------------------\nPools\n----------------------"
@@ -3417,7 +3417,7 @@ void __kmp_print_structure(void) {
     kmp_team_list_item_t *item = list;
     list = list->next;
     KMP_INTERNAL_FREE(item);
-  }; // while
+  }
 }
 
 #endif
@@ -3660,7 +3660,7 @@ int __kmp_register_root(int initial_thread) {
   capacity = __kmp_threads_capacity;
   if (!initial_thread && TCR_PTR(__kmp_threads[0]) == NULL) {
     --capacity;
-  }; // if
+  }
 
   /* see if there are too many threads */
   if (__kmp_all_nth >= capacity && !__kmp_expand_threads(1, 1)) {
@@ -3672,7 +3672,7 @@ int __kmp_register_root(int initial_thread) {
       __kmp_fatal(KMP_MSG(CantRegisterNewThread), KMP_HNT(SystemLimitOnThreads),
                   __kmp_msg_null);
     }
-  }; // if
+  }
 
   /* find an available thread slot */
   /* Don't reassign the zero slot since we need that to only be used by initial
@@ -3808,7 +3808,7 @@ int __kmp_register_root(int initial_thread) {
 #if USE_DEBUGGER
       root_thread->th.th_bar[b].bb.b_worker_arrived = 0;
 #endif
-    }; // for
+    }
   }
   KMP_DEBUG_ASSERT(root->r.r_hot_team->t.t_bar[bs_forkjoin_barrier].b_arrived ==
                    KMP_INIT_BARRIER_STATE);
@@ -4089,9 +4089,9 @@ static void __kmp_initialize_info(kmp_info_t *this_thr, kmp_team_t *team,
       __kmp_print_storage_map_gtid(
           gtid, this_thr->th.th_pri_common, this_thr->th.th_pri_common + 1,
           sizeof(struct common_table), "th_%d.th_pri_common\n", gtid);
-    }; // if
+    }
     this_thr->th.th_pri_head = NULL;
-  }; // if
+  }
 
   /* Initialize dynamic dispatch */
   {
@@ -5784,7 +5784,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
       ANNOTATE_HAPPENS_BEFORE(thread);
       kmp_flag_64 flag(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
       __kmp_release_64(&flag);
-    }; // if
+    }
 
     // Terminate OS thread.
     __kmp_reap_worker(thread);
@@ -5808,7 +5808,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
     // Decrement # of [worker] threads in the pool.
     KMP_DEBUG_ASSERT(__kmp_thread_pool_nth > 0);
     --__kmp_thread_pool_nth;
-  }; // if
+  }
 
   __kmp_free_implicit_task(thread);
 
@@ -5841,13 +5841,13 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
     if (thread->th.th_cons) {
       __kmp_free_cons_stack(thread->th.th_cons);
       thread->th.th_cons = NULL;
-    }; // if
+    }
   }
 
   if (thread->th.th_pri_common != NULL) {
     __kmp_free(thread->th.th_pri_common);
     thread->th.th_pri_common = NULL;
-  }; // if
+  }
 
   if (thread->th.th_task_state_memo_stack != NULL) {
     __kmp_free(thread->th.th_task_state_memo_stack);
@@ -5857,14 +5857,14 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
 #if KMP_USE_BGET
   if (thread->th.th_local.bget_data != NULL) {
     __kmp_finalize_bget(thread);
-  }; // if
+  }
 #endif
 
 #if KMP_AFFINITY_SUPPORTED
   if (thread->th.th_affin_mask != NULL) {
     KMP_CPU_FREE(thread->th.th_affin_mask);
     thread->th.th_affin_mask = NULL;
-  }; // if
+  }
 #endif /* KMP_AFFINITY_SUPPORTED */
 
   __kmp_reap_team(thread->th.th_serial_team);
@@ -5943,7 +5943,7 @@ static void __kmp_internal_end(void) {
       thread->th.th_next_pool = NULL;
       thread->th.th_in_pool = FALSE;
       __kmp_reap_thread(thread, 0);
-    }; // while
+    }
     __kmp_thread_pool_insert_pt = NULL;
 
     // Reap teams.
@@ -5954,7 +5954,7 @@ static void __kmp_internal_end(void) {
       // Reap it.
       team->t.t_next_pool = NULL;
       __kmp_reap_team(team);
-    }; // while
+    }
 
     __kmp_reap_task_teams();
 
@@ -6210,7 +6210,7 @@ void __kmp_internal_end_thread(int gtid_req) {
       __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
       __kmp_release_bootstrap_lock(&__kmp_initz_lock);
       return;
-    };
+    }
   }
 
   /* now we can safely conduct the actual termination */
@@ -6303,9 +6303,9 @@ void __kmp_register_library_startup(void) {
             // If not, then we know the other copy of the library is no longer
             // running.
             neighbor = 2;
-          }; // if
-        }; // if
-      }; // if
+          }
+        }
+      }
       switch (neighbor) {
       case 0: // Cannot parse environment variable -- neighbor status unknown.
         // Assume it is the incompatible format of future version of the
@@ -6320,7 +6320,7 @@ void __kmp_register_library_startup(void) {
           // That's not allowed. Issue fatal error.
           __kmp_fatal(KMP_MSG(DuplicateLibrary, KMP_LIBRARY_FILE, file_name),
                       KMP_HNT(DuplicateLibrary), __kmp_msg_null);
-        }; // if
+        }
         KMP_INTERNAL_FREE(duplicate_ok);
         __kmp_duplicate_library_ok = 1;
         done = 1; // Exit the loop.
@@ -6330,12 +6330,10 @@ void __kmp_register_library_startup(void) {
         __kmp_env_unset(name);
       } break;
       default: { KMP_DEBUG_ASSERT(0); } break;
-      }; // switch
-
-    }; // if
+      }
+    }
     KMP_INTERNAL_FREE((void *)value);
-
-  }; // while
+  }
   KMP_INTERNAL_FREE((void *)name);
 
 } // func __kmp_register_library_startup
@@ -6350,7 +6348,7 @@ void __kmp_unregister_library(void) {
   if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
     // Ok, this is our variable. Delete it.
     __kmp_env_unset(name);
-  }; // if
+  }
 
   KMP_INTERNAL_FREE(__kmp_registration_str);
   KMP_INTERNAL_FREE(value);
@@ -6565,7 +6563,7 @@ static void __kmp_do_serial_initialize(void) {
     __kmp_i18n_dump_catalog(&buffer);
     __kmp_printf("%s", buffer.str);
     __kmp_str_buf_free(&buffer);
-  }; // if
+  }
   __kmp_env_free(&val);
 #endif
 
@@ -6626,7 +6624,7 @@ static void __kmp_do_serial_initialize(void) {
     if (rc != 0) {
       __kmp_fatal(KMP_MSG(FunctionError, "atexit()"), KMP_ERR(rc),
                   __kmp_msg_null);
-    }; // if
+    }
   }
 #endif
 
@@ -7553,7 +7551,7 @@ void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
 void __kmp_aux_set_defaults(char const *str, int len) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
-  };
+  }
   __kmp_env_initialize(str);
 
   if (__kmp_settings

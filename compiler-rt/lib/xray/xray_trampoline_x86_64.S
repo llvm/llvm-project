@@ -173,11 +173,11 @@ __xray_ArgLoggerEntry:
 
 .Larg1entryLog:
 
-  // First argument will become the third
+	// First argument will become the third
 	movq	%rdi, %rdx
 
-  // XRayEntryType::ENTRY into the second
-	xorq	%rsi, %rsi
+	// XRayEntryType::LOG_ARGS_ENTRY into the second
+	mov	$0x3, %esi
 
 	// 32-bit function ID becomes the first
 	movl	%r10d, %edi

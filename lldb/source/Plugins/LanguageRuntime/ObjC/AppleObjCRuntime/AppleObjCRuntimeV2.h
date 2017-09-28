@@ -88,6 +88,8 @@ public:
 
   EncodingToTypeSP GetEncodingToType() override;
 
+  bool IsTaggedPointer(lldb::addr_t ptr) override;
+
   TaggedPointerVendor *GetTaggedPointerVendor() override {
     return m_tagged_pointer_vendor_ap.get();
   }
@@ -138,17 +140,32 @@ private:
 
   private:
     NonPointerISACache(AppleObjCRuntimeV2 &runtime,
+                       const lldb::ModuleSP &objc_module_sp,
                        uint64_t objc_debug_isa_class_mask,
                        uint64_t objc_debug_isa_magic_mask,
-                       uint64_t objc_debug_isa_magic_value);
+                       uint64_t objc_debug_isa_magic_value,
+                       uint64_t objc_debug_indexed_isa_magic_mask,
+                       uint64_t objc_debug_indexed_isa_magic_value,
+                       uint64_t objc_debug_indexed_isa_index_mask,
+                       uint64_t objc_debug_indexed_isa_index_shift,
+                       lldb::addr_t objc_indexed_classes);
 
     bool EvaluateNonPointerISA(ObjCISA isa, ObjCISA &ret_isa);
 
     AppleObjCRuntimeV2 &m_runtime;
     std::map<ObjCISA, ObjCLanguageRuntime::ClassDescriptorSP> m_cache;
+    lldb::ModuleWP m_objc_module_wp;
     uint64_t m_objc_debug_isa_class_mask;
     uint64_t m_objc_debug_isa_magic_mask;
     uint64_t m_objc_debug_isa_magic_value;
+
+    uint64_t m_objc_debug_indexed_isa_magic_mask;
+    uint64_t m_objc_debug_indexed_isa_magic_value;
+    uint64_t m_objc_debug_indexed_isa_index_mask;
+    uint64_t m_objc_debug_indexed_isa_index_shift;
+    lldb::addr_t m_objc_indexed_classes;
+
+    std::vector<lldb::addr_t> m_indexed_isa_cache;
 
     friend class AppleObjCRuntimeV2;
 
@@ -278,8 +295,6 @@ private:
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
   ObjCISA GetPointerISA(ObjCISA isa);
-
-  bool IsTaggedPointer(lldb::addr_t ptr);
 
   lldb::addr_t GetISAHashTablePointer();
 

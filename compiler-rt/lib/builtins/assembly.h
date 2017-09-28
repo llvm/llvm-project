@@ -75,7 +75,7 @@
  * - for '-mthumb -march=armv7' compiler defines '__thumb__' and '__thumb2__'
  */
 #if defined(__thumb2__) || defined(__thumb__)
-#define DEFINE_CODE_STATE .thumb SEPARATOR
+#define DEFINE_CODE_STATE .thumb
 #define DECLARE_FUNC_ENCODING    .thumb_func SEPARATOR
 #if defined(__thumb2__)
 #define USE_THUMB_2
@@ -89,7 +89,7 @@
 #define ITE(cond)
 #endif // defined(__thumb__2)
 #else // !defined(__thumb2__) && !defined(__thumb__)
-#define DEFINE_CODE_STATE .arm SEPARATOR
+#define DEFINE_CODE_STATE .arm
 #define DECLARE_FUNC_ENCODING
 #define IT(cond)
 #define ITT(cond)
@@ -132,7 +132,6 @@
 #endif
 #else // !defined(__arm)
 #define DECLARE_FUNC_ENCODING
-#define DEFINE_CODE_STATE
 #endif
 
 #define GLUE2(a, b) a##b
@@ -147,7 +146,6 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
-  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
@@ -156,7 +154,6 @@
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_THUMB_FUNCTION(name)                                 \
-  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
@@ -165,7 +162,6 @@
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION(name)                               \
-  DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
@@ -174,7 +170,6 @@
   SYMBOL_NAME(name):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(name)                     \
-  DEFINE_CODE_STATE                                                            \
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
   HIDDEN(name) SEPARATOR                                                       \

@@ -371,6 +371,11 @@ TSAN_INTERCEPTOR(int, nanosleep, void *req, void *rem) {
   return res;
 }
 
+TSAN_INTERCEPTOR(int, pause) {
+  SCOPED_TSAN_INTERCEPTOR(pause);
+  return BLOCK_REAL(pause)();
+}
+
 // The sole reason tsan wraps atexit callbacks is to establish synchronization
 // between callback setup and callback execution.
 struct AtExitCtx {
@@ -2583,6 +2588,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(sleep);
   TSAN_INTERCEPT(usleep);
   TSAN_INTERCEPT(nanosleep);
+  TSAN_INTERCEPT(pause);
   TSAN_INTERCEPT(gettimeofday);
   TSAN_INTERCEPT(getaddrinfo);
 

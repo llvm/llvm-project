@@ -21,7 +21,13 @@ struct InitializeHandler : Handler {
       : Handler(Output), Callbacks(Callbacks) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    Callbacks.onInitialize(ID, Output);
+    auto IP = InitializeParams::parse(Params, Output);
+    if (!IP) {
+      Output.log("Failed to decode InitializeParams!\n");
+      IP = InitializeParams();
+    }
+
+    Callbacks.onInitialize(ID, *IP, Output);
   }
 
 private:
@@ -204,6 +210,22 @@ private:
   ProtocolCallbacks &Callbacks;
 };
 
+struct SwitchSourceHeaderHandler : Handler {
+  SwitchSourceHeaderHandler(JSONOutput &Output, ProtocolCallbacks &Callbacks)
+      : Handler(Output), Callbacks(Callbacks) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
+    auto TDPP = TextDocumentIdentifier::parse(Params, Output);
+    if (!TDPP)
+      return;
+
+    Callbacks.onSwitchSourceHeader(*TDPP, ID, Output);
+  }
+
+private:
+  ProtocolCallbacks &Callbacks;
+};
+
 } // namespace
 
 void clangd::regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher,
@@ -240,4 +262,7 @@ void clangd::regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Dispatcher.registerHandler(
       "textDocument/definition",
       llvm::make_unique<GotoDefinitionHandler>(Out, Callbacks));
+  Dispatcher.registerHandler(
+      "textDocument/switchSourceHeader",
+      llvm::make_unique<SwitchSourceHeaderHandler>(Out, Callbacks));    
 }

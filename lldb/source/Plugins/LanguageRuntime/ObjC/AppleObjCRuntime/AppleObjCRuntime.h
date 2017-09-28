@@ -95,6 +95,8 @@ public:
 
   virtual void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                             lldb::addr_t &cf_false);
+                                            
+  virtual bool IsTaggedPointer (lldb::addr_t addr) { return false; }
 
 protected:
   // Call CreateInstance instead.

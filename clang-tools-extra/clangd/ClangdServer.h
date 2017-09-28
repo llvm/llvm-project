@@ -211,6 +211,9 @@ public:
                bool SnippetCompletions, clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
+  /// Set the root path of the workspace.
+  void setRootPath(PathRef RootPath);
+
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
@@ -245,6 +248,10 @@ public:
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
   Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 
+  /// Helper function that returns a path to the corresponding source file when
+  /// given a header file and vice versa.
+  llvm::Optional<Path> switchSourceHeader(PathRef Path);
+
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);
   /// Run formatting for the whole \p File.
@@ -278,6 +285,8 @@ private:
   DraftStore DraftMgr;
   CppFileCollection Units;
   std::string ResourceDir;
+  // If set, this represents the workspace path.
+  llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
   bool SnippetCompletions;
   /// Used to serialize diagnostic callbacks.

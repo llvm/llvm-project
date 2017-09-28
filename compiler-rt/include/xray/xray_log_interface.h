@@ -159,6 +159,9 @@ struct XRayLogImpl {
   /// always have a handler for function entry and exit events. In case the
   /// implementation wants to support arg1 (or other future extensions to XRay
   /// logging) those MUST be installed by the installed 'log_init' handler.
+  ///
+  /// Because we didn't want to change the ABI of this struct, the arg1 handler
+  /// may be silently overwritten during initialization as well.
   void (*handle_arg0)(int32_t, XRayEntryType);
 
   /// The log implementation provided routine for when __xray_log_flushLog() is
