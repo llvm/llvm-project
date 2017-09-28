@@ -208,6 +208,7 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0x06f", "krait") // APQ8064
             .Case("0x201", "kryo")
             .Case("0x205", "kryo")
+            .Case("0xc00", "falkor")
             .Default("generic");
 
   return "generic";
