@@ -1172,6 +1172,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   SourceMgr.pushModuleBuildStack(ModuleName,
     FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
 
+  // Pass along the GenModuleActionWrapper callback
+  auto wrapGenModuleAction = ImportingInstance.getGenModuleActionWrapper();
+  Instance.setGenModuleActionWrapper(wrapGenModuleAction);
+
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't
   // want to produce any dependency output from the module build.
@@ -1194,12 +1198,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
         // probably not this. Interfaces changed upstream.
         std::unique_ptr<FrontendAction> Action(
             new GenerateModuleFromModuleMapAction);
-
-        if (!FrontendOpts.IndexStorePath.empty()) {
-#if defined(__APPLE__)
-          Action = index::createIndexDataRecordingAction(FrontendOpts,
-                                                         std::move(Action));
-#endif
+        if (wrapGenModuleAction) {
+          Action = wrapGenModuleAction(FrontendOpts, std::move(Action));
         }
         Instance.ExecuteAction(*Action);
       },
