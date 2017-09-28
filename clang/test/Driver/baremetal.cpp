@@ -74,4 +74,12 @@
 
 // RUN: %clangxx -target arm-none-eabi -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL
-// CHECK-THREAD-MODEL: Thread model: single
+// CHECK-THREAD-MODEL: Thread model: posix
+
+// RUN: %clangxx -target arm-none-eabi -mthread-model single -v 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-SINGLE
+// CHECK-THREAD-MODEL-SINGLE: Thread model: single
+
+// RUN: %clangxx -target arm-none-eabi -mthread-model posix -v 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
+// CHECK-THREAD-MODEL-POSIX: Thread model: posix
