@@ -2068,8 +2068,6 @@ protected:
               result.GetOutputStream().EOL();
               result.GetOutputStream().EOL();
             }
-            if (m_interpreter.WasInterrupted())
-              break;
             num_dumped++;
             DumpModuleSymtab(
                 m_interpreter, result.GetOutputStream(),
@@ -2098,8 +2096,6 @@ protected:
                   result.GetOutputStream().EOL();
                   result.GetOutputStream().EOL();
                 }
-                if (m_interpreter.WasInterrupted())
-                  break;
                 num_dumped++;
                 DumpModuleSymtab(m_interpreter, result.GetOutputStream(),
                                  module, m_options.m_sort_order, preference);
@@ -2165,8 +2161,6 @@ protected:
                                           " modules.\n",
                                           (uint64_t)num_modules);
           for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-            if (m_interpreter.WasInterrupted())
-              break;
             num_dumped++;
             DumpModuleSections(
                 m_interpreter, result.GetOutputStream(),
@@ -2188,8 +2182,6 @@ protected:
               FindModulesByName(target, arg_cstr, module_list, true);
           if (num_matches > 0) {
             for (size_t i = 0; i < num_matches; ++i) {
-              if (m_interpreter.WasInterrupted())
-                break;
               Module *module = module_list.GetModulePointerAtIndex(i);
               if (module) {
                 num_dumped++;
@@ -2262,8 +2254,6 @@ protected:
                                           " modules.\n",
                                           (uint64_t)num_modules);
           for (uint32_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-            if (m_interpreter.WasInterrupted())
-              break;
             if (DumpModuleSymbolVendor(
                     result.GetOutputStream(),
                     target_modules.GetModulePointerAtIndexUnlocked(image_idx)))
@@ -2285,8 +2275,6 @@ protected:
               FindModulesByName(target, arg_cstr, module_list, true);
           if (num_matches > 0) {
             for (size_t i = 0; i < num_matches; ++i) {
-              if (m_interpreter.WasInterrupted())
-                break;
               Module *module = module_list.GetModulePointerAtIndex(i);
               if (module) {
                 if (DumpModuleSymbolVendor(result.GetOutputStream(), module))
@@ -2354,8 +2342,6 @@ protected:
         if (num_modules > 0) {
           uint32_t num_dumped = 0;
           for (uint32_t i = 0; i < num_modules; ++i) {
-            if (m_interpreter.WasInterrupted())
-              break;
             if (DumpCompileUnitLineTable(
                     m_interpreter, result.GetOutputStream(),
                     target_modules.GetModulePointerAtIndexUnlocked(i),
