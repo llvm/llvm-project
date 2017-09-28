@@ -66,14 +66,14 @@ public:
     /// Construct a new iterator for the entries at \p DataOffset.
     ValueIterator(const DWARFAcceleratorTable &AccelTable, unsigned DataOffset);
     /// End marker.
-    ValueIterator() : NumData(0) {}
+    ValueIterator() = default;
 
     const ArrayRef<DWARFFormValue> operator*() const {
       return AtomForms;
     }
     ValueIterator &operator++() { Next(); return *this; }
     ValueIterator operator++(int) {
-      ValueIterator I(*this);
+      ValueIterator I = *this;
       Next();
       return I;
     }
