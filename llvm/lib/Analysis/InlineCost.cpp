@@ -241,6 +241,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool visitCallSite(CallSite CS);
   bool visitReturnInst(ReturnInst &RI);
   bool visitBranchInst(BranchInst &BI);
+  bool visitSelectInst(SelectInst &SI);
   bool visitSwitchInst(SwitchInst &SI);
   bool visitIndirectBrInst(IndirectBrInst &IBI);
   bool visitResumeInst(ResumeInst &RI);
@@ -1175,6 +1176,87 @@ bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
   return BI.isUnconditional() || isa<ConstantInt>(BI.getCondition()) ||
          dyn_cast_or_null<ConstantInt>(
              SimplifiedValues.lookup(BI.getCondition()));
+}
+
+bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
+  bool CheckSROA = SI.getType()->isPointerTy();
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  Constant *TrueC = dyn_cast<Constant>(TrueVal);
+  if (!TrueC)
+    TrueC = SimplifiedValues.lookup(TrueVal);
+  Constant *FalseC = dyn_cast<Constant>(FalseVal);
+  if (!FalseC)
+    FalseC = SimplifiedValues.lookup(FalseVal);
+  Constant *CondC =
+      dyn_cast_or_null<Constant>(SimplifiedValues.lookup(SI.getCondition()));
+
+  if (!CondC) {
+    // Select C, X, X => X
+    if (TrueC == FalseC && TrueC) {
+      SimplifiedValues[&SI] = TrueC;
+      return true;
+    }
+
+    if (!CheckSROA)
+      return Base::visitSelectInst(SI);
+
+    std::pair<Value *, APInt> TrueBaseAndOffset =
+        ConstantOffsetPtrs.lookup(TrueVal);
+    std::pair<Value *, APInt> FalseBaseAndOffset =
+        ConstantOffsetPtrs.lookup(FalseVal);
+    if (TrueBaseAndOffset == FalseBaseAndOffset && TrueBaseAndOffset.first) {
+      ConstantOffsetPtrs[&SI] = TrueBaseAndOffset;
+
+      Value *SROAArg;
+      DenseMap<Value *, int>::iterator CostIt;
+      if (lookupSROAArgAndCost(TrueVal, SROAArg, CostIt))
+        SROAArgValues[&SI] = SROAArg;
+      return true;
+    }
+
+    return Base::visitSelectInst(SI);
+  }
+
+  // Select condition is a constant.
+  Value *SelectedV = CondC->isAllOnesValue()
+                         ? TrueVal
+                         : (CondC->isNullValue()) ? FalseVal : nullptr;
+  if (!SelectedV) {
+    // Condition is a vector constant that is not all 1s or all 0s.  If all
+    // operands are constants, ConstantExpr::getSelect() can handle the cases
+    // such as select vectors.
+    if (TrueC && FalseC) {
+      if (auto *C = ConstantExpr::getSelect(CondC, TrueC, FalseC)) {
+        SimplifiedValues[&SI] = C;
+        return true;
+      }
+    }
+    return Base::visitSelectInst(SI);
+  }
+
+  // Condition is either all 1s or all 0s. SI can be simplified.
+  if (Constant *SelectedC = dyn_cast<Constant>(SelectedV)) {
+    SimplifiedValues[&SI] = SelectedC;
+    return true;
+  }
+
+  if (!CheckSROA)
+    return true;
+
+  std::pair<Value *, APInt> BaseAndOffset =
+      ConstantOffsetPtrs.lookup(SelectedV);
+  if (BaseAndOffset.first) {
+    ConstantOffsetPtrs[&SI] = BaseAndOffset;
+
+    Value *SROAArg;
+    DenseMap<Value *, int>::iterator CostIt;
+    if (lookupSROAArgAndCost(SelectedV, SROAArg, CostIt))
+      SROAArgValues[&SI] = SROAArg;
+  }
+
+  return true;
 }
 
 bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {

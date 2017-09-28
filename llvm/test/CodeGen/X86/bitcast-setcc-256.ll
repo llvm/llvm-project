@@ -222,8 +222,8 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vmovmskps %xmm0, %eax
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -259,23 +259,13 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
-; AVX1-LABEL: v4f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovmskps %xmm0, %eax
-; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: v4f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovmskpd %ymm0, %eax
-; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX12-LABEL: v4f64:
+; AVX12:       # BB#0:
+; AVX12-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    vmovmskpd %ymm0, %eax
+; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX12-NEXT:    vzeroupper
+; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: v4f64:
 ; AVX512:       # BB#0:

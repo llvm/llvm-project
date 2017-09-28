@@ -235,7 +235,7 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
   auto PAC = PA.getChecker<FunctionAnalysisManagerCGSCCProxy>();
   if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) {
     for (LazyCallGraph::Node &N : C)
-      FAM->clear(N.getFunction());
+      FAM->clear(N.getFunction(), N.getFunction().getName());
 
     return true;
   }

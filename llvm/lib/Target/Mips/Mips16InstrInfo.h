@@ -102,9 +102,6 @@ public:
 
   void BuildAddiuSpImm
     (MachineBasicBlock &MBB, MachineBasicBlock::iterator I, int64_t Imm) const;
-
-  unsigned getInlineAsmLength(const char *Str,
-                              const MCAsmInfo &MAI) const override;
 private:
   unsigned getAnalyzableBrOpc(unsigned Opc) const override;
 

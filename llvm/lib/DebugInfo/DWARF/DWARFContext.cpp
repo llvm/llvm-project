@@ -339,7 +339,7 @@ void DWARFContext::dump(
         uint32_t Offset = *StmtOffset;
         // Verbose dumping is done during parsing and not on the intermediate
         // representation.
-        OS << "debug_line[" << format("%16.16" PRIx64, Offset) << "]\n";
+        OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
         if (DumpOpts.Verbose) {
           LineTable.parse(lineData, &Offset, &OS);
         } else {

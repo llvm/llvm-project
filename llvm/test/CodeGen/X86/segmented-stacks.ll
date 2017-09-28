@@ -636,8 +636,27 @@ define void @test_nostack() #0 {
 ; X64-DFlyBSD-NOT:   callq __morestack
 }
 
+define void @test_nosplitstck() {
+	ret void
+}
+
 attributes #0 = { "split-stack" }
 
 ; X64-Linux-Large: .rodata
 ; X64-Linux-Large-NEXT: __morestack_addr:
 ; X64-Linux-Large-NEXT: .quad	__morestack
+
+; X32-Linux: .section ".note.GNU-split-stack","",@progbits
+; X32-Linux: .section ".note.GNU-no-split-stack","",@progbits
+
+; X64-Linux: .section ".note.GNU-split-stack","",@progbits
+; X64-Linux: .section ".note.GNU-no-split-stack","",@progbits
+
+; X64-FreeBSD: .section ".note.GNU-split-stack","",@progbits
+; X64-FreeBSD: .section ".note.GNU-no-split-stack","",@progbits
+
+; X32-DFlyBSD: .section ".note.GNU-split-stack","",@progbits
+; X32-DFlyBSD: .section ".note.GNU-no-split-stack","",@progbits
+
+; X64-DFlyBSD: .section ".note.GNU-split-stack","",@progbits
+; X64-DFlyBSD: .section ".note.GNU-no-split-stack","",@progbits

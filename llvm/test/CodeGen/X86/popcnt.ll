@@ -101,7 +101,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    shll $8, %ecx
 ; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    movzbl %ch, %eax
+; X64-NEXT:    movzbl %ch, %eax # NOREX
 ; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; X64-NEXT:    retq
 ;

@@ -43,8 +43,8 @@ define i32 @sad_16i8() nounwind {
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu a+1024(%rax), %xmm2
 ; AVX2-NEXT:    vpsadbw b+1024(%rax), %xmm2, %xmm2
-; AVX2-NEXT:    vpaddd %xmm1, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm2
+; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $4, %rax
 ; AVX2-NEXT:    jne .LBB0_1
 ; AVX2-NEXT:  # BB#2: # %middle.block
@@ -67,8 +67,8 @@ define i32 @sad_16i8() nounwind {
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vmovdqu a+1024(%rax), %xmm1
 ; AVX512F-NEXT:    vpsadbw b+1024(%rax), %xmm1, %xmm1
-; AVX512F-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
-; AVX512F-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovdqa %xmm1, %xmm1
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    addq $4, %rax
 ; AVX512F-NEXT:    jne .LBB0_1
 ; AVX512F-NEXT:  # BB#2: # %middle.block
@@ -93,8 +93,8 @@ define i32 @sad_16i8() nounwind {
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vmovdqu a+1024(%rax), %xmm1
 ; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %xmm1, %xmm1
-; AVX512BW-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
-; AVX512BW-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm1
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    addq $4, %rax
 ; AVX512BW-NEXT:    jne .LBB0_1
 ; AVX512BW-NEXT:  # BB#2: # %middle.block
@@ -315,8 +315,8 @@ define i32 @sad_32i8() nounwind {
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vmovdqa a+1024(%rax), %ymm2
 ; AVX512F-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
-; AVX512F-NEXT:    vpaddd %ymm1, %ymm2, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $0, %ymm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    addq $4, %rax
 ; AVX512F-NEXT:    jne .LBB1_1
 ; AVX512F-NEXT:  # BB#2: # %middle.block
@@ -343,8 +343,8 @@ define i32 @sad_32i8() nounwind {
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vmovdqa a+1024(%rax), %ymm2
 ; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
-; AVX512BW-NEXT:    vpaddd %ymm1, %ymm2, %ymm2
-; AVX512BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm1, %zmm1
+; AVX512BW-NEXT:    vmovdqa %ymm2, %ymm2
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $4, %rax
 ; AVX512BW-NEXT:    jne .LBB1_1
 ; AVX512BW-NEXT:  # BB#2: # %middle.block

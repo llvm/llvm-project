@@ -25,7 +25,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-class RISCVInst<dag outs, dag ins, string asmstr, list<dag> pattern>
+// Format specifies the encoding used by the instruction. This is used by
+// RISCVMCCodeEmitter to determine which form of fixup to use. These
+// definitions must be kept in-sync with RISCVBaseInfo.h.
+class InstFormat<bits<4> val> {
+  bits<4> Value = val;
+}
+def InstFormatPseudo : InstFormat<0>;
+def InstFormatR      : InstFormat<1>;
+def InstFormatI      : InstFormat<2>;
+def InstFormatS      : InstFormat<3>;
+def InstFormatSB     : InstFormat<4>;
+def InstFormatU      : InstFormat<5>;
+def InstFormatOther  : InstFormat<6>;
+
+class RISCVInst<dag outs, dag ins, string asmstr, list<dag> pattern,
+                InstFormat format>
     : Instruction {
   field bits<32> Inst;
   // SoftFail is a field the disassembler can use to provide a way for
@@ -45,17 +60,19 @@ class RISCVInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
+
+  let TSFlags{3-0} = format.Value;
 }
 
 // Pseudo instructions
-class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, "", pattern> {
+class Pseudo<dag outs, dag ins, list<dag> pattern>
+    : RISCVInst<outs, ins, "", pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }
 
 class FR<bits<7> funct7, bits<3> funct3, bits<7> opcode, dag outs, dag ins,
-         string asmstr, list<dag> pattern> : RISCVInst<outs, ins, asmstr, pattern>
+         string asmstr, list<dag> pattern> : RISCVInst<outs, ins, asmstr, pattern, InstFormatR>
 {
   bits<5> rs2;
   bits<5> rs1;
@@ -70,7 +87,7 @@ class FR<bits<7> funct7, bits<3> funct3, bits<7> opcode, dag outs, dag ins,
 }
 
 class FI<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatI>
 {
   bits<12> imm12;
   bits<5> rs1;
@@ -84,7 +101,7 @@ class FI<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<
 }
 
 class FI32Shift<bit arithshift, bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatI>
 {
   bits<5> shamt;
   bits<5> rs1;
@@ -101,7 +118,7 @@ class FI32Shift<bit arithshift, bits<3> funct3, bits<7> opcode, dag outs, dag in
 }
 
 class FS<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatS>
 {
   bits<12> imm12;
   bits<5> rs2;
@@ -116,7 +133,7 @@ class FS<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<
 }
 
 class FSB<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatSB>
 {
   bits<12> imm12;
   bits<5> rs2;
@@ -133,7 +150,7 @@ class FSB<bits<3> funct3, bits<7> opcode, dag outs, dag ins, string asmstr, list
 }
 
 class FU<bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatU>
 {
   bits<20> imm20;
   bits<5> rd;
@@ -144,7 +161,7 @@ class FU<bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 class FUJ<bits<7> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
-    : RISCVInst<outs, ins, asmstr, pattern>
+    : RISCVInst<outs, ins, asmstr, pattern, InstFormatU>
 {
   bits<20> imm20;
   bits<5> rd;

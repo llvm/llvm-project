@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -march=bpfel -show-mc-encoding | FileCheck --check-prefix=CHECK-EL %s
+; RUN: llc < %s -march=bpfeb -show-mc-encoding | FileCheck --check-prefix=CHECK-EB %s
 
 ; Function Attrs: nounwind uwtable
 define i32 @ld_b(i64 %foo, i64* nocapture %bar, i8* %ctx, i8* %ctx2) #0 {
@@ -13,8 +14,10 @@ define i32 @ld_b(i64 %foo, i64* nocapture %bar, i8* %ctx, i8* %ctx2) #0 {
   %9 = trunc i64 %8 to i32
   ret i32 %9
 ; CHECK-LABEL: ld_b:
-; CHECK: r0 = *(u8 *)skb[123]
-; CHECK: r0 = *(u8 *)skb[r
+; CHECK-EL: r0 = *(u8 *)skb[123]
+; CHECK-EL: r0 = *(u8 *)skb[r
+; CHECK-EB: r0 = *(u8 *)skb[123]
+; CHECK-EB: r0 = *(u8 *)skb[r
 }
 
 declare i64 @llvm.bpf.load.byte(i8*, i64) #1
@@ -28,8 +31,10 @@ define i32 @ld_h(i8* %ctx, i8* %ctx2, i32 %foo) #0 {
   %5 = trunc i64 %4 to i32
   ret i32 %5
 ; CHECK-LABEL: ld_h:
-; CHECK: r0 = *(u16 *)skb[r
-; CHECK: r0 = *(u16 *)skb[123]
+; CHECK-EL: r0 = *(u16 *)skb[r
+; CHECK-EL: r0 = *(u16 *)skb[123]
+; CHECK-EB: r0 = *(u16 *)skb[r
+; CHECK-EB: r0 = *(u16 *)skb[123]
 }
 
 declare i64 @llvm.bpf.load.half(i8*, i64) #1
@@ -43,8 +48,10 @@ define i32 @ld_w(i8* %ctx, i8* %ctx2, i32 %foo) #0 {
   %5 = trunc i64 %4 to i32
   ret i32 %5
 ; CHECK-LABEL: ld_w:
-; CHECK: r0 = *(u32 *)skb[r
-; CHECK: r0 = *(u32 *)skb[123]
+; CHECK-EL: r0 = *(u32 *)skb[r
+; CHECK-EL: r0 = *(u32 *)skb[123]
+; CHECK-EB: r0 = *(u32 *)skb[r
+; CHECK-EB: r0 = *(u32 *)skb[123]
 }
 
 declare i64 @llvm.bpf.load.word(i8*, i64) #1
@@ -55,7 +62,8 @@ entry:
   tail call void inttoptr (i64 4 to void (i64, i32)*)(i64 %call, i32 4) #2
   ret i32 0
 ; CHECK-LABEL: ld_pseudo:
-; CHECK: ld_pseudo r1, 2, 3 # encoding: [0x18,0x21,0x00,0x00,0x03,0x00
+; CHECK-EL: ld_pseudo r1, 2, 3 # encoding: [0x18,0x21,0x00,0x00,0x03,0x00,0x00,0x00
+; CHECK-EB: ld_pseudo r1, 2, 3 # encoding: [0x18,0x12,0x00,0x00,0x00,0x00,0x00,0x03
 }
 
 declare i64 @llvm.bpf.pseudo(i64, i64) #2
@@ -74,11 +82,16 @@ entry:
   %conv5 = trunc i64 %add4 to i32
   ret i32 %conv5
 ; CHECK-LABEL: bswap:
-; CHECK: bswap64 r1     # encoding: [0xdc,0x01,0x00,0x00,0x40,0x00,0x00,0x00]
-; CHECK: bswap32 r2     # encoding: [0xdc,0x02,0x00,0x00,0x20,0x00,0x00,0x00]
-; CHECK: r2 += r1 # encoding: [0x0f,0x12,0x00,0x00,0x00,0x00,0x00,0x00]
-; CHECK: bswap16 r3     # encoding: [0xdc,0x03,0x00,0x00,0x10,0x00,0x00,0x00]
-; CHECK: r2 += r3 # encoding: [0x0f,0x32,0x00,0x00,0x00,0x00,0x00,0x00]
+; CHECK-EL: r1 = be64 r1     # encoding: [0xdc,0x01,0x00,0x00,0x40,0x00,0x00,0x00]
+; CHECK-EL: r2 = be32 r2     # encoding: [0xdc,0x02,0x00,0x00,0x20,0x00,0x00,0x00]
+; CHECK-EL: r2 += r1 # encoding: [0x0f,0x12,0x00,0x00,0x00,0x00,0x00,0x00]
+; CHECK-EL: r3 = be16 r3     # encoding: [0xdc,0x03,0x00,0x00,0x10,0x00,0x00,0x00]
+; CHECK-EL: r2 += r3 # encoding: [0x0f,0x32,0x00,0x00,0x00,0x00,0x00,0x00]
+; CHECK-EB: r1 = le64 r1     # encoding: [0xd4,0x10,0x00,0x00,0x00,0x00,0x00,0x40]
+; CHECK-EB: r2 = le32 r2     # encoding: [0xd4,0x20,0x00,0x00,0x00,0x00,0x00,0x20]
+; CHECK-EB: r2 += r1 # encoding: [0x0f,0x21,0x00,0x00,0x00,0x00,0x00,0x00]
+; CHECK-EB: r3 = le16 r3     # encoding: [0xd4,0x30,0x00,0x00,0x00,0x00,0x00,0x10]
+; CHECK-EB: r2 += r3 # encoding: [0x0f,0x23,0x00,0x00,0x00,0x00,0x00,0x00]
 }
 
 declare i64 @llvm.bswap.i64(i64) #1

@@ -1237,7 +1237,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   OS << "#ifdef DBGFIELD\n"
      << "#error \"<target>GenSubtargetInfo.inc requires a DBGFIELD macro\"\n"
      << "#endif\n"
-     << "#ifndef NDEBUG\n"
+     << "#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)\n"
      << "#define DBGFIELD(x) x,\n"
      << "#else\n"
      << "#define DBGFIELD(x)\n"

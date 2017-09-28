@@ -114,7 +114,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
 
 InstrItineraryData
 MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
-  const MCSchedModel SchedModel = getSchedModelForCPU(CPU);
+  const MCSchedModel &SchedModel = getSchedModelForCPU(CPU);
   return InstrItineraryData(SchedModel, Stages, OperandCycles, ForwardingPaths);
 }
 

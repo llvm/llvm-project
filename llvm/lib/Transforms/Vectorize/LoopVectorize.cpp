@@ -3456,7 +3456,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
       MiddleBlock->splitBasicBlock(MiddleBlock->getTerminator(), "scalar.ph");
 
   // Create and register the new vector loop.
-  Loop *Lp = new Loop();
+  Loop *Lp = LI->AllocateLoop();
   Loop *ParentLoop = OrigLoop->getParentLoop();
 
   // Insert the new loop into the loop nest and register the new basic blocks

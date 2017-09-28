@@ -14501,8 +14501,8 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     }
 
     NearestPow2 = PowerOf2Ceil(MaxIndex);
-    if (InVT.isSimple() && (NearestPow2 > 2) &&
-        ((NumElems * 2) < NearestPow2)) {
+    if (InVT.isSimple() && NearestPow2 > 2 && MaxIndex < NearestPow2 &&
+        NumElems * 2 < NearestPow2) {
       unsigned SplitSize = NearestPow2 / 2;
       EVT SplitVT = EVT::getVectorVT(*DAG.getContext(),
                                      InVT.getVectorElementType(), SplitSize);
