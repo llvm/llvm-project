@@ -97,3 +97,10 @@ void bridge_of_cf(int *i) {
   // CHECK-NEXT: ret void
 }
 
+// CHECK-LABEL: define %struct.__CFString* @bridge_of_paren_expr()
+CFStringRef bridge_of_paren_expr() {
+  // CHECK-NOT: call i8* @objc_retainAutoreleasedReturnValue(
+  // CHECK-NOT: call void @objc_release(
+  CFStringRef r = (__bridge CFStringRef)(CreateNSString());
+  return r;
+}

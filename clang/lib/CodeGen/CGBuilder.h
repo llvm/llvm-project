@@ -145,6 +145,13 @@ public:
                    Addr.getAlignment());
   }
 
+  using CGBuilderBaseTy::CreateAddrSpaceCast;
+  Address CreateAddrSpaceCast(Address Addr, llvm::Type *Ty,
+                              const llvm::Twine &Name = "") {
+    return Address(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name),
+                   Addr.getAlignment());
+  }
+
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment and address space.
   Address CreateElementBitCast(Address Addr, llvm::Type *Ty,
