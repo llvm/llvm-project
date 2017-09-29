@@ -140,11 +140,6 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
   encodeULEB128(Section.DataSize, SubSection.GetStream());
   SubSection.Done();
 
-  // DATA_ALIGNMENT subsection
-  encodeULEB128(wasm::WASM_DATA_ALIGNMENT, OS);
-  encodeULEB128(Section.DataAlignment, SubSection.GetStream());
-  SubSection.Done();
-
   // SYMBOL_INFO subsection
   if (Section.SymbolInfos.size()) {
     encodeULEB128(wasm::WASM_SYMBOL_INFO, OS);
@@ -159,12 +154,14 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
   }
 
   // SEGMENT_NAMES subsection
-  if (Section.SegmentNames.size()) {
-    encodeULEB128(wasm::WASM_SEGMENT_NAMES, OS);
-    encodeULEB128(Section.SegmentNames.size(), SubSection.GetStream());
-    for (const WasmYAML::NameEntry &NameEntry : Section.SegmentNames) {
-      encodeULEB128(NameEntry.Index, SubSection.GetStream());
-      writeStringRef(NameEntry.Name, SubSection.GetStream());
+  if (Section.SegmentInfos.size()) {
+    encodeULEB128(wasm::WASM_SEGMENT_INFO, OS);
+    encodeULEB128(Section.SegmentInfos.size(), SubSection.GetStream());
+    for (const WasmYAML::SegmentInfo &SegmentInfo : Section.SegmentInfos) {
+      encodeULEB128(SegmentInfo.Index, SubSection.GetStream());
+      writeStringRef(SegmentInfo.Name, SubSection.GetStream());
+      encodeULEB128(SegmentInfo.Alignment, SubSection.GetStream());
+      encodeULEB128(SegmentInfo.Flags, SubSection.GetStream());
     }
     SubSection.Done();
   }

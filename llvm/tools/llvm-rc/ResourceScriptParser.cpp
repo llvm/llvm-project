@@ -293,9 +293,10 @@ RCParser::readIntsWithCommas(size_t MinCount, size_t MaxCount) {
   return std::move(Result);
 }
 
-Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc) {
-  assert(FlagDesc.size() <= 32 && "More than 32 flags won't fit in result.");
+Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc,
+                                        ArrayRef<uint32_t> FlagValues) {
   assert(!FlagDesc.empty());
+  assert(FlagDesc.size() == FlagValues.size());
 
   uint32_t Result = 0;
   while (isNextTokenKind(Kind::Comma)) {
@@ -307,7 +308,7 @@ Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc) {
       if (!FlagResult->equals_lower(FlagDesc[FlagId]))
         continue;
 
-      Result |= (1U << FlagId);
+      Result |= FlagValues[FlagId];
       FoundFlag = true;
       break;
     }
@@ -372,8 +373,10 @@ RCParser::ParseType RCParser::parseAcceleratorsResource() {
     ASSIGN_OR_RETURN(EventResult, readIntOrString());
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     ASSIGN_OR_RETURN(IDResult, readInt());
-    ASSIGN_OR_RETURN(FlagsResult,
-                     parseFlags(AcceleratorsResource::Accelerator::OptionsStr));
+    ASSIGN_OR_RETURN(
+        FlagsResult,
+        parseFlags(AcceleratorsResource::Accelerator::OptionsStr,
+                   AcceleratorsResource::Accelerator::OptionsFlags));
     Accels->addAccelerator(*EventResult, *IDResult, *FlagsResult);
   }
 
@@ -536,7 +539,8 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
       MenuResult = *IntResult;
     }
 
-    ASSIGN_OR_RETURN(FlagsResult, parseFlags(MenuDefinition::OptionsStr));
+    ASSIGN_OR_RETURN(FlagsResult, parseFlags(MenuDefinition::OptionsStr,
+                                             MenuDefinition::OptionsFlags));
 
     if (IsPopup) {
       // If POPUP, read submenu items recursively.

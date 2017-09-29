@@ -5,8 +5,7 @@ define i1 @saddo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: saddo_not_i32:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -19,8 +18,7 @@ define i1 @saddo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: saddo_not_i64:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -33,8 +31,7 @@ define i1 @uaddo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: uaddo_not_i32:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
@@ -47,8 +44,7 @@ define i1 @uaddo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: uaddo_not_i64:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
@@ -61,8 +57,7 @@ define i1 @ssubo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: ssubo_not_i32:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -75,8 +70,7 @@ define i1 @ssub_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: ssub_not_i64:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -89,8 +83,7 @@ define i1 @usubo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: usubo_not_i32:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -103,8 +96,7 @@ define i1 @usubo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: usubo_not_i64:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
@@ -117,8 +109,7 @@ define i1 @smulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: smulo_not_i32:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    imull %esi, %edi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -131,8 +122,7 @@ define i1 @smulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: smulo_not_i64:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    imulq %rsi, %rdi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
@@ -146,8 +136,7 @@ define i1 @umulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mull %esi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -161,8 +150,7 @@ define i1 @umulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %rsi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)

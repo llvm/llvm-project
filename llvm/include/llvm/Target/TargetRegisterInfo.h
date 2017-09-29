@@ -40,6 +40,7 @@ class MachineFunction;
 class MachineInstr;
 class RegScavenger;
 class VirtRegMap;
+class LiveIntervals;
 
 class TargetRegisterClass {
 public:
@@ -959,7 +960,8 @@ public:
                               unsigned SubReg,
                               const TargetRegisterClass *DstRC,
                               unsigned DstSubReg,
-                              const TargetRegisterClass *NewRC) const
+                              const TargetRegisterClass *NewRC,
+                              LiveIntervals &LIS) const
   { return true; }
 
   //===--------------------------------------------------------------------===//

@@ -546,18 +546,25 @@ bool SimplifyIndvar::foldConstantSCEV(Instruction *I) {
 
   const Loop *L = LI->getLoopFor(I->getParent());
   S = SE->getSCEVAtScope(S, L);
+  auto *C = dyn_cast<SCEVConstant>(S);
 
-  if (auto *C = dyn_cast<SCEVConstant>(S)) {
-    I->replaceAllUsesWith(C->getValue());
-    DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
-                 << " with constant: " << *C << '\n');
-    ++NumFoldedUser;
-    Changed = true;
-    DeadInsts.emplace_back(I);
-    return true;
-  }
+  if (!C)
+    return false;
 
-  return false;
+  Constant *V = C->getValue();
+  // The SCEV will have a different type than the instruction if the instruction
+  // has a pointer type. Skip the replacement
+  // TODO: Replace ConstantInt Zero by ConstantPointerNull
+  if (V->getType() != I->getType())
+    return false;
+
+  I->replaceAllUsesWith(V);
+  DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I << " with constant: " << *C
+               << '\n');
+  ++NumFoldedUser;
+  Changed = true;
+  DeadInsts.emplace_back(I);
+  return true;
 }
 
 /// Eliminate any operation that SCEV can prove is an identity function.

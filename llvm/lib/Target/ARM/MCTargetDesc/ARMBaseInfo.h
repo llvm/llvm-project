@@ -343,6 +343,7 @@ namespace ARMII {
     NVExtFrm      = 39 << FormShift,
     NVMulSLFrm    = 40 << FormShift,
     NVTBLFrm      = 41 << FormShift,
+    N3RegCplxFrm  = 43 << FormShift,
 
     //===------------------------------------------------------------------===//
     // Misc flags.

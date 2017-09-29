@@ -19,7 +19,7 @@ for.end:                                          ; preds = %for.inc
 }
 
 ; Should fold the condition of the select into constant
-; CHECK-LABEL: void @test
+; CHECK-LABEL: void @test0(
 ; CHECK:         icmp eq i32 0, 0
 
 define void @test1(i32* %a) {

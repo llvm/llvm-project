@@ -536,7 +536,7 @@ static void group2Shuffle(MVT VT, SmallVectorImpl<uint32_t> &Mask,
 // By computing the shuffle on a sequence of 16 elements(one lane) and add the
 // correct offset. We are creating a vpsuffed + blend sequence between two
 // shuffles.
-static void genShuffleBland(MVT VT, SmallVectorImpl<uint32_t> &Mask,
+static void genShuffleBland(MVT VT, ArrayRef<uint32_t> Mask,
                             SmallVectorImpl<uint32_t> &Out, int LowOffset,
                             int HighOffset) {
   assert(VT.getSizeInBits() == 256 &&

@@ -38,7 +38,7 @@ struct InlineAsmIdentifierInfo {
   enum IdKind {
     IK_Invalid,  // Initial state. Unexpected after a successful parsing.
     IK_Label,    // Function/Label reference.
-    IK_EnumVal,  // Value of enumration type.
+    IK_EnumVal,  // Value of enumeration type.
     IK_Var       // Variable.
   };
   // Represents an Enum value
@@ -85,8 +85,9 @@ struct InlineAsmIdentifierInfo {
     Var.Length = size / type;
   }
   InlineAsmIdentifierInfo() : Kind(IK_Invalid) {}
+
 private:
-  // Discrimint using the current kind
+  // Discriminate using the current kind.
   IdKind Kind;
 };
 

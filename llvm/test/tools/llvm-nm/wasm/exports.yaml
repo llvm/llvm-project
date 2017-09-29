@@ -53,7 +53,6 @@ Sections:
   - Type:            CUSTOM
     Name:            "linking"
     DataSize:        0
-    DataAlignment:   0
 
 # CHECK:      00000400 D bar
 # CHECK-NEXT:          U fimport
