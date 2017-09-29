@@ -167,6 +167,9 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
   if (ComputedEST == EST_None)
     return;
 
+  if (EST == EST_None && Method->hasAttr<NoThrowAttr>())
+    EST = EST_BasicNoexcept;
+
   switch(EST) {
   // If this function can throw any exceptions, make a note of that.
   case EST_MSAny:

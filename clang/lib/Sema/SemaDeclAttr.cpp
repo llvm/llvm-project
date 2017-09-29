@@ -1985,6 +1985,25 @@ static void handleNoReturnAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
       Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
+static void handleNoThrowAttr(Sema &S, Decl *D, const AttributeList &Attrs) {
+  assert(isa<FunctionDecl>(D) && "attribute nothrow only valid on functions");
+
+  auto *FD = cast<FunctionDecl>(D);
+  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+
+  if (FPT && FPT->hasExceptionSpec() &&
+      FPT->getExceptionSpecType() != EST_BasicNoexcept) {
+    S.Diag(Attrs.getLoc(),
+           diag::warn_nothrow_attr_disagrees_with_exception_specification);
+    S.Diag(FD->getExceptionSpecSourceRange().getBegin(),
+           diag::note_previous_decl)
+        << "exception specification";
+  }
+
+  D->addAttr(::new (S.Context) NoThrowAttr(
+      Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
+}
+
 static void handleNoCallerSavedRegsAttr(Sema &S, Decl *D,
                                         const AttributeList &Attr) {
   if (S.CheckNoCallerSavedRegsAttr(Attr))
@@ -6690,7 +6709,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleNoReturnAttr(S, D, Attr);
     break;
   case AttributeList::AT_NoThrow:
-    handleSimpleAttribute<NoThrowAttr>(S, D, Attr);
+    handleNoThrowAttr(S, D, Attr);
     break;
   case AttributeList::AT_CUDAShared:
     handleSharedAttr(S, D, Attr);
