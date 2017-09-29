@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hbr"
-
 #include "HexagonBlockRanges.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
@@ -17,6 +15,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -30,6 +29,8 @@
 #include <utility>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "hbr"
 
 bool HexagonBlockRanges::IndexRange::overlaps(const IndexRange &A) const {
   // If A contains start(), or "this" contains A.start(), then overlap.

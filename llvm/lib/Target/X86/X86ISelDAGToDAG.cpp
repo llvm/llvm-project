@@ -3025,7 +3025,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $32776" to "testw %ax, $32776".
-      if (isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
+      // NOTE: We only want to form TESTW instructions if optimizing for
+      // min size. Otherwise we only save one byte and possibly get a length
+      // changing prefix penalty in the decoders.
+      if (OptForMinSize && isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
           (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
         SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i16);
         SDValue Reg = N0.getOperand(0);

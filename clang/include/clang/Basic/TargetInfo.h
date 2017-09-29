@@ -248,6 +248,9 @@ public:
   IntType getPtrDiffType(unsigned AddrSpace) const {
     return AddrSpace == 0 ? PtrDiffType : getPtrDiffTypeV(AddrSpace);
   }
+  IntType getUnsignedPtrDiffType(unsigned AddrSpace) const {
+    return getCorrespondingUnsignedType(getPtrDiffType(AddrSpace));
+  }
   IntType getIntPtrType() const { return IntPtrType; }
   IntType getUIntPtrType() const {
     return getCorrespondingUnsignedType(IntPtrType);

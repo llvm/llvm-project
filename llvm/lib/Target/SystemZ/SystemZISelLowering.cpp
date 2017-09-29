@@ -6027,6 +6027,12 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   MBB->addSuccessor(LoopMBB);
   MBB->addSuccessor(DoneMBB);
 
+  // If the CC def wasn't dead in the ATOMIC_CMP_SWAPW, mark CC as live-in
+  // to the block after the loop.  At this point, CC may have been defined
+  // either by the CR in LoopMBB or by the CS in SetMBB.
+  if (!MI.registerDefIsDead(SystemZ::CC))
+    DoneMBB->addLiveIn(SystemZ::CC);
+
   MI.eraseFromParent();
   return DoneMBB;
 }

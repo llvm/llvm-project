@@ -1,4 +1,4 @@
-//===-- HexagonInstrInfo.cpp - Hexagon Instruction Information ------------===//
+//===- HexagonInstrInfo.cpp - Hexagon Instruction Information -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,9 +13,11 @@
 
 #include "HexagonInstrInfo.h"
 #include "Hexagon.h"
+#include "HexagonFrameLowering.h"
 #include "HexagonHazardRecognizer.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,7 +34,9 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -44,12 +48,17 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 
@@ -91,9 +100,7 @@ static cl::opt<bool> UseDFAHazardRec("dfa-hazard-rec",
   cl::init(true), cl::Hidden, cl::ZeroOrMore,
   cl::desc("Use the DFA based hazard recognizer."));
 
-///
 /// Constants for Hexagon instructions.
-///
 const int Hexagon_MEMW_OFFSET_MAX = 4095;
 const int Hexagon_MEMW_OFFSET_MIN = -4096;
 const int Hexagon_MEMD_OFFSET_MAX = 8191;
@@ -339,7 +346,6 @@ unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 /// Cond[0] = Hexagon::CMPEQri_f_Jumpnv_t_V4 -- specific opcode
 /// Cond[1] = R
 /// Cond[2] = Imm
-///
 bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *&TBB,
                                      MachineBasicBlock *&FBB,
@@ -576,7 +582,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
       SmallPtrSet<MachineBasicBlock *, 8> VisitedBBs;
       MachineInstr *Loop = findLoopInstr(TBB, EndLoopOp, Cond[1].getMBB(),
                                          VisitedBBs);
-      assert(Loop != 0 && "Inserting an ENDLOOP without a LOOP");
+      assert(Loop != nullptr && "Inserting an ENDLOOP without a LOOP");
       Loop->getOperand(0).setMBB(TBB);
       // Add the ENDLOOP after the finding the LOOP0.
       BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
@@ -617,7 +623,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
     SmallPtrSet<MachineBasicBlock *, 8> VisitedBBs;
     MachineInstr *Loop = findLoopInstr(TBB, EndLoopOp, Cond[1].getMBB(),
                                        VisitedBBs);
-    assert(Loop != 0 && "Inserting an ENDLOOP without a LOOP");
+    assert(Loop != nullptr && "Inserting an ENDLOOP without a LOOP");
     Loop->getOperand(0).setMBB(TBB);
     // Add the ENDLOOP after the finding the LOOP0.
     BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
@@ -1580,7 +1586,6 @@ unsigned HexagonInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return getInstrTimingClassLatency(ItinData, MI);
 }
 
-
 DFAPacketizer *HexagonInstrInfo::CreateTargetScheduleState(
     const TargetSubtargetInfo &STI) const {
   const InstrItineraryData *II = STI.getInstrItineraryData();
@@ -1672,6 +1677,7 @@ HexagonInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
 ArrayRef<std::pair<unsigned, const char*>>
 HexagonInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace HexagonII;
+
   static const std::pair<unsigned, const char*> Flags[] = {
     {MO_PCREL,  "hexagon-pcrel"},
     {MO_GOT,    "hexagon-got"},
@@ -1690,6 +1696,7 @@ HexagonInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
 ArrayRef<std::pair<unsigned, const char*>>
 HexagonInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace HexagonII;
+
   static const std::pair<unsigned, const char*> Flags[] = {
     {HMOTF_ConstExtended, "hexagon-ext"}
   };
@@ -1794,13 +1801,13 @@ bool HexagonInstrInfo::isConstExtended(const MachineInstr &MI) const {
 
 bool HexagonInstrInfo::isDeallocRet(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
-  case Hexagon::L4_return :
-  case Hexagon::L4_return_t :
-  case Hexagon::L4_return_f :
-  case Hexagon::L4_return_tnew_pnt :
-  case Hexagon::L4_return_fnew_pnt :
-  case Hexagon::L4_return_tnew_pt :
-  case Hexagon::L4_return_fnew_pt :
+  case Hexagon::L4_return:
+  case Hexagon::L4_return_t:
+  case Hexagon::L4_return_f:
+  case Hexagon::L4_return_tnew_pnt:
+  case Hexagon::L4_return_fnew_pnt:
+  case Hexagon::L4_return_tnew_pt:
+  case Hexagon::L4_return_fnew_pt:
     return true;
   }
   return false;
@@ -1950,10 +1957,10 @@ bool HexagonInstrInfo::isHVXMemWithAIndirect(const MachineInstr &I,
 
 bool HexagonInstrInfo::isIndirectCall(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
-  case Hexagon::J2_callr :
-  case Hexagon::J2_callrf :
-  case Hexagon::J2_callrt :
-  case Hexagon::PS_call_nr :
+  case Hexagon::J2_callr:
+  case Hexagon::J2_callrf:
+  case Hexagon::J2_callrt:
+  case Hexagon::PS_call_nr:
     return true;
   }
   return false;
@@ -1961,13 +1968,13 @@ bool HexagonInstrInfo::isIndirectCall(const MachineInstr &MI) const {
 
 bool HexagonInstrInfo::isIndirectL4Return(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
-  case Hexagon::L4_return :
-  case Hexagon::L4_return_t :
-  case Hexagon::L4_return_f :
-  case Hexagon::L4_return_fnew_pnt :
-  case Hexagon::L4_return_fnew_pt :
-  case Hexagon::L4_return_tnew_pnt :
-  case Hexagon::L4_return_tnew_pt :
+  case Hexagon::L4_return:
+  case Hexagon::L4_return_t:
+  case Hexagon::L4_return_f:
+  case Hexagon::L4_return_fnew_pnt:
+  case Hexagon::L4_return_fnew_pt:
+  case Hexagon::L4_return_tnew_pnt:
+  case Hexagon::L4_return_tnew_pt:
     return true;
   }
   return false;
@@ -1975,13 +1982,13 @@ bool HexagonInstrInfo::isIndirectL4Return(const MachineInstr &MI) const {
 
 bool HexagonInstrInfo::isJumpR(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
-  case Hexagon::J2_jumpr :
-  case Hexagon::J2_jumprt :
-  case Hexagon::J2_jumprf :
-  case Hexagon::J2_jumprtnewpt :
-  case Hexagon::J2_jumprfnewpt  :
-  case Hexagon::J2_jumprtnew :
-  case Hexagon::J2_jumprfnew :
+  case Hexagon::J2_jumpr:
+  case Hexagon::J2_jumprt:
+  case Hexagon::J2_jumprf:
+  case Hexagon::J2_jumprtnewpt:
+  case Hexagon::J2_jumprfnewpt:
+  case Hexagon::J2_jumprtnew:
+  case Hexagon::J2_jumprfnew:
     return true;
   }
   return false;
@@ -2089,24 +2096,24 @@ bool HexagonInstrInfo::isLoopN(const MachineInstr &MI) const {
 bool HexagonInstrInfo::isMemOp(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
     default: return false;
-    case Hexagon::L4_iadd_memopw_io :
-    case Hexagon::L4_isub_memopw_io :
-    case Hexagon::L4_add_memopw_io :
-    case Hexagon::L4_sub_memopw_io :
-    case Hexagon::L4_and_memopw_io :
-    case Hexagon::L4_or_memopw_io :
-    case Hexagon::L4_iadd_memoph_io :
-    case Hexagon::L4_isub_memoph_io :
-    case Hexagon::L4_add_memoph_io :
-    case Hexagon::L4_sub_memoph_io :
-    case Hexagon::L4_and_memoph_io :
-    case Hexagon::L4_or_memoph_io :
-    case Hexagon::L4_iadd_memopb_io :
-    case Hexagon::L4_isub_memopb_io :
-    case Hexagon::L4_add_memopb_io :
-    case Hexagon::L4_sub_memopb_io :
-    case Hexagon::L4_and_memopb_io :
-    case Hexagon::L4_or_memopb_io :
+    case Hexagon::L4_iadd_memopw_io:
+    case Hexagon::L4_isub_memopw_io:
+    case Hexagon::L4_add_memopw_io:
+    case Hexagon::L4_sub_memopw_io:
+    case Hexagon::L4_and_memopw_io:
+    case Hexagon::L4_or_memopw_io:
+    case Hexagon::L4_iadd_memoph_io:
+    case Hexagon::L4_isub_memoph_io:
+    case Hexagon::L4_add_memoph_io:
+    case Hexagon::L4_sub_memoph_io:
+    case Hexagon::L4_and_memoph_io:
+    case Hexagon::L4_or_memoph_io:
+    case Hexagon::L4_iadd_memopb_io:
+    case Hexagon::L4_isub_memopb_io:
+    case Hexagon::L4_add_memopb_io:
+    case Hexagon::L4_sub_memopb_io:
+    case Hexagon::L4_and_memopb_io:
+    case Hexagon::L4_or_memopb_io:
     case Hexagon::L4_ior_memopb_io:
     case Hexagon::L4_ior_memoph_io:
     case Hexagon::L4_ior_memopw_io:
@@ -2293,8 +2300,8 @@ bool HexagonInstrInfo::isSolo(const MachineInstr &MI) const {
 
 bool HexagonInstrInfo::isSpillPredRegOp(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
-  case Hexagon::STriw_pred :
-  case Hexagon::LDriw_pred :
+  case Hexagon::STriw_pred:
+  case Hexagon::LDriw_pred:
     return true;
   default:
     return false;
@@ -2357,7 +2364,6 @@ bool HexagonInstrInfo::isHVXVec(const MachineInstr &MI) const {
 }
 
 // Check if the Offset is a valid auto-inc imm by Load/Store Type.
-//
 bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
   int Size = VT.getSizeInBits() / 8;
   if (Offset % Size != 0)
@@ -2469,28 +2475,28 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
     return (Offset >= Hexagon_ADDI_OFFSET_MIN) &&
       (Offset <= Hexagon_ADDI_OFFSET_MAX);
 
-  case Hexagon::L4_iadd_memopw_io :
-  case Hexagon::L4_isub_memopw_io :
-  case Hexagon::L4_add_memopw_io :
-  case Hexagon::L4_sub_memopw_io :
-  case Hexagon::L4_and_memopw_io :
-  case Hexagon::L4_or_memopw_io :
+  case Hexagon::L4_iadd_memopw_io:
+  case Hexagon::L4_isub_memopw_io:
+  case Hexagon::L4_add_memopw_io:
+  case Hexagon::L4_sub_memopw_io:
+  case Hexagon::L4_and_memopw_io:
+  case Hexagon::L4_or_memopw_io:
     return (0 <= Offset && Offset <= 255);
 
-  case Hexagon::L4_iadd_memoph_io :
-  case Hexagon::L4_isub_memoph_io :
-  case Hexagon::L4_add_memoph_io :
-  case Hexagon::L4_sub_memoph_io :
-  case Hexagon::L4_and_memoph_io :
-  case Hexagon::L4_or_memoph_io :
+  case Hexagon::L4_iadd_memoph_io:
+  case Hexagon::L4_isub_memoph_io:
+  case Hexagon::L4_add_memoph_io:
+  case Hexagon::L4_sub_memoph_io:
+  case Hexagon::L4_and_memoph_io:
+  case Hexagon::L4_or_memoph_io:
     return (0 <= Offset && Offset <= 127);
 
-  case Hexagon::L4_iadd_memopb_io :
-  case Hexagon::L4_isub_memopb_io :
-  case Hexagon::L4_add_memopb_io :
-  case Hexagon::L4_sub_memopb_io :
-  case Hexagon::L4_and_memopb_io :
-  case Hexagon::L4_or_memopb_io :
+  case Hexagon::L4_iadd_memopb_io:
+  case Hexagon::L4_isub_memopb_io:
+  case Hexagon::L4_add_memopb_io:
+  case Hexagon::L4_sub_memopb_io:
+  case Hexagon::L4_and_memopb_io:
+  case Hexagon::L4_or_memopb_io:
     return (0 <= Offset && Offset <= 63);
 
   // LDriw_xxx and STriw_xxx are pseudo operations, so it has to take offset of
@@ -2714,12 +2720,12 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr &MI) const {
     // Check addressing mode and retrieve non-ext equivalent instruction.
 
     switch (getAddrMode(MI)) {
-    case HexagonII::Absolute :
+    case HexagonII::Absolute:
       // Load/store with absolute addressing mode can be converted into
       // base+offset mode.
       NonExtOpcode = Hexagon::getBaseWithImmOffset(MI.getOpcode());
       break;
-    case HexagonII::BaseImmOffset :
+    case HexagonII::BaseImmOffset:
       // Load/store with base+offset addressing mode can be converted into
       // base+register offset addressing mode. However left shift operand should
       // be set to 0.
@@ -3081,7 +3087,6 @@ HexagonII::CompoundGroup HexagonInstrInfo::getCompoundCandidateGroup(
   case Hexagon::RESTORE_DEALLOC_RET_JMP_V4:
   case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC:
     return HexagonII::HCG_C;
-    break;
   }
 
   return HexagonII::HCG_None;
@@ -3147,7 +3152,6 @@ int HexagonInstrInfo::getNonDotCurOp(const MachineInstr &MI) const {
   }
   return 0;
 }
-
 
 // The diagram below shows the steps involved in the conversion of a predicated
 // store instruction to its .new predicated new-value form.
@@ -3238,8 +3242,8 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   default:
-    llvm::report_fatal_error(std::string("Unknown .new type: ") +
-      std::to_string(MI.getOpcode()).c_str());
+    report_fatal_error(std::string("Unknown .new type: ") +
+      std::to_string(MI.getOpcode()));
   case Hexagon::S4_storerb_ur:
     return Hexagon::S4_storerbnew_ur;
 
@@ -3535,12 +3539,12 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
         (Hexagon::IntRegsRegClass.contains(DstReg) && (Hexagon::R31 == DstReg)))
       return HexagonII::HSIG_L2;
     break;
-  case Hexagon::L4_return_t :
-  case Hexagon::L4_return_f :
-  case Hexagon::L4_return_tnew_pnt :
-  case Hexagon::L4_return_fnew_pnt :
-  case Hexagon::L4_return_tnew_pt :
-  case Hexagon::L4_return_fnew_pt :
+  case Hexagon::L4_return_t:
+  case Hexagon::L4_return_f:
+  case Hexagon::L4_return_tnew_pnt:
+  case Hexagon::L4_return_fnew_pnt:
+  case Hexagon::L4_return_tnew_pt:
+  case Hexagon::L4_return_fnew_pt:
     // [if ([!]p0[.new])] dealloc_return
     SrcReg = MI.getOperand(0).getReg();
     if (Hexagon::PredRegsRegClass.contains(SrcReg) && (Hexagon::P0 == SrcReg))
@@ -3869,6 +3873,7 @@ int HexagonInstrInfo::getMaxValue(const MachineInstr &MI) const {
 
 unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
   using namespace HexagonII;
+
   const uint64_t F = MI.getDesc().TSFlags;
   unsigned S = (F >> MemAccessSizePos) & MemAccesSizeMask;
   unsigned Size = getMemAccessSizeInBytes(MemAccessSize(S));
@@ -3912,9 +3917,9 @@ short HexagonInstrInfo::getNonExtOpcode(const MachineInstr &MI) const {
   if (MI.getDesc().mayLoad() || MI.getDesc().mayStore()) {
     // Check addressing mode and retrieve non-ext equivalent instruction.
     switch (getAddrMode(MI)) {
-    case HexagonII::Absolute :
+    case HexagonII::Absolute:
       return Hexagon::getBaseWithImmOffset(MI.getOpcode());
-    case HexagonII::BaseImmOffset :
+    case HexagonII::BaseImmOffset:
       return Hexagon::getBaseWithRegOffset(MI.getOpcode());
     case HexagonII::BaseLongOffset:
       return Hexagon::getRegShlForm(MI.getOpcode());

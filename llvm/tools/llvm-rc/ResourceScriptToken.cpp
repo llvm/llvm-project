@@ -60,6 +60,18 @@ StringRef RCToken::value() const { return TokenValue; }
 
 Kind RCToken::kind() const { return TokenKind; }
 
+bool RCToken::isBinaryOp() const {
+  switch (TokenKind) {
+  case Kind::Plus:
+  case Kind::Minus:
+  case Kind::Pipe:
+  case Kind::Amp:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static Error getStringError(const Twine &message) {
   return make_error<StringError>("Error parsing file: " + message,
                                  inconvertibleErrorCode());
