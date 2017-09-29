@@ -331,12 +331,15 @@ void DWARFContext::dump(
       if (!CUDIE)
         continue;
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list))) {
+        if (DumpOffset && *StmtOffset != *DumpOffset)
+          continue;
         DWARFDataExtractor lineData(*DObj, DObj->getLineSection(),
                                     isLittleEndian(), savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
         uint32_t Offset = *StmtOffset;
         // Verbose dumping is done during parsing and not on the intermediate
         // representation.
+        OS << "debug_line[" << format("%16.16" PRIx64, Offset) << "]\n";
         if (DumpOpts.Verbose) {
           LineTable.parse(lineData, &Offset, &OS);
         } else {
