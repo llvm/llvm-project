@@ -11,9 +11,9 @@
 # CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000003f] = "/Users/sgravani/Development/tests")
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
 # CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000016){{[[:space:]]}}
-# CHECK-NEXT: Units[2] - start offset: 0x00000068
-# CHECK-NEXT:	Error: The length for this unit is too large for the .debug_info provided.
-# CHECK-NEXT:	Error: The unit type encoding is not valid.
+# CHECK-NEXT: error: Units[2] - start offset: 0x00000068
+# CHECK-NEXT: note: The length for this unit is too large for the .debug_info provided.
+# CHECK-NEXT: note: The unit type encoding is not valid.
 
 
 	.section	__TEXT,__text,regular,pure_instructions

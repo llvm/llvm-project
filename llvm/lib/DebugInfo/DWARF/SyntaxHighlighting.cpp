@@ -24,12 +24,15 @@ WithColor::WithColor(raw_ostream &OS, enum HighlightColor Type) : OS(OS) {
   // Detect color from terminal type unless the user passed the --color option.
   if (UseColor == cl::BOU_UNSET ? OS.has_colors() : UseColor == cl::BOU_TRUE) {
     switch (Type) {
-    case Address:    OS.changeColor(raw_ostream::YELLOW);  break;
-    case String:     OS.changeColor(raw_ostream::GREEN);   break;
-    case Tag:        OS.changeColor(raw_ostream::BLUE);    break;
-    case Attribute:  OS.changeColor(raw_ostream::CYAN);    break;
-    case Enumerator: OS.changeColor(raw_ostream::MAGENTA); break;
-    case Macro:      OS.changeColor(raw_ostream::RED);     break;
+    case Address:    OS.changeColor(raw_ostream::YELLOW);         break;
+    case String:     OS.changeColor(raw_ostream::GREEN);          break;
+    case Tag:        OS.changeColor(raw_ostream::BLUE);           break;
+    case Attribute:  OS.changeColor(raw_ostream::CYAN);           break;
+    case Enumerator: OS.changeColor(raw_ostream::MAGENTA);        break;
+    case Macro:      OS.changeColor(raw_ostream::RED);            break;
+    case Error:      OS.changeColor(raw_ostream::RED, true);      break;
+    case Warning:    OS.changeColor(raw_ostream::MAGENTA, true);  break;
+    case Note:       OS.changeColor(raw_ostream::BLACK, true);    break;
     }
   }
 }
