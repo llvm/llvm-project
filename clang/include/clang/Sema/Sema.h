@@ -229,6 +229,10 @@ struct FileNullability {
   /// not have a corresponding nullability annotation.
   SourceLocation PointerLoc;
 
+  /// The end location for the first pointer declarator in the file. Used for
+  /// placing fix-its.
+  SourceLocation PointerEndLoc;
+
   /// Which kind of pointer declarator we saw.
   uint8_t PointerKind;
 

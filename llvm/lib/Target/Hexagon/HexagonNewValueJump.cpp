@@ -1,4 +1,4 @@
-//===----- HexagonNewValueJump.cpp - Hexagon Backend New Value Jump -------===//
+//===- HexagonNewValueJump.cpp - Hexagon Backend New Value Jump -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,28 +19,36 @@
 // all, it collapses compare and jump instruction into a new valu jump
 // intstructions.
 //
-//
 //===----------------------------------------------------------------------===//
+
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
-#include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
-#include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/PassSupport.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-nvj"
@@ -56,12 +64,14 @@ static cl::opt<bool> DisableNewValueJumps("disable-nvjump", cl::Hidden,
     cl::desc("Disable New Value Jumps"));
 
 namespace llvm {
-  FunctionPass *createHexagonNewValueJump();
-  void initializeHexagonNewValueJumpPass(PassRegistry&);
-}
 
+FunctionPass *createHexagonNewValueJump();
+void initializeHexagonNewValueJumpPass(PassRegistry&);
+
+} // end namespace llvm
 
 namespace {
+
   struct HexagonNewValueJump : public MachineFunctionPass {
     static char ID;
 
@@ -75,6 +85,7 @@ namespace {
     StringRef getPassName() const override { return "Hexagon NewValueJump"; }
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
+
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
@@ -90,7 +101,7 @@ namespace {
     bool isNewValueJumpCandidate(const MachineInstr &MI) const;
   };
 
-} // end of anonymous namespace
+} // end anonymous namespace
 
 char HexagonNewValueJump::ID = 0;
 
@@ -100,7 +111,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_END(HexagonNewValueJump, "hexagon-nvj",
                     "Hexagon NewValueJump", false, false)
 
-
 // We have identified this II could be feeder to NVJ,
 // verify that it can be.
 static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
@@ -109,7 +119,6 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
                                       MachineBasicBlock::iterator end,
                                       MachineBasicBlock::iterator skip,
                                       MachineFunction &MF) {
-
   // Predicated instruction can not be feeder to NVJ.
   if (QII->isPredicated(*II))
     return false;
@@ -144,7 +153,6 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   //    p0 = cmp.eq(r21, #0)
   //    if (p0.new) jump:t .LBB29_45
   // and result WAR hazards if converted to New Value Jump.
-
   for (unsigned i = 0; i < II->getNumOperands(); ++i) {
     if (II->getOperand(i).isReg() &&
         (II->getOperand(i).isUse() || II->getOperand(i).isDef())) {
@@ -171,7 +179,6 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
 // 2. feeder to the compare instruction can be moved before jump.
 static bool commonChecksToProhibitNewValueJump(bool afterRA,
                           MachineBasicBlock::iterator MII) {
-
   // If store in path, bail out.
   if (MII->mayStore())
     return false;
@@ -216,7 +223,6 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
                                      bool optLocation,
                                      MachineBasicBlock::iterator end,
                                      MachineFunction &MF) {
-
   MachineInstr &MI = *II;
 
   // If the second operand of the compare is an imm, make sure it's in the
@@ -417,9 +423,7 @@ bool HexagonNewValueJump::isNewValueJumpCandidate(
   }
 }
 
-
 bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
-
   DEBUG(dbgs() << "********** Hexagon New Value Jump **********\n"
                << "********** Function: " << MF.getName() << "\n");
 
@@ -536,10 +540,8 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
 
       if (foundJump && !foundCompare && MI.getOperand(0).isReg() &&
           MI.getOperand(0).getReg() == predReg) {
-
         // Not all compares can be new value compare. Arch Spec: 7.6.1.1
         if (isNewValueJumpCandidate(MI)) {
-
           assert(
               (MI.getDesc().isCompare()) &&
               "Only compare instruction can be collapsed into New Value Jump");
@@ -566,7 +568,6 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (foundCompare && foundJump) {
-
         // If "common" checks fail, bail out on this BB.
         if (!commonChecksToProhibitNewValueJump(afterRA, MII))
           break;

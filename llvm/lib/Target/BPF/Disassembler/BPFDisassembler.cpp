@@ -146,7 +146,8 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   if (Result == MCDisassembler::Fail) return MCDisassembler::Fail;
 
   switch (Instr.getOpcode()) {
-  case BPF::LD_imm64: {
+  case BPF::LD_imm64:
+  case BPF::LD_pseudo: {
     if (Bytes.size() < 16) {
       Size = 0;
       return MCDisassembler::Fail;
