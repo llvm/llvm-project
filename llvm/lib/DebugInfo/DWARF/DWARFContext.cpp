@@ -291,11 +291,11 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                  DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo());
+    getDebugLoc()->dump(OS, getRegisterInfo(), DumpOffset);
   }
   if (shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                  DObj->getLocDWOSection().Data)) {
-    getDebugLocDWO()->dump(OS, getRegisterInfo());
+    getDebugLocDWO()->dump(OS, getRegisterInfo(), DumpOffset);
   }
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
