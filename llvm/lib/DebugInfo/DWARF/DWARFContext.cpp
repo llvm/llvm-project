@@ -68,17 +68,6 @@ DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
 
 DWARFContext::~DWARFContext() = default;
 
-static void dumpAccelSection(raw_ostream &OS, const DWARFObject &Obj,
-                             const DWARFSection &Section,
-                             StringRef StringSection, bool LittleEndian) {
-  DWARFDataExtractor AccelSection(Obj, Section, LittleEndian, 0);
-  DataExtractor StrData(StringSection, LittleEndian, 0);
-  DWARFAcceleratorTable Accel(AccelSection, StrData);
-  if (!Accel.extract())
-    return;
-  Accel.dump(OS);
-}
-
 /// Dump the UUID load command.
 static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
   auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
@@ -461,13 +450,11 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".apple_namespaces", DIDT_ID_AppleNamespaces,
                  DObj->getAppleNamespacesSection().Data))
-    dumpAccelSection(OS, *DObj, DObj->getAppleNamespacesSection(),
-                     DObj->getStringSection(), isLittleEndian());
+    getAppleNamespaces().dump(OS);
 
   if (shouldDump(Explicit, ".apple_objc", DIDT_ID_AppleObjC,
                  DObj->getAppleObjCSection().Data))
-    dumpAccelSection(OS, *DObj, DObj->getAppleObjCSection(),
-                     DObj->getStringSection(), isLittleEndian());
+    getAppleObjC().dump(OS);
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -656,6 +643,17 @@ const DWARFAcceleratorTable &DWARFContext::getAppleNames() {
 
 const DWARFAcceleratorTable &DWARFContext::getAppleTypes() {
   return getAccelTable(AppleTypes, *DObj, DObj->getAppleTypesSection(),
+                       DObj->getStringSection(), isLittleEndian());
+}
+
+const DWARFAcceleratorTable &DWARFContext::getAppleNamespaces() {
+  return getAccelTable(AppleNamespaces, *DObj,
+                       DObj->getAppleNamespacesSection(),
+                       DObj->getStringSection(), isLittleEndian());
+}
+
+const DWARFAcceleratorTable &DWARFContext::getAppleObjC() {
+  return getAccelTable(AppleObjC, *DObj, DObj->getAppleObjCSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
 
