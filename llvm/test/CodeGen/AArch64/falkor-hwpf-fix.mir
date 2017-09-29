@@ -305,3 +305,28 @@ body: |
   bb.1:
     RET_ReallyLR
 ...
+---
+# Check that we handle case of strided load with no HW prefetcher tag correctly.
+
+# CHECK-LABEL: name: hwpf_notagbug
+# CHECK-NOT: ORRXrs %xzr
+# CHECK: LDARW %x1
+# CHECK-NOT: ORRXrs %xzr
+# CHECK: LDRWui %x1
+name:            hwpf_notagbug
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w0, %x1, %x17
+
+    %w1 = LDARW %x1 :: ("aarch64-strided-access" load 4)
+    %w1 = LDRWui %x1, 0 :: ("aarch64-strided-access" load 4)
+    %w17 = LDRWui %x17, 0 :: ("aarch64-strided-access" load 4)
+
+    %w0 = SUBWri %w0, 1, 0
+    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
+    Bcc 9, %bb.0, implicit %nzcv
+
+  bb.1:
+    RET_ReallyLR
+...

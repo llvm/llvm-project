@@ -690,9 +690,14 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
       if (!TII->isStridedAccess(MI))
         continue;
 
-      LoadInfo LdI = *getLoadInfo(MI);
-      unsigned OldTag = *getTag(TRI, MI, LdI);
-      auto &OldCollisions = TagMap[OldTag];
+      Optional<LoadInfo> OptLdI = getLoadInfo(MI);
+      if (!OptLdI)
+        continue;
+      LoadInfo LdI = *OptLdI;
+      Optional<unsigned> OptOldTag = getTag(TRI, MI, LdI);
+      if (!OptOldTag)
+        continue;
+      auto &OldCollisions = TagMap[*OptOldTag];
       if (OldCollisions.size() <= 1)
         continue;
 
