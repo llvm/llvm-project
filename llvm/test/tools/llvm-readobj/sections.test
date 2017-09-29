@@ -568,6 +568,5 @@ WASM-NEXT:     Size: 22
 WASM-NEXT:     Offset: 257
 WASM-NEXT:     Name: linking
 WASM-NEXT:     DataSize: 13
-WASM-NEXT:     DataAlignment: 1
 WASM-NEXT:   }
 WASM-NEXT: ]

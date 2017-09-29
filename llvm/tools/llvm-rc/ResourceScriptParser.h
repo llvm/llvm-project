@@ -106,10 +106,11 @@ private:
 
   // Read an unknown number of flags preceded by commas. Each correct flag
   // has an entry in FlagDesc array of length NumFlags. In case i-th
-  // flag (0-based) has been read, the i-th bit of the result is set.
+  // flag (0-based) has been read, the result is OR-ed with FlagValues[i].
   // As long as parser has a comma to read, it expects to be fed with
   // a correct flag afterwards.
-  Expected<uint32_t> parseFlags(ArrayRef<StringRef> FlagDesc);
+  Expected<uint32_t> parseFlags(ArrayRef<StringRef> FlagDesc,
+                                ArrayRef<uint32_t> FlagValues);
 
   // Reads a set of optional statements. These can change the behavior of
   // a number of resource types (e.g. STRINGTABLE, MENU or DIALOG) if provided

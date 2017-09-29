@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class LiveIntervals;
 class MachineRegisterInfo;
 class SISubtarget;
 class SIMachineFunctionInfo;
@@ -212,7 +213,8 @@ public:
                       unsigned SubReg,
                       const TargetRegisterClass *DstRC,
                       unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC) const override;
+                      const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;

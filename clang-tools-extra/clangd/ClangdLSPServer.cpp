@@ -256,7 +256,7 @@ void ClangdLSPServer::run(std::istream &In) {
   // Set up JSONRPCDispatcher.
   LSPProtocolCallbacks Callbacks(*this);
   JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
-  regiterCallbackHandlers(Dispatcher, Out, Callbacks);
+  registerCallbackHandlers(Dispatcher, Out, Callbacks);
 
   // Run the Language Server loop.
   runLanguageServerLoop(In, Out, Dispatcher, IsDone);

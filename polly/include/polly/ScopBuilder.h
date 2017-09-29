@@ -356,7 +356,7 @@ class ScopBuilder {
   /// base address and there are no other accesses which overlap with them. The
   /// base address check rules out impossible reductions candidates early. The
   /// overlap check, together with the "only one user" check in
-  /// collectCandiateReductionLoads, guarantees that none of the intermediate
+  /// collectCandidateReductionLoads, guarantees that none of the intermediate
   /// results will escape during execution of the loop nest. We basically check
   /// here that no other memory access can access the same memory as the
   /// potential reduction.
@@ -372,8 +372,8 @@ class ScopBuilder {
   ///
   /// Note: We allow only one use to ensure the load and binary operator cannot
   ///       escape this block or into any other store except @p StoreMA.
-  void collectCandiateReductionLoads(MemoryAccess *StoreMA,
-                                     SmallVectorImpl<MemoryAccess *> &Loads);
+  void collectCandidateReductionLoads(MemoryAccess *StoreMA,
+                                      SmallVectorImpl<MemoryAccess *> &Loads);
 
   /// Build the access relation of all memory accesses of @p Stmt.
   void buildAccessRelations(ScopStmt &Stmt);

@@ -10,6 +10,7 @@ add_public_tablegen_target(RcTableGen)
 
 add_llvm_tool(llvm-rc
   llvm-rc.cpp
+  ResourceFileWriter.cpp
   ResourceScriptParser.cpp
   ResourceScriptStmt.cpp
   ResourceScriptToken.cpp
