@@ -50,11 +50,32 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
   }
 }
 
-void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI) const {
-  for (const LocationList &L : Locations) {
+DWARFDebugLoc::LocationList const *
+DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
+  auto It = std::lower_bound(
+      Locations.begin(), Locations.end(), Offset,
+      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  if (It != Locations.end() && It->Offset == Offset)
+    return &(*It);
+  return nullptr;
+}
+
+void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                         Optional<uint64_t> Offset) const {
+  auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8x: ", L.Offset);
     L.dump(OS, IsLittleEndian, AddressSize, MRI, 12);
     OS << "\n\n";
+  };
+
+  if (Offset) {
+    if (auto *L = getLocationListAtOffset(*Offset))
+      DumpLocationList(*L);
+    return;
+  }
+
+  for (const LocationList &L : Locations) {
+    DumpLocationList(L);
   }
 }
 
@@ -161,6 +182,16 @@ void DWARFDebugLocDWO::parse(DataExtractor data) {
   }
 }
 
+DWARFDebugLocDWO::LocationList const *
+DWARFDebugLocDWO::getLocationListAtOffset(uint64_t Offset) const {
+  auto It = std::lower_bound(
+      Locations.begin(), Locations.end(), Offset,
+      [](const LocationList &L, uint64_t Offset) { return L.Offset < Offset; });
+  if (It != Locations.end() && It->Offset == Offset)
+    return &(*It);
+  return nullptr;
+}
+
 void DWARFDebugLocDWO::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
                                           unsigned AddressSize,
                                           const MCRegisterInfo *MRI,
@@ -173,10 +204,21 @@ void DWARFDebugLocDWO::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
   }
 }
 
-void DWARFDebugLocDWO::dump(raw_ostream &OS, const MCRegisterInfo *MRI) const {
-  for (const LocationList &L : Locations) {
+void DWARFDebugLocDWO::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                            Optional<uint64_t> Offset) const {
+  auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8x: ", L.Offset);
     L.dump(OS, IsLittleEndian, AddressSize, MRI, /*Indent=*/12);
     OS << "\n\n";
+  };
+
+  if (Offset) {
+    if (auto *L = getLocationListAtOffset(*Offset))
+      DumpLocationList(*L);
+    return;
+  }
+
+  for (const LocationList &L : Locations) {
+    DumpLocationList(L);
   }
 }
