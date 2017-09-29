@@ -28,7 +28,7 @@ namespace llvm {
 
 class raw_ostream;
 
-/// DILineInfo - a format-neutral container for source line information.
+/// A format-neutral container for source line information.
 struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
@@ -59,7 +59,7 @@ struct DILineInfo {
 
 using DILineInfoTable = SmallVector<std::pair<uint64_t, DILineInfo>, 16>;
 
-/// DIInliningInfo - a format-neutral container for inlined code description.
+/// A format-neutral container for inlined code description.
 class DIInliningInfo {
   SmallVector<DILineInfo, 4> Frames;
 
@@ -85,7 +85,7 @@ public:
   }
 };
 
-/// DIGlobal - container for description of a global variable.
+/// Container for description of a global variable.
 struct DIGlobal {
   std::string Name;
   uint64_t Start = 0;
@@ -98,8 +98,8 @@ struct DIGlobal {
 /// preference regarding the type of name resolution the caller wants.
 enum class DINameKind { None, ShortName, LinkageName };
 
-/// DILineInfoSpecifier - controls which fields of DILineInfo container
-/// should be filled with data.
+/// Controls which fields of DILineInfo container should be filled
+/// with data.
 struct DILineInfoSpecifier {
   enum class FileLineInfoKind { None, Default, AbsoluteFilePath };
   using FunctionNameKind = DINameKind;
@@ -206,22 +206,23 @@ public:
   /// Calculate the address of the given section.
   /// The section need not be present in the local address space. The addresses
   /// need to be consistent with the addresses used to query the DIContext and
-  /// the output of this function should be deterministic, i.e. repeated calls with
-  /// the same Sec should give the same address.
+  /// the output of this function should be deterministic, i.e. repeated calls
+  /// with the same Sec should give the same address.
   virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const {
     return 0;
   }
 
   /// If conveniently available, return the content of the given Section.
   ///
-  /// When the section is available in the local address space, in relocated (loaded)
-  /// form, e.g. because it was relocated by a JIT for execution, this function
-  /// should provide the contents of said section in `Data`. If the loaded section
-  /// is not available, or the cost of retrieving it would be prohibitive, this
-  /// function should return false. In that case, relocations will be read from the
-  /// local (unrelocated) object file and applied on the fly. Note that this method
-  /// is used purely for optimzation purposes in the common case of JITting in the
-  /// local address space, so returning false should always be correct.
+  /// When the section is available in the local address space, in relocated
+  /// (loaded) form, e.g. because it was relocated by a JIT for execution, this
+  /// function should provide the contents of said section in `Data`. If the
+  /// loaded section is not available, or the cost of retrieving it would be
+  /// prohibitive, this function should return false. In that case, relocations
+  /// will be read from the local (unrelocated) object file and applied on the
+  /// fly. Note that this method is used purely for optimzation purposes in the
+  /// common case of JITting in the local address space, so returning false
+  /// should always be correct.
   virtual bool getLoadedSectionContents(const object::SectionRef &Sec,
                                         StringRef &Data) const {
     return false;
