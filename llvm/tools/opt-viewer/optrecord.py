@@ -282,7 +282,7 @@ def gather_results(filenames, num_jobs, should_print_progress):
     return all_remarks, file_remarks, max_hotness != 0
 
 
-def find_opt_files(dirs_or_files):
+def find_opt_files(*dirs_or_files):
     all = []
     for dir_or_file in dirs_or_files:
         if os.path.isfile(dir_or_file):

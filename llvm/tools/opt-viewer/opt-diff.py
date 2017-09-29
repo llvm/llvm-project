@@ -46,8 +46,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', default='diff.opt.yaml')
     args = parser.parse_args()
 
-    files1 = optrecord.find_opt_files([args.yaml_dir_or_file_1])
-    files2 = optrecord.find_opt_files([args.yaml_dir_or_file_2])
+    files1 = optrecord.find_opt_files(args.yaml_dir_or_file_1)
+    files2 = optrecord.find_opt_files(args.yaml_dir_or_file_2)
 
     print_progress = not args.no_progress_indicator
     all_remarks1, _, _ = optrecord.gather_results(files1, args.jobs, print_progress)
