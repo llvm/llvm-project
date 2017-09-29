@@ -69,7 +69,7 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
     // types from any source that we would do lookups in, which includes the
     // persistent AST context as well as the modules and Objective-C runtime
     // AST contexts.
-    
+
     lldbassert(!m_merger_up);
     clang::ExternalASTMerger::ImporterTarget target = {ast_context,
                                                        file_manager};
@@ -114,14 +114,14 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
 
       sources.push_back(modules_decl_vendor->GetImporterSource());
     } while (0);
-    
+
     if (!is_shared_context) {
       // Update the scratch AST context's merger to reflect any new sources we
       // might have come across since the last time an expression was parsed.
-      
+
       auto scratch_ast_context = static_cast<ClangASTContextForExpressions*>(
           m_target->GetScratchClangASTContext());
-      
+
       scratch_ast_context->GetMergerUnchecked().AddSources(sources);
 
       sources.push_back({*scratch_ast_context->getASTContext(),
@@ -429,22 +429,22 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
     ASTDumper dumper((Decl *)interface_decl);
     dumper.ToLog(log, "      [COID] ");
   }
-  
+
   if (!m_ast_importer_sp) {
     if (HasMerger()) {
       ObjCInterfaceDecl *complete_iface_decl =
         GetCompleteObjCInterface(interface_decl);
-      
+
       if (complete_iface_decl && (complete_iface_decl != interface_decl)) {
         m_merger_up->ForceRecordOrigin(interface_decl, {complete_iface_decl, &complete_iface_decl->getASTContext()});
       }
 
       GetMergerUnchecked().CompleteType(interface_decl);
     } else {
-      lldbassert(!"No mechanism for completing a type!"); 
+      lldbassert(!"No mechanism for completing a type!");
     }
     return;
-  }  
+  }
 
   Decl *original_decl = NULL;
   ASTContext *original_ctx = NULL;
@@ -525,7 +525,7 @@ void ClangASTSource::FindExternalLexicalDecls(
     if (auto *interface_decl = dyn_cast<ObjCInterfaceDecl>(decl_context)) {
       ObjCInterfaceDecl *complete_iface_decl =
          GetCompleteObjCInterface(interface_decl);
-      
+
       if (complete_iface_decl && (complete_iface_decl != interface_decl)) {
         m_merger_up->ForceRecordOrigin(interface_decl, {complete_iface_decl, &complete_iface_decl->getASTContext()});
       }
@@ -701,7 +701,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
     dyn_cast<ObjCInterfaceDecl>(context.m_decl_context)) {
       ObjCInterfaceDecl *complete_iface_decl =
       GetCompleteObjCInterface(interface_decl);
-      
+
       if (complete_iface_decl && (complete_iface_decl != interface_decl)) {
         GetMergerUnchecked().ForceRecordOrigin(
             interface_decl,
@@ -1144,12 +1144,12 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     if (auto *interface_decl = dyn_cast<ObjCInterfaceDecl>(context.m_decl_context)) {
       ObjCInterfaceDecl *complete_iface_decl =
           GetCompleteObjCInterface(interface_decl);
-      
+
       if (complete_iface_decl && (complete_iface_decl != context.m_decl_context)) {
         m_merger_up->ForceRecordOrigin(interface_decl, {complete_iface_decl, &complete_iface_decl->getASTContext()});
       }
     }
-    
+
     GetMergerUnchecked().FindExternalVisibleDeclsByName(context.m_decl_context,
                                                         context.m_decl_name);
     return;
@@ -2021,7 +2021,7 @@ bool ClangASTSource::ResolveDeclOrigin(const clang::Decl *decl,
 }
 
 clang::ExternalASTMerger &ClangASTSource::GetMergerUnchecked() {
-  lldbassert(m_merger_up);
+  lldbassert(m_merger_up != nullptr);
   return *m_merger_up;
 }
 

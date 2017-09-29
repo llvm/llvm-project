@@ -1467,7 +1467,7 @@ static TemplateParameterList *CreateTemplateParameterList(
           is_typename, parameter_pack));
     }
   }
-  
+
   if (template_param_infos.packed_args &&
       template_param_infos.packed_args->args.size()) {
     IdentifierInfo *identifier_info = nullptr;
@@ -10215,7 +10215,7 @@ ClangASTContextForExpressions::GetPersistentExpressionState() {
 
 clang::ExternalASTMerger &
 ClangASTContextForExpressions::GetMergerUnchecked() {
-  lldbassert(m_scratch_ast_source_ap);
+  lldbassert(m_scratch_ast_source_ap != nullptr);
   return m_scratch_ast_source_ap->GetMergerUnchecked();
 }
 
