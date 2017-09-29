@@ -1,0 +1,28 @@
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -find=not_there_at_all - | \
+RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
+EMPTY: {{^$}}
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -find=main - | FileCheck %s
+CHECK: .debug_info contents:
+CHECK-NOT: {{:}}
+CHECK: : DW_TAG_subprogram
+CHECK-NOT: {{:}}
+CHECK:     DW_AT_name ("main")
+CHECK-NOT: {{:}}
+
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   -find=x86_64h_var -find=i386_var \
+RUN:   | FileCheck %s --check-prefix=MULTI
+MULTI: .debug_info contents:
+MULTI-NOT: {{: DW}}
+MULTI: : DW_TAG_variable
+MULTI-NOT: {{: DW}}
+MULTI:    DW_AT_name ("i386_var")
+MULTI-NOT: {{: DW}}
+MULTI: .debug_info contents:
+MULTI: : DW_TAG_variable
+MULTI-NOT: {{: DW}}
+MULTI:    DW_AT_name ("x86_64h_var")
+MULTI-NOT: {{: DW}}
