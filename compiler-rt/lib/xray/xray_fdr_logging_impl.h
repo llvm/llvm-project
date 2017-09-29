@@ -195,13 +195,6 @@ public:
   }
 };
 
-inline bool loggingInitialized(
-    const __sanitizer::atomic_sint32_t &LoggingStatus) XRAY_NEVER_INSTRUMENT {
-  return __sanitizer::atomic_load(&LoggingStatus,
-                                  __sanitizer::memory_order_acquire) ==
-         XRayLogInitStatus::XRAY_LOG_INITIALIZED;
-}
-
 } // namespace
 
 inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
@@ -528,7 +521,10 @@ inline bool isLogInitializedAndReady(
     return false;
   }
 
-  if (!loggingInitialized(LoggingStatus) || LBQ->finalizing()) {
+  if (__sanitizer::atomic_load(&LoggingStatus,
+                               __sanitizer::memory_order_acquire) !=
+          XRayLogInitStatus::XRAY_LOG_INITIALIZED ||
+      LBQ->finalizing()) {
     writeEOBMetadata();
     if (!releaseThreadLocalBuffer(*LBQ))
       return false;
@@ -578,7 +574,8 @@ inline bool isLogInitializedAndReady(
 //   - The TSC delta is representable within the 32 bits we can store in a
 //     FunctionRecord. In this case we write down just a FunctionRecord with
 //     the correct TSC delta.
-inline uint32_t writeCurrentCPUTSC(ThreadLocalData &TLD, uint64_t TSC, uint8_t CPU) {
+inline uint32_t writeCurrentCPUTSC(ThreadLocalData &TLD, uint64_t TSC,
+                                   uint8_t CPU) {
   if (CPU != TLD.CurrentCPU) {
     // We've moved to a new CPU.
     writeNewCPUIdMetadata(CPU, TSC);

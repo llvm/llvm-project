@@ -403,6 +403,9 @@ void __asan_unregister_globals(__asan_global *globals, uptr n) {
     }
     UnregisterGlobal(&globals[i]);
   }
+
+  // Unpoison the metadata.
+  PoisonShadow(reinterpret_cast<uptr>(globals), n * sizeof(__asan_global), 0);
 }
 
 // This method runs immediately prior to dynamic initialization in each TU,
