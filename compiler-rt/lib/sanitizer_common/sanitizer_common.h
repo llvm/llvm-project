@@ -727,7 +727,7 @@ class LoadedModule {
 // filling this information.
 class ListOfModules {
  public:
-  ListOfModules() : modules_(kInitialCapacity) {}
+  ListOfModules() : initialized(false) {}
   ~ListOfModules() { clear(); }
   void init();
   const LoadedModule *begin() const { return modules_.begin(); }
@@ -745,10 +745,15 @@ class ListOfModules {
     for (auto &module : modules_) module.clear();
     modules_.clear();
   }
+  void clearOrInit() {
+    initialized ? clear() : modules_.Initialize(kInitialCapacity);
+    initialized = true;
+  }
 
-  InternalMmapVector<LoadedModule> modules_;
+  InternalMmapVectorNoCtor<LoadedModule> modules_;
   // We rarely have more than 16K loaded modules.
   static const uptr kInitialCapacity = 1 << 14;
+  bool initialized;
 };
 
 // Callback type for iterating over a set of memory ranges.
