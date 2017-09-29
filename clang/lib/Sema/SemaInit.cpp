@@ -886,7 +886,8 @@ void InitListChecker::CheckImplicitInitList(const InitializedEntity &Entity,
     }
 
     // Complain about missing braces.
-    if (T->isArrayType() || T->isRecordType()) {
+    if ((T->isArrayType() || T->isRecordType()) &&
+        !ParentIList->isIdiomaticZeroInitializer(SemaRef.getLangOpts())) {
       SemaRef.Diag(StructuredSubobjectInitList->getLocStart(),
                    diag::warn_missing_braces)
           << StructuredSubobjectInitList->getSourceRange()
@@ -1833,7 +1834,9 @@ void InitListChecker::CheckStructUnionTypes(
   // worthwhile to skip over the rest of the initializer, though.
   RecordDecl *RD = DeclType->getAs<RecordType>()->getDecl();
   RecordDecl::field_iterator FieldEnd = RD->field_end();
-  bool CheckForMissingFields = true;
+  bool CheckForMissingFields =
+    !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
+
   while (Index < IList->getNumInits()) {
     Expr *Init = IList->getInit(Index);
 

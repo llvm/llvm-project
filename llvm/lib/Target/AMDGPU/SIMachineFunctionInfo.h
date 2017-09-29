@@ -185,6 +185,11 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
+  // The hard-wired high half of the address of the global information table
+  // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
+  // current hardware only allows a 16 bit value.
+  unsigned GITPtrHigh;
+
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
     return AMDGPU::SGPR0 + NumUserSGPRs;
@@ -404,6 +409,10 @@ public:
 
   unsigned getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
     return ArgInfo.getPreloadedValue(Value).first->getRegister();
+  }
+
+  unsigned getGITPtrHigh() const {
+    return GITPtrHigh;
   }
 
   unsigned getNumUserSGPRs() const {
