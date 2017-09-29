@@ -247,11 +247,20 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
     DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
-      for (auto Name : Find)
-        for (auto Entry : DICtx.getAppleNames().equal_range(Name))
-          for (auto Atom : Entry)
-            if (auto Offset = Atom.getAsSectionOffset())
-              return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+      for (auto Name : Find) {
+        auto find = [&](const DWARFAcceleratorTable &Accel)
+            -> llvm::Optional<uint64_t> {
+          for (auto Entry : Accel.equal_range(Name))
+            for (auto Atom : Entry)
+              if (auto Offset = Atom.getAsSectionOffset())
+                return Offset;
+          return None;
+        };
+        if (auto Offset = find(DICtx.getAppleNames()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        if (auto Offset = find(DICtx.getAppleTypes()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+      }
       return None;
     }();
     // Early exit if --find was specified but the current file doesn't have it.

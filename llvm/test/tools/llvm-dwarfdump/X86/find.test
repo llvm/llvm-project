@@ -26,3 +26,12 @@ MULTI: : DW_TAG_variable
 MULTI-NOT: {{: DW}}
 MULTI:    DW_AT_name ("x86_64h_var")
 MULTI-NOT: {{: DW}}
+
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -find=int - | FileCheck %s --check-prefix=TYPES
+TYPES: .debug_info contents:
+TYPES-NOT: {{:}}
+TYPES: : DW_TAG_base_type
+TYPES-NOT: {{:}}
+TYPES:     DW_AT_name ("int")
+TYPES-NOT: {{:}}
