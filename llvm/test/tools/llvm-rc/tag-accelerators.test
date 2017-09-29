@@ -1,0 +1,157 @@
+; RUN: llvm-rc /FO %t %p/Inputs/tag-accelerators.rc
+; RUN: llvm-readobj %t | FileCheck %s --check-prefix=ACCELERATORS
+
+; ACCELERATORS: Resource type (int): 9
+; ACCELERATORS-NEXT: Resource name (int): 1
+; ACCELERATORS-NEXT: Data version: 0
+; ACCELERATORS-NEXT: Memory flags: 0x30
+; ACCELERATORS-NEXT: Language ID: 1029
+; ACCELERATORS-NEXT: Version (major): 0
+; ACCELERATORS-NEXT: Version (minor): 700
+; ACCELERATORS-NEXT: Characteristics: 0
+; ACCELERATORS-NEXT: Data size: 248
+; ACCELERATORS-NEXT: Data: (
+; ACCELERATORS-NEXT:   0000: 00006100 03000000 00006100 04000000  |..a.......a.....|
+; ACCELERATORS-NEXT:   0010: 01004100 05000000 00004100 06000000  |..A.......A.....|
+; ACCELERATORS-NEXT:   0020: 00004100 07000000 01004100 08000000  |..A.......A.....|
+; ACCELERATORS-NEXT:   0030: 00003100 09000000 00003100 0A000000  |..1.......1.....|
+; ACCELERATORS-NEXT:   0040: 01003100 0B000000 00002400 0C000000  |..1.......$.....|
+; ACCELERATORS-NEXT:   0050: 00002400 0D000000 00005D00 0F000000  |..$.......].....|
+; ACCELERATORS-NEXT:   0060: 00005D00 10000000 00000100 12000000  |..].............|
+; ACCELERATORS-NEXT:   0070: 00000100 13000000 00000000 25000000  |............%...|
+; ACCELERATORS-NEXT:   0080: 01000000 26000000 00000100 28000000  |....&.......(...|
+; ACCELERATORS-NEXT:   0090: 01000100 29000000 00007F00 2B000000  |....).......+...|
+; ACCELERATORS-NEXT:   00A0: 01007F00 2C000000 00008000 2E000000  |....,...........|
+; ACCELERATORS-NEXT:   00B0: 01008000 2F000000 0000FF00 31000000  |..../.......1...|
+; ACCELERATORS-NEXT:   00C0: 0100FF00 32000000 00000001 34000000  |....2.......4...|
+; ACCELERATORS-NEXT:   00D0: 01000001 35000000 00000100 42000000  |....5.......B...|
+; ACCELERATORS-NEXT:   00E0: 00000100 43000000 000031D4 46000000  |....C.....1.F...|
+; ACCELERATORS-NEXT:   00F0: 810031D4 47000000                    |..1.G...|
+; ACCELERATORS-NEXT: )
+
+; ACCELERATORS-DAG: Resource type (int): 9
+; ACCELERATORS-NEXT: Resource name (int): 2
+; ACCELERATORS-NEXT: Data version: 0
+; ACCELERATORS-NEXT: Memory flags: 0x30
+; ACCELERATORS-NEXT: Language ID: 1033
+; ACCELERATORS-NEXT: Version (major): 0
+; ACCELERATORS-NEXT: Version (minor): 0
+; ACCELERATORS-NEXT: Characteristics: 0
+; ACCELERATORS-NEXT: Data size: 592
+; ACCELERATORS-NEXT: Data: (
+; ACCELERATORS-NEXT:   0000: 00002A00 00000000 01002A00 01000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0010: 02002A00 02000000 03002A00 03000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0020: 09002A00 04000000 05002A00 05000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0030: 11002A00 06000000 0B002A00 07000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0040: 07002A00 08000000 13002A00 09000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0050: 0D002A00 0A000000 19002A00 0B000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0060: 15002A00 0C000000 0F002A00 0D000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0070: 1B002A00 0E000000 17002A00 0F000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0080: 1D002A00 10000000 1F002A00 11000000  |..*.......*.....|
+; ACCELERATORS-NEXT:   0090: 00006600 12000000 01004600 13000000  |..f.......F.....|
+; ACCELERATORS-NEXT:   00A0: 02006600 14000000 03004600 15000000  |..f.......F.....|
+; ACCELERATORS-NEXT:   00B0: 09004600 16000000 05004600 17000000  |..F.......F.....|
+; ACCELERATORS-NEXT:   00C0: 11004600 18000000 0B004600 19000000  |..F.......F.....|
+; ACCELERATORS-NEXT:   00D0: 07004600 1A000000 13004600 1B000000  |..F.......F.....|
+; ACCELERATORS-NEXT:   00E0: 0D004600 1C000000 19004600 1D000000  |..F.......F.....|
+; ACCELERATORS-NEXT:   00F0: 15004600 1E000000 0F004600 1F000000  |..F.......F.....|
+; ACCELERATORS-NEXT:   0100: 1B004600 20000000 17004600 21000000  |..F. .....F.!...|
+; ACCELERATORS-NEXT:   0110: 1D004600 22000000 1F004600 23000000  |..F.".....F.#...|
+; ACCELERATORS-NEXT:   0120: 00005500 24000000 01005500 25000000  |..U.$.....U.%...|
+; ACCELERATORS-NEXT:   0130: 02005500 26000000 03005500 27000000  |..U.&.....U.'...|
+; ACCELERATORS-NEXT:   0140: 09005500 28000000 05005500 29000000  |..U.(.....U.)...|
+; ACCELERATORS-NEXT:   0150: 11005500 2A000000 0B005500 2B000000  |..U.*.....U.+...|
+; ACCELERATORS-NEXT:   0160: 07005500 2C000000 13005500 2D000000  |..U.,.....U.-...|
+; ACCELERATORS-NEXT:   0170: 0D005500 2E000000 19005500 2F000000  |..U.......U./...|
+; ACCELERATORS-NEXT:   0180: 15005500 30000000 0F005500 31000000  |..U.0.....U.1...|
+; ACCELERATORS-NEXT:   0190: 1B005500 32000000 17005500 33000000  |..U.2.....U.3...|
+; ACCELERATORS-NEXT:   01A0: 1D005500 34000000 1F005500 35000000  |..U.4.....U.5...|
+; ACCELERATORS-NEXT:   01B0: 00003700 36000000 01003700 37000000  |..7.6.....7.7...|
+; ACCELERATORS-NEXT:   01C0: 02003700 38000000 03003700 39000000  |..7.8.....7.9...|
+; ACCELERATORS-NEXT:   01D0: 09003700 3A000000 05003700 3B000000  |..7.:.....7.;...|
+; ACCELERATORS-NEXT:   01E0: 11003700 3C000000 0B003700 3D000000  |..7.<.....7.=...|
+; ACCELERATORS-NEXT:   01F0: 07003700 3E000000 13003700 3F000000  |..7.>.....7.?...|
+; ACCELERATORS-NEXT:   0200: 0D003700 40000000 19003700 41000000  |..7.@.....7.A...|
+; ACCELERATORS-NEXT:   0210: 15003700 42000000 0F003700 43000000  |..7.B.....7.C...|
+; ACCELERATORS-NEXT:   0220: 1B003700 44000000 17003700 45000000  |..7.D.....7.E...|
+; ACCELERATORS-NEXT:   0230: 1D003700 46000000 1F003700 47000000  |..7.F.....7.G...|
+; ACCELERATORS-NEXT:   0240: 00000A00 48000000 82000A00 49000000  |....H.......I...|
+; ACCELERATORS-NEXT: )
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-bad-id.rc 2>&1 | FileCheck %s --check-prefix BADID
+
+; BADID: llvm-rc: Error in ACCELERATORS statement (ID 1):
+; BADID-NEXT: ACCELERATORS entry ID (1234567) does not fit in 16 bits.
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-ascii-virtkey.rc 2>&1 | FileCheck %s --check-prefix ASCII1
+
+; ASCII1: llvm-rc: Error in ACCELERATORS statement (ID 2):
+; ASCII1-NEXT: Accelerator ID 15: Accelerator can't be both ASCII and VIRTKEY
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-ascii-control.rc 2>&1 | FileCheck %s --check-prefix ASCII2
+
+; ASCII2: llvm-rc: Error in ACCELERATORS statement (ID 2):
+; ASCII2-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-ascii-shift.rc 2>&1 | FileCheck %s --check-prefix ASCII3
+
+; ASCII3: llvm-rc: Error in ACCELERATORS statement (ID 2):
+; ASCII3-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-ascii-alt.rc 2>&1 | FileCheck %s --check-prefix ASCII4
+
+; ASCII4: llvm-rc: Error in ACCELERATORS statement (ID 2):
+; ASCII4-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-bad-key-id.rc 2>&1 | FileCheck %s --check-prefix BADKEYID
+
+; BADKEYID: llvm-rc: Error in ACCELERATORS statement (ID 9):
+; BADKEYID-NEXT: Numeric event key ID (1234567) does not fit in 16 bits.
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-too-short.rc 2>&1 | FileCheck %s --check-prefix LENGTH1
+
+; LENGTH1: llvm-rc: Error in ACCELERATORS statement (ID 10):
+; LENGTH1-NEXT: Accelerator ID 12: Accelerator string events should have length 1 or 2
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-too-long.rc 2>&1 | FileCheck %s --check-prefix LENGTH2
+
+; LENGTH2: llvm-rc: Error in ACCELERATORS statement (ID 12):
+; LENGTH2-NEXT: Accelerator ID 5: Accelerator string events should have length 1 or 2
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-only-caret.rc 2>&1 | FileCheck %s --check-prefix CARET1
+
+; CARET1: llvm-rc: Error in ACCELERATORS statement (ID 555):
+; CARET1-NEXT: Accelerator ID 100: No character following '^' in accelerator event
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-no-caret.rc 2>&1 | FileCheck %s --check-prefix CARET2
+
+; CARET2: llvm-rc: Error in ACCELERATORS statement (ID 50):
+; CARET2-NEXT: Accelerator ID 1: Event string should be one-character, possibly preceded by '^'
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-long-virtkey.rc 2>&1 | FileCheck %s --check-prefix CARET3
+
+; CARET3: llvm-rc: Error in ACCELERATORS statement (ID 100):
+; CARET3-NEXT: Accelerator ID 10: VIRTKEY accelerator events can't be preceded by '^'
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-control-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA1
+
+; NONALPHA1: llvm-rc: Error in ACCELERATORS statement (ID 100):
+; NONALPHA1-NEXT: Accelerator ID 1: Control character accelerator event should be alphabetic
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-accelerators-virtual-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA2
+
+; NONALPHA2: llvm-rc: Error in ACCELERATORS statement (ID 42):
+; NONALPHA2-NEXT: Accelerator ID 1: Non-alphanumeric characters cannot describe virtual keys

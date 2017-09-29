@@ -1583,7 +1583,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
       std::swap(SrcRC, DstRC);
     }
     if (!TRI->shouldCoalesce(CopyMI, SrcRC, SrcIdx, DstRC, DstIdx,
-                            CP.getNewRC())) {
+                             CP.getNewRC(), *LIS)) {
       DEBUG(dbgs() << "\tSubtarget bailed on coalescing.\n");
       return false;
     }

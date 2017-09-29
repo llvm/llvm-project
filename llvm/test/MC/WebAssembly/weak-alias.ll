@@ -101,17 +101,20 @@ entry:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        12
-; CHECK-NEXT:     DataAlignment:   8
 ; CHECK-NEXT:     SymbolInfo:      
 ; CHECK-NEXT:       - Name:            foo_alias
 ; CHECK-NEXT:         Flags:           1
 ; CHECK-NEXT:       - Name:            bar_alias
 ; CHECK-NEXT:         Flags:           1
-; CHECK-NEXT:     SegmentNames:    
+; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
+; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.bar_alias_address
+; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:

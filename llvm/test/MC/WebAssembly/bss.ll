@@ -13,8 +13,9 @@
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        4
-; CHECK-NEXT:     DataAlignment:   4
-; CHECK-NEXT:     SegmentNames:    
+; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .bss.g0
+; CHECK-NEXT:         Alignment:       4
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT: ...
