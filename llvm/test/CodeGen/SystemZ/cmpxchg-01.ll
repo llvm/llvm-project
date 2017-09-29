@@ -55,3 +55,37 @@ define i8 @f2(i8 *%src) {
   %res = extractvalue { i8, i1 } %pair, 0
   ret i8 %res
 }
+
+; Check generating the comparison result.
+define i32 @f3(i8 %dummy, i8 *%src, i8 %cmp, i8 %swap) {
+; CHECK-MAIN-LABEL: f3:
+; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
+; CHECK-MAIN: sll %r3, 3
+; CHECK-MAIN: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
+; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 8(%r3)
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 55, 0
+; CHECK-MAIN: cr [[TMP]], %r4
+; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
+; CHECK-MAIN: risbg %r5, [[TMP]], 32, 55, 0
+; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -8({{%r[1-9]+}})
+; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
+; CHECK-MAIN: jl [[LOOP]]
+; CHECK-MAIN: [[EXIT]]:
+; CHECK-MAIN-NEXT: ipm %r2
+; CHECK-MAIN-NEXT: afi %r2, -268435456
+; CHECK-MAIN-NEXT: srl %r2, 31
+; CHECK-MAIN-NOT: %r2
+; CHECK-MAIN: br %r14
+;
+; CHECK-SHIFT-LABEL: f3:
+; CHECK-SHIFT: sll [[SHIFT:%r[1-9]+]], 3
+; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT: rll
+; CHECK-SHIFT: rll {{%r[0-9]+}}, %r5, -8([[NEGSHIFT]])
+  %pair = cmpxchg i8 *%src, i8 %cmp, i8 %swap seq_cst seq_cst
+  %val = extractvalue { i8, i1 } %pair, 1
+  %res = zext i1 %val to i32
+  ret i32 %res
+}
+

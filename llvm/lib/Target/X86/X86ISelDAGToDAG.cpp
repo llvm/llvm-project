@@ -2594,7 +2594,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     unsigned LoReg;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
-    case MVT::i8:  LoReg = X86::AL;  Opc = X86::MUL8r; break;
+    // MVT::i8 is handled by X86ISD::UMUL8.
     case MVT::i16: LoReg = X86::AX;  Opc = X86::MUL16r; break;
     case MVT::i32: LoReg = X86::EAX; Opc = X86::MUL32r; break;
     case MVT::i64: LoReg = X86::RAX; Opc = X86::MUL64r; break;
@@ -3025,7 +3025,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $32776" to "testw %ax, $32776".
-      if (isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
+      // NOTE: We only want to form TESTW instructions if optimizing for
+      // min size. Otherwise we only save one byte and possibly get a length
+      // changing prefix penalty in the decoders.
+      if (OptForMinSize && isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
           (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
         SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i16);
         SDValue Reg = N0.getOperand(0);

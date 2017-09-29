@@ -4,7 +4,8 @@
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:
 ; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}}, 
-; CHECK-NEXT: callee-saved-register: '', di-variable: '!11', di-expression: '!DIExpression()',
+; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT: di-variable: '!11', di-expression: '!DIExpression()',
 ; CHECK: DBG_VALUE debug-use %0(s32), debug-use _, !11, !DIExpression(), debug-location !12
 define void @debug_declare(i32 %in) #0 !dbg !7 {
 entry:

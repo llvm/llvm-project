@@ -1204,6 +1204,10 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
 
+  const MachineFunction &MF = *MI->getParent()->getParent();
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+  unsigned FramePtr = STI.useR7AsFramePointer() ? ARM::R7 : ARM::R11;
+
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && MI->getOpcode() != ARM::CONSTPOOL_ENTRY) {
     OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
@@ -1884,13 +1888,33 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
-      .addReg(ARM::R7)
-      .addReg(SrcReg)
-      .addImm(0)
-      // Predicate.
-      .addImm(ARMCC::AL)
-      .addReg(0));
+    if (STI.isTargetDarwin() || STI.isTargetWindows()) {
+      // These platforms always use the same frame register
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
+        .addReg(FramePtr)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+    } else {
+      // If the calling code might use either R7 or R11 as
+      // frame pointer register, restore it into both.
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
+        .addReg(ARM::R7)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
+        .addReg(ARM::R11)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+    }
 
     assert(Subtarget->hasV4TOps());
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::BX)
@@ -1934,13 +1958,33 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
-      .addReg(ARM::R7)
-      .addReg(SrcReg)
-      .addImm(0)
-      // Predicate.
-      .addImm(ARMCC::AL)
-      .addReg(0));
+    if (STI.isTargetDarwin() || STI.isTargetWindows()) {
+      // These platforms always use the same frame register
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
+        .addReg(FramePtr)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+    } else {
+      // If the calling code might use either R7 or R11 as
+      // frame pointer register, restore it into both.
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
+        .addReg(ARM::R7)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+      EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
+        .addReg(ARM::R11)
+        .addReg(SrcReg)
+        .addImm(0)
+        // Predicate.
+        .addImm(ARMCC::AL)
+        .addReg(0));
+    }
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
       .addReg(ScratchReg)

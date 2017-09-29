@@ -290,9 +290,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(InX::BuildId);
   }
 
-  for (InputSection *S : createCommonSections())
-    Add(S);
-
   InX::Bss = make<BssSection>(".bss");
   Add(InX::Bss);
   InX::BssRelRo = make<BssSection>(".bss.rel.ro");
@@ -441,11 +438,7 @@ static bool includeInSymtab(const SymbolBody &B) {
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
-    return true;
   }
-
-  if (auto *Sym = dyn_cast<DefinedCommon>(&B))
-    return Sym->Live;
   return true;
 }
 

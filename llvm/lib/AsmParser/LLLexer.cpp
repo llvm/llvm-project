@@ -601,7 +601,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(hhvm_ccc);
   KEYWORD(cxx_fast_tlscc);
   KEYWORD(amdgpu_vs);
+  KEYWORD(amdgpu_ls);
   KEYWORD(amdgpu_hs);
+  KEYWORD(amdgpu_es);
   KEYWORD(amdgpu_gs);
   KEYWORD(amdgpu_ps);
   KEYWORD(amdgpu_cs);

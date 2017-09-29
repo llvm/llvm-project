@@ -13,12 +13,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMachineScheduler.h"
+#include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/Function.h"
-
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
 #include <iomanip>
+#include <limits>
+#include <memory>
 #include <sstream>
+
+using namespace llvm;
+
+#define DEBUG_TYPE "machine-scheduler"
 
 static cl::opt<bool> IgnoreBBRegPressure("ignore-bb-reg-pressure",
     cl::Hidden, cl::ZeroOrMore, cl::init(false));
@@ -39,10 +63,6 @@ static cl::opt<bool> DisableTCTie("disable-tc-tie",
 // early due to a zero-latency dependence.
 static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
     cl::ZeroOrMore, cl::init(true));
-
-using namespace llvm;
-
-#define DEBUG_TYPE "machine-scheduler"
 
 /// Save the last formed packet
 void VLIWResourceModel::savePacket() {
@@ -246,7 +266,7 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
   Top.ResourceModel = new VLIWResourceModel(STI, DAG->getSchedModel());
   Bot.ResourceModel = new VLIWResourceModel(STI, DAG->getSchedModel());
 
-  assert((!llvm::ForceTopDown || !llvm::ForceBottomUp) &&
+  assert((!ForceTopDown || !ForceBottomUp) &&
          "-misched-topdown incompatible with -misched-bottomup");
 }
 
@@ -328,7 +348,8 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::bumpCycle() {
   unsigned Width = SchedModel->getIssueWidth();
   IssueCount = (IssueCount <= Width) ? 0 : IssueCount - Width;
 
-  assert(MinReadyCycle < UINT_MAX && "MinReadyCycle uninitialized");
+  assert(MinReadyCycle < std::numeric_limits<unsigned>::max() &&
+         "MinReadyCycle uninitialized");
   unsigned NextCycle = std::max(CurrCycle + 1, MinReadyCycle);
 
   if (!HazardRec->isEnabled()) {
@@ -383,7 +404,7 @@ void ConvergingVLIWScheduler::VLIWSchedBoundary::bumpNode(SUnit *SU) {
 void ConvergingVLIWScheduler::VLIWSchedBoundary::releasePending() {
   // If the available queue is empty, it is safe to reset MinReadyCycle.
   if (Available.empty())
-    MinReadyCycle = UINT_MAX;
+    MinReadyCycle = std::numeric_limits<unsigned>::max();
 
   // Check to see if any of the pending instructions are ready to issue.  If
   // so, add them to the available queue.
@@ -883,7 +904,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  if (llvm::ForceTopDown) {
+  if (ForceTopDown) {
     SU = Top.pickOnlyChoice();
     if (!SU) {
       SchedCandidate TopCand;
@@ -894,7 +915,7 @@ SUnit *ConvergingVLIWScheduler::pickNode(bool &IsTopNode) {
       SU = TopCand.SU;
     }
     IsTopNode = true;
-  } else if (llvm::ForceBottomUp) {
+  } else if (ForceBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (!SU) {
       SchedCandidate BotCand;

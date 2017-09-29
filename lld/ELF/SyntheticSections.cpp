@@ -54,24 +54,28 @@ uint64_t SyntheticSection::getVA() const {
   return 0;
 }
 
-std::vector<InputSection *> elf::createCommonSections() {
-  if (!Config->DefineCommon)
-    return {};
-
-  std::vector<InputSection *> Ret;
+// Create a .bss section for each common section and replace the common symbol
+// with a DefinedRegular symbol.
+template <class ELFT> void elf::createCommonSections() {
   for (Symbol *S : Symtab->getSymbols()) {
     auto *Sym = dyn_cast<DefinedCommon>(S->body());
-    if (!Sym || !Sym->Live)
+
+    if (!Sym)
       continue;
 
-    Sym->Section = make<BssSection>("COMMON");
-    size_t Pos = Sym->Section->reserveSpace(Sym->Size, Sym->Alignment);
-    assert(Pos == 0);
-    (void)Pos;
-    Sym->Section->File = Sym->getFile();
-    Ret.push_back(Sym->Section);
+    // Create a synthetic section for the common data.
+    auto *Section = make<BssSection>("COMMON");
+    Section->File = Sym->getFile();
+    Section->Live = !Config->GcSections;
+    Section->reserveSpace(Sym->Size, Sym->Alignment);
+    InputSections.push_back(Section);
+
+    // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
+    // don't have to care about DefinedCommon symbols beyond this point.
+    replaceBody<DefinedRegular>(S, Sym->getFile(), Sym->getName(),
+                                static_cast<bool>(Sym->IsLocal), Sym->StOther,
+                                Sym->Type, 0, Sym->getSize<ELFT>(), Section);
   }
-  return Ret;
 }
 
 // Returns an LLD version string.
@@ -2377,6 +2381,11 @@ template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
+
+template void elf::createCommonSections<ELF32LE>();
+template void elf::createCommonSections<ELF32BE>();
+template void elf::createCommonSections<ELF64LE>();
+template void elf::createCommonSections<ELF64BE>();
 
 template MergeInputSection *elf::createCommentSection<ELF32LE>();
 template MergeInputSection *elf::createCommentSection<ELF32BE>();

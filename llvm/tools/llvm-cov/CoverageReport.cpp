@@ -322,7 +322,8 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
 
 std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     const coverage::CoverageMapping &Coverage, FileCoverageSummary &Totals,
-    ArrayRef<std::string> Files, const CoverageViewOptions &Options) {
+    ArrayRef<std::string> Files, const CoverageViewOptions &Options,
+    const CoverageFilter &Filters) {
   std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = getRedundantPrefixLen(Files);
 
@@ -332,11 +333,15 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     for (const auto &Group : Coverage.getInstantiationGroups(Filename)) {
       std::vector<FunctionCoverageSummary> InstantiationSummaries;
       for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
+        if (!Filters.matches(Coverage, *F))
+          continue;
         auto InstantiationSummary = FunctionCoverageSummary::get(Coverage, *F);
         Summary.addInstantiation(InstantiationSummary);
         Totals.addInstantiation(InstantiationSummary);
         InstantiationSummaries.push_back(InstantiationSummary);
       }
+      if (InstantiationSummaries.empty())
+        continue;
 
       auto GroupSummary =
           FunctionCoverageSummary::get(Group, InstantiationSummaries);
@@ -359,13 +364,15 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
   std::vector<std::string> UniqueSourceFiles;
   for (StringRef SF : Coverage.getUniqueSourceFiles())
     UniqueSourceFiles.emplace_back(SF.str());
-  renderFileReports(OS, UniqueSourceFiles);
+  renderFileReports(OS, UniqueSourceFiles, CoverageFiltersMatchAll());
 }
 
 void CoverageReport::renderFileReports(raw_ostream &OS,
-                                       ArrayRef<std::string> Files) const {
+                                       ArrayRef<std::string> Files,
+                                       const CoverageFilter &Filters) const {
   FileCoverageSummary Totals("TOTAL");
-  auto FileReports = prepareFileReports(Coverage, Totals, Files, Options);
+  auto FileReports =
+      prepareFileReports(Coverage, Totals, Files, Options, Filters);
 
   std::vector<StringRef> Filenames;
   for (const FileCoverageSummary &FCS : FileReports)

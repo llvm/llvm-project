@@ -1,4 +1,4 @@
-//===--- HexagonGenExtract.cpp --------------------------------------------===//
+//===- HexagonGenExtract.cpp ----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -47,8 +47,8 @@ static cl::opt<bool> NeedAnd("extract-needand", cl::init(true), cl::Hidden,
 
 namespace llvm {
 
-  void initializeHexagonGenExtractPass(PassRegistry&);
-  FunctionPass *createHexagonGenExtract();
+void initializeHexagonGenExtractPass(PassRegistry&);
+FunctionPass *createHexagonGenExtract();
 
 } // end namespace llvm
 
@@ -58,7 +58,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonGenExtract() : FunctionPass(ID), ExtractCount(0) {
+    HexagonGenExtract() : FunctionPass(ID) {
       initializeHexagonGenExtractPass(*PassRegistry::getPassRegistry());
     }
 
@@ -78,13 +78,13 @@ namespace {
     bool visitBlock(BasicBlock *B);
     bool convert(Instruction *In);
 
-    unsigned ExtractCount;
+    unsigned ExtractCount = 0;
     DominatorTree *DT;
   };
 
-  char HexagonGenExtract::ID = 0;
-
 } // end anonymous namespace
+
+char HexagonGenExtract::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonGenExtract, "hextract", "Hexagon generate "
   "\"extract\" instructions", false, false)

@@ -202,29 +202,46 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: test_div7_32i8:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpmovsxbw %xmm1, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427]
-; AVX2-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; AVX2-NEXT:    vpmovsxbw %xmm0, %ymm3
-; AVX2-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpsrlw $2, %ymm0, %ymm1
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsrlw $7, %ymm0, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
+; AVX2NOBW-LABEL: test_div7_32i8:
+; AVX2NOBW:       # BB#0:
+; AVX2NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2NOBW-NEXT:    vpmovsxbw %xmm1, %ymm1
+; AVX2NOBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427]
+; AVX2NOBW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpmovsxbw %xmm0, %ymm3
+; AVX2NOBW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
+; AVX2NOBW-NEXT:    vpsrlw $8, %ymm2, %ymm2
+; AVX2NOBW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
+; AVX2NOBW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX2NOBW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; AVX2NOBW-NEXT:    vpsrlw $2, %ymm0, %ymm1
+; AVX2NOBW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; AVX2NOBW-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpsrlw $7, %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2NOBW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; AVX2NOBW-NEXT:    retq
+;
+; AVX512BW-LABEL: test_div7_32i8:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vpmovsxbw %ymm0, %zmm1
+; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; AVX512BW-NEXT:    vpsrlw $2, %ymm0, %ymm1
+; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; AVX512BW-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpsubb %ymm2, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpsrlw $7, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512BW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; AVX512BW-NEXT:    retq
   %res = sdiv <32 x i8> %a, <i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7>
   ret <32 x i8> %res
 }
@@ -538,17 +555,10 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ;
 ; AVX512BW-LABEL: test_rem7_32i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmovsxbw %xmm1, %ymm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427,65427]
-; AVX512BW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512BW-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; AVX512BW-NEXT:    vpmovsxbw %xmm0, %ymm3
-; AVX512BW-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; AVX512BW-NEXT:    vpsrlw $8, %ymm2, %ymm2
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm1[2,3]
-; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512BW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpmovsxbw %ymm0, %zmm1
+; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BW-NEXT:    vpaddb %ymm0, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpsrlw $2, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2

@@ -1,5 +1,4 @@
-# Verify that every branch and jump instruction is followed by a delay slot
-# except for the branch likely instructions.
+# Verify that every branch and jump instruction is followed by a delay slot.
 #
 # RUN: llvm-mc %s -triple=mips-unknown-linux -mcpu=mips32r2 | FileCheck %s
 
@@ -48,52 +47,52 @@
         beqz $11,1332
 
         # CHECK: bc1fl 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1fl 1332
         # CHECK: bc1fl 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1fl $fcc0, 1332
         # CHECK: bc1fl $fcc3, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1fl $fcc3, 1332
         # CHECK: bc1tl 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1tl 1332
         # CHECK: bc1tl 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1tl $fcc0, 1332
         # CHECK: bc1tl $fcc3, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bc1tl $fcc3, 1332
         # CHECK: beql $9, $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         beql $9,$6,1332
         # CHECK: beql $9, $zero, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         beqzl $9,1332
         # CHECK: bnel $9, $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bnel $9,$6,1332
         # CHECK: bnel $9, $zero, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bnezl $9,1332
         # CHECK: bgezl $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bgezl $6,1332
         # CHECK: bgtzl $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bgtzl $6,1332
         # CHECK: blezl $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         blezl $6,1332
         # CHECK: bltzl $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bltzl $6,1332
         # CHECK: bgezall $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bgezall $6,1332
         # CHECK: bltzall $6, 1332
-        # CHECK-NOT: nop
+        # CHECK: nop
         bltzall $6,1332
 
         # CHECK: j 1328

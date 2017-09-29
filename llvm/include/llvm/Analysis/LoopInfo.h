@@ -738,7 +738,7 @@ protected:
 
     // Since LoopAllocator is a BumpPtrAllocator, this Deallocate only poisons
     // \c L, but the pointer remains valid for non-dereferencing uses.
-    LoopAllocator.Deallocate(L, sizeof(LoopT));
+    LoopAllocator.Deallocate(L);
   }
 };
 

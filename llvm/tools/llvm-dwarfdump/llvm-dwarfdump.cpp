@@ -134,6 +134,13 @@ static list<std::string>
                      "name or by number. This option can be specified "
                      "multiple times, once for each desired architecture."),
                 cat(DwarfDumpCategory));
+static list<std::string>
+    Find("find",
+         desc("Search for the exact match for <name> in the accelerator tables "
+              "and print the matching debug information entries."),
+         value_desc("name"), cat(DwarfDumpCategory));
+static alias FindAlias("f", desc("Alias for -find"), aliasopt(Find));
+
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
                           cat(DwarfDumpCategory));
 static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
@@ -164,7 +171,7 @@ static opt<unsigned> RecurseDepth(
     cat(DwarfDumpCategory), init(-1U), value_desc("N"));
 static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth"),
                                aliasopt(RecurseDepth));
-
+  
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"),
@@ -236,6 +243,33 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
+
+  // Handle the --find option and lower it to --debug-info=<offset>.
+  if (!Find.empty()) {
+    DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
+      for (auto Name : Find) {
+        auto find = [&](const DWARFAcceleratorTable &Accel)
+            -> llvm::Optional<uint64_t> {
+          for (auto Entry : Accel.equal_range(Name))
+            for (auto Atom : Entry)
+              if (auto Offset = Atom.getAsSectionOffset())
+                return Offset;
+          return None;
+        };
+        if (auto Offset = find(DICtx.getAppleNames()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        if (auto Offset = find(DICtx.getAppleTypes()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+        if (auto Offset = find(DICtx.getAppleNamespaces()))
+          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
+      }
+      return None;
+    }();
+    // Early exit if --find was specified but the current file doesn't have it.
+    if (!DumpOffsets[DIDT_ID_DebugInfo])
+      return true;
+  }
+  
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
     OS << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';

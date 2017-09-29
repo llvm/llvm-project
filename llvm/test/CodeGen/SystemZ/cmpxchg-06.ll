@@ -111,3 +111,21 @@ define i128 @f9(i128 %cmp, i128 *%ptr) {
   %val = extractvalue { i128, i1 } %pairval, 0
   ret i128 %val
 }
+
+; Check generating the comparison result.
+; CHECK-LABEL: f10
+; CHECK-DAG: lg %r1, 8(%r3)
+; CHECK-DAG: lg %r0, 0(%r3)
+; CHECK-DAG: lg %r13, 8(%r2)
+; CHECK-DAG: lg %r12, 0(%r2)
+; CHECK:     cdsg %r12, %r0, 0(%r4)
+; CHECK-NEXT: ipm %r2
+; CHECK-NEXT: afi %r2, -268435456
+; CHECK-NEXT: srl %r2, 31
+; CHECK: br %r14
+define i32 @f10(i128 %cmp, i128 %swap, i128 *%src) {
+  %pairval = cmpxchg i128 *%src, i128 %cmp, i128 %swap seq_cst seq_cst
+  %val = extractvalue { i128, i1 } %pairval, 1
+  %res = zext i1 %val to i32
+  ret i32 %res
+}

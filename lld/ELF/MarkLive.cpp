@@ -64,11 +64,6 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(InputSectionBase *, uint64_t)> Fn) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
 
-  if (auto *Sym = dyn_cast<DefinedCommon>(&B)) {
-    Sym->Live = true;
-    return;
-  }
-
   if (auto *D = dyn_cast<DefinedRegular>(&B)) {
     if (!D->Section)
       return;
@@ -223,13 +218,9 @@ template <class ELFT> void elf::markLive() {
   };
 
   auto MarkSymbol = [&](SymbolBody *Sym) {
-    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym)) {
+    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
       if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
         Enqueue(IS, D->Value);
-      return;
-    }
-    if (auto *S = dyn_cast_or_null<DefinedCommon>(Sym))
-      S->Live = true;
   };
 
   // Add GC root symbols.

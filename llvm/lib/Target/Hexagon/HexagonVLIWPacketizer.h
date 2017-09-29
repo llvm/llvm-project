@@ -1,18 +1,33 @@
-#ifndef HEXAGONVLIWPACKETIZER_H
-#define HEXAGONVLIWPACKETIZER_H
+//===- HexagonPacketizer.h - VLIW packetizer --------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONVLIWPACKETIZER_H
+#define LLVM_LIB_TARGET_HEXAGON_HEXAGONVLIWPACKETIZER_H
 
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include <vector>
 
 namespace llvm {
+
 class HexagonInstrInfo;
 class HexagonRegisterInfo;
+class MachineBranchProbabilityInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineLoopInfo;
+class TargetRegisterClass;
 
 class HexagonPacketizerList : public VLIWPacketizerList {
   // Vector of instructions assigned to the packet that has just been created.
-  std::vector<MachineInstr*> OldPacketMIs;
+  std::vector<MachineInstr *> OldPacketMIs;
 
   // Has the instruction been promoted to a dot-new instruction.
   bool PromotedToDotNew;
@@ -48,7 +63,6 @@ private:
   const HexagonRegisterInfo *HRI;
 
 public:
-  // Ctor.
   HexagonPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
                         AliasAnalysis *AA,
                         const MachineBranchProbabilityInfo *MBPI);
@@ -108,9 +122,11 @@ protected:
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);
   bool isCurifiable(MachineInstr &MI);
   bool cannotCoexist(const MachineInstr &MI, const MachineInstr &MJ);
-  inline bool isPromotedToDotNew() const {
+
+  bool isPromotedToDotNew() const {
     return PromotedToDotNew;
   }
+
   bool tryAllocateResourcesForConstExt(bool Reserve);
   bool canReserveResourcesForConstExt();
   void reserveResourcesForConstExt();
@@ -120,6 +136,7 @@ protected:
   bool hasV4SpecificDependence(const MachineInstr &I, const MachineInstr &J);
   bool producesStall(const MachineInstr &MI);
 };
-} // namespace llvm
-#endif // HEXAGONVLIWPACKETIZER_H
 
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONVLIWPACKETIZER_H

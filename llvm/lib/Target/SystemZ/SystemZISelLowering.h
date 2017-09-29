@@ -308,6 +308,10 @@ enum NodeType : unsigned {
   // Operand 5: the width of the field in bits (8 or 16)
   ATOMIC_CMP_SWAPW,
 
+  // Atomic compare-and-swap returning glue (condition code).
+  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  ATOMIC_CMP_SWAP,
+
   // 128-bit atomic load.
   // Val, OUTCHAIN = ATOMIC_LOAD_128(INCHAIN, ptr)
   ATOMIC_LOAD_128,
@@ -317,7 +321,7 @@ enum NodeType : unsigned {
   ATOMIC_STORE_128,
 
   // 128-bit atomic compare-and-swap.
-  // Val, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
+  // Val, OUTCHAIN, glue = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP_128,
 
   // Byte swapping load.

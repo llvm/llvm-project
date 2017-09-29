@@ -1909,6 +1909,17 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
       MBB.erase(MBBI);
+      // We now restore LR into PC so it is not live-out of the return block
+      // anymore: Clear the CSI Restored bit.
+      MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
+      // CSI should be fixed after PrologEpilog Insertion
+      assert(MFI.isCalleeSavedInfoValid() && "CSI should be valid");
+      for (CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+        if (Info.getReg() == ARM::LR) {
+          Info.setRestored(false);
+          break;
+        }
+      }
       return true;
     }
   }
