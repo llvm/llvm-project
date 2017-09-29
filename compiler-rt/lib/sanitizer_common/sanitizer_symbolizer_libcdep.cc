@@ -163,29 +163,47 @@ bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
   return true;
 }
 
+void Symbolizer::RefreshModules() {
+  modules_.init();
+  fallback_modules_.fallbackInit();
+  RAW_CHECK(modules_.size() > 0);
+  modules_fresh_ = true;
+}
+
+static const LoadedModule *SearchForModule(const ListOfModules &modules,
+                                           uptr address) {
+  for (uptr i = 0; i < modules.size(); i++) {
+    if (modules[i].containsAddress(address)) {
+      return &modules[i];
+    }
+  }
+  return nullptr;
+}
+
 const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
   bool modules_were_reloaded = false;
   if (!modules_fresh_) {
-    modules_.init();
-    RAW_CHECK(modules_.size() > 0);
-    modules_fresh_ = true;
+    RefreshModules();
     modules_were_reloaded = true;
   }
-  for (uptr i = 0; i < modules_.size(); i++) {
-    if (modules_[i].containsAddress(address)) {
-      return &modules_[i];
-    }
-  }
-  // dlopen/dlclose interceptors invalidate the module list, but when
-  // interception is disabled, we need to retry if the lookup fails in
-  // case the module list changed.
+  const LoadedModule *module = SearchForModule(modules_, address);
+  if (module) return module;
+
+    // dlopen/dlclose interceptors invalidate the module list, but when
+    // interception is disabled, we need to retry if the lookup fails in
+    // case the module list changed.
 #if !SANITIZER_INTERCEPT_DLOPEN_DLCLOSE
   if (!modules_were_reloaded) {
-    modules_fresh_ = false;
-    return FindModuleForAddress(address);
+    RefreshModules();
+    module = SearchForModule(modules_, address);
+    if (module) return module;
   }
 #endif
-  return 0;
+
+  if (fallback_modules_.size()) {
+    module = SearchForModule(fallback_modules_, address);
+  }
+  return module;
 }
 
 // For now we assume the following protocol:

@@ -2348,6 +2348,12 @@ public:
   SourceLocation getLocStart() const LLVM_READONLY;
   SourceLocation getLocEnd() const LLVM_READONLY;
 
+  bool isCallToStdMove() const {
+    const FunctionDecl* FD = getDirectCallee();
+    return getNumArgs() == 1 && FD && FD->isInStdNamespace() &&
+           FD->getIdentifier() && FD->getIdentifier()->isStr("move");
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstCallExprConstant &&
            T->getStmtClass() <= lastCallExprConstant;

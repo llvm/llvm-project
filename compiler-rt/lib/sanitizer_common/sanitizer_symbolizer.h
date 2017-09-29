@@ -119,6 +119,7 @@ class Symbolizer final {
   void AddHooks(StartSymbolizationHook start_hook,
                 EndSymbolizationHook end_hook);
 
+  void RefreshModules();
   const LoadedModule *FindModuleForAddress(uptr address);
 
   void InvalidateModuleList();
@@ -151,6 +152,7 @@ class Symbolizer final {
                                          uptr *module_offset,
                                          ModuleArch *module_arch);
   ListOfModules modules_;
+  ListOfModules fallback_modules_;
   // If stale, need to reload the modules before looking up addresses.
   bool modules_fresh_;
 

@@ -21626,6 +21626,24 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Hi = DAG.getIntPtrConstant(NumElems / 2, dl);
 
     if (VT == MVT::v32i8) {
+      if (Subtarget.hasBWI()) {
+        SDValue ExA = getExtendInVec(ExSSE41, dl, MVT::v32i16, A, DAG);
+        SDValue ExB = getExtendInVec(ExSSE41, dl, MVT::v32i16, B, DAG);
+        SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v32i16, ExA, ExB);
+        Mul = DAG.getNode(ISD::SRL, dl, MVT::v32i16, Mul,
+                          DAG.getConstant(8, dl, MVT::v32i16));
+        // The ymm variant of PACKUS treats the 128-bit lanes separately, so
+        // before using PACKUS we need to permute the inputs to the correct
+        // lo/hi xmm lane.
+        const int Mask[] = { 0,  1,  2,  3,  4,  5,  6,  7,
+                            16, 17, 18, 19, 20, 21, 22, 23,
+                             8,  9, 10, 11, 12, 13, 14, 15,
+                            24, 25, 26, 27, 28, 29, 30, 31};
+        Mul = DAG.getVectorShuffle(MVT::v32i16, dl, Mul, Mul, Mask);
+        Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v16i16, Mul, Lo);
+        Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v16i16, Mul, Hi);
+        return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
+      }
       SDValue ALo = extract128BitVector(A, 0, DAG, dl);
       SDValue BLo = extract128BitVector(B, 0, DAG, dl);
       SDValue AHi = extract128BitVector(A, NumElems / 2, DAG, dl);
@@ -30228,7 +30246,7 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
   case X86ISD::VALIGN: {
     if (EltVT != MVT::i32 && EltVT != MVT::i64)
       return false;
-    uint64_t Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+    uint64_t Imm = Op.getConstantOperandVal(2);
     MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
     unsigned ShiftAmt = Imm * OpEltVT.getSizeInBits();
     unsigned EltSize = EltVT.getSizeInBits();
@@ -30256,7 +30274,7 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
     // Only change element size, not type.
     if (EltVT.isInteger() != OpEltVT.isInteger())
       return false;
-    uint64_t Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
+    uint64_t Imm = Op.getConstantOperandVal(2);
     Imm = (Imm * OpEltVT.getSizeInBits()) / EltSize;
     SDValue Op0 = DAG.getBitcast(VT, Op.getOperand(0));
     DCI.AddToWorklist(Op0.getNode());
@@ -35801,7 +35819,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
     // just insert into the larger zero vector directly.
     if (SubVec.getOpcode() == ISD::INSERT_SUBVECTOR &&
         ISD::isBuildVectorAllZeros(SubVec.getOperand(0).getNode())) {
-      unsigned Idx2Val = cast<ConstantSDNode>(Idx)->getZExtValue();
+      unsigned Idx2Val = SubVec.getConstantOperandVal(2);
       return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec,
                          SubVec.getOperand(1),
                          DAG.getIntPtrConstant(IdxVal + Idx2Val, dl));
@@ -35813,7 +35831,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
       (IdxVal != 0 || !Vec.isUndef())) {
-    int ExtIdxVal = cast<ConstantSDNode>(SubVec.getOperand(1))->getZExtValue();
+    int ExtIdxVal = SubVec.getConstantOperandVal(1);
     if (ExtIdxVal != 0) {
       int VecNumElts = OpVT.getVectorNumElements();
       int SubVecNumElts = SubVecVT.getVectorNumElements();

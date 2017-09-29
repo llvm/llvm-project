@@ -411,10 +411,12 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 }
 
 void ListOfModules::init() {
-  clear();
+  clearOrInit();
   MemoryMappingLayout memory_mapping(false);
   memory_mapping.DumpListOfModules(&modules_);
 }
+
+void ListOfModules::fallbackInit() { clear(); }
 
 static HandleSignalMode GetHandleSignalModeImpl(int signum) {
   switch (signum) {
