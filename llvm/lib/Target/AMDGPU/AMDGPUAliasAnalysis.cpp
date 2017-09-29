@@ -129,8 +129,11 @@ bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
     switch (F->getCallingConv()) {
     default:
       return AAResultBase::pointsToConstantMemory(Loc, OrLocal);
-    case CallingConv::AMDGPU_VS:
+    case CallingConv::AMDGPU_LS:
+    case CallingConv::AMDGPU_HS:
+    case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_VS:
     case CallingConv::AMDGPU_PS:
     case CallingConv::AMDGPU_CS:
     case CallingConv::AMDGPU_KERNEL:

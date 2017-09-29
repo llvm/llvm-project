@@ -3,9 +3,9 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .apple_names...
-# CHECK-NEXT:	error: no atoms; failed to read HashData.
+# CHECK-NEXT:	error: No atoms: failed to read HashData.
 
-# This test is meant to verify that the -verify option 
+# This test is meant to verify that the -verify option
 # in llvm-dwarfdump, correctly identifies that there is not Atom.
 # As a result, the hashdata cannot be read.
 
@@ -21,7 +21,7 @@ Linfo_string:
 	.asciz	"i"                     ## string offset=84
 	.asciz	"int"                   ## string offset=86
 	.asciz	"j"                     ## string offset=90
-	
+
 	.section	__DWARF,__debug_info,regular,debug
 Lsection_info:
 	.section	__DWARF,__apple_names,regular,debug

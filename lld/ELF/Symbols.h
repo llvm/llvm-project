@@ -167,11 +167,6 @@ public:
     return S->kind() == SymbolBody::DefinedCommonKind;
   }
 
-  // True if this symbol is not GC'ed. Liveness is usually a notion of
-  // input sections and not of symbols, but since common symbols don't
-  // belong to any input section, their liveness is managed by this bit.
-  bool Live;
-
   // The maximum alignment we have seen for this symbol.
   uint32_t Alignment;
 

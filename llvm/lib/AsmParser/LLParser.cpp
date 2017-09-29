@@ -1692,7 +1692,9 @@ void LLParser::ParseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'hhvm_ccc'
 ///   ::= 'cxx_fast_tlscc'
 ///   ::= 'amdgpu_vs'
+///   ::= 'amdgpu_ls'
 ///   ::= 'amdgpu_hs'
+///   ::= 'amdgpu_es'
 ///   ::= 'amdgpu_gs'
 ///   ::= 'amdgpu_ps'
 ///   ::= 'amdgpu_cs'
@@ -1734,7 +1736,9 @@ bool LLParser::ParseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_hhvm_ccc:       CC = CallingConv::HHVM_C; break;
   case lltok::kw_cxx_fast_tlscc: CC = CallingConv::CXX_FAST_TLS; break;
   case lltok::kw_amdgpu_vs:      CC = CallingConv::AMDGPU_VS; break;
+  case lltok::kw_amdgpu_ls:      CC = CallingConv::AMDGPU_LS; break;
   case lltok::kw_amdgpu_hs:      CC = CallingConv::AMDGPU_HS; break;
+  case lltok::kw_amdgpu_es:      CC = CallingConv::AMDGPU_ES; break;
   case lltok::kw_amdgpu_gs:      CC = CallingConv::AMDGPU_GS; break;
   case lltok::kw_amdgpu_ps:      CC = CallingConv::AMDGPU_PS; break;
   case lltok::kw_amdgpu_cs:      CC = CallingConv::AMDGPU_CS; break;

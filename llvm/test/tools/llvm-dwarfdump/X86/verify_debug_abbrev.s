@@ -3,12 +3,12 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .debug_abbrev...
-# CHECK-NEXT: Error: Abbreviation declaration contains multiple DW_AT_stmt_list attributes.
+# CHECK-NEXT: error: Abbreviation declaration contains multiple DW_AT_stmt_list attributes.
 # CHECK-NEXT:[1] DW_TAG_compile_unit	DW_CHILDREN_no
 # CHECK-NEXT:	DW_AT_stmt_list	DW_FORM_sec_offset
 # CHECK-NEXT:	DW_AT_GNU_dwo_name	DW_FORM_strp
 # CHECK-NEXT:	DW_AT_stmt_list	DW_FORM_strp{{[[:space:]]}}
-# CHECK-NEXT: Error: Abbreviation declaration contains multiple DW_AT_producer attributes.
+# CHECK-NEXT: error: Abbreviation declaration contains multiple DW_AT_producer attributes.
 # CHECK-NEXT:[1] DW_TAG_compile_unit	DW_CHILDREN_yes
 # CHECK-NEXT:	DW_AT_GNU_dwo_name	DW_FORM_GNU_str_index
 # CHECK-NEXT:	DW_AT_producer	DW_FORM_GNU_str_index
@@ -41,4 +41,3 @@
   .byte  0                       # EOM(1)
   .byte  0                       # EOM(2)
   .byte  0                       # EOM(3)
-  

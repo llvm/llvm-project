@@ -104,9 +104,14 @@ a:
         dclo      $s2,$a2              # CHECK: dclo $18, $6   # encoding: [0x70,0xd2,0x90,0x25]
         dclz      $s0,$25              # CHECK: dclz $16, $25  # encoding: [0x73,0x30,0x80,0x24]
         deret
+        dext      $9,$6,3,7            # CHECK: dext $9, $6, 3, 7      # encoding: [0x7c,0xc9,0x30,0xc3]
+        dextm     $9,$6,3,39           # CHECK: dextm $9, $6, 3, 39    # encoding: [0x7c,0xc9,0x30,0xc1]
+        dextu     $9,$6,35,7           # CHECK: dextu $9, $6, 35, 7    # encoding: [0x7c,0xc9,0x30,0xc2]
         di        $s8                  # CHECK: di  $fp        # encoding: [0x41,0x7e,0x60,0x00]
         di                             # CHECK: di             # encoding: [0x41,0x60,0x60,0x00]
+        dins      $2,$3,4,28           # CHECK: dins  $2, $3, 4, 28    # encoding: [0x7c,0x62,0xf9,0x07]
         dinsm     $2,$3,4,34           # CHECK: dinsm $2, $3, 4, 34    # encoding: [0x7c,0x62,0x29,0x05]
+        dinsu     $2,$3,34,16          # CHECK: dinsu $2, $3, 34, 16   # encoding: [0x7c,0x62,0x88,0x86]
         ddiv      $zero,$k0,$s3
         ddivu     $zero,$s0,$s1
         div       $zero,$25,$11
