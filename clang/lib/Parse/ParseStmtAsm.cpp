@@ -54,9 +54,9 @@ public:
     assert(AsmToks.size() == AsmTokOffsets.size());
   }
 
-  void *LookupInlineAsmIdentifier(StringRef &LineBuf,
-                                  llvm::InlineAsmIdentifierInfo &Info,
-                                  bool IsUnevaluatedContext) override {
+  void LookupInlineAsmIdentifier(StringRef &LineBuf,
+                                 llvm::InlineAsmIdentifierInfo &Info,
+                                 bool IsUnevaluatedContext) override {
     // Collect the desired tokens.
     SmallVector<Token, 16> LineToks;
     const Token *FirstOrigToken = nullptr;
@@ -64,7 +64,7 @@ public:
 
     unsigned NumConsumedToks;
     ExprResult Result = TheParser.ParseMSAsmIdentifier(
-        LineToks, NumConsumedToks, &Info, IsUnevaluatedContext);
+        LineToks, NumConsumedToks, IsUnevaluatedContext);
 
     // If we consumed the entire line, tell MC that.
     // Also do this if we consumed nothing as a way of reporting failure.
@@ -89,9 +89,10 @@ public:
       LineBuf = LineBuf.substr(0, TotalOffset);
     }
 
-    // Initialize the "decl" with the lookup result.
-    Info.OpDecl = static_cast<void *>(Result.get());
-    return Info.OpDecl;
+    // Initialize Info with the lookup result.
+    if (!Result.isUsable())
+      return;
+    TheParser.getActions().FillInlineAsmIdentifierInfo(Result.get(), Info);
   }
 
   StringRef LookupInlineAsmLabel(StringRef Identifier, llvm::SourceMgr &LSM,
@@ -178,16 +179,9 @@ private:
 }
 
 /// Parse an identifier in an MS-style inline assembly block.
-///
-/// \param CastInfo - a void* so that we don't have to teach Parser.h
-///   about the actual type.
 ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
                                         unsigned &NumLineToksConsumed,
-                                        void *CastInfo,
                                         bool IsUnevaluatedContext) {
-  llvm::InlineAsmIdentifierInfo &Info =
-      *(llvm::InlineAsmIdentifierInfo *)CastInfo;
-
   // Push a fake token on the end so that we don't overrun the token
   // stream.  We use ';' because it expression-parsing should never
   // overrun it.
@@ -227,7 +221,7 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
                                  /*AllowDeductionGuide=*/false,
                                  /*ObjectType=*/nullptr, TemplateKWLoc, Id);
     // Perform the lookup.
-    Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id, Info,
+    Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id,
                                                IsUnevaluatedContext);
   }
   // While the next two tokens are 'period' 'identifier', repeatedly parse it as
@@ -241,7 +235,7 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     ConsumeToken(); // Consume the identifier.
     Result = Actions.LookupInlineAsmVarDeclField(Result.get(), Id->getName(),
-                                                 Info, Tok.getLocation());
+                                                 Tok.getLocation());
   }
 
   // Figure out how many tokens we are into LineToks.

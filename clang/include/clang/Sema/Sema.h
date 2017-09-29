@@ -3788,15 +3788,15 @@ public:
                              Expr *AsmString, MultiExprArg Clobbers,
                              SourceLocation RParenLoc);
 
+  void FillInlineAsmIdentifierInfo(Expr *Res,
+                                   llvm::InlineAsmIdentifierInfo &Info);
   ExprResult LookupInlineAsmIdentifier(CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
                                        UnqualifiedId &Id,
-                                       llvm::InlineAsmIdentifierInfo &Info,
                                        bool IsUnevaluatedContext);
   bool LookupInlineAsmField(StringRef Base, StringRef Member,
                             unsigned &Offset, SourceLocation AsmLoc);
   ExprResult LookupInlineAsmVarDeclField(Expr *RefExpr, StringRef Member,
-                                         llvm::InlineAsmIdentifierInfo &Info,
                                          SourceLocation AsmLoc);
   StmtResult ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
                             ArrayRef<Token> AsmToks,

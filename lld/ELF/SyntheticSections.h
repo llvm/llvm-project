@@ -786,7 +786,7 @@ private:
   size_t Size = 0;
 };
 
-std::vector<InputSection *> createCommonSections();
+template <class ELFT> void createCommonSections();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
 void decompressAndMergeSections();

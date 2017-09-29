@@ -96,6 +96,10 @@ private:
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
 
+  raw_ostream &error() const;
+  raw_ostream &warn() const;
+  raw_ostream &note() const;
+
   /// Verifies the abbreviations section.
   ///
   /// This function currently checks that:

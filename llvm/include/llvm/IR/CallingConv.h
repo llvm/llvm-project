@@ -183,16 +183,18 @@ namespace CallingConv {
     /// which have an "optimized" convention to preserve registers.
     AVR_BUILTIN = 86,
 
-    /// Calling convention used for Mesa vertex shaders.
+    /// Calling convention used for Mesa vertex shaders, or AMDPAL last shader
+    /// stage before rasterization (vertex shader if tessellation and geometry
+    /// are not in use, or otherwise copy shader if one is needed).
     AMDGPU_VS = 87,
 
-    /// Calling convention used for Mesa geometry shaders.
+    /// Calling convention used for Mesa/AMDPAL geometry shaders.
     AMDGPU_GS = 88,
 
-    /// Calling convention used for Mesa pixel shaders.
+    /// Calling convention used for Mesa/AMDPAL pixel shaders.
     AMDGPU_PS = 89,
 
-    /// Calling convention used for Mesa compute shaders.
+    /// Calling convention used for Mesa/AMDPAL compute shaders.
     AMDGPU_CS = 90,
 
     /// Calling convention for AMDGPU code object kernels.
@@ -201,13 +203,22 @@ namespace CallingConv {
     /// Register calling convention used for parameters transfer optimization
     X86_RegCall = 92,
 
-    /// Calling convention used for Mesa hull shaders. (= tessellation control
-    /// shaders)
+    /// Calling convention used for Mesa/AMDPAL hull shaders (= tessellation
+    /// control shaders).
     AMDGPU_HS = 93,
 
     /// Calling convention used for special MSP430 rtlib functions
     /// which have an "optimized" convention using additional registers.
     MSP430_BUILTIN = 94,
+
+    /// Calling convention used for AMDPAL vertex shader if tessellation is in
+    /// use.
+    AMDGPU_LS = 95,
+
+    /// Calling convention used for AMDPAL shader stage before geometry shader
+    /// if geometry is in use. So either the domain (= tessellation evaluation)
+    /// shader if tessellation is in use, or otherwise the vertex shader.
+    AMDGPU_ES = 96,
 
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023

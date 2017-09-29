@@ -258,8 +258,8 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
   RTDyldObjectLinkingLayer ObjLayer(
       []() { return nullptr; },
-      [](decltype(ObjLayer)::ObjHandleT,
-         const decltype(ObjLayer)::ObjectPtr &obj,
+      [](RTDyldObjectLinkingLayer::ObjHandleT,
+         const RTDyldObjectLinkingLayer::ObjectPtr &obj,
          const RuntimeDyld::LoadedObjectInfo &info) {});
 }
 
