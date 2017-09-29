@@ -85,7 +85,7 @@ static void MaybeReportLinuxPIEBug() {
 #if SANITIZER_LINUX && (defined(__x86_64__) || defined(__aarch64__))
   Report("This might be related to ELF_ET_DYN_BASE change in Linux 4.12.\n");
   Report(
-      "See https://github.com/google/sanitizers/issues/837 for possible "
+      "See https://github.com/google/sanitizers/issues/856 for possible "
       "workarounds.\n");
 #endif
 }

@@ -13,7 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <cstdint>
 #include <utility>
 
@@ -21,6 +21,9 @@ namespace llvm {
 
 class raw_ostream;
 
+/// This implements the Apple accelerator table format, a precursor of the
+/// DWARF 5 accelerator table format.
+/// TODO: Factor out a common base class for both formats.
 class DWARFAcceleratorTable {
   struct Header {
     uint32_t Magic;
@@ -43,8 +46,46 @@ class DWARFAcceleratorTable {
   struct HeaderData HdrData;
   DWARFDataExtractor AccelSection;
   DataExtractor StringSection;
+  bool IsValid = false;
 
 public:
+  /// An iterator for the entries associated with one key. Each entry can have
+  /// multiple DWARFFormValues.
+  class ValueIterator : public std::iterator<std::input_iterator_tag,
+                                            ArrayRef<DWARFFormValue>> {
+    const DWARFAcceleratorTable *AccelTable = nullptr;
+    SmallVector<DWARFFormValue, 3> AtomForms; ///< The decoded data entry.
+
+    unsigned DataOffset = 0; ///< Offset into the section.
+    unsigned Data = 0; ///< Current data entry.
+    unsigned NumData = 0; ///< Number of data entries.
+
+    /// Advance the iterator.
+    void Next();
+  public:
+    /// Construct a new iterator for the entries at \p DataOffset.
+    ValueIterator(const DWARFAcceleratorTable &AccelTable, unsigned DataOffset);
+    /// End marker.
+    ValueIterator() = default;
+
+    const ArrayRef<DWARFFormValue> operator*() const {
+      return AtomForms;
+    }
+    ValueIterator &operator++() { Next(); return *this; }
+    ValueIterator operator++(int) {
+      ValueIterator I = *this;
+      Next();
+      return I;
+    }
+    friend bool operator==(const ValueIterator &A, const ValueIterator &B) {
+      return A.NumData == B.NumData && A.DataOffset == B.DataOffset;
+    }
+    friend bool operator!=(const ValueIterator &A, const ValueIterator &B) {
+      return !(A == B);
+    }
+  };
+
+
   DWARFAcceleratorTable(const DWARFDataExtractor &AccelSection,
                         DataExtractor StringSection)
       : AccelSection(AccelSection), StringSection(StringSection) {}
@@ -67,6 +108,9 @@ public:
   /// DieTag is the tag of the DIE
   std::pair<uint32_t, dwarf::Tag> readAtoms(uint32_t &HashDataOffset);
   void dump(raw_ostream &OS) const;
+
+  /// Look up all entries in the accelerator table matching \c Key.
+  iterator_range<ValueIterator> equal_range(StringRef Key) const;
 };
 
 } // end namespace llvm

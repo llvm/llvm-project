@@ -150,7 +150,9 @@ void ARMSubtarget::initializeEnvironment() {
   // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
   // directly from it, but we can try to make sure they're consistent when both
   // available.
-  UseSjLjEH = isTargetDarwin() && !isTargetWatchABI();
+  UseSjLjEH = (isTargetDarwin() && !isTargetWatchABI() &&
+               Options.ExceptionModel == ExceptionHandling::None) ||
+              Options.ExceptionModel == ExceptionHandling::SjLj;
   assert((!TM.getMCAsmInfo() ||
           (TM.getMCAsmInfo()->getExceptionHandlingType() ==
            ExceptionHandling::SjLj) == UseSjLjEH) &&

@@ -99,8 +99,9 @@ public:
   using RTDyldObjectLinkingLayerBase::ObjectPtr;
 
   /// @brief Functor for receiving object-loaded notifications.
-  using NotifyLoadedFtor = std::function<void(ObjHandleT, const ObjectPtr &Obj,
-                                              const LoadedObjectInfo &)>;
+  using NotifyLoadedFtor =
+    std::function<void(ObjHandleT, const ObjectPtr &Obj,
+                       const RuntimeDyld::LoadedObjectInfo &)>;
 
   /// @brief Functor for receiving finalization notifications.
   using NotifyFinalizedFtor = std::function<void(ObjHandleT)>;

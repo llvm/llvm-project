@@ -1437,7 +1437,8 @@ def NotTailCalled : InheritableAttr {
 
 def NoThrow : InheritableAttr {
   let Spellings = [GCC<"nothrow">, Declspec<"nothrow">];
-  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [NoThrowDocs];
 }
 
 def NvWeak : IgnoredAttr {

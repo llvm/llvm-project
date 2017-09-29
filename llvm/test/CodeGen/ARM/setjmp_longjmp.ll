@@ -1,4 +1,6 @@
 ; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv7-linux -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-LINUX
+; RUN: llc -mtriple=thumbv7-win32 -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-WIN32
 target triple = "armv7-apple-ios"
 
 declare i32 @llvm.eh.sjlj.setjmp(i8*)
@@ -28,6 +30,16 @@ declare i8* @llvm.stacksave()
 ; CHECK-NEXT: ldr [[DESTREG:r[0-9]+]], {{\[}}[[BUFREG]], #4]
 ; CHECK-NEXT: ldr r7, {{\[}}[[BUFREG]]{{\]}}
 ; CHECK-NEXT: bx [[DESTREG]]
+
+; CHECK-LINUX: ldr sp, [{{\s*}}[[BUFREG:r[0-9]+]], #8]
+; CHECK-LINUX-NEXT: ldr [[DESTREG:r[0-9]+]], {{\[}}[[BUFREG]], #4]
+; CHECK-LINUX-NEXT: ldr r7, {{\[}}[[BUFREG]]{{\]}}
+; CHECK-LINUX-NEXT: ldr r11, {{\[}}[[BUFREG]]{{\]}}
+; CHECK-LINUX-NEXT: bx [[DESTREG]]
+
+; CHECK-WIN32: ldr.w r11, [{{\s*}}[[BUFREG:r[0-9]+]]]
+; CHECK-WIN32-NEXT: ldr.w sp, {{\[}}[[BUFREG]], #8]
+; CHECK-WIN32-NEXT: ldr.w pc, {{\[}}[[BUFREG]], #4]
 define void @foobar() {
 entry:
   %buf = alloca [5 x i8*], align 4

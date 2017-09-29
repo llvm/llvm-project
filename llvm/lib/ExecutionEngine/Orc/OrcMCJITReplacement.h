@@ -341,7 +341,7 @@ private:
 
     void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H,
                     const RTDyldObjectLinkingLayer::ObjectPtr &Obj,
-                    const LoadedObjectInfo &Info) const {
+                    const RuntimeDyld::LoadedObjectInfo &Info) const {
       M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
       M.SectionsAllocatedSinceLastLoad = SectionAddrSet();
       M.MemMgr->notifyObjectLoaded(&M, *Obj->getBinary());

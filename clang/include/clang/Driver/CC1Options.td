@@ -200,6 +200,9 @@ def arange_sections : Flag<["-"], "arange_sections">,
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
+def debug_forward_template_params : Flag<["-"], "debug-forward-template-params">,
+  HelpText<"Emit complete descriptions of template parameters in forward"
+           " declarations">;
 def fforbid_guard_variables : Flag<["-"], "fforbid-guard-variables">,
   HelpText<"Emit an error if a C++ static local initializer would need a guard variable">;
 def no_implicit_float : Flag<["-"], "no-implicit-float">,

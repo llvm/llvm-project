@@ -2594,7 +2594,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     unsigned LoReg;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
-    case MVT::i8:  LoReg = X86::AL;  Opc = X86::MUL8r; break;
+    // MVT::i8 is handled by X86ISD::UMUL8.
     case MVT::i16: LoReg = X86::AX;  Opc = X86::MUL16r; break;
     case MVT::i32: LoReg = X86::EAX; Opc = X86::MUL32r; break;
     case MVT::i64: LoReg = X86::RAX; Opc = X86::MUL64r; break;
