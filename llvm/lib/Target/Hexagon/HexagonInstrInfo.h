@@ -18,8 +18,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include <cstdint>
 #include <vector>
@@ -29,9 +29,12 @@
 
 namespace llvm {
 
-struct EVT;
 class HexagonSubtarget;
-class HexagonRegisterInfo;
+class MachineBranchProbabilityInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineOperand;
+class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
   virtual void anchor();
@@ -40,7 +43,6 @@ public:
   explicit HexagonInstrInfo(HexagonSubtarget &ST);
 
   /// TargetInstrInfo overrides.
-  ///
 
   /// If the specified machine instruction is a direct
   /// load from a stack slot, return the virtual or physical register number of
@@ -82,7 +84,6 @@ public:
   ///
   /// If AllowModify is true, then this routine is allowed to modify the basic
   /// block (e.g. delete instructions after the unconditional branch).
-  ///
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
@@ -249,7 +250,7 @@ public:
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.
   ScheduleHazardRecognizer*
-  CreateTargetPostRAHazardRecognizer(const InstrItineraryData*,
+  CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                      const ScheduleDAG *DAG) const override;
 
   /// For a comparison instruction, return the source registers
@@ -323,7 +324,6 @@ public:
   bool isTailCall(const MachineInstr &MI) const override;
 
   /// HexagonInstrInfo specifics.
-  ///
 
   unsigned createVR(MachineFunction* MF, MVT VT) const;
 

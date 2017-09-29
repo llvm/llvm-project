@@ -2,8 +2,10 @@
 // RUN: not %clang_cc1 -fdiagnostics-parseable-fixits -fblocks -std=gnu++11 -I %S/Inputs %s >%t.txt 2>&1
 // RUN: FileCheck %s < %t.txt
 // RUN: FileCheck %S/Inputs/nullability.h < %t.txt
+// RUN: FileCheck %S/Inputs/nullability-objc.h < %t.txt
 
 #include "nullability.h"
+#include "nullability-objc.h"
 
 #pragma clang assume_nonnull begin
 

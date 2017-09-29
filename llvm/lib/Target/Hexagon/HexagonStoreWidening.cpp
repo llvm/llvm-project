@@ -1,4 +1,4 @@
-//===--- HexagonStoreWidening.cpp------------------------------------------===//
+//===- HexagonStoreWidening.cpp -------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -27,7 +27,6 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -55,8 +54,8 @@ using namespace llvm;
 
 namespace llvm {
 
-  FunctionPass *createHexagonStoreWidening();
-  void initializeHexagonStoreWideningPass(PassRegistry&);
+FunctionPass *createHexagonStoreWidening();
+void initializeHexagonStoreWideningPass(PassRegistry&);
 
 } // end namespace llvm
 
@@ -91,8 +90,8 @@ namespace {
   private:
     static const int MaxWideSize = 4;
 
-    typedef std::vector<MachineInstr*> InstrGroup;
-    typedef std::vector<InstrGroup> InstrGroupList;
+    using InstrGroup = std::vector<MachineInstr *>;
+    using InstrGroupList = std::vector<InstrGroup>;
 
     bool instrAliased(InstrGroup &Stores, const MachineMemOperand &MMO);
     bool instrAliased(InstrGroup &Stores, const MachineInstr *MI);
@@ -109,9 +108,15 @@ namespace {
     bool storesAreAdjacent(const MachineInstr *S1, const MachineInstr *S2);
   };
 
+} // end anonymous namespace
+
 char HexagonStoreWidening::ID = 0;
 
-} // end anonymous namespace
+INITIALIZE_PASS_BEGIN(HexagonStoreWidening, "hexagon-widen-stores",
+                "Hexason Store Widening", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_END(HexagonStoreWidening, "hexagon-widen-stores",
+                "Hexagon Store Widening", false, false)
 
 // Some local helper functions...
 static unsigned getBaseAddressRegister(const MachineInstr *MI) {
@@ -142,12 +147,6 @@ static const MachineMemOperand &getStoreTarget(const MachineInstr *MI) {
   assert(!MI->memoperands_empty() && "Expecting memory operands");
   return **MI->memoperands_begin();
 }
-
-INITIALIZE_PASS_BEGIN(HexagonStoreWidening, "hexagon-widen-stores",
-                "Hexason Store Widening", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(HexagonStoreWidening, "hexagon-widen-stores",
-                "Hexagon Store Widening", false, false)
 
 // Filtering function: any stores whose opcodes are not "approved" of by
 // this function will not be subjected to widening.

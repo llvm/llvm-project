@@ -142,6 +142,88 @@ raw_ostream &DialogResource::log(raw_ostream &OS) const {
   return OS;
 }
 
+raw_ostream &VersionInfoBlock::log(raw_ostream &OS) const {
+  OS << "  Start of block (name: " << Name << ")\n";
+  for (auto &Stmt : Stmts)
+    Stmt->log(OS);
+  return OS << "  End of block\n";
+}
+
+raw_ostream &VersionInfoValue::log(raw_ostream &OS) const {
+  OS << "  " << Key << " =>";
+  for (auto &Value : Values)
+    OS << " " << Value;
+  return OS << "\n";
+}
+
+using VersionInfoFixed = VersionInfoResource::VersionInfoFixed;
+using VersionInfoFixedType = VersionInfoFixed::VersionInfoFixedType;
+
+const StringRef
+    VersionInfoFixed::FixedFieldsNames[VersionInfoFixed::FtNumTypes] = {
+        "",          "FILEVERSION", "PRODUCTVERSION", "FILEFLAGSMASK",
+        "FILEFLAGS", "FILEOS",      "FILETYPE",       "FILESUBTYPE"};
+
+const StringMap<VersionInfoFixedType> VersionInfoFixed::FixedFieldsInfoMap = {
+    {FixedFieldsNames[FtFileVersion], FtFileVersion},
+    {FixedFieldsNames[FtProductVersion], FtProductVersion},
+    {FixedFieldsNames[FtFileFlagsMask], FtFileFlagsMask},
+    {FixedFieldsNames[FtFileFlags], FtFileFlags},
+    {FixedFieldsNames[FtFileOS], FtFileOS},
+    {FixedFieldsNames[FtFileType], FtFileType},
+    {FixedFieldsNames[FtFileSubtype], FtFileSubtype}};
+
+VersionInfoFixedType VersionInfoFixed::getFixedType(StringRef Type) {
+  auto UpperType = Type.upper();
+  auto Iter = FixedFieldsInfoMap.find(UpperType);
+  if (Iter != FixedFieldsInfoMap.end())
+    return Iter->getValue();
+  return FtUnknown;
+}
+
+bool VersionInfoFixed::isTypeSupported(VersionInfoFixedType Type) {
+  return FtUnknown < Type && Type < FtNumTypes;
+}
+
+bool VersionInfoFixed::isVersionType(VersionInfoFixedType Type) {
+  switch (Type) {
+  case FtFileVersion:
+  case FtProductVersion:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+raw_ostream &VersionInfoFixed::log(raw_ostream &OS) const {
+  for (int Type = FtUnknown; Type < FtNumTypes; ++Type) {
+    if (!isTypeSupported((VersionInfoFixedType)Type))
+      continue;
+    OS << "  Fixed: " << FixedFieldsNames[Type] << ":";
+    for (uint32_t Val : FixedInfo[Type])
+      OS << " " << Val;
+    OS << "\n";
+  }
+  return OS;
+}
+
+raw_ostream &VersionInfoResource::log(raw_ostream &OS) const {
+  OS << "VersionInfo (" << ResName << "):\n";
+  FixedData.log(OS);
+  return MainBlock.log(OS);
+}
+
+raw_ostream &UserDefinedResource::log(raw_ostream &OS) const {
+  OS << "User-defined (type: " << Type << ", name: " << ResName << "): ";
+  if (IsFileResource)
+    return OS << FileLoc << "\n";
+  OS << "data = ";
+  for (auto &Item : Contents)
+    OS << Item << " ";
+  return OS << "\n";
+}
+
 raw_ostream &CharacteristicsStmt::log(raw_ostream &OS) const {
   return OS << "Characteristics: " << Value << "\n";
 }

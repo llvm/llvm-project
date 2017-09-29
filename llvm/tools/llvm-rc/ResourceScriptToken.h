@@ -60,6 +60,9 @@ public:
   StringRef value() const;
   Kind kind() const;
 
+  // Check if a token describes a binary operator.
+  bool isBinaryOp() const;
+
 private:
   Kind TokenKind;
   StringRef TokenValue;
