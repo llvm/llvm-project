@@ -92,3 +92,11 @@ def test_diagnostic_children():
     assert children[0].spelling.endswith('declared here')
     assert children[0].location.line == 1
     assert children[0].location.column == 1
+
+def test_diagnostic_string_repr():
+    tu = get_tu('struct MissingSemicolon{}')
+    assert len(tu.diagnostics) == 1
+    d = tu.diagnostics[0]
+
+    assert repr(d) == '<Diagnostic severity 3, location <SourceLocation file \'t.c\', line 1, column 26>, spelling "expected \';\' after struct">'
+    

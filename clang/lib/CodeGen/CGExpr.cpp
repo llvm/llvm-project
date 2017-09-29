@@ -3664,8 +3664,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     getFieldAlignmentSource(BaseInfo.getAlignmentSource());
   LValueBaseInfo FieldBaseInfo(fieldAlignSource, BaseInfo.getMayAlias());
 
+  QualType type = field->getType();
   const RecordDecl *rec = field->getParent();
-  if (rec->isUnion() || rec->hasAttr<MayAliasAttr>())
+  if (rec->isUnion() || rec->hasAttr<MayAliasAttr>() || type->isVectorType())
     FieldBaseInfo.setMayAlias(true);
   bool mayAlias = FieldBaseInfo.getMayAlias();
 
@@ -3690,7 +3691,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo);
   }
 
-  QualType type = field->getType();
   Address addr = base.getAddress();
   unsigned cvr = base.getVRQualifiers();
   bool TBAAPath = CGM.getCodeGenOpts().StructPathTBAA;
