@@ -876,13 +876,15 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   bool NeedsPop = false;
   for (unsigned i = CSI.size(); i != 0; --i) {
-    unsigned Reg = CSI[i-1].getReg();
+    CalleeSavedInfo &Info = CSI[i-1];
+    unsigned Reg = Info.getReg();
 
     // High registers (excluding lr) have already been dealt with
     if (!(ARM::tGPRRegClass.contains(Reg) || Reg == ARM::LR))
       continue;
 
     if (Reg == ARM::LR) {
+      Info.setRestored(false);
       if (MBB.succ_empty()) {
         // Special epilogue for vararg functions. See emitEpilogue
         if (isVarArg)

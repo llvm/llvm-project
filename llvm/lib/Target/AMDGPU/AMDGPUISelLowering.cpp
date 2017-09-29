@@ -848,6 +848,8 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_LS:
     return CC_AMDGPU;
   case CallingConv::C:
   case CallingConv::Fast:
@@ -869,6 +871,8 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_LS:
     return RetCC_SI_Shader;
   case CallingConv::C:
   case CallingConv::Fast:

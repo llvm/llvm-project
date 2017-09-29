@@ -366,7 +366,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
 
 Error CoveragePrinterHTML::createIndexFile(
     ArrayRef<std::string> SourceFiles,
-    const coverage::CoverageMapping &Coverage) {
+    const coverage::CoverageMapping &Coverage, const CoverageFilter &Filters) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
   if (Error E = CSSOrErr.takeError())
@@ -404,8 +404,8 @@ Error CoveragePrinterHTML::createIndexFile(
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef, Opts);
   FileCoverageSummary Totals("TOTALS");
-  auto FileReports =
-      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles, Opts);
+  auto FileReports = CoverageReport::prepareFileReports(
+      Coverage, Totals, SourceFiles, Opts, Filters);
   bool EmptyFiles = false;
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
     if (FileReports[I].FunctionCoverage.getNumFunctions())
@@ -620,7 +620,7 @@ void SourceCoverageViewHTML::renderExpansionView(raw_ostream &OS,
                                                  unsigned ViewDepth) {
   OS << BeginExpansionDiv;
   ESV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/false,
-                  ViewDepth + 1);
+                  /*ShowTitle=*/false, ViewDepth + 1);
   OS << EndExpansionDiv;
 }
 
@@ -636,7 +636,7 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
        << EndSourceNameDiv;
   else
     ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
-                    ViewDepth);
+                    /*ShowTitle=*/false, ViewDepth);
   OS << EndExpansionDiv;
 }
 

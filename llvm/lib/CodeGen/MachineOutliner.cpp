@@ -977,6 +977,59 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
                                     InstructionMapper &Mapper,
                                     unsigned MaxCandidateLen,
                                     const TargetInstrInfo &TII) {
+
+  // Return true if this candidate became unbeneficial for outlining in a
+  // previous step.
+  auto ShouldSkipCandidate = [&FunctionList](Candidate &C) {
+
+    // Check if the candidate was removed in a previous step.
+    if (!C.InCandidateList)
+      return true;
+
+    // Check if C's associated function is still beneficial after previous
+    // pruning steps.
+    OutlinedFunction &F = FunctionList[C.FunctionIdx];
+
+    if (F.OccurrenceCount < 2 || F.Benefit < 1) {
+      assert(F.OccurrenceCount > 0 &&
+             "Can't remove OutlinedFunction with no occurrences!");
+      F.OccurrenceCount--;
+      C.InCandidateList = false;
+      return true;
+    }
+
+    // C is in the list, and F is still beneficial.
+    return false;
+  };
+
+  // Remove C from the candidate space, and update its OutlinedFunction.
+  auto Prune = [&FunctionList](Candidate &C) {
+
+    // Get the OutlinedFunction associated with this Candidate.
+    OutlinedFunction &F = FunctionList[C.FunctionIdx];
+
+    // Update C's associated function's occurrence count.
+    assert(F.OccurrenceCount > 0 &&
+           "Can't remove OutlinedFunction with no occurrences!");
+    F.OccurrenceCount--;
+
+    // Remove the call overhead from the removed sequence.
+    F.Benefit += C.MInfo.CallOverhead;
+
+    // Add back one instance of the sequence.
+    F.Benefit =
+        (F.Sequence.size() > F.Benefit) ? 0 : F.Benefit - F.Sequence.size();
+
+    // Remove C from the CandidateList.
+    C.InCandidateList = false;
+
+    DEBUG(dbgs() << "- Removed a Candidate \n";
+          dbgs() << "--- Num fns left for candidate: " << F.OccurrenceCount
+                 << "\n";
+          dbgs() << "--- Candidate's functions's benefit: " << F.Benefit
+                 << "\n";);
+  };
+
   // TODO: Experiment with interval trees or other interval-checking structures
   // to lower the time complexity of this function.
   // TODO: Can we do better than the simple greedy choice?
@@ -985,20 +1038,11 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
   for (auto It = CandidateList.begin(), Et = CandidateList.end(); It != Et;
        It++) {
     Candidate &C1 = *It;
-    OutlinedFunction &F1 = FunctionList[C1.FunctionIdx];
 
-    // If we removed this candidate, skip it.
-    if (!C1.InCandidateList)
+    // If C1 was already pruned, or its function is no longer beneficial for
+    // outlining, move to the next candidate.
+    if (ShouldSkipCandidate(C1))
       continue;
-
-    // Is it still worth it to outline C1?
-    if (F1.Benefit < 1 || F1.OccurrenceCount < 2) {
-      assert(F1.OccurrenceCount > 0 &&
-             "Can't remove OutlinedFunction with no occurrences!");
-      F1.OccurrenceCount--;
-      C1.InCandidateList = false;
-      continue;
-    }
 
     // The minimum start index of any candidate that could overlap with this
     // one.
@@ -1013,25 +1057,15 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
     // MaxCandidateLen of these.
     for (auto Sit = It + 1; Sit != Et; Sit++) {
       Candidate &C2 = *Sit;
-      OutlinedFunction &F2 = FunctionList[C2.FunctionIdx];
 
       // Is this candidate too far away to overlap?
       if (C2.StartIdx < FarthestPossibleIdx)
         break;
 
-      // Did we already remove this candidate in a previous step?
-      if (!C2.InCandidateList)
+      // If C2 was already pruned, or its function is no longer beneficial for
+      // outlining, move to the next candidate.
+      if (ShouldSkipCandidate(C2))
         continue;
-
-      // Is the function beneficial to outline?
-      if (F2.OccurrenceCount < 2 || F2.Benefit < 1) {
-        // If not, remove this candidate and move to the next one.
-        assert(F2.OccurrenceCount > 0 &&
-               "Can't remove OutlinedFunction with no occurrences!");
-        F2.OccurrenceCount--;
-        C2.InCandidateList = false;
-        continue;
-      }
 
       unsigned C2End = C2.StartIdx + C2.Len - 1;
 
@@ -1052,52 +1086,9 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
       // Approximate this by picking the one which would have saved us the
       // most instructions before any pruning.
       if (C1.Benefit >= C2.Benefit) {
-
-        // C1 is better, so remove C2 and update C2's OutlinedFunction to
-        // reflect the removal.
-        assert(F2.OccurrenceCount > 0 &&
-               "Can't remove OutlinedFunction with no occurrences!");
-        F2.OccurrenceCount--;
-
-        // Remove the call overhead from the removed sequence.
-        F2.Benefit += C2.MInfo.CallOverhead;
-
-        // Add back one instance of the sequence.
-        if (F2.Sequence.size() > F2.Benefit)
-          F2.Benefit = 0;
-        else
-          F2.Benefit -= F2.Sequence.size();
-
-        C2.InCandidateList = false;
-
-        DEBUG(dbgs() << "- Removed C2. \n";
-              dbgs() << "--- Num fns left for C2: " << F2.OccurrenceCount
-                     << "\n";
-              dbgs() << "--- C2's benefit: " << F2.Benefit << "\n";);
-
+        Prune(C2);
       } else {
-        // C2 is better, so remove C1 and update C1's OutlinedFunction to
-        // reflect the removal.
-        assert(F1.OccurrenceCount > 0 &&
-               "Can't remove OutlinedFunction with no occurrences!");
-        F1.OccurrenceCount--;
-
-        // Remove the call overhead from the removed sequence.
-        F1.Benefit += C1.MInfo.CallOverhead;
-
-        // Add back one instance of the sequence.
-        if (F1.Sequence.size() > F1.Benefit)
-          F1.Benefit = 0;
-        else
-          F1.Benefit -= F1.Sequence.size();
-
-        C1.InCandidateList = false;
-
-        DEBUG(dbgs() << "- Removed C1. \n";
-              dbgs() << "--- Num fns left for C1: " << F1.OccurrenceCount
-                     << "\n";
-              dbgs() << "--- C1's benefit: " << F1.Benefit << "\n";);
-
+        Prune(C1);
         // C1 is out, so we don't have to compare it against anyone else.
         break;
       }

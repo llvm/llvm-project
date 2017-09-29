@@ -141,3 +141,17 @@ define i32 @f12(i32 %cmp, i32 *%ptr) {
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
 }
+
+; Check generating the comparison result.
+; CHECK-LABEL: f13
+; CHECK: cs %r2, %r3, 0(%r4)
+; CHECK-NEXT: ipm %r2
+; CHECK-NEXT: afi %r2, -268435456
+; CHECK-NEXT: srl %r2, 31
+; CHECK: br %r14
+define i32 @f13(i32 %cmp, i32 %swap, i32 *%src) {
+  %pairval = cmpxchg i32 *%src, i32 %cmp, i32 %swap seq_cst seq_cst
+  %val = extractvalue { i32, i1 } %pairval, 1
+  %res = zext i1 %val to i32
+  ret i32 %res
+}

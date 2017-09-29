@@ -214,6 +214,7 @@ struct MachineStackObject {
   unsigned Alignment = 0;
   uint8_t StackID = 0;
   StringValue CalleeSavedRegister;
+  bool CalleeSavedRestored = true;
   Optional<int64_t> LocalOffset;
   StringValue DebugVar;
   StringValue DebugExpr;
@@ -225,6 +226,7 @@ struct MachineStackObject {
            Alignment == Other.Alignment &&
            StackID == Other.StackID &&
            CalleeSavedRegister == Other.CalleeSavedRegister &&
+           CalleeSavedRestored == Other.CalleeSavedRestored &&
            LocalOffset == Other.LocalOffset && DebugVar == Other.DebugVar &&
            DebugExpr == Other.DebugExpr && DebugLoc == Other.DebugLoc;
   }
@@ -253,6 +255,8 @@ template <> struct MappingTraits<MachineStackObject> {
     YamlIO.mapOptional("stack-id", Object.StackID);
     YamlIO.mapOptional("callee-saved-register", Object.CalleeSavedRegister,
                        StringValue()); // Don't print it out when it's empty.
+    YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
+                       true);
     YamlIO.mapOptional("local-offset", Object.LocalOffset, Optional<int64_t>());
     YamlIO.mapOptional("di-variable", Object.DebugVar,
                        StringValue()); // Don't print it out when it's empty.
@@ -278,13 +282,15 @@ struct FixedMachineStackObject {
   bool IsImmutable = false;
   bool IsAliased = false;
   StringValue CalleeSavedRegister;
+  bool CalleeSavedRestored = true;
 
   bool operator==(const FixedMachineStackObject &Other) const {
     return ID == Other.ID && Type == Other.Type && Offset == Other.Offset &&
            Size == Other.Size && Alignment == Other.Alignment &&
            StackID == Other.StackID &&
            IsImmutable == Other.IsImmutable && IsAliased == Other.IsAliased &&
-           CalleeSavedRegister == Other.CalleeSavedRegister;
+           CalleeSavedRegister == Other.CalleeSavedRegister &&
+           CalleeSavedRestored == Other.CalleeSavedRestored;
   }
 };
 
@@ -313,6 +319,8 @@ template <> struct MappingTraits<FixedMachineStackObject> {
     }
     YamlIO.mapOptional("callee-saved-register", Object.CalleeSavedRegister,
                        StringValue()); // Don't print it out when it's empty.
+    YamlIO.mapOptional("callee-saved-restored", Object.CalleeSavedRestored,
+                     true);
   }
 
   static const bool flow = true;

@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // This pass removes the computation of provably redundant expressions that have
 // been computed earlier in a previous iteration. It relies on the use of PHIs
 // to identify loop carried dependences. This is scalar replacement for vector
@@ -112,22 +113,41 @@
 // 1. Num of edges in DepChain = Number of Instructions in DepChain = Number of
 //    iterations of carried dependence + 1.
 // 2. All instructions in the DepChain except the last are PHIs.
+//
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-vlcr"
-
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/ADT/Statistic.h"
-#include <set>
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <map>
+#include <memory>
+#include <set>
+
 using namespace llvm;
+
+#define DEBUG_TYPE "hexagon-vlcr"
 
 STATISTIC(HexagonNumVectorLoopCarriedReuse,
           "Number of values that were reused from a previous iteration.");
@@ -136,17 +156,24 @@ static cl::opt<int> HexagonVLCRIterationLim("hexagon-vlcr-iteration-lim",
     cl::Hidden,
     cl::desc("Maximum distance of loop carried dependences that are handled"),
     cl::init(2), cl::ZeroOrMore);
+
 namespace llvm {
-  void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
-  Pass *createHexagonVectorLoopCarriedReusePass();
-}
+
+void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
+Pass *createHexagonVectorLoopCarriedReusePass();
+
+} // end namespace llvm
+
 namespace {
+
   // See info about DepChain in the comments at the top of this file.
-  typedef SmallVector<Instruction *, 4> ChainOfDependences;
+  using ChainOfDependences = SmallVector<Instruction *, 4>;
+
   class DepChain {
     ChainOfDependences Chain;
+
   public:
-    bool isIdentical(DepChain &Other) {
+    bool isIdentical(DepChain &Other) const {
       if (Other.size() != size())
         return false;
       ChainOfDependences &OtherChain = Other.getChain();
@@ -156,30 +183,39 @@ namespace {
       }
       return true;
     }
+
     ChainOfDependences &getChain() {
       return Chain;
     }
-    int size() {
+
+    int size() const {
       return Chain.size();
     }
+
     void clear() {
       Chain.clear();
     }
+
     void push_back(Instruction *I) {
       Chain.push_back(I);
     }
-    int iterations() {
+
+    int iterations() const {
       return size() - 1;
     }
-    Instruction *front() {
+
+    Instruction *front() const {
       return Chain.front();
     }
-    Instruction *back() {
+
+    Instruction *back() const {
       return Chain.back();
     }
+
     Instruction *&operator[](const int index) {
       return Chain[index];
     }
+
    friend raw_ostream &operator<< (raw_ostream &OS, const DepChain &D);
   };
 
@@ -194,19 +230,21 @@ namespace {
     OS << *CD[ChainSize-1] << "\n";
     return OS;
   }
-}
-namespace {
+
   struct ReuseValue {
-    Instruction *Inst2Replace;
+    Instruction *Inst2Replace = nullptr;
+
     // In the new PHI node that we'll construct this is the value that'll be
     // used over the backedge. This is teh value that gets reused from a
     // previous iteration.
-    Instruction * BackedgeInst;
-    ReuseValue() : Inst2Replace(nullptr), BackedgeInst(nullptr) {};
+    Instruction *BackedgeInst = nullptr;
+
+    ReuseValue() = default;
+
     void reset() { Inst2Replace = nullptr; BackedgeInst = nullptr; }
     bool isDefined() { return Inst2Replace != nullptr; }
   };
-  typedef struct ReuseValue ReuseValue;
+
   LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
     OS << "** ReuseValue ***\n";
@@ -214,21 +252,21 @@ namespace {
     OS << "Backedge Instruction: " << *(RU.BackedgeInst) << "\n";
     return OS;
   }
-}
 
-namespace {
   class HexagonVectorLoopCarriedReuse : public LoopPass {
   public:
     static char ID;
+
     explicit HexagonVectorLoopCarriedReuse() : LoopPass(ID) {
       PassRegistry *PR = PassRegistry::getPassRegistry();
       initializeHexagonVectorLoopCarriedReusePass(*PR);
     }
+
     StringRef getPassName() const override {
       return "Hexagon-specific loop carried reuse for HVX vectors";
     }
 
-   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LoopInfoWrapperPass>();
       AU.addRequiredID(LoopSimplifyID);
       AU.addRequiredID(LCSSAID);
@@ -254,9 +292,9 @@ namespace {
     DepChain *getDepChainBtwn(Instruction *I1, Instruction *I2);
     bool isEquivalentOperation(Instruction *I1, Instruction *I2);
     bool canReplace(Instruction *I);
-
   };
-}
+
+} // end anonymous namespace
 
 char HexagonVectorLoopCarriedReuse::ID = 0;
 
@@ -276,7 +314,7 @@ bool HexagonVectorLoopCarriedReuse::runOnLoop(Loop *L, LPPassManager &LPM) {
     return false;
 
   // Work only on innermost loops.
-  if (L->getSubLoops().size() != 0)
+  if (!L->getSubLoops().empty())
     return false;
 
   // Work only on single basic blocks loops.
@@ -396,8 +434,8 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
     }
   }
   ReuseCandidate.reset();
-  return;
 }
+
 Value *HexagonVectorLoopCarriedReuse::findValueInBlock(Value *Op,
                                                        BasicBlock *BB) {
   PHINode *PN = dyn_cast<PHINode>(Op);
@@ -405,6 +443,7 @@ Value *HexagonVectorLoopCarriedReuse::findValueInBlock(Value *Op,
   Value *ValueInBlock = PN->getIncomingValueForBlock(BB);
   return ValueInBlock;
 }
+
 void HexagonVectorLoopCarriedReuse::reuseValue() {
   DEBUG(dbgs() << ReuseCandidate);
   Instruction *Inst2Replace = ReuseCandidate.Inst2Replace;
@@ -476,7 +515,7 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
 }
 
 bool HexagonVectorLoopCarriedReuse::doVLCR() {
-  assert((CurLoop->getSubLoops().size() == 0) &&
+  assert(CurLoop->getSubLoops().empty() &&
          "Can do VLCR on the innermost loop only");
   assert((CurLoop->getNumBlocks() == 1) &&
          "Can do VLCR only on single block loops");
@@ -502,6 +541,7 @@ bool HexagonVectorLoopCarriedReuse::doVLCR() {
   } while (Continue);
   return Changed;
 }
+
 void HexagonVectorLoopCarriedReuse::findDepChainFromPHI(Instruction *I,
                                                         DepChain &D) {
   PHINode *PN = dyn_cast<PHINode>(I);
@@ -536,7 +576,6 @@ void HexagonVectorLoopCarriedReuse::findDepChainFromPHI(Instruction *I,
     D.push_back(PN);
     findDepChainFromPHI(BEInst, D);
   }
-  return;
 }
 
 bool HexagonVectorLoopCarriedReuse::isDepChainBtwn(Instruction *I1,
@@ -548,6 +587,7 @@ bool HexagonVectorLoopCarriedReuse::isDepChainBtwn(Instruction *I1,
   }
   return false;
 }
+
 DepChain *HexagonVectorLoopCarriedReuse::getDepChainBtwn(Instruction *I1,
                                                             Instruction *I2) {
   for (auto *D : Dependences) {
@@ -556,6 +596,7 @@ DepChain *HexagonVectorLoopCarriedReuse::getDepChainBtwn(Instruction *I1,
   }
   return nullptr;
 }
+
 void HexagonVectorLoopCarriedReuse::findLoopCarriedDeps() {
   BasicBlock *BB = CurLoop->getHeader();
   for (auto I = BB->begin(), E = BB->end(); I != E && isa<PHINode>(I); ++I) {
@@ -575,6 +616,7 @@ void HexagonVectorLoopCarriedReuse::findLoopCarriedDeps() {
       dbgs() << *Dependences[i] << "\n";
     });
 }
+
 Pass *llvm::createHexagonVectorLoopCarriedReusePass() {
   return new HexagonVectorLoopCarriedReuse();
 }

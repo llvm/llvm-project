@@ -78,3 +78,46 @@ BEGIN
 END
 
 26 DIALOGEX 1, 2, 3, 4 {}
+
+1 VERSIONINFO
+FILEVERSION 1, 2, 3, 4
+PRODUCTVERSION 5, 6, 7, 8
+FILEFLAGSMASK 50
+FILEFLAGS 555
+FILEOS 110
+FILETYPE 555555
+FILESUBTYPE 14
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        {
+            VALUE "CompanyName",      "a"
+            VALUE "FileDescription",  "b"
+            VALUE "FileVersion",      "c"
+            VALUE "InternalName",     "d"
+            VALUE "LegalCopyright",   "e"
+            VALUE "LegalTrademarks1", "f"
+            VALUE "LegalTrademarks2", "g"
+            VALUE "OriginalFilename", L"h"
+            VALUE "ProductName",      "ii", 2, 3
+            VALUE "ProductVersion"
+        }
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+
+    END
+END
+
+MYNAME MYTYPE "filename"
+
+500 600 "other filename"
+
+HELLO INTEGERS {1, 2, 3, 4}
+
+HELLO STRINGS {"1", "2", "3", "4"}
+
+4 MIXED {1, "2", 3, "4"}

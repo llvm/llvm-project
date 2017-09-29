@@ -35,7 +35,9 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
+
 #include <functional>
+#include <map>
 #include <system_error>
 
 using namespace llvm;
@@ -526,7 +528,8 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
   auto OS = std::move(OSOrErr.get());
 
   View->print(*OS.get(), /*Wholefile=*/true,
-              /*ShowSourceName=*/ShowFilenames);
+              /*ShowSourceName=*/ShowFilenames,
+              /*ShowTitle=*/ViewOpts.hasOutputDirectory());
   Printer->closeViewFile(std::move(OS));
 }
 
@@ -845,37 +848,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
   auto Printer = CoveragePrinter::create(ViewOpts);
 
-  if (!Filters.empty()) {
-    auto OSOrErr = Printer->createViewFile("functions", /*InToplevel=*/true);
-    if (Error E = OSOrErr.takeError()) {
-      error("Could not create view file!", toString(std::move(E)));
-      return 1;
-    }
-    auto OS = std::move(OSOrErr.get());
-
-    // Show functions.
-    for (const auto &Function : Coverage->getCoveredFunctions()) {
-      if (!Filters.matches(*Coverage.get(), Function))
-        continue;
-
-      auto mainView = createFunctionView(Function, *Coverage);
-      if (!mainView) {
-        warning("Could not read coverage for '" + Function.Name + "'.");
-        continue;
-      }
-
-      mainView->print(*OS.get(), /*WholeFile=*/false, /*ShowSourceName=*/true);
-    }
-
-    Printer->closeViewFile(std::move(OS));
-    return 0;
-  }
-
-  // Show files
-  bool ShowFilenames =
-      (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
-      (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
-
   if (SourceFiles.empty())
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles())
@@ -883,11 +855,54 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
   // Create an index out of the source files.
   if (ViewOpts.hasOutputDirectory()) {
-    if (Error E = Printer->createIndexFile(SourceFiles, *Coverage)) {
+    if (Error E = Printer->createIndexFile(SourceFiles, *Coverage, Filters)) {
       error("Could not create index file!", toString(std::move(E)));
       return 1;
     }
   }
+
+  if (!Filters.empty()) {
+    // Build the map of filenames to functions.
+    std::map<llvm::StringRef, std::vector<const FunctionRecord *>>
+        FilenameFunctionMap;
+    for (const auto &SourceFile : SourceFiles)
+      for (const auto &Function : Coverage->getCoveredFunctions(SourceFile))
+        if (Filters.matches(*Coverage.get(), Function))
+          FilenameFunctionMap[SourceFile].push_back(&Function);
+
+    // Only print filter matching functions for each file.
+    for (const auto &FileFunc : FilenameFunctionMap) {
+      StringRef File = FileFunc.first;
+      const auto &Functions = FileFunc.second;
+
+      auto OSOrErr = Printer->createViewFile(File, /*InToplevel=*/false);
+      if (Error E = OSOrErr.takeError()) {
+        error("Could not create view file!", toString(std::move(E)));
+        return 1;
+      }
+      auto OS = std::move(OSOrErr.get());
+
+      bool ShowTitle = true;
+      for (const auto *Function : Functions) {
+        auto FunctionView = createFunctionView(*Function, *Coverage);
+        if (!FunctionView) {
+          warning("Could not read coverage for '" + Function->Name + "'.");
+          continue;
+        }
+        FunctionView->print(*OS.get(), /*WholeFile=*/false,
+                            /*ShowSourceName=*/true, ShowTitle);
+        ShowTitle = false;
+      }
+
+      Printer->closeViewFile(std::move(OS));
+    }
+    return 0;
+  }
+
+  // Show files
+  bool ShowFilenames =
+      (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
+      (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)

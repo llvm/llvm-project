@@ -1053,7 +1053,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     unsigned LastReg = 0;
     bool DeleteRet = false;
     for (; i != 0; --i) {
-      unsigned Reg = CSI[i-1].getReg();
+      CalleeSavedInfo &Info = CSI[i-1];
+      unsigned Reg = Info.getReg();
       if (!(Func)(Reg, STI.splitFramePushPop(MF))) continue;
 
       // The aligned reloads from area DPRCS2 are not inserted here.
@@ -1066,6 +1067,9 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
           Reg = ARM::PC;
           DeleteRet = true;
           LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_RET : ARM::LDMIA_RET;
+          // We 'restore' LR into PC so it is not live out of the return block:
+          // Clear Restored bit.
+          Info.setRestored(false);
         } else
           LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_UPD : ARM::LDMIA_UPD;
         // Fold the return instruction into the LDM.
@@ -1098,13 +1102,6 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
         if (MI != MBB.end()) {
           MIB.copyImplicitOps(*MI);
           MI->eraseFromParent();
-        }
-        // If LR is not restored, mark it in CSI.
-        for (CalleeSavedInfo &I : CSI) {
-          if (I.getReg() != ARM::LR)
-            continue;
-          I.setRestored(false);
-          break;
         }
       }
       MI = MIB;

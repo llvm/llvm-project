@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class CoverageFilter;
 class SourceCoverageView;
 
 /// \brief A view that represents a macro or include expansion.
@@ -111,7 +112,8 @@ public:
 
   /// \brief Create an index which lists reports for the given source files.
   virtual Error createIndexFile(ArrayRef<std::string> SourceFiles,
-                                const coverage::CoverageMapping &Coverage) = 0;
+                                const coverage::CoverageMapping &Coverage,
+                                const CoverageFilter &Filters) = 0;
 
   /// @}
 };
@@ -258,7 +260,7 @@ public:
   /// \brief Print the code coverage information for a specific portion of a
   /// source file to the output stream.
   void print(raw_ostream &OS, bool WholeFile, bool ShowSourceName,
-             unsigned ViewDepth = 0);
+             bool ShowTitle, unsigned ViewDepth = 0);
 };
 
 } // namespace llvm

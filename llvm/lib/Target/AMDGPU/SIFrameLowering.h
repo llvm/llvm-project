@@ -69,6 +69,12 @@ private:
   /// \brief Emits debugger prologue.
   void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
 
+  // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
+  void emitEntryFunctionScratchSetup(const SISubtarget &ST, MachineFunction &MF,
+      MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
+      MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
+      unsigned ScratchRsrcReg) const;
+
 public:
   bool hasFP(const MachineFunction &MF) const override;
   bool hasSP(const MachineFunction &MF) const;

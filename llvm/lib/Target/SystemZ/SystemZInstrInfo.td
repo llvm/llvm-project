@@ -1717,8 +1717,8 @@ let mayLoad = 1, Defs = [CC] in
 
 // Compare and swap.
 let Defs = [CC] in {
-  defm CS  : CmpSwapRSPair<"cs", 0xBA, 0xEB14, atomic_cmp_swap_32, GR32>;
-  def  CSG : CmpSwapRSY<"csg", 0xEB30, atomic_cmp_swap_64, GR64>;
+  defm CS  : CmpSwapRSPair<"cs", 0xBA, 0xEB14, z_atomic_cmp_swap, GR32>;
+  def  CSG : CmpSwapRSY<"csg", 0xEB30, z_atomic_cmp_swap, GR64>;
 }
 
 // Compare double and swap.

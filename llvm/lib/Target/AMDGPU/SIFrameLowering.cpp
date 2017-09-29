@@ -219,7 +219,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
   // specified.
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  auto AMDGPUASI = ST.getAMDGPUAS();
   if (ST.debuggerEmitPrologue())
     emitDebuggerPrologue(MF, MBB);
 
@@ -356,7 +355,65 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       .addReg(PreloadedPrivateBufferReg, RegState::Kill);
   }
 
-  if (ResourceRegUsed && (ST.isMesaGfxShader(MF) || (PreloadedPrivateBufferReg == AMDGPU::NoRegister))) {
+  if (ResourceRegUsed)
+    emitEntryFunctionScratchSetup(ST, MF, MBB, MFI, I,
+        PreloadedPrivateBufferReg, ScratchRsrcReg);
+}
+
+// Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
+void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
+      MachineFunction &MF, MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
+      MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
+      unsigned ScratchRsrcReg) const {
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  DebugLoc DL;
+  auto AMDGPUASI = ST.getAMDGPUAS();
+
+  if (ST.isAmdPalOS()) {
+    // The pointer to the GIT is formed from the offset passed in and either
+    // the amdgpu-git-ptr-high function attribute or the top part of the PC
+    unsigned RsrcLo = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+    unsigned RsrcHi = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+    unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+
+    const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
+
+    if (MFI->getGITPtrHigh() != 0xffffffff) {
+      BuildMI(MBB, I, DL, SMovB32, RsrcHi)
+        .addImm(MFI->getGITPtrHigh())
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+    } else {
+      const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64);
+      BuildMI(MBB, I, DL, GetPC64, Rsrc01);
+    }
+    BuildMI(MBB, I, DL, SMovB32, RsrcLo)
+      .addReg(AMDGPU::SGPR0) // Low address passed in
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+    // We now have the GIT ptr - now get the scratch descriptor from the entry
+    // at offset 0.
+    PointerType *PtrTy =
+      PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
+                       AMDGPUAS::CONSTANT_ADDRESS);
+    MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
+    const MCInstrDesc &LoadDwordX4 = TII->get(AMDGPU::S_LOAD_DWORDX4_IMM);
+    auto MMO = MF.getMachineMemOperand(PtrInfo,
+                                       MachineMemOperand::MOLoad |
+                                       MachineMemOperand::MOInvariant |
+                                       MachineMemOperand::MODereferenceable,
+                                       0, 0);
+    BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
+      .addReg(Rsrc01)
+      .addImm(0) // offset
+      .addImm(0) // glc
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
+      .addMemOperand(MMO);
+    return;
+  }
+  if (ST.isMesaGfxShader(MF)
+      || (PreloadedPrivateBufferReg == AMDGPU::NoRegister)) {
     assert(!ST.isAmdCodeObjectV2(MF));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
