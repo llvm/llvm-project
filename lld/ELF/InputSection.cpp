@@ -234,9 +234,9 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
     InputSectionBase *L = File->getSections()[Link];
     if (auto *IS = dyn_cast<InputSection>(L))
       return IS;
-    error(
-        "Merge and .eh_frame sections are not supported with SHF_LINK_ORDER " +
-        toString(L));
+    error("a section with SHF_LINK_ORDER should not refer a non-regular "
+          "section: " +
+          toString(L));
   }
   return nullptr;
 }

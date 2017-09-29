@@ -11765,9 +11765,7 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
     return;
 
   // Check for a call to std::move
-  const FunctionDecl *FD = CE->getDirectCallee();
-  if (!FD || !FD->isInStdNamespace() || !FD->getIdentifier() ||
-      !FD->getIdentifier()->isStr("move"))
+  if (!CE->isCallToStdMove())
     return;
 
   // Get argument from std::move

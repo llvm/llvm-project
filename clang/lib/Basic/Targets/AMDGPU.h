@@ -17,6 +17,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 
@@ -115,17 +116,83 @@ public:
     return None;
   }
 
+  /// Accepted register names: (n, m is unsigned integer, n < m)
+  /// v
+  /// s
+  /// {vn}, {v[n]}
+  /// {sn}, {s[n]}
+  /// {S} , where S is a special register name
+  ////{v[n:m]}
+  /// {s[n:m]}
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
-    switch (*Name) {
-    default:
-      break;
-    case 'v': // vgpr
-    case 's': // sgpr
+    static const ::llvm::StringSet<> SpecialRegs({
+        "exec", "vcc", "flat_scratch", "m0", "scc", "tba", "tma",
+        "flat_scratch_lo", "flat_scratch_hi", "vcc_lo", "vcc_hi", "exec_lo",
+        "exec_hi", "tma_lo", "tma_hi", "tba_lo", "tba_hi",
+    });
+
+    StringRef S(Name);
+    bool HasLeftParen = false;
+    if (S.front() == '{') {
+      HasLeftParen = true;
+      S = S.drop_front();
+    }
+    if (S.empty())
+      return false;
+    if (S.front() != 'v' && S.front() != 's') {
+      if (!HasLeftParen)
+        return false;
+      auto E = S.find('}');
+      if (!SpecialRegs.count(S.substr(0, E)))
+        return false;
+      S = S.drop_front(E + 1);
+      if (!S.empty())
+        return false;
+      // Found {S} where S is a special register.
       Info.setAllowsRegister();
+      Name = S.data() - 1;
       return true;
     }
-    return false;
+    S = S.drop_front();
+    if (!HasLeftParen) {
+      if (!S.empty())
+        return false;
+      // Found s or v.
+      Info.setAllowsRegister();
+      Name = S.data() - 1;
+      return true;
+    }
+    bool HasLeftBracket = false;
+    if (!S.empty() && S.front() == '[') {
+      HasLeftBracket = true;
+      S = S.drop_front();
+    }
+    unsigned long long N;
+    if (S.empty() || consumeUnsignedInteger(S, 10, N))
+      return false;
+    if (!S.empty() && S.front() == ':') {
+      if (!HasLeftBracket)
+        return false;
+      S = S.drop_front();
+      unsigned long long M;
+      if (consumeUnsignedInteger(S, 10, M) || N >= M)
+        return false;
+    }
+    if (HasLeftBracket) {
+      if (S.empty() || S.front() != ']')
+        return false;
+      S = S.drop_front();
+    }
+    if (S.empty() || S.front() != '}')
+      return false;
+    S = S.drop_front();
+    if (!S.empty())
+      return false;
+    // Found {vn}, {sn}, {v[n]}, {s[n]}, {v[n:m]}, or {s[n:m]}.
+    Info.setAllowsRegister();
+    Name = S.data() - 1;
+    return true;
   }
 
   bool

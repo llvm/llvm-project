@@ -74,7 +74,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
 
   // Update LoopInfo
   Loop *OuterLoop = LI.getLoopFor(BeforeBB);
-  Loop *NewLoop = new Loop();
+  Loop *NewLoop = LI.AllocateLoop();
 
   if (OuterLoop)
     OuterLoop->addChildLoop(NewLoop);

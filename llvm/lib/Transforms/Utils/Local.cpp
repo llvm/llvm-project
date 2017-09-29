@@ -68,7 +68,8 @@ STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
 /// conditions and indirectbr addresses this might make dead if
 /// DeleteDeadConditions is true.
 bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
-                                  const TargetLibraryInfo *TLI) {
+                                  const TargetLibraryInfo *TLI,
+                                  DominatorTree *DT) {
   TerminatorInst *T = BB->getTerminator();
   IRBuilder<> Builder(T);
 
@@ -95,6 +96,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Replace the conditional branch with an unconditional one.
       Builder.CreateBr(Destination);
       BI->eraseFromParent();
+      if (DT && OldDest != Destination && OldDest != BB)
+        DT->deleteEdge(BB, OldDest);
       return true;
     }
 
@@ -165,9 +168,17 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
                           createBranchWeights(Weights));
         }
         // Remove this entry.
-        DefaultDest->removePredecessor(SI->getParent());
+        BasicBlock *ParentBB = SI->getParent();
+        DefaultDest->removePredecessor(ParentBB);
         i = SI->removeCase(i);
         e = SI->case_end();
+        if (DT && DefaultDest != ParentBB) {
+          // DefaultDest may still be a successor of a non-default case.
+          if (none_of(successors(ParentBB), [DefaultDest](BasicBlock *S) {
+                return S == DefaultDest;
+              }))
+            DT->deleteEdge(ParentBB, DefaultDest);
+        }
         continue;
       }
 
@@ -193,19 +204,29 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
+      BasicBlock *TheOnlyDestCheck = TheOnlyDest;
+      std::vector<DominatorTree::UpdateType> Updates;
 
       // Remove entries from PHI nodes which we no longer branch to...
       for (BasicBlock *Succ : SI->successors()) {
         // Found case matching a constant operand?
-        if (Succ == TheOnlyDest)
+        if (Succ == TheOnlyDest) {
           TheOnlyDest = nullptr; // Don't modify the first branch to TheOnlyDest
-        else
+        } else {
           Succ->removePredecessor(BB);
+          if (DT && Succ != TheOnlyDestCheck && Succ != BB) {
+            DominatorTree::UpdateType UT = {DominatorTree::Delete, BB, Succ};
+            if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end())
+              Updates.push_back(UT);
+          }
+        }
       }
 
       // Delete the old switch.
       Value *Cond = SI->getCondition();
       SI->eraseFromParent();
+      if (DT && !Updates.empty())
+        DT->applyUpdates(Updates);
       if (DeleteDeadConditions)
         RecursivelyDeleteTriviallyDeadInstructions(Cond, TLI);
       return true;
@@ -253,17 +274,30 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (BlockAddress *BA =
           dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
+      BasicBlock *TheOnlyDestCheck = TheOnlyDest;
+      std::vector<DominatorTree::UpdateType> Updates;
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
 
       for (unsigned i = 0, e = IBI->getNumDestinations(); i != e; ++i) {
-        if (IBI->getDestination(i) == TheOnlyDest)
+        if (IBI->getDestination(i) == TheOnlyDest) {
           TheOnlyDest = nullptr;
-        else
-          IBI->getDestination(i)->removePredecessor(IBI->getParent());
+        } else {
+          BasicBlock *ParentBB = IBI->getParent();
+          BasicBlock *DestBB = IBI->getDestination(i);
+          DestBB->removePredecessor(ParentBB);
+          if (DT && DestBB != TheOnlyDestCheck && DestBB != ParentBB) {
+            DominatorTree::UpdateType UT = {DominatorTree::Delete, ParentBB,
+                                            DestBB};
+            if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end())
+              Updates.push_back(UT);
+          }
+        }
       }
       Value *Address = IBI->getAddress();
       IBI->eraseFromParent();
+      if (DT && !Updates.empty())
+        DT->applyUpdates(Updates);
       if (DeleteDeadConditions)
         RecursivelyDeleteTriviallyDeadInstructions(Address, TLI);
 
@@ -553,7 +587,8 @@ bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
 ///
 /// .. and delete the predecessor corresponding to the '1', this will attempt to
 /// recursively fold the and to 0.
-void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred) {
+void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
+                                        DominatorTree *DT) {
   // This only adjusts blocks with PHI nodes.
   if (!isa<PHINode>(BB->begin()))
     return;
@@ -576,6 +611,8 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred) {
     // of the block.
     if (PhiIt != OldPhiIt) PhiIt = &BB->front();
   }
+  if (DT && BB != Pred)
+    DT->deleteEdge(Pred, BB);
 }
 
 
@@ -597,6 +634,23 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT) {
   BasicBlock *PredBB = DestBB->getSinglePredecessor();
   assert(PredBB && "Block doesn't have a single predecessor!");
 
+  // Collect all the edges that enter PredBB, discarding edges to itself and
+  // duplicates. These dominator edges will be redirected to DestBB.
+  std::vector<DominatorTree::UpdateType> Updates;
+  if (DT)
+    for (pred_iterator PI = pred_begin(PredBB), E = pred_end(PredBB); PI != E;
+         ++PI) {
+      if (*PI == PredBB)
+        continue;
+      DominatorTree::UpdateType UT = {DominatorTree::Delete, *PI, PredBB};
+      if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end()) {
+        Updates.push_back(UT);
+        // DestBB cannot dominate itself.
+        if (*PI != DestBB)
+          Updates.push_back({DominatorTree::Insert, *PI, DestBB});
+      }
+    }
+
   // Zap anything that took the address of DestBB.  Not doing this will give the
   // address an invalid value.
   if (DestBB->hasAddressTaken()) {
@@ -617,16 +671,25 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT) {
 
   // If the PredBB is the entry block of the function, move DestBB up to
   // become the entry block after we erase PredBB.
-  if (PredBB == &DestBB->getParent()->getEntryBlock())
+  bool ReplacedEntryBB = false;
+  if (PredBB == &DestBB->getParent()->getEntryBlock()) {
     DestBB->moveAfter(PredBB);
-
-  if (DT) {
-    BasicBlock *PredBBIDom = DT->getNode(PredBB)->getIDom()->getBlock();
-    DT->changeImmediateDominator(DestBB, PredBBIDom);
-    DT->eraseNode(PredBB);
+    ReplacedEntryBB = true;
   }
+
+  if (DT && !ReplacedEntryBB) {
+    Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
+    DT->applyUpdates(Updates);
+  }
+
   // Nuke BB.
   PredBB->eraseFromParent();
+
+  // The entry block was removed and there is no external interface for the
+  // dominator tree to be notified of this change. In this corner-case we
+  // recalculate the entire tree.
+  if (DT && ReplacedEntryBB)
+    DT->recalculate(*(DestBB->getParent()));
 }
 
 /// CanMergeValues - Return true if we can choose one of these values to use
@@ -834,7 +897,8 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 /// potential side-effect free intrinsics and the branch.  If possible,
 /// eliminate BB by rewriting all the predecessors to branch to the successor
 /// block and return true.  If we can't transform, return false.
-bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB) {
+bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
+                                                   DominatorTree *DT) {
   assert(BB != &BB->getParent()->getEntryBlock() &&
          "TryToSimplifyUncondBranchFromEmptyBlock called on entry block!");
 
@@ -875,6 +939,20 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB) {
 
   DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
+  // Collect all the edges that enter BB, discarding edges to itself and
+  // duplicates. These dominator edges will be redirected to Succ.
+  std::vector<DominatorTree::UpdateType> Updates;
+  if (DT)
+    for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
+      if (*PI == BB)
+        continue;
+      DominatorTree::UpdateType UT = {DominatorTree::Delete, *PI, BB};
+      if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end()) {
+        Updates.push_back(UT);
+        Updates.push_back({DominatorTree::Insert, *PI, Succ});
+      }
+    }
+
   if (isa<PHINode>(Succ->begin())) {
     // If there is more than one pred of succ, and there are PHI nodes in
     // the successor, then we need to add incoming edges for the PHI nodes
@@ -909,16 +987,27 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB) {
   // add the metadata to the branch instructions in the predecessors.
   unsigned LoopMDKind = BB->getContext().getMDKindID("llvm.loop");
   Instruction *TI = BB->getTerminator();
-  if (TI)
+  if (TI) {
     if (MDNode *LoopMD = TI->getMetadata(LoopMDKind))
       for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
         BasicBlock *Pred = *PI;
         Pred->getTerminator()->setMetadata(LoopMDKind, LoopMD);
       }
+    // Replace the terminator instruction with unreachable to ensure the CFG is
+    // consistent. This is necessary for dominance to be correctly calculated.
+    new UnreachableInst(BB->getContext(), TI);
+    TI->eraseFromParent();
+  }
 
   // Everything that jumped to BB now goes to Succ.
   BB->replaceAllUsesWith(Succ);
   if (!Succ->hasName()) Succ->takeName(BB);
+
+  if (DT) {
+    Updates.push_back({DominatorTree::Delete, BB, Succ});
+    DT->applyUpdates(Updates);
+  }
+
   BB->eraseFromParent();              // Delete the old basic block.
   return true;
 }
@@ -1399,13 +1488,19 @@ unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
 }
 
 unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
-                                   bool PreserveLCSSA) {
+                                   bool PreserveLCSSA, DominatorTree *DT) {
   BasicBlock *BB = I->getParent();
+  std::vector<DominatorTree::UpdateType> Updates;
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
-  for (BasicBlock *Successor : successors(BB))
+  for (BasicBlock *Successor : successors(BB)) {
     Successor->removePredecessor(BB, PreserveLCSSA);
-
+    if (DT && BB != Successor) {
+      DominatorTree::UpdateType UT = {DominatorTree::Delete, BB, Successor};
+      if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end())
+        Updates.push_back(UT);
+    }
+  }
   // Insert a call to llvm.trap right before this.  This turns the undefined
   // behavior into a hard fail instead of falling through into random code.
   if (UseLLVMTrap) {
@@ -1425,11 +1520,13 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     BB->getInstList().erase(BBI++);
     ++NumInstrsRemoved;
   }
+  if (DT && !Updates.empty())
+    DT->applyUpdates(Updates);
   return NumInstrsRemoved;
 }
 
 /// changeToCall - Convert the specified invoke into a normal call.
-static void changeToCall(InvokeInst *II) {
+static void changeToCall(InvokeInst *II, DominatorTree *DT = nullptr) {
   SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
@@ -1442,11 +1539,16 @@ static void changeToCall(InvokeInst *II) {
   II->replaceAllUsesWith(NewCall);
 
   // Follow the call by a branch to the normal destination.
-  BranchInst::Create(II->getNormalDest(), II);
+  BasicBlock *NormalDestBB = II->getNormalDest();
+  BranchInst::Create(NormalDestBB, II);
 
   // Update PHI nodes in the unwind destination
-  II->getUnwindDest()->removePredecessor(II->getParent());
+  BasicBlock *BB = II->getParent();
+  BasicBlock *UnwindDestBB = II->getUnwindDest();
+  UnwindDestBB->removePredecessor(BB);
   II->eraseFromParent();
+  if (DT && BB != UnwindDestBB && NormalDestBB != UnwindDestBB)
+    DT->deleteEdge(BB, UnwindDestBB);
 }
 
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
@@ -1487,7 +1589,8 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 }
 
 static bool markAliveBlocks(Function &F,
-                            SmallPtrSetImpl<BasicBlock*> &Reachable) {
+                            SmallPtrSetImpl<BasicBlock *> &Reachable,
+                            DominatorTree *DT = nullptr) {
 
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
@@ -1508,7 +1611,7 @@ static bool markAliveBlocks(Function &F,
         if (II->getIntrinsicID() == Intrinsic::assume) {
           if (match(II->getArgOperand(0), m_CombineOr(m_Zero(), m_Undef()))) {
             // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(II, false);
+            changeToUnreachable(II, false, false, DT);
             Changed = true;
             break;
           }
@@ -1525,7 +1628,8 @@ static bool markAliveBlocks(Function &F,
           // still be useful for widening.
           if (match(II->getArgOperand(0), m_Zero()))
             if (!isa<UnreachableInst>(II->getNextNode())) {
-              changeToUnreachable(II->getNextNode(), /*UseLLVMTrap=*/ false);
+              changeToUnreachable(II->getNextNode(), /*UseLLVMTrap=*/false,
+                                  false, DT);
               Changed = true;
               break;
             }
@@ -1535,7 +1639,7 @@ static bool markAliveBlocks(Function &F,
       if (auto *CI = dyn_cast<CallInst>(&I)) {
         Value *Callee = CI->getCalledValue();
         if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
-          changeToUnreachable(CI, /*UseLLVMTrap=*/false);
+          changeToUnreachable(CI, /*UseLLVMTrap=*/false, false, DT);
           Changed = true;
           break;
         }
@@ -1545,7 +1649,7 @@ static bool markAliveBlocks(Function &F,
           // though.
           if (!isa<UnreachableInst>(CI->getNextNode())) {
             // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNode(), false);
+            changeToUnreachable(CI->getNextNode(), false, false, DT);
             Changed = true;
           }
           break;
@@ -1564,7 +1668,7 @@ static bool markAliveBlocks(Function &F,
         if (isa<UndefValue>(Ptr) ||
             (isa<ConstantPointerNull>(Ptr) &&
              SI->getPointerAddressSpace() == 0)) {
-          changeToUnreachable(SI, true);
+          changeToUnreachable(SI, true, false, DT);
           Changed = true;
           break;
         }
@@ -1576,16 +1680,19 @@ static bool markAliveBlocks(Function &F,
       // Turn invokes that call 'nounwind' functions into ordinary calls.
       Value *Callee = II->getCalledValue();
       if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
-        changeToUnreachable(II, true);
+        changeToUnreachable(II, true, false, DT);
         Changed = true;
       } else if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
         if (II->use_empty() && II->onlyReadsMemory()) {
           // jump to the normal destination branch.
+          BasicBlock *UnwindDestBB = II->getUnwindDest();
           BranchInst::Create(II->getNormalDest(), II);
-          II->getUnwindDest()->removePredecessor(II->getParent());
+          UnwindDestBB->removePredecessor(II->getParent());
           II->eraseFromParent();
+          if (DT && BB != UnwindDestBB)
+            DT->deleteEdge(BB, UnwindDestBB);
         } else
-          changeToCall(II);
+          changeToCall(II, DT);
         Changed = true;
       }
     } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
@@ -1628,7 +1735,7 @@ static bool markAliveBlocks(Function &F,
       }
     }
 
-    Changed |= ConstantFoldTerminator(BB, true);
+    Changed |= ConstantFoldTerminator(BB, true, nullptr, DT);
     for (BasicBlock *Successor : successors(BB))
       if (Reachable.insert(Successor).second)
         Worklist.push_back(Successor);
@@ -1636,11 +1743,11 @@ static bool markAliveBlocks(Function &F,
   return Changed;
 }
 
-void llvm::removeUnwindEdge(BasicBlock *BB) {
+void llvm::removeUnwindEdge(BasicBlock *BB, DominatorTree *DT) {
   TerminatorInst *TI = BB->getTerminator();
 
   if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    changeToCall(II);
+    changeToCall(II, DT);
     return;
   }
 
@@ -1668,15 +1775,19 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   UnwindDest->removePredecessor(BB);
   TI->replaceAllUsesWith(NewTI);
   TI->eraseFromParent();
+  if (DT && BB != UnwindDest)
+    DT->deleteEdge(BB, UnwindDest);
 }
 
 /// removeUnreachableBlocks - Remove blocks that are not reachable, even
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise. If `LVI` is passed, this function preserves LazyValueInfo
 /// after modifying the CFG.
-bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
+bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
+                                   DominatorTree *DT) {
   SmallPtrSet<BasicBlock*, 16> Reachable;
-  bool Changed = markAliveBlocks(F, Reachable);
+  bool Changed = markAliveBlocks(F, Reachable, DT);
+  std::vector<DominatorTree::UpdateType> Updates;
 
   // If there are unreachable blocks in the CFG...
   if (Reachable.size() == F.size())
@@ -1685,6 +1796,8 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
   assert(Reachable.size() < F.size());
   NumRemoved += F.size()-Reachable.size();
 
+  SmallPtrSet<TerminatorInst *, 4> TIRemoved;
+
   // Loop over all of the basic blocks that are not reachable, dropping all of
   // their internal references...
   for (Function::iterator BB = ++F.begin(), E = F.end(); BB != E; ++BB) {
@@ -1692,12 +1805,34 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
       continue;
 
     for (BasicBlock *Successor : successors(&*BB))
-      if (Reachable.count(Successor))
+      if (Reachable.count(Successor)) {
         Successor->removePredecessor(&*BB);
+        if (DT && &*BB != Successor) {
+          DominatorTree::UpdateType UT = {DominatorTree::Delete, &*BB,
+                                          Successor};
+          if (std::find(Updates.begin(), Updates.end(), UT) == Updates.end())
+            Updates.push_back(UT);
+        }
+      }
+
     if (LVI)
       LVI->eraseBlock(&*BB);
+
+    TerminatorInst *TI = BB->getTerminator();
+    TIRemoved.insert(TI);
+    new UnreachableInst(BB->getContext(), TI);
+
     BB->dropAllReferences();
   }
+
+  // Remove all the terminator instructions after dropping all references. This
+  // keeps the state of the CFG consistent and prevents asserts from circular
+  // use counts in groups of unreachable basic blocks.
+  for (TerminatorInst *TI : TIRemoved)
+    TI->eraseFromParent();
+
+  if (DT && !Updates.empty())
+    DT->applyUpdates(Updates);
 
   for (Function::iterator I = ++F.begin(); I != F.end();)
     if (!Reachable.count(&*I))

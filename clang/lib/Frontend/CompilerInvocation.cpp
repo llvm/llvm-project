@@ -528,6 +528,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SplitDwarfInlining = !Args.hasArg(OPT_fno_split_dwarf_inlining);
   Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
   Opts.DebugExplicitImport = Triple.isPS4CPU();
+  Opts.DebugFwdTemplateParams = Args.hasArg(OPT_debug_forward_template_params);
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ))
     Opts.DebugPrefixMap.insert(StringRef(Arg).split('='));

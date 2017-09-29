@@ -251,12 +251,12 @@ void ConnectToRemote(MainLoop &mainloop,
     auto connection_result = connection_up->Connect(connection_url, &error);
     if (connection_result != eConnectionStatusSuccess) {
       fprintf(stderr, "error: failed to connect to client at '%s' "
-                      "(connection status: %d)",
+                      "(connection status: %d)\n",
               connection_url, static_cast<int>(connection_result));
       exit(-1);
     }
     if (error.Fail()) {
-      fprintf(stderr, "error: failed to connect to client at '%s': %s",
+      fprintf(stderr, "error: failed to connect to client at '%s': %s\n",
               connection_url, error.AsCString());
       exit(-1);
     }
@@ -287,7 +287,7 @@ void ConnectToRemote(MainLoop &mainloop,
       // Ensure we have a port number for the connection.
       if (connection_portno == 0) {
         fprintf(stderr, "error: port number must be specified on when using "
-                        "reverse connect");
+                        "reverse connect\n");
         exit(1);
       }
 
@@ -301,12 +301,12 @@ void ConnectToRemote(MainLoop &mainloop,
       auto connection_result = connection_up->Connect(connection_url, &error);
       if (connection_result != eConnectionStatusSuccess) {
         fprintf(stderr, "error: failed to connect to client at '%s' "
-                        "(connection status: %d)",
+                        "(connection status: %d)\n",
                 connection_url, static_cast<int>(connection_result));
         exit(-1);
       }
       if (error.Fail()) {
-        fprintf(stderr, "error: failed to connect to client at '%s': %s",
+        fprintf(stderr, "error: failed to connect to client at '%s': %s\n",
                 connection_url, error.AsCString());
         exit(-1);
       }
@@ -314,7 +314,7 @@ void ConnectToRemote(MainLoop &mainloop,
       std::unique_ptr<Acceptor> acceptor_up(
           Acceptor::Create(final_host_and_port, false, error));
       if (error.Fail()) {
-        fprintf(stderr, "failed to create acceptor: %s", error.AsCString());
+        fprintf(stderr, "failed to create acceptor: %s\n", error.AsCString());
         exit(1);
       }
       error = acceptor_up->Listen(1);
@@ -328,7 +328,7 @@ void ConnectToRemote(MainLoop &mainloop,
         if (named_pipe_path && named_pipe_path[0]) {
           error = writeSocketIdToPipe(named_pipe_path, socket_id);
           if (error.Fail())
-            fprintf(stderr, "failed to write to the named pipe \'%s\': %s",
+            fprintf(stderr, "failed to write to the named pipe \'%s\': %s\n",
                     named_pipe_path, error.AsCString());
         }
         // If we have an unnamed pipe to write the socket id back to, do that
@@ -336,7 +336,7 @@ void ConnectToRemote(MainLoop &mainloop,
         else if (unnamed_pipe_fd >= 0) {
           error = writeSocketIdToPipe(unnamed_pipe_fd, socket_id);
           if (error.Fail())
-            fprintf(stderr, "failed to write to the unnamed pipe: %s",
+            fprintf(stderr, "failed to write to the unnamed pipe: %s\n",
                     error.AsCString());
         }
       } else {

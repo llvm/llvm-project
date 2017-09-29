@@ -191,7 +191,7 @@ public:
       InvalidateCurrentScop = true;
 
     Worklist.erase(&S.getRegion());
-    SAM.clear(S);
+    SAM.clear(S, S.getName());
   }
 
 private:

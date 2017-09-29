@@ -30,6 +30,8 @@ public:
   uint32_t FindDecls(const ConstString &name, bool append, uint32_t max_matches,
                      std::vector<clang::NamedDecl *> &decls) override;
 
+  clang::ExternalASTMerger::ImporterSource GetImporterSource() override;
+
   friend class AppleObjCExternalASTSource;
 
 private:

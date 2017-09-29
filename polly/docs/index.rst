@@ -25,6 +25,7 @@ Using Polly
    UsingPollyWithClang
    HowToManuallyUseTheIndividualPiecesOfPolly
    TipsAndTricks
+   Performance
 
 * `A list of Polly passes <http://polly.llvm.org/documentation/passes.html>`_
 

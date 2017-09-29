@@ -167,6 +167,9 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
   if (ComputedEST == EST_None)
     return;
 
+  if (EST == EST_None && Method->hasAttr<NoThrowAttr>())
+    EST = EST_BasicNoexcept;
+
   switch(EST) {
   // If this function can throw any exceptions, make a note of that.
   case EST_MSAny:
@@ -3390,14 +3393,9 @@ namespace {
 
     void VisitCallExpr(CallExpr *E) {
       // Treat std::move as a use.
-      if (E->getNumArgs() == 1) {
-        if (FunctionDecl *FD = E->getDirectCallee()) {
-          if (FD->isInStdNamespace() && FD->getIdentifier() &&
-              FD->getIdentifier()->isStr("move")) {
-            HandleValue(E->getArg(0), false /*AddressOf*/);
-            return;
-          }
-        }
+      if (E->isCallToStdMove()) {
+        HandleValue(E->getArg(0), /*AddressOf=*/false);
+        return;
       }
 
       Inherited::VisitCallExpr(E);

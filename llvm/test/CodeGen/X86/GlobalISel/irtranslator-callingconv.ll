@@ -703,9 +703,9 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
 
 ; X32:      fixedStack:      
 ; X32-NEXT:  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0, 
-; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
 ; X32-NEXT:  - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: 0, 
-; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
 ; X32:         %2(p0) = G_FRAME_INDEX %fixed-stack.1
 ; X32-NEXT:    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
 ; X32-NEXT:    %3(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -748,9 +748,9 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
 
 ; X32:      fixedStack:      
 ; X32-NEXT:  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0, 
-; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
 ; X32-NEXT:  - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: 0, 
-; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true }
 ; X32:         %2(p0) = G_FRAME_INDEX %fixed-stack.1
 ; X32-NEXT:    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
 ; X32-NEXT:    %3(p0) = G_FRAME_INDEX %fixed-stack.0
