@@ -27,7 +27,6 @@ Sections:
   - Type:            CUSTOM
     Name:            linking
     DataSize:        10
-    DataAlignment:   2
     SymbolInfo:
       - Name:            function_export
         Flags:           1
@@ -49,7 +48,6 @@ Sections:
 # CHECK:   - Type:            CUSTOM
 # CHECK:     Name:            linking
 # CHECK:     DataSize:        10
-# CHECK:     DataAlignment:   2
 # CHECK:     SymbolInfo:
 # CHECK:       - Name:            function_export
 # CHECK:         Flags:           1

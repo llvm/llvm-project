@@ -9,9 +9,9 @@ registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_64 }
+  - { id: 3, class: sreg_64_xexec }
   - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sreg_64 }
+  - { id: 5, class: sreg_64_xexec }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
 
@@ -42,13 +42,13 @@ registers:
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
   - { id: 8, class: vgpr_32 }
-  - { id: 9, class: sreg_64 }
+  - { id: 9, class: sreg_64_xexec }
   - { id: 10, class: vgpr_32 }
-  - { id: 11, class: sreg_64 }
+  - { id: 11, class: sreg_64_xexec }
   - { id: 12, class: vgpr_32 }
-  - { id: 13, class: sreg_64 }
+  - { id: 13, class: sreg_64_xexec }
   - { id: 14, class: vgpr_32 }
-  - { id: 15, class: sreg_64 }
+  - { id: 15, class: sreg_64_xexec }
 
 body: |
   bb.0:
@@ -77,9 +77,9 @@ name: cluster_mov_addc
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_64 }
+  - { id: 2, class: sreg_64_xexec }
   - { id: 3, class: vgpr_32 }
-  - { id: 4, class: sreg_64 }
+  - { id: 4, class: sreg_64_xexec }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
 
@@ -104,12 +104,12 @@ registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_64 }
+  - { id: 3, class: sreg_64_xexec }
   - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sreg_64 }
+  - { id: 5, class: sreg_64_xexec }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
-  - { id: 8, class: sreg_64 }
+  - { id: 8, class: sreg_64_xexec }
 body: |
   bb.0:
     %0 = V_MOV_B32_e32 0, implicit %exec
@@ -130,9 +130,9 @@ registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_64 }
+  - { id: 3, class: sreg_64_xexec }
   - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sreg_64 }
+  - { id: 5, class: sreg_64_xexec }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
 
@@ -156,9 +156,9 @@ registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
-  - { id: 3, class: sreg_64 }
+  - { id: 3, class: sreg_64_xexec }
   - { id: 4, class: vgpr_32 }
-  - { id: 5, class: sreg_64 }
+  - { id: 5, class: sreg_64_xexec }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
 
@@ -181,7 +181,7 @@ registers:
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
   - { id: 3, class: vgpr_32 }
-  - { id: 4, class: sreg_64 }
+  - { id: 4, class: sreg_64_xexec }
   - { id: 5, class: vgpr_32 }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }
@@ -210,7 +210,7 @@ registers:
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
   - { id: 3, class: vgpr_32 }
-  - { id: 4, class: sreg_64 }
+  - { id: 4, class: sreg_64_xexec }
   - { id: 5, class: vgpr_32 }
   - { id: 6, class: vgpr_32 }
   - { id: 7, class: vgpr_32 }

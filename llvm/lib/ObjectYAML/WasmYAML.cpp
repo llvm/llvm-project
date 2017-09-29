@@ -58,9 +58,8 @@ static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
   IO.mapRequired("DataSize", Section.DataSize);
-  IO.mapRequired("DataAlignment", Section.DataAlignment);
   IO.mapOptional("SymbolInfo", Section.SymbolInfos);
-  IO.mapOptional("SegmentNames", Section.SegmentNames);
+  IO.mapOptional("SegmentInfo", Section.SegmentInfos);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::CustomSection &Section) {
@@ -264,6 +263,14 @@ void MappingTraits<WasmYAML::NameEntry>::mapping(
     IO &IO, WasmYAML::NameEntry &NameEntry) {
   IO.mapRequired("Index", NameEntry.Index);
   IO.mapRequired("Name", NameEntry.Name);
+}
+
+void MappingTraits<WasmYAML::SegmentInfo>::mapping(
+    IO &IO, WasmYAML::SegmentInfo &SegmentInfo) {
+  IO.mapRequired("Index", SegmentInfo.Index);
+  IO.mapRequired("Name", SegmentInfo.Name);
+  IO.mapRequired("Alignment", SegmentInfo.Alignment);
+  IO.mapRequired("Flags", SegmentInfo.Flags);
 }
 
 void MappingTraits<WasmYAML::LocalDecl>::mapping(

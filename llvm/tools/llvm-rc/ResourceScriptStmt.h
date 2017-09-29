@@ -15,6 +15,7 @@
 #define LLVM_TOOLS_LLVMRC_RESOURCESCRIPTSTMT_H
 
 #include "ResourceScriptToken.h"
+#include "ResourceVisitor.h"
 
 #include "llvm/ADT/StringSet.h"
 
@@ -49,22 +50,100 @@ public:
     return !IsInt && Data.String.equals_lower(Str);
   }
 
+  bool isInt() const { return IsInt; }
+
+  uint32_t getInt() const {
+    assert(IsInt);
+    return Data.Int;
+  }
+
+  const StringRef &getString() const {
+    assert(!IsInt);
+    return Data.String;
+  }
+
+  operator Twine() const {
+    return isInt() ? Twine(getInt()) : Twine(getString());
+  }
+
   friend raw_ostream &operator<<(raw_ostream &, const IntOrString &);
+};
+
+enum ResourceKind {
+  // These resource kinds have corresponding .res resource type IDs
+  // (TYPE in RESOURCEHEADER structure). The numeric value assigned to each
+  // kind is equal to this type ID.
+  RkNull = 0,
+  RkMenu = 4,
+  RkDialog = 5,
+  RkAccelerators = 9,
+  RkVersionInfo = 16,
+  RkHTML = 23,
+
+  // These kinds don't have assigned type IDs (they might be the resources
+  // of invalid kind, expand to many resource structures in .res files,
+  // or have variable type ID). In order to avoid ID clashes with IDs above,
+  // we assign the kinds the values 256 and larger.
+  RkInvalid = 256,
+  RkBase,
+  RkCursor,
+  RkIcon,
+  RkUser
+};
+
+// Non-zero memory flags.
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648027(v=vs.85).aspx
+enum MemoryFlags {
+  MfMoveable = 0x10,
+  MfPure = 0x20,
+  MfPreload = 0x40,
+  MfDiscardable = 0x1000
 };
 
 // Base resource. All the resources should derive from this base.
 class RCResource {
-protected:
-  IntOrString ResName;
-
 public:
-  RCResource() = default;
-  RCResource(RCResource &&) = default;
+  IntOrString ResName;
   void setName(const IntOrString &Name) { ResName = Name; }
   virtual raw_ostream &log(raw_ostream &OS) const {
     return OS << "Base statement\n";
   };
   virtual ~RCResource() {}
+
+  virtual Error visit(Visitor *) const {
+    llvm_unreachable("This is unable to call methods from Visitor base");
+  }
+
+  // Apply the statements attached to this resource. Generic resources
+  // don't have any.
+  virtual Error applyStmts(Visitor *) const { return Error::success(); }
+
+  // By default, memory flags are DISCARDABLE | PURE | MOVEABLE.
+  virtual uint16_t getMemoryFlags() const {
+    return MfDiscardable | MfPure | MfMoveable;
+  }
+  virtual ResourceKind getKind() const { return RkBase; }
+  static bool classof(const RCResource *Res) { return true; }
+
+  virtual IntOrString getResourceType() const {
+    llvm_unreachable("This cannot be called on objects without types.");
+  }
+  virtual Twine getResourceTypeName() const {
+    llvm_unreachable("This cannot be called on objects without types.");
+  };
+};
+
+// An empty resource. It has no content, type 0, ID 0 and all of its
+// characteristics are equal to 0.
+class NullResource : public RCResource {
+public:
+  raw_ostream &log(raw_ostream &OS) const override {
+    return OS << "Null resource\n";
+  }
+  Error visit(Visitor *V) const override { return V->visitNullResource(this); }
+  IntOrString getResourceType() const override { return 0; }
+  Twine getResourceTypeName() const override { return "(NULL)"; }
+  uint16_t getMemoryFlags() const override { return 0; }
 };
 
 // Optional statement base. All such statements should derive from this base.
@@ -75,11 +154,28 @@ class OptionalStmtList : public OptionalStmt {
 
 public:
   OptionalStmtList() {}
-  virtual raw_ostream &log(raw_ostream &OS) const;
+  raw_ostream &log(raw_ostream &OS) const override;
 
   void addStmt(std::unique_ptr<OptionalStmt> Stmt) {
     Statements.push_back(std::move(Stmt));
   }
+
+  Error visit(Visitor *V) const override {
+    for (auto &StmtPtr : Statements)
+      if (auto Err = StmtPtr->visit(V))
+        return Err;
+    return Error::success();
+  }
+};
+
+class OptStatementsRCResource : public RCResource {
+public:
+  std::unique_ptr<OptionalStmtList> OptStatements;
+
+  OptStatementsRCResource(OptionalStmtList &&Stmts)
+      : OptStatements(llvm::make_unique<OptionalStmtList>(std::move(Stmts))) {}
+
+  virtual Error applyStmts(Visitor *V) const { return OptStatements->visit(V); }
 };
 
 // LANGUAGE statement. It can occur both as a top-level statement (in such
@@ -89,48 +185,70 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381019(v=vs.85).aspx
 class LanguageResource : public OptionalStmt {
+public:
   uint32_t Lang, SubLang;
 
-public:
   LanguageResource(uint32_t LangId, uint32_t SubLangId)
       : Lang(LangId), SubLang(SubLangId) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  // This is not a regular top-level statement; when it occurs, it just
+  // modifies the language context.
+  Error visit(Visitor *V) const override { return V->visitLanguageStmt(this); }
+  Twine getResourceTypeName() const override { return "LANGUAGE"; }
 };
 
 // ACCELERATORS resource. Defines a named table of accelerators for the app.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380610(v=vs.85).aspx
-class AcceleratorsResource : public RCResource {
+class AcceleratorsResource : public OptStatementsRCResource {
 public:
   class Accelerator {
   public:
     IntOrString Event;
     uint32_t Id;
-    uint8_t Flags;
+    uint16_t Flags;
 
     enum Options {
-      ASCII = (1 << 0),
-      VIRTKEY = (1 << 1),
-      NOINVERT = (1 << 2),
-      ALT = (1 << 3),
-      SHIFT = (1 << 4),
-      CONTROL = (1 << 5)
+      // This is actually 0x0000 (accelerator is assumed to be ASCII if it's
+      // not VIRTKEY). However, rc.exe behavior is different in situations
+      // "only ASCII defined" and "neither ASCII nor VIRTKEY defined".
+      // Therefore, we include ASCII as another flag. This must be zeroed
+      // when serialized.
+      ASCII = 0x8000,
+      VIRTKEY = 0x0001,
+      NOINVERT = 0x0002,
+      ALT = 0x0010,
+      SHIFT = 0x0004,
+      CONTROL = 0x0008
     };
 
     static constexpr size_t NumFlags = 6;
     static StringRef OptionsStr[NumFlags];
+    static uint32_t OptionsFlags[NumFlags];
   };
 
-  AcceleratorsResource(OptionalStmtList &&OptStmts)
-      : OptStatements(std::move(OptStmts)) {}
-  void addAccelerator(IntOrString Event, uint32_t Id, uint8_t Flags) {
+  std::vector<Accelerator> Accelerators;
+
+  using OptStatementsRCResource::OptStatementsRCResource;
+  void addAccelerator(IntOrString Event, uint32_t Id, uint16_t Flags) {
     Accelerators.push_back(Accelerator{Event, Id, Flags});
   }
   raw_ostream &log(raw_ostream &) const override;
 
-private:
-  std::vector<Accelerator> Accelerators;
-  OptionalStmtList OptStatements;
+  IntOrString getResourceType() const override { return RkAccelerators; }
+  uint16_t getMemoryFlags() const override {
+    return MfPure | MfMoveable;
+  }
+  Twine getResourceTypeName() const override { return "ACCELERATORS"; }
+
+  Error visit(Visitor *V) const override {
+    return V->visitAcceleratorsResource(this);
+  }
+  ResourceKind getKind() const override { return RkAccelerators; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkAccelerators;
+  }
 };
 
 // CURSOR resource. Represents a single cursor (".cur") file.
@@ -161,11 +279,22 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa966018(v=vs.85).aspx
 class HTMLResource : public RCResource {
+public:
   StringRef HTMLLoc;
 
-public:
   HTMLResource(StringRef Location) : HTMLLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  Error visit(Visitor *V) const override { return V->visitHTMLResource(this); }
+
+  // Curiously, file resources don't have DISCARDABLE flag set.
+  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+  IntOrString getResourceType() const override { return RkHTML; }
+  Twine getResourceTypeName() const override { return "HTML"; }
+  ResourceKind getKind() const override { return RkHTML; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkHTML;
+  }
 };
 
 // -- MENU resource and its helper classes --
@@ -178,17 +307,18 @@ public:
 class MenuDefinition {
 public:
   enum Options {
-    CHECKED = (1 << 0),
-    GRAYED = (1 << 1),
-    HELP = (1 << 2),
-    INACTIVE = (1 << 3),
-    MENUBARBREAK = (1 << 4),
-    MENUBREAK = (1 << 5)
+    CHECKED = 0x0008,
+    GRAYED = 0x0001,
+    HELP = 0x4000,
+    INACTIVE = 0x0002,
+    MENUBARBREAK = 0x0020,
+    MENUBREAK = 0x0040
   };
 
   static constexpr size_t NumFlags = 6;
   static StringRef OptionsStr[NumFlags];
-  static raw_ostream &logFlags(raw_ostream &, uint8_t Flags);
+  static uint32_t OptionsFlags[NumFlags];
+  static raw_ostream &logFlags(raw_ostream &, uint16_t Flags);
   virtual raw_ostream &log(raw_ostream &OS) const {
     return OS << "Base menu definition\n";
   }
@@ -220,10 +350,10 @@ public:
 class MenuItem : public MenuDefinition {
   StringRef Name;
   uint32_t Id;
-  uint8_t Flags;
+  uint16_t Flags;
 
 public:
-  MenuItem(StringRef Caption, uint32_t ItemId, uint8_t ItemFlags)
+  MenuItem(StringRef Caption, uint32_t ItemId, uint16_t ItemFlags)
       : Name(Caption), Id(ItemId), Flags(ItemFlags) {}
   raw_ostream &log(raw_ostream &) const override;
 };
@@ -233,37 +363,35 @@ public:
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381030(v=vs.85).aspx
 class PopupItem : public MenuDefinition {
   StringRef Name;
-  uint8_t Flags;
+  uint16_t Flags;
   MenuDefinitionList SubItems;
 
 public:
-  PopupItem(StringRef Caption, uint8_t ItemFlags,
+  PopupItem(StringRef Caption, uint16_t ItemFlags,
             MenuDefinitionList &&SubItemsList)
       : Name(Caption), Flags(ItemFlags), SubItems(std::move(SubItemsList)) {}
   raw_ostream &log(raw_ostream &) const override;
 };
 
 // Menu resource definition.
-class MenuResource : public RCResource {
-  OptionalStmtList OptStatements;
+class MenuResource : public OptStatementsRCResource {
   MenuDefinitionList Elements;
 
 public:
   MenuResource(OptionalStmtList &&OptStmts, MenuDefinitionList &&Items)
-      : OptStatements(std::move(OptStmts)), Elements(std::move(Items)) {}
+      : OptStatementsRCResource(std::move(OptStmts)),
+        Elements(std::move(Items)) {}
   raw_ostream &log(raw_ostream &) const override;
 };
 
 // STRINGTABLE resource. Contains a list of strings, each having its unique ID.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381050(v=vs.85).aspx
-class StringTableResource : public RCResource {
-  OptionalStmtList OptStatements;
+class StringTableResource : public OptStatementsRCResource {
   std::vector<std::pair<uint32_t, StringRef>> Table;
 
 public:
-  StringTableResource(OptionalStmtList &&OptStmts)
-      : OptStatements(std::move(OptStmts)) {}
+  using OptStatementsRCResource::OptStatementsRCResource;
   void addString(uint32_t ID, StringRef String) {
     Table.emplace_back(ID, String);
   }
@@ -301,9 +429,8 @@ public:
 // Single dialog definition. We don't create distinct classes for DIALOG and
 // DIALOGEX because of their being too similar to each other. We only have a
 // flag determining the type of the dialog box.
-class DialogResource : public RCResource {
+class DialogResource : public OptStatementsRCResource {
   uint32_t X, Y, Width, Height, HelpID;
-  OptionalStmtList OptStatements;
   std::vector<Control> Controls;
   bool IsExtended;
 
@@ -311,8 +438,9 @@ public:
   DialogResource(uint32_t PosX, uint32_t PosY, uint32_t DlgWidth,
                  uint32_t DlgHeight, uint32_t DlgHelpID,
                  OptionalStmtList &&OptStmts, bool IsDialogEx)
-      : X(PosX), Y(PosY), Width(DlgWidth), Height(DlgHeight), HelpID(DlgHelpID),
-        OptStatements(std::move(OptStmts)), IsExtended(IsDialogEx) {}
+      : OptStatementsRCResource(std::move(OptStmts)), X(PosX), Y(PosY),
+        Width(DlgWidth), Height(DlgHeight), HelpID(DlgHelpID),
+        IsExtended(IsDialogEx) {}
 
   void addControl(Control &&Ctl) { Controls.push_back(std::move(Ctl)); }
 
@@ -441,22 +569,30 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380872(v=vs.85).aspx
 class CharacteristicsStmt : public OptionalStmt {
+public:
   uint32_t Value;
 
-public:
   CharacteristicsStmt(uint32_t Characteristic) : Value(Characteristic) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  Twine getResourceTypeName() const override { return "CHARACTERISTICS"; }
+  Error visit(Visitor *V) const override {
+    return V->visitCharacteristicsStmt(this);
+  }
 };
 
 // VERSION optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381059(v=vs.85).aspx
 class VersionStmt : public OptionalStmt {
+public:
   uint32_t Value;
 
-public:
   VersionStmt(uint32_t Version) : Value(Version) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  Twine getResourceTypeName() const override { return "VERSION"; }
+  Error visit(Visitor *V) const override { return V->visitVersionStmt(this); }
 };
 
 // CAPTION optional statement.

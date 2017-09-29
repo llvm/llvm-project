@@ -17,7 +17,8 @@
 
 int test_omp_taskloop_grainsize()
 {
-  int i, grainsize, count, tmp_count, result, num_off;
+  int result = 0;
+  int i, grainsize, count, tmp_count, num_off;
   int *tmp, *tids, *tidsArray;
 
   tidsArray = (int *)malloc(sizeof(int) * CFDMAX_SIZE);

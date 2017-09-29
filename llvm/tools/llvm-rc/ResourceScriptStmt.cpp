@@ -40,13 +40,17 @@ StringRef AcceleratorsResource::Accelerator::OptionsStr
     [AcceleratorsResource::Accelerator::NumFlags] = {
         "ASCII", "VIRTKEY", "NOINVERT", "ALT", "SHIFT", "CONTROL"};
 
+uint32_t AcceleratorsResource::Accelerator::OptionsFlags
+    [AcceleratorsResource::Accelerator::NumFlags] = {ASCII, VIRTKEY, NOINVERT,
+                                                     ALT,   SHIFT,   CONTROL};
+
 raw_ostream &AcceleratorsResource::log(raw_ostream &OS) const {
   OS << "Accelerators (" << ResName << "): \n";
-  OptStatements.log(OS);
+  OptStatements->log(OS);
   for (const auto &Acc : Accelerators) {
     OS << "  Accelerator: " << Acc.Event << " " << Acc.Id;
     for (size_t i = 0; i < Accelerator::NumFlags; ++i)
-      if (Acc.Flags & (1U << i))
+      if (Acc.Flags & Accelerator::OptionsFlags[i])
         OS << " " << Accelerator::OptionsStr[i];
     OS << "\n";
   }
@@ -68,9 +72,12 @@ raw_ostream &HTMLResource::log(raw_ostream &OS) const {
 StringRef MenuDefinition::OptionsStr[MenuDefinition::NumFlags] = {
     "CHECKED", "GRAYED", "HELP", "INACTIVE", "MENUBARBREAK", "MENUBREAK"};
 
-raw_ostream &MenuDefinition::logFlags(raw_ostream &OS, uint8_t Flags) {
+uint32_t MenuDefinition::OptionsFlags[MenuDefinition::NumFlags] = {
+    CHECKED, GRAYED, HELP, INACTIVE, MENUBARBREAK, MENUBREAK};
+
+raw_ostream &MenuDefinition::logFlags(raw_ostream &OS, uint16_t Flags) {
   for (size_t i = 0; i < NumFlags; ++i)
-    if (Flags & (1U << i))
+    if (Flags & OptionsFlags[i])
       OS << " " << OptionsStr[i];
   return OS;
 }
@@ -101,13 +108,13 @@ raw_ostream &PopupItem::log(raw_ostream &OS) const {
 
 raw_ostream &MenuResource::log(raw_ostream &OS) const {
   OS << "Menu (" << ResName << "):\n";
-  OptStatements.log(OS);
+  OptStatements->log(OS);
   return Elements.log(OS);
 }
 
 raw_ostream &StringTableResource::log(raw_ostream &OS) const {
   OS << "StringTable:\n";
-  OptStatements.log(OS);
+  OptStatements->log(OS);
   for (const auto &String : Table)
     OS << "  " << String.first << " => " << String.second << "\n";
   return OS;
@@ -136,7 +143,7 @@ raw_ostream &DialogResource::log(raw_ostream &OS) const {
   OS << "Dialog" << (IsExtended ? "Ex" : "") << " (" << ResName << "): loc: ("
      << X << ", " << Y << "), size: [" << Width << ", " << Height
      << "], help ID: " << HelpID << "\n";
-  OptStatements.log(OS);
+  OptStatements->log(OS);
   for (auto &Ctl : Controls)
     Ctl.log(OS);
   return OS;

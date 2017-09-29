@@ -193,7 +193,6 @@ static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
 
 WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     : ObjectFile(Binary::ID_Wasm, Buffer) {
-  LinkingData.DataAlignment = 0;
   LinkingData.DataSize = 0;
 
   ErrorAsOutParameter ErrAsOutParam(&Err);
@@ -385,16 +384,16 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
     case wasm::WASM_DATA_SIZE:
       LinkingData.DataSize = readVaruint32(Ptr);
       break;
-    case wasm::WASM_DATA_ALIGNMENT:
-      LinkingData.DataAlignment = readVaruint32(Ptr);
-      break;
-    case wasm::WASM_SEGMENT_NAMES: {
+    case wasm::WASM_SEGMENT_INFO: {
       uint32_t Count = readVaruint32(Ptr);
       if (Count > DataSegments.size())
         return make_error<GenericBinaryError>("Too many segment names",
                                               object_error::parse_failed);
-      for (uint32_t i = 0; i < Count; i++)
+      for (uint32_t i = 0; i < Count; i++) {
         DataSegments[i].Data.Name = readString(Ptr);
+        DataSegments[i].Data.Alignment = readVaruint32(Ptr);
+        DataSegments[i].Data.Flags = readVaruint32(Ptr);
+      }
       break;
     }
     case wasm::WASM_STACK_POINTER:
@@ -734,6 +733,8 @@ Error WasmObjectFile::parseDataSection(const uint8_t *Ptr, const uint8_t *End) {
       return Err;
     uint32_t Size = readVaruint32(Ptr);
     Segment.Data.Content = ArrayRef<uint8_t>(Ptr, Size);
+    Segment.Data.Alignment = 0;
+    Segment.Data.Flags = 0;
     Segment.SectionOffset = Ptr - Start;
     Ptr += Size;
     DataSegments.push_back(Segment);

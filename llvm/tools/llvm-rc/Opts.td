@@ -32,6 +32,9 @@ def H : Flag<[ "/", "-" ], "H">,
         Alias<HELP>,
         HelpText<"Display this help and exit.">;
 
+def DRY_RUN : Flag<[ "/", "-" ], "dry-run">,
+              HelpText<"Don't compile the input; only try to parse it.">;
+
 // Unused switches (at least for now). These will stay unimplemented
 // in an early stage of development and can be ignored. However, we need to
 // parse them in order to preserve the compatibility with the original tool.

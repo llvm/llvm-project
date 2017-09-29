@@ -10,6 +10,7 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -150,6 +151,72 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
   MI->setDesc(TII->get(OpcodeForOffset));
   MI->getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+}
+
+bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
+                                  const TargetRegisterClass *SrcRC,
+                                  unsigned SubReg,
+                                  const TargetRegisterClass *DstRC,
+                                  unsigned DstSubReg,
+                                  const TargetRegisterClass *NewRC,
+                                  LiveIntervals &LIS) const {
+  assert (MI->isCopy() && "Only expecting COPY instructions");
+
+  // Coalesce anything which is not a COPY involving a subreg to/from GR128.
+  if (!(NewRC->hasSuperClassEq(&SystemZ::GR128BitRegClass) &&
+        (getRegSizeInBits(*SrcRC) <= 64 || getRegSizeInBits(*DstRC) <= 64)))
+    return true;
+
+  // Allow coalescing of a GR128 subreg COPY only if the live ranges are small
+  // and local to one MBB with not too much interferring registers. Otherwise
+  // regalloc may run out of registers.
+
+  unsigned WideOpNo = (getRegSizeInBits(*SrcRC) == 128 ? 1 : 0);
+  unsigned GR128Reg = MI->getOperand(WideOpNo).getReg();
+  unsigned GRNarReg = MI->getOperand((WideOpNo == 1) ? 0 : 1).getReg();
+  LiveInterval &IntGR128 = LIS.getInterval(GR128Reg);
+  LiveInterval &IntGRNar = LIS.getInterval(GRNarReg);
+
+  // Check that the two virtual registers are local to MBB.
+  MachineBasicBlock *MBB = MI->getParent();
+  if (LIS.isLiveInToMBB(IntGR128, MBB) || LIS.isLiveOutOfMBB(IntGR128, MBB) ||
+      LIS.isLiveInToMBB(IntGRNar, MBB) || LIS.isLiveOutOfMBB(IntGRNar, MBB))
+    return false;
+
+  // Find the first and last MIs of the registers.
+  MachineInstr *FirstMI = nullptr, *LastMI = nullptr;
+  if (WideOpNo == 1) {
+    FirstMI = LIS.getInstructionFromIndex(IntGR128.beginIndex());
+    LastMI  = LIS.getInstructionFromIndex(IntGRNar.endIndex());
+  } else {
+    FirstMI = LIS.getInstructionFromIndex(IntGRNar.beginIndex());
+    LastMI  = LIS.getInstructionFromIndex(IntGR128.endIndex());
+  }
+  assert (FirstMI && LastMI && "No instruction from index?");
+
+  // Check if coalescing seems safe by finding the set of clobbered physreg
+  // pairs in the region.
+  BitVector PhysClobbered(getNumRegs());
+  MachineBasicBlock::iterator MII = FirstMI, MEE = LastMI;
+  MEE++;
+  for (; MII != MEE; ++MII) {
+    for (const MachineOperand &MO : MII->operands())
+      if (MO.isReg() && isPhysicalRegister(MO.getReg())) {
+        for (MCSuperRegIterator SI(MO.getReg(), this, true/*IncludeSelf*/);
+             SI.isValid(); ++SI)
+          if (NewRC->contains(*SI)) {
+            PhysClobbered.set(*SI);
+            break;
+          }
+      }
+  }
+
+  // Demand an arbitrary margin of free regs.
+  unsigned const DemandedFreeGR128 = 3;
+  if (PhysClobbered.count() > (NewRC->getNumRegs() - DemandedFreeGR128))
+    return false;
+
+  return true;
 }
 
 unsigned

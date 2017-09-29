@@ -120,7 +120,7 @@ void MemoryMappingLayout::LoadFromCache() {
 }
 
 void MemoryMappingLayout::DumpListOfModules(
-    InternalMmapVector<LoadedModule> *modules) {
+    InternalMmapVectorNoCtor<LoadedModule> *modules) {
   Reset();
   InternalScopedString module_name(kMaxPathLength);
   MemoryMappedSegment segment(module_name.data(), module_name.size());
