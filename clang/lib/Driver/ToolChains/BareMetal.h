@@ -38,8 +38,6 @@ public:
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
   bool SupportsObjCGC() const override { return false; }
-  std::string getThreadModel() const override;
-  bool isThreadModelSupported(const StringRef Model) const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
