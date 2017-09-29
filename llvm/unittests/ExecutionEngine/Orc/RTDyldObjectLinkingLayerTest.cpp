@@ -256,11 +256,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 }
 
 TEST_F(RTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
-  RTDyldObjectLinkingLayer ObjLayer([]() { return nullptr; },
-                                    [this](decltype(ObjLayer)::ObjHandleT,
-                                           const decltype(ObjLayer)::ObjectPtr &obj,
-                                           const RuntimeDyld::LoadedObjectInfo &info) {
-                                    });
+  RTDyldObjectLinkingLayer ObjLayer(
+      []() { return nullptr; },
+      [](RTDyldObjectLinkingLayer::ObjHandleT,
+         const RTDyldObjectLinkingLayer::ObjectPtr &obj,
+         const RuntimeDyld::LoadedObjectInfo &info) {});
 }
 
 } // end anonymous namespace

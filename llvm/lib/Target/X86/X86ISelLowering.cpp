@@ -1222,8 +1222,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::MSTORE, VT, Custom);
       }
     }
-    setOperationAction(ISD::TRUNCATE,           MVT::v16i8, Custom);
-    setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
 
     if (Subtarget.hasDQI()) {
       for (auto VT : { MVT::v2i64, MVT::v4i64, MVT::v8i64 }) {
@@ -1265,6 +1263,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i32, Legal);
     }
 
+    setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v16i16, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i32, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v8i64, Custom);
@@ -21617,7 +21616,7 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // and then ashr/lshr the upper bits down to the lower bits before multiply.
   unsigned Opcode = Op.getOpcode();
   unsigned ExShift = (ISD::MULHU == Opcode ? ISD::SRL : ISD::SRA);
-  unsigned ExSSE41 = (ISD::MULHU == Opcode ? X86ISD::VZEXT : X86ISD::VSEXT);
+  unsigned ExAVX = (ISD::MULHU == Opcode ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
 
   // AVX2 implementations - extend xmm subvectors to ymm.
   if (Subtarget.hasInt256()) {
@@ -21627,31 +21626,21 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
     if (VT == MVT::v32i8) {
       if (Subtarget.hasBWI()) {
-        SDValue ExA = getExtendInVec(ExSSE41, dl, MVT::v32i16, A, DAG);
-        SDValue ExB = getExtendInVec(ExSSE41, dl, MVT::v32i16, B, DAG);
+        SDValue ExA = DAG.getNode(ExAVX, dl, MVT::v32i16, A);
+        SDValue ExB = DAG.getNode(ExAVX, dl, MVT::v32i16, B);
         SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v32i16, ExA, ExB);
         Mul = DAG.getNode(ISD::SRL, dl, MVT::v32i16, Mul,
                           DAG.getConstant(8, dl, MVT::v32i16));
-        // The ymm variant of PACKUS treats the 128-bit lanes separately, so
-        // before using PACKUS we need to permute the inputs to the correct
-        // lo/hi xmm lane.
-        const int Mask[] = { 0,  1,  2,  3,  4,  5,  6,  7,
-                            16, 17, 18, 19, 20, 21, 22, 23,
-                             8,  9, 10, 11, 12, 13, 14, 15,
-                            24, 25, 26, 27, 28, 29, 30, 31};
-        Mul = DAG.getVectorShuffle(MVT::v32i16, dl, Mul, Mul, Mask);
-        Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v16i16, Mul, Lo);
-        Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v16i16, Mul, Hi);
-        return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
+        return DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
       }
       SDValue ALo = extract128BitVector(A, 0, DAG, dl);
       SDValue BLo = extract128BitVector(B, 0, DAG, dl);
       SDValue AHi = extract128BitVector(A, NumElems / 2, DAG, dl);
       SDValue BHi = extract128BitVector(B, NumElems / 2, DAG, dl);
-      ALo = DAG.getNode(ExSSE41, dl, MVT::v16i16, ALo);
-      BLo = DAG.getNode(ExSSE41, dl, MVT::v16i16, BLo);
-      AHi = DAG.getNode(ExSSE41, dl, MVT::v16i16, AHi);
-      BHi = DAG.getNode(ExSSE41, dl, MVT::v16i16, BHi);
+      ALo = DAG.getNode(ExAVX, dl, MVT::v16i16, ALo);
+      BLo = DAG.getNode(ExAVX, dl, MVT::v16i16, BLo);
+      AHi = DAG.getNode(ExAVX, dl, MVT::v16i16, AHi);
+      BHi = DAG.getNode(ExAVX, dl, MVT::v16i16, BHi);
       Lo = DAG.getNode(ISD::SRL, dl, MVT::v16i16,
                        DAG.getNode(ISD::MUL, dl, MVT::v16i16, ALo, BLo),
                        DAG.getConstant(8, dl, MVT::v16i16));
@@ -21669,19 +21658,23 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
                          DAG.getVectorShuffle(MVT::v16i16, dl, Lo, Hi, HiMask));
     }
 
-    SDValue ExA = getExtendInVec(ExSSE41, dl, MVT::v16i16, A, DAG);
-    SDValue ExB = getExtendInVec(ExSSE41, dl, MVT::v16i16, B, DAG);
+    SDValue ExA = DAG.getNode(ExAVX, dl, MVT::v16i16, A);
+    SDValue ExB = DAG.getNode(ExAVX, dl, MVT::v16i16, B);
     SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v16i16, ExA, ExB);
-    SDValue MulH = DAG.getNode(ISD::SRL, dl, MVT::v16i16, Mul,
-                               DAG.getConstant(8, dl, MVT::v16i16));
-    Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v8i16, MulH, Lo);
-    Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v8i16, MulH, Hi);
+    Mul = DAG.getNode(ISD::SRL, dl, MVT::v16i16, Mul,
+                      DAG.getConstant(8, dl, MVT::v16i16));
+    // If we have BWI we can use truncate instruction.
+    if (Subtarget.hasBWI())
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
+    Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v8i16, Mul, Lo);
+    Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v8i16, Mul, Hi);
     return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
   }
 
   assert(VT == MVT::v16i8 &&
          "Pre-AVX2 support only supports v16i8 multiplication");
   MVT ExVT = MVT::v8i16;
+  unsigned ExSSE41 = (ISD::MULHU == Opcode ? X86ISD::VZEXT : X86ISD::VSEXT);
 
   // Extract the lo parts and zero/sign extend to i16.
   SDValue ALo, BLo;

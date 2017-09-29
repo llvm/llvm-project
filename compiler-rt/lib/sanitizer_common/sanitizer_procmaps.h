@@ -76,7 +76,7 @@ class MemoryMappingLayout {
   static void CacheMemoryMappings();
 
   // Adds all mapped objects into a vector.
-  void DumpListOfModules(InternalMmapVectorNoCtor<LoadedModule> *modules);
+  void DumpListOfModules(InternalMmapVector<LoadedModule> *modules);
 
  private:
   void LoadFromCache();

@@ -4571,6 +4571,13 @@ QualType ASTContext::getPointerDiffType() const {
   return getFromTargetType(Target->getPtrDiffType(0));
 }
 
+/// \brief Return the unique unsigned counterpart of "ptrdiff_t"
+/// integer type. The standard (C11 7.21.6.1p7) refers to this type
+/// in the definition of %tu format specifier.
+QualType ASTContext::getUnsignedPointerDiffType() const {
+  return getFromTargetType(Target->getUnsignedPtrDiffType(0));
+}
+
 /// \brief Return the unique type for "pid_t" defined in
 /// <sys/types.h>. We need this to compute the correct type for vfork().
 QualType ASTContext::getProcessIDType() const {

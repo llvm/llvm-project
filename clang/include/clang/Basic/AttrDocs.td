@@ -2727,6 +2727,18 @@ Marking virtual functions as ``not_tail_called`` is an error:
   }];
 }
 
+def NoThrowDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the GNU style ``__attribute__((nothrow))`` and Microsoft style
+``__declspec(nothrow)`` attribute as an equivilent of `noexcept` on function
+declarations. This attribute informs the compiler that the annotated function
+does not throw an exception. This prevents exception-unwinding. This attribute
+is particularly useful on functions in the C Standard Library that are
+guaranteed to not throw an exception.
+    }];
+}
+
 def InternalLinkageDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

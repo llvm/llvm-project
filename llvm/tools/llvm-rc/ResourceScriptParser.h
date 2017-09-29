@@ -77,11 +77,17 @@ private:
 
   // The following methods try to read a single token, check if it has the
   // correct type and then parse it.
+  // Each integer can be written as an arithmetic expression producing an
+  // unsigned 32-bit integer.
   Expected<uint32_t> readInt();            // Parse an integer.
   Expected<StringRef> readString();        // Parse a string.
   Expected<StringRef> readIdentifier();    // Parse an identifier.
   Expected<IntOrString> readIntOrString(); // Parse an integer or a string.
   Expected<IntOrString> readTypeOrName();  // Parse an integer or an identifier.
+
+  // Helper integer expression parsing methods.
+  Expected<uint32_t> parseIntExpr1();
+  Expected<uint32_t> parseIntExpr2();
 
   // Advance the state by one, discarding the current token.
   // If the discarded token had an incorrect type, fail.
@@ -133,12 +139,23 @@ private:
   ParseType parseHTMLResource();
   ParseType parseMenuResource();
   ParseType parseStringTableResource();
+  ParseType parseUserDefinedResource(IntOrString Type);
+  ParseType parseVersionInfoResource();
 
   // Helper DIALOG parser - a single control.
   Expected<Control> parseControl();
 
   // Helper MENU parser.
   Expected<MenuDefinitionList> parseMenuItemsList();
+
+  // Helper VERSIONINFO parser - read the contents of a single BLOCK statement,
+  // from BEGIN to END.
+  Expected<std::unique_ptr<VersionInfoBlock>>
+  parseVersionInfoBlockContents(StringRef BlockName);
+  // Helper VERSIONINFO parser - read either VALUE or BLOCK statement.
+  Expected<std::unique_ptr<VersionInfoStmt>> parseVersionInfoStmt();
+  // Helper VERSIONINFO parser - read fixed VERSIONINFO statements.
+  Expected<VersionInfoResource::VersionInfoFixed> parseVersionInfoFixed();
 
   // Optional statement parsers.
   ParseOptionType parseLanguageStmt();

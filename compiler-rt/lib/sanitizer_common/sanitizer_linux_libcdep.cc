@@ -26,7 +26,6 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
-#include "sanitizer_symbolizer.h"
 
 #include <dlfcn.h>  // for dlsym()
 #include <link.h>
@@ -425,7 +424,7 @@ typedef ElfW(Phdr) Elf_Phdr;
 # endif
 
 struct DlIteratePhdrData {
-  InternalMmapVectorNoCtor<LoadedModule> *modules;
+  InternalMmapVector<LoadedModule> *modules;
   bool first;
 };
 
@@ -463,37 +462,21 @@ extern "C" __attribute__((weak)) int dl_iterate_phdr(
     int (*)(struct dl_phdr_info *, size_t, void *), void *);
 #endif
 
-static bool requiresProcmaps() {
+void ListOfModules::init() {
+  clear();
 #if SANITIZER_ANDROID && __ANDROID_API__ <= 22
+  u32 api_level = AndroidGetApiLevel();
   // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
   // The runtime check allows the same library to work with
   // both K and L (and future) Android releases.
-  return AndroidGetApiLevel() <= ANDROID_LOLLIPOP_MR1;
-#else
-  return false;
-#endif
-}
-
-static void procmapsInit(InternalMmapVectorNoCtor<LoadedModule> *modules) {
-  MemoryMappingLayout memory_mapping(false);
-  memory_mapping.DumpListOfModules(modules);
-}
-
-void ListOfModules::init() {
-  clearOrInit();
-  if (requiresProcmaps()) {
-    procmapsInit(&modules_);
-  } else {
-    DlIteratePhdrData data = {&modules_, true};
-    dl_iterate_phdr(dl_iterate_phdr_cb, &data);
+  if (api_level <= ANDROID_LOLLIPOP_MR1) { // L or earlier
+    MemoryMappingLayout memory_mapping(false);
+    memory_mapping.DumpListOfModules(&modules_);
+    return;
   }
-}
-
-// When a custom loader is used, dl_iterate_phdr may not contain the full
-// list of modules. Allow callers to fall back to using procmaps.
-void ListOfModules::fallbackInit() {
-  clearOrInit();
-  if (!requiresProcmaps()) procmapsInit(&modules_);
+#endif
+  DlIteratePhdrData data = {&modules_, true};
+  dl_iterate_phdr(dl_iterate_phdr_cb, &data);
 }
 
 // getrusage does not give us the current RSS, only the max RSS.

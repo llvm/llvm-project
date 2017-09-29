@@ -231,9 +231,7 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpmovsxbw %ymm0, %zmm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,4,5,2,3,6,7]
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512BW-NEXT:    vpackuswb %ymm2, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BW-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
 ; AVX512BW-NEXT:    vpsrlw $2, %ymm0, %ymm1
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
@@ -560,9 +558,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpmovsxbw %ymm0, %zmm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,4,5,2,3,6,7]
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512BW-NEXT:    vpackuswb %ymm2, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512BW-NEXT:    vpaddb %ymm0, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpsrlw $2, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2

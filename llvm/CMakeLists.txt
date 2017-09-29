@@ -795,7 +795,7 @@ if(LLVM_USE_HOST_TOOLS)
   include(CrossCompile)
 endif(LLVM_USE_HOST_TOOLS)
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
-# Dummy use to avoid CMake Wraning: Manually-specified variables were not used
+# Dummy use to avoid CMake Warning: Manually-specified variables were not used
 # (this is a variable that CrossCompile sets on recursive invocations)
 endif()
 

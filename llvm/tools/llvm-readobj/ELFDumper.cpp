@@ -1288,12 +1288,12 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     switch (Sec.sh_type) {
     case ELF::SHT_SYMTAB:
       if (DotSymtabSec != nullptr)
-        reportError("Multilpe SHT_SYMTAB");
+        reportError("Multiple SHT_SYMTAB");
       DotSymtabSec = &Sec;
       break;
     case ELF::SHT_DYNSYM:
       if (DynSymRegion.Size)
-        reportError("Multilpe SHT_DYNSYM");
+        reportError("Multiple SHT_DYNSYM");
       DynSymRegion = createDRIFrom(&Sec);
       // This is only used (if Elf_Shdr present)for naming section in GNU style
       DynSymtabName = unwrapOrError(Obj->getSectionName(&Sec));
@@ -1313,7 +1313,7 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
       break;
     case ELF::SHT_GNU_verneed:
       if (dot_gnu_version_r_sec != nullptr)
-        reportError("Multilpe SHT_GNU_verneed");
+        reportError("Multiple SHT_GNU_verneed");
       dot_gnu_version_r_sec = &Sec;
       break;
     }

@@ -6,9 +6,9 @@ void g2(int (^block)(int, int)); // expected-warning{{block pointer is missing a
 
 void g3(const
         id // expected-warning{{missing a nullability type specifier}}
+        volatile
 // expected-note@-1 {{insert '_Nullable' if the pointer may be null}}
 // expected-note@-2 {{insert '_Nonnull' if the pointer should never be null}}
-        volatile
         * // expected-warning{{missing a nullability type specifier}}
 // expected-note@-1 {{insert '_Nullable' if the pointer may be null}}
 // expected-note@-2 {{insert '_Nonnull' if the pointer should never be null}}

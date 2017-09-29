@@ -319,6 +319,124 @@ public:
   raw_ostream &log(raw_ostream &) const override;
 };
 
+// User-defined resource. It is either:
+//   * a link to the file, e.g. NAME TYPE "filename",
+//   * or contains a list of integers and strings, e.g. NAME TYPE {1, "a", 2}.
+class UserDefinedResource : public RCResource {
+  IntOrString Type;
+  StringRef FileLoc;
+  std::vector<IntOrString> Contents;
+  bool IsFileResource;
+
+public:
+  UserDefinedResource(IntOrString ResourceType, StringRef FileLocation)
+      : Type(ResourceType), FileLoc(FileLocation), IsFileResource(true) {}
+  UserDefinedResource(IntOrString ResourceType, std::vector<IntOrString> &&Data)
+      : Type(ResourceType), Contents(std::move(Data)), IsFileResource(false) {}
+
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// -- VERSIONINFO resource and its helper classes --
+//
+// This resource lists the version information on the executable/library.
+// The declaration consists of the following items:
+//   * A number of fixed optional version statements (e.g. FILEVERSION, FILEOS)
+//   * BEGIN
+//   * A number of BLOCK and/or VALUE statements. BLOCK recursively defines
+//       another block of version information, whereas VALUE defines a
+//       key -> value correspondence. There might be more than one value
+//       corresponding to the single key.
+//   * END
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381058(v=vs.85).aspx
+
+// A single VERSIONINFO statement;
+class VersionInfoStmt {
+public:
+  virtual raw_ostream &log(raw_ostream &OS) const { return OS << "VI stmt\n"; }
+  virtual ~VersionInfoStmt() {}
+};
+
+// BLOCK definition; also the main VERSIONINFO declaration is considered a
+// BLOCK, although it has no name.
+// The correct top-level blocks are "VarFileInfo" and "StringFileInfo". We don't
+// care about them at the parsing phase.
+class VersionInfoBlock : public VersionInfoStmt {
+  std::vector<std::unique_ptr<VersionInfoStmt>> Stmts;
+  StringRef Name;
+
+public:
+  VersionInfoBlock(StringRef BlockName) : Name(BlockName) {}
+  void addStmt(std::unique_ptr<VersionInfoStmt> Stmt) {
+    Stmts.push_back(std::move(Stmt));
+  }
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+class VersionInfoValue : public VersionInfoStmt {
+  StringRef Key;
+  std::vector<IntOrString> Values;
+
+public:
+  VersionInfoValue(StringRef InfoKey, std::vector<IntOrString> &&Vals)
+      : Key(InfoKey), Values(std::move(Vals)) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+class VersionInfoResource : public RCResource {
+public:
+  // A class listing fixed VERSIONINFO statements (occuring before main BEGIN).
+  // If any of these is not specified, it is assumed by the original tool to
+  // be equal to 0.
+  class VersionInfoFixed {
+  public:
+    enum VersionInfoFixedType {
+      FtUnknown,
+      FtFileVersion,
+      FtProductVersion,
+      FtFileFlagsMask,
+      FtFileFlags,
+      FtFileOS,
+      FtFileType,
+      FtFileSubtype,
+      FtNumTypes
+    };
+
+  private:
+    static const StringMap<VersionInfoFixedType> FixedFieldsInfoMap;
+    static const StringRef FixedFieldsNames[FtNumTypes];
+
+  public:
+    SmallVector<uint32_t, 4> FixedInfo[FtNumTypes];
+    SmallVector<bool, FtNumTypes> IsTypePresent;
+
+    static VersionInfoFixedType getFixedType(StringRef Type);
+    static bool isTypeSupported(VersionInfoFixedType Type);
+    static bool isVersionType(VersionInfoFixedType Type);
+
+    VersionInfoFixed() : IsTypePresent(FtNumTypes, false) {}
+
+    void setValue(VersionInfoFixedType Type, ArrayRef<uint32_t> Value) {
+      FixedInfo[Type] = SmallVector<uint32_t, 4>(Value.begin(), Value.end());
+      IsTypePresent[Type] = true;
+    }
+
+    raw_ostream &log(raw_ostream &) const;
+  };
+
+private:
+  VersionInfoBlock MainBlock;
+  VersionInfoFixed FixedData;
+
+public:
+  VersionInfoResource(VersionInfoBlock &&TopLevelBlock,
+                      VersionInfoFixed &&FixedInfo)
+      : MainBlock(std::move(TopLevelBlock)), FixedData(std::move(FixedInfo)) {}
+
+  raw_ostream &log(raw_ostream &) const override;
+};
+
 // CHARACTERISTICS optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380872(v=vs.85).aspx

@@ -11,6 +11,8 @@
 
   .text
 
+#if !defined(__APPLE__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+
 #if defined(__i386__)
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_x866jumptoEv)
 #
@@ -308,7 +310,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   ret    x30                    // jump to pc
 
-#elif defined(__arm__) && !(defined(__APPLE__) || defined(__USING_SJLJ_EXCEPTIONS__))
+#elif defined(__arm__)
 
 #if !defined(__ARM_ARCH_ISA_ARM)
   .thumb
@@ -490,6 +492,8 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
    l.nop
 
 #endif
+
+#endif /* !defined(__APPLE__) && !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
 
