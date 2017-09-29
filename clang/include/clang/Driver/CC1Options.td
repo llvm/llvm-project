@@ -200,6 +200,9 @@ def arange_sections : Flag<["-"], "arange_sections">,
 def dwarf_ext_refs : Flag<["-"], "dwarf-ext-refs">,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
+def dwarf_explicit_import : Flag<["-"], "dwarf-explicit-import">,
+  HelpText<"Generate explicit import from anonymous namespace to containing"
+           " scope">;
 def debug_forward_template_params : Flag<["-"], "debug-forward-template-params">,
   HelpText<"Emit complete descriptions of template parameters in forward"
            " declarations">;

@@ -3490,7 +3490,8 @@ static void fixItNullability(Sema &S, DiagnosticBuilder &Diag,
 
 static void emitNullabilityConsistencyWarning(Sema &S,
                                               SimplePointerKind PointerKind,
-                                              SourceLocation PointerLoc) {
+                                              SourceLocation PointerLoc,
+                                              SourceLocation PointerEndLoc) {
   assert(PointerLoc.isValid());
 
   if (PointerKind == SimplePointerKind::Array) {
@@ -3500,14 +3501,15 @@ static void emitNullabilityConsistencyWarning(Sema &S,
       << static_cast<unsigned>(PointerKind);
   }
 
-  if (PointerLoc.isMacroID())
+  auto FixItLoc = PointerEndLoc.isValid() ? PointerEndLoc : PointerLoc;
+  if (FixItLoc.isMacroID())
     return;
 
   auto addFixIt = [&](NullabilityKind Nullability) {
-    auto Diag = S.Diag(PointerLoc, diag::note_nullability_fix_it);
+    auto Diag = S.Diag(FixItLoc, diag::note_nullability_fix_it);
     Diag << static_cast<unsigned>(Nullability);
     Diag << static_cast<unsigned>(PointerKind);
-    fixItNullability(S, Diag, PointerLoc, Nullability);
+    fixItNullability(S, Diag, FixItLoc, Nullability);
   };
   addFixIt(NullabilityKind::Nullable);
   addFixIt(NullabilityKind::NonNull);
@@ -3519,9 +3521,10 @@ static void emitNullabilityConsistencyWarning(Sema &S,
 ///
 /// If the file has \e not seen other uses of nullability, this particular
 /// pointer is saved for possible later diagnosis. See recordNullabilitySeen().
-static void checkNullabilityConsistency(Sema &S,
-                                        SimplePointerKind pointerKind,
-                                        SourceLocation pointerLoc) {
+static void
+checkNullabilityConsistency(Sema &S, SimplePointerKind pointerKind,
+                            SourceLocation pointerLoc,
+                            SourceLocation pointerEndLoc = SourceLocation()) {
   // Determine which file we're performing consistency checking for.
   FileID file = getNullabilityCompletenessCheckFileID(S, pointerLoc);
   if (file.isInvalid())
@@ -3542,6 +3545,7 @@ static void checkNullabilityConsistency(Sema &S,
     if (fileNullability.PointerLoc.isInvalid() &&
         !S.Context.getDiagnostics().isIgnored(diagKind, pointerLoc)) {
       fileNullability.PointerLoc = pointerLoc;
+      fileNullability.PointerEndLoc = pointerEndLoc;
       fileNullability.PointerKind = static_cast<unsigned>(pointerKind);
     }
 
@@ -3549,7 +3553,7 @@ static void checkNullabilityConsistency(Sema &S,
   }
 
   // Complain about missing nullability.
-  emitNullabilityConsistencyWarning(S, pointerKind, pointerLoc);
+  emitNullabilityConsistencyWarning(S, pointerKind, pointerLoc, pointerEndLoc);
 }
 
 /// Marks that a nullability feature has been used in the file containing
@@ -3575,7 +3579,8 @@ static void recordNullabilitySeen(Sema &S, SourceLocation loc) {
     return;
 
   auto kind = static_cast<SimplePointerKind>(fileNullability.PointerKind);
-  emitNullabilityConsistencyWarning(S, kind, fileNullability.PointerLoc);
+  emitNullabilityConsistencyWarning(S, kind, fileNullability.PointerLoc,
+                                    fileNullability.PointerEndLoc);
 }
 
 /// Returns true if any of the declarator chunks before \p endIndex include a
@@ -3885,6 +3890,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // Returns true if _Nonnull was inferred.
   auto inferPointerNullability = [&](SimplePointerKind pointerKind,
                                      SourceLocation pointerLoc,
+                                     SourceLocation pointerEndLoc,
                                      AttributeList *&attrs) -> AttributeList * {
     // We've seen a pointer.
     if (NumPointersRemaining > 0)
@@ -3940,7 +3946,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Fallthrough.
 
     case CAMN_Yes:
-      checkNullabilityConsistency(S, pointerKind, pointerLoc);
+      checkNullabilityConsistency(S, pointerKind, pointerLoc, pointerEndLoc);
     }
     return nullptr;
   };
@@ -3963,6 +3969,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         if (auto *attr = inferPointerNullability(
               pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
+              D.getDeclSpec().getLocEnd(),
               D.getMutableDeclSpec().getAttributes().getListRef())) {
           T = Context.getAttributedType(
                 AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
@@ -3998,8 +4005,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         S.Diag(DeclType.Loc, diag::err_blocks_disable) << LangOpts.OpenCL;
 
       // Handle pointer nullability.
-      inferPointerNullability(SimplePointerKind::BlockPointer,
-                              DeclType.Loc, DeclType.getAttrListRef());
+      inferPointerNullability(SimplePointerKind::BlockPointer, DeclType.Loc,
+                              DeclType.EndLoc, DeclType.getAttrListRef());
 
       T = S.BuildBlockPointerType(T, D.getIdentifierLoc(), Name);
       if (DeclType.Cls.TypeQuals || LangOpts.OpenCL) {
@@ -4021,7 +4028,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability
       inferPointerNullability(SimplePointerKind::Pointer, DeclType.Loc,
-                              DeclType.getAttrListRef());
+                              DeclType.EndLoc, DeclType.getAttrListRef());
 
       if (LangOpts.ObjC1 && T->getAs<ObjCObjectType>()) {
         T = Context.getObjCObjectPointerType(T);
@@ -4520,8 +4527,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       QualType ClsType;
 
       // Handle pointer nullability.
-      inferPointerNullability(SimplePointerKind::MemberPointer,
-                              DeclType.Loc, DeclType.getAttrListRef());
+      inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
+                              DeclType.EndLoc, DeclType.getAttrListRef());
 
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.
