@@ -68,10 +68,12 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     size_t Index = 0;
     for (const object::WasmSegment &Segment : Obj.dataSegments()) {
       if (!Segment.Data.Name.empty()) {
-        WasmYAML::NameEntry NameEntry;
-        NameEntry.Name = Segment.Data.Name;
-        NameEntry.Index = Index;
-        LinkingSec->SegmentNames.push_back(NameEntry);
+        WasmYAML::SegmentInfo SegmentInfo;
+        SegmentInfo.Name = Segment.Data.Name;
+        SegmentInfo.Index = Index;
+        SegmentInfo.Alignment = Segment.Data.Alignment;
+        SegmentInfo.Flags = Segment.Data.Flags;
+        LinkingSec->SegmentInfos.push_back(SegmentInfo);
       }
       Index++;
     }
@@ -83,7 +85,6 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
       }
     }
     LinkingSec->DataSize = Obj.linkingData().DataSize;
-    LinkingSec->DataAlignment = Obj.linkingData().DataAlignment;
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);

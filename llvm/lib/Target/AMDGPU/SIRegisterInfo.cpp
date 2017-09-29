@@ -1474,7 +1474,8 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     unsigned SubReg,
                                     const TargetRegisterClass *DstRC,
                                     unsigned DstSubReg,
-                                    const TargetRegisterClass *NewRC) const {
+                                    const TargetRegisterClass *NewRC,
+                                    LiveIntervals &LIS) const {
   unsigned SrcSize = getRegSizeInBits(*SrcRC);
   unsigned DstSize = getRegSizeInBits(*DstRC);
   unsigned NewSize = getRegSizeInBits(*NewRC);

@@ -12,12 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ResourceScriptToken.h"
+#include "ResourceFileWriter.h"
 #include "ResourceScriptParser.h"
+#include "ResourceScriptStmt.h"
+#include "ResourceScriptToken.h"
 
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -27,6 +30,7 @@
 #include <system_error>
 
 using namespace llvm;
+using namespace llvm::rc;
 
 namespace {
 
@@ -134,11 +138,36 @@ int main(int argc_, const char *argv_[]) {
     }
   }
 
+  std::unique_ptr<ResourceFileWriter> Visitor;
+  bool IsDryRun = InputArgs.hasArg(OPT_DRY_RUN);
+
+  if (!IsDryRun) {
+    auto OutArgsInfo = InputArgs.getAllArgValues(OPT_FILEOUT);
+    if (OutArgsInfo.size() != 1)
+      fatalError(
+          "Exactly one output file should be provided (using /FO flag).");
+
+    std::error_code EC;
+    auto FOut =
+        llvm::make_unique<raw_fd_ostream>(OutArgsInfo[0], EC, sys::fs::F_RW);
+    if (EC)
+      fatalError("Error opening output file '" + OutArgsInfo[0] +
+                 "': " + EC.message());
+    Visitor = llvm::make_unique<ResourceFileWriter>(std::move(FOut));
+
+    ExitOnErr(NullResource().visit(Visitor.get()));
+
+    // Set the default language; choose en-US arbitrarily.
+    ExitOnErr(LanguageResource(0x09, 0x01).visit(Visitor.get()));
+  }
+
   rc::RCParser Parser{std::move(Tokens)};
   while (!Parser.isEof()) {
     auto Resource = ExitOnErr(Parser.parseSingleResource());
     if (BeVerbose)
       Resource->log(outs());
+    if (!IsDryRun)
+      ExitOnErr(Resource->visit(Visitor.get()));
   }
 
   return 0;

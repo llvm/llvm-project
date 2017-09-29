@@ -1756,6 +1756,10 @@ public:
     if (Kind != k_VectorIndex) return false;
     return VectorIndex.Val < 2;
   }
+  bool isVectorIndex64() const {
+    if (Kind != k_VectorIndex) return false;
+    return VectorIndex.Val < 1;
+  }
 
   bool isNEONi8splat() const {
     if (!isImm()) return false;
@@ -1883,6 +1887,17 @@ public:
     for (unsigned i = 0; i < 8; ++i, Value >>= 8)
       if ((Value & 0xff) != 0 && (Value & 0xff) != 0xff) return false;
     return true;
+  }
+
+  template<int64_t Angle, int64_t Remainder>
+  bool isComplexRotation() const {
+    if (!isImm()) return false;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    uint64_t Value = CE->getValue();
+
+    return (Value % Angle == Remainder && Value <= 270);
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -2628,6 +2643,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getVectorIndex()));
   }
 
+  void addVectorIndex64Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
+  }
+
   void addNEONi8splatOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
@@ -2738,6 +2758,18 @@ public:
       Imm |= (Value & 1) << i;
     }
     Inst.addOperand(MCOperand::createImm(Imm | 0x1e00));
+  }
+
+  void addComplexRotationEvenOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(CE->getValue() / 90));
+  }
+
+  void addComplexRotationOddOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm((CE->getValue() - 90) / 180));
   }
 
   void print(raw_ostream &OS) const override;
@@ -5432,7 +5464,8 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
       Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
       Mnemonic == "bxns"  || Mnemonic == "blxns" ||
-      Mnemonic == "vudot" || Mnemonic == "vsdot")
+      Mnemonic == "vudot" || Mnemonic == "vsdot" ||
+      Mnemonic == "vcmla" || Mnemonic == "vcadd")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -5521,7 +5554,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
       Mnemonic.startswith("sha1") || Mnemonic.startswith("sha256") ||
       (FullInst.startswith("vmull") && FullInst.endswith(".p64")) ||
       Mnemonic == "vmovx" || Mnemonic == "vins" ||
-      Mnemonic == "vudot" || Mnemonic == "vsdot") {
+      Mnemonic == "vudot" || Mnemonic == "vsdot" ||
+      Mnemonic == "vcmla" || Mnemonic == "vcadd") {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {
@@ -9155,6 +9189,10 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         return Error(ErrorLoc, "alignment must be 64, 128, 256 or omitted");
     }
   }
+  case Match_InvalidComplexRotationEven:
+      return Error(IDLoc, "complex rotation must be 0, 90, 180 or 270");
+  case Match_InvalidComplexRotationOdd:
+      return Error(IDLoc, "complex rotation must be 90 or 270");
   }
 
   llvm_unreachable("Implement any new match types added!");

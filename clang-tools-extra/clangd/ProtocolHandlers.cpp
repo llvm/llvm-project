@@ -228,7 +228,7 @@ private:
 
 } // namespace
 
-void clangd::regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher,
+void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
                                      JSONOutput &Out,
                                      ProtocolCallbacks &Callbacks) {
   Dispatcher.registerHandler(

@@ -994,7 +994,7 @@ class getVOP3SrcForVT<ValueType VT> {
            VCSrc_f64,
            VCSrc_b64),
         !if(!eq(VT.Value, i1.Value),
-           SCSrc_b64,
+           SCSrc_i1,
            !if(isFP,
               !if(!eq(VT.Value, f16.Value),
                  VCSrc_f16,

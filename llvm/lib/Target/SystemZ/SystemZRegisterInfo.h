@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class LiveIntervals;
+
 namespace SystemZ {
 // Return the subreg to use for referring to the even and odd registers
 // in a GR128 pair.  Is32Bit says whether we want a GR32 or GR64.
@@ -59,6 +61,16 @@ public:
   void eliminateFrameIndex(MachineBasicBlock::iterator MI,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS) const override;
+
+  /// \brief SrcRC and DstRC will be morphed into NewRC if this returns true.
+ bool shouldCoalesce(MachineInstr *MI,
+                      const TargetRegisterClass *SrcRC,
+                      unsigned SubReg,
+                      const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg,
+                      const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
+
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 };
 

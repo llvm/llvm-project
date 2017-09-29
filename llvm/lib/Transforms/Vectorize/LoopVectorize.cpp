@@ -4235,7 +4235,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // entire expression in the smaller type.
   if (VF > 1 && Phi->getType() != RdxDesc.getRecurrenceType()) {
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
-    Builder.SetInsertPoint(LoopVectorBody->getTerminator());
+    Builder.SetInsertPoint(
+        LI->getLoopFor(LoopVectorBody)->getLoopLatch()->getTerminator());
     VectorParts RdxParts(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
       RdxParts[Part] = VectorLoopValueMap.getVectorValue(LoopExitInst, Part);

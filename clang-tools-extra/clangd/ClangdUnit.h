@@ -12,7 +12,7 @@
 
 #include "Path.h"
 #include "Protocol.h"
-#include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -27,7 +27,6 @@ class raw_ostream;
 }
 
 namespace clang {
-class ASTUnit;
 class PCHContainerOperations;
 
 namespace vfs {

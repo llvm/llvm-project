@@ -1535,3 +1535,12 @@ void ARMInstPrinter::printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
   printRegName(O, MI->getOperand(OpNum).getReg() + 6);
   O << "}";
 }
+
+template<int64_t Angle, int64_t Remainder>
+void ARMInstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  O << "#" << (Val * Angle) + Remainder;
+}
+
