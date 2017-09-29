@@ -106,7 +106,7 @@ bool ScopAnalysisManagerFunctionProxy::Result::invalidate(
     for (auto &S : *SI)
       if (auto *scop = S.second.get())
         if (InnerAM)
-          InnerAM->clear(*scop);
+          InnerAM->clear(*scop, scop->getName());
 
     InnerAM = nullptr;
     return true; // Invalidate the proxy result as well.
