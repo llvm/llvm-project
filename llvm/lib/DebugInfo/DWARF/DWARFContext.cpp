@@ -457,8 +457,7 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".apple_types", DIDT_ID_AppleTypes,
                  DObj->getAppleTypesSection().Data))
-    dumpAccelSection(OS, *DObj, DObj->getAppleTypesSection(),
-                     DObj->getStringSection(), isLittleEndian());
+    getAppleTypes().dump(OS);
 
   if (shouldDump(Explicit, ".apple_namespaces", DIDT_ID_AppleNamespaces,
                  DObj->getAppleNamespacesSection().Data))
@@ -652,6 +651,11 @@ getAccelTable(std::unique_ptr<DWARFAcceleratorTable> &Cache,
 
 const DWARFAcceleratorTable &DWARFContext::getAppleNames() {
   return getAccelTable(AppleNames, *DObj, DObj->getAppleNamesSection(),
+                       DObj->getStringSection(), isLittleEndian());
+}
+
+const DWARFAcceleratorTable &DWARFContext::getAppleTypes() {
+  return getAccelTable(AppleTypes, *DObj, DObj->getAppleTypesSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
 
