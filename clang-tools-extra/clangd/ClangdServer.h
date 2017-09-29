@@ -13,7 +13,6 @@
 #include "ClangdUnitStore.h"
 #include "DraftStore.h"
 #include "GlobalCompilationDatabase.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"

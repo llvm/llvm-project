@@ -11,6 +11,8 @@
 
     .text
 
+#if !defined(__APPLE__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+
 #if defined(__i386__)
 
 #
@@ -289,7 +291,7 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   mov    x0, #0                   // return UNW_ESUCCESS
   ret
 
-#elif defined(__arm__) && !(defined(__APPLE__) || defined(__USING_SJLJ_EXCEPTIONS__))
+#elif defined(__arm__)
 
 #if !defined(__ARM_ARCH_ISA_ARM)
   .thumb
@@ -470,6 +472,8 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   l.sw     120(r3), r30
   l.sw     124(r3), r31
 #endif
+
+#endif /* !defined(__APPLE__) && !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
 
