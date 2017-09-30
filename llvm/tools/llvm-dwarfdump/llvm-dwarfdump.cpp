@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -137,13 +138,17 @@ static list<std::string>
 static list<std::string>
     Find("find",
          desc("Search for the exact match for <name> in the accelerator tables "
-              "and print the matching debug information entries."),
+              "and print the matching debug information entries. When there no "
+              "accelerator tables avilable, the slower but more complete -name "
+              "option can be used."),
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for -find"), aliasopt(Find));
-
-static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
-                          cat(DwarfDumpCategory));
-static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
+static list<std::string>
+    Name("name",
+         desc("Find and print all debug info entries whose name (DW_AT_name "
+              "attribute) matches the exact text in <name>."),
+         value_desc("name"), cat(DwarfDumpCategory));
+static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
 static opt<std::string>
     OutputFilename("out-file", cl::init(""),
                    cl::desc("Redirect output to the specified file"),
@@ -180,6 +185,9 @@ static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
                         cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+                          cat(DwarfDumpCategory));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
 static opt<bool> Verbose("verbose",
                          desc("Print more low-level encoding details"),
                          cat(DwarfDumpCategory));
@@ -244,10 +252,36 @@ static bool filterArch(ObjectFile &Obj) {
 using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx, Twine,
                                      raw_ostream &)>;
 
+/// Print only DIEs that have a certain name.
+static void filterByName(const StringSet<> &Names,
+                         DWARFContext::cu_iterator_range CUs, raw_ostream &OS) {
+  for (const auto &CU : CUs)
+    for (const auto &Entry : CU->dies()) {
+      DWARFDie Die = {CU.get(), &Entry};
+      if (Names.count(Die.getName(DINameKind::ShortName)))
+        Die.dump(OS, 0, getDumpOpts());
+    }
+}
+
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
+
+  // The UUID dump already contains all the same information.
+  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
+    OS << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
+
+  // Handle the --name option.
+  if (!Name.empty()) {
+    StringSet<> Names;
+    for (auto name : Name)
+      Names.insert(name);
+      
+    filterByName(Names, DICtx.compile_units(), OS);
+    filterByName(Names, DICtx.dwo_compile_units(), OS);
+    return true;
+  }
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
@@ -275,10 +309,6 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
       return true;
   }
   
-  // The UUID dump already contains all the same information.
-  if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
-    OS << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
-
   // Dump the complete DWARF structure.
   DICtx.dump(OS, getDumpOpts(), DumpOffsets);
   return true;
