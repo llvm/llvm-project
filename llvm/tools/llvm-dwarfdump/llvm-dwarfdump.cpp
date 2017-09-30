@@ -221,12 +221,17 @@ static uint32_t getCPUType(MachOObjectFile &MachO) {
 static bool filterArch(ObjectFile &Obj) {
   if (ArchFilters.empty())
     return true;
+
   if (auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
     std::string ObjArch =
         Triple::getArchTypeName(MachO->getArchTriple().getArch());
+
     for (auto Arch : ArchFilters) {
+      // Match name.
       if (Arch == ObjArch)
         return true;
+
+      // Match architecture number.
       unsigned Value;
       if (!StringRef(Arch).getAsInteger(0, Value))
         if (Value == getCPUType(*MachO))
