@@ -2043,8 +2043,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();
-      if (ClangASTContext *src_ast =
-              llvm::dyn_cast<ClangASTContext>(type_system)) {
+      if (llvm::isa<ClangASTContext>(type_system)) {
         clang::DeclContext *src_decl_context =
             (clang::DeclContext *)function->GetDeclContext()
                 .GetOpaqueDeclContext();

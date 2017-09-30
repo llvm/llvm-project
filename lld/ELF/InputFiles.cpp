@@ -616,7 +616,8 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 template <class ELFT> void ArchiveFile::parse() {
   Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(Symtab->addLazyArchive<ELFT>(this, Sym)->body());
+    Symbols.push_back(
+        Symtab->addLazyArchive<ELFT>(Sym.getName(), this, Sym)->body());
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -779,14 +780,14 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
         VersymIndex == VER_NDX_GLOBAL ? nullptr : Verdefs[VersymIndex];
 
     if (!Hidden)
-      Symtab->addShared(this, Name, Sym, V);
+      Symtab->addShared(Name, this, Sym, V);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
     if (V) {
       StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
       Name = Saver.save(Name + "@" + VerName);
-      Symtab->addShared(this, Name, Sym, V);
+      Symtab->addShared(Name, this, Sym, V);
     }
   }
 }

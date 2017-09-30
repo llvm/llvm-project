@@ -37,6 +37,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/xxhash.h"
 #include <cstdlib>
+#include <thread>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -48,30 +49,36 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+constexpr size_t MergeNoTailSection::NumShards;
+
 uint64_t SyntheticSection::getVA() const {
   if (OutputSection *Sec = getParent())
     return Sec->Addr + OutSecOff;
   return 0;
 }
 
-std::vector<InputSection *> elf::createCommonSections() {
-  if (!Config->DefineCommon)
-    return {};
-
-  std::vector<InputSection *> Ret;
+// Create a .bss section for each common section and replace the common symbol
+// with a DefinedRegular symbol.
+template <class ELFT> void elf::createCommonSections() {
   for (Symbol *S : Symtab->getSymbols()) {
     auto *Sym = dyn_cast<DefinedCommon>(S->body());
-    if (!Sym || !Sym->Live)
+
+    if (!Sym)
       continue;
 
-    Sym->Section = make<BssSection>("COMMON");
-    size_t Pos = Sym->Section->reserveSpace(Sym->Size, Sym->Alignment);
-    assert(Pos == 0);
-    (void)Pos;
-    Sym->Section->File = Sym->getFile();
-    Ret.push_back(Sym->Section);
+    // Create a synthetic section for the common data.
+    auto *Section = make<BssSection>("COMMON");
+    Section->File = Sym->getFile();
+    Section->Live = !Config->GcSections;
+    Section->reserveSpace(Sym->Size, Sym->Alignment);
+    InputSections.push_back(Section);
+
+    // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
+    // don't have to care about DefinedCommon symbols beyond this point.
+    replaceBody<DefinedRegular>(S, Sym->getFile(), Sym->getName(),
+                                static_cast<bool>(Sym->IsLocal), Sym->StOther,
+                                Sym->Type, 0, Sym->getSize<ELFT>(), Section);
   }
-  return Ret;
 }
 
 // Returns an LLD version string.
@@ -2177,19 +2184,19 @@ template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
   return getNeedNum() == 0;
 }
 
-MergeSyntheticSection::MergeSyntheticSection(StringRef Name, uint32_t Type,
-                                             uint64_t Flags, uint32_t Alignment)
-    : SyntheticSection(Flags, Type, Alignment, Name),
-      Builder(StringTableBuilder::RAW, Alignment) {}
-
 void MergeSyntheticSection::addSection(MergeInputSection *MS) {
   MS->Parent = this;
   Sections.push_back(MS);
 }
 
-size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
+MergeTailSection::MergeTailSection(StringRef Name, uint32_t Type,
+                                   uint64_t Flags, uint32_t Alignment)
+    : MergeSyntheticSection(Name, Type, Flags, Alignment),
+      Builder(StringTableBuilder::RAW, Alignment) {}
 
-void MergeSyntheticSection::writeTo(uint8_t *Buf) { Builder.write(Buf); }
+size_t MergeTailSection::getSize() const { return Builder.getSize(); }
+
+void MergeTailSection::writeTo(uint8_t *Buf) { Builder.write(Buf); }
 
 void MergeTailSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
@@ -2211,17 +2218,63 @@ void MergeTailSection::finalizeContents() {
         Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
+void MergeNoTailSection::writeTo(uint8_t *Buf) {
+  for (size_t I = 0; I < NumShards; ++I)
+    Shards[I].write(Buf + ShardOffsets[I]);
+}
+
+// This function is very hot (i.e. it can take several seconds to finish)
+// because sometimes the number of inputs is in an order of magnitude of
+// millions. So, we use multi-threading.
+//
+// For any strings S and T, we know S is not mergeable with T if S's hash
+// value is different from T's. If that's the case, we can safely put S and
+// T into different string builders without worrying about merge misses.
+// We do it in parallel.
 void MergeNoTailSection::finalizeContents() {
-  // Add all string pieces to the string table builder to create section
-  // contents. Because we are not tail-optimizing, offsets of strings are
-  // fixed when they are added to the builder (string table builder contains
-  // a hash table from strings to offsets).
-  for (MergeInputSection *Sec : Sections)
+  // Initializes string table builders.
+  for (size_t I = 0; I < NumShards; ++I)
+    Shards.emplace_back(StringTableBuilder::RAW, Alignment);
+
+  // Concurrency level. Must be a power of 2.
+  size_t Concurrency = 1;
+  if (Config->Threads)
+    if (int N = std::thread::hardware_concurrency())
+      Concurrency = std::min<size_t>(PowerOf2Floor(N), NumShards);
+
+  // Add section pieces to the builders.
+  parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
+    for (MergeInputSection *Sec : Sections) {
+      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+        if (!Sec->Pieces[I].Live)
+          continue;
+        CachedHashStringRef Str = Sec->getData(I);
+        size_t ShardId = getShardId(Str.hash());
+        if ((ShardId & (Concurrency - 1)) == ThreadId)
+          Sec->Pieces[I].OutputOff = Shards[ShardId].add(Str);
+      }
+    }
+  });
+
+  // Compute an in-section offset for each shard.
+  size_t Off = 0;
+  for (size_t I = 0; I < NumShards; ++I) {
+    Shards[I].finalizeInOrder();
+    if (Shards[I].getSize() > 0)
+      Off = alignTo(Off, Alignment);
+    ShardOffsets[I] = Off;
+    Off += Shards[I].getSize();
+  }
+  Size = Off;
+
+  // So far, section pieces have offsets from beginning of shards, but
+  // we want offsets from beginning of the whole section. Fix them.
+  parallelForEach(Sections, [&](MergeInputSection *Sec) {
     for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
       if (Sec->Pieces[I].Live)
-        Sec->Pieces[I].OutputOff = Builder.add(Sec->getData(I));
-
-  Builder.finalizeInOrder();
+        Sec->Pieces[I].OutputOff +=
+            ShardOffsets[getShardId(Sec->getData(I).hash())];
+  });
 }
 
 static MergeSyntheticSection *createMergeSynthetic(StringRef Name,
@@ -2377,6 +2430,11 @@ template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
+
+template void elf::createCommonSections<ELF32LE>();
+template void elf::createCommonSections<ELF32BE>();
+template void elf::createCommonSections<ELF64LE>();
+template void elf::createCommonSections<ELF64BE>();
 
 template MergeInputSection *elf::createCommentSection<ELF32LE>();
 template MergeInputSection *elf::createCommentSection<ELF32BE>();
