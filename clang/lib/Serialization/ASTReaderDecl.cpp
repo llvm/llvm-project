@@ -1757,7 +1757,8 @@ void ASTDeclReader::MergeDefinitionData(
   }
 
   if (DetectedOdrViolation)
-    Reader.PendingOdrMergeFailures[DD.Definition].push_back(MergeDD.Definition);
+    Reader.PendingOdrMergeFailures[DD.Definition].push_back(
+        {MergeDD.Definition, &MergeDD});
 }
 
 void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update) {

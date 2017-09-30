@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fms-extensions %s 
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify -fms-extensions %s
 typedef long HRESULT;
 typedef unsigned long ULONG;
 typedef struct _GUID {
