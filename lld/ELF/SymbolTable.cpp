@@ -472,7 +472,7 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
 }
 
 template <typename ELFT>
-void SymbolTable::addShared(SharedFile<ELFT> *File, StringRef Name,
+void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
                             const typename ELFT::Sym &Sym,
                             const typename ELFT::Verdef *Verdef) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
@@ -533,11 +533,10 @@ void SymbolTable::defsym(Symbol *Dst, Symbol *Src) {
 }
 
 template <class ELFT>
-Symbol *SymbolTable::addLazyArchive(ArchiveFile *F,
+Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
                                     const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
-  StringRef Name = Sym.getName();
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<LazyArchive>(S, F, Sym, SymbolBody::UnknownType);
@@ -840,16 +839,16 @@ template DefinedRegular *SymbolTable::addIgnored<ELF64LE>(StringRef, uint8_t);
 template DefinedRegular *SymbolTable::addIgnored<ELF64BE>(StringRef, uint8_t);
 
 template Symbol *
-SymbolTable::addLazyArchive<ELF32LE>(ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile *,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF32BE>(ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile *,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64LE>(ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile *,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64BE>(ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile *,
                                      const object::Archive::Symbol);
 
 template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjFile &);
@@ -857,16 +856,16 @@ template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
 
-template void SymbolTable::addShared<ELF32LE>(SharedFile<ELF32LE> *, StringRef,
+template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> *,
                                               const typename ELF32LE::Sym &,
                                               const typename ELF32LE::Verdef *);
-template void SymbolTable::addShared<ELF32BE>(SharedFile<ELF32BE> *, StringRef,
+template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile<ELF32BE> *,
                                               const typename ELF32BE::Sym &,
                                               const typename ELF32BE::Verdef *);
-template void SymbolTable::addShared<ELF64LE>(SharedFile<ELF64LE> *, StringRef,
+template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> *,
                                               const typename ELF64LE::Sym &,
                                               const typename ELF64LE::Verdef *);
-template void SymbolTable::addShared<ELF64BE>(SharedFile<ELF64BE> *, StringRef,
+template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> *,
                                               const typename ELF64BE::Sym &,
                                               const typename ELF64BE::Verdef *);
 
