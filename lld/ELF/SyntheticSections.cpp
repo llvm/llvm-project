@@ -49,7 +49,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-const size_t MergeNoTailSection::NumShards;
+constexpr size_t MergeNoTailSection::NumShards;
 
 uint64_t SyntheticSection::getVA() const {
   if (OutputSection *Sec = getParent())
