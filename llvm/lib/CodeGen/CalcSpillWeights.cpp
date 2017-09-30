@@ -1,4 +1,4 @@
-//===------------------------ CalcSpillWeights.cpp ------------------------===//
+//===- CalcSpillWeights.cpp -----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CalcSpillWeights.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
@@ -19,6 +22,9 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <tuple>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"

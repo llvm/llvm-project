@@ -1,4 +1,4 @@
-//===---------------- lib/CodeGen/CalcSpillWeights.h ------------*- C++ -*-===//
+//===- lib/CodeGen/CalcSpillWeights.h ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
@@ -16,11 +15,12 @@
 
 namespace llvm {
 
-  class LiveInterval;
-  class LiveIntervals;
-  class MachineBlockFrequencyInfo;
-  class MachineLoopInfo;
-  class VirtRegMap;
+class LiveInterval;
+class LiveIntervals;
+class MachineBlockFrequencyInfo;
+class MachineFunction;
+class MachineLoopInfo;
+class VirtRegMap;
 
   /// \brief Normalize the spill weight of a live interval
   ///
@@ -32,7 +32,6 @@ namespace llvm {
   ///                   per function call. Derived from block frequencies.
   /// @param Size       Size of live interval as returnexd by getSize()
   /// @param NumInstr   Number of instructions using this live interval
-  ///
   static inline float normalizeSpillWeight(float UseDefFreq, unsigned Size,
                                            unsigned NumInstr) {
     // The constant 25 instructions is added to avoid depending too much on
@@ -47,7 +46,7 @@ namespace llvm {
   /// spill weight and allocation hint.
   class VirtRegAuxInfo {
   public:
-    typedef float (*NormalizingFn)(float, unsigned, unsigned);
+    using NormalizingFn = float (*)(float, unsigned, unsigned);
 
   private:
     MachineFunction &MF;
@@ -77,6 +76,7 @@ namespace llvm {
                                      const MachineBlockFrequencyInfo &MBFI,
                                      VirtRegAuxInfo::NormalizingFn norm =
                                          normalizeSpillWeight);
-}
+
+} // end namespace llvm
 
 #endif // LLVM_CODEGEN_CALCSPILLWEIGHTS_H

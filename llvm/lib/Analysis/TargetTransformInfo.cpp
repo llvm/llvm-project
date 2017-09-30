@@ -88,11 +88,6 @@ int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
   return TTIImpl->getGEPCost(PointeeType, Ptr, Operands);
 }
 
-int TargetTransformInfo::getGEPCost(const GEPOperator *GEP,
-                                    ArrayRef<const Value *> Operands) const {
-  return TTIImpl->getGEPCost(GEP, Operands);
-}
-
 int TargetTransformInfo::getExtCost(const Instruction *I,
                                     const Value *Src) const {
   return TTIImpl->getExtCost(I, Src);

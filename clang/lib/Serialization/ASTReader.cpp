@@ -9190,7 +9190,8 @@ void ASTReader::diagnoseOdrViolations() {
     Merge.first->decls_begin();
     Merge.first->bases_begin();
     Merge.first->vbases_begin();
-    for (auto *RD : Merge.second) {
+    for (auto &RecordPair : Merge.second) {
+      auto *RD = RecordPair.first;
       RD->decls_begin();
       RD->bases_begin();
       RD->vbases_begin();
@@ -9296,13 +9297,132 @@ void ASTReader::diagnoseOdrViolations() {
     bool Diagnosed = false;
     CXXRecordDecl *FirstRecord = Merge.first;
     std::string FirstModule = getOwningModuleNameForDiagnostic(FirstRecord);
-    for (CXXRecordDecl *SecondRecord : Merge.second) {
+    for (auto &RecordPair : Merge.second) {
+      CXXRecordDecl *SecondRecord = RecordPair.first;
       // Multiple different declarations got merged together; tell the user
       // where they came from.
       if (FirstRecord == SecondRecord)
         continue;
 
       std::string SecondModule = getOwningModuleNameForDiagnostic(SecondRecord);
+
+      auto *FirstDD = FirstRecord->DefinitionData;
+      auto *SecondDD = RecordPair.second;
+
+      assert(FirstDD && SecondDD && "Definitions without DefinitionData");
+
+      // Diagnostics from DefinitionData are emitted here.
+      if (FirstDD != SecondDD) {
+        enum ODRDefinitionDataDifference {
+          NumBases,
+          NumVBases,
+          BaseType,
+          BaseVirtual,
+          BaseAccess,
+        };
+        auto ODRDiagError = [FirstRecord, &FirstModule,
+                             this](SourceLocation Loc, SourceRange Range,
+                                   ODRDefinitionDataDifference DiffType) {
+          return Diag(Loc, diag::err_module_odr_violation_definition_data)
+                 << FirstRecord << FirstModule.empty() << FirstModule << Range
+                 << DiffType;
+        };
+        auto ODRDiagNote = [&SecondModule,
+                            this](SourceLocation Loc, SourceRange Range,
+                                  ODRDefinitionDataDifference DiffType) {
+          return Diag(Loc, diag::note_module_odr_violation_definition_data)
+                 << SecondModule << Range << DiffType;
+        };
+
+        ODRHash Hash;
+        auto ComputeQualTypeODRHash = [&Hash](QualType Ty) {
+          Hash.clear();
+          Hash.AddQualType(Ty);
+          return Hash.CalculateHash();
+        };
+
+        unsigned FirstNumBases = FirstDD->NumBases;
+        unsigned FirstNumVBases = FirstDD->NumVBases;
+        unsigned SecondNumBases = SecondDD->NumBases;
+        unsigned SecondNumVBases = SecondDD->NumVBases;
+
+        auto GetSourceRange = [](struct CXXRecordDecl::DefinitionData *DD) {
+          unsigned NumBases = DD->NumBases;
+          if (NumBases == 0) return SourceRange();
+          auto bases = DD->bases();
+          return SourceRange(bases[0].getLocStart(),
+                             bases[NumBases - 1].getLocEnd());
+        };
+
+        if (FirstNumBases != SecondNumBases) {
+          ODRDiagError(FirstRecord->getLocation(), GetSourceRange(FirstDD),
+                       NumBases)
+              << FirstNumBases;
+          ODRDiagNote(SecondRecord->getLocation(), GetSourceRange(SecondDD),
+                      NumBases)
+              << SecondNumBases;
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstNumVBases != SecondNumVBases) {
+          ODRDiagError(FirstRecord->getLocation(), GetSourceRange(FirstDD),
+                       NumVBases)
+              << FirstNumVBases;
+          ODRDiagNote(SecondRecord->getLocation(), GetSourceRange(SecondDD),
+                      NumVBases)
+              << SecondNumVBases;
+          Diagnosed = true;
+          break;
+        }
+
+        auto FirstBases = FirstDD->bases();
+        auto SecondBases = SecondDD->bases();
+        unsigned i = 0;
+        for (i = 0; i < FirstNumBases; ++i) {
+          auto FirstBase = FirstBases[i];
+          auto SecondBase = SecondBases[i];
+          if (ComputeQualTypeODRHash(FirstBase.getType()) !=
+              ComputeQualTypeODRHash(SecondBase.getType())) {
+            ODRDiagError(FirstRecord->getLocation(), FirstBase.getSourceRange(),
+                         BaseType)
+                << (i + 1) << FirstBase.getType();
+            ODRDiagNote(SecondRecord->getLocation(),
+                        SecondBase.getSourceRange(), BaseType)
+                << (i + 1) << SecondBase.getType();
+            break;
+          }
+
+          if (FirstBase.isVirtual() != SecondBase.isVirtual()) {
+            ODRDiagError(FirstRecord->getLocation(), FirstBase.getSourceRange(),
+                         BaseVirtual)
+                << (i + 1) << FirstBase.isVirtual() << FirstBase.getType();
+            ODRDiagNote(SecondRecord->getLocation(),
+                        SecondBase.getSourceRange(), BaseVirtual)
+                << (i + 1) << SecondBase.isVirtual() << SecondBase.getType();
+            break;
+          }
+
+          if (FirstBase.getAccessSpecifierAsWritten() !=
+              SecondBase.getAccessSpecifierAsWritten()) {
+            ODRDiagError(FirstRecord->getLocation(), FirstBase.getSourceRange(),
+                         BaseAccess)
+                << (i + 1) << FirstBase.getType()
+                << (int)FirstBase.getAccessSpecifierAsWritten();
+            ODRDiagNote(SecondRecord->getLocation(),
+                        SecondBase.getSourceRange(), BaseAccess)
+                << (i + 1) << SecondBase.getType()
+                << (int)SecondBase.getAccessSpecifierAsWritten();
+            break;
+          }
+        }
+
+        if (i != FirstNumBases) {
+          Diagnosed = true;
+          break;
+        }
+      }
+
       using DeclHashes = llvm::SmallVector<std::pair<Decl *, unsigned>, 4>;
 
       const ClassTemplateDecl *FirstTemplate =

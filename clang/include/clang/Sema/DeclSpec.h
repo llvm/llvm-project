@@ -2301,6 +2301,42 @@ public:
     }
     llvm_unreachable("unknown context kind!");
   }
+
+  /// Determine whether this declaration appears in a context where an
+  /// expression could appear.
+  bool isExpressionContext() const {
+    switch (Context) {
+    case FileContext:
+    case KNRTypeListContext:
+    case MemberContext:
+    case TypeNameContext: // FIXME: sizeof(...) permits an expression.
+    case FunctionalCastContext:
+    case AliasDeclContext:
+    case AliasTemplateContext:
+    case PrototypeContext:
+    case LambdaExprParameterContext:
+    case ObjCParameterContext:
+    case ObjCResultContext:
+    case TemplateParamContext:
+    case CXXNewContext:
+    case CXXCatchContext:
+    case ObjCCatchContext:
+    case BlockLiteralContext:
+    case LambdaExprContext:
+    case ConversionIdContext:
+    case TrailingReturnContext:
+      return false;
+
+    case BlockContext:
+    case ForContext:
+    case InitStmtContext:
+    case ConditionContext:
+    case TemplateTypeArgContext:
+      return true;
+    }
+
+    llvm_unreachable("unknown context kind!");
+  }
   
   /// \brief Return true if a function declarator at this position would be a
   /// function declaration.

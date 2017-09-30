@@ -295,8 +295,20 @@ def warn_empty_parens_are_function_decl : Warning<
 def warn_parens_disambiguated_as_function_declaration : Warning<
   "parentheses were disambiguated as a function declaration">,
   InGroup<VexingParse>;
+def warn_parens_disambiguated_as_variable_declaration : Warning<
+  "parentheses were disambiguated as redundant parentheses around declaration "
+  "of variable named %0">, InGroup<VexingParse>;
+def warn_redundant_parens_around_declarator : Warning<
+  "redundant parentheses surrounding declarator">,
+  InGroup<DiagGroup<"redundant-parens">>, DefaultIgnore;
 def note_additional_parens_for_variable_declaration : Note<
   "add a pair of parentheses to declare a variable">;
+def note_raii_guard_add_name : Note<
+  "add a variable name to declare a %0 initialized with %1">;
+def note_function_style_cast_add_parentheses : Note<
+  "add enclosing parentheses to perform a function-style cast">;
+def note_remove_parens_for_variable_declaration : Note<
+  "remove parentheses to silence this warning">;
 def note_empty_parens_function_call : Note<
   "change this ',' to a ';' to call %0">;
 def note_empty_parens_default_ctor : Note<
