@@ -456,8 +456,6 @@ public:
       if (ConstantInt *C = dyn_cast<ConstantInt>(I))
         if (C->isZero())
           continue;
-      if (isa<ConstantAggregateZero>(I))
-        continue;
       return false;
     }
     return true;

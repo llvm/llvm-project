@@ -30,6 +30,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetOptions.h"
 #include <vector>
 #include <cmath>
 
@@ -168,10 +169,13 @@ namespace {
 
   AMDGPULibCalls Simplifier;
 
+  const TargetOptions Options;
+
   public:
     static char ID; // Pass identification
 
-    AMDGPUSimplifyLibCalls() : FunctionPass(ID) {
+    AMDGPUSimplifyLibCalls(const TargetOptions &Opt = TargetOptions())
+      : FunctionPass(ID), Options(Opt) {
       initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
     }
 
@@ -1680,12 +1684,32 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, FuncInfo &FInfo) {
 }
 
 // Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass() {
-  return new AMDGPUSimplifyLibCalls();
+FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetOptions &Opt) {
+  return new AMDGPUSimplifyLibCalls(Opt);
 }
 
 FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {
   return new AMDGPUUseNativeCalls();
+}
+
+static bool setFastFlags(Function &F, const TargetOptions &Options) {
+  AttrBuilder B;
+
+  if (Options.UnsafeFPMath || Options.NoInfsFPMath)
+    B.addAttribute("no-infs-fp-math", "true");
+  if (Options.UnsafeFPMath || Options.NoNaNsFPMath)
+    B.addAttribute("no-nans-fp-math", "true");
+  if (Options.UnsafeFPMath) {
+    B.addAttribute("less-precise-fpmad", "true");
+    B.addAttribute("unsafe-fp-math", "true");
+  }
+
+  if (!B.hasAttributes())
+    return false;
+
+  F.addAttributes(AttributeList::FunctionIndex, B);
+
+  return true;
 }
 
 bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
@@ -1698,6 +1722,9 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
   DEBUG(dbgs() << "AMDIC: process function ";
         F.printAsOperand(dbgs(), false, F.getParent());
         dbgs() << '\n';);
+
+  if (!EnablePreLink)
+    Changed |= setFastFlags(F, Options);
 
   for (auto &BB : F) {
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
