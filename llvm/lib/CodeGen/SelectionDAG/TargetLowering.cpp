@@ -3481,6 +3481,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
   EVT VT = LD->getValueType(0);
   EVT LoadedVT = LD->getMemoryVT();
   SDLoc dl(LD);
+  auto &MF = DAG.getMachineFunction();
   if (VT.isFloatingPoint() || VT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), LoadedVT.getSizeInBits());
     if (isTypeLegal(intVT) && isTypeLegal(LoadedVT)) {
@@ -3511,7 +3512,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
 
     // Make sure the stack slot is also aligned for the register type.
     SDValue StackBase = DAG.CreateStackTemporary(LoadedVT, RegVT);
-
+    auto FrameIndex = cast<FrameIndexSDNode>(StackBase.getNode())->getIndex();
     SmallVector<SDValue, 8> Stores;
     SDValue StackPtr = StackBase;
     unsigned Offset = 0;
@@ -3530,8 +3531,9 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
           MinAlign(LD->getAlignment(), Offset), LD->getMemOperand()->getFlags(),
           LD->getAAInfo());
       // Follow the load with a store to the stack slot.  Remember the store.
-      Stores.push_back(DAG.getStore(Load.getValue(1), dl, Load, StackPtr,
-                                    MachinePointerInfo()));
+      Stores.push_back(DAG.getStore(
+          Load.getValue(1), dl, Load, StackPtr,
+          MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset)));
       // Increment the pointers.
       Offset += RegBytes;
       Ptr = DAG.getNode(ISD::ADD, dl, PtrVT, Ptr, PtrIncrement);
@@ -3550,15 +3552,17 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
     // Follow the load with a store to the stack slot.  Remember the store.
     // On big-endian machines this requires a truncating store to ensure
     // that the bits end up in the right place.
-    Stores.push_back(DAG.getTruncStore(Load.getValue(1), dl, Load, StackPtr,
-                                       MachinePointerInfo(), MemVT));
+    Stores.push_back(DAG.getTruncStore(
+        Load.getValue(1), dl, Load, StackPtr,
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), MemVT));
 
     // The order of the stores doesn't matter - say it with a TokenFactor.
     SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);
 
     // Finally, perform the original load only redirected to the stack slot.
     Load = DAG.getExtLoad(LD->getExtensionType(), dl, VT, TF, StackBase,
-                          MachinePointerInfo(), LoadedVT);
+                          MachinePointerInfo::getFixedStack(MF, FrameIndex, 0),
+                          LoadedVT);
 
     // Callers expect a MERGE_VALUES node.
     return std::make_pair(Load, TF);
@@ -3628,6 +3632,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   SDValue Val = ST->getValue();
   EVT VT = Val.getValueType();
   int Alignment = ST->getAlignment();
+  auto &MF = DAG.getMachineFunction();
 
   SDLoc dl(ST);
   if (ST->getMemoryVT().isFloatingPoint() ||
@@ -3662,10 +3667,12 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
 
     // Make sure the stack slot is also aligned for the register type.
     SDValue StackPtr = DAG.CreateStackTemporary(StoredVT, RegVT);
+    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
 
     // Perform the original store, only redirected to the stack slot.
-    SDValue Store = DAG.getTruncStore(Chain, dl, Val, StackPtr,
-                                      MachinePointerInfo(), StoredVT);
+    SDValue Store = DAG.getTruncStore(
+        Chain, dl, Val, StackPtr,
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, 0), StoredVT);
 
     EVT StackPtrVT = StackPtr.getValueType();
 
@@ -3677,8 +3684,9 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
     // Do all but one copies using the full register width.
     for (unsigned i = 1; i < NumRegs; i++) {
       // Load one integer register's worth from the stack slot.
-      SDValue Load =
-          DAG.getLoad(RegVT, dl, Store, StackPtr, MachinePointerInfo());
+      SDValue Load = DAG.getLoad(
+          RegVT, dl, Store, StackPtr,
+          MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset));
       // Store it to the final location.  Remember the store.
       Stores.push_back(DAG.getStore(Load.getValue(1), dl, Load, Ptr,
                                     ST->getPointerInfo().getWithOffset(Offset),
@@ -3698,8 +3706,9 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
                                   8 * (StoredBytes - Offset));
 
     // Load from the stack slot.
-    SDValue Load = DAG.getExtLoad(ISD::EXTLOAD, dl, RegVT, Store, StackPtr,
-                                  MachinePointerInfo(), MemVT);
+    SDValue Load = DAG.getExtLoad(
+        ISD::EXTLOAD, dl, RegVT, Store, StackPtr,
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), MemVT);
 
     Stores.push_back(
         DAG.getTruncStore(Load.getValue(1), dl, Load, Ptr,

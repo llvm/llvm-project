@@ -726,35 +726,6 @@ public:
     return TTI::TCC_Basic;
   }
 
-  int getGEPCost(const GEPOperator *GEP, ArrayRef<const Value *> Operands) {
-    Type *PointeeType = GEP->getSourceElementType();
-    const Value *Ptr = GEP->getPointerOperand();
-
-    if (getGEPCost(PointeeType, Ptr, Operands) == TTI::TCC_Free) {
-      // Should check if the GEP is actually used in load / store instructions.
-      // For simplicity, we check only direct users of the GEP.
-      //
-      // FIXME: GEPs could also be folded away as a part of addressing mode in
-      // load/store instructions together with other instructions (e.g., other
-      // GEPs). Handling all such cases must be expensive to be performed
-      // in this function, so we stay conservative for now.
-      for (const User *U : GEP->users()) {
-        const Operator *UOP = cast<Operator>(U);
-        const Value *PointerOperand = nullptr;
-        if (auto *LI = dyn_cast<LoadInst>(UOP))
-          PointerOperand = LI->getPointerOperand();
-        else if (auto *SI = dyn_cast<StoreInst>(UOP))
-          PointerOperand = SI->getPointerOperand();
-
-        if ((!PointerOperand || PointerOperand != GEP) &&
-            !GEP->hasAllZeroIndices())
-          return TTI::TCC_Basic;
-      }
-      return TTI::TCC_Free;
-    }
-    return TTI::TCC_Basic;
-  }
-
   using BaseT::getIntrinsicCost;
 
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
@@ -778,8 +749,11 @@ public:
       if (A->isStaticAlloca())
         return TTI::TCC_Free;
 
-    if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U))
-      return static_cast<T *>(this)->getGEPCost(GEP, Operands.drop_front());
+    if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
+      return static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
+                                                GEP->getPointerOperand(),
+                                                Operands.drop_front());
+    }
 
     if (auto CS = ImmutableCallSite(U)) {
       const Function *F = CS.getCalledFunction();
