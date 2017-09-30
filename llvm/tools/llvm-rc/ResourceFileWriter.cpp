@@ -60,6 +60,25 @@ static Error checkNumberFits(uint32_t Number, Twine FieldName) {
   return checkNumberFits(Number, sizeof(FitType) * 8, FieldName);
 }
 
+// A similar function for signed integers.
+template <typename FitType>
+static Error checkSignedNumberFits(uint32_t Number, Twine FieldName,
+                                   bool CanBeNegative) {
+  int32_t SignedNum = Number;
+  if (SignedNum < std::numeric_limits<FitType>::min() ||
+      SignedNum > std::numeric_limits<FitType>::max())
+    return createError(FieldName + " (" + Twine(SignedNum) +
+                           ") does not fit in " + Twine(sizeof(FitType) * 8) +
+                           "-bit signed integer type.",
+                       std::errc::value_too_large);
+
+  if (!CanBeNegative && SignedNum < 0)
+    return createError(FieldName + " (" + Twine(SignedNum) +
+                       ") cannot be negative.");
+
+  return Error::success();
+}
+
 static Error checkIntOrString(IntOrString Value, Twine FieldName) {
   if (!Value.isInt())
     return Error::success();
@@ -201,8 +220,16 @@ Error ResourceFileWriter::visitAcceleratorsResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeAcceleratorsBody);
 }
 
+Error ResourceFileWriter::visitDialogResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeDialogBody);
+}
+
 Error ResourceFileWriter::visitHTMLResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeHTMLBody);
+}
+
+Error ResourceFileWriter::visitMenuResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeMenuBody);
 }
 
 Error ResourceFileWriter::visitCharacteristicsStmt(
@@ -375,11 +402,205 @@ Error ResourceFileWriter::writeAcceleratorsBody(const RCResource *Base) {
   return Error::success();
 }
 
-// --- HTMLResource helpers. --- //
+// --- DialogResource helpers. --- //
 
+Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
+                                                   bool IsExtended) {
+  // Each control should be aligned to DWORD.
+  padStream(sizeof(uint32_t));
+
+  auto TypeInfo = Control::SupportedCtls.lookup(Ctl.Type);
+  uint32_t CtlStyle = TypeInfo.Style | Ctl.Style.getValueOr(0);
+  uint32_t CtlExtStyle = Ctl.ExtStyle.getValueOr(0);
+
+  // DIALOG(EX) item header prefix.
+  if (!IsExtended) {
+    struct {
+      ulittle32_t Style;
+      ulittle32_t ExtStyle;
+    } Prefix{ulittle32_t(CtlStyle), ulittle32_t(CtlExtStyle)};
+    writeObject(Prefix);
+  } else {
+    struct {
+      ulittle32_t HelpID;
+      ulittle32_t ExtStyle;
+      ulittle32_t Style;
+    } Prefix{ulittle32_t(Ctl.HelpID.getValueOr(0)), ulittle32_t(CtlExtStyle),
+             ulittle32_t(CtlStyle)};
+    writeObject(Prefix);
+  }
+
+  // Common fixed-length part.
+  RETURN_IF_ERROR(checkSignedNumberFits<int16_t>(
+      Ctl.X, "Dialog control x-coordinate", true));
+  RETURN_IF_ERROR(checkSignedNumberFits<int16_t>(
+      Ctl.Y, "Dialog control y-coordinate", true));
+  RETURN_IF_ERROR(
+      checkSignedNumberFits<int16_t>(Ctl.Width, "Dialog control width", false));
+  RETURN_IF_ERROR(checkSignedNumberFits<int16_t>(
+      Ctl.Height, "Dialog control height", false));
+  struct {
+    ulittle16_t X;
+    ulittle16_t Y;
+    ulittle16_t Width;
+    ulittle16_t Height;
+  } Middle{ulittle16_t(Ctl.X), ulittle16_t(Ctl.Y), ulittle16_t(Ctl.Width),
+           ulittle16_t(Ctl.Height)};
+  writeObject(Middle);
+
+  // ID; it's 16-bit in DIALOG and 32-bit in DIALOGEX.
+  if (!IsExtended) {
+    RETURN_IF_ERROR(checkNumberFits<uint16_t>(
+        Ctl.ID, "Control ID in simple DIALOG resource"));
+    writeInt<uint16_t>(Ctl.ID);
+  } else {
+    writeInt<uint32_t>(Ctl.ID);
+  }
+
+  // Window class - either 0xFFFF + 16-bit integer or a string.
+  RETURN_IF_ERROR(writeIntOrString(IntOrString(TypeInfo.CtlClass)));
+
+  // Element caption/reference ID. ID is preceded by 0xFFFF.
+  RETURN_IF_ERROR(checkIntOrString(Ctl.Title, "Control reference ID"));
+  RETURN_IF_ERROR(writeIntOrString(Ctl.Title));
+
+  // # bytes of extra creation data count. Don't pass any.
+  writeInt<uint16_t>(0);
+
+  return Error::success();
+}
+
+Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
+  auto *Res = cast<DialogResource>(Base);
+
+  // Default style: WS_POPUP | WS_BORDER | WS_SYSMENU.
+  const uint32_t UsedStyle = 0x80880000;
+
+  // Write DIALOG(EX) header prefix. These are pretty different.
+  if (!Res->IsExtended) {
+    struct {
+      ulittle32_t Style;
+      ulittle32_t ExtStyle;
+    } Prefix{ulittle32_t(UsedStyle),
+             ulittle32_t(0)}; // As of now, we don't keep EXSTYLE.
+
+    writeObject(Prefix);
+  } else {
+    const uint16_t DialogExMagic = 0xFFFF;
+
+    struct {
+      ulittle16_t Version;
+      ulittle16_t Magic;
+      ulittle32_t HelpID;
+      ulittle32_t ExtStyle;
+      ulittle32_t Style;
+    } Prefix{ulittle16_t(1), ulittle16_t(DialogExMagic),
+             ulittle32_t(Res->HelpID), ulittle32_t(0), ulittle32_t(UsedStyle)};
+
+    writeObject(Prefix);
+  }
+
+  // Now, a common part. First, fixed-length fields.
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(Res->Controls.size(),
+                                            "Number of dialog controls"));
+  RETURN_IF_ERROR(
+      checkSignedNumberFits<int16_t>(Res->X, "Dialog x-coordinate", true));
+  RETURN_IF_ERROR(
+      checkSignedNumberFits<int16_t>(Res->Y, "Dialog y-coordinate", true));
+  RETURN_IF_ERROR(
+      checkSignedNumberFits<int16_t>(Res->Width, "Dialog width", false));
+  RETURN_IF_ERROR(
+      checkSignedNumberFits<int16_t>(Res->Height, "Dialog height", false));
+  struct {
+    ulittle16_t Count;
+    ulittle16_t PosX;
+    ulittle16_t PosY;
+    ulittle16_t DialogWidth;
+    ulittle16_t DialogHeight;
+  } Middle{ulittle16_t(Res->Controls.size()), ulittle16_t(Res->X),
+           ulittle16_t(Res->Y), ulittle16_t(Res->Width),
+           ulittle16_t(Res->Height)};
+  writeObject(Middle);
+
+  // MENU field. As of now, we don't keep them in the state and can peacefully
+  // think there is no menu attached to the dialog.
+  writeInt<uint16_t>(0);
+
+  // Window CLASS field. Not kept here.
+  writeInt<uint16_t>(0);
+
+  // Window title. There is no title for now, so all we output is '\0'.
+  writeInt<uint16_t>(0);
+
+  auto handleCtlError = [&](Error &&Err, const Control &Ctl) -> Error {
+    if (!Err)
+      return Error::success();
+    return joinErrors(createError("Error in " + Twine(Ctl.Type) +
+                                  " control  (ID " + Twine(Ctl.ID) + "):"),
+                      std::move(Err));
+  };
+
+  for (auto &Ctl : Res->Controls)
+    RETURN_IF_ERROR(
+        handleCtlError(writeSingleDialogControl(Ctl, Res->IsExtended), Ctl));
+
+  return Error::success();
+}
+
+// --- HTMLResource helpers. --- //
 
 Error ResourceFileWriter::writeHTMLBody(const RCResource *Base) {
   return appendFile(cast<HTMLResource>(Base)->HTMLLoc);
+}
+
+// --- MenuResource helpers. --- //
+
+Error ResourceFileWriter::writeMenuDefinition(
+    const std::unique_ptr<MenuDefinition> &Def, uint16_t Flags) {
+  assert(Def);
+  const MenuDefinition *DefPtr = Def.get();
+
+  if (auto *MenuItemPtr = dyn_cast<MenuItem>(DefPtr)) {
+    writeInt<uint16_t>(Flags);
+    RETURN_IF_ERROR(
+        checkNumberFits<uint16_t>(MenuItemPtr->Id, "MENUITEM action ID"));
+    writeInt<uint16_t>(MenuItemPtr->Id);
+    RETURN_IF_ERROR(writeCString(MenuItemPtr->Name));
+    return Error::success();
+  }
+
+  if (isa<MenuSeparator>(DefPtr)) {
+    writeInt<uint16_t>(Flags);
+    writeInt<uint32_t>(0);
+    return Error::success();
+  }
+
+  auto *PopupPtr = cast<PopupItem>(DefPtr);
+  writeInt<uint16_t>(Flags);
+  RETURN_IF_ERROR(writeCString(PopupPtr->Name));
+  return writeMenuDefinitionList(PopupPtr->SubItems);
+}
+
+Error ResourceFileWriter::writeMenuDefinitionList(
+    const MenuDefinitionList &List) {
+  for (auto &Def : List.Definitions) {
+    uint16_t Flags = Def->getResFlags();
+    // Last element receives an additional 0x80 flag.
+    const uint16_t LastElementFlag = 0x0080;
+    if (&Def == &List.Definitions.back())
+      Flags |= LastElementFlag;
+
+    RETURN_IF_ERROR(writeMenuDefinition(Def, Flags));
+  }
+  return Error::success();
+}
+
+Error ResourceFileWriter::writeMenuBody(const RCResource *Base) {
+  // At first, MENUHEADER structure. In fact, these are two WORDs equal to 0.
+  // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648018.aspx
+  writeObject<uint32_t>(0);
+
+  return writeMenuDefinitionList(cast<MenuResource>(Base)->Elements);
 }
 
 } // namespace rc

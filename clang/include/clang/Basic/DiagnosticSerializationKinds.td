@@ -122,6 +122,27 @@ def note_second_module_difference : Note<
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 
+def err_module_odr_violation_definition_data : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%4 base %plural{1:class|:classes}4|"
+  "%4 virtual base %plural{1:class|:classes}4|"
+  "%ordinal4 base class with type %5|"
+  "%ordinal4 %select{non-virtual|virtual}5 base class %6|"
+  "%ordinal4 base class %5 with "
+  "%select{public|protected|private|no}6 access specifier}3">;
+
+def note_module_odr_violation_definition_data : Note <
+  "but in '%0' found "
+  "%select{"
+  "%2 base %plural{1:class|:classes}2|"
+  "%2 virtual base %plural{1:class|:classes}2|"
+  "%ordinal2 base class with different type %3|"
+  "%ordinal2 %select{non-virtual|virtual}3 base class %4|"
+  "%ordinal2 base class %3 with "
+  "%select{public|protected|private|no}4 access specifier}1">;
+
 def err_module_odr_violation_template_parameter : Error <
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "

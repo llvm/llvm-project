@@ -458,15 +458,17 @@ Expected<Control> RCParser::parseControl() {
   //  [class] text, id, x, y, width, height [, style] [, exstyle] [, helpID]
   //  [class]       id, x, y, width, height [, style] [, exstyle] [, helpID]
   // Note that control ids must be integers.
+  // Text might be either a string or an integer pointing to resource ID.
   ASSIGN_OR_RETURN(ClassResult, readIdentifier());
   std::string ClassUpper = ClassResult->upper();
-  if (Control::SupportedCtls.find(ClassUpper) == Control::SupportedCtls.end())
+  auto CtlInfo = Control::SupportedCtls.find(ClassUpper);
+  if (CtlInfo == Control::SupportedCtls.end())
     return getExpectedError("control type, END or '}'", true);
 
   // Read caption if necessary.
-  StringRef Caption;
-  if (Control::CtlsWithTitle.find(ClassUpper) != Control::CtlsWithTitle.end()) {
-    ASSIGN_OR_RETURN(CaptionResult, readString());
+  IntOrString Caption{StringRef()};
+  if (CtlInfo->getValue().HasTitle) {
+    ASSIGN_OR_RETURN(CaptionResult, readIntOrString());
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     Caption = *CaptionResult;
   }
