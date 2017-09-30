@@ -456,6 +456,14 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   if (TD) {
     AddTemplateParameterList(TD->getTemplateParameters());
   }
+
+  ID.AddInteger(Record->getNumBases());
+  auto Bases = Record->bases();
+  for (auto Base : Bases) {
+    AddQualType(Base.getType());
+    ID.AddInteger(Base.isVirtual());
+    ID.AddInteger(Base.getAccessSpecifierAsWritten());
+  }
 }
 
 void ODRHash::AddDecl(const Decl *D) {

@@ -70,7 +70,7 @@ def analyzer_opt_analyze_nested_blocks : Flag<["-"], "analyzer-opt-analyze-neste
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">;
 def analyze_function : Separate<["-"], "analyze-function">,
-  HelpText<"Run analysis on specific function">;
+  HelpText<"Run analysis on specific function (for C++ include parameters in name)">;
 def analyze_function_EQ : Joined<["-"], "analyze-function=">, Alias<analyze_function>;
 def analyzer_eagerly_assume : Flag<["-"], "analyzer-eagerly-assume">,
   HelpText<"Eagerly assume the truth/falseness of some symbolic constraints">;

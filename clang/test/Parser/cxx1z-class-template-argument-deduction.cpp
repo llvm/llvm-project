@@ -180,6 +180,7 @@ namespace typename_specifier {
     {(void)(typename T::A)(0);} // expected-error{{refers to class template member}}
     {(void)(typename T::A){0};} // expected-error{{refers to class template member}}
     {typename T::A (parens) = 0;} // expected-error {{refers to class template member in 'typename_specifier::X'; argument deduction not allowed here}}
+    // expected-warning@-1 {{disambiguated as redundant parentheses around declaration of variable named 'parens'}} expected-note@-1 {{add a variable name}} expected-note@-1{{remove parentheses}} expected-note@-1 {{add enclosing parentheses}}
     {typename T::A *p = 0;} // expected-error {{refers to class template member}}
     {typename T::A &r = *p;} // expected-error {{refers to class template member}}
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
