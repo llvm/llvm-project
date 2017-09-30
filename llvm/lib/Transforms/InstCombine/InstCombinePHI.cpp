@@ -179,7 +179,7 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
   for (auto II = BB->begin(), EI = BasicBlock::iterator(BB->getFirstNonPHI());
        II != EI; II++) {
     PHINode *PtrPHI = dyn_cast<PHINode>(II);
-    if (!PtrPHI || PtrPHI == &PN)
+    if (!PtrPHI || PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
       continue;
     MatchingPtrPHI = PtrPHI;
     for (unsigned i = 0; i != PtrPHI->getNumIncomingValues(); ++i) {
