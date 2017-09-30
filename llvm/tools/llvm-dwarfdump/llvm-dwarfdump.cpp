@@ -138,9 +138,9 @@ static list<std::string>
 static list<std::string>
     Find("find",
          desc("Search for the exact match for <name> in the accelerator tables "
-              "and print the matching debug information entries. When there no "
-              "accelerator tables avilable, the slower but more complete -name "
-              "option can be used."),
+              "and print the matching debug information entries. When no "
+              "accelerator tables are available, the slower but more complete "
+              "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for -find"), aliasopt(Find));
 static list<std::string>
