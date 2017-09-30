@@ -49,7 +49,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-const size_t MergeNoTailSection::NumShards;
+constexpr size_t MergeNoTailSection::NumShards;
 
 uint64_t SyntheticSection::getVA() const {
   if (OutputSection *Sec = getParent())
@@ -2240,7 +2240,7 @@ void MergeNoTailSection::finalizeContents() {
   size_t Concurrency = 1;
   if (Config->Threads)
     if (int N = std::thread::hardware_concurrency())
-      Concurrency = std::min(PowerOf2Floor(N), NumShards);
+      Concurrency = std::min<size_t>(PowerOf2Floor(N), NumShards);
 
   // Add section pieces to the builders.
   parallelForEachN(0, Concurrency, [&](size_t ThreadId) {

@@ -93,7 +93,7 @@ public:
   /// getPreExpArgument - Return the pre-expanded form of the specified
   /// argument.
   const std::vector<Token> &
-    getPreExpArgument(unsigned Arg, const MacroInfo *MI, Preprocessor &PP);
+    getPreExpArgument(unsigned Arg, Preprocessor &PP);
 
   /// getStringifiedArgument - Compute, cache, and return the specified argument
   /// that has been 'stringified' as required by the # operator.
