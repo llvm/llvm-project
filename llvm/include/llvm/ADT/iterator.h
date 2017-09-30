@@ -70,10 +70,10 @@ class iterator_facade_base
                            ReferenceT> {
 protected:
   enum {
-    IsRandomAccess =
-        std::is_base_of<std::random_access_iterator_tag, IteratorCategoryT>::value,
-    IsBidirectional =
-        std::is_base_of<std::bidirectional_iterator_tag, IteratorCategoryT>::value,
+    IsRandomAccess = std::is_base_of<std::random_access_iterator_tag,
+                                     IteratorCategoryT>::value,
+    IsBidirectional = std::is_base_of<std::bidirectional_iterator_tag,
+                                      IteratorCategoryT>::value,
   };
 
   /// A proxy object for computing a reference via indirecting a copy of an

@@ -2,7 +2,11 @@
 
 extern "C++" struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {
   void foo();
+  // Definitions aren't allowed, unless they are a template.
+  template<typename T>
+  void bar(T t){}
 };
+
 struct IPropertyPageBase : public IUnknown {};
 struct IPropertyPage : public IPropertyPageBase {};
 __interface ISfFileIOPropertyPage : public IPropertyPage {};
@@ -11,10 +15,17 @@ __interface ISfFileIOPropertyPage : public IPropertyPage {};
 namespace NS {
   struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {};
   // expected-error@+1 {{interface type cannot inherit from}}
-  __interface IPropertyPageBase : public IUnknown {}; 
+  __interface IPropertyPageBase : public IUnknown {};
 }
+
+namespace NS2 {
+extern "C++" struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {};
 // expected-error@+1 {{interface type cannot inherit from}}
-__interface IPropertyPageBase2 : public NS::IUnknown {}; 
+__interface IPropertyPageBase : public IUnknown{};
+}
+
+// expected-error@+1 {{interface type cannot inherit from}}
+__interface IPropertyPageBase2 : public NS::IUnknown {};
 
 __interface temp_iface {};
 struct bad_base : temp_iface {};
@@ -32,8 +43,8 @@ __interface PropertyPage : public Page4 {};
 
 struct Page5 : public Page3, Page4{};
 // expected-error@+1 {{interface type cannot inherit from}}
-__interface PropertyPage2 : public Page5 {}; 
+__interface PropertyPage2 : public Page5 {};
 
 __interface IF1 {};
-__interface PP : IUnknown, IF1{}; 
+__interface PP : IUnknown, IF1{};
 __interface PP2 : PP, Page3, Page4{};

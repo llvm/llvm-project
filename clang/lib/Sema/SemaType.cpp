@@ -3065,6 +3065,7 @@ static void warnAboutAmbiguousFunction(Sema &S, Declarator &D,
         S.Diag(D.getCommaLoc(), diag::note_empty_parens_function_call)
           << FixItHint::CreateReplacement(D.getCommaLoc(), ";")
           << D.getIdentifier();
+      Result.suppressDiagnostics();
     }
   }
 
@@ -3104,6 +3105,99 @@ static void warnAboutAmbiguousFunction(Sema &S, Declarator &D,
           << FixItHint::CreateReplacement(ParenRange, Init);
     }
   }
+}
+
+/// Produce an appropriate diagnostic for a declarator with top-level
+/// parentheses.
+static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
+  DeclaratorChunk &Paren = D.getTypeObject(D.getNumTypeObjects() - 1);
+  assert(Paren.Kind == DeclaratorChunk::Paren &&
+         "do not have redundant top-level parentheses");
+
+  // This is a syntactic check; we're not interested in cases that arise
+  // during template instantiation.
+  if (S.inTemplateInstantiation())
+    return;
+
+  // Check whether this could be intended to be a construction of a temporary
+  // object in C++ via a function-style cast.
+  bool CouldBeTemporaryObject =
+      S.getLangOpts().CPlusPlus && D.isExpressionContext() &&
+      !D.isInvalidType() && D.getIdentifier() &&
+      D.getDeclSpec().getParsedSpecifiers() == DeclSpec::PQ_TypeSpecifier &&
+      (T->isRecordType() || T->isDependentType()) &&
+      D.getDeclSpec().getTypeQualifiers() == 0 && D.isFirstDeclarator();
+
+  for (auto &C : D.type_objects()) {
+    switch (C.Kind) {
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Paren:
+      continue;
+
+    case DeclaratorChunk::Array:
+      if (!C.Arr.NumElts)
+        CouldBeTemporaryObject = false;
+      continue;
+
+    case DeclaratorChunk::Reference:
+      // FIXME: Suppress the warning here if there is no initializer; we're
+      // going to give an error anyway.
+      // We assume that something like 'T (&x) = y;' is highly likely to not
+      // be intended to be a temporary object.
+      CouldBeTemporaryObject = false;
+      continue;
+
+    case DeclaratorChunk::Function:
+      // In a new-type-id, function chunks require parentheses.
+      if (D.getContext() == Declarator::CXXNewContext)
+        return;
+      LLVM_FALLTHROUGH;
+    case DeclaratorChunk::BlockPointer:
+    case DeclaratorChunk::MemberPointer:
+    case DeclaratorChunk::Pipe:
+      // These cannot appear in expressions.
+      CouldBeTemporaryObject = false;
+      continue;
+    }
+  }
+
+  // FIXME: If there is an initializer, assume that this is not intended to be
+  // a construction of a temporary object.
+
+  // Check whether the name has already been declared; if not, this is not a
+  // function-style cast.
+  if (CouldBeTemporaryObject) {
+    LookupResult Result(S, D.getIdentifier(), SourceLocation(),
+                        Sema::LookupOrdinaryName);
+    if (!S.LookupName(Result, S.getCurScope()))
+      CouldBeTemporaryObject = false;
+    Result.suppressDiagnostics();
+  }
+
+  SourceRange ParenRange(Paren.Loc, Paren.EndLoc);
+
+  if (!CouldBeTemporaryObject) {
+    S.Diag(Paren.Loc, diag::warn_redundant_parens_around_declarator)
+        << ParenRange << FixItHint::CreateRemoval(Paren.Loc)
+        << FixItHint::CreateRemoval(Paren.EndLoc);
+    return;
+  }
+
+  S.Diag(Paren.Loc, diag::warn_parens_disambiguated_as_variable_declaration)
+      << ParenRange << D.getIdentifier();
+  auto *RD = T->getAsCXXRecordDecl();
+  if (!RD || !RD->hasDefinition() || RD->hasNonTrivialDestructor())
+    S.Diag(Paren.Loc, diag::note_raii_guard_add_name)
+        << FixItHint::CreateInsertion(Paren.Loc, " varname") << T
+        << D.getIdentifier();
+  // FIXME: A cast to void is probably a better suggestion in cases where it's
+  // valid (when there is no initializer and we're not in a condition).
+  S.Diag(D.getLocStart(), diag::note_function_style_cast_add_parentheses)
+      << FixItHint::CreateInsertion(D.getLocStart(), "(")
+      << FixItHint::CreateInsertion(S.getLocForEndOfToken(D.getLocEnd()), ")");
+  S.Diag(Paren.Loc, diag::note_remove_parens_for_variable_declaration)
+      << FixItHint::CreateRemoval(Paren.Loc)
+      << FixItHint::CreateRemoval(Paren.EndLoc);
 }
 
 /// Helper for figuring out the default CC for a function declarator type.  If
@@ -4007,6 +4101,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     IsQualifiedFunction &= DeclType.Kind == DeclaratorChunk::Paren;
     switch (DeclType.Kind) {
     case DeclaratorChunk::Paren:
+      if (i == 0)
+        warnAboutRedundantParens(S, D, T);
       T = S.BuildParenType(T);
       break;
     case DeclaratorChunk::BlockPointer:

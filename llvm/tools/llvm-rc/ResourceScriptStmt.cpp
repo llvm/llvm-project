@@ -120,11 +120,14 @@ raw_ostream &StringTableResource::log(raw_ostream &OS) const {
   return OS;
 }
 
-const StringSet<> Control::SupportedCtls = {
-    "LTEXT", "RTEXT", "CTEXT", "PUSHBUTTON", "DEFPUSHBUTTON", "EDITTEXT"};
-
-const StringSet<> Control::CtlsWithTitle = {"LTEXT", "RTEXT", "CTEXT",
-                                            "PUSHBUTTON", "DEFPUSHBUTTON"};
+const StringMap<Control::CtlInfo> Control::SupportedCtls = {
+    {"LTEXT", CtlInfo{0x50020000, ClsStatic, true}},
+    {"CTEXT", CtlInfo{0x50020001, ClsStatic, true}},
+    {"RTEXT", CtlInfo{0x50020002, ClsStatic, true}},
+    {"PUSHBUTTON", CtlInfo{0x50010000, ClsButton, true}},
+    {"DEFPUSHBUTTON", CtlInfo{0x50010001, ClsButton, true}},
+    {"EDITTEXT", CtlInfo{0x50810000, ClsEdit, false}},
+};
 
 raw_ostream &Control::log(raw_ostream &OS) const {
   OS << "  Control (" << ID << "): " << Type << ", title: " << Title

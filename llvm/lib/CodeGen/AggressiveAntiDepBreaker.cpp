@@ -1,4 +1,4 @@
-//===----- AggressiveAntiDepBreaker.cpp - Anti-dep breaker ----------------===//
+//===- AggressiveAntiDepBreaker.cpp - Anti-dep breaker --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,16 +15,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "AggressiveAntiDepBreaker.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "post-RA-sched"
@@ -34,18 +51,17 @@ static cl::opt<int>
 DebugDiv("agg-antidep-debugdiv",
          cl::desc("Debug control for aggressive anti-dep breaker"),
          cl::init(0), cl::Hidden);
+
 static cl::opt<int>
 DebugMod("agg-antidep-debugmod",
          cl::desc("Debug control for aggressive anti-dep breaker"),
          cl::init(0), cl::Hidden);
 
 AggressiveAntiDepState::AggressiveAntiDepState(const unsigned TargetRegs,
-                                               MachineBasicBlock *BB) :
-  NumTargetRegs(TargetRegs), GroupNodes(TargetRegs, 0),
-  GroupNodeIndices(TargetRegs, 0),
-  KillIndices(TargetRegs, 0),
-  DefIndices(TargetRegs, 0)
-{
+                                               MachineBasicBlock *BB)
+    : NumTargetRegs(TargetRegs), GroupNodes(TargetRegs, 0),
+      GroupNodeIndices(TargetRegs, 0), KillIndices(TargetRegs, 0),
+      DefIndices(TargetRegs, 0) {
   const unsigned BBSize = BB->size();
   for (unsigned i = 0; i < NumTargetRegs; ++i) {
     // Initialize all registers to be in their own group. Initially we
@@ -76,8 +92,7 @@ void AggressiveAntiDepState::GetGroupRegs(
   }
 }
 
-unsigned AggressiveAntiDepState::UnionGroups(unsigned Reg1, unsigned Reg2)
-{
+unsigned AggressiveAntiDepState::UnionGroups(unsigned Reg1, unsigned Reg2) {
   assert(GroupNodes[0] == 0 && "GroupNode 0 not parent!");
   assert(GroupNodeIndices[0] == 0 && "Reg 0 not in Group 0!");
 
@@ -92,8 +107,7 @@ unsigned AggressiveAntiDepState::UnionGroups(unsigned Reg1, unsigned Reg2)
   return Parent;
 }
 
-unsigned AggressiveAntiDepState::LeaveGroup(unsigned Reg)
-{
+unsigned AggressiveAntiDepState::LeaveGroup(unsigned Reg) {
   // Create a new GroupNode for Reg. Reg's existing GroupNode must
   // stay as is because there could be other GroupNodes referring to
   // it.
@@ -103,8 +117,7 @@ unsigned AggressiveAntiDepState::LeaveGroup(unsigned Reg)
   return idx;
 }
 
-bool AggressiveAntiDepState::IsLive(unsigned Reg)
-{
+bool AggressiveAntiDepState::IsLive(unsigned Reg) {
   // KillIndex must be defined and DefIndex not defined for a register
   // to be live.
   return((KillIndices[Reg] != ~0u) && (DefIndices[Reg] == ~0u));
@@ -115,8 +128,7 @@ AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
     TargetSubtargetInfo::RegClassVector &CriticalPathRCs)
     : AntiDepBreaker(), MF(MFi), MRI(MF.getRegInfo()),
       TII(MF.getSubtarget().getInstrInfo()),
-      TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI),
-      State(nullptr) {
+      TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI) {
   /* Collect a bitset of all registers that are only broken if they
      are on the critical path. */
   for (unsigned i = 0, e = CriticalPathRCs.size(); i < e; ++i) {
@@ -250,7 +262,7 @@ void AggressiveAntiDepBreaker::GetPassthruRegs(
 
 /// AntiDepEdges - Return in Edges the anti- and output- dependencies
 /// in SU that we want to consider for breaking.
-static void AntiDepEdges(const SUnit *SU, std::vector<const SDep*>& Edges) {
+static void AntiDepEdges(const SUnit *SU, std::vector<const SDep *> &Edges) {
   SmallSet<unsigned, 4> RegSet;
   for (SUnit::const_pred_iterator P = SU->Preds.begin(), PE = SU->Preds.end();
        P != PE; ++P) {
@@ -544,8 +556,8 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
   // break the anti-dependence.
   std::vector<unsigned> Regs;
   State->GetGroupRegs(AntiDepGroupIndex, Regs, &RegRefs);
-  assert(Regs.size() > 0 && "Empty register group!");
-  if (Regs.size() == 0)
+  assert(!Regs.empty() && "Empty register group!");
+  if (Regs.empty())
     return false;
 
   // Find the "superest" register in the group. At the same time,
@@ -732,14 +744,12 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
 
 /// BreakAntiDependencies - Identifiy anti-dependencies within the
 /// ScheduleDAG and break them by renaming registers.
-///
 unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
-                              const std::vector<SUnit>& SUnits,
+                              const std::vector<SUnit> &SUnits,
                               MachineBasicBlock::iterator Begin,
                               MachineBasicBlock::iterator End,
                               unsigned InsertPosIndex,
                               DbgValueVector &DbgValues) {
-
   std::vector<unsigned> &KillIndices = State->GetKillIndices();
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
   std::multimap<unsigned, AggressiveAntiDepState::RegisterReference>&

@@ -1577,6 +1577,126 @@ using TemplateParameters::S6;
 #endif
 }  // namespace TemplateParameters
 
+namespace BaseClass {
+#if defined(FIRST)
+struct B1 {};
+struct S1 : B1 {};
+#elif defined(SECOND)
+struct S1 {};
+#else
+S1 s1;
+// expected-error@second.h:* {{'BaseClass::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found 0 base classes}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1 base class}}
+#endif
+
+#if defined(FIRST)
+struct S2 {};
+#elif defined(SECOND)
+struct B2 {};
+struct S2 : virtual B2 {};
+#else
+S2 s2;
+// expected-error@second.h:* {{'BaseClass::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1 base class}}
+// expected-note@first.h:* {{but in 'FirstModule' found 0 base classes}}
+#endif
+
+#if defined(FIRST)
+struct B3a {};
+struct S3 : B3a {};
+#elif defined(SECOND)
+struct B3b {};
+struct S3 : virtual B3b {};
+#else
+S3 s3;
+// expected-error@second.h:* {{'BaseClass::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1 virtual base class}}
+// expected-note@first.h:* {{but in 'FirstModule' found 0 virtual base classes}}
+#endif
+
+#if defined(FIRST)
+struct B4a {};
+struct S4 : B4a {};
+#elif defined(SECOND)
+struct B4b {};
+struct S4 : B4b {};
+#else
+S4 s4;
+// expected-error@second.h:* {{'BaseClass::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class with type 'BaseClass::B4b'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class with different type 'BaseClass::B4a'}}
+#endif
+
+#if defined(FIRST)
+struct B5a {};
+struct S5 : virtual B5a {};
+#elif defined(SECOND)
+struct B5a {};
+struct S5 : B5a {};
+#else
+S5 s5;
+// expected-error@second.h:* {{'BaseClass::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found 0 virtual base classes}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1 virtual base class}}
+#endif
+
+#if defined(FIRST)
+struct B6a {};
+struct S6 : B6a {};
+#elif defined(SECOND)
+struct B6a {};
+struct S6 : virtual B6a {};
+#else
+S6 s6;
+// expected-error@second.h:* {{'BaseClass::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1 virtual base class}}
+// expected-note@first.h:* {{but in 'FirstModule' found 0 virtual base classes}}
+#endif
+
+#if defined(FIRST)
+struct B7a {};
+struct S7 : protected B7a {};
+#elif defined(SECOND)
+struct B7a {};
+struct S7 : B7a {};
+#else
+S7 s7;
+// expected-error@second.h:* {{'BaseClass::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B7a' with no access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B7a' with protected access specifier}}
+#endif
+
+#if defined(FIRST)
+struct B8a {};
+struct S8 : public B8a {};
+#elif defined(SECOND)
+struct B8a {};
+struct S8 : private B8a {};
+#else
+S8 s8;
+// expected-error@second.h:* {{'BaseClass::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B8a' with private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B8a' with public access specifier}}
+#endif
+
+#if defined(FIRST)
+struct B9a {};
+struct S9 : private B9a {};
+#elif defined(SECOND)
+struct B9a {};
+struct S9 : public B9a {};
+#else
+S9 s9;
+// expected-error@second.h:* {{'BaseClass::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B9a' with public access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B9a' with private access specifier}}
+#endif
+
+#if defined(FIRST)
+struct B10a {};
+struct S10 : B10a {};
+#elif defined(SECOND)
+struct B10a {};
+struct S10 : protected B10a {};
+#else
+S10 s10;
+// expected-error@second.h:* {{'BaseClass::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B10a' with protected access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B10a' with no access specifier}}
+#endif
+}  // namespace BaseClass
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
