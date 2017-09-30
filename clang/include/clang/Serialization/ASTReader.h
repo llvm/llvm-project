@@ -1043,8 +1043,11 @@ private:
   /// once recursing loading has been completed.
   llvm::SmallVector<NamedDecl *, 16> PendingOdrMergeChecks;
 
+  using DataPointers =
+      std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
+
   /// \brief Record definitions in which we found an ODR violation.
-  llvm::SmallDenseMap<CXXRecordDecl *, llvm::TinyPtrVector<CXXRecordDecl *>, 2>
+  llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
       PendingOdrMergeFailures;
 
   /// \brief DeclContexts in which we have diagnosed an ODR violation.

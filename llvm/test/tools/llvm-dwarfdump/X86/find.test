@@ -12,7 +12,7 @@ CHECK-NOT: {{:}}
 CHECK:     DW_AT_name ("main")
 CHECK-NOT: {{:}}
 
-RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/libfat-test.a \
 RUN:   -find=x86_64h_var -find=i386_var \
 RUN:   | FileCheck %s --check-prefix=MULTI
 MULTI: .debug_info contents:

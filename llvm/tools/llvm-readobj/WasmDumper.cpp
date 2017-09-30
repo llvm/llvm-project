@@ -156,8 +156,6 @@ void WasmDumper::printSections() {
       if (WasmSec.Name == "linking") {
         const wasm::WasmLinkingData &LinkingData = Obj->linkingData();
         W.printNumber("DataSize", LinkingData.DataSize);
-        if (LinkingData.DataAlignment)
-          W.printNumber("DataAlignment", LinkingData.DataAlignment);
       }
       break;
     case wasm::WASM_SEC_DATA: {

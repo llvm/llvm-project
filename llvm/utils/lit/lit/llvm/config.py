@@ -75,6 +75,9 @@ class LLVMConfig(object):
             features.add("long_tests")
 
         if target_triple:
+            if re.match(r'^x86_64.*-apple', target_triple):
+                if 'address' in sanitizers:
+                    self.with_environment('ASAN_OPTIONS', 'detect_leaks=1', append_path=True)
             if re.match(r'^x86_64.*-linux', target_triple):
                 features.add("x86_64-linux")
             if re.match(r'.*-win32$', target_triple):

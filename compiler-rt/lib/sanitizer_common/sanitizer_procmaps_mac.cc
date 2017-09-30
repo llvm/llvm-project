@@ -353,7 +353,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
 }
 
 void MemoryMappingLayout::DumpListOfModules(
-    InternalMmapVector<LoadedModule> *modules) {
+    InternalMmapVectorNoCtor<LoadedModule> *modules) {
   Reset();
   InternalScopedString module_name(kMaxPathLength);
   MemoryMappedSegment segment(module_name.data(), kMaxPathLength);

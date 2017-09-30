@@ -575,8 +575,8 @@ execute a single checker:
 processing a large file use the  <tt><b>-analyzer-display-progress</b></tt>
 option.</p>
 
-<p>You can analyze a particular function within the file, which is often useful
-because the problem is always in a certain function:</p>
+<p>To selectively analyze only the given function, use the
+<tt><b>-analyze-function</b></tt> option:</p>
 <pre class="code">
     $ <b>clang -cc1 -analyze -analyzer-checker=core test.c -analyzer-display-progress</b>
     ANALYZE (Syntax): test.c foo
@@ -587,6 +587,16 @@ because the problem is always in a certain function:</p>
     ANALYZE (Syntax): test.c foo
     ANALYZE (Path,  Inline_Regular): test.c foo
 </pre>
+
+<b>Note: </b> a fully qualified function name has to be used when selecting
+C++ functions and methods, Objective-C methods and blocks, e.g.:
+
+<pre class="code">
+    $ <b>clang -cc1 -analyze -analyzer-checker=core test.cc -analyze-function=foo(int)</b>
+</pre>
+
+The fully qualified name can be found from the
+<tt><b>-analyzer-display-progress</b></tt> output.
 
 <p>The bug reporter mechanism removes path diagnostics inside intermediate
 function calls that have returned by the time the bug was found and contain

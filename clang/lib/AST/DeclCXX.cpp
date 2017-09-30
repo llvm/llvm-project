@@ -1470,6 +1470,15 @@ bool CXXRecordDecl::isAnyDestructorNoReturn() const {
   return false;
 }
 
+static bool isDeclContextInNamespace(const DeclContext *DC) {
+  while (!DC->isTranslationUnit()) {
+    if (DC->isNamespace())
+      return true;
+    DC = DC->getParent();
+  }
+  return false;
+}
+
 bool CXXRecordDecl::isInterfaceLike() const {
   assert(hasDefinition() && "checking for interface-like without a definition");
   // All __interfaces are inheritently interface-like.
@@ -1486,13 +1495,16 @@ bool CXXRecordDecl::isInterfaceLike() const {
 
   // No interface-like type can have a method with a definition.
   for (const auto *const Method : methods())
-    if (Method->isDefined())
+    if (Method->isDefined() && !Method->isImplicit())
       return false;
 
   // Check "Special" types.
   const auto *Uuid = getAttr<UuidAttr>();
-  if (Uuid && isStruct() && (getDeclContext()->isTranslationUnit() ||
-                             getDeclContext()->isExternCXXContext()) &&
+  // MS SDK declares IUnknown/IDispatch both in the root of a TU, or in an
+  // extern C++ block directly in the TU.  These are only valid if in one
+  // of these two situations.
+  if (Uuid && isStruct() && !getDeclContext()->isExternCContext() &&
+      !isDeclContextInNamespace(getDeclContext()) &&
       ((getName() == "IUnknown" &&
         Uuid->getGuid() == "00000000-0000-0000-C000-000000000046") ||
        (getName() == "IDispatch" &&

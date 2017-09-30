@@ -214,6 +214,10 @@ public:
            TargetTriple.getEnvironmentName() == "amdgizcl";
   }
 
+  bool isAmdPalOS() const {
+    return TargetTriple.getOS() == Triple::AMDPAL;
+  }
+
   Generation getGeneration() const {
     return Gen;
   }
