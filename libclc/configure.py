@@ -72,8 +72,8 @@ llvm_version = llvm_config(['--version']).replace('svn', '').split('.')
 llvm_int_version = int(llvm_version[0]) * 100 + int(llvm_version[1]) * 10
 llvm_string_version = llvm_version[0] + '.' + llvm_version[1]
 
-if llvm_int_version < 400:
-    print("libclc requires LLVM >= 4.0")
+if llvm_int_version < 390:
+    print("libclc requires LLVM >= 3.9")
     sys.exit(1)
 
 llvm_system_libs = llvm_config(['--system-libs'])
@@ -109,9 +109,13 @@ available_targets = {
   'nvptx64--nvidiacl' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
 }
 
-available_targets['amdgcn-mesa-mesa3d'] = available_targets['amdgcn--']
 
-default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa', 'amdgcn-mesa-mesa3d']
+default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa']
+
+#mesa is using amdgcn-mesa-mesa3d since llvm-4.0
+if llvm_int_version > 390:
+    available_targets['amdgcn-mesa-mesa3d'] = available_targets['amdgcn--']
+    default_targets.append('amdgcn-mesa-mesa3d')
 
 targets = args
 if not targets:
@@ -218,12 +222,20 @@ for target in targets:
       override_list_file = os.path.join(libdir, 'OVERRIDES')
       compat_list_file = os.path.join(libdir,
         'SOURCES_' + llvm_string_version)
+      compat_list_override = os.path.join(libdir,
+        'OVERRIDES_' + llvm_string_version)
 
       # Build compat list
       if os.path.exists(compat_list_file):
         for compat in open(compat_list_file).readlines():
           compat = compat.rstrip()
           compats.append(compat)
+
+      # Add target compat overrides
+      if os.path.exists(compat_list_override):
+        for override in open(compat_list_override).readlines():
+          override = override.rstrip()
+          sources_seen.add(override)
 
       # Add target overrides
       if os.path.exists(override_list_file):

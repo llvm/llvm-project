@@ -984,7 +984,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
       continue;
 
     Loads.clear();
-    collectCandiateReductionLoads(StoreMA, Loads);
+    collectCandidateReductionLoads(StoreMA, Loads);
     for (MemoryAccess *LoadMA : Loads)
       Candidates.push_back(std::make_pair(LoadMA, StoreMA));
   }
@@ -1034,7 +1034,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
   }
 }
 
-void ScopBuilder::collectCandiateReductionLoads(
+void ScopBuilder::collectCandidateReductionLoads(
     MemoryAccess *StoreMA, SmallVectorImpl<MemoryAccess *> &Loads) {
   ScopStmt *Stmt = StoreMA->getStatement();
 

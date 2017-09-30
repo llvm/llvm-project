@@ -668,24 +668,26 @@ public:
 class MergeSyntheticSection : public SyntheticSection {
 public:
   void addSection(MergeInputSection *MS);
-  size_t getSize() const override;
-  void writeTo(uint8_t *Buf) override;
 
 protected:
   MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
-                        uint32_t Alignment);
+                        uint32_t Alignment)
+      : SyntheticSection(Flags, Type, Alignment, Name) {}
 
   std::vector<MergeInputSection *> Sections;
-  llvm::StringTableBuilder Builder;
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
 public:
   MergeTailSection(StringRef Name, uint32_t Type, uint64_t Flags,
-                   uint32_t Alignment)
-      : MergeSyntheticSection(Name, Type, Flags, Alignment) {}
+                   uint32_t Alignment);
 
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;
+
+private:
+  llvm::StringTableBuilder Builder;
 };
 
 class MergeNoTailSection final : public MergeSyntheticSection {
@@ -694,7 +696,27 @@ public:
                      uint32_t Alignment)
       : MergeSyntheticSection(Name, Type, Flags, Alignment) {}
 
+  size_t getSize() const override { return Size; }
+  void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;
+
+private:
+  // We use the most significant bits of a hash as a shard ID.
+  // The reason why we don't want to use the least significant bits is
+  // because DenseMap also uses lower bits to determine a bucket ID.
+  // If we use lower bits, it significantly increases the probability of
+  // hash collisons.
+  size_t getShardId(uint32_t Hash) {
+    return Hash >> (32 - llvm::countTrailingZeros(NumShards));
+  }
+
+  // Section size
+  size_t Size;
+
+  // String table contents
+  constexpr static size_t NumShards = 32;
+  std::vector<llvm::StringTableBuilder> Shards;
+  size_t ShardOffsets[NumShards];
 };
 
 // .MIPS.abiflags section.
@@ -786,7 +808,7 @@ private:
   size_t Size = 0;
 };
 
-std::vector<InputSection *> createCommonSections();
+template <class ELFT> void createCommonSections();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
 void decompressAndMergeSections();
