@@ -78,10 +78,6 @@ public:
   /// Create an implicit cast for lvalue-to-rvaluate conversions.
   ImplicitCastExpr *makeLvalueToRvalue(const Expr *Arg, QualType Ty);
   
-  /// Create an implicit cast for lvalue-to-rvaluate conversions.
-  ImplicitCastExpr *makeLvalueToRvalue(const Expr *Arg,
-                                       bool GetNonReferenceType = false);
-
   /// Make RValue out of variable declaration, creating a temporary
   /// DeclRefExpr in the process.
   ImplicitCastExpr *
@@ -162,15 +158,6 @@ UnaryOperator *ASTMaker::makeDereference(const Expr *Arg, QualType Ty) {
 
 ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg, QualType Ty) {
   return makeImplicitCast(Arg, Ty, CK_LValueToRValue);
-}
-
-ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg,
-                                               bool GetNonReferenceType) {
-
-  QualType Type = Arg->getType();
-  if (GetNonReferenceType)
-    Type = Type.getNonReferenceType();
-  return makeImplicitCast(Arg, Type, CK_LValueToRValue);
 }
 
 ImplicitCastExpr *
