@@ -279,6 +279,7 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   TransposedMatrix.resize(4);
   SmallVector<uint32_t, 32> MaskHigh;
   SmallVector<uint32_t, 32> MaskLow;
+  SmallVector<uint32_t, 32> LowHighMask[2];
   SmallVector<uint32_t, 32> MaskHighTemp1;
   SmallVector<uint32_t, 32> MaskLowTemp1;
   SmallVector<uint32_t, 32> MaskHighWord;
@@ -289,50 +290,40 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   // MaskHighTemp and MaskLowTemp built in the vpunpckhbw and vpunpcklbw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(VT, MaskHigh, false, false);
   createUnpackShuffleMask<uint32_t>(VT, MaskLow, true, false);
+  createUnpackShuffleMask<uint32_t>(VT, MaskHigh, false, false);
 
   // MaskHighTemp1 and MaskLowTemp1 built in the vpunpckhdw and vpunpckldw X86
   // shuffle pattern.
 
   createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp1, true, false);
   createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp1, false, false);
-  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, MaskHighWord);
-  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, MaskLowWord);
+  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, LowHighMask[0]);
+  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, LowHighMask[1]);
 
   // IntrVec1Low  = c0  m0  c1  m1 ... c7  m7  | c16 m16 c17 m17 ... c23 m23
   // IntrVec1High = c8  m8  c9  m9 ... c15 m15 | c24 m24 c25 m25 ... c31 m31
   // IntrVec2Low  = y0  k0  y1  k1 ... y7  k7  | y16 k16 y17 k17 ... y23 k23
   // IntrVec2High = y8  k8  y9  k9 ... y15 k15 | y24 k24 y25 k25 ... y31 k31
+  Value *IntrVec[4];
 
-  Value *IntrVec1Low =
-      Builder.CreateShuffleVector(Matrix[0], Matrix[1], MaskLow);
-  Value *IntrVec1High =
-      Builder.CreateShuffleVector(Matrix[0], Matrix[1], MaskHigh);
-  Value *IntrVec2Low =
-      Builder.CreateShuffleVector(Matrix[2], Matrix[3], MaskLow);
-  Value *IntrVec2High =
-      Builder.CreateShuffleVector(Matrix[2], Matrix[3], MaskHigh);
+  IntrVec[0] = Builder.CreateShuffleVector(Matrix[0], Matrix[1], MaskLow);
+  IntrVec[1] = Builder.CreateShuffleVector(Matrix[0], Matrix[1], MaskHigh);
+  IntrVec[2] = Builder.CreateShuffleVector(Matrix[2], Matrix[3], MaskLow);
+  IntrVec[3] = Builder.CreateShuffleVector(Matrix[2], Matrix[3], MaskHigh);
 
   // cmyk4  cmyk5  cmyk6   cmyk7  | cmyk20 cmyk21 cmyk22 cmyk23
   // cmyk12 cmyk13 cmyk14  cmyk15 | cmyk28 cmyk29 cmyk30 cmyk31
   // cmyk0  cmyk1  cmyk2   cmyk3  | cmyk16 cmyk17 cmyk18 cmyk19
   // cmyk8  cmyk9  cmyk10  cmyk11 | cmyk24 cmyk25 cmyk26 cmyk27
 
-  Value *High =
-      Builder.CreateShuffleVector(IntrVec1Low, IntrVec2Low, MaskHighWord);
-  Value *High1 =
-      Builder.CreateShuffleVector(IntrVec1High, IntrVec2High, MaskHighWord);
-  Value *Low =
-      Builder.CreateShuffleVector(IntrVec1Low, IntrVec2Low, MaskLowWord);
-  Value *Low1 =
-      Builder.CreateShuffleVector(IntrVec1High, IntrVec2High, MaskLowWord);
+  Value *VecOut[4];
+  for (int i = 0; i < 4; i++)
+    VecOut[i] = Builder.CreateShuffleVector(IntrVec[i / 2], IntrVec[i / 2 + 2],
+                                            LowHighMask[i % 2]);
 
   if (VT == MVT::v16i8) {
-    TransposedMatrix[0] = Low;
-    TransposedMatrix[1] = High;
-    TransposedMatrix[2] = Low1;
-    TransposedMatrix[3] = High1;
+    std::copy(VecOut, VecOut + 4, TransposedMatrix.begin());
     return;
   }
 
@@ -343,14 +334,13 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
 
   // ConcatHigh and ConcatLow built in the vperm2i128 and vinserti128 X86
   // shuffle pattern.
-  SmallVector<uint32_t, 32> ConcatHigh12, ConcatHigh13;
   createConcatShuffleMask(numberOfElement, ConcatLow, true);
   createConcatShuffleMask(numberOfElement, ConcatHigh, false);
 
-  TransposedMatrix[0] = Builder.CreateShuffleVector(Low, High, ConcatLow);
-  TransposedMatrix[1] = Builder.CreateShuffleVector(Low1, High1, ConcatLow);
-  TransposedMatrix[2] = Builder.CreateShuffleVector(Low, High, ConcatHigh);
-  TransposedMatrix[3] = Builder.CreateShuffleVector(Low1, High1, ConcatHigh);
+  TransposedMatrix[0] = Builder.CreateShuffleVector(VecOut[0], VecOut[1], ConcatLow);
+  TransposedMatrix[1] = Builder.CreateShuffleVector(VecOut[2], VecOut[3], ConcatLow);
+  TransposedMatrix[2] = Builder.CreateShuffleVector(VecOut[0], VecOut[1], ConcatHigh);
+  TransposedMatrix[3] = Builder.CreateShuffleVector(VecOut[2], VecOut[3], ConcatHigh);
 }
 
 //  createShuffleStride returns shuffle mask of size N.

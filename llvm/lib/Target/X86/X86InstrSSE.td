@@ -2308,6 +2308,58 @@ let Constraints = "$src1 = $dst" in {
                  SSEPackedDouble, memopv2f64, SSE_ALU_F64P>, PD;
 }
 
+def CommutableCMPCC : PatLeaf<(imm), [{
+  return (N->getZExtValue() == 0x00 || N->getZExtValue() == 0x03 ||
+          N->getZExtValue() == 0x04 || N->getZExtValue() == 0x07);
+}]>;
+
+// Patterns to select compares with loads in first operand.
+let Predicates = [HasAVX] in {
+  def : Pat<(v4f64 (X86cmpp (loadv4f64 addr:$src2), VR256:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPPDYrmi VR256:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(v8f32 (X86cmpp (loadv8f32 addr:$src2), VR256:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPPSYrmi VR256:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(v2f64 (X86cmpp (loadv2f64 addr:$src2), VR128:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPPDrmi VR128:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(v4f32 (X86cmpp (loadv4f32 addr:$src2), VR128:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPPSrmi VR128:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(f64 (X86cmps (loadf64 addr:$src2), FR64:$src1,
+                          CommutableCMPCC:$cc)),
+            (VCMPSDrm FR64:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(f32 (X86cmps (loadf32 addr:$src2), FR32:$src1,
+                          CommutableCMPCC:$cc)),
+            (VCMPSSrm FR32:$src1, addr:$src2, imm:$cc)>;
+}
+
+let Predicates = [UseSSE2] in {
+  def : Pat<(v2f64 (X86cmpp (memopv2f64 addr:$src2), VR128:$src1,
+                            CommutableCMPCC:$cc)),
+            (CMPPDrmi VR128:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(f64 (X86cmps (loadf64 addr:$src2), FR64:$src1,
+                          CommutableCMPCC:$cc)),
+            (CMPSDrm FR64:$src1, addr:$src2, imm:$cc)>;
+}
+
+let Predicates = [UseSSE1] in {
+  def : Pat<(v4f32 (X86cmpp (memopv4f32 addr:$src2), VR128:$src1,
+                            CommutableCMPCC:$cc)),
+            (CMPPSrmi VR128:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(f32 (X86cmps (loadf32 addr:$src2), FR32:$src1,
+                          CommutableCMPCC:$cc)),
+            (CMPSSrm FR32:$src1, addr:$src2, imm:$cc)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Shuffle Instructions
 //===----------------------------------------------------------------------===//
