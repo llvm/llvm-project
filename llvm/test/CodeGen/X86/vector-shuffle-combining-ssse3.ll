@@ -640,6 +640,64 @@ define <8 x i16> @shuffle_combine_unpack_insert(<8 x i16> %a0) {
   ret <8 x i16> %8
 }
 
+define <16 x i8> @shuffle_combine_packssdw_pshufb(<4 x i32> %a0) {
+; SSE-LABEL: shuffle_combine_packssdw_pshufb:
+; SSE:       # BB#0:
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[13,12,9,8,5,4,1,0,13,12,9,8,5,4,1,0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_combine_packssdw_pshufb:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13,12,9,8,5,4,1,0,13,12,9,8,5,4,1,0]
+; AVX-NEXT:    retq
+  %1 = ashr <4 x i32> %a0, <i32 31, i32 31, i32 31, i32 31>
+  %2 = tail call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %1, <4 x i32> %1)
+  %3 = bitcast <8 x i16> %2 to <16 x i8>
+  %4 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %3, <16 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8>)
+  ret <16 x i8> %4
+}
+declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>) nounwind readnone
+
+define <16 x i8> @shuffle_combine_packsswb_pshufb(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: shuffle_combine_packsswb_pshufb:
+; SSE:       # BB#0:
+; SSE-NEXT:    psraw $15, %xmm0
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,12,10,8,6,4,2,0,14,12,10,8,6,4,2,0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_combine_packsswb_pshufb:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,12,10,8,6,4,2,0,14,12,10,8,6,4,2,0]
+; AVX-NEXT:    retq
+  %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %2 = ashr <8 x i16> %a1, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %3 = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %1, <8 x i16> %2)
+  %4 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %3, <16 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  ret <16 x i8> %4
+}
+declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <16 x i8> @shuffle_combine_packuswb_pshufb(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: shuffle_combine_packuswb_pshufb:
+; SSE:       # BB#0:
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15,13,11,9,7,5,3,1,15,13,11,9,7,5,3,1]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_combine_packuswb_pshufb:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,13,11,9,7,5,3,1,15,13,11,9,7,5,3,1]
+; AVX-NEXT:    retq
+  %1 = lshr <8 x i16> %a0, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %2 = lshr <8 x i16> %a1, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %3 = tail call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %1, <8 x i16> %2)
+  %4 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %3, <16 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  ret <16 x i8> %4
+}
+declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind readnone
+
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:
 ; SSE:       # BB#0:
