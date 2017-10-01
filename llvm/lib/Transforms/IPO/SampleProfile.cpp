@@ -149,13 +149,14 @@ private:
 class SampleProfileLoader {
 public:
   SampleProfileLoader(
-      StringRef Name,
+      StringRef Name, bool IsThinLTOPreLink,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
       : DT(nullptr), PDT(nullptr), LI(nullptr), GetAC(GetAssumptionCache),
         GetTTI(GetTargetTransformInfo), Reader(), Samples(nullptr),
-        Filename(Name), ProfileIsValid(false), TotalCollectedSamples(0),
-        ORE(nullptr) {}
+        Filename(Name), ProfileIsValid(false),
+        IsThinLTOPreLink(IsThinLTOPreLink),
+        TotalCollectedSamples(0), ORE(nullptr) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM);
@@ -252,6 +253,12 @@ protected:
   /// \brief Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid;
 
+  /// \brief Flag indicating if the pass is invoked in ThinLTO compile phase.
+  ///
+  /// In this phase, in annotation, we should not promote indirect calls.
+  /// Instead, we will mark GUIDs that needs to be annotated to the function.
+  bool IsThinLTOPreLink;
+
   /// \brief Total number of samples collected in this profile.
   ///
   /// This is the sum of all the samples collected in all the functions executed
@@ -267,8 +274,9 @@ public:
   // Class identification, replacement for typeinfo
   static char ID;
 
-  SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile)
-      : ModulePass(ID), SampleLoader(Name,
+  SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile,
+                                bool IsThinLTOPreLink = false)
+      : ModulePass(ID), SampleLoader(Name, IsThinLTOPreLink,
                                      [&](Function &F) -> AssumptionCache & {
                                        return ACT->getAssumptionCache(F);
                                      },
@@ -755,6 +763,12 @@ bool SampleProfileLoader::inlineHotFunctions(
         if (PromotedInsns.count(I))
           continue;
         for (const auto *FS : findIndirectCallFunctionSamples(*I)) {
+          if (IsThinLTOPreLink) {
+            FS->findImportedFunctions(ImportGUIDs, F.getParent(),
+                                      Samples->getTotalSamples() *
+                                          SampleProfileHotThreshold / 100);
+            continue;
+          }
           auto CalleeFunctionName = FS->getName();
           // If it is a recursive call, we do not inline it as it could bloat
           // the code exponentially. There is way to better handle this, e.g.
@@ -783,16 +797,16 @@ bool SampleProfileLoader::inlineHotFunctions(
                 inlineCallInstruction(DI))
               LocalChanged = true;
           } else {
-            FS->findImportedFunctions(ImportGUIDs, F.getParent(),
-                                      Samples->getTotalSamples() *
-                                          SampleProfileHotThreshold / 100);
+            DEBUG(dbgs()
+                  << "\nFailed to promote indirect call to "
+                  << CalleeFunctionName << " because " << Reason << "\n");
           }
         }
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
         if (inlineCallInstruction(I))
           LocalChanged = true;
-      } else {
+      } else if (IsThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findImportedFunctions(
             ImportGUIDs, F.getParent(),
             Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
@@ -1558,9 +1572,9 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     return FAM.getResult<TargetIRAnalysis>(F);
   };
 
-  SampleProfileLoader SampleLoader(ProfileFileName.empty() ? SampleProfileFile
-                                                           : ProfileFileName,
-                                   GetAssumptionCache, GetTTI);
+  SampleProfileLoader SampleLoader(
+      ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
+      IsThinLTOPreLink, GetAssumptionCache, GetTTI);
 
   SampleLoader.doInitialization(M);
 

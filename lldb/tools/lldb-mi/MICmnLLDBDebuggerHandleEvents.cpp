@@ -218,7 +218,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleEventSBBreakPoint(
       lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(vEvent);
   switch (eEvent) {
   default:
-    break
+    break;
   case lldb::eBreakpointEventTypeThreadChanged:
     pEventType = "eBreakpointEventTypeThreadChanged";
     break;

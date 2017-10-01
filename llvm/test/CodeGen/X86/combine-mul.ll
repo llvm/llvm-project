@@ -185,7 +185,7 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 ;
 ; AVX-LABEL: combine_vec_mul_negpow2c:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,4294967295]
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vpsrlq $32, %ymm0, %ymm2
 ; AVX-NEXT:    vmovdqa {{.*#+}} ymm3 = [18446744073709551615,18446744073709551614,18446744073709551612,18446744073709551600]

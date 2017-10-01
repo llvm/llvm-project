@@ -5606,7 +5606,6 @@ ParsedType Sema::ActOnObjCInstanceType(SourceLocation Loc) {
 /// space for the type.
 static void HandleAddressSpaceTypeAttribute(QualType &Type,
                                             const AttributeList &Attr, Sema &S){
-
   // If this type is already address space qualified, reject it.
   // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified by
   // qualifiers for two or more different address spaces."
