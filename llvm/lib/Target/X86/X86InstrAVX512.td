@@ -2077,7 +2077,33 @@ multiclass avx512_vcmp_common<X86VectorVTInfo _> {
                          "$cc, ${src2}"##_.BroadcastStr##", $src1",
                          "$src1, ${src2}"##_.BroadcastStr##", $cc">,EVEX_B;
     }
- }
+  }
+
+  // Patterns for selecting with loads in other operand.
+  def : Pat<(X86cmpm (_.LdFrag addr:$src2), (_.VT _.RC:$src1),
+                     CommutableCMPCC:$cc),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmi") _.RC:$src1, addr:$src2,
+                                                      imm:$cc)>;
+
+  def : Pat<(and _.KRCWM:$mask, (X86cmpm (_.LdFrag addr:$src2),
+                                         (_.VT _.RC:$src1),
+                                         CommutableCMPCC:$cc)),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmik") _.KRCWM:$mask,
+                                                       _.RC:$src1, addr:$src2,
+                                                       imm:$cc)>;
+
+  def : Pat<(X86cmpm (X86VBroadcast (_.ScalarLdFrag addr:$src2)),
+                     (_.VT _.RC:$src1), CommutableCMPCC:$cc),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmbi") _.RC:$src1, addr:$src2,
+                                                       imm:$cc)>;
+
+  def : Pat<(and _.KRCWM:$mask, (X86cmpm (X86VBroadcast
+                                          (_.ScalarLdFrag addr:$src2)),
+                                         (_.VT _.RC:$src1),
+                                         CommutableCMPCC:$cc)),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmbik") _.KRCWM:$mask,
+                                                        _.RC:$src1, addr:$src2,
+                                                        imm:$cc)>;
 }
 
 multiclass avx512_vcmp_sae<X86VectorVTInfo _> {
@@ -2118,6 +2144,17 @@ defm VCMPPD : avx512_vcmp<avx512vl_f64_info>,
 defm VCMPPS : avx512_vcmp<avx512vl_f32_info>,
                           AVX512PSIi8Base, EVEX_4V, EVEX_CD8<32, CD8VF>;
 
+
+// Patterns to select fp compares with load as first operand.
+let Predicates = [HasAVX512] in {
+  def : Pat<(v1i1 (X86cmpms (loadf64 addr:$src2), FR64X:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPSDZrm FR64X:$src1, addr:$src2, imm:$cc)>;
+
+  def : Pat<(v1i1 (X86cmpms (loadf32 addr:$src2), FR32X:$src1,
+                            CommutableCMPCC:$cc)),
+            (VCMPSSZrm FR32X:$src1, addr:$src2, imm:$cc)>;
+}
 
 // ----------------------------------------------------------------
 // FPClass

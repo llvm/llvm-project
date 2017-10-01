@@ -25,6 +25,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/xxhash.h"
 #include <mutex>
 
 using namespace llvm;
@@ -903,7 +904,7 @@ void MergeInputSection::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
       fatal(toString(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
     Pieces.emplace_back(Off, !IsAlloc);
-    Hashes.push_back(hash_value(toStringRef(Data.slice(0, Size))));
+    Hashes.push_back(xxHash64(toStringRef(Data.slice(0, Size))));
     Data = Data.slice(Size);
     Off += Size;
   }
@@ -917,7 +918,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> Data,
   assert((Size % EntSize) == 0);
   bool IsAlloc = this->Flags & SHF_ALLOC;
   for (unsigned I = 0, N = Size; I != N; I += EntSize) {
-    Hashes.push_back(hash_value(toStringRef(Data.slice(I, EntSize))));
+    Hashes.push_back(xxHash64(toStringRef(Data.slice(I, EntSize))));
     Pieces.emplace_back(I, !IsAlloc);
   }
 }

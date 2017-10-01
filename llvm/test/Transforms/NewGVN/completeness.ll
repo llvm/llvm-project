@@ -8,7 +8,7 @@ define i32 @test1(i32, i8**) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; CHECK:         br label [[TMP6:%.*]]
 ; CHECK:         br label [[TMP6]]
-; CHECK:         [[PHIOFOPS:%.*]] = phi i32 [ 75, [[TMP4]] ], [ 105, [[TMP5]] ]
+; CHECK:         [[PHIOFOPS:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 5, [[TMP4]] ], [ 7, [[TMP5]] ]
 ; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
 ;
@@ -25,6 +25,33 @@ define i32 @test1(i32, i8**) {
   %.0 = phi i32 [ 5, %4 ], [ 7, %5 ]
   %7 = mul nsw i32 %.0, 15
   ret i32 %7
+}
+;; Dependent phi of ops
+define i32 @test1b(i32, i8**) {
+; CHECK-LABEL: @test1b(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CHECK:         br label [[TMP6:%.*]]
+; CHECK:         br label [[TMP6]]
+; CHECK:         [[PHIOFOPS1:%.*]] = phi i32 [ 105, [[TMP5]] ], [ 75, [[TMP4]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ 1575, [[TMP5]] ], [ 1125, [[TMP4]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 5, [[TMP4]] ], [ 7, [[TMP5]] ]
+; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
+;
+  %3 = icmp ne i32 %0, 0
+  br i1 %3, label %4, label %5
+
+; <label>:4:                                      ; preds = %2
+  br label %6
+
+; <label>:5:                                      ; preds = %2
+  br label %6
+
+; <label>:6:                                      ; preds = %5, %4
+  %.0 = phi i32 [ 5, %4 ], [ 7, %5 ]
+  %7 = mul nsw i32 %.0, 15
+  %8 = mul nsw i32 %7, 15
+  ret i32 %8
 }
 
 define i32 @test2(i32) {
@@ -188,7 +215,7 @@ define i64 @test5(i64 %arg) {
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb15:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i64 [ [[TMP25:%.*]], [[BB15]] ], [ [[TMP12]], [[BB14]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i64 [ [[TMP12]], [[BB14]] ], [ [[TMP25:%.*]], [[BB15]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ [[TMP24:%.*]], [[BB15]] ], [ [[TMP11]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ [[TMP22:%.*]], [[BB15]] ], [ [[TMP10]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i64 [ [[TMP20:%.*]], [[BB15]] ], [ 0, [[BB14]] ]
@@ -470,3 +497,109 @@ bb7:                                              ; preds = %bb2
 }
 
 declare i32* @wombat()
+
+;; Ensure that when reachability affects a phi of ops, we recompute
+;; it.  Here, the phi node is marked for recomputation when bb7->bb3
+;; becomes live, but the value does not change. if we do not directly
+;; recompute the phi of ops instruction (tmp5), the value number will
+;; change in the verifier, as it goes from a constant value to a
+;; phi of [true, false]
+
+define void @test12() {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB2:%.*]], label [[BB8:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[BB7:%.*]] ]
+; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB6:%.*]], label [[BB7]]
+; CHECK:       bb6:
+; CHECK-NEXT:    br label [[BB7]]
+; CHECK:       bb7:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb8:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = load i32, i32* null
+  %tmp1 = icmp sgt i32 %tmp, 0
+  br i1 %tmp1, label %bb2, label %bb8
+
+bb2:                                              ; preds = %bb
+  br label %bb3
+
+bb3:                                              ; preds = %bb7, %bb2
+  %tmp4 = phi i32 [ %tmp, %bb2 ], [ undef, %bb7 ]
+  %tmp5 = icmp sgt i32 %tmp4, 0
+  br i1 %tmp5, label %bb6, label %bb7
+
+bb6:                                              ; preds = %bb3
+  br label %bb7
+
+bb7:                                              ; preds = %bb6, %bb3
+  br label %bb3
+
+bb8:                                              ; preds = %bb
+  ret void
+}
+
+;; Make sure we reprocess phi of ops involving loads when loads change class.
+;; This is PR 34473
+define void @test13() {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* null
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i8 [ [[TMP]], [[BB1]] ], [ [[TMP10:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i8* [ null, [[BB1]] ], [ [[TMP6:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ undef, [[BB1]] ], [ [[TMP9:%.*]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP6]] = getelementptr i8, i8* [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i8 [[PHIOFOPS]] to i32
+; CHECK-NEXT:    [[TMP9]] = mul i32 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10]] = load i8, i8* [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
+; CHECK-NEXT:    br i1 [[TMP11]], label [[BB12:%.*]], label [[BB3]]
+; CHECK:       bb12:
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP9]], 0
+; CHECK-NEXT:    br i1 [[TMP14]], label [[BB1]], label [[BB15:%.*]]
+; CHECK:       bb15:
+; CHECK-NEXT:    call void (...) @bar()
+; CHECK-NEXT:    br label [[BB1]]
+;
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb15, %bb12, %bb
+  %tmp = load i8, i8* null
+  %tmp2 = icmp eq i8 %tmp, 8
+  br label %bb3
+
+bb3:                                              ; preds = %bb3, %bb1
+  %tmp4 = phi i8* [ null, %bb1 ], [ %tmp6, %bb3 ]
+  %tmp5 = phi i32 [ undef, %bb1 ], [ %tmp9, %bb3 ]
+  %tmp6 = getelementptr i8, i8* %tmp4, i64 1
+  %tmp7 = load i8, i8* %tmp4
+  %tmp8 = sext i8 %tmp7 to i32
+  %tmp9 = mul i32 %tmp5, %tmp8
+  %tmp10 = load i8, i8* %tmp6
+  %tmp11 = icmp eq i8 %tmp10, 0
+  br i1 %tmp11, label %bb12, label %bb3
+
+bb12:                                             ; preds = %bb3
+  %tmp13 = phi i32 [ %tmp9, %bb3 ]
+  %tmp14 = icmp eq i32 %tmp13, 0
+  br i1 %tmp14, label %bb1, label %bb15
+
+bb15:                                             ; preds = %bb12
+  call void (...) @bar()
+  br label %bb1
+}
+
+declare void @bar(...)
+
