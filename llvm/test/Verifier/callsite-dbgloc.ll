@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o %t 2>&1 | FileCheck %s
+; RUN: llvm-as %s -o %t 2>&1 | FileCheck %s
 ; Created and then edited from
 ;   extern void i();
 ;   void h() { i(); }
@@ -38,6 +38,8 @@ entry:
 }
 
 attributes #0 = { nounwind ssp uwtable }
+
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

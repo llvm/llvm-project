@@ -1431,7 +1431,6 @@ void GlobalObject::setMetadata(StringRef Kind, MDNode *N) {
 MDNode *GlobalObject::getMetadata(unsigned KindID) const {
   SmallVector<MDNode *, 1> MDs;
   getMetadata(KindID, MDs);
-  assert(MDs.size() <= 1 && "Expected at most one metadata attachment");
   if (MDs.empty())
     return nullptr;
   return MDs[0];

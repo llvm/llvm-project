@@ -444,7 +444,8 @@ int main(int argc, char **argv) {
   }
 
   // Load the input module...
-  std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
+  std::unique_ptr<Module> M =
+      parseIRFile(InputFilename, Err, Context, !NoVerify);
 
   if (!M) {
     Err.print(argv[0], errs());

@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
 
 define i32 @foo() !dbg !4 {
 entry:
@@ -11,6 +11,7 @@ entry:
   ret i32 0, !dbg !6
 }
 
+; CHECK: warning: ignoring invalid debug info
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
 

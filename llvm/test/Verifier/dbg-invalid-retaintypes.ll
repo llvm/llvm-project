@@ -1,5 +1,5 @@
-; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK:      assembly parsed, but does not verify
+; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

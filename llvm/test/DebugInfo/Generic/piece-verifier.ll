@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 
@@ -53,3 +53,4 @@ attributes #1 = { nounwind readnone }
 ; CHECK-NEXT: !DIExpression({{[0-9]+}}, 64, 32, {{[0-9]+}})
 ; CHECK-NOT: invalid expression
 !27 = !DIExpression(DW_OP_LLVM_fragment, 64, 32, DW_OP_deref)
+; CHECK: warning: ignoring invalid debug info
