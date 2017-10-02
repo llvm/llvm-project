@@ -145,9 +145,11 @@ public:
     /// Indicates that the tracked object is an Objective-C object.
     ObjC,
     /// Indicates that the tracked object could be a CF or Objective-C object.
-    AnyObj
+    AnyObj,
+    /// Indicates that the tracked object is a generalized object.
+    Generalized
   };
-  
+
 private:
   Kind K;
   ObjKind O;
