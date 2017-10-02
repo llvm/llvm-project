@@ -31,7 +31,6 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     UnwindCursor.hpp
-    unwind_ext.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/libunwind.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/unwind.h)
 

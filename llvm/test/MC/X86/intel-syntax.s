@@ -532,14 +532,14 @@ xchg [ECX], EAX
 xchg AX, [ECX]
 xchg [ECX], AX
 
-// CHECK: testq (%ecx), %rax
-// CHECK: testq (%ecx), %rax
-// CHECK: testl (%ecx), %eax
-// CHECK: testl (%ecx), %eax
-// CHECK: testw (%ecx), %ax
-// CHECK: testw (%ecx), %ax
-// CHECK: testb (%ecx), %al
-// CHECK: testb (%ecx), %al
+// CHECK: testq %rax, (%ecx)
+// CHECK: testq %rax, (%ecx)
+// CHECK: testl %eax, (%ecx)
+// CHECK: testl %eax, (%ecx)
+// CHECK: testw %ax, (%ecx)
+// CHECK: testw %ax, (%ecx)
+// CHECK: testb %al, (%ecx)
+// CHECK: testb %al, (%ecx)
 test RAX, [ECX]
 test [ECX], RAX
 test EAX, [ECX]

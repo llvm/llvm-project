@@ -292,7 +292,7 @@ body:             |
     %rcx = CMOVNE64rr killed %rcx, killed %rdx, implicit killed %eflags
     %rcx = OR64rr killed %rcx, killed %rsi, implicit-def dead %eflags
     %rdx = MOVSX64rm32 %rbx, 1, _, 0, _ :: (load 4, align 8)
-    TEST32rm killed %eax, killed %rcx, 4, killed %rdx, 0, _, implicit-def %eflags :: (load 4)
+    TEST32mr killed %rcx, 4, killed %rdx, 0, _, killed %eax, implicit-def %eflags :: (load 4)
     JNE_1 %bb.2, implicit %eflags
     JMP_1 %bb.3
 

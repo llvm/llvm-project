@@ -3236,14 +3236,14 @@ defm : ShiftRotateByOneAlias<"ror", "ROR">;
 FIXME */
 
 // test: We accept "testX <reg>, <mem>" and "testX <mem>, <reg>" as synonyms.
-def : InstAlias<"test{b}\t{$val, $mem|$mem, $val}",
-                (TEST8rm  GR8 :$val, i8mem :$mem), 0>;
-def : InstAlias<"test{w}\t{$val, $mem|$mem, $val}",
-                (TEST16rm GR16:$val, i16mem:$mem), 0>;
-def : InstAlias<"test{l}\t{$val, $mem|$mem, $val}",
-                (TEST32rm GR32:$val, i32mem:$mem), 0>;
-def : InstAlias<"test{q}\t{$val, $mem|$mem, $val}",
-                (TEST64rm GR64:$val, i64mem:$mem), 0>;
+def : InstAlias<"test{b}\t{$mem, $val|$val, $mem}",
+                (TEST8mr  i8mem :$mem, GR8 :$val), 0>;
+def : InstAlias<"test{w}\t{$mem, $val|$val, $mem}",
+                (TEST16mr i16mem:$mem, GR16:$val), 0>;
+def : InstAlias<"test{l}\t{$mem, $val|$val, $mem}",
+                (TEST32mr i32mem:$mem, GR32:$val), 0>;
+def : InstAlias<"test{q}\t{$mem, $val|$val, $mem}",
+                (TEST64mr i64mem:$mem, GR64:$val), 0>;
 
 // xchg: We accept "xchgX <reg>, <mem>" and "xchgX <mem>, <reg>" as synonyms.
 def : InstAlias<"xchg{b}\t{$mem, $val|$val, $mem}",

@@ -406,9 +406,9 @@ sysretl
 // CHECK: encoding: [0x0f,0x07]
 
 testl	%ecx, -24(%ebp)
-// CHECK: testl	-24(%ebp), %ecx
+// CHECK: testl	%ecx, -24(%ebp)
 testl	-24(%ebp), %ecx
-// CHECK: testl	-24(%ebp), %ecx
+// CHECK: testl	%ecx, -24(%ebp)
 
 
 push %cs
