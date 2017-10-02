@@ -211,6 +211,12 @@ struct Configuration {
   // if that's true.)
   bool IsMips64EL;
 
+  // Holds set of ELF header flags for MIPS targets. The set calculated
+  // by the `elf::calcMipsEFlags` function and cached in this field. For
+  // the calculation we iterate over all input object files and combine
+  // their ELF flags.
+  uint32_t MipsEFlags = 0;
+
   // The ELF spec defines two types of relocation table entries, RELA and
   // REL. RELA is a triplet of (offset, info, addend) while REL is a
   // tuple of (offset, info). Addends for REL are implicit and read from

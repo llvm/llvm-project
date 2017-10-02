@@ -173,7 +173,7 @@ private:
   ///         For each statement instance, the array elements that contain the
   ///         same ValInst.
   isl::union_map findSameContentElements(isl::union_map ValInst) {
-    assert(ValInst.is_single_valued().is_true());
+    assert(!ValInst.is_single_valued().is_false());
 
     // { Domain[] }
     isl::union_set Domain = ValInst.domain();

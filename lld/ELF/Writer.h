@@ -48,7 +48,7 @@ struct PhdrEntry {
 
 llvm::StringRef getOutputSectionName(llvm::StringRef Name);
 
-template <class ELFT> uint32_t getMipsEFlags();
+template <class ELFT> uint32_t calcMipsEFlags();
 
 uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
                          llvm::StringRef FileName);

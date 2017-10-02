@@ -151,7 +151,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
       return nullptr;
     }
 
-    // LLD checks ISA compatibility in getMipsEFlags(). Here we just
+    // LLD checks ISA compatibility in calcMipsEFlags(). Here we just
     // select the highest number of ISA/Rev/Ext.
     Flags.isa_level = std::max(Flags.isa_level, S->isa_level);
     Flags.isa_rev = std::max(Flags.isa_rev, S->isa_rev);

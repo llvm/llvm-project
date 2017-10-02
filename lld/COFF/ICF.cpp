@@ -61,9 +61,9 @@ private:
 
 // Returns a hash value for S.
 uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getPermissions(), hash_value(C->SectionName),
-                      C->NumRelocs, C->Alignment,
-                      uint32_t(C->Header->SizeOfRawData), C->Checksum);
+  return hash_combine(C->getPermissions(), C->SectionName, C->NumRelocs,
+                      C->Alignment, uint32_t(C->Header->SizeOfRawData),
+                      C->Checksum, C->getContents());
 }
 
 // Returns true if section S is subject of ICF.
@@ -210,9 +210,10 @@ void ICF::run(const std::vector<Chunk *> &Vec) {
   }
 
   // Initially, we use hash values to partition sections.
-  for (SectionChunk *SC : Chunks)
+  for_each(parallel::par, Chunks.begin(), Chunks.end(), [&](SectionChunk *SC) {
     // Set MSB to 1 to avoid collisions with non-hash classs.
     SC->Class[0] = getHash(SC) | (1 << 31);
+  });
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
