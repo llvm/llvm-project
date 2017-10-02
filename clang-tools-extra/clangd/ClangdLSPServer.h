@@ -71,6 +71,7 @@ private:
                         JSONOutput &Out) override;
   void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
                             JSONOutput &Out) override;
+  void onFileEvent(const DidChangeWatchedFilesParams &Params) override;
 
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);

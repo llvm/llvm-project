@@ -73,6 +73,10 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams Params,
                      Params.contentChanges[0].text);
 }
 
+void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  Server.onFileEvent(Params);
+}
+
 void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams Params,
                                          JSONOutput &Out) {
   Server.removeDocument(Params.textDocument.uri.file);
