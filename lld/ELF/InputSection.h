@@ -91,7 +91,7 @@ protected:
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() != Output; }
 
   // The file this section is from.
   InputFile *File;
@@ -211,7 +211,7 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
                     StringRef Name);
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() == Merge; }
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
@@ -281,7 +281,7 @@ public:
   template <class ELFT>
   EhInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
                  StringRef Name);
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() == EHFrame; }
   template <class ELFT> void split();
   template <class ELFT, class RelTy> void split(ArrayRef<RelTy> Rels);
 
