@@ -9,7 +9,7 @@
 #define CLC_VERSION_1_2 120
 #endif
 
-#define NULL ((void*)NULL)
+#define NULL ((void*)0)
 
 #define __kernel_exec(X, typen) __kernel \
                                 __attribute__((work_group_size_hint(X, 1, 1))) \

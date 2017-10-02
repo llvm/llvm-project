@@ -652,9 +652,8 @@ class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
 
 // BinOpRR - Instructions like "add reg, reg, reg".
 class BinOpRR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-              dag outlist, list<dag> pattern, InstrItinClass itin,
-              Format f = MRMDestReg>
-  : ITy<opcode, f, typeinfo, outlist,
+              dag outlist, list<dag> pattern, InstrItinClass itin>
+  : ITy<opcode, MRMDestReg, typeinfo, outlist,
         (ins typeinfo.RegClass:$src1, typeinfo.RegClass:$src2),
         mnemonic, "{$src2, $src1|$src1, $src2}", pattern, itin>,
     Sched<[WriteALU]>;
@@ -662,11 +661,11 @@ class BinOpRR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 // BinOpRR_F - Instructions like "cmp reg, Reg", where the pattern has
 // just a EFLAGS as a result.
 class BinOpRR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                SDPatternOperator opnode, Format f = MRMDestReg>
+                SDPatternOperator opnode>
   : BinOpRR<opcode, mnemonic, typeinfo, (outs),
             [(set EFLAGS,
                   (opnode typeinfo.RegClass:$src1, typeinfo.RegClass:$src2))],
-            IIC_BIN_NONMEM, f>;
+            IIC_BIN_NONMEM>;
 
 // BinOpRR_RF - Instructions like "add reg, reg, reg", where the pattern has
 // both a regclass and EFLAGS as a result.
@@ -727,7 +726,7 @@ class BinOpRM<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 
 // BinOpRM_F - Instructions like "cmp reg, [mem]".
 class BinOpRM_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-              SDPatternOperator opnode>
+                SDNode opnode>
   : BinOpRM<opcode, mnemonic, typeinfo, (outs),
             [(set EFLAGS,
             (opnode typeinfo.RegClass:$src1, (typeinfo.LoadNode addr:$src2)))]>;
@@ -837,7 +836,7 @@ class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 
 // BinOpMR_F - Instructions like "cmp [mem], reg".
 class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                  SDNode opnode>
+                SDPatternOperator opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(set EFLAGS, (opnode (load addr:$dst), typeinfo.RegClass:$src))]>;
 
@@ -1224,10 +1223,10 @@ let isCompare = 1 in {
       def TEST64rr : BinOpRR_F<0x84, "test", Xi64, X86testpat>;
     } // isCommutable
 
-    def TEST8rm    : BinOpRM_F<0x84, "test", Xi8 , X86testpat>;
-    def TEST16rm   : BinOpRM_F<0x84, "test", Xi16, X86testpat>;
-    def TEST32rm   : BinOpRM_F<0x84, "test", Xi32, X86testpat>;
-    def TEST64rm   : BinOpRM_F<0x84, "test", Xi64, X86testpat>;
+    def TEST8mr    : BinOpMR_F<0x84, "test", Xi8 , X86testpat>;
+    def TEST16mr   : BinOpMR_F<0x84, "test", Xi16, X86testpat>;
+    def TEST32mr   : BinOpMR_F<0x84, "test", Xi32, X86testpat>;
+    def TEST64mr   : BinOpMR_F<0x84, "test", Xi64, X86testpat>;
 
     def TEST8ri    : BinOpRI_F<0xF6, "test", Xi8 , X86testpat, MRM0r>;
     def TEST16ri   : BinOpRI_F<0xF6, "test", Xi16, X86testpat, MRM0r>;
