@@ -2430,6 +2430,15 @@ void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
     << Range;
 }
 
+void MicrosoftCXXNameMangler::mangleType(const DependentAddressSpaceType *T,
+                                         Qualifiers, SourceRange Range) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent address space type yet");
+  Diags.Report(Range.getBegin(), DiagID) << Range;
+}
+
 void MicrosoftCXXNameMangler::mangleType(const ObjCInterfaceType *T, Qualifiers,
                                          SourceRange) {
   // ObjC interfaces have structs underlying them.

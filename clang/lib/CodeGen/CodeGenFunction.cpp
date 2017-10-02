@@ -171,7 +171,7 @@ LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
   LValueBaseInfo BaseInfo;
   CharUnits Alignment = getNaturalTypeAlignment(T, &BaseInfo);
   return LValue::MakeAddr(Address(V, Alignment), T, getContext(), BaseInfo,
-                          CGM.getTBAAInfo(T));
+                          CGM.getTBAATypeInfo(T));
 }
 
 /// Given a value of type T* that may not be to a complete object,

@@ -1,6 +1,6 @@
 // RUN: %clangxx -g -DSHARED_LIB %s -fPIC -shared -o %T/target_uninstrumented-so.so
 // RUN: %clangxx_cfi_diag -g %s -o %t %T/target_uninstrumented-so.so
-// RUN: %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: cxxabi
 // UNSUPPORTED: win32

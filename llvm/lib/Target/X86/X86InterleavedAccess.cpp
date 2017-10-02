@@ -132,11 +132,12 @@ bool X86InterleavedAccessGroup::isSupported() const {
      return true;
 
   if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) && Factor == 4 &&
-      (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024))
-     return true;
+      (WideInstSize == 256 || WideInstSize == 512 || WideInstSize == 1024 ||
+       WideInstSize == 2048))
+    return true;
 
   if (ShuffleElemSize == 8 && Factor == 3 &&
-      (WideInstSize == 384 || WideInstSize == 768))
+      (WideInstSize == 384 || WideInstSize == 768 || WideInstSize == 1536))
     return true;
 
   return false;
@@ -149,10 +150,10 @@ void X86InterleavedAccessGroup::decompose(
   assert((isa<LoadInst>(VecInst) || isa<ShuffleVectorInst>(VecInst)) &&
          "Expected Load or Shuffle");
 
-  Type *VecTy = VecInst->getType();
-  (void)VecTy;
-  assert(VecTy->isVectorTy() &&
-         DL.getTypeSizeInBits(VecTy) >=
+  Type *VecWidth = VecInst->getType();
+  (void)VecWidth;
+  assert(VecWidth->isVectorTy() &&
+         DL.getTypeSizeInBits(VecWidth) >=
              DL.getTypeSizeInBits(SubVecTy) * NumSubVectors &&
          "Invalid Inst-size!!!");
 
@@ -178,11 +179,12 @@ void X86InterleavedAccessGroup::decompose(
   // In the case of stride 3 with a vector of 32 elements load the information
   // in the following way:
   // [0,1...,VF/2-1,VF/2+VF,VF/2+VF+1,...,2VF-1]
-  if (DL.getTypeSizeInBits(VecTy) == 768) {
+  unsigned VecLength = DL.getTypeSizeInBits(VecWidth);
+  if (VecLength == 768 || VecLength == 1536) {
     Type *VecTran =
         VectorType::get(Type::getInt8Ty(LI->getContext()), 16)->getPointerTo();
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecTran);
-    NumLoads = NumSubVectors * 2;
+    NumLoads = NumSubVectors * (VecLength / 384);
   } else
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
   // Generate N loads of T type.
@@ -195,32 +197,100 @@ void X86InterleavedAccessGroup::decompose(
   }
 }
 
-//  Create shuffle mask for concatenation of two half vectors.
-//  Low = false:  mask generated for the shuffle
-//  shuffle(VEC1,VEC2,{NumElement/2, NumElement/2+1, NumElement/2+2...,
-//                    NumElement-1, NumElement+NumElement/2,
-//                    NumElement+NumElement/2+1..., 2*NumElement-1})
-//  = concat(high_half(VEC1),high_half(VEC2))
-//  Low = true:  mask generated for the shuffle
-//  shuffle(VEC1,VEC2,{0,1,2,...,NumElement/2-1,NumElement,
-//                    NumElement+1...,NumElement+NumElement/2-1})
-//  = concat(low_half(VEC1),low_half(VEC2))
-static void createConcatShuffleMask(int NumElements,
-                                    SmallVectorImpl<uint32_t> &Mask, bool Low) {
-  int NumHalfElements = NumElements / 2;
-  int Offset = Low ? 0 : NumHalfElements;
-  for (int i = 0; i < NumHalfElements; ++i)
-    Mask.push_back(i + Offset);
-  for (int i = 0; i < NumHalfElements; ++i)
-    Mask.push_back(i + Offset + NumElements);
-}
-
 // Changing the scale of the vector type by reducing the number of elements and
 // doubling the scalar size.
 static MVT scaleVectorType(MVT VT) {
   unsigned ScalarSize = VT.getVectorElementType().getScalarSizeInBits() * 2;
   return MVT::getVectorVT(MVT::getIntegerVT(ScalarSize),
                           VT.getVectorNumElements() / 2);
+}
+
+static uint32_t Concat[] = {
+  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+  32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+  48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63 };
+
+
+// genShuffleBland - Creates shuffle according to two vectors.This function is
+// only works on instructions with lane inside 256 registers. According to
+// the mask 'Mask' creates a new Mask 'Out' by the offset of the mask. The
+// offset amount depends on the two integer, 'LowOffset' and 'HighOffset'.
+// Where the 'LowOffset' refers to the first vector and the highOffset refers to
+// the second vector.
+// |a0....a5,b0....b4,c0....c4|a16..a21,b16..b20,c16..c20|
+// |c5...c10,a5....a9,b5....b9|c21..c26,a22..a26,b21..b25|
+// |b10..b15,c11..c15,a10..a15|b26..b31,c27..c31,a27..a31|
+// For the sequence to work as a mirror to the load.
+// We must consider the elements order as above.
+// In this function we are combining two types of shuffles.
+// The first one is vpshufed and the second is a type of "blend" shuffle.
+// By computing the shuffle on a sequence of 16 elements(one lane) and add the
+// correct offset. We are creating a vpsuffed + blend sequence between two
+// shuffles.
+static void genShuffleBland(MVT VT, ArrayRef<uint32_t> Mask,
+  SmallVectorImpl<uint32_t> &Out, int LowOffset,
+  int HighOffset) {
+  assert(VT.getSizeInBits() >= 256 &&
+    "This function doesn't accept width smaller then 256");
+  unsigned NumOfElm = VT.getVectorNumElements();
+  for (unsigned i = 0; i < Mask.size(); i++)
+    Out.push_back(Mask[i] + LowOffset);
+  for (unsigned i = 0; i < Mask.size(); i++)
+    Out.push_back(Mask[i] + HighOffset + NumOfElm);
+}
+
+// reorderSubVecotr returns the data to is the original state. And de-facto is
+// the opposite of  the function concatSubVector.
+
+// For VecElems = 16
+// Invec[0] -  |0|      TransposedMatrix[0] - |0|
+// Invec[1] -  |1|  =>  TransposedMatrix[1] - |1|
+// Invec[2] -  |2|      TransposedMatrix[2] - |2|
+
+// For VecElems = 32
+// Invec[0] -  |0|3|      TransposedMatrix[0] - |0|1|
+// Invec[1] -  |1|4|  =>  TransposedMatrix[1] - |2|3|
+// Invec[2] -  |2|5|      TransposedMatrix[2] - |4|5|
+
+// For VecElems = 64
+// Invec[0] -  |0|3|6|9 |     TransposedMatrix[0] - |0|1|2 |3 |
+// Invec[1] -  |1|4|7|10| =>  TransposedMatrix[1] - |4|5|6 |7 |
+// Invec[2] -  |2|5|8|11|     TransposedMatrix[2] - |8|9|10|11|
+
+static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
+  ArrayRef<Value *> Vec, ArrayRef<uint32_t> VPShuf,
+  unsigned VecElems, unsigned Stride,
+  IRBuilder<> Builder) {
+
+  if (VecElems == 16) {
+    for (unsigned i = 0; i < Stride; i++)
+      TransposedMatrix[i] = Builder.CreateShuffleVector(
+        Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
+    return;
+  }
+
+  SmallVector<uint32_t, 32> OptimizeShuf;
+  Value *Temp[8];
+
+  for (unsigned i = 0; i < (VecElems / 16) * Stride; i += 2) {
+    genShuffleBland(VT, VPShuf, OptimizeShuf, (i / Stride) * 16,
+      (i + 1) / Stride * 16);
+    Temp[i / 2] = Builder.CreateShuffleVector(
+      Vec[i % Stride], Vec[(i + 1) % Stride], OptimizeShuf);
+    OptimizeShuf.clear();
+  }
+
+  if (VecElems == 32) {
+    std::copy(Temp, Temp + Stride, TransposedMatrix.begin());
+    return;
+  }
+  else
+    for (unsigned i = 0; i < Stride; i++)
+      TransposedMatrix[i] =
+      Builder.CreateShuffleVector(Temp[2 * i], Temp[2 * i + 1], Concat);
+
+  return;
 }
 
 void X86InterleavedAccessGroup::interleave8bitStride4VF8(
@@ -265,7 +335,7 @@ void X86InterleavedAccessGroup::interleave8bitStride4VF8(
 
 void X86InterleavedAccessGroup::interleave8bitStride4(
     ArrayRef<Instruction *> Matrix, SmallVectorImpl<Value *> &TransposedMatrix,
-    unsigned numberOfElement) {
+    unsigned NumOfElm) {
 
   // Example: Assuming we start from the following vectors:
   // Matrix[0]= c0 c1 c2 c3 c4 ... c31
@@ -273,19 +343,15 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   // Matrix[2]= y0 y1 y2 y3 y4 ... y31
   // Matrix[3]= k0 k1 k2 k3 k4 ... k31
 
-  MVT VT = MVT::getVectorVT(MVT::i8, numberOfElement);
+  MVT VT = MVT::getVectorVT(MVT::i8, NumOfElm);
   MVT HalfVT = scaleVectorType(VT);
 
   TransposedMatrix.resize(4);
   SmallVector<uint32_t, 32> MaskHigh;
   SmallVector<uint32_t, 32> MaskLow;
   SmallVector<uint32_t, 32> LowHighMask[2];
-  SmallVector<uint32_t, 32> MaskHighTemp1;
-  SmallVector<uint32_t, 32> MaskLowTemp1;
-  SmallVector<uint32_t, 32> MaskHighWord;
-  SmallVector<uint32_t, 32> MaskLowWord;
-  SmallVector<uint32_t, 32> ConcatLow;
-  SmallVector<uint32_t, 32> ConcatHigh;
+  SmallVector<uint32_t, 32> MaskHighTemp;
+  SmallVector<uint32_t, 32> MaskLowTemp;
 
   // MaskHighTemp and MaskLowTemp built in the vpunpckhbw and vpunpcklbw X86
   // shuffle pattern.
@@ -296,10 +362,10 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
   // MaskHighTemp1 and MaskLowTemp1 built in the vpunpckhdw and vpunpckldw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp1, true, false);
-  createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp1, false, false);
-  scaleShuffleMask<uint32_t>(2, MaskLowTemp1, LowHighMask[0]);
-  scaleShuffleMask<uint32_t>(2, MaskHighTemp1, LowHighMask[1]);
+  createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp, true, false);
+  createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp, false, false);
+  scaleShuffleMask<uint32_t>(2, MaskLowTemp, LowHighMask[0]);
+  scaleShuffleMask<uint32_t>(2, MaskHighTemp, LowHighMask[1]);
 
   // IntrVec1Low  = c0  m0  c1  m1 ... c7  m7  | c16 m16 c17 m17 ... c23 m23
   // IntrVec1High = c8  m8  c9  m9 ... c15 m15 | c24 m24 c25 m25 ... c31 m31
@@ -322,25 +388,18 @@ void X86InterleavedAccessGroup::interleave8bitStride4(
     VecOut[i] = Builder.CreateShuffleVector(IntrVec[i / 2], IntrVec[i / 2 + 2],
                                             LowHighMask[i % 2]);
 
-  if (VT == MVT::v16i8) {
-    std::copy(VecOut, VecOut + 4, TransposedMatrix.begin());
-    return;
-  }
-
   // cmyk0  cmyk1  cmyk2  cmyk3   | cmyk4  cmyk5  cmyk6  cmyk7
   // cmyk8  cmyk9  cmyk10 cmyk11  | cmyk12 cmyk13 cmyk14 cmyk15
   // cmyk16 cmyk17 cmyk18 cmyk19  | cmyk20 cmyk21 cmyk22 cmyk23
   // cmyk24 cmyk25 cmyk26 cmyk27  | cmyk28 cmyk29 cmyk30 cmyk31
 
-  // ConcatHigh and ConcatLow built in the vperm2i128 and vinserti128 X86
-  // shuffle pattern.
-  createConcatShuffleMask(numberOfElement, ConcatLow, true);
-  createConcatShuffleMask(numberOfElement, ConcatHigh, false);
+  if (VT == MVT::v16i8) {
+    std::copy(VecOut, VecOut + 4, TransposedMatrix.begin());
+    return;
+  }
 
-  TransposedMatrix[0] = Builder.CreateShuffleVector(VecOut[0], VecOut[1], ConcatLow);
-  TransposedMatrix[1] = Builder.CreateShuffleVector(VecOut[2], VecOut[3], ConcatLow);
-  TransposedMatrix[2] = Builder.CreateShuffleVector(VecOut[0], VecOut[1], ConcatHigh);
-  TransposedMatrix[3] = Builder.CreateShuffleVector(VecOut[2], VecOut[3], ConcatHigh);
+  reorderSubVector(VT, TransposedMatrix, VecOut, makeArrayRef(Concat, 16),
+		   NumOfElm, 4, Builder);
 }
 
 //  createShuffleStride returns shuffle mask of size N.
@@ -413,6 +472,55 @@ static void DecodePALIGNRMask(MVT VT, unsigned Imm,
   }
 }
 
+// concatSubVector - The function rebuilds the data to a correct expected
+// order. An assumption(The shape of the matrix) was taken for the
+// deinterleaved to work with lane's instructions like 'vpalign' or 'vphuf'.
+// This function ensures that the data is built in correct way for the lane
+// instructions. Each lane inside the vector is a 128-bit length.
+//
+// The 'InVec' argument contains the data in increasing order. In InVec[0] You
+// can find the first 128 bit data. The number of different lanes inside a
+// vector depends on the 'VecElems'.In general, the formula is
+// VecElems * type / 128. The size of the array 'InVec' depends and equal to
+// 'VecElems'.
+
+// For VecElems = 16
+// Invec[0] - |0|      Vec[0] - |0|
+// Invec[1] - |1|  =>  Vec[1] - |1|
+// Invec[2] - |2|      Vec[2] - |2|
+
+// For VecElems = 32
+// Invec[0] - |0|1|      Vec[0] - |0|3|
+// Invec[1] - |2|3|  =>  Vec[1] - |1|4|
+// Invec[2] - |4|5|      Vec[2] - |2|5|
+
+// For VecElems = 64
+// Invec[0] - |0|1|2 |3 |      Vec[0] - |0|3|6|9 |
+// Invec[1] - |4|5|6 |7 |  =>  Vec[1] - |1|4|7|10|
+// Invec[2] - |8|9|10|11|      Vec[2] - |2|5|8|11|
+
+static void concatSubVector(Value **Vec, ArrayRef<Instruction *> InVec,
+                            unsigned VecElems, IRBuilder<> Builder) {
+  if (VecElems == 16) {
+    for (int i = 0; i < 3; i++)
+      Vec[i] = InVec[i];
+    return;
+  }
+
+  for (unsigned j = 0; j < VecElems / 32; j++)
+    for (int i = 0; i < 3; i++)
+      Vec[i + j * 3] = Builder.CreateShuffleVector(
+          InVec[j * 6 + i], InVec[j * 6 + i + 3], makeArrayRef(Concat, 32));
+
+  if (VecElems == 32)
+    return;
+
+  for (int i = 0; i < 3; i++)
+    Vec[i] = Builder.CreateShuffleVector(Vec[i], Vec[i + 3], Concat);
+
+  return;
+}
+
 void X86InterleavedAccessGroup::deinterleave8bitStride3(
     ArrayRef<Instruction *> InVec, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned VecElems) {
@@ -423,18 +531,14 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
   // Matrix[2]= b5 c5 a6 b6 c6 a7 b7 c7
 
   TransposedMatrix.resize(3);
-  SmallVector<uint32_t, 32> Concat;
   SmallVector<uint32_t, 32> VPShuf;
   SmallVector<uint32_t, 32> VPAlign[2];
   SmallVector<uint32_t, 32> VPAlign2;
   SmallVector<uint32_t, 32> VPAlign3;
   SmallVector<uint32_t, 3> GroupSize;
-  Value *Vec[3], *TempVector[3];
+  Value *Vec[6], *TempVector[3];
 
   MVT VT = MVT::getVT(Shuffles[0]->getType());
-
-  for (unsigned i = 0; i < VecElems && VecElems == 32; ++i)
-    Concat.push_back(i);
 
   createShuffleStride(VT, 3, VPShuf);
   setGroupSize(VT, GroupSize);
@@ -445,11 +549,7 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
   DecodePALIGNRMask(VT, GroupSize[2] + GroupSize[1], VPAlign2, true, true);
   DecodePALIGNRMask(VT, GroupSize[1], VPAlign3, true, true);
 
-  for (int i = 0; i < 3; i++)
-    Vec[i] = VecElems == 32
-                 ? Builder.CreateShuffleVector(InVec[i], InVec[i + 3], Concat)
-                 : InVec[i];
-
+  concatSubVector(Vec, InVec, VecElems, Builder);
   // Vec[0]= a0 a1 a2 b0 b1 b2 c0 c1
   // Vec[1]= c2 c3 c4 a3 a4 a5 b3 b4
   // Vec[2]= b5 b6 b7 c5 c6 c7 a6 a7
@@ -510,34 +610,6 @@ static void group2Shuffle(MVT VT, SmallVectorImpl<uint32_t> &Mask,
   }
 }
 
-// genShuffleBland - Creates shuffle according to two vectors.This function is
-// only works on instructions with lane inside 256 registers. According to
-// the mask 'Mask' creates a new Mask 'Out' by the offset of the mask. The
-// offset amount depends on the two integer, 'LowOffset' and 'HighOffset'.
-// Where the 'LowOffset' refers to the first vector and the highOffset refers to
-// the second vector.
-// |a0....a5,b0....b4,c0....c4|a16..a21,b16..b20,c16..c20|
-// |c5...c10,a5....a9,b5....b9|c21..c26,a22..a26,b21..b25|
-// |b10..b15,c11..c15,a10..a15|b26..b31,c27..c31,a27..a31|
-// For the sequence to work as a mirror to the load.
-// We must consider the elements order as above.
-// In this function we are combining two types of shuffles.
-// The first one is vpshufed and the second is a type of "blend" shuffle.
-// By computing the shuffle on a sequence of 16 elements(one lane) and add the
-// correct offset. We are creating a vpsuffed + blend sequence between two
-// shuffles.
-static void genShuffleBland(MVT VT, ArrayRef<uint32_t> Mask,
-                            SmallVectorImpl<uint32_t> &Out, int LowOffset,
-                            int HighOffset) {
-  assert(VT.getSizeInBits() == 256 &&
-         "This function works on only width of 256");
-  unsigned NumOfElm = VT.getVectorNumElements();
-  for (unsigned i = 0; i < Mask.size(); i++)
-    Out.push_back(Mask[i] + LowOffset);
-  for (unsigned i = 0; i < Mask.size(); i++)
-    Out.push_back(Mask[i] + HighOffset + NumOfElm);
-}
-
 void X86InterleavedAccessGroup::interleave8bitStride3(
     ArrayRef<Instruction *> InVec, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned VecElems) {
@@ -553,7 +625,7 @@ void X86InterleavedAccessGroup::interleave8bitStride3(
   SmallVector<uint32_t, 32> VPAlign[3];
   SmallVector<uint32_t, 32> VPAlign2;
   SmallVector<uint32_t, 32> VPAlign3;
-  SmallVector<uint32_t, 32> OptimizeShuf[3];
+
   Value *Vec[3], *TempVector[3];
   MVT VT = MVT::getVectorVT(MVT::i8, VecElems);
 
@@ -595,23 +667,9 @@ void X86InterleavedAccessGroup::interleave8bitStride3(
   // TransposedMatrix[1] = c2 a3 b3 c3 a4 b4 c4 a5
   // TransposedMatrix[2] = b5 c5 a6 b6 c6 a7 b7 c7
 
-  group2Shuffle(VT, GroupSize, VPShuf);
-
-  if (VT.getSizeInBits() <= 128) {
-    for (int i = 0; i < 3; i++)
-      TransposedMatrix[i] = Builder.CreateShuffleVector(
-          Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
-    return;
-  }
-
   unsigned NumOfElm = VT.getVectorNumElements();
-  genShuffleBland(VT, VPShuf, OptimizeShuf[0], 0, 0);
-  genShuffleBland(VT, VPShuf, OptimizeShuf[1], 0, NumOfElm / 2);
-  genShuffleBland(VT, VPShuf, OptimizeShuf[2], NumOfElm / 2, NumOfElm / 2);
-
-  for (int i = 0; i < 3; i++)
-    TransposedMatrix[i] = Builder.CreateShuffleVector(
-        Vec[(i * 2) % 3], Vec[(i * 2 + 1) % 3], OptimizeShuf[i]);
+  group2Shuffle(VT, GroupSize, VPShuf);
+  reorderSubVector(VT, TransposedMatrix, Vec, VPShuf, NumOfElm,3, Builder);
 
   return;
 }
@@ -673,6 +731,7 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
     case 8:
     case 16:
     case 32:
+    case 64:
       deinterleave8bitStride3(DecomposedVectors, TransposedVectors,
                               NumSubVecElems);
       break;
@@ -706,6 +765,7 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
     break;
   case 16:
   case 32:
+  case 64:
     if (Factor == 4)
       interleave8bitStride4(DecomposedVectors, TransposedVectors,
                             NumSubVecElems);

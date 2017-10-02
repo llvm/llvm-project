@@ -318,10 +318,10 @@
 # CHECK: sysretl
 0x0f 0x07
 
-# CHECK: testl -24(%ebp), %ecx
+# CHECK: testl %ecx, -24(%ebp)
 0x67 0x66 0x85 0x4d 0xe8
 
-# CHECK: testl -24(%ebp), %ecx
+# CHECK: testl %ecx, -24(%ebp)
 0x67 0x66 0x85 0x4d 0xe8
 
 # CHECK: pushw %cs

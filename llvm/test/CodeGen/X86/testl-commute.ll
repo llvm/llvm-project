@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin7"
 define i32 @test(i32* %P, i32* %G) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK-NOT: ret
-; CHECK: testl (%{{.*}}), %{{.*}}
+; CHECK: testl %{{.*}}, (%{{.*}})
 ; CHECK: ret
 
 entry:
@@ -30,7 +30,7 @@ bb1:		; preds = %entry
 define i32 @test2(i32* %P, i32* %G) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK-NOT: ret
-; CHECK: testl (%{{.*}}), %{{.*}}
+; CHECK: testl %{{.*}}, (%{{.*}})
 ; CHECK: ret
 
 entry:
@@ -51,7 +51,7 @@ bb1:		; preds = %entry
 define i32 @test3(i32* %P, i32* %G) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK-NOT: ret
-; CHECK: testl (%{{.*}}), %{{.*}}
+; CHECK: testl %{{.*}}, (%{{.*}})
 ; CHECK: ret
 
 entry:

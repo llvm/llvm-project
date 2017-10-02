@@ -227,18 +227,19 @@ class LValue {
 
   Expr *BaseIvarExp;
 
-  /// Used by struct-path-aware TBAA.
+  /// TBAABaseType - The base access type used by TBAA.
   QualType TBAABaseType;
-  /// Offset relative to the base type.
+
+  /// TBAAOffset - Access offset used by TBAA.
   uint64_t TBAAOffset;
 
-  /// TBAAInfo - TBAA information to attach to dereferences of this LValue.
-  llvm::MDNode *TBAAInfo;
+  /// TBAAInfo - The final access type used by TBAA.
+  llvm::MDNode *TBAAAccessType;
 
 private:
   void Initialize(QualType Type, Qualifiers Quals,
                   CharUnits Alignment, LValueBaseInfo BaseInfo,
-                  llvm::MDNode *TBAAInfo = nullptr) {
+                  llvm::MDNode *TBAAAccessType = nullptr) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->Type = Type;
@@ -258,7 +259,7 @@ private:
     // Initialize fields for TBAA.
     this->TBAABaseType = Type;
     this->TBAAOffset = 0;
-    this->TBAAInfo = TBAAInfo;
+    this->TBAAAccessType = TBAAAccessType;
   }
 
 public:
@@ -324,8 +325,8 @@ public:
   uint64_t getTBAAOffset() const { return TBAAOffset; }
   void setTBAAOffset(uint64_t O) { TBAAOffset = O; }
 
-  llvm::MDNode *getTBAAInfo() const { return TBAAInfo; }
-  void setTBAAInfo(llvm::MDNode *N) { TBAAInfo = N; }
+  llvm::MDNode *getTBAAAccessType() const { return TBAAAccessType; }
+  void setTBAAAccessType(llvm::MDNode *N) { TBAAAccessType = N; }
 
   const Qualifiers &getQuals() const { return Quals; }
   Qualifiers &getQuals() { return Quals; }
@@ -386,7 +387,7 @@ public:
   static LValue MakeAddr(Address address, QualType type,
                          ASTContext &Context,
                          LValueBaseInfo BaseInfo,
-                         llvm::MDNode *TBAAInfo = nullptr) {
+                         llvm::MDNode *TBAAAccessType = nullptr) {
     Qualifiers qs = type.getQualifiers();
     qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
 
@@ -394,7 +395,7 @@ public:
     R.LVType = Simple;
     assert(address.getPointer()->getType()->isPointerTy());
     R.V = address.getPointer();
-    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
+    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAAccessType);
     return R;
   }
 
