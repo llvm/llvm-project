@@ -49,7 +49,7 @@ def apply_patches(repo):
         f for f in files if fnmatch.fnmatch(
             f, repo + '.*.diff')]
     for p in patches:
-        subprocess.call(["patch", '-p0', '-i',
+        subprocess.call(["patch", '-p1', '-i',
                          os.path.join(lldb_source_path(), 'scripts', p)],
                          cwd=repo)
 
