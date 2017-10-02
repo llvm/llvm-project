@@ -2750,7 +2750,13 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR(SDValue Op,
     MVT SVT = VecVT.getSimpleVT();
     uint64_t W = CW->getZExtValue();
 
-    if (W == 32) {
+    if (W == 1) {
+      MVT LocVT = MVT::getIntegerVT(SVT.getSizeInBits());
+      SDValue VecCast = DAG.getNode(ISD::BITCAST, dl, LocVT, Vec);
+      SDValue Shifted = DAG.getNode(ISD::SRA, dl, LocVT, VecCast, Offset);
+      return DAG.getNode(ISD::AND, dl, LocVT, Shifted,
+                         DAG.getConstant(1, dl, LocVT));
+    } else if (W == 32) {
       // Translate this node into EXTRACT_SUBREG.
       unsigned Subreg = (X == 0) ? Hexagon::isub_lo : 0;
 

@@ -1634,9 +1634,9 @@ def: InstRW<[SKLWriteResGroup21], (instregex "OR8rm")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "POP(16|32|64)r(mr?)")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "SUB(16|32|64)rm")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "SUB8rm")>;
-def: InstRW<[SKLWriteResGroup21], (instregex "TEST(16|32|64)rm")>;
+def: InstRW<[SKLWriteResGroup21], (instregex "TEST(16|32|64)mr")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "TEST8mi")>;
-def: InstRW<[SKLWriteResGroup21], (instregex "TEST8rm")>;
+def: InstRW<[SKLWriteResGroup21], (instregex "TEST8mr")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "XOR(16|32|64)rm")>;
 def: InstRW<[SKLWriteResGroup21], (instregex "XOR8rm")>;
 

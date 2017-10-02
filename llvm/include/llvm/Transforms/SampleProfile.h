@@ -21,10 +21,12 @@ namespace llvm {
 class SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  SampleProfileLoaderPass(std::string File = "") : ProfileFileName(File) {}
+  SampleProfileLoaderPass(std::string File = "", bool IsThinLTOPreLink = false)
+      : ProfileFileName(File), IsThinLTOPreLink(IsThinLTOPreLink) {}
 
 private:
   std::string ProfileFileName;
+  bool IsThinLTOPreLink;
 };
 
 } // End llvm namespace
