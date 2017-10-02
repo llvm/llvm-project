@@ -1664,6 +1664,76 @@ private:
   }
 };
 
+struct DependentAddressSpaceLocInfo {
+  Expr *ExprOperand;
+  SourceRange OperandParens;
+  SourceLocation AttrLoc;
+};
+
+class DependentAddressSpaceTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc,
+                             DependentAddressSpaceTypeLoc,
+                             DependentAddressSpaceType,
+                             DependentAddressSpaceLocInfo> {
+
+  public:
+
+  /// The location of the attribute name, i.e.
+  ///    int * __attribute__((address_space(11)))
+  ///                         ^~~~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const {
+    return getLocalData()->AttrLoc;
+  }
+  void setAttrNameLoc(SourceLocation loc) {
+    getLocalData()->AttrLoc = loc;
+  }
+
+  /// The attribute's expression operand, if it has one.
+  ///    int * __attribute__((address_space(11)))
+  ///                                       ^~
+  Expr *getAttrExprOperand() const {
+    return getLocalData()->ExprOperand;
+  }
+  void setAttrExprOperand(Expr *e) {
+    getLocalData()->ExprOperand = e;
+  }
+
+  /// The location of the parentheses around the operand, if there is
+  /// an operand.
+  ///    int * __attribute__((address_space(11)))
+  ///                                      ^  ^
+  SourceRange getAttrOperandParensRange() const {
+    return getLocalData()->OperandParens;
+  }
+  void setAttrOperandParensRange(SourceRange range) {
+    getLocalData()->OperandParens = range;
+  }
+
+  SourceRange getLocalSourceRange() const {
+    SourceRange range(getAttrNameLoc());
+    range.setEnd(getAttrOperandParensRange().getEnd());
+    return range;
+  }
+
+  ///  Returns the type before the address space attribute application 
+  ///  area.   
+  ///    int * __attribute__((address_space(11))) *
+  ///    ^   ^          
+  QualType getInnerType() const {
+    return this->getTypePtr()->getPointeeType();
+  }
+
+  TypeLoc getPointeeTypeLoc() const {
+    return this->getInnerTypeLoc();
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrNameLoc(loc);
+    setAttrOperandParensRange(SourceRange(loc));
+    setAttrExprOperand(getTypePtr()->getAddrSpaceExpr());
+  }
+};
+
 //===----------------------------------------------------------------------===//
 //
 //  All of these need proper implementations.

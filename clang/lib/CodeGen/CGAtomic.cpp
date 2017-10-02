@@ -98,7 +98,7 @@ namespace {
         LVal = LValue::MakeBitfield(Address(Addr, lvalue.getAlignment()),
                                     BFI, lvalue.getType(),
                                     lvalue.getBaseInfo());
-        LVal.setTBAAInfo(lvalue.getTBAAInfo());
+        LVal.setTBAAAccessType(lvalue.getTBAAAccessType());
         AtomicTy = C.getIntTypeForBitwidth(AtomicSizeInBits, OrigBFI.IsSigned);
         if (AtomicTy.isNull()) {
           llvm::APInt Size(
@@ -205,7 +205,7 @@ namespace {
         addr = CGF.Builder.CreateStructGEP(addr, 0, CharUnits());
 
       return LValue::MakeAddr(addr, getValueType(), CGF.getContext(),
-                              LVal.getBaseInfo(), LVal.getTBAAInfo());
+                              LVal.getBaseInfo(), LVal.getTBAAAccessType());
     }
 
     /// \brief Emits atomic load.
@@ -1425,8 +1425,8 @@ llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
   // Other decoration.
   if (IsVolatile)
     Load->setVolatile(true);
-  if (LVal.getTBAAInfo())
-    CGF.CGM.DecorateInstructionWithTBAA(Load, LVal.getTBAAInfo());
+  if (LVal.getTBAAAccessType())
+    CGF.CGM.DecorateInstructionWithTBAA(Load, LVal.getTBAAAccessType());
   return Load;
 }
 
@@ -1692,8 +1692,8 @@ EmitAtomicUpdateValue(CodeGenFunction &CGF, AtomicInfo &Atomics, RValue OldRVal,
           DesiredAddr, AtomicLVal.getExtVectorElts(), AtomicLVal.getType(),
           AtomicLVal.getBaseInfo());
     }
-    UpdateLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
-    DesiredLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
+    UpdateLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
+    DesiredLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
     UpRVal = CGF.EmitLoadOfLValue(UpdateLVal, SourceLocation());
   }
   // Store new value in the corresponding memory area
@@ -1789,7 +1789,7 @@ static void EmitAtomicUpdateValue(CodeGenFunction &CGF, AtomicInfo &Atomics,
         DesiredAddr, AtomicLVal.getExtVectorElts(), AtomicLVal.getType(),
         AtomicLVal.getBaseInfo());
   }
-  DesiredLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
+  DesiredLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
   // Store new value in the corresponding memory area
   assert(UpdateRVal.isScalar());
   CGF.EmitStoreThroughLValue(UpdateRVal, DesiredLVal);
@@ -1942,8 +1942,8 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
     // Other decoration.
     if (IsVolatile)
       store->setVolatile(true);
-    if (dest.getTBAAInfo())
-      CGM.DecorateInstructionWithTBAA(store, dest.getTBAAInfo());
+    if (dest.getTBAAAccessType())
+      CGM.DecorateInstructionWithTBAA(store, dest.getTBAAAccessType());
     return;
   }
 

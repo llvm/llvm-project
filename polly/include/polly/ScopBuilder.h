@@ -243,10 +243,8 @@ class ScopBuilder {
   /// @param Stmt               Statement to add MemoryAccesses to.
   /// @param BB                 A basic block in @p R.
   /// @param NonAffineSubRegion The non affine sub-region @p BB is in.
-  /// @param IsExitBlock        Flag to indicate that @p BB is in the exit BB.
   void buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
-                            Region *NonAffineSubRegion = nullptr,
-                            bool IsExitBlock = false);
+                            Region *NonAffineSubRegion = nullptr);
 
   /// Create a new MemoryAccess object and add it to #AccFuncMap.
   ///

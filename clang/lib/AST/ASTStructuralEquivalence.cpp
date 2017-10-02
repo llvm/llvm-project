@@ -365,6 +365,21 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  case Type::DependentAddressSpace: {
+    const DependentAddressSpaceType *DepAddressSpace1 =
+        cast<DependentAddressSpaceType>(T1);
+    const DependentAddressSpaceType *DepAddressSpace2 =
+        cast<DependentAddressSpaceType>(T2);
+    if (!IsStructurallyEquivalent(Context, DepAddressSpace1->getAddrSpaceExpr(),
+                                  DepAddressSpace2->getAddrSpaceExpr()))
+      return false;
+    if (!IsStructurallyEquivalent(Context, DepAddressSpace1->getPointeeType(),
+                                  DepAddressSpace2->getPointeeType()))
+      return false;
+
+    break;
+  }
+
   case Type::DependentSizedExtVector: {
     const DependentSizedExtVectorType *Vec1 =
         cast<DependentSizedExtVectorType>(T1);

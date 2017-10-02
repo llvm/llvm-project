@@ -1910,14 +1910,14 @@ public:
                         LValueBaseInfo BaseInfo =
                             LValueBaseInfo(AlignmentSource::Type)) {
     return LValue::MakeAddr(Addr, T, getContext(), BaseInfo,
-                            CGM.getTBAAInfo(T));
+                            CGM.getTBAATypeInfo(T));
   }
 
   LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
                         LValueBaseInfo BaseInfo =
                             LValueBaseInfo(AlignmentSource::Type)) {
     return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
-                            BaseInfo, CGM.getTBAAInfo(T));
+                            BaseInfo, CGM.getTBAATypeInfo(T));
   }
 
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
@@ -3050,7 +3050,7 @@ public:
                                 SourceLocation Loc,
                                 LValueBaseInfo BaseInfo =
                                     LValueBaseInfo(AlignmentSource::Type),
-                                llvm::MDNode *TBAAInfo = nullptr,
+                                llvm::MDNode *TBAAAccessType = nullptr,
                                 QualType TBAABaseTy = QualType(),
                                 uint64_t TBAAOffset = 0,
                                 bool isNontemporal = false);
@@ -3068,8 +3068,8 @@ public:
                          bool Volatile, QualType Ty,
                          LValueBaseInfo BaseInfo =
                              LValueBaseInfo(AlignmentSource::Type),
-                         llvm::MDNode *TBAAInfo = nullptr, bool isInit = false,
-                         QualType TBAABaseTy = QualType(),
+                         llvm::MDNode *TBAAAccessType = nullptr,
+                         bool isInit = false, QualType TBAABaseTy = QualType(),
                          uint64_t TBAAOffset = 0, bool isNontemporal = false);
 
   /// EmitStoreOfScalar - Store a scalar value to an address, taking

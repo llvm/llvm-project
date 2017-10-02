@@ -652,12 +652,19 @@ public:
   CtorList &getGlobalCtors() { return GlobalCtors; }
   CtorList &getGlobalDtors() { return GlobalDtors; }
 
-  llvm::MDNode *getTBAAInfo(QualType QTy);
+  /// getTBAATypeInfo - Get metadata used to describe accesses to objects of
+  /// the given type.
+  llvm::MDNode *getTBAATypeInfo(QualType QTy);
+
   llvm::MDNode *getTBAAInfoForVTablePtr();
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
   /// Return the path-aware tag for given base type, access node and offset.
   llvm::MDNode *getTBAAStructTagInfo(QualType BaseTy, llvm::MDNode *AccessN,
                                      uint64_t O);
+
+  /// getTBAAMayAliasTypeInfo - Get TBAA information that represents
+  /// may-alias accesses.
+  llvm::MDNode *getTBAAMayAliasTypeInfo();
 
   bool isTypeConstant(QualType QTy, bool ExcludeCtorDtor);
 

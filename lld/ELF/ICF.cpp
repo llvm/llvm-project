@@ -155,7 +155,7 @@ private:
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> static uint32_t getHash(InputSection *S) {
-  return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
+  return hash_combine(S->Flags, S->getSize(), S->NumRelocations, S->Data);
 }
 
 // Returns true if section S is subject of ICF.
@@ -394,9 +394,10 @@ template <class ELFT> void ICF<ELFT>::run() {
         Sections.push_back(S);
 
   // Initially, we use hash values to partition sections.
-  for (InputSection *S : Sections)
+  parallelForEach(Sections, [&](InputSection *S) {
     // Set MSB to 1 to avoid collisions with non-hash IDs.
     S->Class[0] = getHash<ELFT>(S) | (1 << 31);
+  });
 
   // From now on, sections in Sections vector are ordered so that sections
   // in the same equivalence class are consecutive in the vector.

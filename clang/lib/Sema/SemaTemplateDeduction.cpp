@@ -1843,6 +1843,60 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
       return Sema::TDK_NonDeducedMismatch;
     }
 
+    //     (clang extension)
+    //
+    //     T __attribute__(((address_space(N))))
+    case Type::DependentAddressSpace: {
+      const DependentAddressSpaceType *AddressSpaceParam =
+          cast<DependentAddressSpaceType>(Param);
+
+      if (const DependentAddressSpaceType *AddressSpaceArg =
+              dyn_cast<DependentAddressSpaceType>(Arg)) {
+        // Perform deduction on the pointer type.
+        if (Sema::TemplateDeductionResult Result =
+                DeduceTemplateArgumentsByTypeMatch(
+                    S, TemplateParams, AddressSpaceParam->getPointeeType(),
+                    AddressSpaceArg->getPointeeType(), Info, Deduced, TDF))
+          return Result;
+
+        // Perform deduction on the address space, if we can.
+        NonTypeTemplateParmDecl *NTTP = getDeducedParameterFromExpr(
+            Info, AddressSpaceParam->getAddrSpaceExpr());
+        if (!NTTP)
+          return Sema::TDK_Success;
+
+        return DeduceNonTypeTemplateArgument(
+            S, TemplateParams, NTTP, AddressSpaceArg->getAddrSpaceExpr(), Info,
+            Deduced);
+      }
+
+      if (Arg.getAddressSpace() >= LangAS::FirstTargetAddressSpace) {
+        llvm::APSInt ArgAddressSpace(S.Context.getTypeSize(S.Context.IntTy),
+                                     false);
+        ArgAddressSpace =
+            (Arg.getAddressSpace() - LangAS::FirstTargetAddressSpace);
+
+        // Perform deduction on the pointer types.
+        if (Sema::TemplateDeductionResult Result =
+                DeduceTemplateArgumentsByTypeMatch(
+                    S, TemplateParams, AddressSpaceParam->getPointeeType(),
+                    S.Context.removeAddrSpaceQualType(Arg), Info, Deduced, TDF))
+          return Result;
+
+        // Perform deduction on the address space, if we can.
+        NonTypeTemplateParmDecl *NTTP = getDeducedParameterFromExpr(
+            Info, AddressSpaceParam->getAddrSpaceExpr());
+        if (!NTTP)
+          return Sema::TDK_Success;
+
+        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
+                                             ArgAddressSpace, S.Context.IntTy,
+                                             true, Info, Deduced);
+      }
+
+      return Sema::TDK_NonDeducedMismatch;
+    }
+
     case Type::TypeOfExpr:
     case Type::TypeOf:
     case Type::DependentName:
@@ -5224,6 +5278,17 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                Depth, Used);
     MarkUsedTemplateParameters(Ctx, VecType->getSizeExpr(), OnlyDeduced,
                                Depth, Used);
+    break;
+  }
+
+  case Type::DependentAddressSpace: {
+    const DependentAddressSpaceType *DependentASType =
+        cast<DependentAddressSpaceType>(T);
+    MarkUsedTemplateParameters(Ctx, DependentASType->getPointeeType(),
+                               OnlyDeduced, Depth, Used);
+    MarkUsedTemplateParameters(Ctx,
+                               DependentASType->getAddrSpaceExpr(),
+                               OnlyDeduced, Depth, Used);
     break;
   }
 
