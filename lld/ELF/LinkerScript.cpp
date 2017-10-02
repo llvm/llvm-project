@@ -677,6 +677,8 @@ void LinkerScript::adjustSectionsAfterSorting() {
   // Try and find an appropriate memory region to assign offsets in.
   for (BaseCommand *Base : Opt.Commands) {
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
+      if (!Sec->Live)
+        continue;
       Sec->MemRegion = findMemoryRegion(Sec);
       // Handle align (e.g. ".foo : ALIGN(16) { ... }").
       if (Sec->AlignExpr)
@@ -713,8 +715,6 @@ void LinkerScript::adjustSectionsAfterSorting() {
       DefPhdrs = Sec->Phdrs;
     }
   }
-
-  removeEmptyCommands();
 }
 
 static OutputSection *findFirstSection(PhdrEntry *Load) {

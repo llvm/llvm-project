@@ -238,7 +238,7 @@ public:
   ///     section has no data or \a offset is not a valid offset
   ///     in this section.
   //------------------------------------------------------------------
-  lldb::offset_t GetSectionData(DataExtractor &data) const;
+  lldb::offset_t GetSectionData(DataExtractor &data);
 
   uint32_t GetLog2Align() { return m_log2align; }
 
@@ -246,6 +246,10 @@ public:
 
   // Get the number of host bytes required to hold a target byte
   uint32_t GetTargetByteSize() const { return m_target_byte_size; }
+
+  bool IsRelocated() const { return m_relocated; }
+
+  void SetIsRelocated(bool b) { m_relocated = b; }
 
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
@@ -274,7 +278,8 @@ protected:
       m_thread_specific : 1,   // This section is thread specific
       m_readable : 1,          // If this section has read permissions
       m_writable : 1,          // If this section has write permissions
-      m_executable : 1;        // If this section has executable permissions
+      m_executable : 1,        // If this section has executable permissions
+      m_relocated : 1;         // If this section has had relocations applied
   uint32_t m_target_byte_size; // Some architectures have non-8-bit byte size.
                                // This is specified as
                                // as a multiple number of a host bytes

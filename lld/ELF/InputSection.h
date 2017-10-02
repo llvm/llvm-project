@@ -13,7 +13,7 @@
 #include "Config.h"
 #include "Relocations.h"
 #include "Thunks.h"
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -91,7 +91,7 @@ protected:
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() != Output; }
 
   // The file this section is from.
   InputFile *File;
@@ -196,11 +196,11 @@ private:
 // be found by looking at the next one) and put the hash in a side table.
 struct SectionPiece {
   SectionPiece(size_t Off, bool Live = false)
-      : InputOff(Off), OutputOff(-1), Live(Live || !Config->GcSections) {}
+      : InputOff(Off), Live(Live || !Config->GcSections), OutputOff(-1) {}
 
-  size_t InputOff;
-  ssize_t OutputOff : 8 * sizeof(ssize_t) - 1;
+  size_t InputOff : 8 * sizeof(ssize_t) - 1;
   size_t Live : 1;
+  ssize_t OutputOff;
 };
 static_assert(sizeof(SectionPiece) == 2 * sizeof(size_t),
               "SectionPiece is too big");
@@ -211,7 +211,7 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
                     StringRef Name);
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() == Merge; }
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
@@ -281,7 +281,7 @@ public:
   template <class ELFT>
   EhInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
                  StringRef Name);
-  static bool classof(const SectionBase *S);
+  static bool classof(const SectionBase *S) { return S->kind() == EHFrame; }
   template <class ELFT> void split();
   template <class ELFT, class RelTy> void split(ArrayRef<RelTy> Rels);
 

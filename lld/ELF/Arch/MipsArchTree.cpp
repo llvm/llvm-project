@@ -281,7 +281,7 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> Files) {
   return Ret;
 }
 
-template <class ELFT> uint32_t elf::getMipsEFlags() {
+template <class ELFT> uint32_t elf::calcMipsEFlags() {
   std::vector<FileFlags> V;
   for (InputFile *F : ObjectFiles)
     V.push_back(
@@ -364,7 +364,7 @@ bool elf::isMipsN32Abi(const InputFile *F) {
   }
 }
 
-template uint32_t elf::getMipsEFlags<ELF32LE>();
-template uint32_t elf::getMipsEFlags<ELF32BE>();
-template uint32_t elf::getMipsEFlags<ELF64LE>();
-template uint32_t elf::getMipsEFlags<ELF64BE>();
+template uint32_t elf::calcMipsEFlags<ELF32LE>();
+template uint32_t elf::calcMipsEFlags<ELF32BE>();
+template uint32_t elf::calcMipsEFlags<ELF64LE>();
+template uint32_t elf::calcMipsEFlags<ELF64BE>();

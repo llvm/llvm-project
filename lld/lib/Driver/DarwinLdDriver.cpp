@@ -13,11 +13,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "lld/Common/LLVM.h"
 #include "lld/Core/ArchiveLibraryFile.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/File.h"
 #include "lld/Core/Instrumentation.h"
-#include "lld/Core/LLVM.h"
 #include "lld/Core/LinkingContext.h"
 #include "lld/Core/Node.h"
 #include "lld/Core/PassManager.h"
