@@ -143,6 +143,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DependentSizedArrayType> DependentSizedArrayTypes;
   mutable llvm::FoldingSet<DependentSizedExtVectorType>
     DependentSizedExtVectorTypes;
+  mutable llvm::FoldingSet<DependentAddressSpaceType>
+      DependentAddressSpaceTypes;
   mutable llvm::FoldingSet<VectorType> VectorTypes;
   mutable llvm::FoldingSet<FunctionNoProtoType> FunctionNoProtoTypes;
   mutable llvm::ContextualFoldingSet<FunctionProtoType, ASTContext&>
@@ -1070,6 +1072,13 @@ public:
   /// replaced.
   QualType getAddrSpaceQualType(QualType T, unsigned AddressSpace) const;
 
+  /// \brief Remove any existing address space on the type and returns the type
+  /// with qualifiers intact (or that's the idea anyway)
+  ///
+  /// The return type should be T with all prior qualifiers minus the address
+  /// space.
+  QualType removeAddrSpaceQualType(QualType T) const;
+
   /// \brief Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
@@ -1269,6 +1278,10 @@ public:
   QualType getDependentSizedExtVectorType(QualType VectorType,
                                           Expr *SizeExpr,
                                           SourceLocation AttrLoc) const;
+
+  QualType getDependentAddressSpaceType(QualType PointeeType,
+                                        Expr *AddrSpaceExpr,
+                                        SourceLocation AttrLoc) const;
 
   /// \brief Return a K&R style C function type like 'int()'.
   QualType getFunctionNoProtoType(QualType ResultTy,

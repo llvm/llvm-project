@@ -1054,8 +1054,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
-  if (Script->Opt.HasSections)
-    Script->adjustSectionsBeforeSorting();
+  Script->adjustSectionsBeforeSorting();
 
   // Don't sort if using -r. It is not necessary and we want to preserve the
   // relative order for SHF_LINK_ORDER sections.
@@ -1197,8 +1196,7 @@ static void removeUnusedSyntheticSections() {
     // If there are no other sections in the output section, remove it from the
     // output.
     if (OS->Commands.empty())
-      llvm::erase_if(Script->Opt.Commands,
-                     [&](BaseCommand *Cmd) { return Cmd == OS; });
+      OS->Live = false;
   }
 }
 
@@ -1304,6 +1302,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   removeUnusedSyntheticSections();
 
   sortSections();
+  Script->removeEmptyCommands();
 
   // Now that we have the final list, create a list of all the
   // OutputSections for convenience.
