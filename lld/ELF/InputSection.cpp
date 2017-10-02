@@ -348,10 +348,6 @@ bool InputSection::classof(const SectionBase *S) {
          S->kind() == SectionBase::Synthetic;
 }
 
-bool InputSectionBase::classof(const SectionBase *S) {
-  return S->kind() != Output;
-}
-
 OutputSection *InputSection::getParent() const {
   return cast_or_null<OutputSection>(Parent);
 }
@@ -821,10 +817,6 @@ SyntheticSection *EhInputSection::getParent() const {
   return cast_or_null<SyntheticSection>(Parent);
 }
 
-bool EhInputSection::classof(const SectionBase *S) {
-  return S->kind() == InputSectionBase::EHFrame;
-}
-
 // Returns the index of the first relocation that points to a region between
 // Begin and Begin+Size.
 template <class IntTy, class RelTy>
@@ -947,10 +939,6 @@ void MergeInputSection::splitIntoPieces() {
   if (Config->GcSections && (this->Flags & SHF_ALLOC))
     for (uint64_t Off : LiveOffsets)
       this->getSectionPiece(Off)->Live = true;
-}
-
-bool MergeInputSection::classof(const SectionBase *S) {
-  return S->kind() == InputSectionBase::Merge;
 }
 
 // Do binary search to get a section piece at a given input offset.

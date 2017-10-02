@@ -230,9 +230,9 @@ bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,
   return num_loaded_sections > 0;
 }
 
-size_t ObjectFileJIT::ReadSectionData(const lldb_private::Section *section,
+size_t ObjectFileJIT::ReadSectionData(lldb_private::Section *section,
                                       lldb::offset_t section_offset, void *dst,
-                                      size_t dst_len) const {
+                                      size_t dst_len) {
   lldb::offset_t file_size = section->GetFileSize();
   if (section_offset < file_size) {
     size_t src_len = file_size - section_offset;
@@ -248,8 +248,8 @@ size_t ObjectFileJIT::ReadSectionData(const lldb_private::Section *section,
 }
 
 size_t ObjectFileJIT::ReadSectionData(
-    const lldb_private::Section *section,
-    lldb_private::DataExtractor &section_data) const {
+    lldb_private::Section *section,
+    lldb_private::DataExtractor &section_data) {
   if (section->GetFileSize()) {
     const void *src = (void *)(uintptr_t)section->GetFileOffset();
 
