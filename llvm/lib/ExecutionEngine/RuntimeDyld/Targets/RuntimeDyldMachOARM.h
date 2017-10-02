@@ -34,7 +34,20 @@ public:
 
   unsigned getStubAlignment() override { return 4; }
 
-  int64_t decodeAddend(const RelocationEntry &RE) const {
+  JITSymbolFlags getJITSymbolFlags(const BasicSymbolRef &SR) override {
+    auto Flags = RuntimeDyldImpl::getJITSymbolFlags(SR);
+    Flags.getTargetFlags() = ARMJITSymbolFlags::fromObjectSymbol(SR);
+    return Flags;
+  }
+
+  uint64_t modifyAddressBasedOnFlags(uint64_t Addr,
+                                     JITSymbolFlags Flags) const override {
+    if (Flags.getTargetFlags() & ARMJITSymbolFlags::Thumb)
+      Addr |= 0x1;
+    return Addr;
+  }
+
+  Expected<int64_t> decodeAddend(const RelocationEntry &RE) const {
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
@@ -46,6 +59,27 @@ public:
         Temp &= 0x00ffffff; // Mask out the opcode.
         // Now we've got the shifted immediate, shift by 2, sign extend and ret.
         return SignExtend32<26>(Temp << 2);
+      }
+
+      case MachO::ARM_THUMB_RELOC_BR22: {
+        // This is a pair of instructions whose operands combine to provide 22
+        // bits of displacement:
+        // Encoding for high bits 1111 0XXX XXXX XXXX
+        // Encoding for low bits  1111 1XXX XXXX XXXX
+        uint16_t HighInsn = readBytesUnaligned(LocalAddress, 2);
+        if ((HighInsn & 0xf800) != 0xf000)
+          return make_error<StringError>("Unrecognized thumb branch encoding "
+                                         "(BR22 high bits)",
+                                         inconvertibleErrorCode());
+
+        uint16_t LowInsn = readBytesUnaligned(LocalAddress + 2, 2);
+        if ((LowInsn & 0xf800) != 0xf800)
+          return make_error<StringError>("Unrecognized thumb branch encoding "
+                                         "(BR22 low bits)",
+                                         inconvertibleErrorCode());
+
+        return SignExtend64<23>(((HighInsn & 0x7ff) << 12) |
+                                ((LowInsn & 0x7ff) << 1));
       }
     }
   }
@@ -61,12 +95,35 @@ public:
         Obj.getRelocation(RelI->getRawDataRefImpl());
     uint32_t RelType = Obj.getAnyRelocationType(RelInfo);
 
+    // Set to true for thumb functions in this (or previous) TUs.
+    // Will be used to set the TargetIsThumbFunc member on the relocation entry.
+    bool TargetIsLocalThumbFunc = false;
+    if (Obj.getPlainRelocationExternal(RelInfo)) {
+      auto Symbol = RelI->getSymbol();
+      StringRef TargetName;
+      if (auto TargetNameOrErr = Symbol->getName())
+        TargetName = *TargetNameOrErr;
+      else
+        return TargetNameOrErr.takeError();
+
+      // If the target is external but the value doesn't have a name then we've
+      // converted the value to a section/offset pair, but we still need to set
+      // the IsTargetThumbFunc bit, so look the value up in the globla symbol table.
+      auto EntryItr = GlobalSymbolTable.find(TargetName);
+      if (EntryItr != GlobalSymbolTable.end()) {
+        TargetIsLocalThumbFunc =
+          EntryItr->second.getFlags().getTargetFlags() &
+          ARMJITSymbolFlags::Thumb;
+      }
+    }
+
     if (Obj.isRelocationScattered(RelInfo)) {
       if (RelType == MachO::ARM_RELOC_HALF_SECTDIFF)
         return processHALFSECTDIFFRelocation(SectionID, RelI, Obj,
                                              ObjSectionToID);
       else if (RelType == MachO::GENERIC_RELOC_VANILLA)
-        return processScatteredVANILLA(SectionID, RelI, Obj, ObjSectionToID);
+        return processScatteredVANILLA(SectionID, RelI, Obj, ObjSectionToID,
+                                       TargetIsLocalThumbFunc);
       else
         return ++RelI;
     }
@@ -77,7 +134,6 @@ public:
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_SECTDIFF);
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_LOCAL_SECTDIFF);
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PB_LA_PTR);
-    UNIMPLEMENTED_RELOC(MachO::ARM_THUMB_RELOC_BR22);
     UNIMPLEMENTED_RELOC(MachO::ARM_THUMB_32BIT_BRANCH);
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_HALF);
     default:
@@ -89,17 +145,30 @@ public:
     }
 
     RelocationEntry RE(getRelocationEntry(SectionID, Obj, RelI));
-    RE.Addend = decodeAddend(RE);
+    if (auto AddendOrErr = decodeAddend(RE))
+      RE.Addend = *AddendOrErr;
+    else
+      return AddendOrErr.takeError();
+    RE.IsTargetThumbFunc = TargetIsLocalThumbFunc;
+
     RelocationValueRef Value;
     if (auto ValueOrErr = getRelocationValueRef(Obj, RelI, RE, ObjSectionToID))
       Value = *ValueOrErr;
     else
       return ValueOrErr.takeError();
 
-    if (RE.IsPCRel)
-      makeValueAddendPCRel(Value, RelI, 8);
+    // If this is a branch from a thumb function (BR22) then make sure we mark
+    // the value as being a thumb stub: we don't want to mix it up with an ARM
+    // stub targeting the same function.
+    if (RE.RelType == MachO::ARM_THUMB_RELOC_BR22)
+      Value.IsStubThumb = TargetIsLocalThumbFunc;
 
-    if ((RE.RelType & 0xf) == MachO::ARM_RELOC_BR24)
+    if (RE.IsPCRel)
+      makeValueAddendPCRel(Value, RelI,
+                           (RE.RelType == MachO::ARM_THUMB_RELOC_BR22) ? 4 : 8);
+
+    if (RE.RelType == MachO::ARM_RELOC_BR24 ||
+        RE.RelType == MachO::ARM_THUMB_RELOC_BR22)
       processBranchRelocation(RE, Value, Stubs);
     else {
       RE.Addend = Value.Offset;
@@ -124,12 +193,30 @@ public:
       Value -= FinalAddress;
       // ARM PCRel relocations have an effective-PC offset of two instructions
       // (four bytes in Thumb mode, 8 bytes in ARM mode).
-      // FIXME: For now, assume ARM mode.
-      Value -= 8;
+      Value -= (RE.RelType == MachO::ARM_THUMB_RELOC_BR22) ? 4 : 8;
     }
 
     switch (RE.RelType) {
+    case MachO::ARM_THUMB_RELOC_BR22: {
+      Value += RE.Addend;
+      uint16_t HighInsn = readBytesUnaligned(LocalAddress, 2);
+      assert((HighInsn & 0xf800) == 0xf000 &&
+             "Unrecognized thumb branch encoding (BR22 high bits)");
+      HighInsn = (HighInsn & 0xf800) | ((Value >> 12) & 0x7ff);
+
+      uint16_t LowInsn = readBytesUnaligned(LocalAddress + 2, 2);
+      assert((LowInsn & 0xf800) != 0xf8000 &&
+             "Unrecognized thumb branch encoding (BR22 low bits)");
+      LowInsn = (LowInsn & 0xf800) | ((Value >> 1) & 0x7ff);
+
+      writeBytesUnaligned(HighInsn, LocalAddress, 2);
+      writeBytesUnaligned(LowInsn, LocalAddress + 2, 2);
+      break;
+    }
+
     case MachO::ARM_RELOC_VANILLA:
+      if (RE.IsTargetThumbFunc)
+        Value |= 0x01;
       writeBytesUnaligned(Value + RE.Addend, LocalAddress, 1 << RE.Size);
       break;
     case MachO::ARM_RELOC_BR24: {
@@ -158,10 +245,19 @@ public:
       Value = SectionABase - SectionBBase + RE.Addend;
       if (RE.Size & 0x1) // :upper16:
         Value = (Value >> 16);
+
+      bool IsThumb = RE.Size & 0x2;
+
       Value &= 0xffff;
 
       uint32_t Insn = readBytesUnaligned(LocalAddress, 4);
-      Insn = (Insn & 0xfff0f000) | ((Value & 0xf000) << 4) | (Value & 0x0fff);
+
+      if (IsThumb)
+        Insn = (Insn & 0x8f00fbf0) | ((Value & 0xf000) >> 12) |
+               ((Value & 0x0800) >> 1) | ((Value & 0x0700) << 20) |
+               ((Value & 0x00ff) << 16);
+      else
+        Insn = (Insn & 0xfff0f000) | ((Value & 0xf000) << 4) | (Value & 0x0fff);
       writeBytesUnaligned(Insn, LocalAddress, 4);
       break;
     }
@@ -196,17 +292,26 @@ private:
       Addr = Section.getAddressWithOffset(i->second);
     } else {
       // Create a new stub function.
+      assert(Section.getStubOffset() % 4 == 0 && "Misaligned stub");
       Stubs[Value] = Section.getStubOffset();
-      uint8_t *StubTargetAddr = createStubFunction(
-          Section.getAddressWithOffset(Section.getStubOffset()));
+      uint32_t StubOpcode = 0;
+      if (RE.RelType == MachO::ARM_RELOC_BR24)
+        StubOpcode = 0xe51ff004; // ldr pc, [pc, #-4]
+      else if (RE.RelType == MachO::ARM_THUMB_RELOC_BR22)
+        StubOpcode = 0xf000f8df; // ldr pc, [pc]
+      else
+        llvm_unreachable("Unrecognized relocation");
+      Addr = Section.getAddressWithOffset(Section.getStubOffset());
+      writeBytesUnaligned(StubOpcode, Addr, 4);
+      uint8_t *StubTargetAddr = Addr + 4;
       RelocationEntry StubRE(
           RE.SectionID, StubTargetAddr - Section.getAddress(),
           MachO::GENERIC_RELOC_VANILLA, Value.Offset, false, 2);
+      StubRE.IsTargetThumbFunc = RE.IsTargetThumbFunc;
       if (Value.SymbolName)
         addRelocationForSymbol(StubRE, Value.SymbolName);
       else
         addRelocationForSection(StubRE, Value.SectionID);
-      Addr = Section.getAddressWithOffset(Section.getStubOffset());
       Section.advanceStubOffset(getMaxStubSize());
     }
     RelocationEntry TargetRE(RE.SectionID, RE.Offset, RE.RelType, 0,
@@ -223,14 +328,12 @@ private:
     MachO::any_relocation_info RE =
         MachO.getRelocation(RelI->getRawDataRefImpl());
 
-
     // For a half-diff relocation the length bits actually record whether this
     // is a movw/movt, and whether this is arm or thumb.
     // Bit 0 indicates movw (b0 == 0) or movt (b0 == 1).
     // Bit 1 indicates arm (b1 == 0) or thumb (b1 == 1).
     unsigned HalfDiffKindBits = MachO.getAnyRelocationLength(RE);
-    if (HalfDiffKindBits & 0x2)
-      llvm_unreachable("Thumb not yet supported.");
+    bool IsThumb = HalfDiffKindBits & 0x2;
 
     SectionEntry &Section = Sections[SectionID];
     uint32_t RelocType = MachO.getAnyRelocationType(RE);
@@ -238,7 +341,14 @@ private:
     uint64_t Offset = RelI->getOffset();
     uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
     int64_t Immediate = readBytesUnaligned(LocalAddress, 4); // Copy the whole instruction out.
-    Immediate = ((Immediate >> 4) & 0xf000) | (Immediate & 0xfff);
+
+    if (IsThumb)
+      Immediate = ((Immediate & 0x0000000f) << 12) |
+                  ((Immediate & 0x00000400) << 1) |
+                  ((Immediate & 0x70000000) >> 20) |
+                  ((Immediate & 0x00ff0000) >> 16);
+    else
+      Immediate = ((Immediate >> 4) & 0xf000) | (Immediate & 0xfff);
 
     ++RelI;
     MachO::any_relocation_info RE2 =

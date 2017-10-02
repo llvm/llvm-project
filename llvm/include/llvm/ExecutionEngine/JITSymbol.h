@@ -40,6 +40,7 @@ using JITTargetAddress = uint64_t;
 class JITSymbolFlags {
 public:
   using UnderlyingType = uint8_t;
+  using TargetFlagsType = uint64_t;
 
   enum FlagNames : UnderlyingType {
     None = 0,
@@ -55,6 +56,11 @@ public:
 
   /// @brief Construct a JITSymbolFlags instance from the given flags.
   JITSymbolFlags(FlagNames Flags) : Flags(Flags) {}
+
+  /// @brief Construct a JITSymbolFlags instance from the given flags and target
+  ///        flags.
+  JITSymbolFlags(FlagNames Flags, TargetFlagsType TargetFlags)
+    : Flags(Flags), TargetFlags(TargetFlags) {}
 
   /// @brief Return true if there was an error retrieving this symbol.
   bool hasError() const {
@@ -80,7 +86,11 @@ public:
     return (Flags & Exported) == Exported;
   }
 
+  /// @brief Implicitly convert to the underlying flags type.
   operator UnderlyingType&() { return Flags; }
+
+  /// @brief Return a reference to the target-specific flags.
+  TargetFlagsType& getTargetFlags() { return TargetFlags; }
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.
@@ -92,6 +102,26 @@ public:
 
 private:
   UnderlyingType Flags = None;
+  TargetFlagsType TargetFlags = 0;
+};
+
+/// @brief ARM-specific JIT symbol flags.
+/// FIXME: This should be moved into a target-specific header.
+class ARMJITSymbolFlags {
+public:
+  ARMJITSymbolFlags() = default;
+
+  enum FlagNames {
+    None = 0,
+    Thumb = 1 << 0
+  };
+
+  operator JITSymbolFlags::TargetFlagsType&() { return Flags; }
+
+  static ARMJITSymbolFlags fromObjectSymbol(
+                                           const object::BasicSymbolRef &Symbol);
+private:
+  JITSymbolFlags::TargetFlagsType Flags = 0;
 };
 
 /// @brief Represents a symbol that has been evaluated to an address already.

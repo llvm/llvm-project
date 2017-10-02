@@ -83,7 +83,8 @@ protected:
   Expected<relocation_iterator>
   processScatteredVANILLA(unsigned SectionID, relocation_iterator RelI,
                           const ObjectFile &BaseObjT,
-                          RuntimeDyldMachO::ObjSectionToIDMap &ObjSectionToID);
+                          RuntimeDyldMachO::ObjSectionToIDMap &ObjSectionToID,
+                          bool TargetIsLocalThumbFunc = false);
 
   /// Construct a RelocationValueRef representing the relocation target.
   /// For Symbols in known sections, this will return a RelocationValueRef
