@@ -1165,7 +1165,7 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
       Scope.ForceCleanup({&V});
       return LValue::MakeAddr(Address(V, LV.getAlignment()), LV.getType(),
                               getContext(), LV.getBaseInfo(),
-                              LV.getTBAAInfo());
+                              LV.getTBAAAccessType());
     }
     // FIXME: Is it possible to create an ExprWithCleanups that produces a
     // bitfield lvalue or some other non-simple lvalue?
@@ -1365,7 +1365,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
                           lvalue.getType(), Loc, lvalue.getBaseInfo(),
-                          lvalue.getTBAAInfo(),
+                          lvalue.getTBAAAccessType(),
                           lvalue.getTBAABaseType(), lvalue.getTBAAOffset(),
                           lvalue.isNontemporal());
 }
@@ -1477,7 +1477,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                                QualType Ty,
                                                SourceLocation Loc,
                                                LValueBaseInfo BaseInfo,
-                                               llvm::MDNode *TBAAInfo,
+                                               llvm::MDNode *TBAAAccessType,
                                                QualType TBAABaseType,
                                                uint64_t TBAAOffset,
                                                bool isNontemporal) {
@@ -1508,7 +1508,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   // Atomic operations have to be done on integral types.
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAAccessType);
   if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
@@ -1519,11 +1519,11 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
         Load->getContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Load->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAInfo) {
+  if (TBAAAccessType) {
     bool MayAlias = BaseInfo.getMayAlias();
     llvm::MDNode *TBAA = MayAlias
-        ? CGM.getTBAAInfo(getContext().CharTy)
-        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo, TBAAOffset);
+        ? CGM.getTBAATypeInfo(getContext().CharTy)
+        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAAccessType, TBAAOffset);
     if (TBAA)
       CGM.DecorateInstructionWithTBAA(Load, TBAA, MayAlias);
   }
@@ -1566,7 +1566,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo,
-                                        llvm::MDNode *TBAAInfo,
+                                        llvm::MDNode *TBAAAccessType,
                                         bool isInit, QualType TBAABaseType,
                                         uint64_t TBAAOffset,
                                         bool isNontemporal) {
@@ -1596,7 +1596,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   Value = EmitToMemory(Value, Ty);
 
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAAccessType);
   if (Ty->isAtomicType() ||
       (!isInit && LValueIsSuitableForInlineAtomic(AtomicLValue))) {
     EmitAtomicStore(RValue::get(Value), AtomicLValue, isInit);
@@ -1610,11 +1610,11 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                           llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Store->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAInfo) {
+  if (TBAAAccessType) {
     bool MayAlias = BaseInfo.getMayAlias();
     llvm::MDNode *TBAA = MayAlias
-        ? CGM.getTBAAInfo(getContext().CharTy)
-        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAInfo, TBAAOffset);
+        ? CGM.getTBAATypeInfo(getContext().CharTy)
+        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAAccessType, TBAAOffset);
     if (TBAA)
       CGM.DecorateInstructionWithTBAA(Store, TBAA, MayAlias);
   }
@@ -1624,8 +1624,9 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
                                         bool isInit) {
   EmitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(),
-                    lvalue.getTBAAInfo(), isInit, lvalue.getTBAABaseType(),
-                    lvalue.getTBAAOffset(), lvalue.isNontemporal());
+                    lvalue.getTBAAAccessType(), isInit,
+                    lvalue.getTBAABaseType(), lvalue.getTBAAOffset(),
+                    lvalue.isNontemporal());
 }
 
 /// EmitLoadOfLValue - Given an expression that represents a value lvalue, this
@@ -3725,9 +3726,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       if (CGM.shouldUseTBAA()) {
         llvm::MDNode *tbaa;
         if (mayAlias)
-          tbaa = CGM.getTBAAInfo(getContext().CharTy);
+          tbaa = CGM.getTBAATypeInfo(getContext().CharTy);
         else
-          tbaa = CGM.getTBAAInfo(type);
+          tbaa = CGM.getTBAATypeInfo(type);
         if (tbaa)
           CGM.DecorateInstructionWithTBAA(load, tbaa);
       }
@@ -3778,8 +3779,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // Fields of may_alias structs act like 'char' for TBAA purposes.
   // FIXME: this should get propagated down through anonymous structs
   // and unions.
-  if (mayAlias && LV.getTBAAInfo())
-    LV.setTBAAInfo(CGM.getTBAAInfo(getContext().CharTy));
+  if (mayAlias && LV.getTBAAAccessType())
+    LV.setTBAAAccessType(CGM.getTBAATypeInfo(getContext().CharTy));
 
   return LV;
 }

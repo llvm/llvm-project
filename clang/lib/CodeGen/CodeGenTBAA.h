@@ -95,9 +95,9 @@ public:
               MangleContext &MContext);
   ~CodeGenTBAA();
 
-  /// getTBAAInfo - Get the TBAA MDNode to be used for a dereference
-  /// of the given type.
-  llvm::MDNode *getTBAAInfo(QualType QTy);
+  /// getTypeInfo - Get metadata used to describe accesses to objects of the
+  /// given type.
+  llvm::MDNode *getTypeInfo(QualType QTy);
 
   /// getTBAAInfoForVTablePtr - Get the TBAA MDNode to be used for a
   /// dereference of a vtable pointer.

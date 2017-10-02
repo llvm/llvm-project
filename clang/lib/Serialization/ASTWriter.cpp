@@ -433,6 +433,15 @@ ASTTypeWriter::VisitDependentSizedExtVectorType(
   Code = TYPE_DEPENDENT_SIZED_EXT_VECTOR;
 }
 
+void 
+ASTTypeWriter::VisitDependentAddressSpaceType(
+    const DependentAddressSpaceType *T) {
+  Record.AddTypeRef(T->getPointeeType());
+  Record.AddStmt(T->getAddrSpaceExpr());
+  Record.AddSourceLocation(T->getAttributeLoc());
+  Code = TYPE_DEPENDENT_ADDRESS_SPACE;
+}
+
 void
 ASTTypeWriter::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
   Record.push_back(T->getDepth());
@@ -625,6 +634,15 @@ void TypeLocWriter::VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
 void TypeLocWriter::VisitDependentSizedArrayTypeLoc(
                                             DependentSizedArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
+}
+
+void TypeLocWriter::VisitDependentAddressSpaceTypeLoc(
+    DependentAddressSpaceTypeLoc TL) {
+  Record.AddSourceLocation(TL.getAttrNameLoc());
+  SourceRange range = TL.getAttrOperandParensRange();
+  Record.AddSourceLocation(range.getBegin());
+  Record.AddSourceLocation(range.getEnd());
+  Record.AddStmt(TL.getAttrExprOperand());       
 }
 
 void TypeLocWriter::VisitDependentSizedExtVectorTypeLoc(
