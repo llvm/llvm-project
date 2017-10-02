@@ -257,10 +257,9 @@ NamedDecl *ASTMaker::findMemberField(const CXXRecordDecl *RD, StringRef Name) {
 
 typedef Stmt *(*FunctionFarmer)(ASTContext &C, const FunctionDecl *D);
 
-static CallExpr *
-create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
-                              const ParmVarDecl *Callback,
-                              SmallVectorImpl<Expr *> &CallArgs) {
+static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
+                                               const ParmVarDecl *Callback,
+                                               ArrayRef<Expr *> CallArgs) {
 
   return new (C) CallExpr(
       /*ASTContext=*/C,
@@ -271,10 +270,10 @@ create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
       /*SourceLocation=*/SourceLocation());
 }
 
-static CallExpr *
-create_call_once_lambda_call(ASTContext &C, ASTMaker M,
-                             const ParmVarDecl *Callback, QualType CallbackType,
-                             SmallVectorImpl<Expr *> &CallArgs) {
+static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
+                                              const ParmVarDecl *Callback,
+                                              QualType CallbackType,
+                                              ArrayRef<Expr *> CallArgs) {
 
   CXXRecordDecl *CallbackDecl = CallbackType->getAsCXXRecordDecl();
 
@@ -292,12 +291,6 @@ create_call_once_lambda_call(ASTContext &C, ASTMaker M,
                           /* NameLoc = */ SourceLocation(),
                           /* T = */ callOperatorDecl->getType(),
                           /* VK = */ VK_LValue);
-
-  CallArgs.insert(
-      CallArgs.begin(),
-      M.makeDeclRefExpr(Callback,
-                        /* RefersToEnclosingVariableOrCapture= */ true,
-                        /* GetNonReferenceType= */ true));
 
   return new (C)
       CXXOperatorCallExpr(/*AstContext=*/C, OO_Call, callOperatorDeclRef,
@@ -335,15 +328,24 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   const ParmVarDecl *Callback = D->getParamDecl(1);
   QualType CallbackType = Callback->getType().getNonReferenceType();
 
+  bool isLambdaCall = CallbackType->getAsCXXRecordDecl() &&
+                      CallbackType->getAsCXXRecordDecl()->isLambda();
+
   SmallVector<Expr *, 5> CallArgs;
+
+  if (isLambdaCall)
+    // Lambda requires callback itself inserted as a first parameter.
+    CallArgs.push_back(
+        M.makeDeclRefExpr(Callback,
+                          /* RefersToEnclosingVariableOrCapture= */ true,
+                          /* GetNonReferenceType= */ true));
 
   // All arguments past first two ones are passed to the callback.
   for (unsigned int i = 2; i < D->getNumParams(); i++)
     CallArgs.push_back(M.makeLvalueToRvalue(D->getParamDecl(i)));
 
   CallExpr *CallbackCall;
-  if (CallbackType->getAsCXXRecordDecl() &&
-      CallbackType->getAsCXXRecordDecl()->isLambda()) {
+  if (isLambdaCall) {
 
     CallbackCall =
         create_call_once_lambda_call(C, M, Callback, CallbackType, CallArgs);
