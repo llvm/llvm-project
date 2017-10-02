@@ -169,6 +169,26 @@ DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
   SizeExpr->Profile(ID, Context, true);
 }
 
+DependentAddressSpaceType::DependentAddressSpaceType(
+    const ASTContext &Context, QualType PointeeType, QualType can,
+    Expr *AddrSpaceExpr, SourceLocation loc)
+    : Type(DependentAddressSpace, can, /*Dependent=*/true,
+           /*InstantiationDependent=*/true,
+           PointeeType->isVariablyModifiedType(),
+           (PointeeType->containsUnexpandedParameterPack() ||
+            (AddrSpaceExpr &&
+             AddrSpaceExpr->containsUnexpandedParameterPack()))),
+      Context(Context), AddrSpaceExpr(AddrSpaceExpr), PointeeType(PointeeType),
+      loc(loc) {}
+
+void DependentAddressSpaceType::Profile(llvm::FoldingSetNodeID &ID,
+                                        const ASTContext &Context,
+                                        QualType PointeeType,
+                                        Expr *AddrSpaceExpr) {
+  ID.AddPointer(PointeeType.getAsOpaquePtr());
+  AddrSpaceExpr->Profile(ID, Context, true);
+}
+
 VectorType::VectorType(QualType vecType, unsigned nElements, QualType canonType,
                        VectorKind vecKind)
     : VectorType(Vector, vecType, nElements, canonType, vecKind) {}
@@ -3651,6 +3671,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentSizedExtVector:
   case Type::Vector:
   case Type::ExtVector:
+  case Type::DependentAddressSpace:
   case Type::FunctionProto:
   case Type::FunctionNoProto:
   case Type::Record:

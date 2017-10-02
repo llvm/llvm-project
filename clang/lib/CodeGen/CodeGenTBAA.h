@@ -95,9 +95,9 @@ public:
               MangleContext &MContext);
   ~CodeGenTBAA();
 
-  /// getTBAAInfo - Get the TBAA MDNode to be used for a dereference
-  /// of the given type.
-  llvm::MDNode *getTBAAInfo(QualType QTy);
+  /// getTypeInfo - Get metadata used to describe accesses to objects of the
+  /// given type.
+  llvm::MDNode *getTypeInfo(QualType QTy);
 
   /// getTBAAInfoForVTablePtr - Get the TBAA MDNode to be used for a
   /// dereference of a vtable pointer.
@@ -116,6 +116,10 @@ public:
 
   /// Get the scalar tag MDNode for a given scalar type.
   llvm::MDNode *getTBAAScalarTagInfo(llvm::MDNode *AccessNode);
+
+  /// getMayAliasTypeInfo - Get TBAA information that represents may-alias
+  /// accesses.
+  llvm::MDNode *getMayAliasTypeInfo();
 };
 
 }  // end namespace CodeGen

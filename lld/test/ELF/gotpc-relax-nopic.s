@@ -64,7 +64,7 @@
 # DISASM-PIC-NEXT: 1023: {{.*}} sbbq  8310(%rip), %rsi
 # DISASM-PIC-NEXT: 102a: {{.*}} subq  8303(%rip), %rbp
 # DISASM-PIC-NEXT: 1031: {{.*}} xorq  8296(%rip), %r8
-# DISASM-PIC-NEXT: 1038: {{.*}} testq 8289(%rip), %r15
+# DISASM-PIC-NEXT: 1038: {{.*}} testq %r15, 8289(%rip)
 
 .data
 .type   bar, @object

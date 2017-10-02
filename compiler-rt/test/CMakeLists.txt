@@ -10,7 +10,7 @@ configure_lit_site_cfg(
 
 set(SANITIZER_COMMON_LIT_TEST_DEPS)
 
-if (COMPILER_RT_HAS_PROFILE)
+if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
   list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS profile)
 endif()
 
@@ -72,7 +72,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
       endif()
     endforeach()
   endif()
-  if (COMPILER_RT_HAS_PROFILE)
+  if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
     compiler_rt_test_runtime(profile)
   endif()
   if(COMPILER_RT_BUILD_XRAY)

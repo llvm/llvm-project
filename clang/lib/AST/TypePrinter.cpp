@@ -222,6 +222,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::LValueReference:
     case Type::RValueReference:
     case Type::MemberPointer:
+    case Type::DependentAddressSpace:
     case Type::DependentSizedExtVector:
     case Type::Vector:
     case Type::ExtVector:
@@ -525,6 +526,19 @@ void TypePrinter::printDependentSizedArrayAfter(
     T->getSizeExpr()->printPretty(OS, nullptr, Policy);
   OS << ']';
   printAfter(T->getElementType(), OS);
+}
+
+void TypePrinter::printDependentAddressSpaceBefore(
+    const DependentAddressSpaceType *T, raw_ostream &OS) {
+  printBefore(T->getPointeeType(), OS);
+}
+void TypePrinter::printDependentAddressSpaceAfter(
+    const DependentAddressSpaceType *T, raw_ostream &OS) {
+  OS << " __attribute__((address_space(";
+  if (T->getAddrSpaceExpr())
+    T->getAddrSpaceExpr()->printPretty(OS, nullptr, Policy);
+  OS << ")))";
+  printAfter(T->getPointeeType(), OS);
 }
 
 void TypePrinter::printDependentSizedExtVectorBefore(
