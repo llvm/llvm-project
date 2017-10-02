@@ -259,6 +259,16 @@ class Configuration(object):
                            compile_flags=compile_flags,
                            link_flags=link_flags)
 
+    def _dump_macros_verbose(self, *args, **kwargs):
+        macros_or_error = self.cxx.dumpMacros(*args, **kwargs)
+        if isinstance(macros_or_error, tuple):
+            cmd, out, err, rc = macros_or_error
+            report = libcxx.util.makeReport(cmd, out, err, rc)
+            report += "Compiler failed unexpectedly when dumping macros!"
+            self.lit_config.fatal(report)
+            return None
+        assert isinstance(macros_or_error, dict)
+        return macros_or_error
 
     def configure_src_root(self):
         self.libcxx_src_root = self.get_lit_conf(
@@ -446,7 +456,7 @@ class Configuration(object):
         if self.get_lit_bool('has_libatomic', False):
             self.config.available_features.add('libatomic')
 
-        macros = self.cxx.dumpMacros()
+        macros = self._dump_macros_verbose()
         if '__cpp_if_constexpr' not in macros:
             self.config.available_features.add('libcpp-no-if-constexpr')
 
@@ -468,7 +478,7 @@ class Configuration(object):
 
         # Attempt to detect the glibc version by querying for __GLIBC__
         # in 'features.h'.
-        macros = self.cxx.dumpMacros(flags=['-include', 'features.h'])
+        macros = self._dump_macros_verbose(flags=['-include', 'features.h'])
         if macros is not None and '__GLIBC__' in macros:
             maj_v, min_v = (macros['__GLIBC__'], macros['__GLIBC_MINOR__'])
             self.config.available_features.add('glibc')
@@ -627,8 +637,8 @@ class Configuration(object):
         """
         # Parse the macro contents of __config_site by dumping the macros
         # using 'c++ -dM -E' and filtering the predefines.
-        predefines = self.cxx.dumpMacros()
-        macros = self.cxx.dumpMacros(header)
+        predefines = self._dump_macros_verbose()
+        macros = self._dump_macros_verbose(header)
         feature_macros_keys = set(macros.keys()) - set(predefines.keys())
         feature_macros = {}
         for k in feature_macros_keys:
@@ -980,7 +990,7 @@ class Configuration(object):
 
     def configure_coroutines(self):
         if self.cxx.hasCompileFlag('-fcoroutines-ts'):
-            macros = self.cxx.dumpMacros(flags=['-fcoroutines-ts'])
+            macros = self._dump_macros_verbose(flags=['-fcoroutines-ts'])
             if '__cpp_coroutines' not in macros:
                 self.lit_config.warning('-fcoroutines-ts is supported but '
                     '__cpp_coroutines is not defined')

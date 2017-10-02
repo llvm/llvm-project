@@ -10,7 +10,7 @@
 #ifndef LLD_ELF_STRINGS_H
 #define LLD_ELF_STRINGS_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"

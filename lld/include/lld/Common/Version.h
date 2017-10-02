@@ -1,4 +1,4 @@
-//===- lld/Config/Version.h - LLD Version Number ----------------*- C++ -*-===//
+//===- lld/Common/Version.h - LLD Version Number ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 #ifndef LLD_VERSION_H
 #define LLD_VERSION_H
 
-#include "lld/Config/Version.inc"
+#include "lld/Common/Version.inc"
 #include "llvm/ADT/StringRef.h"
 
 namespace lld {

@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/TargetOptionsCommandFlags.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Target/TargetOptions.h"
