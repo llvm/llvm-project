@@ -5477,6 +5477,18 @@ static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   ATL.setParensRange(SourceRange());
 }
 
+static void fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL, 
+                                             const AttributeList *Attrs) {
+  while (Attrs && Attrs->getKind() != AttributeList::AT_AddressSpace)
+    Attrs = Attrs->getNext();
+
+  assert(Attrs && "no address_space attribute found at the expected location!");
+  
+  DASTL.setAttrNameLoc(Attrs->getLoc());
+  DASTL.setAttrExprOperand(Attrs->getArgAsExpr(0));
+  DASTL.setAttrOperandParensRange(SourceRange());
+}
+
 /// \brief Create and instantiate a TypeSourceInfo with type source information.
 ///
 /// \param T QualType referring to the type as written in source code.
@@ -5499,6 +5511,13 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
   }
 
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
+    
+    if (DependentAddressSpaceTypeLoc DASTL =
+        CurrTL.getAs<DependentAddressSpaceTypeLoc>()) {
+      fillDependentAddressSpaceTypeLoc(DASTL, D.getTypeObject(i).getAttrs());
+      CurrTL = DASTL.getPointeeTypeLoc().getUnqualifiedLoc();  
+    }
+
     // An AtomicTypeLoc might be produced by an atomic qualifier in this
     // declarator chunk.
     if (AtomicTypeLoc ATL = CurrTL.getAs<AtomicTypeLoc>()) {
@@ -5591,12 +5610,72 @@ ParsedType Sema::ActOnObjCInstanceType(SourceLocation Loc) {
 // Type Attribute Processing
 //===----------------------------------------------------------------------===//
 
+/// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an expression 
+/// is uninstantiated. If instantiated it will apply the appropriate address space 
+/// to the type. This function allows dependent template variables to be used in
+/// conjunction with the address_space attribute  
+QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
+                                     SourceLocation AttrLoc) {
+  if (!AddrSpace->isValueDependent()) { 
+
+    // If this type is already address space qualified, reject it.
+    // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified
+    // by qualifiers for two or more different address spaces."
+    if (T.getAddressSpace()) {
+      Diag(AttrLoc, diag::err_attribute_address_multiple_qualifiers);
+      return QualType();
+    }
+
+    llvm::APSInt addrSpace(32);
+    if (!AddrSpace->isIntegerConstantExpr(addrSpace, Context)) {
+      Diag(AttrLoc, diag::err_attribute_argument_type)
+          << "'address_space'" << AANT_ArgumentIntegerConstant
+          << AddrSpace->getSourceRange();
+      return QualType();
+    }
+
+    // Bounds checking.
+    if (addrSpace.isSigned()) {
+      if (addrSpace.isNegative()) {
+        Diag(AttrLoc, diag::err_attribute_address_space_negative)
+            << AddrSpace->getSourceRange();
+        return QualType();
+      }
+      addrSpace.setIsSigned(false);
+    }
+
+    llvm::APSInt max(addrSpace.getBitWidth());
+    max = Qualifiers::MaxAddressSpace - LangAS::FirstTargetAddressSpace;
+    if (addrSpace > max) {
+      Diag(AttrLoc, diag::err_attribute_address_space_too_high)
+          << (unsigned)max.getZExtValue() << AddrSpace->getSourceRange();
+      return QualType();
+    }
+
+    unsigned ASIdx = static_cast<unsigned>(addrSpace.getZExtValue()) +
+                     LangAS::FirstTargetAddressSpace;
+
+    return Context.getAddrSpaceQualType(T, ASIdx);
+  }
+
+  // A check with similar intentions as checking if a type already has an
+  // address space except for on a dependent types, basically if the 
+  // current type is already a DependentAddressSpaceType then its already 
+  // lined up to have another address space on it and we can't have
+  // multiple address spaces on the one pointer indirection
+  if (T->getAs<DependentAddressSpaceType>()) {
+    Diag(AttrLoc, diag::err_attribute_address_multiple_qualifiers);
+    return QualType();
+  }
+
+  return Context.getDependentAddressSpaceType(T, AddrSpace, AttrLoc);
+}
+
 /// HandleAddressSpaceTypeAttribute - Process an address_space attribute on the
 /// specified type.  The attribute contains 1 argument, the id of the address
 /// space for the type.
 static void HandleAddressSpaceTypeAttribute(QualType &Type,
                                             const AttributeList &Attr, Sema &S){
-
   // If this type is already address space qualified, reject it.
   // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "No type shall be qualified by
   // qualifiers for two or more different address spaces."
@@ -5616,44 +5695,41 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
 
   unsigned ASIdx;
   if (Attr.getKind() == AttributeList::AT_AddressSpace) {
+
     // Check the attribute arguments.
     if (Attr.getNumArgs() != 1) {
       S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr.getName() << 1;
-      Attr.setInvalid();
-      return;
-    }
-    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
-    llvm::APSInt addrSpace(32);
-    if (ASArgExpr->isTypeDependent() || ASArgExpr->isValueDependent() ||
-        !ASArgExpr->isIntegerConstantExpr(addrSpace, S.Context)) {
-      S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-        << Attr.getName() << AANT_ArgumentIntegerConstant
-        << ASArgExpr->getSourceRange();
+          << Attr.getName() << 1;
       Attr.setInvalid();
       return;
     }
 
-    // Bounds checking.
-    if (addrSpace.isSigned()) {
-      if (addrSpace.isNegative()) {
-        S.Diag(Attr.getLoc(), diag::err_attribute_address_space_negative)
-          << ASArgExpr->getSourceRange();
-        Attr.setInvalid();
+    Expr *ASArgExpr;
+    if (Attr.isArgIdent(0)) {
+      // Special case where the argument is a template id.
+      CXXScopeSpec SS;
+      SourceLocation TemplateKWLoc;
+      UnqualifiedId id;
+      id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
+
+      ExprResult AddrSpace = S.ActOnIdExpression(
+          S.getCurScope(), SS, TemplateKWLoc, id, false, false);
+      if (AddrSpace.isInvalid())
         return;
-      }
-      addrSpace.setIsSigned(false);
+
+      ASArgExpr = static_cast<Expr *>(AddrSpace.get());
+    } else {
+      ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
     }
-    llvm::APSInt max(addrSpace.getBitWidth());
-    max = Qualifiers::MaxAddressSpace - LangAS::FirstTargetAddressSpace;
-    if (addrSpace > max) {
-      S.Diag(Attr.getLoc(), diag::err_attribute_address_space_too_high)
-        << (unsigned)max.getZExtValue() << ASArgExpr->getSourceRange();
+
+    // Create the DependentAddressSpaceType or append an address space onto
+    // the type.
+    QualType T = S.BuildAddressSpaceAttr(Type, ASArgExpr, Attr.getLoc());
+
+    if (!T.isNull())
+      Type = T;
+    else
       Attr.setInvalid();
-      return;
-    }
-    ASIdx = static_cast<unsigned>(addrSpace.getZExtValue()) +
-            LangAS::FirstTargetAddressSpace;
   } else {
     // The keyword-based type attributes imply which address space to use.
     switch (Attr.getKind()) {
@@ -5669,9 +5745,9 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       assert(Attr.getKind() == AttributeList::AT_OpenCLPrivateAddressSpace);
       ASIdx = 0; break;
     }
+
+    Type = S.Context.getAddrSpaceQualType(Type, ASIdx);
   }
-  
-  Type = S.Context.getAddrSpaceQualType(Type, ASIdx);
 }
 
 /// Does this type have a "direct" ownership qualifier?  That is,

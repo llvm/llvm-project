@@ -6271,6 +6271,18 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     return Context.getDependentSizedExtVectorType(ElementType, SizeExpr,
                                                   AttrLoc);
   }
+
+  case TYPE_DEPENDENT_ADDRESS_SPACE: {
+    unsigned Idx = 0;
+
+    // DependentAddressSpaceType
+    QualType PointeeType = readType(*Loc.F, Record, Idx);
+    Expr *AddrSpaceExpr = ReadExpr(*Loc.F);
+    SourceLocation AttrLoc = ReadSourceLocation(*Loc.F, Record, Idx);
+
+    return Context.getDependentAddressSpaceType(PointeeType, AddrSpaceExpr,
+                                                   AttrLoc);
+  }
   }
   llvm_unreachable("Invalid TypeCode!");
 }
@@ -6402,6 +6414,17 @@ void TypeLocReader::VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
 void TypeLocReader::VisitDependentSizedArrayTypeLoc(
                                             DependentSizedArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
+}
+
+void TypeLocReader::VisitDependentAddressSpaceTypeLoc(
+    DependentAddressSpaceTypeLoc TL) {
+
+    TL.setAttrNameLoc(ReadSourceLocation());
+    SourceRange range;
+    range.setBegin(ReadSourceLocation());
+    range.setEnd(ReadSourceLocation());
+    TL.setAttrOperandParensRange(range);
+    TL.setAttrExprOperand(Reader->ReadExpr(*F));
 }
 
 void TypeLocReader::VisitDependentSizedExtVectorTypeLoc(

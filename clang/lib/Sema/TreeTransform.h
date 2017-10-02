@@ -835,6 +835,18 @@ public:
                                               Expr *SizeExpr,
                                               SourceLocation AttributeLoc);
 
+  /// \brief Build a new DependentAddressSpaceType or return the pointee
+  /// type variable with the correct address space (retrieved from
+  /// AddrSpaceExpr) applied to it. The former will be returned in cases
+  /// where the address space remains dependent.
+  ///
+  /// By default, performs semantic analysis when building the type with address
+  /// space applied. Subclasses may override this routine to provide different
+  /// behavior.
+  QualType RebuildDependentAddressSpaceType(QualType PointeeType,
+                                            Expr *AddrSpaceExpr,
+                                            SourceLocation AttributeLoc);
+
   /// \brief Build a new function type.
   ///
   /// By default, performs semantic analysis when building the function type.
@@ -4785,7 +4797,53 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
   return Result;
 }
 
-template<typename Derived>
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformDependentAddressSpaceType(
+    TypeLocBuilder &TLB, DependentAddressSpaceTypeLoc TL) {
+  const DependentAddressSpaceType *T = TL.getTypePtr();
+
+  QualType pointeeType = getDerived().TransformType(T->getPointeeType());
+
+  if (pointeeType.isNull())
+    return QualType();
+
+  // Address spaces are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult AddrSpace = getDerived().TransformExpr(T->getAddrSpaceExpr());
+  AddrSpace = SemaRef.ActOnConstantExpression(AddrSpace);
+  if (AddrSpace.isInvalid())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || pointeeType != T->getPointeeType() ||
+      AddrSpace.get() != T->getAddrSpaceExpr()) {
+    Result = getDerived().RebuildDependentAddressSpaceType(
+        pointeeType, AddrSpace.get(), T->getAttributeLoc());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  // Result might be dependent or not.
+  if (isa<DependentAddressSpaceType>(Result)) {
+    DependentAddressSpaceTypeLoc NewTL =
+        TLB.push<DependentAddressSpaceTypeLoc>(Result);
+
+    NewTL.setAttrOperandParensRange(TL.getAttrOperandParensRange());
+    NewTL.setAttrExprOperand(TL.getAttrExprOperand());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+
+  } else {
+    TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(
+        Result, getDerived().getBaseLocation());
+    TransformType(TLB, DI->getTypeLoc());
+  }
+
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformVectorType(TypeLocBuilder &TLB,
                                                      VectorTypeLoc TL) {
   const VectorType *T = TL.getTypePtr();
@@ -12313,10 +12371,18 @@ TreeTransform<Derived>::RebuildDependentSizedArrayType(QualType ElementType,
                                        IndexTypeQuals, BracketsRange);
 }
 
-template<typename Derived>
-QualType TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
-                                               unsigned NumElements,
-                                               VectorType::VectorKind VecKind) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildDependentAddressSpaceType(
+    QualType PointeeType, Expr *AddrSpaceExpr, SourceLocation AttributeLoc) {
+  return SemaRef.BuildAddressSpaceAttr(PointeeType, AddrSpaceExpr,
+                                          AttributeLoc);
+}
+
+template <typename Derived>
+QualType
+TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
+                                          unsigned NumElements,
+                                          VectorType::VectorKind VecKind) {
   // FIXME: semantic checking!
   return SemaRef.Context.getVectorType(ElementType, NumElements, VecKind);
 }

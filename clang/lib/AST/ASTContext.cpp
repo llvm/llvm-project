@@ -2302,6 +2302,27 @@ ASTContext::getAddrSpaceQualType(QualType T, unsigned AddressSpace) const {
   return getExtQualType(TypeNode, Quals);
 }
 
+QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
+  // If we are composing extended qualifiers together, merge together
+  // into one ExtQuals node.
+  QualifierCollector Quals;
+  const Type *TypeNode = Quals.strip(T);
+
+  // If the qualifier doesn't have an address space just return it.
+  if (!Quals.hasAddressSpace())
+    return T;
+
+  Quals.removeAddressSpace();
+
+  // Removal of the address space can mean there are no longer any
+  // non-fast qualifiers, so creating an ExtQualType isn't possible (asserts)
+  // or required.
+  if (Quals.hasNonFastQualifiers())
+    return getExtQualType(TypeNode, Quals);
+  else
+    return QualType(TypeNode, Quals.getFastQualifiers());
+}
+
 QualType ASTContext::getObjCGCQualType(QualType T,
                                        Qualifiers::GC GCAttr) const {
   QualType CanT = getCanonicalType(T);
@@ -2752,6 +2773,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::Vector:
   case Type::ExtVector:
   case Type::DependentSizedExtVector:
+  case Type::DependentAddressSpace:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
@@ -3098,6 +3120,41 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
 
   Types.push_back(New);
   return QualType(New, 0);
+}
+
+QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType, 
+                                                  Expr *AddrSpaceExpr, 
+                                                  SourceLocation AttrLoc) const {
+  assert(AddrSpaceExpr->isInstantiationDependent()); 
+
+  QualType canonPointeeType = getCanonicalType(PointeeType);
+
+  void *insertPos = nullptr;
+  llvm::FoldingSetNodeID ID;
+  DependentAddressSpaceType::Profile(ID, *this, canonPointeeType,
+                                     AddrSpaceExpr);
+
+  DependentAddressSpaceType *canonTy =
+    DependentAddressSpaceTypes.FindNodeOrInsertPos(ID, insertPos);
+
+  if (!canonTy) {
+    canonTy = new (*this, TypeAlignment)
+      DependentAddressSpaceType(*this, canonPointeeType, 
+                                QualType(), AddrSpaceExpr, AttrLoc);
+    DependentAddressSpaceTypes.InsertNode(canonTy, insertPos);
+    Types.push_back(canonTy);
+  }
+    
+  if (canonPointeeType == PointeeType &&
+      canonTy->getAddrSpaceExpr() == AddrSpaceExpr)
+    return QualType(canonTy, 0);     
+
+  DependentAddressSpaceType *sugaredType
+    = new (*this, TypeAlignment)
+        DependentAddressSpaceType(*this, PointeeType, QualType(canonTy, 0), 
+                                  AddrSpaceExpr, AttrLoc);
+  Types.push_back(sugaredType);
+  return QualType(sugaredType, 0);  
 }
 
 /// \brief Determine whether \p T is canonical as the result type of a function.

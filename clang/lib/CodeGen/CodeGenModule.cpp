@@ -573,10 +573,10 @@ void CodeGenModule::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
   Types.RefreshTypeCacheForClass(RD);
 }
 
-llvm::MDNode *CodeGenModule::getTBAAInfo(QualType QTy) {
+llvm::MDNode *CodeGenModule::getTBAATypeInfo(QualType QTy) {
   if (!TBAA)
     return nullptr;
-  return TBAA->getTBAAInfo(QTy);
+  return TBAA->getTypeInfo(QTy);
 }
 
 llvm::MDNode *CodeGenModule::getTBAAInfoForVTablePtr() {
