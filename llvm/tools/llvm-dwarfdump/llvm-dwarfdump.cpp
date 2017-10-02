@@ -143,6 +143,12 @@ static list<std::string>
               "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for -find"), aliasopt(Find));
+static opt<bool>
+    IgnoreCase("ignore-case",
+               desc("Ignore case distinctions in when searching by name."),
+               value_desc("i"), cat(DwarfDumpCategory));
+static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case"),
+                             aliasopt(IgnoreCase));
 static list<std::string>
     Name("name",
          desc("Find and print all debug info entries whose name (DW_AT_name "
@@ -265,8 +271,11 @@ static void filterByName(const StringSet<> &Names,
   for (const auto &CU : CUs)
     for (const auto &Entry : CU->dies()) {
       DWARFDie Die = {CU.get(), &Entry};
-      if (Names.count(Die.getName(DINameKind::ShortName)))
-        Die.dump(OS, 0, getDumpOpts());
+      if (const char *NamePtr = Die.getName(DINameKind::ShortName)) {
+        std::string Name = IgnoreCase ? StringRef(NamePtr).lower() : NamePtr;
+        if (Names.count(Name))
+          Die.dump(OS, 0, getDumpOpts());
+      }
     }
 }
 
@@ -283,7 +292,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   if (!Name.empty()) {
     StringSet<> Names;
     for (auto name : Name)
-      Names.insert(name);
+      Names.insert(IgnoreCase ? StringRef(name).lower() : name);
 
     filterByName(Names, DICtx.compile_units(), OS);
     filterByName(Names, DICtx.dwo_compile_units(), OS);
