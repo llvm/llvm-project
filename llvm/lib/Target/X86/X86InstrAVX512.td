@@ -3391,21 +3391,19 @@ def : Pat<(_.VT (OpNode _.RC:$src0,
                                   (_.EltVT (X86selects (scalar_to_vector (and (i8 (trunc GR32:$mask)), (i8 1))),
                                                        (_.EltVT _.FRC:$src1),
                                                        (_.EltVT _.FRC:$src2))))))),
-          (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrk)
-                                          (COPY_TO_REGCLASS _.FRC:$src2, _.RC),
-                                          (COPY_TO_REGCLASS GR32:$mask, VK1WM),
-                                          (_.VT _.RC:$src0), _.FRC:$src1),
-                            _.RC)>;
+          (!cast<Instruction>(InstrStr#rrk)
+                        (COPY_TO_REGCLASS _.FRC:$src2, _.RC),
+                        (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                        (_.VT _.RC:$src0), _.FRC:$src1)>;
 
 def : Pat<(_.VT (OpNode _.RC:$src0,
                         (_.VT (scalar_to_vector
                                   (_.EltVT (X86selects (scalar_to_vector (and (i8 (trunc GR32:$mask)), (i8 1))),
                                                        (_.EltVT _.FRC:$src1),
                                                        (_.EltVT ZeroFP))))))),
-          (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrkz)
-                                          (COPY_TO_REGCLASS GR32:$mask, VK1WM),
-                                          (_.VT _.RC:$src0), _.FRC:$src1),
-                            _.RC)>;
+          (!cast<Instruction>(InstrStr#rrkz)
+                        (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                        (_.VT _.RC:$src0), _.FRC:$src1)>;
 }
 
 multiclass avx512_store_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,

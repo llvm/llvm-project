@@ -2099,9 +2099,9 @@ def: InstRW<[HWWriteResGroup18], (instregex "OR8rm")>;
 def: InstRW<[HWWriteResGroup18], (instregex "POP(16|32|64)r(mr?)")>;
 def: InstRW<[HWWriteResGroup18], (instregex "SUB(16|32|64)rm")>;
 def: InstRW<[HWWriteResGroup18], (instregex "SUB8rm")>;
-def: InstRW<[HWWriteResGroup18], (instregex "TEST(16|32|64)rm")>;
+def: InstRW<[HWWriteResGroup18], (instregex "TEST(16|32|64)mr")>;
 def: InstRW<[HWWriteResGroup18], (instregex "TEST8mi")>;
-def: InstRW<[HWWriteResGroup18], (instregex "TEST8rm")>;
+def: InstRW<[HWWriteResGroup18], (instregex "TEST8mr")>;
 def: InstRW<[HWWriteResGroup18], (instregex "XOR(16|32|64)rm")>;
 def: InstRW<[HWWriteResGroup18], (instregex "XOR8rm")>;
 
