@@ -63,7 +63,6 @@ namespace llvm {
 extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> LTORemarksFilename;
 extern cl::opt<bool> LTOPassRemarksWithHotness;
-extern cl::opt<bool> LTOStripInvalidDebugInfo;
 }
 
 namespace {
@@ -158,8 +157,7 @@ public:
 /// Verify the module and strip broken debug info.
 static void verifyLoadedModule(Module &TheModule) {
   bool BrokenDebugInfo = false;
-  if (verifyModule(TheModule, &dbgs(),
-                   LTOStripInvalidDebugInfo ? &BrokenDebugInfo : nullptr))
+  if (verifyModule(TheModule, &dbgs(), &BrokenDebugInfo))
     report_fatal_error("Broken module found, compilation aborted!");
   if (BrokenDebugInfo) {
     TheModule.getContext().diagnose(ThinLTODiagnosticInfo(

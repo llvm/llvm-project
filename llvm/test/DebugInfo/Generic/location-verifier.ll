@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output -verify-debug-info < %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output -verify-debug-info -o - < %s 2>&1 | FileCheck %s
 ; ModuleID = 'test.c'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
@@ -30,3 +30,4 @@ attributes #0 = { nounwind ssp uwtable }
 ; An old-style DILocation should not pass verify.
 ; CHECK: invalid !dbg metadata attachment
 !13 = !{i32 2, i32 2, !4, null}
+; CHECK: warning: ignoring invalid debug info
