@@ -139,7 +139,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   else
     WithColor(OS, syntax::Attribute).get() << format("DW_AT_Unknown_%x", Attr);
 
-  if (DumpOpts.Verbose) {
+  if (DumpOpts.Verbose || DumpOpts.ShowForm) {
     auto formString = FormEncodingString(Form);
     if (!formString.empty())
       OS << " [" << formString << ']';
