@@ -1,6 +1,5 @@
 ; RUN: llvm-as %s -disable-verify -o %t.bc
-; RUN: llvm-lto -lto-strip-invalid-debug-info=true \
-; RUN:     -exported-symbol f -exported-symbol _f \
+; RUN: llvm-lto -exported-symbol f -exported-symbol _f \
 ; RUN:     -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=CHECK-WARN
 ; RUN: llvm-nm %t.o | FileCheck %s 
@@ -8,7 +7,7 @@
 ; Check that missing debug locations on inlinable calls are a
 ; recoverable error.
 
-; CHECK-WARN: Invalid debug info found, debug info will be stripped
+; CHECK-WARN: warning{{.*}} ignoring invalid debug info
 ; CHECK: {{f$}}
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"

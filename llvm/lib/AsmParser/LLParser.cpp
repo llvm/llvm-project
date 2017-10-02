@@ -237,7 +237,8 @@ bool LLParser::ValidateEndOfModule() {
     }
   }
 
-  UpgradeDebugInfo(*M);
+  if (UpgradeDebugInfo)
+    llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
 

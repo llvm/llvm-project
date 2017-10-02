@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
@@ -11,6 +11,8 @@ entry:
   call void @llvm.dbg.declare(metadata i32* %a, metadata !4, metadata !DIExpression()), !dbg !6
   ret void, !dbg !6
 }
+
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
