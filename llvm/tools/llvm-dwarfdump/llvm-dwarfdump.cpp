@@ -170,13 +170,19 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
                               aliasopt(ShowParents));
+static opt<bool>
+    ShowForm("show-form",
+             desc("Show DWARF form types after the DWARF attribute types."),
+             cat(DwarfDumpCategory));
+static alias ShowFormAlias("F", desc("Alias for -show-form"),
+                           aliasopt(ShowForm), cat(DwarfDumpCategory));
 static opt<unsigned> RecurseDepth(
     "recurse-depth",
     desc("Only recurse to a depth of N when displaying debug info entries."),
     cat(DwarfDumpCategory), init(-1U), value_desc("N"));
 static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth"),
                                aliasopt(RecurseDepth));
-  
+
 static opt<bool>
     SummarizeTypes("summarize-types",
                    desc("Abbreviate the description of type unit entries"),
@@ -210,6 +216,7 @@ static DIDumpOptions getDumpOpts() {
   DumpOpts.RecurseDepth = RecurseDepth;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
+  DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
   // In -verify mode, print DIEs without children in error messages.
@@ -277,7 +284,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
     StringSet<> Names;
     for (auto name : Name)
       Names.insert(name);
-      
+
     filterByName(Names, DICtx.compile_units(), OS);
     filterByName(Names, DICtx.dwo_compile_units(), OS);
     return true;
@@ -308,7 +315,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
     if (!DumpOffsets[DIDT_ID_DebugInfo])
       return true;
   }
-  
+
   // Dump the complete DWARF structure.
   DICtx.dump(OS, getDumpOpts(), DumpOffsets);
   return true;

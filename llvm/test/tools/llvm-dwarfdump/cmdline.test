@@ -8,8 +8,9 @@ HELP: -eh-frame
 HELP: Specific Options
 HELP: -find
 HELP: -name
-HELP: -recurse-depth=<N> 
+HELP: -recurse-depth=<N>
 HELP: -show-children
+HELP: -show-form
 HELP: -show-parents
 HELP: -summarize-types
 HELP-NOT: -reverse-iterate
