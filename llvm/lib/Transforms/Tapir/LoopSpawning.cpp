@@ -100,7 +100,15 @@ class LoopSpawningHints;
 /// initially scan the loop for existing metadata, and will update the local
 /// values based on information in the loop.
 class LoopSpawningHints {
-  enum HintKind { HK_STRATEGY };
+public:
+  enum SpawningStrategy {
+    ST_SEQ,
+    ST_DAC,
+    ST_END,
+  };
+
+private:
+  enum HintKind { HK_STRATEGY, HK_GRAINSIZE };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -115,6 +123,8 @@ class LoopSpawningHints {
       switch (Kind) {
       case HK_STRATEGY:
         return (Val < ST_END);
+      case HK_GRAINSIZE:
+        return true;
       }
       return false;
     }
@@ -122,17 +132,13 @@ class LoopSpawningHints {
 
   /// Spawning strategy
   Hint Strategy;
+  /// Grainsize
+  Hint Grainsize;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "tapir.loop."; }
 
 public:
-  enum SpawningStrategy {
-    ST_SEQ,
-    ST_DAC,
-    ST_END,
-  };
-
   static std::string printStrategy(enum SpawningStrategy Strat) {
     switch(Strat) {
     case LoopSpawningHints::ST_SEQ:
@@ -147,6 +153,7 @@ public:
 
   LoopSpawningHints(const Loop *L, OptimizationRemarkEmitter &ORE)
       : Strategy("spawn.strategy", ST_SEQ, HK_STRATEGY),
+        Grainsize("grainsize", 0, HK_GRAINSIZE),
         TheLoop(L), ORE(ORE) {
     // Populate values with existing loop metadata.
     getHintsFromMetadata();
@@ -162,6 +169,10 @@ public:
 
   enum SpawningStrategy getStrategy() const {
     return (SpawningStrategy)Strategy.Value;
+  }
+
+  unsigned getGrainsize() const {
+    return Grainsize.Value;
   }
 
 private:
@@ -213,7 +224,7 @@ private:
       return;
     unsigned Val = C->getZExtValue();
 
-    Hint *Hints[] = {&Strategy};
+    Hint *Hints[] = {&Strategy, &Grainsize};
     for (auto H : Hints) {
       if (Name == H->Name) {
         if (H->validate(Val))
@@ -329,7 +340,6 @@ static void emitMissedWarning(Function *F, Loop *L,
 /// lifting a Tapir loop into a separate helper function.
 class LoopOutline {
 public:
-
   LoopOutline(Loop *OrigLoop, ScalarEvolution &SE,
               LoopInfo *LI, DominatorTree *DT,
               AssumptionCache *AC,
@@ -400,11 +410,14 @@ public:
   //       TLI(TLI), TTI(TTI), ORE(ORE)
   // {}
   TapirTarget* tapirTarget;
-  DACLoopSpawning(Loop *OrigLoop, ScalarEvolution &SE,
+  DACLoopSpawning(Loop *OrigLoop, unsigned Grainsize,
+                  ScalarEvolution &SE,
                   LoopInfo *LI, DominatorTree *DT,
                   AssumptionCache *AC,
                   OptimizationRemarkEmitter &ORE, TapirTarget* tapirTarget)
-      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE), tapirTarget(tapirTarget)
+      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE),
+        tapirTarget(tapirTarget),
+        SpecifiedGrainsize(Grainsize)
   {}
 
   bool processLoop();
@@ -424,7 +437,7 @@ protected:
                                      LoopInfo *LI,
                                      bool CanonicalIVFlagNUW = false,
                                      bool CanonicalIVFlagNSW = false);
-
+  unsigned SpecifiedGrainsize;
 // private:
 //   /// Report an analysis message to assist the user in diagnosing loops that are
 //   /// not transformed.  These are handled as LoopAccessReport rather than
@@ -1085,7 +1098,12 @@ bool DACLoopSpawning::processLoop() {
   // Insert computation of grainsize into the Preheader.
   // For debugging:
   // Value *GrainVar = ConstantInt::get(Limit->getType(), 2);
-  Value *GrainVar = computeGrainsize(LimitVar);
+  Value *GrainVar;
+  if (!SpecifiedGrainsize)
+    GrainVar = computeGrainsize(LimitVar);
+  else
+    GrainVar = ConstantInt::get(LimitVar->getType(), SpecifiedGrainsize);
+
   DEBUG(dbgs() << "GrainVar: " << *GrainVar << "\n");
   // emitAnalysis(LoopSpawningReport()
   //              << "grainsize value " << *GrainVar << "\n");
@@ -2094,6 +2112,7 @@ void LoopSpawningImpl::addTapirLoop(Loop *L, SmallVectorImpl<Loop *> &V) {
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+               << " grainsize = " << Hints.getGrainsize()
                << "\n");
 
   using namespace ore;
@@ -2172,6 +2191,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
 
   DEBUG(dbgs() << "LS: Loop hints:"
                << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+               << " grainsize = " << Hints.getGrainsize()
                << "\n");
 
   using namespace ore;
@@ -2204,7 +2224,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
     {
       DebugLoc DLoc = L->getStartLoc();
       BasicBlock *Header = L->getHeader();
-      DACLoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE, tapirTarget);
+      DACLoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE, tapirTarget);
       // CilkABILoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE);
       // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
       if (DLS.processLoop()) {
