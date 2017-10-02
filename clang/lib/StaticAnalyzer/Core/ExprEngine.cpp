@@ -17,6 +17,7 @@
 #include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
@@ -27,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1497,6 +1499,27 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
                                          NodeBuilderWithSinks &nodeBuilder,
                                          ExplodedNode *Pred) {
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
+  // If we reach a loop which has a known bound (and meets
+  // other constraints) then consider completely unrolling it.
+  if (AMgr.options.shouldUnrollLoops()) {
+    const CFGBlock *ActualBlock = nodeBuilder.getContext().getBlock();
+    const Stmt *Term = ActualBlock->getTerminator();
+    if (Term && shouldCompletelyUnroll(Term, AMgr.getASTContext())) {
+      ProgramStateRef UnrolledState =
+              markLoopAsUnrolled(Term, Pred->getState(),
+                                 Pred->getLocationContext()
+                                         ->getAnalysisDeclContext()
+                                         ->getCFGStmtMap());
+      if (UnrolledState != Pred->getState())
+        nodeBuilder.generateNode(UnrolledState, Pred);
+      return;
+    }
+
+    if (isUnrolledLoopBlock(ActualBlock, Pred))
+      return;
+    if (ActualBlock->empty())
+      return;
+  }
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
@@ -1664,7 +1687,6 @@ void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
   const LocationContext *LCtx = Pred->getLocationContext();
   PrettyStackTraceLocationContext StackCrashInfo(LCtx);
   currBldrCtx = &BldCtx;
-
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
     BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
