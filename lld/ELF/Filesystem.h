@@ -10,7 +10,7 @@
 #ifndef LLD_ELF_FILESYSTEM_H
 #define LLD_ELF_FILESYSTEM_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 
 namespace lld {
 namespace elf {

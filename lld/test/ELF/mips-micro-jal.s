@@ -34,6 +34,17 @@
 # RUN: ld.lld -o %tel.exe %t2el.o %tel.so
 # RUN: llvm-objdump -d -mattr=micromips %tel.exe | FileCheck --check-prefix=ELR6 %s
 
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         -mattr=micromips %S/Inputs/mips-micro.s -o %t1eb.o
+# RUN: ld.lld -shared -o %teb.so %t1eb.o
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         %S/Inputs/mips-fpic.s -o %t-reg.o
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         -mattr=micromips %s -o %t2eb.o
+# RUN: ld.lld --no-threads -o %teb.exe %t-reg.o %t2eb.o %teb.so
+# RUN: llvm-objdump -d -mattr=micromips %teb.exe \
+# RUN:   | FileCheck --check-prefix=MIXED %s
+
 # REQUIRES: mips
 
 # EB:      Disassembly of section .plt:
@@ -105,6 +116,25 @@
 # ELR6-NEXT:    20034:       22 ff 00 00     lw      $25, 0($2)
 # ELR6-NEXT:    20038:       02 0f           move16  $24, $2
 # ELR6-NEXT:    2003a:       23 47           jrc16   $25
+
+# MIXED:      Disassembly of section .plt:
+# MIXED-NEXT: .plt:
+# MIXED-NEXT:    20020:       79 80 3f f9     addiupc $3, 65508
+# MIXED-NEXT:    20024:       ff 23 00 00     lw      $25, 0($3)
+# MIXED-NEXT:    20028:       05 35           subu16  $2, $2, $3
+# MIXED-NEXT:    2002a:       25 25           srl16   $2, $2, 2
+# MIXED-NEXT:    2002c:       33 02 ff fe     addiu   $24, $2, -2
+# MIXED-NEXT:    20030:       0d ff           move    $15, $ra
+# MIXED-NEXT:    20032:       45 f9           jalrs16 $25
+# MIXED-NEXT:    20034:       0f 83           move    $gp, $3
+# MIXED-NEXT:    20036:       0c 00           nop
+# MIXED-NEXT:    20038:       00 00 00 00     nop
+# MIXED-NEXT:    2003c:       00 00 00 00     nop
+
+# MIXED-NEXT:    20040:       79 00 3f f3     addiupc $2, 65484
+# MIXED-NEXT:    20044:       ff 22 00 00     lw      $25, 0($2)
+# MIXED-NEXT:    20048:       45 99           jr16    $25
+# MIXED-NEXT:    2004a:       0f 02           move    $24, $2
 
 # PLT:      Entries [
 # PLT-NEXT:   Entry {

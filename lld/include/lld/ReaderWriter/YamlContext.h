@@ -10,7 +10,7 @@
 #ifndef LLD_READER_WRITER_YAML_CONTEXT_H
 #define LLD_READER_WRITER_YAML_CONTEXT_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include <functional>
 #include <memory>
 #include <vector>

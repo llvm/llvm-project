@@ -424,3 +424,8 @@ ClangdServer::scheduleCancelRebuild(std::shared_ptr<CppFile> Resources) {
                            std::move(DeferredCancel));
   return DoneFuture;
 }
+
+void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  // FIXME: Do nothing for now. This will be used for indexing and potentially
+  // invalidating other caches.
+}
