@@ -43,7 +43,7 @@ f:
 define void @foo64(i64* %ptr) {
   %load = load i64, i64* %ptr
   ; CHECK: movabsq $bit_mask64, %rax
-  ; CHECK: testq (%rdi), %rax
+  ; CHECK: testq %rax, (%rdi)
   %and = and i64 %load, ptrtoint (i8* @bit_mask64 to i64)
   %icmp = icmp eq i64 %and, 0
   br i1 %icmp, label %t, label %f

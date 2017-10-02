@@ -1063,6 +1063,25 @@ class BitPermutationSelector {
 
       return std::make_pair(Interesting = true, &Bits);
     }
+    case ISD::ZERO_EXTEND: {
+      // We support only the case with zero extension from i32 to i64 so far.
+      if (V.getValueType() != MVT::i64 ||
+          V.getOperand(0).getValueType() != MVT::i32)
+        break;
+
+      const SmallVector<ValueBit, 64> *LHSBits;
+      const unsigned NumOperandBits = 32;
+      std::tie(Interesting, LHSBits) = getValueBits(V.getOperand(0),
+                                                    NumOperandBits);
+
+      for (unsigned i = 0; i < NumOperandBits; ++i)
+        Bits[i] = (*LHSBits)[i];
+
+      for (unsigned i = NumOperandBits; i < NumBits; ++i)
+        Bits[i] = ValueBit(ValueBit::ConstZero);
+
+      return std::make_pair(Interesting, &Bits);
+      }
     }
 
     for (unsigned i = 0; i < NumBits; ++i)
@@ -1324,6 +1343,24 @@ class BitPermutationSelector {
     return ~Mask;
   }
 
+  // This method extends an input value to 64 bit if input is 32-bit integer.
+  // While selecting instructions in BitPermutationSelector in 64-bit mode,
+  // an input value can be a 32-bit integer if a ZERO_EXTEND node is included.
+  // In such case, we extend it to 64 bit to be consistent with other values.
+  SDValue ExtendToInt64(SDValue V, const SDLoc &dl) {
+    if (V.getValueSizeInBits() == 64)
+      return V;
+
+    assert(V.getValueSizeInBits() == 32);
+    SDValue SubRegIdx = CurDAG->getTargetConstant(PPC::sub_32, dl, MVT::i32);
+    SDValue ImDef = SDValue(CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl,
+                                                   MVT::i64), 0);
+    SDValue ExtVal = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl,
+                                                    MVT::i64, ImDef, V,
+                                                    SubRegIdx), 0);
+    return ExtVal;
+  }
+
   // Depending on the number of groups for a particular value, it might be
   // better to rotate, mask explicitly (using andi/andis), and then or the
   // result. Select this part of the result first.
@@ -1540,27 +1577,30 @@ class BitPermutationSelector {
       assert(InstMaskStart >= 32 && "Mask cannot start out of range");
       assert(InstMaskEnd   >= 32 && "Mask cannot end out of range");
       SDValue Ops[] =
-        { V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskStart - 32, dl),
-          getI32Imm(InstMaskEnd - 32, dl) };
+        { ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskStart - 32, dl), getI32Imm(InstMaskEnd - 32, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLWINM8, dl, MVT::i64,
                                             Ops), 0);
     }
 
     if (InstMaskEnd == 63) {
       SDValue Ops[] =
-        { V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskStart, dl) };
+        { ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskStart, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, Ops), 0);
     }
 
     if (InstMaskStart == 0) {
       SDValue Ops[] =
-        { V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskEnd, dl) };
+        { ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskEnd, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLDICR, dl, MVT::i64, Ops), 0);
     }
 
     if (InstMaskEnd == 63 - RLAmt) {
       SDValue Ops[] =
-        { V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskStart, dl) };
+        { ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskStart, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLDIC, dl, MVT::i64, Ops), 0);
     }
 
@@ -1601,15 +1641,16 @@ class BitPermutationSelector {
       assert(InstMaskStart >= 32 && "Mask cannot start out of range");
       assert(InstMaskEnd   >= 32 && "Mask cannot end out of range");
       SDValue Ops[] =
-        { Base, V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskStart - 32, dl),
-          getI32Imm(InstMaskEnd - 32, dl) };
+        { ExtendToInt64(Base, dl), ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskStart - 32, dl), getI32Imm(InstMaskEnd - 32, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLWIMI8, dl, MVT::i64,
                                             Ops), 0);
     }
 
     if (InstMaskEnd == 63 - RLAmt) {
       SDValue Ops[] =
-        { Base, V, getI32Imm(RLAmt, dl), getI32Imm(InstMaskStart, dl) };
+        { ExtendToInt64(Base, dl), ExtendToInt64(V, dl), getI32Imm(RLAmt, dl),
+          getI32Imm(InstMaskStart, dl) };
       return SDValue(CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops), 0);
     }
 
@@ -1759,10 +1800,14 @@ class BitPermutationSelector {
         SDValue ANDIVal, ANDISVal;
         if (ANDIMask != 0)
           ANDIVal = SDValue(CurDAG->getMachineNode(PPC::ANDIo8, dl, MVT::i64,
-                              VRot, getI32Imm(ANDIMask, dl)), 0);
+                                                   ExtendToInt64(VRot, dl),
+                                                   getI32Imm(ANDIMask, dl)),
+                            0);
         if (ANDISMask != 0)
           ANDISVal = SDValue(CurDAG->getMachineNode(PPC::ANDISo8, dl, MVT::i64,
-                               VRot, getI32Imm(ANDISMask, dl)), 0);
+                                                    ExtendToInt64(VRot, dl),
+                                                    getI32Imm(ANDISMask, dl)),
+                             0);
 
         if (!ANDIVal)
           TotalVal = ANDISVal;
@@ -1770,19 +1815,21 @@ class BitPermutationSelector {
           TotalVal = ANDIVal;
         else
           TotalVal = SDValue(CurDAG->getMachineNode(PPC::OR8, dl, MVT::i64,
-                               ANDIVal, ANDISVal), 0);
+                               ExtendToInt64(ANDIVal, dl), ANDISVal), 0);
       } else {
         TotalVal = SDValue(selectI64Imm(CurDAG, dl, Mask), 0);
         TotalVal =
           SDValue(CurDAG->getMachineNode(PPC::AND8, dl, MVT::i64,
-                                         VRot, TotalVal), 0);
+                                         ExtendToInt64(VRot, dl), TotalVal),
+                  0);
      }
 
       if (!Res)
         Res = TotalVal;
       else
         Res = SDValue(CurDAG->getMachineNode(PPC::OR8, dl, MVT::i64,
-                                             Res, TotalVal), 0);
+                                             ExtendToInt64(Res, dl), TotalVal),
+                      0);
 
       // Now, remove all groups with this underlying value and rotation
       // factor.
@@ -1902,10 +1949,10 @@ class BitPermutationSelector {
         SDValue ANDIVal, ANDISVal;
         if (ANDIMask != 0)
           ANDIVal = SDValue(CurDAG->getMachineNode(PPC::ANDIo8, dl, MVT::i64,
-                              Res, getI32Imm(ANDIMask, dl)), 0);
+                              ExtendToInt64(Res, dl), getI32Imm(ANDIMask, dl)), 0);
         if (ANDISMask != 0)
           ANDISVal = SDValue(CurDAG->getMachineNode(PPC::ANDISo8, dl, MVT::i64,
-                               Res, getI32Imm(ANDISMask, dl)), 0);
+                               ExtendToInt64(Res, dl), getI32Imm(ANDISMask, dl)), 0);
 
         if (!ANDIVal)
           Res = ANDISVal;
@@ -1913,14 +1960,14 @@ class BitPermutationSelector {
           Res = ANDIVal;
         else
           Res = SDValue(CurDAG->getMachineNode(PPC::OR8, dl, MVT::i64,
-                          ANDIVal, ANDISVal), 0);
+                          ExtendToInt64(ANDIVal, dl), ANDISVal), 0);
       } else {
         if (InstCnt) *InstCnt += selectI64ImmInstrCount(Mask) + /* and */ 1;
 
         SDValue MaskVal = SDValue(selectI64Imm(CurDAG, dl, Mask), 0);
         Res =
           SDValue(CurDAG->getMachineNode(PPC::AND8, dl, MVT::i64,
-                                         Res, MaskVal), 0);
+                                         ExtendToInt64(Res, dl), MaskVal), 0);
       }
     }
 

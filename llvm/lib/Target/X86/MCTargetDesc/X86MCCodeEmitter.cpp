@@ -380,7 +380,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
         return X86::reloc_riprel_4byte_movq_load;
       case X86::CALL64m:
       case X86::JMP64m:
-      case X86::TEST64rm:
+      case X86::TEST64mr:
       case X86::ADC64rm:
       case X86::ADD64rm:
       case X86::AND64rm:

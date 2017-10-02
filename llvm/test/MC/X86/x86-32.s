@@ -528,9 +528,9 @@ sysretl
 
 // rdar://8018260
 testl	%ecx, -24(%ebp)
-// CHECK: testl	-24(%ebp), %ecx
+// CHECK: testl	%ecx, -24(%ebp)
 testl	-24(%ebp), %ecx
-// CHECK: testl	-24(%ebp), %ecx
+// CHECK: testl	%ecx, -24(%ebp)
 
 
 // rdar://8407242
