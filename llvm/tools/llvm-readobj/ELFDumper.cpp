@@ -821,10 +821,20 @@ static const EnumEntry<unsigned> ElfOSABI[] = {
   {"AROS",         "AROS",                 ELF::ELFOSABI_AROS},
   {"FenixOS",      "FenixOS",              ELF::ELFOSABI_FENIXOS},
   {"CloudABI",     "CloudABI",             ELF::ELFOSABI_CLOUDABI},
-  {"C6000_ELFABI", "Bare-metal C6000",     ELF::ELFOSABI_C6000_ELFABI},
-  {"C6000_LINUX",  "Linux C6000",          ELF::ELFOSABI_C6000_LINUX},
-  {"ARM",          "ARM",                  ELF::ELFOSABI_ARM},
   {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
+};
+
+static const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
+  {"AMDGPU_HSA", "AMDGPU - HSA", ELF::ELFOSABI_AMDGPU_HSA}
+};
+
+static const EnumEntry<unsigned> ARMElfOSABI[] = {
+  {"ARM", "ARM", ELF::ELFOSABI_ARM}
+};
+
+static const EnumEntry<unsigned> C6000ElfOSABI[] = {
+  {"C6000_ELFABI", "Bare-metal C6000", ELF::ELFOSABI_C6000_ELFABI},
+  {"C6000_LINUX",  "Linux C6000",      ELF::ELFOSABI_C6000_LINUX}
 };
 
 static const EnumEntry<unsigned> ElfMachineType[] = {
@@ -3512,13 +3522,22 @@ template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
                   makeArrayRef(ElfDataEncoding));
       W.printNumber("FileVersion", e->e_ident[ELF::EI_VERSION]);
 
-      // Handle architecture specific OS/ABI values.
-      if (e->e_machine == ELF::EM_AMDGPU &&
-          e->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA)
-        W.printHex("OS/ABI", "AMDGPU_HSA", ELF::ELFOSABI_AMDGPU_HSA);
-      else
-        W.printEnum("OS/ABI", e->e_ident[ELF::EI_OSABI],
-                    makeArrayRef(ElfOSABI));
+      auto OSABI = makeArrayRef(ElfOSABI);
+      if (e->e_ident[ELF::EI_OSABI] >= ELF::ELFOSABI_FIRST_ARCH &&
+          e->e_ident[ELF::EI_OSABI] <= ELF::ELFOSABI_LAST_ARCH) {
+        switch (e->e_machine) {
+        case ELF::EM_AMDGPU:
+          OSABI = makeArrayRef(AMDGPUElfOSABI);
+          break;
+        case ELF::EM_ARM:
+          OSABI = makeArrayRef(ARMElfOSABI);
+          break;
+        case ELF::EM_TI_C6000:
+          OSABI = makeArrayRef(C6000ElfOSABI);
+          break;
+        }
+      }
+      W.printEnum("OS/ABI", e->e_ident[ELF::EI_OSABI], OSABI);
       W.printNumber("ABIVersion", e->e_ident[ELF::EI_ABIVERSION]);
       W.printBinary("Unused", makeArrayRef(e->e_ident).slice(ELF::EI_PAD));
     }

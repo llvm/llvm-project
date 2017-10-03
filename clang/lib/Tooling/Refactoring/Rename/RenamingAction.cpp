@@ -23,7 +23,6 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
-#include "clang/Tooling/Refactoring/RefactoringActionRules.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
@@ -39,7 +38,63 @@ namespace tooling {
 
 namespace {
 
-class LocalRename : public RefactoringAction {
+class SymbolSelectionRequirement : public SourceRangeSelectionRequirement {
+public:
+  Expected<const NamedDecl *> evaluate(RefactoringRuleContext &Context) const {
+    Expected<SourceRange> Selection =
+        SourceRangeSelectionRequirement::evaluate(Context);
+    if (!Selection)
+      return Selection.takeError();
+    const NamedDecl *ND =
+        getNamedDeclAt(Context.getASTContext(), Selection->getBegin());
+    if (!ND) {
+      // FIXME: Use a diagnostic.
+      return llvm::make_error<StringError>("no symbol selected",
+                                           llvm::inconvertibleErrorCode());
+    }
+    return getCanonicalSymbolDeclaration(ND);
+  }
+};
+
+class OccurrenceFinder final : public FindSymbolOccurrencesRefactoringRule {
+public:
+  OccurrenceFinder(const NamedDecl *ND) : ND(ND) {}
+
+  Expected<SymbolOccurrences>
+  findSymbolOccurrences(RefactoringRuleContext &Context) override {
+    std::vector<std::string> USRs =
+        getUSRsForDeclaration(ND, Context.getASTContext());
+    std::string PrevName = ND->getNameAsString();
+    return getOccurrencesOfUSRs(
+        USRs, PrevName, Context.getASTContext().getTranslationUnitDecl());
+  }
+
+private:
+  const NamedDecl *ND;
+};
+
+class RenameOccurrences final : public SourceChangeRefactoringRule {
+public:
+  RenameOccurrences(const NamedDecl *ND) : Finder(ND) {}
+
+  Expected<AtomicChanges>
+  createSourceReplacements(RefactoringRuleContext &Context) {
+    Expected<SymbolOccurrences> Occurrences =
+        Finder.findSymbolOccurrences(Context);
+    if (!Occurrences)
+      return Occurrences.takeError();
+    // FIXME: This is a temporary workaround that's needed until the refactoring
+    // options are implemented.
+    StringRef NewName = "Bar";
+    return createRenameReplacements(
+        *Occurrences, Context.getASTContext().getSourceManager(), NewName);
+  }
+
+private:
+  OccurrenceFinder Finder;
+};
+
+class LocalRename final : public RefactoringAction {
 public:
   StringRef getCommand() const override { return "local-rename"; }
 
@@ -50,42 +105,11 @@ public:
   /// Returns a set of refactoring actions rules that are defined by this
   /// action.
   RefactoringActionRules createActionRules() const override {
-    using namespace refactoring_action_rules;
     RefactoringActionRules Rules;
-    Rules.push_back(createRefactoringRule(
-        renameOccurrences, requiredSelection(SymbolSelectionRequirement())));
+    Rules.push_back(createRefactoringActionRule<RenameOccurrences>(
+        SymbolSelectionRequirement()));
     return Rules;
   }
-
-private:
-  static Expected<AtomicChanges>
-  renameOccurrences(const RefactoringRuleContext &Context,
-                    const NamedDecl *ND) {
-    std::vector<std::string> USRs =
-        getUSRsForDeclaration(ND, Context.getASTContext());
-    std::string PrevName = ND->getNameAsString();
-    auto Occurrences = getOccurrencesOfUSRs(
-        USRs, PrevName, Context.getASTContext().getTranslationUnitDecl());
-
-    // FIXME: This is a temporary workaround that's needed until the refactoring
-    // options are implemented.
-    StringRef NewName = "Bar";
-    return createRenameReplacements(
-        Occurrences, Context.getASTContext().getSourceManager(), NewName);
-  }
-
-  class SymbolSelectionRequirement : public selection::Requirement {
-  public:
-    Expected<Optional<const NamedDecl *>>
-    evaluateSelection(const RefactoringRuleContext &Context,
-                      selection::SourceSelectionRange Selection) const {
-      const NamedDecl *ND = getNamedDeclAt(Context.getASTContext(),
-                                           Selection.getRange().getBegin());
-      if (!ND)
-        return None;
-      return getCanonicalSymbolDeclaration(ND);
-    }
-  };
 };
 
 } // end anonymous namespace

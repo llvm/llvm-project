@@ -318,7 +318,7 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    movabsq $6120523590596543007, %rdx # imm = 0x54F077C718E7C21F
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    shrq $12, %rdx
 ; X64-NEXT:    imulq $12345, %rdx, %rax # imm = 0x3039

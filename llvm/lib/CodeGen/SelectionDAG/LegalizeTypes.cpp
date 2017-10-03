@@ -864,13 +864,8 @@ void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
   AnalyzeNewValue(Hi);
 
   // Transfer debug values.
-  if (DAG.getDataLayout().isBigEndian()) {
-    transferDbgValues(DAG, Op, Hi, 0);
-    transferDbgValues(DAG, Op, Lo, Hi.getValueSizeInBits());
-  } else {
-    transferDbgValues(DAG, Op, Lo, 0);
-    transferDbgValues(DAG, Op, Hi, Lo.getValueSizeInBits());
-  }
+  transferDbgValues(DAG, Op, Lo, 0);
+  transferDbgValues(DAG, Op, Hi, Lo.getValueSizeInBits());
 
   // Remember that this is the result of the node.
   std::pair<SDValue, SDValue> &Entry = ExpandedIntegers[Op];

@@ -241,25 +241,23 @@ def SMRDBufferImm   : ComplexPattern<i32, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<i32, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgpr  : ComplexPattern<i32, 1, "SelectSMRDBufferSgpr">;
 
-let Predicates = [isGCN] in {
-
 multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
   // 1. IMM offset
-  def : Pat <
+  def : GCNPat <
     (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
     (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))
   >;
 
   // 2. SGPR offset
-  def : Pat <
+  def : GCNPat <
     (smrd_load (SMRDSgpr i64:$sbase, i32:$offset)),
     (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $offset, 0))
   >;
 }
 
-let Predicates = [isSICI] in {
-def : Pat <
+let OtherPredicates = [isSICI] in {
+def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMTIME)
 >;
@@ -277,29 +275,27 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX8",  v8i32>;
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
 
 // 1. Offset as an immediate
-def SM_LOAD_PATTERN : Pat <  // name this pattern to reuse AddedComplexity on CI
+def SM_LOAD_PATTERN : GCNPat <  // name this pattern to reuse AddedComplexity on CI
   (SIload_constant v4i32:$sbase, (SMRDBufferImm i32:$offset)),
   (S_BUFFER_LOAD_DWORD_IMM $sbase, $offset, 0)
 >;
 
 // 2. Offset loaded in an 32bit SGPR
-def : Pat <
+def : GCNPat <
   (SIload_constant v4i32:$sbase, (SMRDBufferSgpr i32:$offset)),
   (S_BUFFER_LOAD_DWORD_SGPR $sbase, $offset, 0)
 >;
 
 } // End let AddedComplexity = 100
 
-} // let Predicates = [isGCN]
+let OtherPredicates = [isVI] in {
 
-let Predicates = [isVI] in {
-
-def : Pat <
+def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMREALTIME)
 >;
 
-} // let Predicates = [isVI]
+} // let OtherPredicates = [isVI]
 
 
 //===----------------------------------------------------------------------===//
@@ -508,10 +504,10 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 
 let AddedComplexity = SM_LOAD_PATTERN.AddedComplexity in {
 
-class SMRD_Pattern_ci <string Instr, ValueType vt> : Pat <
+class SMRD_Pattern_ci <string Instr, ValueType vt> : GCNPat <
   (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
   (vt (!cast<SM_Pseudo>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-  let Predicates = [isCIOnly];
+  let OtherPredicates = [isCIOnly];
 }
 
 def : SMRD_Pattern_ci <"S_LOAD_DWORD",    i32>;
@@ -520,10 +516,10 @@ def : SMRD_Pattern_ci <"S_LOAD_DWORDX4",  v4i32>;
 def : SMRD_Pattern_ci <"S_LOAD_DWORDX8",  v8i32>;
 def : SMRD_Pattern_ci <"S_LOAD_DWORDX16", v16i32>;
 
-def : Pat <
+def : GCNPat <
   (SIload_constant v4i32:$sbase, (SMRDBufferImm32 i32:$offset)),
   (S_BUFFER_LOAD_DWORD_IMM_ci $sbase, $offset, 0)> {
-  let Predicates = [isCI]; // should this be isCIOnly?
+  let OtherPredicates = [isCI]; // should this be isCIOnly?
 }
 
 } // End let AddedComplexity = SM_LOAD_PATTERN.AddedComplexity

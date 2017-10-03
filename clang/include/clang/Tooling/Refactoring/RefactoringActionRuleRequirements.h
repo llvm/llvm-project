@@ -10,48 +10,49 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
 #define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
 
-#include "clang/Tooling/Refactoring/RefactoringActionRuleRequirementsInternal.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
 #include "llvm/Support/Error.h"
 #include <type_traits>
 
 namespace clang {
 namespace tooling {
-namespace refactoring_action_rules {
 
-/// Creates a selection requirement from the given requirement.
+/// A refactoring action rule requirement determines when a refactoring action
+/// rule can be invoked. The rule can be invoked only when all of the
+/// requirements are satisfied.
 ///
-/// Requirements must subclass \c selection::Requirement and implement
-/// evaluateSelection member function.
-template <typename T>
-internal::SourceSelectionRequirement<
-    typename selection::internal::EvaluateSelectionChecker<
-        decltype(&T::evaluateSelection)>::ArgType,
-    typename selection::internal::EvaluateSelectionChecker<
-        decltype(&T::evaluateSelection)>::ReturnType,
-    T>
-requiredSelection(
-    const T &Requirement,
-    typename std::enable_if<selection::traits::IsRequirement<T>::value>::type
-        * = nullptr) {
-  return internal::SourceSelectionRequirement<
-      typename selection::internal::EvaluateSelectionChecker<decltype(
-          &T::evaluateSelection)>::ArgType,
-      typename selection::internal::EvaluateSelectionChecker<decltype(
-          &T::evaluateSelection)>::ReturnType,
-      T>(Requirement);
-}
+/// Subclasses must implement the
+/// 'Expected<T> evaluate(RefactoringRuleContext &) const' member function.
+/// \c T is used to determine the return type that is passed to the
+/// refactoring rule's constructor.
+/// For example, the \c SourceRangeSelectionRequirement subclass defines
+/// 'Expected<SourceRange> evaluate(RefactoringRuleContext &Context) const'
+/// function. When this function returns a non-error value, the resulting
+/// source range is passed to the specific refactoring action rule
+/// constructor (provided all other requirements are satisfied).
+class RefactoringActionRuleRequirement {
+  // Expected<T> evaluate(RefactoringRuleContext &Context) const;
+};
 
-template <typename T>
-void requiredSelection(
-    const T &,
-    typename std::enable_if<
-        !std::is_base_of<selection::Requirement, T>::value>::type * = nullptr) {
-  static_assert(
-      sizeof(T) && false,
-      "selection requirement must be a class derived from Requirement");
-}
+/// A base class for any requirement that expects some part of the source to be
+/// selected in an editor (or the refactoring tool with the -selection option).
+class SourceSelectionRequirement : public RefactoringActionRuleRequirement {};
 
-} // end namespace refactoring_action_rules
+/// A selection requirement that is satisfied when any portion of the source
+/// text is selected.
+class SourceRangeSelectionRequirement : public SourceSelectionRequirement {
+public:
+  Expected<SourceRange> evaluate(RefactoringRuleContext &Context) const {
+    if (Context.getSelectionRange().isValid())
+      return Context.getSelectionRange();
+    // FIXME: Use a diagnostic.
+    return llvm::make_error<llvm::StringError>(
+        "refactoring action can't be initiated without a selection",
+        llvm::inconvertibleErrorCode());
+  }
+};
+
 } // end namespace tooling
 } // end namespace clang
 

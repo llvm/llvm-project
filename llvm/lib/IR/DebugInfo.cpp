@@ -290,7 +290,7 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
 
 bool llvm::stripDebugInfo(Function &F) {
   bool Changed = false;
-  if (F.getSubprogram()) {
+  if (F.getMetadata(LLVMContext::MD_dbg)) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
@@ -668,4 +668,27 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
           M.getModuleFlag("Debug Info Version")))
     return Val->getZExtValue();
   return 0;
+}
+
+void Instruction::applyMergedLocation(const DILocation *LocA,
+                                      const DILocation *LocB) {
+  if (LocA && LocB && (LocA == LocB || !LocA->canDiscriminate(*LocB))) {
+    setDebugLoc(LocA);
+    return;
+  }
+  if (!LocA || !LocB || !isa<CallInst>(this)) {
+    setDebugLoc(nullptr);
+    return;
+  }
+  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
+  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
+    InlinedLocationsA.insert(L);
+  const DILocation *Result = LocB;
+  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt()) {
+    Result = L;
+    if (InlinedLocationsA.count(L))
+      break;
+  }
+  setDebugLoc(DILocation::get(
+      Result->getContext(), 0, 0, Result->getScope(), Result->getInlinedAt()));
 }

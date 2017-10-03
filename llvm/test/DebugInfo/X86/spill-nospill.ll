@@ -30,7 +30,7 @@
 ; CHECK: callq   g
 ; CHECK: movl    %eax, %[[CSR:[^ ]*]]
 ; CHECK: #DEBUG_VALUE: f:y <- %ESI
-; CHECK: movl    %[[CSR]], %ecx
+; CHECK: movl    %eax, %ecx
 ; CHECK: callq   g
 ; CHECK: movl    %[[CSR]], %ecx
 ; CHECK: callq   g

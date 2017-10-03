@@ -51,6 +51,11 @@
                         "type": "string"
                     },
                     "description": "Arguments for clangd server"
+                },
+                "clangd.syncFileEvents": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether or not to send file events to clangd (File created, changed or deleted). This can be disabled for performance consideration."
                 }
             }
         }

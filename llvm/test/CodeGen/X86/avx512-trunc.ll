@@ -661,7 +661,7 @@ define <32 x i8> @usat_trunc_db_1024(<32 x i32> %i) {
 ;
 ; SKX-LABEL: usat_trunc_db_1024:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm2
+; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SKX-NEXT:    vpminud %zmm2, %zmm1, %zmm1
 ; SKX-NEXT:    vpminud %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    vpmovdw %zmm0, %ymm0
@@ -687,7 +687,7 @@ define void @usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
 ;
 ; SKX-LABEL: usat_trunc_db_1024_mem:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm2
+; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SKX-NEXT:    vpminud %zmm2, %zmm1, %zmm1
 ; SKX-NEXT:    vpminud %zmm2, %zmm0, %zmm0
 ; SKX-NEXT:    vpmovdw %zmm0, %ymm0
@@ -745,7 +745,7 @@ define <16 x i16> @usat_trunc_qw_1024(<16 x i64> %i) {
 define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ; KNL-LABEL: usat_trunc_db_256:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; KNL-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]

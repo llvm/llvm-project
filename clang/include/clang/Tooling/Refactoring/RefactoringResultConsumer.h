@@ -46,29 +46,6 @@ private:
   }
 };
 
-namespace traits {
-namespace internal {
-
-template <typename T> struct HasHandle {
-private:
-  template <typename ClassT>
-  static auto check(ClassT *) -> typename std::is_same<
-      decltype(std::declval<ClassT>().handle(std::declval<T>())), void>::type;
-
-  template <typename> static std::false_type check(...);
-
-public:
-  using Type = decltype(check<RefactoringResultConsumer>(nullptr));
-};
-
-} // end namespace internal
-
-/// A type trait that returns true iff the given type is a valid refactoring
-/// result.
-template <typename T>
-struct IsValidRefactoringResult : internal::HasHandle<T>::Type {};
-
-} // end namespace traits
 } // end namespace tooling
 } // end namespace clang
 

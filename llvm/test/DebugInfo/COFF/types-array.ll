@@ -68,7 +68,7 @@
 ; CHECK:       VarName: a
 ; CHECK:     }
 ; CHECK:     DefRangeRegisterRelSym {
-; CHECK:       BaseRegister: 22
+; CHECK:       BaseRegister: EBP (0x16)
 ; CHECK:       HasSpilledUDTMember: No
 ; CHECK:       OffsetInParent: 0
 ; CHECK:       BasePointerOffset: -20

@@ -126,7 +126,7 @@ define void @test6(i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:  Lcfi11:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq _baz
 ; CHECK-NEXT:  Ltmp6:
 ; CHECK-NEXT:    callq _bar
@@ -153,13 +153,13 @@ entry:
 ; CHECK:      .byte	1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT: .short 4
-; CHECK-NEXT: .short	6
+; CHECK-NEXT: .short	5
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 ; CHECK:      .byte	1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT: .short 4
-; CHECK-NEXT: .short	3
+; CHECK-NEXT: .short	4
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT: .long	0
 ; CHECK: Ltmp2-_test2

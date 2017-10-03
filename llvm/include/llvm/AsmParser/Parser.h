@@ -36,10 +36,12 @@ class Type;
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
-std::unique_ptr<Module> parseAssemblyFile(StringRef Filename,
-                                          SMDiagnostic &Error,
-                                          LLVMContext &Context,
-                                          SlotMapping *Slots = nullptr);
+/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
+///                         This option should only be set to false by llvm-as
+///                         for use inside the LLVM testuite!
+std::unique_ptr<Module>
+parseAssemblyFile(StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
+                  SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true);
 
 /// The function is a secondary interface to the LLVM Assembly Parser. It parses
 /// an ASCII string that (presumably) contains LLVM Assembly code. It returns a
@@ -52,10 +54,14 @@ std::unique_ptr<Module> parseAssemblyFile(StringRef Filename,
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
+/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
+///                         This option should only be set to false by llvm-as
+///                         for use inside the LLVM testuite!
 std::unique_ptr<Module> parseAssemblyString(StringRef AsmString,
                                             SMDiagnostic &Error,
                                             LLVMContext &Context,
-                                            SlotMapping *Slots = nullptr);
+                                            SlotMapping *Slots = nullptr,
+                                            bool UpgradeDebugInfo = true);
 
 /// parseAssemblyFile and parseAssemblyString are wrappers around this function.
 /// \brief Parse LLVM Assembly from a MemoryBuffer.
@@ -63,9 +69,13 @@ std::unique_ptr<Module> parseAssemblyString(StringRef AsmString,
 /// \param Err Error result info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
+/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
+///                         This option should only be set to false by llvm-as
+///                         for use inside the LLVM testuite!
 std::unique_ptr<Module> parseAssembly(MemoryBufferRef F, SMDiagnostic &Err,
                                       LLVMContext &Context,
-                                      SlotMapping *Slots = nullptr);
+                                      SlotMapping *Slots = nullptr,
+                                      bool UpgradeDebugInfo = true);
 
 /// This function is the low-level interface to the LLVM Assembly Parser.
 /// This is kept as an independent function instead of being inlined into
@@ -78,8 +88,12 @@ std::unique_ptr<Module> parseAssembly(MemoryBufferRef F, SMDiagnostic &Err,
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
 /// \return true on error.
+/// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
+///                         This option should only be set to false by llvm-as
+///                         for use inside the LLVM testuite!
 bool parseAssemblyInto(MemoryBufferRef F, Module &M, SMDiagnostic &Err,
-                       SlotMapping *Slots = nullptr);
+                       SlotMapping *Slots = nullptr,
+                       bool UpgradeDebugInfo = true);
 
 /// Parse a type and a constant value in the given string.
 ///

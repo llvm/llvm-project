@@ -909,7 +909,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq 8(%rsi), %rbp
 ; X64-NEXT:    movq %r15, %rax
 ; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    mulq %rsi
+; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    movq %rax, %r8
 ; X64-NEXT:    movq %r11, %rax
@@ -932,23 +932,24 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq %r11, %rax
 ; X64-NEXT:    mulq %rbp
 ; X64-NEXT:    movq %rbp, %r14
-; X64-NEXT:    movq %r14, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rax, %rbp
 ; X64-NEXT:    addq %rcx, %rbp
 ; X64-NEXT:    adcq %rbx, %rsi
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movq %r10, %rbx
-; X64-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp) # 8-byte Spill
-; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    movq %r10, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %r10, %rax
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, %r13
 ; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    movq %r15, %rax
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    # kill: %RAX<kill>
+; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rax, %r15
-; X64-NEXT:    movq %r15, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    addq %r10, %r15
 ; X64-NEXT:    adcq %r13, %rdx
 ; X64-NEXT:    addq %rbp, %r15
@@ -987,8 +988,8 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    movq %rdx, %r14
 ; X64-NEXT:    movq %rax, %r11
-; X64-NEXT:    addq %r11, %r10
-; X64-NEXT:    adcq %r14, %r13
+; X64-NEXT:    addq %rax, %r10
+; X64-NEXT:    adcq %rdx, %r13
 ; X64-NEXT:    addq %rbp, %r10
 ; X64-NEXT:    adcq %rsi, %r13
 ; X64-NEXT:    addq %r8, %r10
@@ -1000,7 +1001,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    movq 16(%rsi), %r8
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    movq %rcx, %r9
-; X64-NEXT:    movq %r9, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    movq %rdx, %rdi
 ; X64-NEXT:    movq %rax, %r12
@@ -1031,7 +1032,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X64-NEXT:    mulq %rcx
 ; X64-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %rax, %rbp
-; X64-NEXT:    addq %rbp, %r11
+; X64-NEXT:    addq %rax, %r11
 ; X64-NEXT:    adcq %rdx, %r14
 ; X64-NEXT:    addq %r9, %r11
 ; X64-NEXT:    adcq %rbx, %r14

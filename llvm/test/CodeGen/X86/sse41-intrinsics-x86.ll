@@ -135,6 +135,32 @@ define <8 x i16> @test_x86_sse41_packusdw(<4 x i32> %a0, <4 x i32> %a1) {
 declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>) nounwind readnone
 
 
+define <8 x i16> @test_x86_sse41_packusdw_fold() {
+; SSE41-LABEL: test_x86_sse41_packusdw_fold:
+; SSE41:       ## BB#0:
+; SSE41-NEXT:    pxor %xmm0, %xmm0 ## encoding: [0x66,0x0f,0xef,0xc0]
+; SSE41-NEXT:    packusdw LCPI7_0, %xmm0 ## encoding: [0x66,0x0f,0x38,0x2b,0x05,A,A,A,A]
+; SSE41-NEXT:    ## fixup A - offset: 5, value: LCPI7_0, kind: FK_Data_4
+; SSE41-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse41_packusdw_fold:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xef,0xc0]
+; AVX2-NEXT:    vpackusdw LCPI7_0, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x2b,0x05,A,A,A,A]
+; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI7_0, kind: FK_Data_4
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_packusdw_fold:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; SKX-NEXT:    vpackusdw LCPI7_0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x2b,0x05,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 5, value: LCPI7_0, kind: FK_Data_4
+; SKX-NEXT:    retl ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> zeroinitializer, <4 x i32> <i32 65535, i32 65536, i32 -1, i32 -131072>)
+  ret <8 x i16> %res
+}
+
+
 define <16 x i8> @test_x86_sse41_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; SSE41-LABEL: test_x86_sse41_pblendvb:
 ; SSE41:       ## BB#0:

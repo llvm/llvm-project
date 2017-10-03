@@ -68,7 +68,6 @@ int foo(int n, double *ptr) {
   // CHECK:  [[C:%.+]] = alloca [5 x [10 x double]],
   // CHECK:  [[D:%.+]] = alloca [[TT]],
   // CHECK:  [[ACAST:%.+]] = alloca i{{[0-9]+}},
-  // CHECK:  {{.+}} = alloca i{{[0-9]+}},
   // CHECK:  [[BASE_PTR_ARR:%.+]] = alloca [1 x i8*],
   // CHECK:  [[PTR_ARR:%.+]] = alloca [1 x i8*],
   // CHECK:  [[A2CAST:%.+]] = alloca i{{[0-9]+}},

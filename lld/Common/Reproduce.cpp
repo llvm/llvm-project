@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/Reproduce.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
