@@ -310,6 +310,11 @@ namespace {
     readVariableInfo(data, info);
 
     uint8_t payload = endian::readNext<uint8_t, little, unaligned>(data);
+    if (auto rawConvention = payload & 0x7) {
+      auto convention = static_cast<RetainCountConventionKind>(rawConvention-1);
+      info.setRetainCountConvention(convention);
+    }
+    payload >>= 3;
     if (payload & 0x01) {
       info.setNoEscape(payload & 0x02);
     }
@@ -319,8 +324,16 @@ namespace {
   /// Read serialized FunctionInfo.
   void readFunctionInfo(const uint8_t *&data, FunctionInfo &info) {
     readCommonEntityInfo(data, info);
-    info.NullabilityAudited
-      = endian::readNext<uint8_t, little, unaligned>(data);
+
+    uint8_t payload = endian::readNext<uint8_t, little, unaligned>(data);
+    if (auto rawConvention = payload & 0x7) {
+      auto convention = static_cast<RetainCountConventionKind>(rawConvention-1);
+      info.setRetainCountConvention(convention);
+    }
+    payload >>= 3;
+    info.NullabilityAudited = payload & 0x1;
+    payload >>= 1; assert(payload == 0 && "Bad API notes");
+
     info.NumAdjustedNullable
       = endian::readNext<uint8_t, little, unaligned>(data);
     info.NullabilityPayload

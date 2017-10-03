@@ -14,6 +14,7 @@ Classes:
     Methods:         
       - Selector:        'cellWithImage:'
         MethodKind:      Class
+        RetainCountConvention: NSReturnsNotRetained
         Availability:    available
         AvailabilityMsg: ''
         SwiftPrivate:    false
@@ -111,6 +112,16 @@ Classes:
         SwiftName:       ''
         SwiftImportAsAccessors: false
 Functions:       
+  - Name:            CFURLCopyResourcePropertiesForKeys
+    Parameters:      
+      - Position:        0
+      - Position:        1
+      - Position:        2
+        RetainCountConvention: CFReturnsRetained
+    RetainCountConvention: CFReturnsRetained
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftName:       ''
   - Name:            NSAvailableWindowDepths
     NullabilityOfRet: N
     Availability:    available
@@ -183,3 +194,4 @@ SwiftVersions:
             AvailabilityMsg: ''
             SwiftName:       ''
             SwiftImportAsAccessors: true
+...

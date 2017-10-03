@@ -724,6 +724,10 @@ namespace {
       if (*noescape)
         payload |= 0x02;
     }
+    payload <<= 3;
+    if (auto retainCountConvention = info.getRetainCountConvention()) {
+      payload |= static_cast<uint8_t>(retainCountConvention.getValue()) + 1;
+    }
     writer.write<uint8_t>(payload);
   }
 
@@ -744,7 +748,15 @@ namespace {
     emitCommonEntityInfo(out, info);
 
     endian::Writer<little> writer(out);
-    writer.write<uint8_t>(info.NullabilityAudited);
+
+    uint8_t payload = 0;
+    payload |= info.NullabilityAudited;
+    payload <<= 3;
+    if (auto retainCountConvention = info.getRetainCountConvention()) {
+      payload |= static_cast<uint8_t>(retainCountConvention.getValue()) + 1;
+    }
+    writer.write<uint8_t>(payload);
+
     writer.write<uint8_t>(info.NumAdjustedNullable);
     writer.write<uint64_t>(info.NullabilityPayload);
 
