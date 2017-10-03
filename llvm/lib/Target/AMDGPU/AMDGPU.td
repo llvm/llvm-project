@@ -181,13 +181,13 @@ def FeatureGCN3Encoding : SubtargetFeature<"gcn3-encoding",
 def FeatureCIInsts : SubtargetFeature<"ci-insts",
   "CIInsts",
   "true",
-  "Additional intstructions for CI+"
+  "Additional instructions for CI+"
 >;
 
 def FeatureGFX9Insts : SubtargetFeature<"gfx9-insts",
   "GFX9Insts",
   "true",
-  "Additional intstructions for GFX9+"
+  "Additional instructions for GFX9+"
 >;
 
 def FeatureSMemRealTime : SubtargetFeature<"s-memrealtime",
@@ -724,17 +724,27 @@ def HasIntClamp : Predicate<"Subtarget->hasIntClamp()">,
 def HasMadMix : Predicate<"Subtarget->hasMadMixInsts()">,
   AssemblerPredicate<"FeatureGFX9Insts">;
 
+
+// Exists to help track down where SubtargetPredicate isn't set rather
+// than letting tablegen crash with an unhelpful error.
+def InvalidPred : Predicate<"predicate not set on instruction or pattern">;
+
 class PredicateControl {
-  Predicate SubtargetPredicate;
+  Predicate SubtargetPredicate = InvalidPred;
   Predicate SIAssemblerPredicate = isSICI;
   Predicate VIAssemblerPredicate = isVI;
   list<Predicate> AssemblerPredicates = [];
   Predicate AssemblerPredicate = TruePredicate;
   list<Predicate> OtherPredicates = [];
-  list<Predicate> Predicates = !listconcat([SubtargetPredicate, AssemblerPredicate],
+  list<Predicate> Predicates = !listconcat([SubtargetPredicate,
+                                            AssemblerPredicate],
                                             AssemblerPredicates,
                                             OtherPredicates);
 }
+
+class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
+  PredicateControl;
+
 
 // Include AMDGPU TD files
 include "R600Schedule.td"

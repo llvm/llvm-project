@@ -132,6 +132,139 @@ enum OperandMatchResultTy {
   MatchOperand_ParseFail // operand matched but had errors
 };
 
+// When matching of an assembly instruction fails, there may be multiple
+// encodings that are close to being a match. It's often ambiguous which one
+// the programmer intended to use, so we want to report an error which mentions
+// each of these "near-miss" encodings. This struct contains information about
+// one such encoding, and why it did not match the parsed instruction.
+class NearMissInfo {
+public:
+  enum NearMissKind {
+    NoNearMiss,
+    NearMissOperand,
+    NearMissFeature,
+    NearMissPredicate,
+    NearMissTooFewOperands,
+  };
+
+  // The encoding is valid for the parsed assembly string. This is only used
+  // internally to the table-generated assembly matcher.
+  static NearMissInfo getSuccess() { return NearMissInfo(); }
+
+  // The instruction encoding is not valid because it requires some target
+  // features that are not currently enabled. MissingFeatures has a bit set for
+  // each feature that the encoding needs but which is not enabled.
+  static NearMissInfo getMissedFeature(uint64_t MissingFeatures) {
+    NearMissInfo Result;
+    Result.Kind = NearMissFeature;
+    Result.Features = MissingFeatures;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because the target-specific
+  // predicate function returned an error code. FailureCode is the
+  // target-specific error code returned by the predicate.
+  static NearMissInfo getMissedPredicate(unsigned FailureCode) {
+    NearMissInfo Result;
+    Result.Kind = NearMissPredicate;
+    Result.PredicateError = FailureCode;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because one (and only one) parsed
+  // operand is not of the correct type. OperandError is the error code
+  // relating to the operand class expected by the encoding. OperandClass is
+  // the type of the expected operand. Opcode is the opcode of the encoding.
+  // OperandIndex is the index into the parsed operand list.
+  static NearMissInfo getMissedOperand(unsigned OperandError,
+                                       unsigned OperandClass, unsigned Opcode,
+                                       unsigned OperandIndex) {
+    NearMissInfo Result;
+    Result.Kind = NearMissOperand;
+    Result.MissedOperand.Error = OperandError;
+    Result.MissedOperand.Class = OperandClass;
+    Result.MissedOperand.Opcode = Opcode;
+    Result.MissedOperand.Index = OperandIndex;
+    return Result;
+  }
+
+  // The instruction encoding is not valid because it expects more operands
+  // than were parsed. OperandClass is the class of the expected operand that
+  // was not provided. Opcode is the instruction encoding.
+  static NearMissInfo getTooFewOperands(unsigned OperandClass,
+                                        unsigned Opcode) {
+    NearMissInfo Result;
+    Result.Kind = NearMissTooFewOperands;
+    Result.TooFewOperands.Class = OperandClass;
+    Result.TooFewOperands.Opcode = Opcode;
+    return Result;
+  }
+
+  operator bool() const { return Kind != NoNearMiss; }
+
+  NearMissKind getKind() const { return Kind; }
+
+  // Feature flags required by the instruction, that the current target does
+  // not have.
+  uint64_t getFeatures() const {
+    assert(Kind == NearMissFeature);
+    return Features;
+  }
+  // Error code returned by the target predicate when validating this
+  // instruction encoding.
+  unsigned getPredicateError() const {
+    assert(Kind == NearMissPredicate);
+    return PredicateError;
+  }
+  // MatchClassKind of the operand that we expected to see.
+  unsigned getOperandClass() const {
+    assert(Kind == NearMissOperand || Kind == NearMissTooFewOperands);
+    return MissedOperand.Class;
+  }
+  // Opcode of the encoding we were trying to match.
+  unsigned getOpcode() const {
+    assert(Kind == NearMissOperand || Kind == NearMissTooFewOperands);
+    return MissedOperand.Opcode;
+  }
+  // Error code returned when validating the operand.
+  unsigned getOperandError() const {
+    assert(Kind == NearMissOperand);
+    return MissedOperand.Error;
+  }
+  // Index of the actual operand we were trying to match in the list of parsed
+  // operands.
+  unsigned getOperandIndex() const {
+    assert(Kind == NearMissOperand);
+    return MissedOperand.Index;
+  }
+
+private:
+  NearMissKind Kind;
+
+  // These two structs share a common prefix, so we can safely rely on the fact
+  // that they overlap in the union.
+  struct MissedOpInfo {
+    unsigned Class;
+    unsigned Opcode;
+    unsigned Error;
+    unsigned Index;
+  };
+
+  struct TooFewOperandsInfo {
+    unsigned Class;
+    unsigned Opcode;
+  };
+
+  union {
+    uint64_t Features;
+    unsigned PredicateError;
+    MissedOpInfo MissedOperand;
+    TooFewOperandsInfo TooFewOperands;
+  };
+
+  NearMissInfo() : Kind(NoNearMiss) {}
+};
+
 /// MCTargetAsmParser - Generic interface to target specific assembly parsers.
 class MCTargetAsmParser : public MCAsmParserExtension {
 public:
@@ -140,6 +273,7 @@ public:
     Match_MissingFeature,
     Match_MnemonicFail,
     Match_Success,
+    Match_NearMisses,
     FIRST_TARGET_MATCH_RESULT_TY
   };
 

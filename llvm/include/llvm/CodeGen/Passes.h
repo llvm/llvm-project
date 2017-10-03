@@ -278,6 +278,11 @@ namespace llvm {
   /// MachineSinking - This pass performs sinking on machine instructions.
   extern char &MachineSinkingID;
 
+  /// MachineCopyPropagationPreRegRewrite - This pass performs copy propagation
+  /// on machine instructions after register allocation but before virtual
+  /// register re-writing..
+  extern char &MachineCopyPropagationPreRegRewriteID;
+
   /// MachineCopyPropagation - This pass performs copy propagation on
   /// machine instructions.
   extern char &MachineCopyPropagationID;

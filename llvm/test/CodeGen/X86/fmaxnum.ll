@@ -18,7 +18,7 @@ declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
 
 ; CHECK-LABEL: @test_fmaxf
 ; SSE:         movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm3
 ; SSE-NEXT:    andps %xmm1, %xmm3
 ; SSE-NEXT:    maxss %xmm0, %xmm1
@@ -47,7 +47,7 @@ define float @test_fmaxf_minsize(float %x, float %y) minsize {
 
 ; CHECK-LABEL: @test_fmax
 ; SSE:         movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm2, %xmm2
+; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm3
 ; SSE-NEXT:    andpd %xmm1, %xmm3
 ; SSE-NEXT:    maxsd %xmm0, %xmm1
@@ -74,7 +74,7 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 
 ; CHECK-LABEL: @test_intrinsic_fmaxf
 ; SSE:         movaps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordss %xmm2, %xmm2
+; SSE-NEXT:    cmpunordss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm3
 ; SSE-NEXT:    andps %xmm1, %xmm3
 ; SSE-NEXT:    maxss %xmm0, %xmm1
@@ -95,7 +95,7 @@ define float @test_intrinsic_fmaxf(float %x, float %y) {
 
 ; CHECK-LABEL: @test_intrinsic_fmax
 ; SSE:         movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm2, %xmm2
+; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm3
 ; SSE-NEXT:    andpd %xmm1, %xmm3
 ; SSE-NEXT:    maxsd %xmm0, %xmm1

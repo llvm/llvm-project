@@ -5,9 +5,11 @@
 ; alternative is that of keeping a map of visited GVs, which has non trivial
 ; memory usage consequences on large testcases, or when LTO is the mode of
 ; operation.
-; RUN: not llc %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output %s -o - 2>&1 | FileCheck %s
 ; CHECK: missing global variable type
 ; CHECK: missing global variable type
+; CHECK-NOT: missing global variable type
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!63, !64}

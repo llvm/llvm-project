@@ -3,7 +3,7 @@
 
 define i64 @testOptimizeLiAddToAddi(i64 %a) {
 ; CHECK-LABEL: testOptimizeLiAddToAddi:
-; CHECK:    addi 3, 30, 2444
+; CHECK:    addi 3, 3, 2444
 ; CHECK:    bl callv
 ; CHECK:    addi 3, 30, 234
 ; CHECK:    bl call
