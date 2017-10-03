@@ -112,10 +112,12 @@ private:
 
   SIProgramInfo CurrentProgramInfo;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
+  std::map<uint32_t, uint32_t> PalMetadata;
 
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
   SIFunctionResourceInfo analyzeResourceUsage(const MachineFunction &MF) const;
 
+  void readPalMetadata(Module &M);
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
@@ -127,6 +129,7 @@ private:
   /// can correctly setup the GPU state.
   void EmitProgramInfoR600(const MachineFunction &MF);
   void EmitProgramInfoSI(const MachineFunction &MF, const SIProgramInfo &KernelInfo);
+  void EmitPalMetadata(const MachineFunction &MF, const SIProgramInfo &KernelInfo);
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   uint32_t NumSGPR,
                                   uint32_t ScratchSize,

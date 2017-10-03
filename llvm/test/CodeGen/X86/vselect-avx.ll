@@ -99,10 +99,9 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, (%rdi)
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX1-NEXT:    retq
 ;
@@ -123,10 +122,9 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %xmm0, (%rdi)
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm1[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-NEXT:    retq
   %tmp6 = srem <4 x i32> %induction30, <i32 3, i32 3, i32 3, i32 3>

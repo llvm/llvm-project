@@ -17,8 +17,8 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_mutex.h"
-#include <cstdint>
-#include <memory>
+#include <deque>
+#include <unordered_set>
 #include <utility>
 
 namespace __xray {
@@ -36,22 +36,14 @@ public:
   };
 
 private:
-  // Size of each individual Buffer.
   size_t BufferSize;
 
   // We use a bool to indicate whether the Buffer has been used in this
   // freelist implementation.
-  std::unique_ptr<std::tuple<Buffer, bool>[]> Buffers;
-  size_t BufferCount;
-
-  __sanitizer::SpinMutex Mutex;
+  std::deque<std::tuple<Buffer, bool>> Buffers;
+  __sanitizer::BlockingMutex Mutex;
+  std::unordered_set<void *> OwnedBuffers;
   __sanitizer::atomic_uint8_t Finalizing;
-
-  // Sorted buffer pointers, making it quick to find buffers that we own.
-  std::unique_ptr<void *[]> OwnedBuffers;
-
-  std::tuple<Buffer, bool> *Next;
-  std::tuple<Buffer, bool> *First;
 
 public:
   enum class ErrorCode : unsigned {
@@ -125,9 +117,8 @@ public:
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation).
   template <class F> void apply(F Fn) {
-    __sanitizer::SpinMutexLock G(&Mutex);
-    for (auto I = Buffers.get(), E = Buffers.get() + BufferCount; I != E; ++I) {
-      const auto &T = *I;
+    __sanitizer::BlockingMutexLock G(&Mutex);
+    for (const auto &T : Buffers) {
       if (std::get<1>(T))
         Fn(std::get<0>(T));
     }

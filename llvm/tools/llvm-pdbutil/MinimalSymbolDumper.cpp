@@ -287,57 +287,11 @@ static std::string formatCookieKind(FrameCookieKind Kind) {
 
 static std::string formatRegisterId(RegisterId Id) {
   switch (Id) {
-    RETURN_CASE(RegisterId, VFrame, "vframe");
-    RETURN_CASE(RegisterId, AL, "al");
-    RETURN_CASE(RegisterId, CL, "cl");
-    RETURN_CASE(RegisterId, DL, "dl");
-    RETURN_CASE(RegisterId, BL, "bl");
-    RETURN_CASE(RegisterId, AH, "ah");
-    RETURN_CASE(RegisterId, CH, "ch");
-    RETURN_CASE(RegisterId, DH, "dh");
-    RETURN_CASE(RegisterId, BH, "bh");
-    RETURN_CASE(RegisterId, AX, "ax");
-    RETURN_CASE(RegisterId, CX, "cx");
-    RETURN_CASE(RegisterId, DX, "dx");
-    RETURN_CASE(RegisterId, BX, "bx");
-    RETURN_CASE(RegisterId, SP, "sp");
-    RETURN_CASE(RegisterId, BP, "bp");
-    RETURN_CASE(RegisterId, SI, "si");
-    RETURN_CASE(RegisterId, DI, "di");
-    RETURN_CASE(RegisterId, EAX, "eax");
-    RETURN_CASE(RegisterId, ECX, "ecx");
-    RETURN_CASE(RegisterId, EDX, "edx");
-    RETURN_CASE(RegisterId, EBX, "ebx");
-    RETURN_CASE(RegisterId, ESP, "esp");
-    RETURN_CASE(RegisterId, EBP, "ebp");
-    RETURN_CASE(RegisterId, ESI, "esi");
-    RETURN_CASE(RegisterId, EDI, "edi");
-    RETURN_CASE(RegisterId, ES, "es");
-    RETURN_CASE(RegisterId, CS, "cs");
-    RETURN_CASE(RegisterId, SS, "ss");
-    RETURN_CASE(RegisterId, DS, "ds");
-    RETURN_CASE(RegisterId, FS, "fs");
-    RETURN_CASE(RegisterId, GS, "gs");
-    RETURN_CASE(RegisterId, IP, "ip");
-    RETURN_CASE(RegisterId, RAX, "rax");
-    RETURN_CASE(RegisterId, RBX, "rbx");
-    RETURN_CASE(RegisterId, RCX, "rcx");
-    RETURN_CASE(RegisterId, RDX, "rdx");
-    RETURN_CASE(RegisterId, RSI, "rsi");
-    RETURN_CASE(RegisterId, RDI, "rdi");
-    RETURN_CASE(RegisterId, RBP, "rbp");
-    RETURN_CASE(RegisterId, RSP, "rsp");
-    RETURN_CASE(RegisterId, R8, "r8");
-    RETURN_CASE(RegisterId, R9, "r9");
-    RETURN_CASE(RegisterId, R10, "r10");
-    RETURN_CASE(RegisterId, R11, "r11");
-    RETURN_CASE(RegisterId, R12, "r12");
-    RETURN_CASE(RegisterId, R13, "r13");
-    RETURN_CASE(RegisterId, R14, "r14");
-    RETURN_CASE(RegisterId, R15, "r15");
-  default:
-    return formatUnknownEnum(Id);
+#define CV_REGISTER(name, val) RETURN_CASE(RegisterId, name, #name)
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
   }
+  return formatUnknownEnum(Id);
 }
 
 static std::string formatRange(LocalVariableAddrRange Range) {

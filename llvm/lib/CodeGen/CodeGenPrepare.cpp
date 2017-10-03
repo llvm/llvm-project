@@ -2676,16 +2676,68 @@ namespace {
 struct ExtAddrMode : public TargetLowering::AddrMode {
   Value *BaseReg = nullptr;
   Value *ScaledReg = nullptr;
+  Value *OriginalValue = nullptr;
+
+  enum FieldName {
+    NoField        = 0x00,
+    BaseRegField   = 0x01,
+    BaseGVField    = 0x02,
+    BaseOffsField  = 0x04,
+    ScaledRegField = 0x08,
+    ScaleField     = 0x10,
+    MultipleFields = 0xff
+  };
 
   ExtAddrMode() = default;
 
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  bool operator==(const ExtAddrMode& O) const {
-    return (BaseReg == O.BaseReg) && (ScaledReg == O.ScaledReg) &&
-           (BaseGV == O.BaseGV) && (BaseOffs == O.BaseOffs) &&
-           (HasBaseReg == O.HasBaseReg) && (Scale == O.Scale);
+  FieldName compare(const ExtAddrMode &other) {
+    // First check that the types are the same on each field, as differing types
+    // is something we can't cope with later on.
+    if (BaseReg && other.BaseReg &&
+        BaseReg->getType() != other.BaseReg->getType())
+      return MultipleFields;
+    if (BaseGV && other.BaseGV &&
+        BaseGV->getType() != other.BaseGV->getType())
+      return MultipleFields;
+    if (ScaledReg && other.ScaledReg &&
+        ScaledReg->getType() != other.ScaledReg->getType())
+      return MultipleFields;
+
+    // Check each field to see if it differs.
+    unsigned Result = NoField;
+    if (BaseReg != other.BaseReg)
+      Result |= BaseRegField;
+    if (BaseGV != other.BaseGV)
+      Result |= BaseGVField;
+    if (BaseOffs != other.BaseOffs)
+      Result |= BaseOffsField;
+    if (ScaledReg != other.ScaledReg)
+      Result |= ScaledRegField;
+    // Don't count 0 as being a different scale, because that actually means
+    // unscaled (which will already be counted by having no ScaledReg).
+    if (Scale && other.Scale && Scale != other.Scale)
+      Result |= ScaleField;
+
+    if (countPopulation(Result) > 1)
+      return MultipleFields;
+    else
+      return static_cast<FieldName>(Result);
+  }
+
+  // AddrModes with a base reg or gv where the reg/gv is just the original
+  // value are trivial.
+  bool isTrivial() {
+    bool Trivial = (BaseGV && BaseGV == OriginalValue) ||
+      (BaseReg && BaseReg == OriginalValue);
+    // If the AddrMode is trivial it shouldn't have an offset or be scaled.
+    if (Trivial) {
+      assert(BaseOffs == 0);
+      assert(Scale == 0);
+    }
+    return Trivial;
   }
 };
 
@@ -3300,6 +3352,92 @@ private:
   bool valueAlreadyLiveAtInst(Value *Val, Value *KnownLive1, Value *KnownLive2);
   bool isPromotionProfitable(unsigned NewCost, unsigned OldCost,
                              Value *PromotedOperand) const;
+};
+
+/// \brief A helper class for combining addressing modes.
+class AddressingModeCombiner {
+private:
+  /// The addressing modes we've collected.
+  SmallVector<ExtAddrMode, 16> AddrModes;
+
+  /// The field in which the AddrModes differ, when we have more than one.
+  ExtAddrMode::FieldName DifferentField = ExtAddrMode::NoField;
+
+  /// Are the AddrModes that we have all just equal to their original values?
+  bool AllAddrModesTrivial = true;
+
+public:
+  /// \brief Get the combined AddrMode
+  const ExtAddrMode &getAddrMode() const {
+    return AddrModes[0];
+  }
+
+  /// \brief Add a new AddrMode if it's compatible with the AddrModes we already
+  /// have.
+  /// \return True iff we succeeded in doing so.
+  bool addNewAddrMode(ExtAddrMode &NewAddrMode) {
+    // Take note of if we have any non-trivial AddrModes, as we need to detect
+    // when all AddrModes are trivial as then we would introduce a phi or select
+    // which just duplicates what's already there.
+    AllAddrModesTrivial = AllAddrModesTrivial && NewAddrMode.isTrivial();
+
+    // If this is the first addrmode then everything is fine.
+    if (AddrModes.empty()) {
+      AddrModes.emplace_back(NewAddrMode);
+      return true;
+    }
+
+    // Figure out how different this is from the other address modes, which we
+    // can do just by comparing against the first one given that we only care
+    // about the cumulative difference.
+    ExtAddrMode::FieldName ThisDifferentField =
+      AddrModes[0].compare(NewAddrMode);
+    if (DifferentField == ExtAddrMode::NoField)
+      DifferentField = ThisDifferentField;
+    else if (DifferentField != ThisDifferentField)
+      DifferentField = ExtAddrMode::MultipleFields;
+
+    // If this AddrMode is the same as all the others then everything is fine
+    // (which should only happen when there is actually only one AddrMode).
+    if (DifferentField == ExtAddrMode::NoField) {
+      assert(AddrModes.size() == 1);
+      return true;
+    }
+
+    // If NewAddrMode differs in only one dimension then we can handle it by
+    // inserting a phi/select later on.
+    if (DifferentField != ExtAddrMode::MultipleFields) {
+      AddrModes.emplace_back(NewAddrMode);
+      return true;
+    }
+
+    // We couldn't combine NewAddrMode with the rest, so return failure.
+    AddrModes.clear();
+    return false;
+  }
+
+  /// \brief Combine the addressing modes we've collected into a single
+  /// addressing mode.
+  /// \return True iff we successfully combined them or we only had one so
+  /// didn't need to combine them anyway.
+  bool combineAddrModes() {
+    // If we have no AddrModes then they can't be combined.
+    if (AddrModes.size() == 0)
+      return false;
+
+    // A single AddrMode can trivially be combined.
+    if (AddrModes.size() == 1)
+      return true;
+
+    // If the AddrModes we collected are all just equal to the value they are
+    // derived from then combining them wouldn't do anything useful.
+    if (AllAddrModesTrivial)
+      return false;
+
+    // TODO: Combine multiple AddrModes by inserting a select or phi for the
+    // field in which the AddrModes differ.
+    return false;
+  }
 };
 
 } // end anonymous namespace
@@ -4389,13 +4527,12 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   SmallPtrSet<Value*, 16> Visited;
   worklist.push_back(Addr);
 
-  // Use a worklist to iteratively look through PHI nodes, and ensure that
-  // the addressing mode obtained from the non-PHI roots of the graph
-  // are equivalent.
-  bool AddrModeFound = false;
-  bool PhiSeen = false;
+  // Use a worklist to iteratively look through PHI and select nodes, and
+  // ensure that the addressing mode obtained from the non-PHI/select roots of
+  // the graph are compatible.
+  bool PhiOrSelectSeen = false;
   SmallVector<Instruction*, 16> AddrModeInsts;
-  ExtAddrMode AddrMode;
+  AddressingModeCombiner AddrModes;
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();
@@ -4419,7 +4556,14 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     if (PHINode *P = dyn_cast<PHINode>(V)) {
       for (Value *IncValue : P->incoming_values())
         worklist.push_back(IncValue);
-      PhiSeen = true;
+      PhiOrSelectSeen = true;
+      continue;
+    }
+    // Similar for select.
+    if (SelectInst *SI = dyn_cast<SelectInst>(V)) {
+      worklist.push_back(SI->getFalseValue());
+      worklist.push_back(SI->getTrueValue());
+      PhiOrSelectSeen = true;
       continue;
     }
 
@@ -4430,30 +4574,29 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
         InsertedInsts, PromotedInsts, TPT);
+    NewAddrMode.OriginalValue = V;
 
-    if (!AddrModeFound) {
-      AddrModeFound = true;
-      AddrMode = NewAddrMode;
-      continue;
-    }
-    if (NewAddrMode == AddrMode)
-      continue;
-
-    AddrModeFound = false;
-    break;
+    if (!AddrModes.addNewAddrMode(NewAddrMode))
+      break;
   }
 
-  // If the addressing mode couldn't be determined, or if multiple different
-  // ones were determined, bail out now.
-  if (!AddrModeFound) {
+  // Try to combine the AddrModes we've collected. If we couldn't collect any,
+  // or we have multiple but either couldn't combine them or combining them
+  // wouldn't do anything useful, bail out now.
+  if (!AddrModes.combineAddrModes()) {
     TPT.rollback(LastKnownGood);
     return false;
   }
   TPT.commit();
 
+  // Get the combined AddrMode (or the only AddrMode, if we only had one).
+  ExtAddrMode AddrMode = AddrModes.getAddrMode();
+
   // If all the instructions matched are already in this BB, don't do anything.
-  // If we saw Phi node then it is not local definitely.
-  if (!PhiSeen && none_of(AddrModeInsts, [&](Value *V) {
+  // If we saw a Phi node then it is not local definitely, and if we saw a select
+  // then we want to push the address calculation past it even if it's already
+  // in this BB.
+  if (!PhiOrSelectSeen && none_of(AddrModeInsts, [&](Value *V) {
         return IsNonLocalValue(V, MemoryInst->getParent());
                   })) {
     DEBUG(dbgs() << "CGP: Found      local addrmode: " << AddrMode << "\n");

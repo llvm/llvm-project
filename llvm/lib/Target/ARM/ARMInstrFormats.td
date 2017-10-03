@@ -2573,18 +2573,18 @@ class N3VLaneCP8<bit op23, bits<2> op21_20, bit op6, bit op4,
 }
 
 // Operand types for complex instructions
-class ComplexRotationOperand<int Angle, int Remainder, string Type>
+class ComplexRotationOperand<int Angle, int Remainder, string Type, string Diag>
   : AsmOperandClass {
   let PredicateMethod = "isComplexRotation<" # Angle # ", " # Remainder # ">";
-  let DiagnosticType = "InvalidComplexRotation" # Type;
+  let DiagnosticString = "complex rotation must be " # Diag;
   let Name = "ComplexRotation" # Type;
 }
 def complexrotateop : Operand<i32> {
-  let ParserMatchClass = ComplexRotationOperand<90, 0, "Even">;
+  let ParserMatchClass = ComplexRotationOperand<90, 0, "Even", "0, 90, 180 or 270">;
   let PrintMethod = "printComplexRotationOp<90, 0>";
 }
 def complexrotateopodd : Operand<i32> {
-  let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd">;
+  let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd", "90 or 270">;
   let PrintMethod = "printComplexRotationOp<180, 90>";
 }
 

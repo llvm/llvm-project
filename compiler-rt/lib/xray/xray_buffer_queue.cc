@@ -16,7 +16,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
-#include <algorithm>
 #include <cstdlib>
 #include <tuple>
 
@@ -24,21 +23,18 @@ using namespace __xray;
 using namespace __sanitizer;
 
 BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
-    : BufferSize(B), Buffers(new std::tuple<Buffer, bool>[N]()),
-      BufferCount(N), Finalizing{0}, OwnedBuffers(new void *[N]()),
-      Next(Buffers.get()), First(nullptr) {
-  for (size_t i = 0; i < N; ++i) {
-    auto &T = Buffers[i];
+    : BufferSize(B), Buffers(N), Mutex(), OwnedBuffers(), Finalizing{0} {
+  for (auto &T : Buffers) {
     void *Tmp = malloc(BufferSize);
     if (Tmp == nullptr) {
       Success = false;
       return;
     }
+
     auto &Buf = std::get<0>(T);
-    std::get<1>(T) = false;
     Buf.Buffer = Tmp;
     Buf.Size = B;
-    OwnedBuffers[i] = Tmp;
+    OwnedBuffers.emplace(Tmp);
   }
   Success = true;
 }
@@ -46,43 +42,27 @@ BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
 BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   if (__sanitizer::atomic_load(&Finalizing, __sanitizer::memory_order_acquire))
     return ErrorCode::QueueFinalizing;
-  __sanitizer::SpinMutexLock Guard(&Mutex);
-
-  if (Next == First)
+  __sanitizer::BlockingMutexLock Guard(&Mutex);
+  if (Buffers.empty())
     return ErrorCode::NotEnoughMemory;
-
-  auto &T = *Next;
+  auto &T = Buffers.front();
   auto &B = std::get<0>(T);
   Buf = B;
-
-  if (First == nullptr)
-    First = Next;
-  ++Next;
-  if (Next == (Buffers.get() + BufferCount))
-    Next = Buffers.get();
-
+  B.Buffer = nullptr;
+  B.Size = 0;
+  Buffers.pop_front();
   return ErrorCode::Ok;
 }
 
 BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
-  // Blitz through the buffers array to find the buffer.
-  if (std::none_of(OwnedBuffers.get(), OwnedBuffers.get() + BufferCount,
-                   [&Buf](void *P) { return P == Buf.Buffer; }))
+  if (OwnedBuffers.count(Buf.Buffer) == 0)
     return ErrorCode::UnrecognizedBuffer;
-  __sanitizer::SpinMutexLock Guard(&Mutex);
-
-  // This points to a semantic bug, we really ought to not be releasing more
-  // buffers than we actually get.
-  if (First == nullptr || First == Next)
-    return ErrorCode::NotEnoughMemory;
+  __sanitizer::BlockingMutexLock Guard(&Mutex);
 
   // Now that the buffer has been released, we mark it as "used".
-  *First = std::make_tuple(Buf, true);
+  Buffers.emplace(Buffers.end(), Buf, true /* used */);
   Buf.Buffer = nullptr;
   Buf.Size = 0;
-  ++First;
-  if (First == (Buffers.get() + BufferCount))
-    First = Buffers.get();
   return ErrorCode::Ok;
 }
 
@@ -94,8 +74,7 @@ BufferQueue::ErrorCode BufferQueue::finalize() {
 }
 
 BufferQueue::~BufferQueue() {
-  for (auto I = Buffers.get(), E = Buffers.get() + BufferCount; I != E; ++I) {
-    auto &T = *I;
+  for (auto &T : Buffers) {
     auto &Buf = std::get<0>(T);
     free(Buf.Buffer);
   }

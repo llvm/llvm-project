@@ -9,6 +9,7 @@
 
 #include "llvm/Support/Parallel.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Threading.h"
 
 #include <atomic>
 #include <stack>
@@ -70,8 +71,7 @@ Executor *Executor::getDefaultExecutor() {
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
 public:
-  explicit ThreadPoolExecutor(
-      unsigned ThreadCount = std::thread::hardware_concurrency())
+  explicit ThreadPoolExecutor(unsigned ThreadCount = hardware_concurrency())
       : Done(ThreadCount) {
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.

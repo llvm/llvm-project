@@ -132,6 +132,16 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
           I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
         return true;
 
+      // V_READFIRSTLANE/V_READLANE destination register may be used as operand
+      // by some SALU instruction. If exec mask is zero vector instruction
+      // defining the register that is used by the scalar one is not executed
+      // and scalar instruction will operate on undefined data. For
+      // V_READFIRSTLANE/V_READLANE we should avoid predicated execution.
+      if ((I->getOpcode() == AMDGPU::V_READFIRSTLANE_B32) ||
+          (I->getOpcode() == AMDGPU::V_READLANE_B32)) {
+        return true;
+      }
+
       if (I->isInlineAsm()) {
         const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
         const char *AsmStr = I->getOperand(0).getSymbolName();
