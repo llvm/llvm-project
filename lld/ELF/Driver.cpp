@@ -40,8 +40,8 @@
 #include "Target.h"
 #include "Threads.h"
 #include "Writer.h"
-#include "lld/Config/Version.h"
-#include "lld/Driver/Driver.h"
+#include "lld/Common/Driver.h"
+#include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -1079,6 +1079,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (BinaryFile *F : BinaryFiles)
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
+
+  if (Config->EMachine == EM_MIPS)
+    Config->MipsEFlags = calcMipsEFlags<ELFT>();
 
   // This adds a .comment section containing a version string. We have to add it
   // before decompressAndMergeSections because the .comment section is a

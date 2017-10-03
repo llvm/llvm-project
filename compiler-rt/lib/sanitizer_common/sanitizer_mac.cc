@@ -416,6 +416,8 @@ void ListOfModules::init() {
   memory_mapping.DumpListOfModules(&modules_);
 }
 
+void ListOfModules::fallbackInit() { clear(); }
+
 static HandleSignalMode GetHandleSignalModeImpl(int signum) {
   switch (signum) {
     case SIGABRT:

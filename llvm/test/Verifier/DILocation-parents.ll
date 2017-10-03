@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o - 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output %s -o - 2>&1 | FileCheck %s
 source_filename = "t.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
@@ -16,6 +16,8 @@ entry:
 ; CHECK: DILexicalBlockFile
   ret void, !dbg !9
 }
+
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_CORE_REPRODUCE_H
-#define LLD_CORE_REPRODUCE_H
+#ifndef LLD_COMMON_REPRODUCE_H
+#define LLD_COMMON_REPRODUCE_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 

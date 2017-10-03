@@ -408,12 +408,12 @@ defm V_CVT_PK_I16_I32 : VOP2Inst <"v_cvt_pk_i16_i32", VOP_NO_EXT<VOP_I32_I32_I32
 
 } // End SubtargetPredicate = isGCN
 
-def : Pat<
+def : GCNPat<
     (AMDGPUadde i32:$src0, i32:$src1, i1:$src2),
     (V_ADDC_U32_e64 $src0, $src1, $src2)
 >;
 
-def : Pat<
+def : GCNPat<
     (AMDGPUsube i32:$src0, i32:$src1, i1:$src2),
     (V_SUBB_U32_e64 $src0, $src1, $src2)
 >;
@@ -469,17 +469,17 @@ defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 // Note: 16-bit instructions produce a 0 result in the high 16-bits.
 multiclass Arithmetic_i16_Pats <SDPatternOperator op, Instruction inst> {
 
-def : Pat<
+def : GCNPat<
   (op i16:$src0, i16:$src1),
   (inst $src0, $src1)
 >;
 
-def : Pat<
+def : GCNPat<
   (i32 (zext (op i16:$src0, i16:$src1))),
   (inst $src0, $src1)
 >;
 
-def : Pat<
+def : GCNPat<
   (i64 (zext (op i16:$src0, i16:$src1))),
    (REG_SEQUENCE VReg_64,
      (inst $src0, $src1), sub0,
@@ -490,18 +490,18 @@ def : Pat<
 
 multiclass Bits_OpsRev_i16_Pats <SDPatternOperator op, Instruction inst> {
 
-def : Pat<
+def : GCNPat<
   (op i16:$src0, i16:$src1),
   (inst $src1, $src0)
 >;
 
-def : Pat<
+def : GCNPat<
   (i32 (zext (op i16:$src0, i16:$src1))),
   (inst $src1, $src0)
 >;
 
 
-def : Pat<
+def : GCNPat<
   (i64 (zext (op i16:$src0, i16:$src1))),
    (REG_SEQUENCE VReg_64,
      (inst $src1, $src0), sub0,
@@ -509,7 +509,7 @@ def : Pat<
 >;
 }
 
-class ZExt_i16_i1_Pat <SDNode ext> : Pat <
+class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
   (i16 (ext i1:$src)),
   (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src)
 >;
@@ -524,17 +524,17 @@ defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e64>;
 defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e64>;
 defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e64>;
 
-def : Pat <
+def : GCNPat <
   (and i16:$src0, i16:$src1),
   (V_AND_B32_e64 $src0, $src1)
 >;
 
-def : Pat <
+def : GCNPat <
   (or i16:$src0, i16:$src1),
   (V_OR_B32_e64 $src0, $src1)
 >;
 
-def : Pat <
+def : GCNPat <
   (xor i16:$src0, i16:$src1),
   (V_XOR_B32_e64 $src0, $src1)
 >;
@@ -546,7 +546,7 @@ defm : Bits_OpsRev_i16_Pats<sra, V_ASHRREV_I16_e64>;
 def : ZExt_i16_i1_Pat<zext>;
 def : ZExt_i16_i1_Pat<anyext>;
 
-def : Pat <
+def : GCNPat <
   (i16 (sext i1:$src)),
   (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src)
 >;
@@ -554,7 +554,7 @@ def : Pat <
 // Undo sub x, c -> add x, -c canonicalization since c is more likely
 // an inline immediate than -c.
 // TODO: Also do for 64-bit.
-def : Pat<
+def : GCNPat<
   (add i16:$src0, (i16 NegSubInlineConst16:$src1)),
   (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
 >;

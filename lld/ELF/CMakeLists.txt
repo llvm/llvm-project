@@ -65,7 +65,7 @@ add_lld_library(lldELF
   TransformUtils
 
   LINK_LIBS
-  lldConfig
+  lldCommon
   lldCore
   ${LLVM_PTHREAD_LIB}
 

@@ -658,9 +658,9 @@ public:
 
   llvm::MDNode *getTBAAInfoForVTablePtr();
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
-  /// Return the path-aware tag for given base type, access node and offset.
-  llvm::MDNode *getTBAAStructTagInfo(QualType BaseTy, llvm::MDNode *AccessN,
-                                     uint64_t O);
+
+  /// Get path-aware TBAA tag for a given memory access.
+  llvm::MDNode *getTBAAStructTagInfo(TBAAAccessInfo Info);
 
   /// getTBAAMayAliasTypeInfo - Get TBAA information that represents
   /// may-alias accesses.

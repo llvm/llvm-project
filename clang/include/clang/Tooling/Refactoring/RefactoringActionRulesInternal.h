@@ -20,108 +20,90 @@
 
 namespace clang {
 namespace tooling {
-namespace refactoring_action_rules {
 namespace internal {
 
-/// A specialized refactoring action rule that calls the stored function once
-/// all the of the requirements are fullfilled. The values produced during the
-/// evaluation of requirements are passed to the stored function.
-template <typename FunctionType, typename... RequirementTypes>
-class PlainFunctionRule final : public RefactoringActionRule {
-public:
-  PlainFunctionRule(FunctionType Function,
-                    std::tuple<RequirementTypes...> &&Requirements)
-      : Function(Function), Requirements(std::move(Requirements)) {}
+inline llvm::Error findError() { return llvm::Error::success(); }
 
-  void invoke(RefactoringResultConsumer &Consumer,
-              RefactoringRuleContext &Context) override {
-    return invokeImpl(Consumer, Context,
-                      llvm::index_sequence_for<RequirementTypes...>());
-  }
+/// Scans the tuple and returns a valid \c Error if any of the values are
+/// invalid.
+template <typename FirstT, typename... RestT>
+llvm::Error findError(Expected<FirstT> &First, Expected<RestT> &... Rest) {
+  if (!First)
+    return First.takeError();
+  return findError(Rest...);
+}
 
-  bool hasSelectionRequirement() override {
-    return traits::HasSelectionRequirement<RequirementTypes...>::value;
-  }
+template <typename RuleType, typename... RequirementTypes, size_t... Is>
+void invokeRuleAfterValidatingRequirements(
+    RefactoringResultConsumer &Consumer, RefactoringRuleContext &Context,
+    const std::tuple<RequirementTypes...> &Requirements,
+    llvm::index_sequence<Is...>) {
+  // Check if the requirements we're interested in can be evaluated.
+  auto Values =
+      std::make_tuple(std::get<Is>(Requirements).evaluate(Context)...);
+  auto Err = findError(std::get<Is>(Values)...);
+  if (Err)
+    return Consumer.handleError(std::move(Err));
+  // Construct the target action rule by extracting the evaluated
+  // requirements from Expected<> wrappers and then run it.
+  RuleType((*std::get<Is>(Values))...).invoke(Consumer, Context);
+}
 
-private:
-  /// Returns \c T when given \c Expected<Optional<T>>, or \c T otherwise.
-  template <typename T>
-  static T &&unwrapRequirementResult(Expected<Optional<T>> &&X) {
-    assert(X && "unexpected diagnostic!");
-    return std::move(**X);
-  }
-  template <typename T> static T &&unwrapRequirementResult(T &&X) {
-    return std::move(X);
-  }
+/// A type trait that returns true when the given type list has at least one
+/// type whose base is the given base type.
+template <typename Base, typename First, typename... Rest>
+struct HasBaseOf : std::conditional<HasBaseOf<Base, First>::value ||
+                                        HasBaseOf<Base, Rest...>::value,
+                                    std::true_type, std::false_type>::type {};
 
-  /// Scans the tuple and returns a \c PartialDiagnosticAt
-  /// from the first invalid \c DiagnosticOr value. Returns \c None if all
-  /// values are valid.
-  template <typename FirstT, typename... RestT>
-  static Optional<llvm::Error> findErrorNone(FirstT &First, RestT &... Rest) {
-    Optional<llvm::Error> Result = takeErrorNone(First);
-    if (Result)
-      return Result;
-    return findErrorNone(Rest...);
-  }
+template <typename Base, typename T>
+struct HasBaseOf<Base, T> : std::is_base_of<Base, T> {};
 
-  static Optional<llvm::Error> findErrorNone() { return None; }
+/// A type trait that returns true when the given type list contains types that
+/// derive from Base.
+template <typename Base, typename First, typename... Rest>
+struct AreBaseOf : std::conditional<AreBaseOf<Base, First>::value &&
+                                        AreBaseOf<Base, Rest...>::value,
+                                    std::true_type, std::false_type>::type {};
 
-  template <typename T> static Optional<llvm::Error> takeErrorNone(T &) {
-    return None;
-  }
-
-  template <typename T>
-  static Optional<llvm::Error> takeErrorNone(Expected<Optional<T>> &Diag) {
-    if (!Diag)
-      return std::move(Diag.takeError());
-    if (!*Diag)
-      return llvm::Error::success(); // Initiation failed without a diagnostic.
-    return None;
-  }
-
-  template <size_t... Is>
-  void invokeImpl(RefactoringResultConsumer &Consumer,
-                  RefactoringRuleContext &Context,
-                  llvm::index_sequence<Is...> Seq) {
-    // Initiate the operation.
-    auto Values =
-        std::make_tuple(std::get<Is>(Requirements).evaluate(Context)...);
-    Optional<llvm::Error> InitiationFailure =
-        findErrorNone(std::get<Is>(Values)...);
-    if (InitiationFailure) {
-      llvm::Error Error = std::move(*InitiationFailure);
-      if (!Error)
-        // FIXME: Use a diagnostic.
-        return Consumer.handleError(llvm::make_error<llvm::StringError>(
-            "refactoring action can't be initiated with the specified "
-            "selection range",
-            llvm::inconvertibleErrorCode()));
-      return Consumer.handleError(std::move(Error));
-    }
-    // Perform the operation.
-    auto Result = Function(
-        Context, unwrapRequirementResult(std::move(std::get<Is>(Values)))...);
-    if (!Result)
-      return Consumer.handleError(Result.takeError());
-    Consumer.handle(std::move(*Result));
-  }
-
-  FunctionType Function;
-  std::tuple<RequirementTypes...> Requirements;
-};
-
-/// Used to deduce the refactoring result type for the lambda that passed into
-/// createRefactoringRule.
-template <typename T> struct LambdaDeducer;
-template <typename T, typename R, typename... Args>
-struct LambdaDeducer<R (T::*)(const RefactoringRuleContext &, Args...) const> {
-  using ReturnType = R;
-  using FunctionType = R (*)(const RefactoringRuleContext &, Args...);
-};
+template <typename Base, typename T>
+struct AreBaseOf<Base, T> : std::is_base_of<Base, T> {};
 
 } // end namespace internal
-} // end namespace refactoring_action_rules
+
+template <typename RuleType, typename... RequirementTypes>
+std::unique_ptr<RefactoringActionRule>
+createRefactoringActionRule(const RequirementTypes &... Requirements) {
+  static_assert(std::is_base_of<RefactoringActionRuleBase, RuleType>::value,
+                "Expected a refactoring action rule type");
+  static_assert(internal::AreBaseOf<RefactoringActionRuleRequirement,
+                                    RequirementTypes...>::value,
+                "Expected a list of refactoring action rules");
+
+  class Rule final : public RefactoringActionRule {
+  public:
+    Rule(std::tuple<RequirementTypes...> Requirements)
+        : Requirements(Requirements) {}
+
+    void invoke(RefactoringResultConsumer &Consumer,
+                RefactoringRuleContext &Context) override {
+      internal::invokeRuleAfterValidatingRequirements<RuleType>(
+          Consumer, Context, Requirements,
+          llvm::index_sequence_for<RequirementTypes...>());
+    }
+
+    bool hasSelectionRequirement() override {
+      return internal::HasBaseOf<SourceSelectionRequirement,
+                                 RequirementTypes...>::value;
+    }
+
+  private:
+    std::tuple<RequirementTypes...> Requirements;
+  };
+
+  return llvm::make_unique<Rule>(std::make_tuple(Requirements...));
+}
+
 } // end namespace tooling
 } // end namespace clang
 

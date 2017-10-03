@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -sections %t | FileCheck -check-prefix=OBJ %s
+# RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_386
+Sections:
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+
+# OBJ:      Sections [
+# OBJ:        Section {
+# OBJ:          Index: 1
+# OBJ-NEXT:     Name: .debug_line (1)
+# OBJ-NEXT:     Type: SHT_PROGBITS (0x1)
+# OBJ-NEXT:     Flags [ (0x800)
+# OBJ-NEXT:       SHF_COMPRESSED (0x800)
+# OBJ-NEXT:     ]
+
+# YAML:      Sections:
+# YAML-NEXT:   - Name:            .debug_line
+# YAML-NEXT:     Type:            SHT_PROGBITS
+# YAML-NEXT:     Flags:           [ SHF_COMPRESSED ]

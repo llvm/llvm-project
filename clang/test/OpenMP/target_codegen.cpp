@@ -92,23 +92,20 @@ int foo(int n) {
   double cn[5][n];
   TT<long long, char> d;
 
-  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i[[SZ]]* null, i32* null)
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK:       [[ADD:%.+]] = add nsw i32
+  // CHECK:       store i32 [[ADD]], i32* [[CAPTURE:%.+]],
+  // CHECK:       [[LD:%.+]] = load i32, i32* [[CAPTURE]],
+  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i32 [[LD]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i[[SZ]]* null, i32* null)
+  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT0:@.+]]()
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
-  #pragma omp target
+  #pragma omp target device(global + a)
   {
   }
 
-  // CHECK:       store i32 0, i32* [[RHV:%.+]], align 4
-  // CHECK:       store i32 -1, i32* [[RHV]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
   #pragma omp target if(0) firstprivate(global)
   {
@@ -125,9 +122,7 @@ int foo(int n) {
   // CHECK-DAG:   store i[[SZ]] [[BP0:%[^,]+]], i[[SZ]]* [[CBPADDR0]]
   // CHECK-DAG:   store i[[SZ]] [[P0:%[^,]+]], i[[SZ]]* [[CPADDR0]]
 
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT2:@.+]](i[[SZ]] {{[^,]+}})
@@ -158,21 +153,18 @@ int foo(int n) {
   // CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] [[BP1:%[^,]+]], i[[SZ]]* [[CBPADDR1]]
   // CHECK-DAG:   store i[[SZ]] [[P1:%[^,]+]], i[[SZ]]* [[CPADDR1]]
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK-NEXT:  br label %[[IFEND:.+]]
-
-  // CHECK:       [[IFELSE]]
-  // CHECK:       store i32 -1, i32* [[RHV]], align 4
-  // CHECK-NEXT:  br label %[[IFEND:.+]]
-
-  // CHECK:       [[IFEND]]
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT3:@.+]]({{[^,]+}}, {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
+  // CHECK-NEXT:  br label %[[IFEND:.+]]
+  // CHECK:       [[IFELSE]]
+  // CHECK:       call void [[HVT3]]({{[^,]+}}, {{[^,]+}})
+  // CHECK-NEXT:  br label %[[IFEND]]
+
+  // CHECK:       [[IFEND]]
   #pragma omp target if(n>10)
   {
     a += 1;
@@ -194,7 +186,7 @@ int foo(int n) {
   // CHECK:       [[CNSIZE:%.+]] = mul nuw i[[SZ]] [[CNELEMSIZE2]], 8
 
   // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
-  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
+  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[IFELSE:[^,]+]]
   // CHECK:       [[TRY]]
   // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 9, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i32* getelementptr inbounds ([9 x i32], [9 x i32]* [[MAPT4]], i32 0, i32 0))
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
@@ -285,15 +277,18 @@ int foo(int n) {
   // CHECK-DAG:   store [[TT]]* %{{.+}}, [[TT]]** [[CPADDR8]]
   // CHECK-DAG:   store i[[SZ]] {{12|16}}, i[[SZ]]* [[SADDR8]]
 
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-  // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
-
+  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+  // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT4:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
+  // CHECK-NEXT:  br label %[[IFEND:.+]]
+  // CHECK:       [[IFELSE]]
+  // CHECK:       call void [[HVT4]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+  // CHECK-NEXT:  br label %[[IFEND]]
+
+  // CHECK:       [[IFEND]]
   #pragma omp target if(n>20)
   {
     a += 1;
@@ -467,7 +462,7 @@ int bar(int n){
 // CHECK:       [[CSIZE:%.+]] = mul nuw i[[SZ]] [[CELEMSIZE2]], 2
 
 // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
-// CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
+// CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[IFELSE:[^,]+]]
 // CHECK:       [[TRY]]
 // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i32* getelementptr inbounds ([5 x i32], [5 x i32]* [[MAPT7]], i32 0, i32 0))
 // CHECK-DAG:   [[BPR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP:%.+]], i32 0, i32 0
@@ -521,15 +516,18 @@ int bar(int n){
 // CHECK-DAG:   store i16* %{{.+}}, i16** [[CPADDR4]]
 // CHECK-DAG:   store i[[SZ]] [[CSIZE]], i[[SZ]]* [[SADDR4]]
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
-// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
-
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT7:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IFELSE]]
+// CHECK:       call void [[HVT7]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+// CHECK-NEXT:  br label %[[IFEND]]
+
+// CHECK:       [[IFEND]]
 
 //
 // CHECK: define {{.*}}[[FSTATIC]]
@@ -569,21 +567,18 @@ int bar(int n){
 // CHECK-DAG:   store [10 x i32]* [[VAL3:%[^,]+]], [10 x i32]** [[CBPADDR3]]
 // CHECK-DAG:   store [10 x i32]* [[VAL3]], [10 x i32]** [[CPADDR3]]
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFEND]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT6:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IFELSE]]
+// CHECK:       call void [[HVT6]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+// CHECK-NEXT:  br label %[[IFEND]]
+
+// CHECK:       [[IFEND]]
 
 //
 // CHECK: define {{.*}}[[FTEMPLATE]]
@@ -616,22 +611,18 @@ int bar(int n){
 // CHECK-DAG:   store [10 x i32]* [[VAL2:%[^,]+]], [10 x i32]** [[CBPADDR2]]
 // CHECK-DAG:   store [10 x i32]* [[VAL2]], [10 x i32]** [[CPADDR2]]
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFEND]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT5:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IFELSE]]
+// CHECK:       call void [[HVT5]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+// CHECK-NEXT:  br label %[[IFEND]]
 
+// CHECK:       [[IFEND]]
 
 
 // Check that the offloading functions are emitted and that the arguments are

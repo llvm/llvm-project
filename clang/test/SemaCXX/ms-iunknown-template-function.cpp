@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify -fms-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fms-extensions %s
+// expected-no-diagnostics
 typedef long HRESULT;
 typedef unsigned long ULONG;
 typedef struct _GUID {
@@ -15,8 +16,7 @@ typedef GUID IID;
 
 extern "C" {
 extern "C++" {
-// expected-warning@+1 {{__declspec attribute 'novtable'}}
-struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) __declspec(novtable)
+struct __declspec(uuid("00000000-0000-0000-C000-000000000046"))
     IUnknown {
 public:
   virtual HRESULT __stdcall QueryInterface(

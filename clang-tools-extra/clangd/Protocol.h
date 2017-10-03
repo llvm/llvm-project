@@ -237,6 +237,33 @@ struct DidChangeTextDocumentParams {
   parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
 };
 
+enum class FileChangeType {
+  /// The file got created.
+  Created = 1,
+  /// The file got changed.
+  Changed = 2,
+  /// The file got deleted.
+  Deleted = 3
+};
+
+struct FileEvent {
+  /// The file's URI.
+  URI uri;
+  /// The change type.
+  FileChangeType type;
+
+  static llvm::Optional<FileEvent> parse(llvm::yaml::MappingNode *Params,
+                                         clangd::Logger &Logger);
+};
+
+struct DidChangeWatchedFilesParams {
+  /// The actual file events.
+  std::vector<FileEvent> changes;
+
+  static llvm::Optional<DidChangeWatchedFilesParams>
+  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+};
+
 struct FormattingOptions {
   /// Size of a tab in spaces.
   int tabSize;

@@ -16,8 +16,8 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %e.0
 ; CHECK: @foo
 ; CHECK: mr [[NEWREG:[0-9]+]], 3
+; CHECK: mr [[REG1:[0-9]+]], 4
 ; CHECK: mtvsrd [[NEWREG2:[0-9]+]], 4
-; CHECK: mffprd [[REG1:[0-9]+]], [[NEWREG2]]
 ; CHECK: add {{[0-9]+}}, [[NEWREG]], [[REG1]]
 ; CHECK: mffprd [[REG2:[0-9]+]], [[NEWREG2]]
 ; CHECK: add {{[0-9]+}}, [[REG2]], [[NEWREG]]

@@ -10,7 +10,7 @@
 #ifndef LLD_ELF_RELOCATIONS_H
 #define LLD_ELF_RELOCATIONS_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include <map>
 #include <vector>

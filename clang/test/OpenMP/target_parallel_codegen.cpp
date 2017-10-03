@@ -94,9 +94,7 @@ int foo(int n) {
   TT<long long, char> d;
 
   // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i[[SZ]]* null, i32* null, i32 1, i32 0)
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT0:@.+]]()
@@ -106,10 +104,6 @@ int foo(int n) {
   {
   }
 
-  // CHECK:       store i32 0, i32* [[RHV:%.+]], align 4
-  // CHECK:       store i32 -1, i32* [[RHV]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
   #pragma omp target parallel if(target: 0)
   {
@@ -126,9 +120,7 @@ int foo(int n) {
   // CHECK-DAG:   store i[[SZ]] [[VAL0:%.+]], i[[SZ]]* [[CBPADDR0]],
   // CHECK-DAG:   store i[[SZ]] [[VAL0]], i[[SZ]]* [[CPADDR0]],
 
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT2:@.+]](i[[SZ]] {{[^,]+}})
@@ -159,21 +151,18 @@ int foo(int n) {
   // CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] [[VAL1:%.+]], i[[SZ]]* [[CBPADDR1]],
   // CHECK-DAG:   store i[[SZ]] [[VAL1]], i[[SZ]]* [[CPADDR1]],
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK-NEXT:  br label %[[IFEND:.+]]
-
-  // CHECK:       [[IFELSE]]
-  // CHECK:       store i32 -1, i32* [[RHV]], align 4
-  // CHECK-NEXT:  br label %[[IFEND:.+]]
-
-  // CHECK:       [[IFEND]]
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
   // CHECK:       call void [[HVT3:@.+]]({{[^,]+}}, {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
+  // CHECK-NEXT:  br label %[[IFEND:.+]]
+  // CHECK:       [[IFELSE]]
+  // CHECK:       call void [[HVT3]]({{[^,]+}}, {{[^,]+}})
+  // CHECK-NEXT:  br label %[[IFEND]]
+  // CHECK:       [[IFEND]]
+
   #pragma omp target parallel if(target: n>10)
   {
     a += 1;
@@ -286,9 +275,7 @@ int foo(int n) {
   // CHECK-DAG:   [[CPADDR8]] = bitcast i8** {{%[^,]+}} to [[TT]]**
   // CHECK-DAG:   store i[[SZ]] {{12|16}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-  // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 
   // CHECK:       [[FAIL]]
@@ -582,9 +569,7 @@ int bar(int n){
 // CHECK-DAG:   [[CPADDR4]] = bitcast i8** {{%[^,]+}} to i16**
 // CHECK-DAG:   store i[[SZ]] [[CSIZE]], i[[SZ]]* {{%[^,]+}}
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 
 // CHECK:       [[FAIL]]
@@ -630,21 +615,17 @@ int bar(int n){
 // CHECK-DAG:   store [10 x i32]* [[VAL3:%.+]], [10 x i32]** [[CBPADDR3]],
 // CHECK-DAG:   store [10 x i32]* [[VAL3]], [10 x i32]** [[CPADDR3]],
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFEND]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT6:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IFELSE]]
+// CHECK:       call void [[HVT6]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+// CHECK-NEXT:  br label %[[IFEND]]
+// CHECK:       [[IFEND]]
 
 //
 // CHECK: define {{.*}}[[FTEMPLATE]]
@@ -677,23 +658,17 @@ int bar(int n){
 // CHECK-DAG:   store [10 x i32]* [[VAL2:%.+]], [10 x i32]** [[CBPADDR2]],
 // CHECK-DAG:   store [10 x i32]* [[VAL2]], [10 x i32]** [[CPADDR2]],
 
-// CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFELSE]]
-// CHECK:       store i32 -1, i32* [[RHV]], align 4
-// CHECK-NEXT:  br label %[[IFEND:.+]]
-
-// CHECK:       [[IFEND]]
-// CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
-// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:.+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       call void [[HVT5:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}})
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
-
-
+// CHECK-NEXT:  br label %[[IFEND:.+]]
+// CHECK:       [[IFELSE]]
+// CHECK:       call void [[HVT:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}})
+// CHECK-NEXT:  br label %[[IFEND]]
+// CHECK:       [[IFEND]]
 
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions of the callees of bar().

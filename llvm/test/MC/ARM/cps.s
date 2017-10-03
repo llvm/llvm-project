@@ -13,5 +13,5 @@
 @ CHECK: cps     #0                      @ encoding: [0xaf,0xf3,0x00,0x81]
 
 @ UNDEF-DAG: cpsie f                         @ encoding: [0x61,0xb6]
-@ UNDEF-DAG: error: instruction requires:
+@ UNDEF-DAG: instruction requires:
 @ UNDEF-DAG: error: instruction 'cps' requires effect for M-class

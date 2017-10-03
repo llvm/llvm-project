@@ -26,7 +26,7 @@
 #include "Target.h"
 #include "Threads.h"
 #include "Writer.h"
-#include "lld/Config/Version.h"
+#include "lld/Common/Version.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/Decompressor.h"
@@ -151,7 +151,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
       return nullptr;
     }
 
-    // LLD checks ISA compatibility in getMipsEFlags(). Here we just
+    // LLD checks ISA compatibility in calcMipsEFlags(). Here we just
     // select the highest number of ISA/Rev/Ext.
     Flags.isa_level = std::max(Flags.isa_level, S->isa_level);
     Flags.isa_rev = std::max(Flags.isa_rev, S->isa_rev);
@@ -2236,7 +2236,8 @@ void MergeNoTailSection::finalizeContents() {
   for (size_t I = 0; I < NumShards; ++I)
     Shards.emplace_back(StringTableBuilder::RAW, Alignment);
 
-  // Concurrency level. Must be a power of 2.
+  // Concurrency level. Must be a power of 2 to avoid expensive modulo
+  // operations in the following tight loop.
   size_t Concurrency = 1;
   if (Config->Threads)
     if (int N = std::thread::hardware_concurrency())

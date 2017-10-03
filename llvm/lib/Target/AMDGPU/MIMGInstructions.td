@@ -349,7 +349,7 @@ defm IMAGE_SAMPLE_C_CD_CL_O : MIMG_Sampler <0x0000006f, "image_sample_c_cd_cl_o"
 /********** ======================= **********/
 
 // Image + sampler
-class SampleRawPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+class SampleRawPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : GCNPat <
   (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, i32:$dmask, i32:$unorm,
         i32:$r128, i32:$da, i32:$glc, i32:$slc, i32:$tfe, i32:$lwe),
   (opcode $addr, $rsrc, $sampler,
@@ -371,7 +371,7 @@ multiclass SampleRawPatterns<SDPatternOperator name, string opcode> {
 // 2. Handle v4i32 rsrc type (Register Class for the instruction to be SReg_128).
 // 3. Add A16 support when we pass address of half type.
 multiclass AMDGCNSamplePattern<SDPatternOperator name, MIMG opcode, ValueType dt, ValueType vt>  {
-  def : Pat<
+  def : GCNPat<
     (dt (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, i32:$dmask, i1:$unorm, i1:$glc,
         i1:$slc, i1:$lwe, i1:$da)),
     (opcode $addr, $rsrc, $sampler,
@@ -396,7 +396,7 @@ multiclass AMDGCNSamplePatterns<SDPatternOperator name, string opcode> {
 }
 
 // Image only
-class ImagePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+class ImagePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : GCNPat <
   (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$unorm,
         imm:$r128, imm:$da, imm:$glc, imm:$slc, imm:$tfe, imm:$lwe),
   (opcode $addr, $rsrc,
@@ -411,7 +411,7 @@ multiclass ImagePatterns<SDPatternOperator name, string opcode> {
 }
 
 multiclass ImageLoadPattern<SDPatternOperator name, MIMG opcode, ValueType dt, ValueType vt> {
-  def : Pat <
+  def : GCNPat <
     (dt (name vt:$addr, v8i32:$rsrc, i32:$dmask, i1:$glc, i1:$slc, i1:$lwe,
                 i1:$da)),
     (opcode $addr, $rsrc,
@@ -434,7 +434,7 @@ multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
 }
 
 multiclass ImageStorePattern<SDPatternOperator name, MIMG opcode, ValueType dt, ValueType vt> {
-  def : Pat <
+  def : GCNPat <
     (name dt:$data, vt:$addr, v8i32:$rsrc, i32:$dmask, i1:$glc, i1:$slc,
           i1:$lwe, i1:$da),
     (opcode $data, $addr, $rsrc,
@@ -456,7 +456,7 @@ multiclass ImageStorePatterns<SDPatternOperator name, string opcode> {
   defm : ImageStoreDataPatterns<name, !cast<string>(opcode # _V4), v4f32>;
 }
 
-class ImageAtomicPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+class ImageAtomicPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : GCNPat <
   (name i32:$vdata, vt:$addr, v8i32:$rsrc, imm:$r128, imm:$da, imm:$slc),
   (opcode $vdata, $addr, $rsrc, 1, 1, 1, (as_i1imm $slc), (as_i1imm $r128), 0, 0, (as_i1imm $da))
 >;
@@ -467,7 +467,7 @@ multiclass ImageAtomicPatterns<SDPatternOperator name, string opcode> {
   def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V4), v4i32>;
 }
 
-class ImageAtomicCmpSwapPattern<MIMG opcode, ValueType vt> : Pat <
+class ImageAtomicCmpSwapPattern<MIMG opcode, ValueType vt> : GCNPat <
   (int_amdgcn_image_atomic_cmpswap i32:$vsrc, i32:$vcmp, vt:$addr, v8i32:$rsrc,
                                    imm:$r128, imm:$da, imm:$slc),
   (EXTRACT_SUBREG
@@ -584,34 +584,34 @@ defm : ImageAtomicPatterns<int_amdgcn_image_atomic_inc, "IMAGE_ATOMIC_INC">;
 defm : ImageAtomicPatterns<int_amdgcn_image_atomic_dec, "IMAGE_ATOMIC_DEC">;
 
 /* SIsample for simple 1D texture lookup */
-def : Pat <
+def : GCNPat <
   (SIsample i32:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
   (IMAGE_SAMPLE_V4_V1 $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
-class SamplePattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
+class SamplePattern<SDNode name, MIMG opcode, ValueType vt> : GCNPat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
     (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
-class SampleRectPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
+class SampleRectPattern<SDNode name, MIMG opcode, ValueType vt> : GCNPat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_RECT),
     (opcode $addr, $rsrc, $sampler, 0xf, 1, 0, 0, 0, 0, 0, 0)
 >;
 
-class SampleArrayPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
+class SampleArrayPattern<SDNode name, MIMG opcode, ValueType vt> : GCNPat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_ARRAY),
     (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 1)
 >;
 
 class SampleShadowPattern<SDNode name, MIMG opcode,
-                          ValueType vt> : Pat <
+                          ValueType vt> : GCNPat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW),
     (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
 class SampleShadowArrayPattern<SDNode name, MIMG opcode,
-                               ValueType vt> : Pat <
+                               ValueType vt> : GCNPat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW_ARRAY),
     (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 1)
 >;

@@ -21,7 +21,7 @@
 #ifndef LLD_COFF_LTO_H
 #define LLD_COFF_LTO_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include <memory>
 #include <vector>

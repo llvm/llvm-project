@@ -30,22 +30,19 @@ class Function;
 class Instruction;
 class PHINode;
 class raw_ostream;
-class SparseSolver;
+template <class LatticeVal> class SparseSolver;
 class TerminatorInst;
 class Value;
 template <typename T> class SmallVectorImpl;
 
 /// AbstractLatticeFunction - This class is implemented by the dataflow instance
-/// to specify what the lattice values are and how they handle merges etc.
-/// This gives the client the power to compute lattice values from instructions,
-/// constants, etc.  The requirement is that lattice values must all fit into
-/// a void*.  If a void* is not sufficient, the implementation should use this
-/// pointer to be a pointer into a uniquing set or something.
-///
-class AbstractLatticeFunction {
-public:
-  using LatticeVal = void *;
+/// to specify what the lattice values are and how they handle merges etc.  This
+/// gives the client the power to compute lattice values from instructions,
+/// constants, etc.  The current requirement is that lattice values must be
+/// copyable.  At the moment, nothing tries to avoid copying.
 
+
+template <class LatticeVal> class AbstractLatticeFunction {
 private:
   LatticeVal UndefVal, OverdefinedVal, UntrackedVal;
 
@@ -81,7 +78,8 @@ public:
   /// GetConstant - If the specified lattice value is representable as an LLVM
   /// constant value, return it.  Otherwise return null.  The returned value
   /// must be in the same LLVM type as Val.
-  virtual Constant *GetConstant(LatticeVal LV, Value *Val, SparseSolver &SS) {
+  virtual Constant *GetConstant(LatticeVal LV, Value *Val,
+                                SparseSolver<LatticeVal> &SS) {
     return nullptr;
   }
 
@@ -100,7 +98,8 @@ public:
 
   /// ComputeInstructionState - Given an instruction and a vector of its operand
   /// values, compute the result value of the instruction.
-  virtual LatticeVal ComputeInstructionState(Instruction &I, SparseSolver &SS) {
+  virtual LatticeVal ComputeInstructionState(Instruction &I,
+                                             SparseSolver<LatticeVal> &SS) {
     return getOverdefinedVal(); // always safe, never useful.
   }
 
@@ -110,12 +109,11 @@ public:
 
 /// SparseSolver - This class is a general purpose solver for Sparse Conditional
 /// Propagation with a programmable lattice function.
-class SparseSolver {
-  using LatticeVal = AbstractLatticeFunction::LatticeVal;
+template <class LatticeVal> class SparseSolver {
 
   /// LatticeFunc - This is the object that knows the lattice and how to do
   /// compute transfer functions.
-  AbstractLatticeFunction *LatticeFunc;
+  AbstractLatticeFunction<LatticeVal> *LatticeFunc;
 
   DenseMap<Value *, LatticeVal> ValueState;   // The state each value is in.
   SmallPtrSet<BasicBlock *, 16> BBExecutable; // The bbs that are executable.
@@ -130,7 +128,7 @@ class SparseSolver {
   std::set<Edge> KnownFeasibleEdges;
 
 public:
-  explicit SparseSolver(AbstractLatticeFunction *Lattice)
+  explicit SparseSolver(AbstractLatticeFunction<LatticeVal> *Lattice)
       : LatticeFunc(Lattice) {}
   SparseSolver(const SparseSolver &) = delete;
   SparseSolver &operator=(const SparseSolver &) = delete;
@@ -143,18 +141,18 @@ public:
 
   /// getLatticeState - Return the LatticeVal object that corresponds to the
   /// value.  If an value is not in the map, it is returned as untracked,
-  /// unlike the getOrInitValueState method.
+  /// unlike the getValueState method.
   LatticeVal getLatticeState(Value *V) const {
-    DenseMap<Value*, LatticeVal>::const_iterator I = ValueState.find(V);
+    auto I = ValueState.find(V);
     return I != ValueState.end() ? I->second : LatticeFunc->getUntrackedVal();
   }
 
-  /// getOrInitValueState - Return the LatticeVal object that corresponds to the
+  /// getValueState - Return the LatticeVal object that corresponds to the
   /// value, initializing the value's state if it hasn't been entered into the
   /// map yet.   This function is necessary because not all values should start
   /// out in the underdefined state... Arguments should be overdefined, and
   /// constants should be marked as constants.
-  LatticeVal getOrInitValueState(Value *V);
+  LatticeVal getValueState(Value *V);
 
   /// isEdgeFeasible - Return true if the control flow edge from the 'From'
   /// basic block to the 'To' basic block is currently feasible.  If

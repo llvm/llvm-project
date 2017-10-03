@@ -15,8 +15,8 @@
 #include "InputSection.h"
 #include "Symbols.h"
 
-#include "lld/Core/LLVM.h"
-#include "lld/Core/Reproduce.h"
+#include "lld/Common/LLVM.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"

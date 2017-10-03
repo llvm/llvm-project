@@ -15,7 +15,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
-#include "lld/Driver/Driver.h"
+#include "lld/Common/Driver.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"

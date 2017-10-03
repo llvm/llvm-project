@@ -11,8 +11,8 @@
 #define LLD_ELF_DRIVER_H
 
 #include "SymbolTable.h"
-#include "lld/Core/LLVM.h"
-#include "lld/Core/Reproduce.h"
+#include "lld/Common/LLVM.h"
+#include "lld/Common/Reproduce.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"

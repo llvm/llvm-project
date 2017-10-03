@@ -7102,6 +7102,16 @@ TEST_F(FormatTest, SplitEmptyFunction) {
                "}",
                Style);
 }
+TEST_F(FormatTest, KeepShortFunctionAfterPPElse) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  verifyFormat("#ifdef A\n"
+               "int f() {}\n"
+               "#else\n"
+               "int g() {}\n"
+               "#endif",
+               Style);
+}
 
 TEST_F(FormatTest, SplitEmptyClass) {
   FormatStyle Style = getLLVMStyle();

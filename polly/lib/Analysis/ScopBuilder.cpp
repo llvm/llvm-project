@@ -657,6 +657,15 @@ void ScopBuilder::buildAccessFunctions() {
     for (BasicBlock *BB : R->blocks())
       buildAccessFunctions(&Stmt, *BB, R);
   }
+
+  // Build write accesses for values that are used after the SCoP.
+  // The instructions defining them might be synthesizable and therefore not
+  // contained in any statement, hence we iterate over the original instructions
+  // to identify all escaping values.
+  for (BasicBlock *BB : scop->getRegion().blocks()) {
+    for (Instruction &Inst : *BB)
+      buildEscapingDependences(&Inst);
+  }
 }
 
 bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
@@ -701,56 +710,54 @@ void ScopBuilder::buildStmts(Region &SR) {
 }
 
 void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
-                                       Region *NonAffineSubRegion,
-                                       bool IsExitBlock) {
+                                       Region *NonAffineSubRegion) {
   assert(
-      !Stmt == IsExitBlock &&
+      Stmt &&
       "The exit BB is the only one that cannot be represented by a statement");
-  assert(IsExitBlock || Stmt->represents(&BB));
+  assert(Stmt->represents(&BB));
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
-  if (isErrorBlock(BB, scop->getRegion(), LI, DT) && !IsExitBlock)
+  if (isErrorBlock(BB, scop->getRegion(), LI, DT))
     return;
 
-  int Count = 0;
-  bool Split = false;
-  for (Instruction &Inst : BB) {
-    if (Split) {
-      Split = false;
-      Count++;
-    }
-    if (Inst.getMetadata("polly_split_after"))
-      Split = true;
-
-    if (Stmt && Stmt->isBlockStmt() && Stmt != scop->getStmtListFor(&BB)[Count])
-      continue;
-
-    PHINode *PHI = dyn_cast<PHINode>(&Inst);
+  auto BuildAccessesForInst = [this, Stmt,
+                               NonAffineSubRegion](Instruction *Inst) {
+    PHINode *PHI = dyn_cast<PHINode>(Inst);
     if (PHI)
-      buildPHIAccesses(Stmt, PHI, NonAffineSubRegion, IsExitBlock);
+      buildPHIAccesses(Stmt, PHI, NonAffineSubRegion, false);
 
-    // For the exit block we stop modeling after the last PHI node.
-    if (!PHI && IsExitBlock)
-      break;
-
-    if (auto MemInst = MemAccInst::dyn_cast(Inst)) {
+    if (auto MemInst = MemAccInst::dyn_cast(*Inst)) {
       assert(Stmt && "Cannot build access function in non-existing statement");
       buildMemoryAccess(MemInst, Stmt);
     }
-
-    if (isIgnoredIntrinsic(&Inst))
-      continue;
 
     // PHI nodes have already been modeled above and TerminatorInsts that are
     // not part of a non-affine subregion are fully modeled and regenerated
     // from the polyhedral domains. Hence, they do not need to be modeled as
     // explicit data dependences.
-    if (!PHI && (!isa<TerminatorInst>(&Inst) || NonAffineSubRegion))
-      buildScalarDependences(Stmt, &Inst);
+    if (!PHI)
+      buildScalarDependences(Stmt, Inst);
+  };
 
-    if (!IsExitBlock)
-      buildEscapingDependences(&Inst);
+  const InvariantLoadsSetTy &RIL = scop->getRequiredInvariantLoads();
+  bool IsEntryBlock = (Stmt->getEntryBlock() == &BB);
+  if (IsEntryBlock) {
+    for (Instruction *Inst : Stmt->getInstructions())
+      BuildAccessesForInst(Inst);
+    if (Stmt->isRegionStmt())
+      BuildAccessesForInst(BB.getTerminator());
+  } else {
+    for (Instruction &Inst : BB) {
+      if (isIgnoredIntrinsic(&Inst))
+        continue;
+
+      // Invariant loads already have been processed.
+      if (isa<LoadInst>(Inst) && RIL.count(cast<LoadInst>(&Inst)))
+        continue;
+
+      BuildAccessesForInst(&Inst);
+    }
   }
 }
 
@@ -1184,6 +1191,33 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE));
 
   buildStmts(R);
+
+  // Create all invariant load instructions first. These are categorized as
+  // 'synthesizable', therefore are not part of any ScopStmt but need to be
+  // created somewhere.
+  const InvariantLoadsSetTy &RIL = scop->getRequiredInvariantLoads();
+  for (BasicBlock *BB : scop->getRegion().blocks()) {
+    if (isErrorBlock(*BB, scop->getRegion(), LI, DT))
+      continue;
+
+    for (Instruction &Inst : *BB) {
+      LoadInst *Load = dyn_cast<LoadInst>(&Inst);
+      if (!Load)
+        continue;
+
+      if (!RIL.count(Load))
+        continue;
+
+      // Invariant loads require a MemoryAccess to be created in some statement.
+      // It is not important to which statement the MemoryAccess is added
+      // because it will later be removed from the ScopStmt again. We chose the
+      // first statement of the basic block the LoadInst is in.
+      ArrayRef<ScopStmt *> List = scop->getStmtListFor(BB);
+      assert(!List.empty());
+      ScopStmt *RILStmt = List.front();
+      buildMemoryAccess(Load, RILStmt);
+    }
+  }
   buildAccessFunctions();
 
   // In case the region does not have an exiting block we will later (during
@@ -1193,9 +1227,15 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   // To handle these PHI nodes later we will now model their operands as scalar
   // accesses. Note that we do not model anything in the exit block if we have
   // an exiting block in the region, as there will not be any splitting later.
-  if (!R.isTopLevelRegion() && !scop->hasSingleExitEdge())
-    buildAccessFunctions(nullptr, *R.getExit(), nullptr,
-                         /* IsExitBlock */ true);
+  if (!R.isTopLevelRegion() && !scop->hasSingleExitEdge()) {
+    for (Instruction &Inst : *R.getExit()) {
+      PHINode *PHI = dyn_cast<PHINode>(&Inst);
+      if (!PHI)
+        break;
+
+      buildPHIAccesses(nullptr, PHI, nullptr, true);
+    }
+  }
 
   // Create memory accesses for global reads since all arrays are now known.
   auto *AF = SE.getConstant(IntegerType::getInt64Ty(SE.getContext()), 0);

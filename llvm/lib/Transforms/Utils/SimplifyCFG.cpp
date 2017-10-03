@@ -1277,9 +1277,7 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
 
     // I1 and I2 are being combined into a single instruction.  Its debug
     // location is the merged locations of the original instructions.
-    if (!isa<CallInst>(I1))
-      I1->setDebugLoc(
-          DILocation::getMergedLocation(I1->getDebugLoc(), I2->getDebugLoc()));
+    I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
 
     I2->eraseFromParent();
     Changed = true;
@@ -1533,20 +1531,20 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I0->getOperandUse(O).set(NewOperands[O]);
   I0->moveBefore(&*BBEnd->getFirstInsertionPt());
 
-  // The debug location for the "common" instruction is the merged locations of
-  // all the commoned instructions.  We start with the original location of the
-  // "common" instruction and iteratively merge each location in the loop below.
-  const DILocation *Loc = I0->getDebugLoc();
-
   // Update metadata and IR flags, and merge debug locations.
   for (auto *I : Insts)
     if (I != I0) {
-      Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
+      // The debug location for the "common" instruction is the merged locations
+      // of all the commoned instructions.  We start with the original location
+      // of the "common" instruction and iteratively merge each location in the
+      // loop below.
+      // This is an N-way merge, which will be inefficient if I0 is a CallInst.
+      // However, as N-way merge for CallInst is rare, so we use simplified API
+      // instead of using complex API for N-way merge.
+      I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I);
       I0->andIRFlags(I);
     }
-  if (!isa<CallInst>(I0))
-    I0->setDebugLoc(Loc);
 
   if (!isa<StoreInst>(I0)) {
     // canSinkLastInstruction checked that all instructions were used by
@@ -2030,9 +2028,8 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     Value *S = Builder.CreateSelect(
         BrCond, TrueV, FalseV, TrueV->getName() + "." + FalseV->getName(), BI);
     SpeculatedStore->setOperand(0, S);
-    SpeculatedStore->setDebugLoc(
-        DILocation::getMergedLocation(
-          BI->getDebugLoc(), SpeculatedStore->getDebugLoc()));
+    SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
+                                         SpeculatedStore->getDebugLoc());
   }
 
   // Metadata can be dependent on the condition we are hoisting above.

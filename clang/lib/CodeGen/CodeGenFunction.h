@@ -2356,6 +2356,12 @@ public:
     TCK_NonnullAssign
   };
 
+  /// Determine whether the pointer type check \p TCK permits null pointers.
+  static bool isNullPointerAllowed(TypeCheckKind TCK);
+
+  /// Determine whether the pointer type check \p TCK requires a vptr check.
+  static bool isVptrCheckRequired(TypeCheckKind TCK, QualType Ty);
+
   /// \brief Whether any type-checking sanitizers are enabled. If \c false,
   /// calls to EmitTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
@@ -3050,9 +3056,7 @@ public:
                                 SourceLocation Loc,
                                 LValueBaseInfo BaseInfo =
                                     LValueBaseInfo(AlignmentSource::Type),
-                                llvm::MDNode *TBAAAccessType = nullptr,
-                                QualType TBAABaseTy = QualType(),
-                                uint64_t TBAAOffset = 0,
+                                TBAAAccessInfo TBAAInfo = TBAAAccessInfo(),
                                 bool isNontemporal = false);
 
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
@@ -3068,9 +3072,8 @@ public:
                          bool Volatile, QualType Ty,
                          LValueBaseInfo BaseInfo =
                              LValueBaseInfo(AlignmentSource::Type),
-                         llvm::MDNode *TBAAAccessType = nullptr,
-                         bool isInit = false, QualType TBAABaseTy = QualType(),
-                         uint64_t TBAAOffset = 0, bool isNontemporal = false);
+                         TBAAAccessInfo TBAAInfo = TBAAAccessInfo(),
+                         bool isInit = false, bool isNontemporal = false);
 
   /// EmitStoreOfScalar - Store a scalar value to an address, taking
   /// care to appropriately convert from the memory representation to

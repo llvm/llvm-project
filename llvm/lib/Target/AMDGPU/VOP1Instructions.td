@@ -361,14 +361,14 @@ defm V_COS_F16 : VOP1Inst <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
 
 }
 
-let Predicates = [Has16BitInsts] in {
+let OtherPredicates = [Has16BitInsts] in {
 
-def : Pat<
+def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_e32 $src)
 >;
 
-def : Pat<
+def : GCNPat<
     (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_e32 $src)
 >;
@@ -653,9 +653,9 @@ def V_MOVRELD_B32_V4 : V_MOVRELD_B32_pseudo<VReg_128>;
 def V_MOVRELD_B32_V8 : V_MOVRELD_B32_pseudo<VReg_256>;
 def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
 
-let Predicates = [isVI] in {
+let OtherPredicates = [isVI] in {
 
-def : Pat <
+def : GCNPat <
   (i32 (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
                       imm:$bound_ctrl)),
   (V_MOV_B32_dpp $src, $src, (as_i32imm $dpp_ctrl),
@@ -663,7 +663,7 @@ def : Pat <
                        (as_i1imm $bound_ctrl))
 >;
 
-def : Pat <
+def : GCNPat <
   (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, imm:$dpp_ctrl, imm:$row_mask,
                       imm:$bank_mask, imm:$bound_ctrl)),
   (V_MOV_B32_dpp $old, $src, (as_i32imm $dpp_ctrl),
@@ -671,26 +671,26 @@ def : Pat <
                        (as_i1imm $bound_ctrl))
 >;
 
-def : Pat<
+def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)
 >;
 
-def : Pat<
+def : GCNPat<
    (i64 (anyext i16:$src)),
    (REG_SEQUENCE VReg_64,
      (i32 (COPY $src)), sub0,
      (V_MOV_B32_e32 (i32 0)), sub1)
 >;
 
-def : Pat<
+def : GCNPat<
   (i16 (trunc i32:$src)),
   (COPY $src)
 >;
 
-def : Pat <
+def : GCNPat <
   (i16 (trunc i64:$src)),
   (EXTRACT_SUBREG $src, sub0)
 >;
 
-} // End Predicates = [isVI]
+} // End OtherPredicates = [isVI]

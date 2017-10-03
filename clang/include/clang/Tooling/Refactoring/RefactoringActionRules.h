@@ -16,60 +16,78 @@
 namespace clang {
 namespace tooling {
 
-class RefactoringRuleContext;
-
-namespace refactoring_action_rules {
-
-/// Creates a new refactoring action rule that invokes the given function once
-/// all of the requirements are satisfied. The values produced during the
-/// evaluation of requirements are passed to the given function (in the order of
-/// requirements).
+/// Creates a new refactoring action rule that constructs and invokes the
+/// \c RuleType rule when all of the requirements are satisfied.
 ///
-/// \param RefactoringFunction the function that will perform the refactoring
-/// once the requirements are satisfied. The function must return a valid
-/// refactoring result type wrapped in an \c Expected type. The following result
-/// types are currently supported:
+/// This function takes in a list of values whose type derives from
+/// \c RefactoringActionRuleRequirement. These values describe the initiation
+/// requirements that have to be satisfied by the refactoring engine before
+/// the provided action rule can be constructed and invoked. The engine
+/// verifies that the requirements are satisfied by evaluating them (using the
+/// 'evaluate' member function) and checking that the results don't contain
+/// any errors. Once all requirements are satisfied, the provided refactoring
+/// rule is constructed by passing in the values returned by the requirements'
+/// evaluate functions as arguments to the constructor. The rule is then invoked
+/// immediately after construction.
 ///
-///  - AtomicChanges: the refactoring function will be used to create source
-///                   replacements.
-///
-/// \param Requirements a set of rule requirements that have to be satisfied.
-/// Each requirement must be a valid requirement, i.e. the value of
-/// \c traits::IsRequirement<T> must be true. The following requirements are
-/// currently supported:
-///
-///  - requiredSelection: The refactoring function won't be invoked unless the
-///                       given selection requirement is satisfied.
-template <typename ResultType, typename... RequirementTypes>
+/// The separation of requirements, their evaluation and the invocation of the
+/// refactoring action rule allows the refactoring clients to:
+///   - Disable refactoring action rules whose requirements are not supported.
+///   - Gather the set of options and define a command-line / visual interface
+///     that allows users to input these options without ever invoking the
+///     action.
+template <typename RuleType, typename... RequirementTypes>
 std::unique_ptr<RefactoringActionRule>
-createRefactoringRule(Expected<ResultType> (*RefactoringFunction)(
-                          const RefactoringRuleContext &,
-                          typename RequirementTypes::OutputType...),
-                      const RequirementTypes &... Requirements) {
-  static_assert(tooling::traits::IsValidRefactoringResult<ResultType>::value,
-                "invalid refactoring result type");
-  static_assert(traits::IsRequirement<RequirementTypes...>::value,
-                "invalid refactoring action rule requirement");
-  return llvm::make_unique<internal::PlainFunctionRule<
-      decltype(RefactoringFunction), RequirementTypes...>>(
-      RefactoringFunction, std::make_tuple(Requirements...));
-}
+createRefactoringActionRule(const RequirementTypes &... Requirements);
 
-template <
-    typename Callable, typename... RequirementTypes,
-    typename Fn = decltype(&Callable::operator()),
-    typename ResultType = typename internal::LambdaDeducer<Fn>::ReturnType,
-    bool IsNonCapturingLambda = std::is_convertible<
-        Callable, typename internal::LambdaDeducer<Fn>::FunctionType>::value,
-    typename = typename std::enable_if<IsNonCapturingLambda>::type>
-std::unique_ptr<RefactoringActionRule>
-createRefactoringRule(const Callable &C,
-                      const RequirementTypes &... Requirements) {
-  typename internal::LambdaDeducer<Fn>::FunctionType Func = C;
-  return createRefactoringRule(Func, Requirements...);
-}
+/// A set of refactoring action rules that should have unique initiation
+/// requirements.
+using RefactoringActionRules =
+    std::vector<std::unique_ptr<RefactoringActionRule>>;
 
-} // end namespace refactoring_action_rules
+/// A type of refactoring action rule that produces source replacements in the
+/// form of atomic changes.
+///
+/// This action rule is typically used for local refactorings that replace
+/// source in a single AST unit.
+class SourceChangeRefactoringRule : public RefactoringActionRuleBase {
+public:
+  void invoke(RefactoringResultConsumer &Consumer,
+              RefactoringRuleContext &Context) final override {
+    Expected<AtomicChanges> Changes = createSourceReplacements(Context);
+    if (!Changes)
+      Consumer.handleError(Changes.takeError());
+    else
+      Consumer.handle(std::move(*Changes));
+  }
+
+private:
+  virtual Expected<AtomicChanges>
+  createSourceReplacements(RefactoringRuleContext &Context) = 0;
+};
+
+/// A type of refactoring action rule that finds a set of symbol occurrences
+/// that reference a particular symbol.
+///
+/// This action rule is typically used for an interactive rename that allows
+/// users to specify the new name and the set of selected occurrences during
+/// the refactoring.
+class FindSymbolOccurrencesRefactoringRule : public RefactoringActionRuleBase {
+public:
+  void invoke(RefactoringResultConsumer &Consumer,
+              RefactoringRuleContext &Context) final override {
+    Expected<SymbolOccurrences> Occurrences = findSymbolOccurrences(Context);
+    if (!Occurrences)
+      Consumer.handleError(Occurrences.takeError());
+    else
+      Consumer.handle(std::move(*Occurrences));
+  }
+
+private:
+  virtual Expected<SymbolOccurrences>
+  findSymbolOccurrences(RefactoringRuleContext &Context) = 0;
+};
+
 } // end namespace tooling
 } // end namespace clang
 

@@ -37,3 +37,10 @@ RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/odr-anon-namespace/1.o \
 RUN:    -name="(anonymous namespace)" \
 RUN:   | FileCheck %s --check-prefix=EMPTY
 
+Test the -ignore-case option.
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -name=Main - | FileCheck %s -check-prefix=EMPTY
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -name=Main -i - | FileCheck %s
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -name=MAIN -ignore-case - | FileCheck %s

@@ -1164,10 +1164,18 @@ static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
       Fn(SS);
 }
 
-// We need to add input synthetic sections early in createSyntheticSections()
-// to make them visible from linkescript side. But not all sections are always
-// required to be in output. For example we don't need dynamic section content
-// sometimes. This function filters out such unused sections from the output.
+// In order to allow users to manipulate linker-synthesized sections,
+// we had to add synthetic sections to the input section list early,
+// even before we make decisions whether they are needed. This allows
+// users to write scripts like this: ".mygot : { .got }".
+//
+// Doing it has an unintended side effects. If it turns out that we
+// don't need a .got (for example) at all because there's no
+// relocation that needs a .got, we don't want to emit .got.
+//
+// To deal with the above problem, this function is called after
+// scanRelocations is called to remove synthetic sections that turn
+// out to be empty.
 static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. We iterate over them all and exit at first
@@ -1798,7 +1806,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     // kernels (as of 2016) require an EABI version to be set.
     EHdr->e_flags = EF_ARM_EABI_VER5;
   else if (Config->EMachine == EM_MIPS)
-    EHdr->e_flags = getMipsEFlags<ELFT>();
+    EHdr->e_flags = Config->MipsEFlags;
 
   if (!Config->Relocatable) {
     EHdr->e_phoff = sizeof(Elf_Ehdr);

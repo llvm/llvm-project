@@ -817,9 +817,9 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     return LinkageInfo::none();
   }
 
-  // If we ended up with non-external linkage, visibility should
+  // If we ended up with non-externally-visible linkage, visibility should
   // always be default.
-  if (LV.getLinkage() != ExternalLinkage)
+  if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
 
   return LV;
