@@ -238,37 +238,29 @@ static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
   write16<E>(Loc, Data);
 }
 
-template <class ELFT> static bool isMicroMips() {
-  // FIXME (simon): This code does not support the case when both
-  // microMIPS and MIPS object files are linked together.
-  const auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
-  uint32_t Arch = FirstObj.getObj().getHeader()->e_flags & EF_MIPS_ARCH_ASE;
-  return Arch == EF_MIPS_MICROMIPS;
-}
+static bool isMicroMips() { return Config->MipsEFlags & EF_MIPS_MICROMIPS; }
 
-template <class ELFT> static bool isMipsR6() {
-  const auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
-  uint32_t Arch = FirstObj.getObj().getHeader()->e_flags & EF_MIPS_ARCH;
+static bool isMipsR6() {
+  uint32_t Arch = Config->MipsEFlags & EF_MIPS_ARCH;
   return Arch == EF_MIPS_ARCH_32R6 || Arch == EF_MIPS_ARCH_64R6;
 }
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
-  if (isMicroMips<ELFT>()) {
+  if (isMicroMips()) {
     uint64_t GotPlt = In<ELFT>::GotPlt->getVA();
     uint64_t Plt = In<ELFT>::Plt->getVA();
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(Buf, 0, PltHeaderSize);
 
-    write16<E>(Buf, isMipsR6<ELFT>() ? 0x7860 : 0x7980);
-                                    // addiupc v1, (GOTPLT) - .
+    write16<E>(Buf, isMipsR6() ? 0x7860 : 0x7980);  // addiupc v1, (GOTPLT) - .
     write16<E>(Buf + 4, 0xff23);    // lw      $25, 0($3)
     write16<E>(Buf + 8, 0x0535);    // subu16  $2,  $2, $3
     write16<E>(Buf + 10, 0x2525);   // srl16   $2,  $2, 2
     write16<E>(Buf + 12, 0x3302);   // addiu   $24, $2, -2
     write16<E>(Buf + 14, 0xfffe);
     write16<E>(Buf + 16, 0x0dff);   // move    $15, $31
-    if (isMipsR6<ELFT>()) {
+    if (isMipsR6()) {
       write16<E>(Buf + 18, 0x0f83); // move    $28, $3
       write16<E>(Buf + 20, 0x472b); // jalrc   $25
       write16<E>(Buf + 22, 0x0c00); // nop
@@ -310,11 +302,11 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                           uint64_t PltEntryAddr, int32_t Index,
                           unsigned RelOff) const {
   const endianness E = ELFT::TargetEndianness;
-  if (isMicroMips<ELFT>()) {
+  if (isMicroMips()) {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(Buf, 0, PltEntrySize);
 
-    if (isMipsR6<ELFT>()) {
+    if (isMipsR6()) {
       write16<E>(Buf, 0x7840);      // addiupc $2, (GOTPLT) - .
       write16<E>(Buf + 4, 0xff22);  // lw $25, 0($2)
       write16<E>(Buf + 8, 0x0f02);  // move $24, $2
@@ -332,8 +324,7 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
   write32<E>(Buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
   write32<E>(Buf + 4, 0x8df90000); // l[wd] $25, %lo(.got.plt entry)($15)
-                                   // jr    $25
-  write32<E>(Buf + 8, isMipsR6<ELFT>() ? 0x03200009 : 0x03200008);
+  write32<E>(Buf + 8, isMipsR6() ? 0x03200009 : 0x03200008);  // jr  $25
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
   writeRelocation<E>(Buf, GotPltEntryAddr + 0x8000, 16, 16);
   writeRelocation<E>(Buf + 4, GotPltEntryAddr, 16, 0);

@@ -79,6 +79,12 @@ ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
+/// \brief Attempt to constant fold a select instruction with the specified
+/// operands. The constant result is returned if successful; if not, null is
+/// returned.
+Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
+                                        Constant *V2);
+
 /// \brief Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,

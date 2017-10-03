@@ -13,7 +13,9 @@ undefined:
 
 	udf #256
 
-@ CHECK: error: instruction requires: arm-mode
+@ CHECK: error: invalid instruction, any one of the following would fix this:
+@ CHECK: note: instruction requires: arm-mode
+@ CHECK: note: immediate operand must be in the range [0,255]
 @ CHECK: 	udf #256
 @ CHECK: 	^
 

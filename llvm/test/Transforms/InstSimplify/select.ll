@@ -17,6 +17,14 @@ define <2 x i8> @vsel_fvec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %s
 }
 
+define <2 x i8> @vsel_mixedvec() {
+; CHECK-LABEL: @vsel_mixedvec(
+; CHECK-NEXT:    ret <2 x i8> <i8 0, i8 3>
+;
+  %s = select <2 x i1><i1 true, i1 false>, <2 x i8> <i8 0, i8 1>, <2 x i8> <i8 2, i8 3>
+  ret <2 x i8> %s
+}
+
 define i32 @test1(i32 %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i32 %x

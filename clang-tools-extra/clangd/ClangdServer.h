@@ -268,6 +268,8 @@ public:
   /// Waits until all requests to worker thread are finished and dumps AST for
   /// \p File. \p File must be in the list of added documents.
   std::string dumpAST(PathRef File);
+  /// Called when an event occurs for a watched file in the workspace.
+  void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
 private:
   std::future<void>

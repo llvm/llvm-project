@@ -82,9 +82,9 @@ def V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3_Profile<VOP_F16_F16
 }
 }
 
-let Predicates = [HasMadMix] in {
+let OtherPredicates = [HasMadMix] in {
 
-def : Pat <
+def : GCNPat <
   (f16 (fpround (fmad (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                       (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
                       (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
@@ -98,7 +98,7 @@ def : Pat <
 // FIXME: Special case handling for maxhi (especially for clamp)
 // because dealing with the write to high half of the register is
 // difficult.
-def : Pat <
+def : GCNPat <
   (build_vector f16:$elt0, (fpround (fmad (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                                           (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
                                           (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
@@ -109,7 +109,7 @@ def : Pat <
                           $elt0))
 >;
 
-def : Pat <
+def : GCNPat <
   (build_vector
     f16:$elt0,
     (AMDGPUclamp (fpround (fmad (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
@@ -122,7 +122,7 @@ def : Pat <
                           $elt0))
 >;
 
-def : Pat <
+def : GCNPat <
   (AMDGPUclamp (build_vector
     (fpround (fmad (f32 (VOP3PMadMixMods f16:$lo_src0, i32:$lo_src0_modifiers)),
                    (f32 (VOP3PMadMixMods f16:$lo_src1, i32:$lo_src1_modifiers)),

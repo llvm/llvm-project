@@ -1,6 +1,6 @@
-; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK:      assembly parsed, but does not verify
-; CHECK-NEXT: invalid retained type
+; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
+; CHECK: invalid retained type
+; CHECK: warning: ignoring invalid debug info
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}

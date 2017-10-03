@@ -367,9 +367,9 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
   renderFileReports(OS, UniqueSourceFiles, CoverageFiltersMatchAll());
 }
 
-void CoverageReport::renderFileReports(raw_ostream &OS,
-                                       ArrayRef<std::string> Files,
-                                       const CoverageFilter &Filters) const {
+void CoverageReport::renderFileReports(
+    raw_ostream &OS, ArrayRef<std::string> Files,
+    const CoverageFiltersMatchAll &Filters) const {
   FileCoverageSummary Totals("TOTAL");
   auto FileReports =
       prepareFileReports(Coverage, Totals, Files, Options, Filters);
@@ -405,7 +405,7 @@ void CoverageReport::renderFileReports(raw_ostream &OS,
       EmptyFiles = true;
   }
 
-  if (EmptyFiles) {
+  if (EmptyFiles && Filters.empty()) {
     OS << "\n"
        << "Files which contain no functions:\n";
 

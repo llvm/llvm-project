@@ -478,3 +478,32 @@ define i1 @PR24873(i64 %V) {
   ret i1 %icmp
 }
 
+declare void @foo(i32)
+
+define i1 @exact_multiuse(i32 %x) {
+; CHECK-LABEL: @exact_multiuse(
+; CHECK-NEXT:    [[SH:%.*]] = lshr exact i32 %x, 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %x, 131072
+; CHECK-NEXT:    call void @foo(i32 [[SH]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sh = lshr exact i32 %x, 7
+  %cmp = icmp eq i32 %sh, 1024
+  call void @foo(i32 %sh)
+  ret i1 %cmp
+}
+
+declare void @foo2(<2 x i32>)
+define <2 x i1> @exact_eq0_multiuse(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @exact_eq0_multiuse(
+; CHECK-NEXT:    [[SH:%.*]] = ashr exact <2 x i32> %x, %y
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SH]], zeroinitializer
+; CHECK-NEXT:    call void @foo2(<2 x i32> [[SH]])
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sh = ashr exact <2 x i32> %x, %y
+  %cmp = icmp eq <2 x i32> %sh, zeroinitializer
+  call void @foo2(<2 x i32> %sh)
+  ret <2 x i1> %cmp
+}
+

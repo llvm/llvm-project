@@ -251,3 +251,20 @@ backedge:
 exit:
   ret void
 }
+
+; Make sure we can eliminate a select when both arguments perform equivalent
+; address computation.
+define void @test10(i1 %cond, i64* %base) {
+; CHECK-LABEL: @test10
+; CHECK: getelementptr i8, {{.+}} 40
+; CHECK-NOT: select
+entry:
+  %gep1 = getelementptr inbounds i64, i64* %base, i64 5
+  %gep1.casted = bitcast i64* %gep1 to i32*
+  %base.casted = bitcast i64* %base to i32*
+  %gep2 = getelementptr inbounds i32, i32* %base.casted, i64 10
+  %casted.merged = select i1 %cond, i32* %gep1.casted, i32* %gep2
+  %v = load i32, i32* %casted.merged, align 4
+  call void @foo(i32 %v)
+  ret void
+}

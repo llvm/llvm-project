@@ -30,15 +30,43 @@ namespace clang {
   class Type;
 
 namespace CodeGen {
-  class CGRecordLayout;
+class CGRecordLayout;
 
-  struct TBAAPathTag {
-    TBAAPathTag(const Type *B, const llvm::MDNode *A, uint64_t O)
-      : BaseT(B), AccessN(A), Offset(O) {}
-    const Type *BaseT;
-    const llvm::MDNode *AccessN;
-    uint64_t Offset;
-  };
+struct TBAAPathTag {
+  TBAAPathTag(const Type *B, const llvm::MDNode *A, uint64_t O)
+    : BaseT(B), AccessN(A), Offset(O) {}
+  const Type *BaseT;
+  const llvm::MDNode *AccessN;
+  uint64_t Offset;
+};
+
+// TBAAAccessInfo - Describes a memory access in terms of TBAA.
+struct TBAAAccessInfo {
+  TBAAAccessInfo(QualType BaseType, llvm::MDNode *AccessType, uint64_t Offset)
+    : BaseType(BaseType), AccessType(AccessType), Offset(Offset)
+  {}
+
+  explicit TBAAAccessInfo(llvm::MDNode *AccessType)
+    : TBAAAccessInfo(/* BaseType= */ QualType(), AccessType, /* Offset= */ 0)
+  {}
+
+  TBAAAccessInfo()
+    : TBAAAccessInfo(/* AccessType= */ nullptr)
+  {}
+
+  /// BaseType - The base/leading access type. May be null if this access
+  /// descriptor represents an access that is not considered to be an access
+  /// to an aggregate or union member.
+  QualType BaseType;
+
+  /// AccessType - The final access type. May be null if there is no TBAA
+  /// information available about this access.
+  llvm::MDNode *AccessType;
+
+  /// Offset - The byte offset of the final access within the base one. Must be
+  /// zero if the base access type is not specified.
+  uint64_t Offset;
+};
 
 /// CodeGenTBAA - This class organizes the cross-module state that is used
 /// while lowering AST types to LLVM types.
@@ -109,10 +137,9 @@ public:
 
   /// Get the MDNode in the type DAG for given struct type QType.
   llvm::MDNode *getTBAAStructTypeInfo(QualType QType);
-  /// Get the tag MDNode for a given base type, the actual scalar access MDNode
-  /// and offset into the base type.
-  llvm::MDNode *getTBAAStructTagInfo(QualType BaseQType,
-                                     llvm::MDNode *AccessNode, uint64_t Offset);
+
+  /// Get path-aware TBAA tag for a given memory access.
+  llvm::MDNode *getTBAAStructTagInfo(TBAAAccessInfo Info);
 
   /// Get the scalar tag MDNode for a given scalar type.
   llvm::MDNode *getTBAAScalarTagInfo(llvm::MDNode *AccessNode);

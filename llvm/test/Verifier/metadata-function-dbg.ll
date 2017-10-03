@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
+; RUN: llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK:      function declaration may not have a !dbg attachment
 declare !dbg !4 void @f1()
@@ -26,6 +26,7 @@ define void @bar() !dbg !3 {
   unreachable
 }
 
+; CHECK: warning: ignoring invalid debug info
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 

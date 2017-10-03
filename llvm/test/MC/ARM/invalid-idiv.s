@@ -9,13 +9,17 @@
 
         sdiv  r1, r2, r3
         udiv  r3, r4, r5
-@ ARM-A15: error: instruction requires: divide in ARM
+@ ARM-A15: note: instruction requires: divide in ARM
+@ ARM-A15: note: instruction requires: thumb
 @ ARM-A15: sdiv r1, r2, r3
-@ ARM-A15: error: instruction requires: divide in ARM
+@ ARM-A15: note: instruction requires: divide in ARM
+@ ARM-A15: note: instruction requires: thumb
 @ ARM-A15: udiv r3, r4, r5
-@ THUMB-A15: error: instruction requires: arm-mode
+@ THUMB-A15: note: instruction requires: arm-mode 
+@ THUMB-A15: note: instruction requires: divide in THUMB
 @ THUMB-A15: sdiv r1, r2, r3
-@ THUMB-A15: error: instruction requires: arm-mode
+@ THUMB-A15: note: instruction requires: arm-mode 
+@ THUMB-A15: note: instruction requires: divide in THUMB
 @ THUMB-A15: udiv r3, r4, r5
 
 @ ARM: error: instruction requires: divide in ARM

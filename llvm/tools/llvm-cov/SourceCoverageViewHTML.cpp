@@ -366,7 +366,8 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
 
 Error CoveragePrinterHTML::createIndexFile(
     ArrayRef<std::string> SourceFiles,
-    const coverage::CoverageMapping &Coverage, const CoverageFilter &Filters) {
+    const coverage::CoverageMapping &Coverage,
+    const CoverageFiltersMatchAll &Filters) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
   if (Error E = CSSOrErr.takeError())
@@ -419,7 +420,7 @@ Error CoveragePrinterHTML::createIndexFile(
   // Emit links to files which don't contain any functions. These are normally
   // not very useful, but could be relevant for code which abuses the
   // preprocessor.
-  if (EmptyFiles) {
+  if (EmptyFiles && Filters.empty()) {
     OSRef << tag("p", "Files which contain no functions. (These "
                       "files contain code pulled into other files "
                       "by the preprocessor.)\n");

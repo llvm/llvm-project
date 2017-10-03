@@ -1,6 +1,6 @@
-; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK: assembly parsed, but does not verify
+; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
 ; CHECK: line specified with no file
+; CHECK: warning: ignoring invalid debug info
 
 define void @foo() !dbg !3 {
   ret void

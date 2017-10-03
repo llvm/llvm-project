@@ -1,4 +1,4 @@
-; RUN: not opt -verify %s 2>&1 | FileCheck %s
+; RUN: opt -verify %s 2>&1 | FileCheck %s
 ; CHECK: invalid type ref
 ; CHECK-NOT: invalid type ref
 

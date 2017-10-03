@@ -66,15 +66,17 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
             MemoryBuffer::getFile(TempFilename);
+        if (!MBOrErr)
+          report_fatal_error(Twine("Failed to open new cache file ") +
+                             TempFilename + ": " +
+                             MBOrErr.getError().message() + "\n");
 
         // This is atomic on POSIX systems.
         if (auto EC = sys::fs::rename(TempFilename, EntryPath))
           report_fatal_error(Twine("Failed to rename temporary file ") +
-                             TempFilename + ": " + EC.message() + "\n");
+                             TempFilename + " to " + EntryPath + ": " +
+                             EC.message() + "\n");
 
-        if (!MBOrErr)
-          report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
-                             ": " + MBOrErr.getError().message() + "\n");
         AddBuffer(Task, std::move(*MBOrErr), EntryPath);
       }
     };

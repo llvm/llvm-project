@@ -353,11 +353,13 @@ enum {
   ELFOSABI_AROS = 15,         // AROS
   ELFOSABI_FENIXOS = 16,      // FenixOS
   ELFOSABI_CLOUDABI = 17,     // Nuxi CloudABI
-  ELFOSABI_C6000_ELFABI = 64, // Bare-metal TMS320C6000
+  ELFOSABI_FIRST_ARCH = 64,   // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,   // AMD HSA runtime
+  ELFOSABI_C6000_ELFABI = 64, // Bare-metal TMS320C6000
   ELFOSABI_C6000_LINUX = 65,  // Linux TMS320C6000
   ELFOSABI_ARM = 97,          // ARM
-  ELFOSABI_STANDALONE = 255   // Standalone (embedded) application
+  ELFOSABI_STANDALONE = 255,  // Standalone (embedded) application
+  ELFOSABI_LAST_ARCH = 255    // Last Architecture-specific OS ABI
 };
 
 #define ELF_RELOC(name, value) name = value,

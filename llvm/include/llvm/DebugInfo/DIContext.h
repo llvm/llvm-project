@@ -141,6 +141,7 @@ struct DIDumpOptions {
   unsigned RecurseDepth = -1U;
   bool ShowChildren = false;
   bool ShowParents = false;
+  bool ShowForm = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
 

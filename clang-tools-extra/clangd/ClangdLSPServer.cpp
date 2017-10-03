@@ -73,6 +73,10 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams Params,
                      Params.contentChanges[0].text);
 }
 
+void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+  Server.onFileEvent(Params);
+}
+
 void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams Params,
                                          JSONOutput &Out) {
   Server.removeDocument(Params.textDocument.uri.file);
@@ -196,8 +200,9 @@ void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier Params,
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  bool SnippetCompletions,
-                                 llvm::Optional<StringRef> ResourceDir)
-    : Out(Out), CDB(/*Logger=*/Out),
+                                 llvm::Optional<StringRef> ResourceDir,
+                                 llvm::Optional<Path> CompileCommandsDir)
+    : Out(Out), CDB(/*Logger=*/Out, std::move(CompileCommandsDir)),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
              SnippetCompletions, /*Logger=*/Out, ResourceDir) {}
 

@@ -98,9 +98,18 @@ def : Proc<"tsc701",          []>;
 def : Proc<"myriad2",         [FeatureLeon, LeonCASA]>;
 def : Proc<"myriad2.1",       [FeatureLeon, LeonCASA]>;
 def : Proc<"myriad2.2",       [FeatureLeon, LeonCASA]>;
+def : Proc<"myriad2.3",       [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2100",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2150",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2155",          [FeatureLeon, LeonCASA]>;
 def : Proc<"ma2450",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2455",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2x5x",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2080",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2085",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2480",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2485",          [FeatureLeon, LeonCASA]>;
+def : Proc<"ma2x8x",          [FeatureLeon, LeonCASA]>;
 def : Proc<"v9",              [FeatureV9]>;
 def : Proc<"ultrasparc",      [FeatureV9, FeatureV8Deprecated, FeatureVIS]>;
 def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,

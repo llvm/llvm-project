@@ -94,15 +94,6 @@ static cl::opt<bool> EnableLoopInterchange(
     "enable-loopinterchange", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental LoopInterchange Pass"));
 
-static cl::opt<bool> EnableNonLTOGlobalsModRef(
-    "enable-non-lto-gmr", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable the GlobalsModRef AliasAnalysis outside of the LTO pipeline."));
-
-static cl::opt<bool> EnableLoopLoadElim(
-    "enable-loop-load-elim", cl::init(true), cl::Hidden,
-    cl::desc("Enable the LoopLoadElimination Pass"));
-
 static cl::opt<bool>
     EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
                             cl::desc("Enable preparation for ThinLTO."));
@@ -490,11 +481,10 @@ void PassManagerBuilder::populateModulePassManager(
   if (!PerformThinLTO && !PrepareForThinLTOUsingPGOSampleProfile)
     addPGOInstrPasses(MPM);
 
-  if (EnableNonLTOGlobalsModRef)
-    // We add a module alias analysis pass here. In part due to bugs in the
-    // analysis infrastructure this "works" in that the analysis stays alive
-    // for the entire SCC pass run below.
-    MPM.add(createGlobalsAAWrapperPass());
+  // We add a module alias analysis pass here. In part due to bugs in the
+  // analysis infrastructure this "works" in that the analysis stays alive
+  // for the entire SCC pass run below.
+  MPM.add(createGlobalsAAWrapperPass());
 
   // Start of CallGraph SCC passes.
   if (!DisableUnitAtATime)
@@ -560,23 +550,22 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createLICMPass());                  // Hoist loop invariants
   }
 
-  if (EnableNonLTOGlobalsModRef)
-    // We add a fresh GlobalsModRef run at this point. This is particularly
-    // useful as the above will have inlined, DCE'ed, and function-attr
-    // propagated everything. We should at this point have a reasonably minimal
-    // and richly annotated call graph. By computing aliasing and mod/ref
-    // information for all local globals here, the late loop passes and notably
-    // the vectorizer will be able to use them to help recognize vectorizable
-    // memory operations.
-    //
-    // Note that this relies on a bug in the pass manager which preserves
-    // a module analysis into a function pass pipeline (and throughout it) so
-    // long as the first function pass doesn't invalidate the module analysis.
-    // Thus both Float2Int and LoopRotate have to preserve AliasAnalysis for
-    // this to work. Fortunately, it is trivial to preserve AliasAnalysis
-    // (doing nothing preserves it as it is required to be conservatively
-    // correct in the face of IR changes).
-    MPM.add(createGlobalsAAWrapperPass());
+  // We add a fresh GlobalsModRef run at this point. This is particularly
+  // useful as the above will have inlined, DCE'ed, and function-attr
+  // propagated everything. We should at this point have a reasonably minimal
+  // and richly annotated call graph. By computing aliasing and mod/ref
+  // information for all local globals here, the late loop passes and notably
+  // the vectorizer will be able to use them to help recognize vectorizable
+  // memory operations.
+  //
+  // Note that this relies on a bug in the pass manager which preserves
+  // a module analysis into a function pass pipeline (and throughout it) so
+  // long as the first function pass doesn't invalidate the module analysis.
+  // Thus both Float2Int and LoopRotate have to preserve AliasAnalysis for
+  // this to work. Fortunately, it is trivial to preserve AliasAnalysis
+  // (doing nothing preserves it as it is required to be conservatively
+  // correct in the face of IR changes).
+  MPM.add(createGlobalsAAWrapperPass());
 
   MPM.add(createFloat2IntPass());
 
@@ -597,8 +586,7 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
-  if (EnableLoopLoadElim)
-    MPM.add(createLoopLoadEliminationPass());
+  MPM.add(createLoopLoadEliminationPass());
 
   // FIXME: Because of #pragma vectorize enable, the passes below are always
   // inserted in the pipeline, even when the vectorizer doesn't run (ex. when

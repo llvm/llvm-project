@@ -3141,7 +3141,7 @@ public:
 /// In this example directive '#pragma omp target' has clause 'device'
 /// with single expression 'a'.
 ///
-class OMPDeviceClause : public OMPClause {
+class OMPDeviceClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// \brief Location of '('.
   SourceLocation LParenLoc;
@@ -3161,16 +3161,19 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   ///
-  OMPDeviceClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc, 
-                  SourceLocation EndLoc)
-      : OMPClause(OMPC_device, StartLoc, EndLoc), LParenLoc(LParenLoc), 
-        Device(E) {}
+  OMPDeviceClause(Expr *E, Stmt *HelperE, SourceLocation StartLoc,
+                  SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_device, StartLoc, EndLoc), OMPClauseWithPreInit(this),
+        LParenLoc(LParenLoc), Device(E) {
+    setPreInitStmt(HelperE);
+  }
 
   /// \brief Build an empty clause.
   ///
   OMPDeviceClause()
-      : OMPClause(OMPC_device, SourceLocation(), SourceLocation()), 
-        LParenLoc(SourceLocation()), Device(nullptr) {}
+      : OMPClause(OMPC_device, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this), LParenLoc(SourceLocation()),
+        Device(nullptr) {}
   /// \brief Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
   /// \brief Returns the location of '('.

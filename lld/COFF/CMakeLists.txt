@@ -42,6 +42,7 @@ add_lld_library(lldCOFF
   WindowsManifest
 
   LINK_LIBS
+  lldCommon
   lldCore
   ${LLVM_PTHREAD_LIB}
 

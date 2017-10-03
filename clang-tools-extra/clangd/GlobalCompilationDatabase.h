@@ -47,7 +47,8 @@ public:
 class DirectoryBasedGlobalCompilationDatabase
     : public GlobalCompilationDatabase {
 public:
-  DirectoryBasedGlobalCompilationDatabase(clangd::Logger &Logger);
+  DirectoryBasedGlobalCompilationDatabase(
+      clangd::Logger &Logger, llvm::Optional<Path> CompileCommandsDir);
 
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override;
@@ -56,6 +57,7 @@ public:
 
 private:
   tooling::CompilationDatabase *getCompilationDatabase(PathRef File);
+  tooling::CompilationDatabase *tryLoadDatabaseFromPath(PathRef File);
 
   std::mutex Mutex;
   /// Caches compilation databases loaded from directories(keys are
@@ -67,6 +69,9 @@ private:
   llvm::StringMap<std::vector<std::string>> ExtraFlagsForFile;
   /// Used for logging.
   clangd::Logger &Logger;
+  /// Used for command argument pointing to folder where compile_commands.json
+  /// is located.
+  llvm::Optional<Path> CompileCommandsDir;
 };
 } // namespace clangd
 } // namespace clang

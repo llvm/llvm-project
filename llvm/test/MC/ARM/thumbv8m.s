@@ -19,12 +19,12 @@ mov.w r0, r0
 .arm
 
 // And only +dsp has DSP and instructions
-// UNDEF-BASELINE: error: instruction requires: arm-mode
-// UNDEF-MAINLINE: error: instruction requires: arm-mode
+// UNDEF-BASELINE: error: instruction requires: dsp thumb2
+// UNDEF-MAINLINE: error: instruction requires: dsp
 // UNDEF-MAINLINE_DSP-NOT: error: instruction requires:
 qadd16 r0, r0, r0
-// UNDEF-BASELINE: error: instruction requires: arm-mode
-// UNDEF-MAINLINE: error: instruction requires: arm-mode
+// UNDEF-BASELINE: error: instruction requires: dsp thumb2
+// UNDEF-MAINLINE: error: instruction requires: dsp
 // UNDEF-MAINLINE_DSP-NOT: error: instruction requires:
 uxtab16 r0, r1, r2
 
@@ -146,7 +146,7 @@ sg
 // CHECK: bxns r0                    @ encoding: [0x04,0x47]
 bxns r0
 
-// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
 // UNDEF-BASELINE: error: conditional execution not supported in Thumb1
 // CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
 // CHECK-MAINLINE: bxnseq r1                  @ encoding: [0x0c,0x47]
@@ -159,7 +159,7 @@ bxns lr
 // CHECK: blxns r0                   @ encoding: [0x84,0x47]
 blxns r0
 
-// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
 // UNDEF-BASELINE: error: conditional execution not supported in Thumb1
 // CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
 // CHECK-MAINLINE: blxnseq r1                 @ encoding: [0x8c,0x47]
@@ -226,28 +226,28 @@ MSR FAULTMASK_NS, r14
 // UNDEF-BASELINE: error: invalid operand for instruction
 
 // Invalid operand tests
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     sg #0
 sg #0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     sg r0
 sg r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     bxns r0, r1
 bxns r0, r1
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     blxns r0, #0
 blxns r0, #0
 // UNDEF: error: invalid operand for instruction
 // UNDEF:     blxns label
 blxns label
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, r2
 tt r0, r1, r2
 // UNDEF: error: invalid operand for instruction
 // UNDEF:     tt r0, [r1]
 tt r0, [r1]
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, #4
 tt r0, r1, #4
 // UNDEF: error: invalid operand for instruction
@@ -268,10 +268,12 @@ tt pc, r0
 // UNDEF:     tt r0, pc
 tt r0, pc
 
-// UNDEF: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-MAINLINE: error: invalid operand for instruction
 // UNDEF:     vlldm pc
 vlldm pc
 
-// UNDEF: error: invalid operand for instruction
+// UNDEF-BASELINE: error: invalid instruction
+// UNDEF-MAINLINE: error: invalid operand for instruction
 // UNDEF:     vlstm pc
 vlstm pc
