@@ -23,22 +23,28 @@ using namespace clang;
 using namespace ento;
 using namespace clang::ast_matchers;
 
+static const int MAXIMUM_STEP_UNROLLED = 128;
+
 struct LoopState {
 private:
   enum Kind { Normal, Unrolled } K;
   const Stmt *LoopStmt;
   const LocationContext *LCtx;
-  LoopState(Kind InK, const Stmt *S, const LocationContext *L)
-      : K(InK), LoopStmt(S), LCtx(L) {}
+  unsigned maxStep;
+  LoopState(Kind InK, const Stmt *S, const LocationContext *L, unsigned N)
+      : K(InK), LoopStmt(S), LCtx(L), maxStep(N) {}
 
 public:
-  static LoopState getNormal(const Stmt *S, const LocationContext *L) {
-    return LoopState(Normal, S, L);
+  static LoopState getNormal(const Stmt *S, const LocationContext *L,
+                             unsigned N) {
+    return LoopState(Normal, S, L, N);
   }
-  static LoopState getUnrolled(const Stmt *S, const LocationContext *L) {
-    return LoopState(Unrolled, S, L);
+  static LoopState getUnrolled(const Stmt *S, const LocationContext *L,
+                               unsigned N) {
+    return LoopState(Unrolled, S, L, N);
   }
   bool isUnrolled() const { return K == Unrolled; }
+  unsigned getMaxStep() const { return maxStep; }
   const Stmt *getLoopStmt() const { return LoopStmt; }
   const LocationContext *getLocationContext() const { return LCtx; }
   bool operator==(const LoopState &X) const {
@@ -48,6 +54,7 @@ public:
     ID.AddInteger(K);
     ID.AddPointer(LoopStmt);
     ID.AddPointer(LCtx);
+    ID.AddInteger(maxStep);
   }
 };
 
@@ -74,12 +81,14 @@ ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
 }
 
 static internal::Matcher<Stmt> simpleCondition(StringRef BindName) {
-  return binaryOperator(
-      anyOf(hasOperatorName("<"), hasOperatorName(">"), hasOperatorName("<="),
-            hasOperatorName(">="), hasOperatorName("!=")),
-      hasEitherOperand(ignoringParenImpCasts(
-          declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName))))),
-      hasEitherOperand(ignoringParenImpCasts(integerLiteral())));
+  return binaryOperator(anyOf(hasOperatorName("<"), hasOperatorName(">"),
+                              hasOperatorName("<="), hasOperatorName(">="),
+                              hasOperatorName("!=")),
+                        hasEitherOperand(ignoringParenImpCasts(declRefExpr(
+                            to(varDecl(hasType(isInteger())).bind(BindName))))),
+                        hasEitherOperand(ignoringParenImpCasts(
+                            integerLiteral().bind("boundNum"))))
+      .bind("conditionOperator");
 }
 
 static internal::Matcher<Stmt>
@@ -134,13 +143,13 @@ static internal::Matcher<Stmt> forLoopMatcher() {
   return forStmt(
              hasCondition(simpleCondition("initVarName")),
              // Initialization should match the form: 'int i = 6' or 'i = 42'.
-             hasLoopInit(
-                 anyOf(declStmt(hasSingleDecl(
-                           varDecl(allOf(hasInitializer(integerLiteral()),
-                                         equalsBoundNode("initVarName"))))),
-                       binaryOperator(hasLHS(declRefExpr(to(varDecl(
-                                          equalsBoundNode("initVarName"))))),
-                                      hasRHS(integerLiteral())))),
+             hasLoopInit(anyOf(
+                 declStmt(hasSingleDecl(varDecl(
+                     allOf(hasInitializer(integerLiteral().bind("initNum")),
+                           equalsBoundNode("initVarName"))))),
+                 binaryOperator(hasLHS(declRefExpr(to(
+                                    varDecl(equalsBoundNode("initVarName"))))),
+                                hasRHS(integerLiteral().bind("initNum"))))),
              // Incrementation should be a simple increment or decrement
              // operator call.
              hasIncrement(unaryOperator(
@@ -187,7 +196,7 @@ static bool isPossiblyEscaped(const VarDecl *VD, ExplodedNode *N) {
 }
 
 bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
-                            ExplodedNode *Pred) {
+                            ExplodedNode *Pred, unsigned &maxStep) {
 
   if (!isLoopStmt(LoopStmt))
     return false;
@@ -199,15 +208,21 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
     return false;
 
   auto CounterVar = Matches[0].getNodeAs<VarDecl>("initVarName");
+  auto BoundNum = Matches[0].getNodeAs<IntegerLiteral>("boundNum")->getValue();
+  auto InitNum = Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
+  auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
+  if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
+    maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
+  else
+    maxStep = (BoundNum - InitNum).abs().getZExtValue();
 
   // Check if the counter of the loop is not escaped before.
   return !isPossiblyEscaped(CounterVar->getCanonicalDecl(), Pred);
 }
 
-bool madeNewBranch(ExplodedNode* N, const Stmt* LoopStmt) {
-  const Stmt* S = nullptr;
-  while (!N->pred_empty())
-  {
+bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
+  const Stmt *S = nullptr;
+  while (!N->pred_empty()) {
     if (N->succ_size() > 1)
       return true;
 
@@ -226,7 +241,7 @@ bool madeNewBranch(ExplodedNode* N, const Stmt* LoopStmt) {
 
 // updateLoopStack is called on every basic block, therefore it needs to be fast
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
-                                ExplodedNode* Pred) {
+                                ExplodedNode *Pred, unsigned maxVisitOnPath) {
   auto State = Pred->getState();
   auto LCtx = Pred->getLocationContext();
 
@@ -238,17 +253,27 @@ ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
       LCtx == LS.getHead().getLocationContext()) {
     if (LS.getHead().isUnrolled() && madeNewBranch(Pred, LoopStmt)) {
       State = State->set<LoopStack>(LS.getTail());
-      State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));
+      State = State->add<LoopStack>(
+          LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
     }
     return State;
   }
-
-  if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred)) {
-    State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));
+  unsigned maxStep;
+  if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred, maxStep)) {
+    State = State->add<LoopStack>(
+        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
     return State;
   }
 
-  State = State->add<LoopStack>(LoopState::getUnrolled(LoopStmt, LCtx));
+  unsigned outerStep = (LS.isEmpty() ? 1 : LS.getHead().getMaxStep());
+
+  unsigned innerMaxStep = maxStep * outerStep;
+  if (innerMaxStep > MAXIMUM_STEP_UNROLLED)
+    State = State->add<LoopStack>(
+        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+  else
+    State = State->add<LoopStack>(
+        LoopState::getUnrolled(LoopStmt, LCtx, innerMaxStep));
   return State;
 }
 
