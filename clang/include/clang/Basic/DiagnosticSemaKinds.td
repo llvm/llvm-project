@@ -1425,10 +1425,6 @@ def err_noexcept_needs_constant_expression : Error<
   "argument to noexcept specifier must be a constant expression">;
 def err_exception_spec_not_parsed : Error<
   "exception specification is not available until end of class definition">;
-def warn_nothrow_attr_disagrees_with_exception_specification
-    : ExtWarn<"attribute 'nothrow' ignored due to conflicting exception "
-              "specification">,
-      InGroup<IgnoredAttributes>;
 
 // C++ access checking
 def err_class_redeclared_with_different_access : Error<

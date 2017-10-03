@@ -55,9 +55,9 @@ class TokenLexer {
   ///
   unsigned NumTokens;
 
-  /// CurToken - This is the next token that Lex will return.
+  /// This is the index of the next token that Lex will return.
   ///
-  unsigned CurToken;
+  unsigned CurTokenIdx;
 
   /// ExpandLocStart/End - The source location range where this macro was
   /// expanded.
@@ -156,16 +156,39 @@ private:
   /// isAtEnd - Return true if the next lex call will pop this macro off the
   /// include stack.
   bool isAtEnd() const {
-    return CurToken == NumTokens;
+    return CurTokenIdx == NumTokens;
   }
 
-  /// PasteTokens - Tok is the LHS of a ## operator, and CurToken is the ##
-  /// operator.  Read the ## and RHS, and paste the LHS/RHS together.  If there
-  /// are is another ## after it, chomp it iteratively.  Return the result as
-  /// Tok.  If this returns true, the caller should immediately return the
+  /// Concatenates the next (sub-)sequence of \p Tokens separated by '##'
+  /// starting with LHSTok - stopping when we encounter a token that is neither
+  /// '##' nor preceded by '##'.  Places the result back into \p LHSTok and sets
+  /// \p CurIdx to point to the token following the last one that was pasted.
+  ///
+  /// Also performs the MSVC extension wide-literal token pasting involved with:
+  ///       \code L #macro-arg. \endcode
+  ///
+  /// \param[in,out] LHSTok - Contains the token to the left of '##' in \p
+  /// Tokens upon entry and will contain the resulting concatenated Token upon
+  /// exit.
+  ///
+  /// \param[in] TokenStream - The stream of Tokens we are lexing from.
+  ///
+  /// \param[in,out] CurIdx - Upon entry, \pTokens[\pCurIdx] must equal '##'
+  /// (with the exception of the MSVC extension mentioned above).  Upon exit, it
+  /// is set to the index of the token following the last token that was
+  /// concatenated together.
+  ///
+  /// \returns If this returns true, the caller should immediately return the
   /// token.
-  bool PasteTokens(Token &Tok);
 
+  bool pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
+                   unsigned int &CurIdx);
+
+  /// Calls pasteTokens above, passing in the '*this' object's Tokens and
+  /// CurTokenIdx data members.
+  bool pasteTokens(Token &Tok);
+
+  
   /// Expand the arguments of a function-like macro so that we can quickly
   /// return preexpanded tokens from Tokens.
   void ExpandFunctionArguments();

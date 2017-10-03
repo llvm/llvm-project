@@ -662,6 +662,10 @@ public:
   llvm::MDNode *getTBAAStructTagInfo(QualType BaseTy, llvm::MDNode *AccessN,
                                      uint64_t O);
 
+  /// getTBAAMayAliasTypeInfo - Get TBAA information that represents
+  /// may-alias accesses.
+  llvm::MDNode *getTBAAMayAliasTypeInfo();
+
   bool isTypeConstant(QualType QTy, bool ExcludeCtorDtor);
 
   bool isPaddedAtomicType(QualType type);

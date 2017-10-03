@@ -9,7 +9,6 @@ add_clang_library(clangToolingRefactoring
   Rename/USRFinder.cpp
   Rename/USRFindingAction.cpp
   Rename/USRLocFinder.cpp
-  SourceSelectionConstraints.cpp
 
   LINK_LIBS
   clangAST
