@@ -365,6 +365,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       ProcessImplicitDtor(E.castAs<CFGImplicitDtor>(), Pred);
       return;
     case CFGElement::LifetimeEnds:
+    case CFGElement::LoopExit:
       return;
   }
 }

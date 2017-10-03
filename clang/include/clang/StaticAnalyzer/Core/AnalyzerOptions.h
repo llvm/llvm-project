@@ -214,6 +214,9 @@ private:
   /// \sa IncludeLifetimeInCFG
   Optional<bool> IncludeLifetimeInCFG;
 
+  /// \sa IncludeLoopExitInCFG
+  Optional<bool> IncludeLoopExitInCFG;
+
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
@@ -417,6 +420,13 @@ public:
   /// This is controlled by the 'cfg-lifetime' config option, which accepts
   /// the values "true" and "false".
   bool includeLifetimeInCFG();
+
+  /// Returns whether or not the end of the loop information should be included
+  /// in the CFG.
+  ///
+  /// This is controlled by the 'cfg-loopexit' config option, which accepts
+  /// the values "true" and "false".
+  bool includeLoopExitInCFG();
 
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.

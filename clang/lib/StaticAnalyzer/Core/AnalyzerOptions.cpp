@@ -183,6 +183,11 @@ bool AnalyzerOptions::includeLifetimeInCFG() {
                           /* Default = */ false);
 }
 
+bool AnalyzerOptions::includeLoopExitInCFG() {
+  return getBooleanOption(IncludeLoopExitInCFG, "cfg-loopexit",
+          /* Default = */ false);
+}
+
 bool AnalyzerOptions::mayInlineCXXStandardLibrary() {
   return getBooleanOption(InlineCXXStandardLibrary,
                           "c++-stdlib-inlining",
