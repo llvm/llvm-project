@@ -478,8 +478,8 @@ class Configuration(object):
 
         # Attempt to detect the glibc version by querying for __GLIBC__
         # in 'features.h'.
-        macros = self._dump_macros_verbose(flags=['-include', 'features.h'])
-        if macros is not None and '__GLIBC__' in macros:
+        macros = self.cxx.dumpMacros(flags=['-include', 'features.h'])
+        if isinstance(macros, dict) and '__GLIBC__' in macros:
             maj_v, min_v = (macros['__GLIBC__'], macros['__GLIBC_MINOR__'])
             self.config.available_features.add('glibc')
             self.config.available_features.add('glibc-%s' % maj_v)

@@ -2236,7 +2236,8 @@ void MergeNoTailSection::finalizeContents() {
   for (size_t I = 0; I < NumShards; ++I)
     Shards.emplace_back(StringTableBuilder::RAW, Alignment);
 
-  // Concurrency level. Must be a power of 2.
+  // Concurrency level. Must be a power of 2 to avoid expensive modulo
+  // operations in the following tight loop.
   size_t Concurrency = 1;
   if (Config->Threads)
     if (int N = std::thread::hardware_concurrency())
