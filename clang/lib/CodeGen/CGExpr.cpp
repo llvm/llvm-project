@@ -569,6 +569,19 @@ static llvm::Value *emitHash16Bytes(CGBuilderTy &Builder, llvm::Value *Low,
   return Builder.CreateMul(B1, KMul);
 }
 
+bool CodeGenFunction::isNullPointerAllowed(TypeCheckKind TCK) {
+  return TCK == TCK_DowncastPointer || TCK == TCK_Upcast ||
+         TCK == TCK_UpcastToVirtualBase;
+}
+
+bool CodeGenFunction::isVptrCheckRequired(TypeCheckKind TCK, QualType Ty) {
+  CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+  return (RD && RD->hasDefinition() && RD->isDynamicClass()) &&
+         (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
+          TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
+          TCK == TCK_UpcastToVirtualBase);
+}
+
 bool CodeGenFunction::sanitizePerformTypeCheck() const {
   return SanOpts.has(SanitizerKind::Null) |
          SanOpts.has(SanitizerKind::Alignment) |
@@ -608,8 +621,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   llvm::Value *IsNonNull = nullptr;
   bool IsGuaranteedNonNull =
       SkippedChecks.has(SanitizerKind::Null) || PtrToAlloca;
-  bool AllowNullPointers = TCK == TCK_DowncastPointer || TCK == TCK_Upcast ||
-                           TCK == TCK_UpcastToVirtualBase;
+  bool AllowNullPointers = isNullPointerAllowed(TCK);
   if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
       !IsGuaranteedNonNull) {
     // The glvalue must not be an empty glvalue.
@@ -696,13 +708,8 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   //   The program has undefined behavior if:
   //    -- the [pointer or glvalue] is used to access a non-static data member
   //       or call a non-static member function
-  CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
   if (SanOpts.has(SanitizerKind::Vptr) &&
-      !SkippedChecks.has(SanitizerKind::Vptr) &&
-      (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
-       TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
-       TCK == TCK_UpcastToVirtualBase) &&
-      RD && RD->hasDefinition() && RD->isDynamicClass()) {
+      !SkippedChecks.has(SanitizerKind::Vptr) && isVptrCheckRequired(TCK, Ty)) {
     // Ensure that the pointer is non-null before loading it. If there is no
     // compile-time guarantee, reuse the run-time null check or emit a new one.
     if (!IsGuaranteedNonNull) {
