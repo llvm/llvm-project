@@ -408,6 +408,7 @@ SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
 }
 
 SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
+  DEBUG(dbgs() << "Optimizing float store operations\n");
   // Turn 'store float 1.0, Ptr' -> 'store int 0x12345678, Ptr'
   // FIXME: We shouldn't do this for TargetConstantFP's.
   // FIXME: move this to the DAG Combiner!  Note that we can't regress due
@@ -466,172 +467,174 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
 }
 
 void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
-    StoreSDNode *ST = cast<StoreSDNode>(Node);
-    SDValue Chain = ST->getChain();
-    SDValue Ptr = ST->getBasePtr();
-    SDLoc dl(Node);
+  StoreSDNode *ST = cast<StoreSDNode>(Node);
+  SDValue Chain = ST->getChain();
+  SDValue Ptr = ST->getBasePtr();
+  SDLoc dl(Node);
 
-    unsigned Alignment = ST->getAlignment();
-    MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-    AAMDNodes AAInfo = ST->getAAInfo();
+  unsigned Alignment = ST->getAlignment();
+  MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = ST->getAAInfo();
 
-    if (!ST->isTruncatingStore()) {
-      if (SDNode *OptStore = OptimizeFloatStore(ST).getNode()) {
-        ReplaceNode(ST, OptStore);
-        return;
-      }
-
-      {
-        SDValue Value = ST->getValue();
-        MVT VT = Value.getSimpleValueType();
-        switch (TLI.getOperationAction(ISD::STORE, VT)) {
-        default: llvm_unreachable("This action is not supported yet!");
-        case TargetLowering::Legal: {
-          // If this is an unaligned store and the target doesn't support it,
-          // expand it.
-          EVT MemVT = ST->getMemoryVT();
-          unsigned AS = ST->getAddressSpace();
-          unsigned Align = ST->getAlignment();
-          const DataLayout &DL = DAG.getDataLayout();
-          if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
-            SDValue Result = TLI.expandUnalignedStore(ST, DAG);
-            ReplaceNode(SDValue(ST, 0), Result);
-          }
-          break;
-        }
-        case TargetLowering::Custom: {
-          SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG);
-          if (Res && Res != SDValue(Node, 0))
-            ReplaceNode(SDValue(Node, 0), Res);
-          return;
-        }
-        case TargetLowering::Promote: {
-          MVT NVT = TLI.getTypeToPromoteTo(ISD::STORE, VT);
-          assert(NVT.getSizeInBits() == VT.getSizeInBits() &&
-                 "Can only promote stores to same size type");
-          Value = DAG.getNode(ISD::BITCAST, dl, NVT, Value);
-          SDValue Result =
-              DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
-                           Alignment, MMOFlags, AAInfo);
-          ReplaceNode(SDValue(Node, 0), Result);
-          break;
-        }
-        }
-        return;
-      }
-    } else {
-      SDValue Value = ST->getValue();
-
-      EVT StVT = ST->getMemoryVT();
-      unsigned StWidth = StVT.getSizeInBits();
-      auto &DL = DAG.getDataLayout();
-
-      if (StWidth != StVT.getStoreSizeInBits()) {
-        // Promote to a byte-sized store with upper bits zero if not
-        // storing an integral number of bytes.  For example, promote
-        // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
-        EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
-                                    StVT.getStoreSizeInBits());
-        Value = DAG.getZeroExtendInReg(Value, dl, StVT);
-        SDValue Result =
-            DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(), NVT,
-                              Alignment, MMOFlags, AAInfo);
-        ReplaceNode(SDValue(Node, 0), Result);
-      } else if (StWidth & (StWidth - 1)) {
-        // If not storing a power-of-2 number of bits, expand as two stores.
-        assert(!StVT.isVector() && "Unsupported truncstore!");
-        unsigned RoundWidth = 1 << Log2_32(StWidth);
-        assert(RoundWidth < StWidth);
-        unsigned ExtraWidth = StWidth - RoundWidth;
-        assert(ExtraWidth < RoundWidth);
-        assert(!(RoundWidth % 8) && !(ExtraWidth % 8) &&
-               "Store size not an integral number of bytes!");
-        EVT RoundVT = EVT::getIntegerVT(*DAG.getContext(), RoundWidth);
-        EVT ExtraVT = EVT::getIntegerVT(*DAG.getContext(), ExtraWidth);
-        SDValue Lo, Hi;
-        unsigned IncrementSize;
-
-        if (DL.isLittleEndian()) {
-          // TRUNCSTORE:i24 X -> TRUNCSTORE:i16 X, TRUNCSTORE@+2:i8 (srl X, 16)
-          // Store the bottom RoundWidth bits.
-          Lo = DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
-                                 RoundVT, Alignment, MMOFlags, AAInfo);
-
-          // Store the remaining ExtraWidth bits.
-          IncrementSize = RoundWidth / 8;
-          Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                            DAG.getConstant(IncrementSize, dl,
-                                            Ptr.getValueType()));
-          Hi = DAG.getNode(
-              ISD::SRL, dl, Value.getValueType(), Value,
-              DAG.getConstant(RoundWidth, dl,
-                              TLI.getShiftAmountTy(Value.getValueType(), DL)));
-          Hi = DAG.getTruncStore(
-              Chain, dl, Hi, Ptr,
-              ST->getPointerInfo().getWithOffset(IncrementSize), ExtraVT,
-              MinAlign(Alignment, IncrementSize), MMOFlags, AAInfo);
-        } else {
-          // Big endian - avoid unaligned stores.
-          // TRUNCSTORE:i24 X -> TRUNCSTORE:i16 (srl X, 8), TRUNCSTORE@+2:i8 X
-          // Store the top RoundWidth bits.
-          Hi = DAG.getNode(
-              ISD::SRL, dl, Value.getValueType(), Value,
-              DAG.getConstant(ExtraWidth, dl,
-                              TLI.getShiftAmountTy(Value.getValueType(), DL)));
-          Hi = DAG.getTruncStore(Chain, dl, Hi, Ptr, ST->getPointerInfo(),
-                                 RoundVT, Alignment, MMOFlags, AAInfo);
-
-          // Store the remaining ExtraWidth bits.
-          IncrementSize = RoundWidth / 8;
-          Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                            DAG.getConstant(IncrementSize, dl,
-                                            Ptr.getValueType()));
-          Lo = DAG.getTruncStore(
-              Chain, dl, Value, Ptr,
-              ST->getPointerInfo().getWithOffset(IncrementSize), ExtraVT,
-              MinAlign(Alignment, IncrementSize), MMOFlags, AAInfo);
-        }
-
-        // The order of the stores doesn't matter.
-        SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
-        ReplaceNode(SDValue(Node, 0), Result);
-      } else {
-        switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
-        default: llvm_unreachable("This action is not supported yet!");
-        case TargetLowering::Legal: {
-          EVT MemVT = ST->getMemoryVT();
-          unsigned AS = ST->getAddressSpace();
-          unsigned Align = ST->getAlignment();
-          // If this is an unaligned store and the target doesn't support it,
-          // expand it.
-          if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
-            SDValue Result = TLI.expandUnalignedStore(ST, DAG);
-            ReplaceNode(SDValue(ST, 0), Result);
-          }
-          break;
-        }
-        case TargetLowering::Custom: {
-          SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG);
-          if (Res && Res != SDValue(Node, 0))
-            ReplaceNode(SDValue(Node, 0), Res);
-          return;
-        }
-        case TargetLowering::Expand:
-          assert(!StVT.isVector() &&
-                 "Vector Stores are handled in LegalizeVectorOps");
-
-          // TRUNCSTORE:i16 i32 -> STORE i16
-          assert(TLI.isTypeLegal(StVT) &&
-                 "Do not know how to expand this store!");
-          Value = DAG.getNode(ISD::TRUNCATE, dl, StVT, Value);
-          SDValue Result =
-              DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
-                           Alignment, MMOFlags, AAInfo);
-          ReplaceNode(SDValue(Node, 0), Result);
-          break;
-        }
-      }
+  if (!ST->isTruncatingStore()) {
+    DEBUG(dbgs() << "Legalizing store operation\n");
+    if (SDNode *OptStore = OptimizeFloatStore(ST).getNode()) {
+      ReplaceNode(ST, OptStore);
+      return;
     }
+
+    SDValue Value = ST->getValue();
+    MVT VT = Value.getSimpleValueType();
+    switch (TLI.getOperationAction(ISD::STORE, VT)) {
+    default: llvm_unreachable("This action is not supported yet!");
+    case TargetLowering::Legal: {
+      // If this is an unaligned store and the target doesn't support it,
+      // expand it.
+      EVT MemVT = ST->getMemoryVT();
+      unsigned AS = ST->getAddressSpace();
+      unsigned Align = ST->getAlignment();
+      const DataLayout &DL = DAG.getDataLayout();
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
+        DEBUG(dbgs() << "Expanding unsupported unaligned store\n");
+        SDValue Result = TLI.expandUnalignedStore(ST, DAG);
+        ReplaceNode(SDValue(ST, 0), Result);
+      } else
+        DEBUG(dbgs() << "Legal store\n");
+      break;
+    }
+    case TargetLowering::Custom: {
+      DEBUG(dbgs() << "Trying custom lowering\n");
+      SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG);
+      if (Res && Res != SDValue(Node, 0))
+        ReplaceNode(SDValue(Node, 0), Res);
+      return;
+    }
+    case TargetLowering::Promote: {
+      MVT NVT = TLI.getTypeToPromoteTo(ISD::STORE, VT);
+      assert(NVT.getSizeInBits() == VT.getSizeInBits() &&
+             "Can only promote stores to same size type");
+      Value = DAG.getNode(ISD::BITCAST, dl, NVT, Value);
+      SDValue Result =
+          DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
+                       Alignment, MMOFlags, AAInfo);
+      ReplaceNode(SDValue(Node, 0), Result);
+      break;
+    }
+    }
+    return;
+  }
+
+  DEBUG(dbgs() << "Legalizing truncating store operations\n");
+  SDValue Value = ST->getValue();
+  EVT StVT = ST->getMemoryVT();
+  unsigned StWidth = StVT.getSizeInBits();
+  auto &DL = DAG.getDataLayout();
+
+  if (StWidth != StVT.getStoreSizeInBits()) {
+    // Promote to a byte-sized store with upper bits zero if not
+    // storing an integral number of bytes.  For example, promote
+    // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
+    EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
+                                StVT.getStoreSizeInBits());
+    Value = DAG.getZeroExtendInReg(Value, dl, StVT);
+    SDValue Result =
+        DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(), NVT,
+                          Alignment, MMOFlags, AAInfo);
+    ReplaceNode(SDValue(Node, 0), Result);
+  } else if (StWidth & (StWidth - 1)) {
+    // If not storing a power-of-2 number of bits, expand as two stores.
+    assert(!StVT.isVector() && "Unsupported truncstore!");
+    unsigned RoundWidth = 1 << Log2_32(StWidth);
+    assert(RoundWidth < StWidth);
+    unsigned ExtraWidth = StWidth - RoundWidth;
+    assert(ExtraWidth < RoundWidth);
+    assert(!(RoundWidth % 8) && !(ExtraWidth % 8) &&
+           "Store size not an integral number of bytes!");
+    EVT RoundVT = EVT::getIntegerVT(*DAG.getContext(), RoundWidth);
+    EVT ExtraVT = EVT::getIntegerVT(*DAG.getContext(), ExtraWidth);
+    SDValue Lo, Hi;
+    unsigned IncrementSize;
+
+    if (DL.isLittleEndian()) {
+      // TRUNCSTORE:i24 X -> TRUNCSTORE:i16 X, TRUNCSTORE@+2:i8 (srl X, 16)
+      // Store the bottom RoundWidth bits.
+      Lo = DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
+                             RoundVT, Alignment, MMOFlags, AAInfo);
+
+      // Store the remaining ExtraWidth bits.
+      IncrementSize = RoundWidth / 8;
+      Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
+                        DAG.getConstant(IncrementSize, dl,
+                                        Ptr.getValueType()));
+      Hi = DAG.getNode(
+          ISD::SRL, dl, Value.getValueType(), Value,
+          DAG.getConstant(RoundWidth, dl,
+                          TLI.getShiftAmountTy(Value.getValueType(), DL)));
+      Hi = DAG.getTruncStore(
+          Chain, dl, Hi, Ptr,
+          ST->getPointerInfo().getWithOffset(IncrementSize), ExtraVT,
+          MinAlign(Alignment, IncrementSize), MMOFlags, AAInfo);
+    } else {
+      // Big endian - avoid unaligned stores.
+      // TRUNCSTORE:i24 X -> TRUNCSTORE:i16 (srl X, 8), TRUNCSTORE@+2:i8 X
+      // Store the top RoundWidth bits.
+      Hi = DAG.getNode(
+          ISD::SRL, dl, Value.getValueType(), Value,
+          DAG.getConstant(ExtraWidth, dl,
+                          TLI.getShiftAmountTy(Value.getValueType(), DL)));
+      Hi = DAG.getTruncStore(Chain, dl, Hi, Ptr, ST->getPointerInfo(),
+                             RoundVT, Alignment, MMOFlags, AAInfo);
+
+      // Store the remaining ExtraWidth bits.
+      IncrementSize = RoundWidth / 8;
+      Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
+                        DAG.getConstant(IncrementSize, dl,
+                                        Ptr.getValueType()));
+      Lo = DAG.getTruncStore(
+          Chain, dl, Value, Ptr,
+          ST->getPointerInfo().getWithOffset(IncrementSize), ExtraVT,
+          MinAlign(Alignment, IncrementSize), MMOFlags, AAInfo);
+    }
+
+    // The order of the stores doesn't matter.
+    SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo, Hi);
+    ReplaceNode(SDValue(Node, 0), Result);
+  } else {
+    switch (TLI.getTruncStoreAction(ST->getValue().getValueType(), StVT)) {
+    default: llvm_unreachable("This action is not supported yet!");
+    case TargetLowering::Legal: {
+      EVT MemVT = ST->getMemoryVT();
+      unsigned AS = ST->getAddressSpace();
+      unsigned Align = ST->getAlignment();
+      // If this is an unaligned store and the target doesn't support it,
+      // expand it.
+      if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
+        SDValue Result = TLI.expandUnalignedStore(ST, DAG);
+        ReplaceNode(SDValue(ST, 0), Result);
+      }
+      break;
+    }
+    case TargetLowering::Custom: {
+      SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG);
+      if (Res && Res != SDValue(Node, 0))
+        ReplaceNode(SDValue(Node, 0), Res);
+      return;
+    }
+    case TargetLowering::Expand:
+      assert(!StVT.isVector() &&
+             "Vector Stores are handled in LegalizeVectorOps");
+
+      // TRUNCSTORE:i16 i32 -> STORE i16
+      assert(TLI.isTypeLegal(StVT) &&
+             "Do not know how to expand this store!");
+      Value = DAG.getNode(ISD::TRUNCATE, dl, StVT, Value);
+      SDValue Result =
+          DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
+                       Alignment, MMOFlags, AAInfo);
+      ReplaceNode(SDValue(Node, 0), Result);
+      break;
+    }
+  }
 }
 
 void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
@@ -643,6 +646,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD) {
+    DEBUG(dbgs() << "Legalizing non-extending load operation\n");
     MVT VT = Node->getSimpleValueType(0);
     SDValue RVal = SDValue(Node, 0);
     SDValue RChain = SDValue(Node, 1);
@@ -692,6 +696,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     return;
   }
 
+  DEBUG(dbgs() << "Legalizing extending load operation\n");
   EVT SrcVT = LD->getMemoryVT();
   unsigned SrcWidth = SrcVT.getSizeInBits();
   unsigned Alignment = LD->getAlignment();
@@ -1184,8 +1189,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     }
     switch (Action) {
     case TargetLowering::Legal:
+      DEBUG(dbgs() << "Legal node: nothing to do\n");
       return;
     case TargetLowering::Custom:
+      DEBUG(dbgs() << "Trying custom legalization\n");
       // FIXME: The handling for custom lowering with multiple results is
       // a complete mess.
       if (SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG)) {
@@ -1193,6 +1200,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
           return;
 
         if (Node->getNumValues() == 1) {
+          DEBUG(dbgs() << "Successfully custom legalized node\n");
           // We can just directly replace this node with the lowered value.
           ReplaceNode(SDValue(Node, 0), Res);
           return;
@@ -1201,9 +1209,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         SmallVector<SDValue, 8> ResultVals;
         for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
           ResultVals.push_back(Res.getValue(i));
+        DEBUG(dbgs() << "Successfully custom legalized node\n");
         ReplaceNode(Node, ResultVals.data());
         return;
       }
+      DEBUG(dbgs() << "Could not custom legalize node\n");
       LLVM_FALLTHROUGH;
     case TargetLowering::Expand:
       if (ExpandNode(Node))
@@ -2010,10 +2020,13 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
-  if (!CallInfo.second.getNode())
+  if (!CallInfo.second.getNode()) {
+    DEBUG(dbgs() << "Created tailcall: "; DAG.getRoot().dump());
     // It's a tailcall, return the chain (which is the DAG root).
     return DAG.getRoot();
+  }
 
+  DEBUG(dbgs() << "Created libcall: "; CallInfo.first.dump());
   return CallInfo.first;
 }
 
@@ -2299,9 +2312,10 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   // TODO: Should any fast-math-flags be set for the created nodes?
-
+  DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
   if (Op0.getValueType() == MVT::i32 && TLI.isTypeLegal(MVT::f64)) {
-    // simple 32-bit [signed|unsigned] integer to float/double expansion
+    DEBUG(dbgs() << "32-bit [signed|unsigned] integer to float/double "
+                    "expansion\n");
 
     // Get the stack frame index of a 8 byte buffer.
     SDValue StackSlot = DAG.CreateStackTemporary(MVT::f64);
@@ -2366,6 +2380,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   // and in all alternate rounding modes.
   // TODO: Generalize this for use with other types.
   if (Op0.getValueType() == MVT::i64 && DestVT == MVT::f64) {
+    DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
     SDValue TwoP52 =
       DAG.getConstant(UINT64_C(0x4330000000000000), dl, MVT::i64);
     SDValue TwoP84PlusTwoP52 =
@@ -2386,9 +2401,9 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
     return DAG.getNode(ISD::FADD, dl, MVT::f64, LoFlt, HiSub);
   }
 
-  // Implementation of unsigned i64 to f32.
   // TODO: Generalize this for use with other types.
   if (Op0.getValueType() == MVT::i64 && DestVT == MVT::f32) {
+    DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
     if (!isSigned) {
@@ -2812,6 +2827,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
 }
 
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
+  DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
@@ -3269,6 +3285,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_TO_FP16:
+    DEBUG(dbgs() << "Legalizing FP_TO_FP16\n");
     if (!TLI.useSoftFloat() && TM.Options.UnsafeFPMath) {
       SDValue Op = Node->getOperand(0);
       MVT SVT = Op.getSimpleValueType();
@@ -3877,14 +3894,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
 
   // Replace the original node with the legalized result.
-  if (Results.empty())
+  if (Results.empty()) {
+    DEBUG(dbgs() << "Cannot expand node\n");
     return false;
+  }
 
+  DEBUG(dbgs() << "Succesfully expanded node\n");
   ReplaceNode(Node, Results.data());
   return true;
 }
 
 void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
+  DEBUG(dbgs() << "Trying to convert node to libcall\n");
   SmallVector<SDValue, 8> Results;
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
@@ -4139,8 +4160,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   }
 
   // Replace the original node with the legalized result.
-  if (!Results.empty())
+  if (!Results.empty()) {
+    DEBUG(dbgs() << "Successfully converted node to libcall\n");
     ReplaceNode(Node, Results.data());
+  } else
+    DEBUG(dbgs() << "Could not convert node to libcall\n");
 }
 
 // Determine the vector type to use in place of an original scalar element when
@@ -4154,6 +4178,7 @@ static MVT getPromotedVectorElementType(const TargetLowering &TLI,
 }
 
 void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
+  DEBUG(dbgs() << "Trying to promote node\n");
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
@@ -4589,8 +4614,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   }
 
   // Replace the original node with the legalized result.
-  if (!Results.empty())
+  if (!Results.empty()) {
+    DEBUG(dbgs() << "Successfully promoted node\n");
     ReplaceNode(Node, Results.data());
+  } else
+    DEBUG(dbgs() << "Could not promote node\n");
 }
 
 /// This is the entry point for the file.

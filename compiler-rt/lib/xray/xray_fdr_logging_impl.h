@@ -22,6 +22,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <pthread.h>
 #include <string>
 #include <sys/syscall.h>
 #include <time.h>
@@ -92,8 +93,10 @@ static void writeEOBMetadata();
 static void writeTSCWrapMetadata(uint64_t TSC);
 
 // Group together thread-local-data in a struct, then hide it behind a function
-// call so that it can be initialized on first use instead of as a global.
-struct ThreadLocalData {
+// call so that it can be initialized on first use instead of as a global. We
+// force the alignment to 64-bytes for x86 cache line alignment, as this
+// structure is used in the hot path of implementation.
+struct ALIGNED(64) ThreadLocalData {
   BufferQueue::Buffer Buffer;
   char *RecordPtr = nullptr;
   // The number of FunctionEntry records immediately preceding RecordPtr.
@@ -124,43 +127,95 @@ static ThreadLocalData &getThreadLocalData();
 static constexpr auto MetadataRecSize = sizeof(MetadataRecord);
 static constexpr auto FunctionRecSize = sizeof(FunctionRecord);
 
-class ThreadExitBufferCleanup {
-  std::shared_ptr<BufferQueue> &Buffers;
-  BufferQueue::Buffer &Buffer;
-
-public:
-  explicit ThreadExitBufferCleanup(std::shared_ptr<BufferQueue> &BQ,
-                                   BufferQueue::Buffer &Buffer)
-      XRAY_NEVER_INSTRUMENT : Buffers(BQ),
-                              Buffer(Buffer) {}
-
-  ~ThreadExitBufferCleanup() noexcept XRAY_NEVER_INSTRUMENT {
-    auto &TLD = getThreadLocalData();
-    auto &RecordPtr = TLD.RecordPtr;
-    if (RecordPtr == nullptr)
-      return;
-
-    // We make sure that upon exit, a thread will write out the EOB
-    // MetadataRecord in the thread-local log, and also release the buffer to
-    // the queue.
-    assert((RecordPtr + MetadataRecSize) - static_cast<char *>(Buffer.Buffer) >=
-           static_cast<ptrdiff_t>(MetadataRecSize));
-    if (Buffers) {
-      writeEOBMetadata();
-      auto EC = Buffers->releaseBuffer(Buffer);
-      if (EC != BufferQueue::ErrorCode::Ok)
-        Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
-               BufferQueue::getErrorString(EC));
-      Buffers = nullptr;
-      return;
-    }
-  }
-};
-
+// This function will initialize the thread-local data structure used by the FDR
+// logging implementation and return a reference to it. The implementation
+// details require a bit of care to maintain.
+//
+// First, some requirements on the implementation in general:
+//
+//   - XRay handlers should not call any memory allocation routines that may
+//     delegate to an instrumented implementation. This means functions like
+//     malloc() and free() should not be called while instrumenting.
+//
+//   - We would like to use some thread-local data initialized on first-use of
+//     the XRay instrumentation. These allow us to implement unsynchronized
+//     routines that access resources associated with the thread.
+//
+// The implementation here uses a few mechanisms that allow us to provide both
+// the requirements listed above. We do this by:
+//
+//   1. Using a thread-local aligned storage buffer for representing the
+//      ThreadLocalData struct. This data will be uninitialized memory by
+//      design.
+//
+//   2. Using pthread_once(...) to initialize the thread-local data structures
+//      on first use, for every thread. We don't use std::call_once so we don't
+//      have a reliance on the C++ runtime library.
+//
+//   3. Registering a cleanup function that gets run at the end of a thread's
+//      lifetime through pthread_create_key(...). The cleanup function would
+//      allow us to release the thread-local resources in a manner that would
+//      let the rest of the XRay runtime implementation handle the records
+//      written for this thread's active buffer.
+//
+// We're doing this to avoid using a `thread_local` object that has a
+// non-trivial destructor, because the C++ runtime might call std::malloc(...)
+// to register calls to destructors. Deadlocks may arise when, for example, an
+// externally provided malloc implementation is XRay instrumented, and
+// initializing the thread-locals involves calling into malloc. A malloc
+// implementation that does global synchronization might be holding a lock for a
+// critical section, calling a function that might be XRay instrumented (and
+// thus in turn calling into malloc by virtue of registration of the
+// thread_local's destructor).
+//
+// With the approach taken where, we attempt to avoid the potential for
+// deadlocks by relying instead on pthread's memory management routines.
 static ThreadLocalData &getThreadLocalData() {
-  thread_local ThreadLocalData TLD;
-  thread_local ThreadExitBufferCleanup Cleanup(TLD.LocalBQ, TLD.Buffer);
-  return TLD;
+  thread_local pthread_key_t key;
+
+  // We need aligned, uninitialized storage for the TLS object which is
+  // trivially destructible. We're going to use this as raw storage and
+  // placement-new the ThreadLocalData object into it later.
+  thread_local std::aligned_storage<sizeof(ThreadLocalData),
+                                    alignof(ThreadLocalData)>::type TLSBuffer;
+
+  // Ensure that we only actually ever do the pthread initialization once.
+  thread_local bool UNUSED Unused = [] {
+    new (&TLSBuffer) ThreadLocalData();
+    auto result = pthread_key_create(&key, +[](void *) {
+      auto &TLD = *reinterpret_cast<ThreadLocalData *>(&TLSBuffer);
+      auto &RecordPtr = TLD.RecordPtr;
+      auto &Buffers = TLD.LocalBQ;
+      auto &Buffer = TLD.Buffer;
+      if (RecordPtr == nullptr)
+        return;
+
+      // We make sure that upon exit, a thread will write out the EOB
+      // MetadataRecord in the thread-local log, and also release the buffer
+      // to the queue.
+      assert((RecordPtr + MetadataRecSize) -
+                 static_cast<char *>(Buffer.Buffer) >=
+             static_cast<ptrdiff_t>(MetadataRecSize));
+      if (Buffers) {
+        writeEOBMetadata();
+        auto EC = Buffers->releaseBuffer(Buffer);
+        if (EC != BufferQueue::ErrorCode::Ok)
+          Report("Failed to release buffer at %p; error=%s\n", Buffer.Buffer,
+                 BufferQueue::getErrorString(EC));
+        Buffers = nullptr;
+        return;
+      }
+    });
+    if (result != 0) {
+      Report("Failed to allocate thread-local data through pthread; error=%d",
+             result);
+      return false;
+    }
+    pthread_setspecific(key, &TLSBuffer);
+    return true;
+  }();
+
+  return *reinterpret_cast<ThreadLocalData *>(&TLSBuffer);
 }
 
 //-----------------------------------------------------------------------------|

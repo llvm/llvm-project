@@ -584,7 +584,7 @@ define void @usat_trunc_wb_128_mem(<8 x i16> %i, <8 x i8>* %res) {
 ; KNL-LABEL: usat_trunc_wb_128_mem:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpminuw {{.*}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vmovq %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;

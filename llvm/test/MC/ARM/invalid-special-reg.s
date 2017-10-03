@@ -3,9 +3,9 @@
 
   msr apsr_c, r0
 @ CHECK: invalid operand for instruction
-  msr cpsr_w
+  msr cpsr_w, r0
 @ CHECK: invalid operand for instruction
-  msr cpsr_cc
+  msr cpsr_cc, r0
 @ CHECK: invalid operand for instruction
-  msr xpsr_c
+  msr xpsr_c, r0
 @ CHECK: invalid operand for instruction

@@ -7,4 +7,4 @@
         bxj r2
 
 @ CHECK: bxj r2                      @ encoding: [0xc2,0xf3,0x00,0x8f]
-@ UNDEF: error: instruction requires: arm-mode
+@ UNDEF: error: instruction requires: !armv*m

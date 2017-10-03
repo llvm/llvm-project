@@ -784,7 +784,7 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
       }
       else continue;
     }
-    else if (CMPI1->getOperand(2).isImm() && CMPI2->getOperand(2).isImm()){
+    else if (CMPI1->getOperand(2).isImm() && CMPI2->getOperand(2).isImm()) {
       // In case of comparisons between a register and an immediate,
       // the operand register must be same for two compare instructions.
       unsigned Cmp1Operand1 = getSrcVReg(CMPI1->getOperand(1).getReg(),

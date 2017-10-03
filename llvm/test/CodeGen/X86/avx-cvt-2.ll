@@ -50,7 +50,7 @@ define void @fptoui8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -68,7 +68,7 @@ define void @fptosi8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -56,4 +56,4 @@
         sevl
 
 @ CHECK-V8: sevl @ encoding: [0x05,0xf0,0x20,0xe3]
-@ CHECK-V7: error: instruction requires: armv8
+@ CHECK-V7: instruction requires: armv8

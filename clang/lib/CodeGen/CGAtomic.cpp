@@ -98,7 +98,7 @@ namespace {
         LVal = LValue::MakeBitfield(Address(Addr, lvalue.getAlignment()),
                                     BFI, lvalue.getType(),
                                     lvalue.getBaseInfo());
-        LVal.setTBAAAccessType(lvalue.getTBAAAccessType());
+        LVal.setTBAAInfo(lvalue.getTBAAInfo());
         AtomicTy = C.getIntTypeForBitwidth(AtomicSizeInBits, OrigBFI.IsSigned);
         if (AtomicTy.isNull()) {
           llvm::APInt Size(
@@ -1692,8 +1692,8 @@ EmitAtomicUpdateValue(CodeGenFunction &CGF, AtomicInfo &Atomics, RValue OldRVal,
           DesiredAddr, AtomicLVal.getExtVectorElts(), AtomicLVal.getType(),
           AtomicLVal.getBaseInfo());
     }
-    UpdateLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
-    DesiredLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
+    UpdateLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
+    DesiredLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
     UpRVal = CGF.EmitLoadOfLValue(UpdateLVal, SourceLocation());
   }
   // Store new value in the corresponding memory area
@@ -1789,7 +1789,7 @@ static void EmitAtomicUpdateValue(CodeGenFunction &CGF, AtomicInfo &Atomics,
         DesiredAddr, AtomicLVal.getExtVectorElts(), AtomicLVal.getType(),
         AtomicLVal.getBaseInfo());
   }
-  DesiredLVal.setTBAAAccessType(AtomicLVal.getTBAAAccessType());
+  DesiredLVal.setTBAAInfo(AtomicLVal.getTBAAInfo());
   // Store new value in the corresponding memory area
   assert(UpdateRVal.isScalar());
   CGF.EmitStoreThroughLValue(UpdateRVal, DesiredLVal);
