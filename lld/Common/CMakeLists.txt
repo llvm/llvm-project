@@ -1,3 +1,7 @@
+if(NOT LLD_BUILT_STANDALONE)
+  set(tablegen_deps intrinsics_gen)
+endif()
+
 add_lld_library(lldCommon
   Reproduce.cpp
   TargetOptionsCommandFlags.cpp
@@ -12,4 +16,7 @@ add_lld_library(lldCommon
   Option
   Support
   Target
+
+  DEPENDS
+  ${tablegen_deps}
   )

@@ -11,7 +11,7 @@ Examples:
 
 .. code-block:: c++
 
-  std::string('x', 50) str; // should be std::string(50, 'x')
+  std::string str('x', 50); // should be str(50, 'x')
 
 Calling the string-literal constructor with a length bigger than the literal is
 suspicious and adds extra random characters to the string.
