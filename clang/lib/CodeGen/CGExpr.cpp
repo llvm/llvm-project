@@ -618,6 +618,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   auto PtrToAlloca =
       dyn_cast<llvm::AllocaInst>(Ptr->stripPointerCastsNoFollowAliases());
 
+  llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
   llvm::Value *IsNonNull = nullptr;
   bool IsGuaranteedNonNull =
       SkippedChecks.has(SanitizerKind::Null) || PtrToAlloca;
@@ -629,8 +630,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
 
     // The IR builder can constant-fold the null check if the pointer points to
     // a constant.
-    IsGuaranteedNonNull =
-        IsNonNull == llvm::ConstantInt::getTrue(getLLVMContext());
+    IsGuaranteedNonNull = IsNonNull == True;
 
     // Skip the null check if the pointer is known to be non-null.
     if (!IsGuaranteedNonNull) {
@@ -684,7 +684,8 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
           PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal - 1));
       llvm::Value *Aligned =
           Builder.CreateICmpEQ(Align, llvm::ConstantInt::get(IntPtrTy, 0));
-      Checks.push_back(std::make_pair(Aligned, SanitizerKind::Alignment));
+      if (Aligned != True)
+        Checks.push_back(std::make_pair(Aligned, SanitizerKind::Alignment));
     }
   }
 
