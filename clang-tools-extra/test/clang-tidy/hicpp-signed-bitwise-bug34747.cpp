@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t -- | count 0
+// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t --
 
 // Note: this test expects no diagnostics, but FileCheck cannot handle that,
 // hence the use of | count 0.
@@ -18,4 +18,12 @@ struct foo {
 
 void bar(OutputStream<signed char> &o) {
   foo<signed char> f(o);
+}
+
+void silence_lit() {
+  int SValue = 42;
+  int SResult;
+
+  SResult = SValue & 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
 }
