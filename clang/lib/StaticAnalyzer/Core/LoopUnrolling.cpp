@@ -13,15 +13,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/AST/ParentMap.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
-#include "llvm/ADT/Statistic.h"
 
 using namespace clang;
 using namespace ento;
@@ -72,11 +68,8 @@ static bool isLoopStmt(const Stmt *S) {
 
 ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
   auto LS = State->get<LoopStack>();
-  assert(!LS.isEmpty() && "Loop not added to the stack.");
-  assert(LoopStmt == LS.getHead().getLoopStmt() &&
-         "Loop is not on top of the stack.");
-
-  State = State->set<LoopStack>(LS.getTail());
+  if (!LS.isEmpty() && LS.getHead().getLoopStmt() == LoopStmt)
+    State = State->set<LoopStack>(LS.getTail());
   return State;
 }
 
