@@ -50,7 +50,7 @@ public:
   /// Render file reports for the files specified in \p Files and the functions
   /// in \p Filters.
   void renderFileReports(raw_ostream &OS, ArrayRef<std::string> Files,
-                         const CoverageFilter &Filters) const;
+                         const CoverageFiltersMatchAll &Filters) const;
 };
 
 } // end namespace llvm
