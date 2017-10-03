@@ -1457,17 +1457,17 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
     return true;
 
+  auto &Ctx = getLLVMContext();
   SanitizerScope SanScope(this);
   llvm::Value *Check;
   --End;
   if (!Min) {
-    Check = Builder.CreateICmpULE(
-        Value, llvm::ConstantInt::get(getLLVMContext(), End));
+    Check = Builder.CreateICmpULE(Value, llvm::ConstantInt::get(Ctx, End));
   } else {
-    llvm::Value *Upper = Builder.CreateICmpSLE(
-        Value, llvm::ConstantInt::get(getLLVMContext(), End));
-    llvm::Value *Lower = Builder.CreateICmpSGE(
-        Value, llvm::ConstantInt::get(getLLVMContext(), Min));
+    llvm::Value *Upper =
+        Builder.CreateICmpSLE(Value, llvm::ConstantInt::get(Ctx, End));
+    llvm::Value *Lower =
+        Builder.CreateICmpSGE(Value, llvm::ConstantInt::get(Ctx, Min));
     Check = Builder.CreateAnd(Upper, Lower);
   }
   llvm::Constant *StaticArgs[] = {EmitCheckSourceLocation(Loc),
