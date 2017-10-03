@@ -66,7 +66,6 @@ add_lld_library(lldELF
 
   LINK_LIBS
   lldCommon
-  lldConfig
   lldCore
   ${LLVM_PTHREAD_LIB}
 
