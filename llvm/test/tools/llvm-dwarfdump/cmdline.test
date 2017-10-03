@@ -8,7 +8,6 @@ HELP: -eh-frame
 HELP: Specific Options
 HELP: -find
 HELP: -ignore-case
-HELP: -lookup
 HELP: -name
 HELP: -recurse-depth=<N>
 HELP: -regex
