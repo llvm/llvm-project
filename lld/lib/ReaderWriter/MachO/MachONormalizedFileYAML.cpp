@@ -16,8 +16,8 @@
 ///                  +------------+         +------+
 
 #include "MachONormalizedFile.h"
+#include "lld/Common/LLVM.h"
 #include "lld/Core/Error.h"
-#include "lld/Core/LLVM.h"
 #include "lld/ReaderWriter/YamlContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"

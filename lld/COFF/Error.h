@@ -10,7 +10,7 @@
 #ifndef LLD_COFF_ERROR_H
 #define LLD_COFF_ERROR_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/Support/Error.h"
 
 namespace lld {

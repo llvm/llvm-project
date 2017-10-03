@@ -326,3 +326,7 @@ CodeGenTBAA::getTBAAScalarTagInfo(llvm::MDNode *AccessNode) {
   return ScalarTagMetadataCache[AccessNode] =
     MDHelper.createTBAAStructTagNode(AccessNode, AccessNode, 0);
 }
+
+llvm::MDNode *CodeGenTBAA::getMayAliasTypeInfo() {
+  return getChar();
+}

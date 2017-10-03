@@ -599,6 +599,12 @@ llvm::MDNode *CodeGenModule::getTBAAStructTagInfo(QualType BaseTy,
   return TBAA->getTBAAStructTagInfo(BaseTy, AccessN, O);
 }
 
+llvm::MDNode *CodeGenModule::getTBAAMayAliasTypeInfo() {
+  if (!TBAA)
+    return nullptr;
+  return TBAA->getMayAliasTypeInfo();
+}
+
 /// Decorate the instruction with a TBAA tag. For both scalar TBAA
 /// and struct-path aware TBAA, the tag has the same format:
 /// base type, access type and offset.

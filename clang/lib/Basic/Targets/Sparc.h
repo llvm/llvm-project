@@ -107,7 +107,15 @@ public:
     CK_NIAGARA4,
     CK_MYRIAD2100,
     CK_MYRIAD2150,
+    CK_MYRIAD2155,
     CK_MYRIAD2450,
+    CK_MYRIAD2455,
+    CK_MYRIAD2x5x,
+    CK_MYRIAD2080,
+    CK_MYRIAD2085,
+    CK_MYRIAD2480,
+    CK_MYRIAD2485,
+    CK_MYRIAD2x8x,
     CK_LEON2,
     CK_LEON2_AT697E,
     CK_LEON2_AT697F,
@@ -136,7 +144,15 @@ public:
     case CK_TSC701:
     case CK_MYRIAD2100:
     case CK_MYRIAD2150:
+    case CK_MYRIAD2155:
     case CK_MYRIAD2450:
+    case CK_MYRIAD2455:
+    case CK_MYRIAD2x5x:
+    case CK_MYRIAD2080:
+    case CK_MYRIAD2085:
+    case CK_MYRIAD2480:
+    case CK_MYRIAD2485:
+    case CK_MYRIAD2x8x:
     case CK_LEON2:
     case CK_LEON2_AT697E:
     case CK_LEON2_AT697F:

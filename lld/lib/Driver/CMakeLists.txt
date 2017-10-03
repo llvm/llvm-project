@@ -14,7 +14,6 @@ add_lld_library(lldDriver
     Support
 
   LINK_LIBS
-    lldConfig
     lldMachO
     lldCore
     lldReaderWriter

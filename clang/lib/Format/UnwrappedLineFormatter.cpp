@@ -466,8 +466,7 @@ private:
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.
     if (Line.First->isOneOf(tok::kw_else, tok::kw_case) ||
-        (Line.First->Next && Line.First->Next->is(tok::kw_else)) ||
-        (I != AnnotatedLines.begin() && I[-1]->Last->is(tok::kw_else)))
+        (Line.First->Next && Line.First->Next->is(tok::kw_else)))
       return 0;
     if (Line.First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_do, tok::kw_try,
                             tok::kw___try, tok::kw_catch, tok::kw___finally,

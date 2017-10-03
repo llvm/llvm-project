@@ -116,6 +116,10 @@ public:
 
   /// Get the scalar tag MDNode for a given scalar type.
   llvm::MDNode *getTBAAScalarTagInfo(llvm::MDNode *AccessNode);
+
+  /// getMayAliasTypeInfo - Get TBAA information that represents may-alias
+  /// accesses.
+  llvm::MDNode *getMayAliasTypeInfo();
 };
 
 }  // end namespace CodeGen
