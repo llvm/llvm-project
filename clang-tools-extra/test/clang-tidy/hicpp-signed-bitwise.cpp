@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t -- -- -std=c++11 -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t -- -- -std=c++11 
 
 // These could cause false positives and should not be considered.
 struct StreamClass {
