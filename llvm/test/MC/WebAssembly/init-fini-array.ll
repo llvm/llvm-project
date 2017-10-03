@@ -84,13 +84,18 @@ declare void @func2()
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        12
-; CHECK-NEXT:     DataAlignment:   8
-; CHECK-NEXT:     SegmentNames:    
+; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global1
+; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .init_array
+; CHECK-NEXT:         Alignment:       4
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            .fini_array
+; CHECK-NEXT:         Alignment:       4
+; CHECK-NEXT:         Flags:           0
 ; CHECK-NEXT: ...
 

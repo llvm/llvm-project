@@ -112,6 +112,14 @@ bool AMDGPUTargetAsmStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
   return true;
 }
 
+bool AMDGPUTargetAsmStreamer::EmitPalMetadata(ArrayRef<uint32_t> Data) {
+  OS << "\t.amdgpu_pal_metadata";
+  for (auto I = Data.begin(), E = Data.end(); I != E; ++I)
+    OS << (I == Data.begin() ? " 0x" : ",0x") << Twine::utohexstr(*I);
+  OS << "\n";
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
@@ -230,3 +238,16 @@ bool AMDGPUTargetELFStreamer::EmitCodeObjectMetadata(StringRef YamlString) {
 
   return true;
 }
+
+bool AMDGPUTargetELFStreamer::EmitPalMetadata(ArrayRef<uint32_t> Data) {
+  EmitAMDGPUNote(
+    MCConstantExpr::create(Data.size() * sizeof(uint32_t), getContext()),
+    ElfNote::NT_AMDGPU_PAL_METADATA,
+    [&](MCELFStreamer &OS){
+      for (auto I : Data)
+        OS.EmitIntValue(I, sizeof(uint32_t));
+    }
+  );
+  return true;
+}
+

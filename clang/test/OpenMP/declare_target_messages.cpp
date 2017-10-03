@@ -73,9 +73,9 @@ int C::method() {
 }
 
 struct S {
-#pragma omp declare target // expected-error {{directive must be at file or namespace scope}}
+#pragma omp declare target
   int v;
-#pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
+#pragma omp end declare target
 };
 
 int main (int argc, char **argv) {

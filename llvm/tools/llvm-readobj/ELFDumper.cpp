@@ -825,7 +825,9 @@ static const EnumEntry<unsigned> ElfOSABI[] = {
 };
 
 static const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
-  {"AMDGPU_HSA", "AMDGPU - HSA", ELF::ELFOSABI_AMDGPU_HSA}
+  {"AMDGPU_HSA",    "AMDGPU - HSA",    ELF::ELFOSABI_AMDGPU_HSA},
+  {"AMDGPU_PAL",    "AMDGPU - PAL",    ELF::ELFOSABI_AMDGPU_PAL},
+  {"AMDGPU_MESA3D", "AMDGPU - MESA3D", ELF::ELFOSABI_AMDGPU_MESA3D}
 };
 
 static const EnumEntry<unsigned> ARMElfOSABI[] = {

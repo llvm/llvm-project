@@ -40,6 +40,8 @@ private:
 
   bool LoadRawSectionData(lldb::SectionType sect_type,
                           lldb_private::DWARFDataExtractor &data);
+  
+  void InitDebugCUIndexMap();
 
   lldb::ObjectFileSP m_obj_file;
 

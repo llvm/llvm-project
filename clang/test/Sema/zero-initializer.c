@@ -6,6 +6,7 @@ struct bar { struct foo a; struct foo b; };
 struct A { int a; };
 struct B { struct A a; };
 struct C { struct B b; };
+struct D { struct C c; int n; };
 
 int main(void)
 {
@@ -20,7 +21,8 @@ int main(void)
   struct bar n = { { 0 }, { 9, 9 } }; // no-warning
   struct bar o = { { 9 }, { 9, 9 } }; // expected-warning {{missing field 'y' initializer}}
   struct C p = { 0 }; // no-warning
-  struct C q = { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{suggest braces around initialization of subobject}}
+  struct C q = { 9 }; // warning suppressed for struct with single element
+  struct D r = { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
   f = (struct foo ) { 0 }; // no-warning
   g = (struct foo ) { 9 }; // expected-warning {{missing field 'y' initializer}}
   h = (struct foo ) { 9, 9 }; // no-warning
@@ -32,7 +34,8 @@ int main(void)
   n = (struct bar) { { 0 }, { 9, 9 } }; // no-warning
   o = (struct bar) { { 9 }, { 9, 9 } }; // expected-warning {{missing field 'y' initializer}}
   p = (struct C) { 0 }; // no-warning
-  q = (struct C) { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{suggest braces around initialization of subobject}}
+  q = (struct C) { 9 }; // warning suppressed for struct with single element
+  r = (struct D) { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
 
   return 0;
 }

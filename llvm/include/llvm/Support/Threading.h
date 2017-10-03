@@ -131,6 +131,14 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
   unsigned heavyweight_hardware_concurrency();
 
+  /// Get the number of threads that the current program can execute
+  /// concurrently. On some systems std::thread::hardware_concurrency() returns
+  /// the total number of cores, without taking affinity into consideration.
+  /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF.
+  /// Fallback to std::thread::hardware_concurrency() if sched_getaffinity is
+  /// not available.
+  unsigned hardware_concurrency();
+
   /// \brief Return the current thread id, as used in various OS system calls.
   /// Note that not all platforms guarantee that the value returned will be
   /// unique across the entire system, so portable code should not assume

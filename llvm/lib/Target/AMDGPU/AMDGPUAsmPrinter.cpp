@@ -110,11 +110,17 @@ AMDGPUTargetStreamer& AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
-
   AMDGPU::IsaInfo::IsaVersion ISA =
       AMDGPU::IsaInfo::getIsaVersion(getSTI()->getFeatureBits());
+
+  if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
+    readPalMetadata(M);
+    // AMDPAL wants an HSA_ISA .note.
+    getTargetStreamer().EmitDirectiveHSACodeObjectISA(
+        ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
+  }
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+    return;
 
   getTargetStreamer().EmitDirectiveHSACodeObjectVersion(2, 1);
   getTargetStreamer().EmitDirectiveHSACodeObjectISA(
@@ -123,6 +129,17 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
+    // Copy the PAL metadata from the map where we collected it into a vector,
+    // then write it as a .note.
+    std::vector<uint32_t> Data;
+    for (auto i : PalMetadata) {
+      Data.push_back(i.first);
+      Data.push_back(i.second);
+    }
+    getTargetStreamer().EmitPalMetadata(Data);
+  }
+
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
@@ -190,6 +207,27 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   return AsmPrinter::doFinalization(M);
 }
 
+// For the amdpal OS type, read the amdgpu.pal.metadata supplied by the
+// frontend into our PalMetadata map, ready for per-function modification.  It
+// is a NamedMD containing an MDTuple containing a number of MDNodes each of
+// which is an integer value, and each two integer values forms a key=value
+// pair that we store as PalMetadata[key]=value in the map.
+void AMDGPUAsmPrinter::readPalMetadata(Module &M) {
+  auto NamedMD = M.getNamedMetadata("amdgpu.pal.metadata");
+  if (!NamedMD || !NamedMD->getNumOperands())
+    return;
+  auto Tuple = dyn_cast<MDTuple>(NamedMD->getOperand(0));
+  if (!Tuple)
+    return;
+  for (unsigned I = 0, E = Tuple->getNumOperands() & -2; I != E; I += 2) {
+    auto Key = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I));
+    auto Val = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I + 1));
+    if (!Key || !Val)
+      continue;
+    PalMetadata[Key->getZExtValue()] = Val->getZExtValue();
+  }
+}
+
 // Print comments that apply to both callable functions and entry points.
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
   uint32_t NumVGPR,
@@ -232,6 +270,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       Info = analyzeResourceUsage(MF);
     }
 
+    if (STM.isAmdPalOS())
+      EmitPalMetadata(MF, CurrentProgramInfo);
     if (!STM.isAmdHsaOS()) {
       EmitProgramInfoSI(MF, CurrentProgramInfo);
     }
@@ -921,6 +961,74 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
   OutStreamer->EmitIntValue(MFI->getNumSpilledSGPRs(), 4);
   OutStreamer->EmitIntValue(R_SPILLED_VGPRS, 4);
   OutStreamer->EmitIntValue(MFI->getNumSpilledVGPRs(), 4);
+}
+
+// This is the equivalent of EmitProgramInfoSI above, but for when the OS type
+// is AMDPAL.  It stores each compute/SPI register setting and other PAL
+// metadata items into the PalMetadata map, combining with any provided by the
+// frontend as LLVM metadata. Once all functions are written, PalMetadata is
+// then written as a single block in the .note section.
+void AMDGPUAsmPrinter::EmitPalMetadata(const MachineFunction &MF,
+       const SIProgramInfo &CurrentProgramInfo) {
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  // Given the calling convention, calculate the register number for rsrc1. In
+  // principle the register number could change in future hardware, but we know
+  // it is the same for gfx6-9 (except that LS and ES don't exist on gfx9), so
+  // we can use the same fixed value that .AMDGPU.config has for Mesa. Note
+  // that we use a register number rather than a byte offset, so we need to
+  // divide by 4.
+  unsigned Rsrc1Reg = getRsrcReg(MF.getFunction()->getCallingConv()) / 4;
+  unsigned Rsrc2Reg = Rsrc1Reg + 1;
+  // Also calculate the PAL metadata key for *S_SCRATCH_SIZE. It can be used
+  // with a constant offset to access any non-register shader-specific PAL
+  // metadata key.
+  unsigned ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_CS_SCRATCH_SIZE;
+  switch (MF.getFunction()->getCallingConv()) {
+    case CallingConv::AMDGPU_PS:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_PS_SCRATCH_SIZE;
+      break;
+    case CallingConv::AMDGPU_VS:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_VS_SCRATCH_SIZE;
+      break;
+    case CallingConv::AMDGPU_GS:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_GS_SCRATCH_SIZE;
+      break;
+    case CallingConv::AMDGPU_ES:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_ES_SCRATCH_SIZE;
+      break;
+    case CallingConv::AMDGPU_HS:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_HS_SCRATCH_SIZE;
+      break;
+    case CallingConv::AMDGPU_LS:
+      ScratchSizeKey = AMDGPU::ElfNote::AMDGPU_PAL_METADATA_LS_SCRATCH_SIZE;
+      break;
+  }
+  unsigned NumUsedVgprsKey = ScratchSizeKey
+      + AMDGPU::ElfNote::AMDGPU_PAL_METADATA_VS_NUM_USED_VGPRS
+      - AMDGPU::ElfNote::AMDGPU_PAL_METADATA_VS_SCRATCH_SIZE;
+  unsigned NumUsedSgprsKey = ScratchSizeKey
+      + AMDGPU::ElfNote::AMDGPU_PAL_METADATA_VS_NUM_USED_SGPRS
+      - AMDGPU::ElfNote::AMDGPU_PAL_METADATA_VS_SCRATCH_SIZE;
+  PalMetadata[NumUsedVgprsKey] = CurrentProgramInfo.NumVGPRsForWavesPerEU;
+  PalMetadata[NumUsedSgprsKey] = CurrentProgramInfo.NumSGPRsForWavesPerEU;
+  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+    PalMetadata[Rsrc1Reg] |= CurrentProgramInfo.ComputePGMRSrc1;
+    PalMetadata[Rsrc2Reg] |= CurrentProgramInfo.ComputePGMRSrc2;
+    // ScratchSize is in bytes, 16 aligned.
+    PalMetadata[ScratchSizeKey] |= alignTo(CurrentProgramInfo.ScratchSize, 16);
+  } else {
+    PalMetadata[Rsrc1Reg] |= S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks)
+                             | S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks);
+    if (CurrentProgramInfo.ScratchBlocks > 0)
+      PalMetadata[Rsrc2Reg] |= S_00B84C_SCRATCH_EN(1);
+    // ScratchSize is in bytes, 16 aligned.
+    PalMetadata[ScratchSizeKey] |= alignTo(CurrentProgramInfo.ScratchSize, 16);
+  }
+  if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_PS) {
+    PalMetadata[Rsrc2Reg] |= S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks);
+    PalMetadata[R_0286CC_SPI_PS_INPUT_ENA / 4] |= MFI->getPSInputEnable();
+    PalMetadata[R_0286D0_SPI_PS_INPUT_ADDR / 4] |= MFI->getPSInputAddr();
+  }
 }
 
 // This is supposed to be log2(Size)

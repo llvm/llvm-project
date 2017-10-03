@@ -195,15 +195,7 @@ void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC) {
     Printf(FallbackFMT, PC);
 }
 
-unsigned NumberOfCpuCores() {
-  unsigned N = std::thread::hardware_concurrency();
-  if (!N) {
-    Printf("WARNING: std::thread::hardware_concurrency not well defined for "
-           "your platform. Assuming CPU count of 1.\n");
-    N = 1;
-  }
-  return N;
-}
+unsigned NumberOfCpuCores() { return hardware_concurrency(); }
 
 size_t SimpleFastHash(const uint8_t *Data, size_t Size) {
   size_t Res = 0;

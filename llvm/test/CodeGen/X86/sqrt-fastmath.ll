@@ -132,7 +132,7 @@ define float @f32_estimate(float %x) #1 {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm2, %xmm2
 ; SSE-NEXT:    mulss %xmm0, %xmm2
 ; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
 ; SSE-NEXT:    mulss {{.*}}(%rip), %xmm1
@@ -178,7 +178,7 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm2
 ; SSE-NEXT:    mulps %xmm0, %xmm2
 ; SSE-NEXT:    addps {{.*}}(%rip), %xmm2
 ; SSE-NEXT:    mulps {{.*}}(%rip), %xmm1
@@ -228,7 +228,7 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm3
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [-5.000000e-01,-5.000000e-01,-5.000000e-01,-5.000000e-01]
 ; SSE-NEXT:    movaps %xmm3, %xmm2
-; SSE-NEXT:    mulps %xmm3, %xmm2
+; SSE-NEXT:    mulps %xmm2, %xmm2
 ; SSE-NEXT:    mulps %xmm0, %xmm2
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [-3.000000e+00,-3.000000e+00,-3.000000e+00,-3.000000e+00]
 ; SSE-NEXT:    addps %xmm0, %xmm2
@@ -236,7 +236,7 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; SSE-NEXT:    mulps %xmm3, %xmm2
 ; SSE-NEXT:    rsqrtps %xmm1, %xmm5
 ; SSE-NEXT:    movaps %xmm5, %xmm3
-; SSE-NEXT:    mulps %xmm5, %xmm3
+; SSE-NEXT:    mulps %xmm3, %xmm3
 ; SSE-NEXT:    mulps %xmm1, %xmm3
 ; SSE-NEXT:    addps %xmm0, %xmm3
 ; SSE-NEXT:    mulps %xmm4, %xmm3

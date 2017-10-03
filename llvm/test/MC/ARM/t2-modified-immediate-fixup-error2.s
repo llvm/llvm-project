@@ -9,10 +9,10 @@
 @ CHECK: error: invalid instruction, any one of the following would fix this:
 @ CHECK: note: instruction requires: arm-mode
 @ CHECK: note: invalid operand for instruction
-@ CHECK: note: immediate operand must be in the range [255,65535]
+@ CHECK: note: immediate operand must be in the range [256,65535]
     mov r0, :lower16: sym0
 @ CHECK: error: invalid instruction, any one of the following would fix this:
 @ CHECK: note: instruction requires: arm-mode
 @ CHECK: note: invalid operand for instruction
-@ CHECK: note: immediate operand must be in the range [255,65535]
+@ CHECK: note: immediate operand must be in the range [256,65535]
     .equ sym0, 0x01abcdef

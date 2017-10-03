@@ -24,7 +24,7 @@
 
 ; CHECK:      .debug_loc contents:
 ; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT:              0x000000000000001f - 0x000000000000005a: DW_OP_reg3 RBX
+; CHECK-NEXT:              0x000000000000001f - 0x000000000000003c: DW_OP_reg3 RBX
 ;   We should only have one entry
 ; CHECK-NOT: :
 

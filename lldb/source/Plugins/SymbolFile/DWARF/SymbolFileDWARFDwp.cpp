@@ -69,16 +69,20 @@ SymbolFileDWARFDwp::Create(lldb::ModuleSP module_sp,
       debug_cu_index.GetAddressByteSize());
   if (!dwp_symfile->m_debug_cu_index.parse(llvm_debug_cu_index))
     return nullptr;
+  dwp_symfile->InitDebugCUIndexMap();
   return dwp_symfile;
+}
+
+void SymbolFileDWARFDwp::InitDebugCUIndexMap() {
+  m_debug_cu_index_map.clear();
+  for (const auto &entry : m_debug_cu_index.getRows())
+    m_debug_cu_index_map.emplace(entry.getSignature(), &entry);
 }
 
 SymbolFileDWARFDwp::SymbolFileDWARFDwp(lldb::ModuleSP module_sp,
                                        lldb::ObjectFileSP obj_file)
-    : m_obj_file(std::move(obj_file)), m_debug_cu_index(llvm::DW_SECT_INFO) {
-  for (const auto &entry : m_debug_cu_index.getRows()) {
-    m_debug_cu_index_map.emplace(entry.getSignature(), &entry);
-  }
-}
+    : m_obj_file(std::move(obj_file)), m_debug_cu_index(llvm::DW_SECT_INFO) 
+{}
 
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARFDwp::GetSymbolFileForDwoId(DWARFCompileUnit *dwarf_cu,
