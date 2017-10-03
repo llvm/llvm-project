@@ -1457,8 +1457,8 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
   // If this is a comparison that tests the signbit (X < 0) or (x > -1),
   // fold the xor.
   ICmpInst::Predicate Pred = Cmp.getPredicate();
-  if ((Pred == ICmpInst::ICMP_SLT && C.isNullValue()) ||
-      (Pred == ICmpInst::ICMP_SGT && C.isAllOnesValue())) {
+  bool TrueIfSigned = false;
+  if (isSignBitCheck(Cmp.getPredicate(), C, TrueIfSigned)) {
 
     // If the sign bit of the XorCst is not set, there is no change to
     // the operation, just stop using the Xor.
@@ -1468,17 +1468,13 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
       return &Cmp;
     }
 
-    // Was the old condition true if the operand is positive?
-    bool isTrueIfPositive = Pred == ICmpInst::ICMP_SGT;
-
-    // If so, the new one isn't.
-    isTrueIfPositive ^= true;
-
-    Constant *CmpConstant = cast<Constant>(Cmp.getOperand(1));
-    if (isTrueIfPositive)
-      return new ICmpInst(ICmpInst::ICMP_SGT, X, SubOne(CmpConstant));
+    // Emit the opposite comparison.
+    if (TrueIfSigned)
+      return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                          ConstantInt::getAllOnesValue(X->getType()));
     else
-      return new ICmpInst(ICmpInst::ICMP_SLT, X, AddOne(CmpConstant));
+      return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                          ConstantInt::getNullValue(X->getType()));
   }
 
   if (Xor->hasOneUse()) {

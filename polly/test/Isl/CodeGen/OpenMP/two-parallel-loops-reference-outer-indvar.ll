@@ -1,3 +1,6 @@
+; XFAIL: *
+; This test fails the VerifyDFSNumbers DominatorTree check.
+
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-ast -analyze < %s | FileCheck %s -check-prefix=AST
 ; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 

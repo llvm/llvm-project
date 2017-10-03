@@ -16,7 +16,7 @@ define <2 x float> @test4(<2 x float> %A, <2 x float> %B) nounwind {
 ; X32-LABEL: test4:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movaps %xmm0, %xmm2
-; X32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[2,3]
+; X32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; X32-NEXT:    addss %xmm1, %xmm0
 ; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X32-NEXT:    subss %xmm1, %xmm2
@@ -26,7 +26,7 @@ define <2 x float> @test4(<2 x float> %A, <2 x float> %B) nounwind {
 ; X64-LABEL: test4:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movaps %xmm0, %xmm2
-; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[2,3]
+; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; X64-NEXT:    addss %xmm1, %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X64-NEXT:    subss %xmm1, %xmm2

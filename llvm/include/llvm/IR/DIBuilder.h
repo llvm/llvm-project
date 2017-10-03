@@ -74,6 +74,17 @@ namespace llvm {
     /// Create an \a temporary node and track it in \a UnresolvedNodes.
     void trackIfUnresolved(MDNode *N);
 
+    /// Internal helper for insertDeclare.
+    Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
+                               DIExpression *Expr, const DILocation *DL,
+                               BasicBlock *InsertBB, Instruction *InsertBefore);
+
+    /// Internal helper for insertDbgValueIntrinsic.
+    Instruction *
+    insertDbgValueIntrinsic(llvm::Value *Val, DILocalVariable *VarInfo,
+                            DIExpression *Expr, const DILocation *DL,
+                            BasicBlock *InsertBB, Instruction *InsertBefore);
+
   public:
     /// Construct a builder for a module.
     ///

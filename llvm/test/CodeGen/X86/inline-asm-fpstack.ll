@@ -162,7 +162,6 @@ define void @testPR4459(x86_fp80 %a) {
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll _ceil
 ; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistpl %st(0)
 ; CHECK-NEXT:    ## InlineAsm End

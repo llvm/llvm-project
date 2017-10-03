@@ -240,11 +240,6 @@ static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
 
 static bool isMicroMips() { return Config->MipsEFlags & EF_MIPS_MICROMIPS; }
 
-static bool isMipsR6() {
-  uint32_t Arch = Config->MipsEFlags & EF_MIPS_ARCH;
-  return Arch == EF_MIPS_ARCH_32R6 || Arch == EF_MIPS_ARCH_64R6;
-}
-
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
   if (isMicroMips()) {

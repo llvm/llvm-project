@@ -460,12 +460,13 @@ def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
 class ImmAsmOperand<int Low, int High> : AsmOperandClass {
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
-  let DiagnosticType = "ImmRange" # Low # "_" # High;
+  let DiagnosticString = "immediate operand must be in the range [" # Low # "," # High # "]";
 }
 
 class ImmAsmOperandMinusOne<int Low, int High> : AsmOperandClass {
   let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
   let DiagnosticType = "ImmRange" # Low # "_" # High;
+  let DiagnosticString = "immediate operand must be in the range [" # Low # "," # High # "]";
 }
 
 // Operands that are part of a memory addressing mode.
@@ -754,7 +755,6 @@ def imm1_31 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm < 32; }]> {
 /// imm0_15 predicate - Immediate in the range [0,15].
 def Imm0_15AsmOperand: ImmAsmOperand<0,15> {
   let Name = "Imm0_15";
-  let DiagnosticType = "ImmRange0_15";
 }
 def imm0_15 : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm < 16;
@@ -789,7 +789,6 @@ def imm0_63 : Operand<i32>, ImmLeaf<i32, [{
 /// imm0_239 predicate - Immediate in the range [0,239].
 def Imm0_239AsmOperand : ImmAsmOperand<0,239> {
   let Name = "Imm0_239";
-  let DiagnosticType = "ImmRange0_239";
 }
 def imm0_239 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 240; }]> {
   let ParserMatchClass = Imm0_239AsmOperand;
@@ -836,7 +835,10 @@ def imm256_65535_expr : Operand<i32> {
 }
 
 /// imm24b - True if the 32-bit immediate is encodable in 24 bits.
-def Imm24bitAsmOperand: ImmAsmOperand<0,0xffffff> { let Name = "Imm24bit"; }
+def Imm24bitAsmOperand: ImmAsmOperand<0,0xffffff> {
+  let Name = "Imm24bit";
+  let DiagnosticString = "immediate operand must be in the range [0,0xffffff]";
+}
 def imm24b : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm <= 0xffffff;
 }]> {
@@ -1129,7 +1131,7 @@ class AddrMode6Align : MemOperand,
 // VLD/VST instructions and checking the alignment is not specified.
 def AddrMode6AlignNoneAsmOperand : AsmOperandClass {
   let Name = "AlignedMemoryNone";
-  let DiagnosticType = "AlignedMemoryRequiresNone";
+  let DiagnosticString = "alignment must be omitted";
 }
 def addrmode6alignNone : AddrMode6Align {
   // The alignment specifier can only be omitted.
@@ -1140,7 +1142,7 @@ def addrmode6alignNone : AddrMode6Align {
 // VLD/VST instructions and checking the alignment value.
 def AddrMode6Align16AsmOperand : AsmOperandClass {
   let Name = "AlignedMemory16";
-  let DiagnosticType = "AlignedMemoryRequires16";
+  let DiagnosticString = "alignment must be 16 or omitted";
 }
 def addrmode6align16 : AddrMode6Align {
   // The alignment specifier can only be 16 or omitted.
@@ -1151,7 +1153,7 @@ def addrmode6align16 : AddrMode6Align {
 // VLD/VST instructions and checking the alignment value.
 def AddrMode6Align32AsmOperand : AsmOperandClass {
   let Name = "AlignedMemory32";
-  let DiagnosticType = "AlignedMemoryRequires32";
+  let DiagnosticString = "alignment must be 32 or omitted";
 }
 def addrmode6align32 : AddrMode6Align {
   // The alignment specifier can only be 32 or omitted.
@@ -1162,7 +1164,7 @@ def addrmode6align32 : AddrMode6Align {
 // VLD/VST instructions and checking the alignment value.
 def AddrMode6Align64AsmOperand : AsmOperandClass {
   let Name = "AlignedMemory64";
-  let DiagnosticType = "AlignedMemoryRequires64";
+  let DiagnosticString = "alignment must be 64 or omitted";
 }
 def addrmode6align64 : AddrMode6Align {
   // The alignment specifier can only be 64 or omitted.
@@ -1173,7 +1175,7 @@ def addrmode6align64 : AddrMode6Align {
 // for VLD/VST instructions and checking the alignment value.
 def AddrMode6Align64or128AsmOperand : AsmOperandClass {
   let Name = "AlignedMemory64or128";
-  let DiagnosticType = "AlignedMemoryRequires64or128";
+  let DiagnosticString = "alignment must be 64, 128 or omitted";
 }
 def addrmode6align64or128 : AddrMode6Align {
   // The alignment specifier can only be 64, 128 or omitted.
@@ -1184,7 +1186,7 @@ def addrmode6align64or128 : AddrMode6Align {
 // encoding for VLD/VST instructions and checking the alignment value.
 def AddrMode6Align64or128or256AsmOperand : AsmOperandClass {
   let Name = "AlignedMemory64or128or256";
-  let DiagnosticType = "AlignedMemoryRequires64or128or256";
+  let DiagnosticString = "alignment must be 64, 128, 256 or omitted";
 }
 def addrmode6align64or128or256 : AddrMode6Align {
   // The alignment specifier can only be 64, 128, 256 or omitted.
@@ -1215,7 +1217,7 @@ class AddrMode6DupAlign : MemOperand,
 // VLD-dup instruction and checking the alignment is not specified.
 def AddrMode6dupAlignNoneAsmOperand : AsmOperandClass {
   let Name = "DupAlignedMemoryNone";
-  let DiagnosticType = "DupAlignedMemoryRequiresNone";
+  let DiagnosticString = "alignment must be omitted";
 }
 def addrmode6dupalignNone : AddrMode6DupAlign {
   // The alignment specifier can only be omitted.
@@ -1226,7 +1228,7 @@ def addrmode6dupalignNone : AddrMode6DupAlign {
 // instruction and checking the alignment value.
 def AddrMode6dupAlign16AsmOperand : AsmOperandClass {
   let Name = "DupAlignedMemory16";
-  let DiagnosticType = "DupAlignedMemoryRequires16";
+  let DiagnosticString = "alignment must be 16 or omitted";
 }
 def addrmode6dupalign16 : AddrMode6DupAlign {
   // The alignment specifier can only be 16 or omitted.
@@ -1237,7 +1239,7 @@ def addrmode6dupalign16 : AddrMode6DupAlign {
 // instruction and checking the alignment value.
 def AddrMode6dupAlign32AsmOperand : AsmOperandClass {
   let Name = "DupAlignedMemory32";
-  let DiagnosticType = "DupAlignedMemoryRequires32";
+  let DiagnosticString = "alignment must be 32 or omitted";
 }
 def addrmode6dupalign32 : AddrMode6DupAlign {
   // The alignment specifier can only be 32 or omitted.
@@ -1248,7 +1250,7 @@ def addrmode6dupalign32 : AddrMode6DupAlign {
 // instructions and checking the alignment value.
 def AddrMode6dupAlign64AsmOperand : AsmOperandClass {
   let Name = "DupAlignedMemory64";
-  let DiagnosticType = "DupAlignedMemoryRequires64";
+  let DiagnosticString = "alignment must be 64 or omitted";
 }
 def addrmode6dupalign64 : AddrMode6DupAlign {
   // The alignment specifier can only be 64 or omitted.
@@ -1259,7 +1261,7 @@ def addrmode6dupalign64 : AddrMode6DupAlign {
 // for VLD instructions and checking the alignment value.
 def AddrMode6dupAlign64or128AsmOperand : AsmOperandClass {
   let Name = "DupAlignedMemory64or128";
-  let DiagnosticType = "DupAlignedMemoryRequires64or128";
+  let DiagnosticString = "alignment must be 64, 128 or omitted";
 }
 def addrmode6dupalign64or128 : AddrMode6DupAlign {
   // The alignment specifier can only be 64, 128 or omitted.
