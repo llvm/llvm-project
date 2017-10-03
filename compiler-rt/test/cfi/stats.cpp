@@ -1,5 +1,5 @@
 // RUN: %clangxx_cfi -g -fsanitize-stats -o %t %s
-// RUN: env SANITIZER_STATS_PATH=%t.stats %t
+// RUN: env SANITIZER_STATS_PATH=%t.stats %run %t
 // RUN: sanstats %t.stats | FileCheck %s
 
 // FIXME: We currently emit the wrong debug info under devirtualization.

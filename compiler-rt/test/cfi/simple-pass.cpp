@@ -1,5 +1,5 @@
 // RUN: %clangxx_cfi -o %t %s
-// RUN: %t
+// RUN: %run %t
 
 // Tests that the CFI mechanism does not crash the program when making various
 // kinds of valid calls involving classes with various different linkages and
