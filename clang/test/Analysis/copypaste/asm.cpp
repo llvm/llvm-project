@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
 
 // expected-no-diagnostics
 

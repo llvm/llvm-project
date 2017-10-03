@@ -238,9 +238,18 @@ static size_t createHash(llvm::MD5 &Hash) {
   return HashCode;
 }
 
-size_t RecursiveCloneTypeIIConstraint::saveHash(
-    const Stmt *S, const Decl *D,
-    std::vector<std::pair<size_t, StmtSequence>> &StmtsByHash) {
+/// Generates and saves a hash code for the given Stmt.
+/// \param S The given Stmt.
+/// \param D The Decl containing S.
+/// \param StmtsByHash Output parameter that will contain the hash codes for
+///                    each StmtSequence in the given Stmt.
+/// \return The hash code of the given Stmt.
+///
+/// If the given Stmt is a CompoundStmt, this method will also generate
+/// hashes for all possible StmtSequences in the children of this Stmt.
+static size_t
+saveHash(const Stmt *S, const Decl *D,
+         std::vector<std::pair<size_t, StmtSequence>> &StmtsByHash) {
   llvm::MD5 Hash;
   ASTContext &Context = D->getASTContext();
 
@@ -340,7 +349,7 @@ static bool areSequencesClones(const StmtSequence &LHS,
   return DataLHS == DataRHS;
 }
 
-void RecursiveCloneTypeIIConstraint::constrain(
+void RecursiveCloneTypeIIHashConstraint::constrain(
     std::vector<CloneDetector::CloneGroup> &Sequences) {
   // FIXME: Maybe we can do this in-place and don't need this additional vector.
   std::vector<CloneDetector::CloneGroup> Result;
@@ -381,8 +390,7 @@ void RecursiveCloneTypeIIConstraint::constrain(
 
       for (; i < StmtsByHash.size(); ++i) {
         // A different hash value means we have reached the end of the sequence.
-        if (PrototypeHash != StmtsByHash[i].first ||
-            !areSequencesClones(StmtsByHash[i].second, Current.second)) {
+        if (PrototypeHash != StmtsByHash[i].first) {
           // The current sequence could be the start of a new CloneGroup. So we
           // decrement i so that we visit it again in the outer loop.
           // Note: i can never be 0 at this point because we are just comparing
@@ -405,8 +413,17 @@ void RecursiveCloneTypeIIConstraint::constrain(
   Sequences = Result;
 }
 
+void RecursiveCloneTypeIIVerifyConstraint::constrain(
+    std::vector<CloneDetector::CloneGroup> &Sequences) {
+  CloneConstraint::splitCloneGroups(
+      Sequences, [](const StmtSequence &A, const StmtSequence &B) {
+        return areSequencesClones(A, B);
+      });
+}
+
 size_t MinComplexityConstraint::calculateStmtComplexity(
-    const StmtSequence &Seq, const std::string &ParentMacroStack) {
+    const StmtSequence &Seq, std::size_t Limit,
+    const std::string &ParentMacroStack) {
   if (Seq.empty())
     return 0;
 
@@ -415,10 +432,8 @@ size_t MinComplexityConstraint::calculateStmtComplexity(
   ASTContext &Context = Seq.getASTContext();
 
   // Look up what macros expanded into the current statement.
-  std::string StartMacroStack =
+  std::string MacroStack =
       data_collection::getMacroStack(Seq.getStartLoc(), Context);
-  std::string EndMacroStack =
-      data_collection::getMacroStack(Seq.getEndLoc(), Context);
 
   // First, check if ParentMacroStack is not empty which means we are currently
   // dealing with a parent statement which was expanded from a macro.
@@ -428,8 +443,7 @@ size_t MinComplexityConstraint::calculateStmtComplexity(
   // macro expansion will only increase the total complexity by one.
   // Note: This is not the final complexity of this statement as we still
   // add the complexity of the child statements to the complexity value.
-  if (!ParentMacroStack.empty() && (StartMacroStack == ParentMacroStack &&
-                                    EndMacroStack == ParentMacroStack)) {
+  if (!ParentMacroStack.empty() && MacroStack == ParentMacroStack) {
     Complexity = 0;
   }
 
@@ -438,12 +452,16 @@ size_t MinComplexityConstraint::calculateStmtComplexity(
   if (Seq.holdsSequence()) {
     for (const Stmt *S : Seq) {
       Complexity += calculateStmtComplexity(
-          StmtSequence(S, Seq.getContainingDecl()), StartMacroStack);
+          StmtSequence(S, Seq.getContainingDecl()), Limit, MacroStack);
+      if (Complexity >= Limit)
+        return Limit;
     }
   } else {
     for (const Stmt *S : Seq.front()->children()) {
       Complexity += calculateStmtComplexity(
-          StmtSequence(S, Seq.getContainingDecl()), StartMacroStack);
+          StmtSequence(S, Seq.getContainingDecl()), Limit, MacroStack);
+      if (Complexity >= Limit)
+        return Limit;
     }
   }
   return Complexity;

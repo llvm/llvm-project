@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
 
 // Tests that macros and non-macro clones aren't mixed into the same hash
 // group. This is currently necessary as all clones in a hash group need

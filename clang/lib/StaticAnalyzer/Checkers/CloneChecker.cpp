@@ -64,7 +64,7 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // the CloneDetector. The only thing left to do is to report the found clones.
 
   int MinComplexity = Mgr.getAnalyzerOptions().getOptionAsInteger(
-      "MinimumCloneComplexity", 10, this);
+      "MinimumCloneComplexity", 50, this);
   assert(MinComplexity >= 0);
 
   bool ReportSuspiciousClones = Mgr.getAnalyzerOptions().getBooleanOption(
@@ -81,11 +81,11 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // because reportSuspiciousClones() wants to search them for errors.
   std::vector<CloneDetector::CloneGroup> AllCloneGroups;
 
-  Detector.findClones(AllCloneGroups,
-                      FilenamePatternConstraint(IgnoredFilesPattern),
-                      RecursiveCloneTypeIIConstraint(),
-                      MinComplexityConstraint(MinComplexity),
-                      MinGroupSizeConstraint(2), OnlyLargestCloneConstraint());
+  Detector.findClones(
+      AllCloneGroups, FilenamePatternConstraint(IgnoredFilesPattern),
+      RecursiveCloneTypeIIHashConstraint(), MinGroupSizeConstraint(2),
+      MinComplexityConstraint(MinComplexity),
+      RecursiveCloneTypeIIVerifyConstraint(), OnlyLargestCloneConstraint());
 
   if (ReportSuspiciousClones)
     reportSuspiciousClones(BR, Mgr, AllCloneGroups);

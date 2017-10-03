@@ -252,22 +252,25 @@ public:
       std::function<bool(const StmtSequence &, const StmtSequence &)> Compare);
 };
 
-/// Searches all children of the given clones for type II clones (i.e. they are
-/// identical in every aspect beside the used variable names).
-class RecursiveCloneTypeIIConstraint {
+/// This constraint moves clones into clone groups of type II via hashing.
+///
+/// Clones with different hash values are moved into separate clone groups.
+/// Collisions are possible, and this constraint does nothing to address this
+/// them. Add the slower RecursiveCloneTypeIIVerifyConstraint later in the
+/// constraint chain, not necessarily immediately, to eliminate hash collisions
+/// through a more detailed analysis.
+class RecursiveCloneTypeIIHashConstraint {
+public:
+  void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
+};
 
-  /// Generates and saves a hash code for the given Stmt.
-  /// \param S The given Stmt.
-  /// \param D The Decl containing S.
-  /// \param StmtsByHash Output parameter that will contain the hash codes for
-  ///                    each StmtSequence in the given Stmt.
-  /// \return The hash code of the given Stmt.
-  ///
-  /// If the given Stmt is a CompoundStmt, this method will also generate
-  /// hashes for all possible StmtSequences in the children of this Stmt.
-  size_t saveHash(const Stmt *S, const Decl *D,
-                  std::vector<std::pair<size_t, StmtSequence>> &StmtsByHash);
-
+/// This constraint moves clones into clone groups of type II by comparing them.
+///
+/// Clones that aren't type II clones are moved into separate clone groups.
+/// In contrast to the RecursiveCloneTypeIIHashConstraint, all clones in a clone
+/// group are guaranteed to be be type II clones of each other, but it is too
+/// slow to efficiently handle large amounts of clones.
+class RecursiveCloneTypeIIVerifyConstraint {
 public:
   void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
 };
@@ -284,14 +287,19 @@ public:
   MinComplexityConstraint(unsigned MinComplexity)
       : MinComplexity(MinComplexity) {}
 
-  size_t calculateStmtComplexity(const StmtSequence &Seq,
+  /// Calculates the complexity of the given StmtSequence.
+  /// \param Limit The limit of complexity we probe for. After reaching
+  ///              this limit during calculation, this method is exiting
+  ///              early to improve performance and returns this limit.
+  size_t calculateStmtComplexity(const StmtSequence &Seq, std::size_t Limit,
                                  const std::string &ParentMacroStack = "");
 
   void constrain(std::vector<CloneDetector::CloneGroup> &CloneGroups) {
     CloneConstraint::filterGroups(
         CloneGroups, [this](const CloneDetector::CloneGroup &A) {
           if (!A.empty())
-            return calculateStmtComplexity(A.front()) < MinComplexity;
+            return calculateStmtComplexity(A.front(), MinComplexity) <
+                   MinComplexity;
           else
             return false;
         });

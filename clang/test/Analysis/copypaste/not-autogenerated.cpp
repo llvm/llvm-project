@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:IgnoredFilesPattern="moc_|ui_|dbus_|.*_automoc" -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -analyzer-config alpha.clone.CloneChecker:IgnoredFilesPattern="moc_|ui_|dbus_|.*_automoc" -verify %s
 
 void f1() {
   int *p1 = new int[1];
