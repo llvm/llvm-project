@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true -analyzer-stats -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++11 %s
 
 void clang_analyzer_numTimesReached();
 
@@ -24,6 +24,12 @@ int simple_unroll2() {
     clang_analyzer_numTimesReached(); // expected-warning {{9}}
     a[i] = 42;
   }
+
+  for (int j = 0; j <= 9; ++j) {
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    a[j] = 42;
+  }
+
   int b = 22 / (k - 42); // expected-warning {{Division by zero}}
   return 0;
 }
@@ -87,6 +93,45 @@ int simple_no_unroll5() {
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
     a[i] = 42;
     int &j{i};
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll1() {
+  int a[9];
+  int k = 42;
+  int i;
+  int &j = i;
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll2() {
+  int a[9];
+  int k = 42;
+  int i;
+  int *p = &i;
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll3() {
+  int a[9];
+  int k = 42;
+  int i;
+  foo(i);
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
   }
   int b = 22 / (k - 42); // no-warning
   return 0;
@@ -172,5 +217,58 @@ int nested_inlined_no_unroll1() {
     k = simple_unknown_bound_loop();  // reevaluation without inlining
   }
   int a = 22 / k; // no-warning
+  return 0;
+}
+
+
+int recursion_unroll1(bool b) {
+  int k = 2;
+  for (int i = 0; i < 5; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{14}}
+    if(i == 0 && b)
+      recursion_unroll1(false);
+    clang_analyzer_numTimesReached(); // expected-warning {{15}}
+  }
+  int a = 22 / k; // no-warning
+  return 0;
+}
+
+int recursion_unroll2(bool b) {
+  int k = 0;
+  for (int i = 0; i < 5; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    if(i == 0 && b)
+      recursion_unroll2(false);
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+  }
+  int a = 22 / k; // expected-warning {{Division by zero}}
+  return 0;
+}
+
+int recursion_unroll3(bool b) {
+  int k = 2;
+  for (int i = 0; i < 5; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    if(i == 4 && b) {
+      recursion_unroll3(false);
+      break;
+    }
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+  }
+  int a = 22 / k;
+  return 0;
+}
+
+int recursion_unroll4(bool b) {
+  int k = 2;
+  for (int i = 0; i < 5; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{14}}
+    if(i == 0 && b) {
+      recursion_unroll4(false);
+      continue;
+    }
+    clang_analyzer_numTimesReached(); // expected-warning {{14}}
+  }
+  int a = 22 / k;
   return 0;
 }

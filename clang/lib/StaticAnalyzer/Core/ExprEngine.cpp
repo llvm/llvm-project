@@ -364,6 +364,9 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
     case CFGElement::TemporaryDtor:
       ProcessImplicitDtor(E.castAs<CFGImplicitDtor>(), Pred);
       return;
+    case CFGElement::LoopExit:
+      ProcessLoopExit(E.castAs<CFGLoopExit>().getLoopStmt(), Pred);
+      return;
     case CFGElement::LifetimeEnds:
       return;
   }
@@ -505,6 +508,24 @@ void ExprEngine::ProcessStmt(const CFGStmt S,
     Dst.insert(DstI);
   }
 
+  // Enqueue the new nodes onto the work list.
+  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+}
+
+void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
+  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
+                                S->getLocStart(),
+                                "Error evaluating end of the loop");
+  ExplodedNodeSet Dst;
+  Dst.Add(Pred);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  ProgramStateRef NewState = Pred->getState();
+
+  if(AMgr.options.shouldUnrollLoops())
+    NewState = processLoopEnd(S, NewState);
+
+  LoopExit PP(S, Pred->getLocationContext());
+  Bldr.generateNode(PP, NewState, Pred);
   // Enqueue the new nodes onto the work list.
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
@@ -1501,22 +1522,17 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
-  if (AMgr.options.shouldUnrollLoops()) {
-    const CFGBlock *ActualBlock = nodeBuilder.getContext().getBlock();
-    const Stmt *Term = ActualBlock->getTerminator();
-    if (Term && shouldCompletelyUnroll(Term, AMgr.getASTContext())) {
-      ProgramStateRef UnrolledState = markLoopAsUnrolled(
-          Term, Pred->getState(),
-          cast<FunctionDecl>(Pred->getStackFrame()->getDecl()));
-      if (UnrolledState != Pred->getState())
-        nodeBuilder.generateNode(UnrolledState, Pred);
-      return;
+  if(AMgr.options.shouldUnrollLoops()) {
+    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminator();
+    if (Term) {
+      ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
+                                                 Pred);
+      if (NewState != Pred->getState()){
+        Pred = nodeBuilder.generateNode(NewState, Pred);
+      }
     }
-
-    if (ActualBlock->empty())
-      return;
-
-    if (isUnrolledLoopBlock(ActualBlock, Pred, AMgr))
+    // Is we are inside an unrolled loop then no need the check the counters.
+    if(isUnrolledState(Pred->getState()))
       return;
   }
 
@@ -2686,6 +2702,12 @@ struct DOTGraphTraits<ExplodedNode*> :
       case ProgramPoint::EpsilonKind:
         Out << "Epsilon Point";
         break;
+
+      case ProgramPoint::LoopExitKind: {
+        LoopExit LE = Loc.castAs<LoopExit>();
+        Out << "LoopExit: " << LE.getLoopStmt()->getStmtClassName();
+        break;
+      }
 
       case ProgramPoint::PreImplicitCallKind: {
         ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
