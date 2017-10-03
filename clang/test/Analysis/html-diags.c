@@ -3,6 +3,12 @@
 // RUN: %clang_analyze_cc1 -analyzer-output=html -analyzer-checker=core -o %T/dir %s
 // RUN: ls %T/dir | grep report
 
+// D30406: Test new html-single-file output
+// RUN: rm -fR %T/dir
+// RUN: mkdir %T/dir
+// RUN: %clang_analyze_cc1 -analyzer-output=html-single-file -analyzer-checker=core -o %T/dir %s
+// RUN: ls %T/dir | grep report
+
 // PR16547: Test relative paths
 // RUN: cd %T/dir
 // RUN: %clang_analyze_cc1 -analyzer-output=html -analyzer-checker=core -o testrelative %s
