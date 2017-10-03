@@ -165,6 +165,7 @@ bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
 
 void Symbolizer::RefreshModules() {
   modules_.init();
+  fallback_modules_.fallbackInit();
   RAW_CHECK(modules_.size() > 0);
   modules_fresh_ = true;
 }
@@ -198,6 +199,10 @@ const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
     if (module) return module;
   }
 #endif
+
+  if (fallback_modules_.size()) {
+    module = SearchForModule(fallback_modules_, address);
+  }
   return module;
 }
 

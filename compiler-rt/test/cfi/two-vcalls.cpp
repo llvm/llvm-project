@@ -1,5 +1,5 @@
 // RUN: %clangxx_cfi_diag -o %t %s
-// RUN: %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s
 
 // This test checks that we don't generate two type checks,
 // if two virtual calls are in the same function.
