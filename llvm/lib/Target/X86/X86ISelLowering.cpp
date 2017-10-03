@@ -5967,13 +5967,13 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     // If we know input saturation won't happen we can treat this
     // as a truncation shuffle.
     if (Opcode == X86ISD::PACKSS) {
-      if (DAG.ComputeNumSignBits(N0) <= NumBitsPerElt ||
-          DAG.ComputeNumSignBits(N1) <= NumBitsPerElt)
+      if ((!N0.isUndef() && DAG.ComputeNumSignBits(N0) <= NumBitsPerElt) ||
+          (!N1.isUndef() && DAG.ComputeNumSignBits(N1) <= NumBitsPerElt))
         return false;
     } else {
       APInt ZeroMask = APInt::getHighBitsSet(2 * NumBitsPerElt, NumBitsPerElt);
-      if (!DAG.MaskedValueIsZero(N0, ZeroMask) ||
-          !DAG.MaskedValueIsZero(N1, ZeroMask))
+      if ((!N0.isUndef() && !DAG.MaskedValueIsZero(N0, ZeroMask)) ||
+          (!N1.isUndef() && !DAG.MaskedValueIsZero(N1, ZeroMask)))
         return false;
     }
 
@@ -6042,6 +6042,14 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
   for (int i = 0, e = Inputs.size(); i < e; ++i) {
     int lo = UsedInputs.size() * MaskWidth;
     int hi = lo + MaskWidth;
+
+    // Strip UNDEF input usage.
+    if (Inputs[i].isUndef())
+      for (int &M : Mask)
+        if ((lo <= M) && (M < hi))
+          M = SM_SentinelUndef;
+
+    // Check for unused inputs.
     if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
       UsedInputs.push_back(Inputs[i]);
       continue;

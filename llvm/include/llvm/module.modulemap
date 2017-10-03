@@ -123,6 +123,7 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "DebugInfo/CodeView/CodeViewRegisters.def"
   textual header "DebugInfo/CodeView/CodeViewTypes.def"
   textual header "DebugInfo/CodeView/CodeViewSymbols.def"
 }

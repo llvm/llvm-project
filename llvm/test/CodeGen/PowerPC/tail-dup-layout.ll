@@ -23,7 +23,7 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK-LABEL: straight_test:
 ; test1 may have been merged with entry
 ;CHECK: mr [[TAGREG:[0-9]+]], 3
-;CHECK: andi. {{[0-9]+}}, [[TAGREG:[0-9]+]], 1
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
 ;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30

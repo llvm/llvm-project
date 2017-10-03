@@ -16,6 +16,7 @@
 #include "InstPrinter/X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -72,52 +73,128 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
     MRI->mapLLVMRegToSEHReg(Reg, SEH);
   }
 
-  // These CodeView registers are numbered sequentially starting at value 1.
-  static const MCPhysReg LowCVRegs[] = {
-      X86::AL,  X86::CL,  X86::DL,  X86::BL,  X86::AH,  X86::CH,
-      X86::DH,  X86::BH,  X86::AX,  X86::CX,  X86::DX,  X86::BX,
-      X86::SP,  X86::BP,  X86::SI,  X86::DI,  X86::EAX, X86::ECX,
-      X86::EDX, X86::EBX, X86::ESP, X86::EBP, X86::ESI, X86::EDI,
+  // Mapping from CodeView to MC register id.
+  static const struct {
+    codeview::RegisterId CVReg;
+    MCPhysReg Reg;
+  } RegMap[] = {
+    { codeview::RegisterId::AL, X86::AL},
+    { codeview::RegisterId::CL, X86::CL},
+    { codeview::RegisterId::DL, X86::DL},
+    { codeview::RegisterId::BL, X86::BL},
+    { codeview::RegisterId::AH, X86::AH},
+    { codeview::RegisterId::CH, X86::CH},
+    { codeview::RegisterId::DH, X86::DH},
+    { codeview::RegisterId::BH, X86::BH},
+    { codeview::RegisterId::AX, X86::AX},
+    { codeview::RegisterId::CX, X86::CX},
+    { codeview::RegisterId::DX, X86::DX},
+    { codeview::RegisterId::BX, X86::BX},
+    { codeview::RegisterId::SP, X86::SP},
+    { codeview::RegisterId::BP, X86::BP},
+    { codeview::RegisterId::SI, X86::SI},
+    { codeview::RegisterId::DI, X86::DI},
+    { codeview::RegisterId::EAX, X86::EAX},
+    { codeview::RegisterId::ECX, X86::ECX},
+    { codeview::RegisterId::EDX, X86::EDX},
+    { codeview::RegisterId::EBX, X86::EBX},
+    { codeview::RegisterId::ESP, X86::ESP},
+    { codeview::RegisterId::EBP, X86::EBP},
+    { codeview::RegisterId::ESI, X86::ESI},
+    { codeview::RegisterId::EDI, X86::EDI},
+
+    { codeview::RegisterId::EFLAGS, X86::EFLAGS},
+
+    { codeview::RegisterId::ST0, X86::FP0},
+    { codeview::RegisterId::ST1, X86::FP1},
+    { codeview::RegisterId::ST2, X86::FP2},
+    { codeview::RegisterId::ST3, X86::FP3},
+    { codeview::RegisterId::ST4, X86::FP4},
+    { codeview::RegisterId::ST5, X86::FP5},
+    { codeview::RegisterId::ST6, X86::FP6},
+    { codeview::RegisterId::ST7, X86::FP7},
+
+    { codeview::RegisterId::XMM0, X86::XMM0},
+    { codeview::RegisterId::XMM1, X86::XMM1},
+    { codeview::RegisterId::XMM2, X86::XMM2},
+    { codeview::RegisterId::XMM3, X86::XMM3},
+    { codeview::RegisterId::XMM4, X86::XMM4},
+    { codeview::RegisterId::XMM5, X86::XMM5},
+    { codeview::RegisterId::XMM6, X86::XMM6},
+    { codeview::RegisterId::XMM7, X86::XMM7},
+
+    { codeview::RegisterId::XMM8, X86::XMM8},
+    { codeview::RegisterId::XMM9, X86::XMM9},
+    { codeview::RegisterId::XMM10, X86::XMM10},
+    { codeview::RegisterId::XMM11, X86::XMM11},
+    { codeview::RegisterId::XMM12, X86::XMM12},
+    { codeview::RegisterId::XMM13, X86::XMM13},
+    { codeview::RegisterId::XMM14, X86::XMM14},
+    { codeview::RegisterId::XMM15, X86::XMM15},
+
+    { codeview::RegisterId::SIL, X86::SIL},
+    { codeview::RegisterId::DIL, X86::DIL},
+    { codeview::RegisterId::BPL, X86::BPL},
+    { codeview::RegisterId::SPL, X86::SPL},
+    { codeview::RegisterId::RAX, X86::RAX},
+    { codeview::RegisterId::RBX, X86::RBX},
+    { codeview::RegisterId::RCX, X86::RCX},
+    { codeview::RegisterId::RDX, X86::RDX},
+    { codeview::RegisterId::RSI, X86::RSI},
+    { codeview::RegisterId::RDI, X86::RDI},
+    { codeview::RegisterId::RBP, X86::RBP},
+    { codeview::RegisterId::RSP, X86::RSP},
+    { codeview::RegisterId::R8, X86::R8},
+    { codeview::RegisterId::R9, X86::R9},
+    { codeview::RegisterId::R10, X86::R10},
+    { codeview::RegisterId::R11, X86::R11},
+    { codeview::RegisterId::R12, X86::R12},
+    { codeview::RegisterId::R13, X86::R13},
+    { codeview::RegisterId::R14, X86::R14},
+    { codeview::RegisterId::R15, X86::R15},
+    { codeview::RegisterId::R8B, X86::R8B},
+    { codeview::RegisterId::R9B, X86::R9B},
+    { codeview::RegisterId::R10B, X86::R10B},
+    { codeview::RegisterId::R11B, X86::R11B},
+    { codeview::RegisterId::R12B, X86::R12B},
+    { codeview::RegisterId::R13B, X86::R13B},
+    { codeview::RegisterId::R14B, X86::R14B},
+    { codeview::RegisterId::R15B, X86::R15B},
+    { codeview::RegisterId::R8W, X86::R8W},
+    { codeview::RegisterId::R9W, X86::R9W},
+    { codeview::RegisterId::R10W, X86::R10W},
+    { codeview::RegisterId::R11W, X86::R11W},
+    { codeview::RegisterId::R12W, X86::R12W},
+    { codeview::RegisterId::R13W, X86::R13W},
+    { codeview::RegisterId::R14W, X86::R14W},
+    { codeview::RegisterId::R15W, X86::R15W},
+    { codeview::RegisterId::R8D, X86::R8D},
+    { codeview::RegisterId::R9D, X86::R9D},
+    { codeview::RegisterId::R10D, X86::R10D},
+    { codeview::RegisterId::R11D, X86::R11D},
+    { codeview::RegisterId::R12D, X86::R12D},
+    { codeview::RegisterId::R13D, X86::R13D},
+    { codeview::RegisterId::R14D, X86::R14D},
+    { codeview::RegisterId::R15D, X86::R15D},
+    { codeview::RegisterId::AMD64_YMM0, X86::YMM0},
+    { codeview::RegisterId::AMD64_YMM1, X86::YMM1},
+    { codeview::RegisterId::AMD64_YMM2, X86::YMM2},
+    { codeview::RegisterId::AMD64_YMM3, X86::YMM3},
+    { codeview::RegisterId::AMD64_YMM4, X86::YMM4},
+    { codeview::RegisterId::AMD64_YMM5, X86::YMM5},
+    { codeview::RegisterId::AMD64_YMM6, X86::YMM6},
+    { codeview::RegisterId::AMD64_YMM7, X86::YMM7},
+    { codeview::RegisterId::AMD64_YMM8, X86::YMM8},
+    { codeview::RegisterId::AMD64_YMM9, X86::YMM9},
+    { codeview::RegisterId::AMD64_YMM10, X86::YMM10},
+    { codeview::RegisterId::AMD64_YMM11, X86::YMM11},
+    { codeview::RegisterId::AMD64_YMM12, X86::YMM12},
+    { codeview::RegisterId::AMD64_YMM13, X86::YMM13},
+    { codeview::RegisterId::AMD64_YMM14, X86::YMM14},
+    { codeview::RegisterId::AMD64_YMM15, X86::YMM15},
   };
-  unsigned CVLowRegStart = 1;
-  for (unsigned I = 0; I < array_lengthof(LowCVRegs); ++I)
-    MRI->mapLLVMRegToCVReg(LowCVRegs[I], I + CVLowRegStart);
-
-  MRI->mapLLVMRegToCVReg(X86::EFLAGS, 34);
-
-  // The x87 registers start at 128 and are numbered sequentially.
-  unsigned FP0Start = 128;
-  for (unsigned I = 0; I < 8; ++I)
-    MRI->mapLLVMRegToCVReg(X86::FP0 + I, FP0Start + I);
-
-  // The low 8 XMM registers start at 154 and are numbered sequentially.
-  unsigned CVXMM0Start = 154;
-  for (unsigned I = 0; I < 8; ++I)
-    MRI->mapLLVMRegToCVReg(X86::XMM0 + I, CVXMM0Start + I);
-
-  // The high 8 XMM registers start at 252 and are numbered sequentially.
-  unsigned CVXMM8Start = 252;
-  for (unsigned I = 0; I < 8; ++I)
-    MRI->mapLLVMRegToCVReg(X86::XMM8 + I, CVXMM8Start + I);
-
-  // FIXME: XMM16 and above from AVX512 not yet documented.
-
-  // AMD64 registers start at 324 and count up.
-  unsigned CVX64RegStart = 324;
-  static const MCPhysReg CVX64Regs[] = {
-      X86::SIL,   X86::DIL,   X86::BPL,   X86::SPL,   X86::RAX,   X86::RBX,
-      X86::RCX,   X86::RDX,   X86::RSI,   X86::RDI,   X86::RBP,   X86::RSP,
-      X86::R8,    X86::R9,    X86::R10,   X86::R11,   X86::R12,   X86::R13,
-      X86::R14,   X86::R15,   X86::R8B,   X86::R9B,   X86::R10B,  X86::R11B,
-      X86::R12B,  X86::R13B,  X86::R14B,  X86::R15B,  X86::R8W,   X86::R9W,
-      X86::R10W,  X86::R11W,  X86::R12W,  X86::R13W,  X86::R14W,  X86::R15W,
-      X86::R8D,   X86::R9D,   X86::R10D,  X86::R11D,  X86::R12D,  X86::R13D,
-      X86::R14D,  X86::R15D,  X86::YMM0,  X86::YMM1,  X86::YMM2,  X86::YMM3,
-      X86::YMM4,  X86::YMM5,  X86::YMM6,  X86::YMM7,  X86::YMM8,  X86::YMM9,
-      X86::YMM10, X86::YMM11, X86::YMM12, X86::YMM13, X86::YMM14, X86::YMM15,
-  };
-  for (unsigned I = 0; I < array_lengthof(CVX64Regs); ++I)
-    MRI->mapLLVMRegToCVReg(CVX64Regs[I], CVX64RegStart + I);
+  for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
+    MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
 }
 
 MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,

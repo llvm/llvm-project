@@ -623,7 +623,6 @@ public:
     SmallString<128> Message;
   };
 
-  const char *getOperandMatchFailDiag(ARMMatchResultTy Error);
   void FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
                         SmallVectorImpl<NearMissMessage> &NearMissesOut,
                         SMLoc IDLoc, OperandVector &Operands);
@@ -3407,13 +3406,13 @@ int ARMAsmParser::tryParseShiftRegister(OperandVector &Operands) {
 /// parse for a specific register type.
 bool ARMAsmParser::tryParseRegisterWithWriteBack(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  const AsmToken &RegTok = Parser.getTok();
+  SMLoc RegStartLoc = Parser.getTok().getLoc();
+  SMLoc RegEndLoc = Parser.getTok().getEndLoc();
   int RegNo = tryParseRegister();
   if (RegNo == -1)
     return true;
 
-  Operands.push_back(ARMOperand::CreateReg(RegNo, RegTok.getLoc(),
-                                           RegTok.getEndLoc()));
+  Operands.push_back(ARMOperand::CreateReg(RegNo, RegStartLoc, RegEndLoc));
 
   const AsmToken &ExclaimTok = Parser.getTok();
   if (ExclaimTok.is(AsmToken::Exclaim)) {
@@ -9028,13 +9027,6 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MatchResult = MatchInstruction(Operands, Inst, NearMisses, MatchingInlineAsm,
                                  PendConditionalInstruction, Out);
 
-  SMLoc ErrorLoc;
-  if (ErrorInfo < Operands.size()) {
-    ErrorLoc = ((ARMOperand &)*Operands[ErrorInfo]).getStartLoc();
-    if (ErrorLoc == SMLoc())
-      ErrorLoc = IDLoc;
-  }
-
   switch (MatchResult) {
   case Match_Success:
     // Context sensitive operand constraints aren't handled by the matcher,
@@ -10102,80 +10094,6 @@ extern "C" void LLVMInitializeARMAsmParser() {
 #define GET_MATCHER_IMPLEMENTATION
 #include "ARMGenAsmMatcher.inc"
 
-const char *ARMAsmParser::getOperandMatchFailDiag(ARMMatchResultTy Error) {
-  switch (Error) {
-  case Match_AlignedMemoryRequiresNone:
-  case Match_DupAlignedMemoryRequiresNone:
-    return "alignment must be omitted";
-  case Match_AlignedMemoryRequires16:
-  case Match_DupAlignedMemoryRequires16:
-    return "alignment must be 16 or omitted";
-  case Match_AlignedMemoryRequires32:
-  case Match_DupAlignedMemoryRequires32:
-    return "alignment must be 32 or omitted";
-  case Match_AlignedMemoryRequires64:
-  case Match_DupAlignedMemoryRequires64:
-    return "alignment must be 64 or omitted";
-  case Match_AlignedMemoryRequires64or128:
-  case Match_DupAlignedMemoryRequires64or128:
-    return "alignment must be 64, 128 or omitted";
-  case Match_AlignedMemoryRequires64or128or256:
-    return "alignment must be 64, 128, 256 or omitted";
-  case Match_ImmRange0_1:
-    return "immediate operand must be in the range [0,1]";
-  case Match_ImmRange0_3:
-    return "immediate operand must be in the range [0,3]";
-  case Match_ImmRange0_7:
-    return "immediate operand must be in the range [0,7]";
-  case Match_ImmRange0_15:
-    return "immediate operand must be in the range [0,15]";
-  case Match_ImmRange0_31:
-    return "immediate operand must be in the range [0,31]";
-  case Match_ImmRange0_32:
-    return "immediate operand must be in the range [0,32]";
-  case Match_ImmRange0_63:
-    return "immediate operand must be in the range [0,63]";
-  case Match_ImmRange0_239:
-    return "immediate operand must be in the range [0,239]";
-  case Match_ImmRange0_255:
-    return "immediate operand must be in the range [0,255]";
-  case Match_ImmRange0_4095:
-    return "immediate operand must be in the range [0,4095]";
-  case Match_ImmRange0_65535:
-    return "immediate operand must be in the range [0,65535]";
-  case Match_ImmRange1_7:
-    return "immediate operand must be in the range [1,7]";
-  case Match_ImmRange1_8:
-    return "immediate operand must be in the range [1,8]";
-  case Match_ImmRange1_15:
-    return "immediate operand must be in the range [1,15]";
-  case Match_ImmRange1_16:
-    return "immediate operand must be in the range [1,16]";
-  case Match_ImmRange1_31:
-    return "immediate operand must be in the range [1,31]";
-  case Match_ImmRange1_32:
-    return "immediate operand must be in the range [1,32]";
-  case Match_ImmRange1_64:
-    return "immediate operand must be in the range [1,64]";
-  case Match_ImmRange8_8:
-    return "immediate operand must be 8.";
-  case Match_ImmRange16_16:
-    return "immediate operand must be 16.";
-  case Match_ImmRange32_32:
-    return "immediate operand must be 32.";
-  case Match_ImmRange256_65535:
-    return "immediate operand must be in the range [255,65535]";
-  case Match_ImmRange0_16777215:
-    return "immediate operand must be in the range [0,0xffffff]";
-  case Match_InvalidComplexRotationEven:
-      return "complex rotation must be 0, 90, 180 or 270";
-  case Match_InvalidComplexRotationOdd:
-      return "complex rotation must be 90 or 270";
-  default:
-    return nullptr;
-  }
-}
-
 // Process the list of near-misses, throwing away ones we don't want to report
 // to the user, and converting the rest to a source location and string that
 // should be reported.
@@ -10206,7 +10124,7 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
       SMLoc OperandLoc =
           ((ARMOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
       const char *OperandDiag =
-          getOperandMatchFailDiag((ARMMatchResultTy)I.getOperandError());
+          getMatchKindDiag((ARMMatchResultTy)I.getOperandError());
 
       // If we have already emitted a message for a superclass, don't also report
       // the sub-class. We consider all operand classes that we don't have a
@@ -10218,8 +10136,8 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
       if (std::any_of(PrevReports.first, PrevReports.second,
                       [DupCheckMatchClass](
                           const std::pair<unsigned, unsigned> Pair) {
-            if (DupCheckMatchClass == ~0U)
-              return Pair.second == ~0U;
+            if (DupCheckMatchClass == ~0U || Pair.second == ~0U)
+              return Pair.second == DupCheckMatchClass;
             else
               return isSubclass((MatchClassKind)DupCheckMatchClass,
                                 (MatchClassKind)Pair.second);

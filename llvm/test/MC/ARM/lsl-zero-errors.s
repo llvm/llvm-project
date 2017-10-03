@@ -61,7 +61,7 @@
 // CHECK-NONARM-NEXT: mov r0, pc, lsl #0
 // CHECK-NONARM: invalid operand for instruction
 // CHECK-NONARM: invalid operand for instruction
-// CHECK-NONARM: immediate operand must be in the range [255,65535]
+// CHECK-NONARM: immediate operand must be in the range [256,65535]
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: mov pc, pc, lsl #0
 // CHECK-NONARM: invalid operand for instruction

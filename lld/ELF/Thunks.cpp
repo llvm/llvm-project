@@ -101,6 +101,28 @@ public:
   InputSection *getTargetInputSection() const override;
 };
 
+// microMIPS R2-R5 LA25 thunk
+class MicroMipsThunk final : public Thunk {
+public:
+  MicroMipsThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+
+  uint32_t size() const override { return 14; }
+  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  void addSymbols(ThunkSection &IS) override;
+  InputSection *getTargetInputSection() const override;
+};
+
+// microMIPS R6 LA25 thunk
+class MicroMipsR6Thunk final : public Thunk {
+public:
+  MicroMipsR6Thunk(const SymbolBody &Dest) : Thunk(Dest) {}
+
+  uint32_t size() const override { return 12; }
+  void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
+  void addSymbols(ThunkSection &IS) override;
+  InputSection *getTargetInputSection() const override;
+};
+
 } // end anonymous namespace
 
 // ARM Target Thunks
@@ -235,6 +257,56 @@ InputSection *MipsThunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(DR->Section);
 }
 
+// Write microMIPS R2-R5 LA25 thunk code
+// to call PIC function from the non-PIC one.
+void MicroMipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
+  uint64_t S = Destination.getVA();
+  write16(Buf, 0x41b9, Config->Endianness);       // lui   $25, %hi(func)
+  write16(Buf + 4, 0xd400, Config->Endianness);   // j     func
+  write16(Buf + 8, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)
+  write16(Buf + 12, 0x0c00, Config->Endianness);  // nop
+  Target->relocateOne(Buf, R_MICROMIPS_HI16, S);
+  Target->relocateOne(Buf + 4, R_MICROMIPS_26_S1, S);
+  Target->relocateOne(Buf + 8, R_MICROMIPS_LO16, S);
+}
+
+void MicroMipsThunk::addSymbols(ThunkSection &IS) {
+  ThunkSym =
+      addSyntheticLocal(Saver.save("__microLA25Thunk_" + Destination.getName()),
+                        STT_FUNC, Offset, size(), &IS);
+  ThunkSym->StOther |= STO_MIPS_MICROMIPS;
+}
+
+InputSection *MicroMipsThunk::getTargetInputSection() const {
+  auto *DR = dyn_cast<DefinedRegular>(&Destination);
+  return dyn_cast<InputSection>(DR->Section);
+}
+
+// Write microMIPS R6 LA25 thunk code
+// to call PIC function from the non-PIC one.
+void MicroMipsR6Thunk::writeTo(uint8_t *Buf, ThunkSection &) const {
+  uint64_t S = Destination.getVA();
+  uint64_t P = ThunkSym->getVA();
+  write16(Buf, 0x1320, Config->Endianness);       // lui   $25, %hi(func)
+  write16(Buf + 4, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)
+  write16(Buf + 8, 0x9400, Config->Endianness);   // bc    func
+  Target->relocateOne(Buf, R_MICROMIPS_HI16, S);
+  Target->relocateOne(Buf + 4, R_MICROMIPS_LO16, S);
+  Target->relocateOne(Buf + 8, R_MICROMIPS_PC26_S1, S - P - 12);
+}
+
+void MicroMipsR6Thunk::addSymbols(ThunkSection &IS) {
+  ThunkSym =
+      addSyntheticLocal(Saver.save("__microLA25Thunk_" + Destination.getName()),
+                        STT_FUNC, Offset, size(), &IS);
+  ThunkSym->StOther |= STO_MIPS_MICROMIPS;
+}
+
+InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
+  auto *DR = dyn_cast<DefinedRegular>(&Destination);
+  return dyn_cast<InputSection>(DR->Section);
+}
+
 Thunk::Thunk(const SymbolBody &D) : Destination(D), Offset(0) {}
 
 Thunk::~Thunk() = default;
@@ -260,13 +332,19 @@ static Thunk *addThunkArm(uint32_t Reloc, SymbolBody &S) {
   fatal("unrecognized relocation type");
 }
 
-static Thunk *addThunkMips(SymbolBody &S) { return make<MipsThunk>(S); }
+static Thunk *addThunkMips(uint32_t Reloc, SymbolBody &S) {
+  if ((S.StOther & STO_MIPS_MICROMIPS) && isMipsR6())
+    return make<MicroMipsR6Thunk>(S);
+  if (S.StOther & STO_MIPS_MICROMIPS)
+    return make<MicroMipsThunk>(S);
+  return make<MipsThunk>(S);
+}
 
 Thunk *addThunk(uint32_t RelocType, SymbolBody &S) {
   if (Config->EMachine == EM_ARM)
     return addThunkArm(RelocType, S);
   else if (Config->EMachine == EM_MIPS)
-    return addThunkMips(S);
+    return addThunkMips(RelocType, S);
   llvm_unreachable("add Thunk only supported for ARM and Mips");
   return nullptr;
 }

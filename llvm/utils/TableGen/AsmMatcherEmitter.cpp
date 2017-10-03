@@ -205,6 +205,9 @@ struct ClassInfo {
   /// For custom match classes: the diagnostic kind for when the predicate fails.
   std::string DiagnosticType;
 
+  /// For custom match classes: the diagnostic string for when the predicate fails.
+  std::string DiagnosticString;
+
   /// Is this operand optional and not always required.
   bool IsOptional;
 
@@ -1357,11 +1360,17 @@ void AsmMatcherInfo::buildOperandClasses() {
     if (StringInit *SI = dyn_cast<StringInit>(PRMName))
       CI->ParserMethod = SI->getValue();
 
-    // Get the diagnostic type or leave it as empty.
-    // Get the parse method name or leave it as empty.
+    // Get the diagnostic type and string or leave them as empty.
     Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
     if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
       CI->DiagnosticType = SI->getValue();
+    Init *DiagnosticString = Rec->getValueInit("DiagnosticString");
+    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
+      CI->DiagnosticString = SI->getValue();
+    // If we have a DiagnosticString, we need a DiagnosticType for use within
+    // the matcher.
+    if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
+      CI->DiagnosticType = CI->ClassName;
 
     Init *IsOptional = Rec->getValueInit("IsOptional");
     if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
@@ -2188,6 +2197,38 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
   OS << "}\n\n";
 }
 
+/// emitMatchClassDiagStrings - Emit a function to get the diagnostic text to be
+/// used when an assembly operand does not match the expected operand class.
+static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info, raw_ostream &OS) {
+  // If the target does not use DiagnosticString for any operands, don't emit
+  // an unused function.
+  if (std::all_of(
+          Info.Classes.begin(), Info.Classes.end(),
+          [](const ClassInfo &CI) { return CI.DiagnosticString.empty(); }))
+    return;
+
+  OS << "static const char *getMatchKindDiag(" << Info.Target.getName()
+     << "AsmParser::" << Info.Target.getName()
+     << "MatchResultTy MatchResult) {\n";
+  OS << "  switch (MatchResult) {\n";
+
+  for (const auto &CI: Info.Classes) {
+    if (!CI.DiagnosticString.empty()) {
+      assert(!CI.DiagnosticType.empty() &&
+             "DiagnosticString set without DiagnosticType");
+      OS << "  case " << Info.Target.getName()
+         << "AsmParser::Match_" << CI.DiagnosticType << ":\n";
+      OS << "    return \"" << CI.DiagnosticString << "\";\n";
+    }
+  }
+
+  OS << "  default:\n";
+  OS << "    return nullptr;\n";
+
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(AsmMatcherInfo &Info,
                                      raw_ostream &OS) {
@@ -2913,6 +2954,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);
+
+  // Emit a function to get the user-visible string to describe an operand
+  // match failure in diagnostics.
+  emitOperandMatchErrorDiagStrings(Info, OS);
 
   // Emit the routine to match token strings to their match class.
   emitMatchTokenString(Target, Info.Classes, OS);

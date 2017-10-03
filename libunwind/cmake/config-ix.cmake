@@ -52,7 +52,6 @@ endif ()
 
 # Check compiler flags
 check_c_compiler_flag(-funwind-tables         LIBUNWIND_HAS_FUNWIND_TABLES)
-check_cxx_compiler_flag(-fPIC                 LIBUNWIND_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fno-exceptions       LIBUNWIND_HAS_NO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti             LIBUNWIND_HAS_NO_RTTI_FLAG)
 check_cxx_compiler_flag(-fstrict-aliasing     LIBUNWIND_HAS_FSTRICT_ALIASING_FLAG)
