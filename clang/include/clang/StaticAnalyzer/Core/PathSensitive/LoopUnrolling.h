@@ -8,8 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This header contains the declarations of functions which are used to decide
-/// which loops should be completely unrolled and mark their corresponding
-/// CFGBlocks.
+/// which loops should be completely unrolled and mark them.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +27,8 @@ ProgramStateRef markLoopAsUnrolled(const Stmt *Term, ProgramStateRef State,
                                    const FunctionDecl *FD);
 bool isUnrolledLoopBlock(const CFGBlock *Block, ExplodedNode *Pred,
                          AnalysisManager &AMgr);
-bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx);
+bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
+                            ExplodedNode *Pred);
 
 } // end namespace ento
 } // end namespace clang

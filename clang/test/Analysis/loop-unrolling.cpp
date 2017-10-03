@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true -analyzer-stats -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-max-loop 4 -analyzer-config unroll-loops=true -verify -std=c++11 %s
 
 void clang_analyzer_numTimesReached();
 
@@ -24,6 +24,12 @@ int simple_unroll2() {
     clang_analyzer_numTimesReached(); // expected-warning {{9}}
     a[i] = 42;
   }
+
+  for (int j = 0; j <= 9; ++j) {
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    a[j] = 42;
+  }
+
   int b = 22 / (k - 42); // expected-warning {{Division by zero}}
   return 0;
 }
@@ -87,6 +93,45 @@ int simple_no_unroll5() {
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
     a[i] = 42;
     int &j{i};
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll1() {
+  int a[9];
+  int k = 42;
+  int i;
+  int &j = i;
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll2() {
+  int a[9];
+  int k = 42;
+  int i;
+  int *p = &i;
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
+  }
+  int b = 22 / (k - 42); // no-warning
+  return 0;
+}
+
+int escape_before_loop_no_unroll3() {
+  int a[9];
+  int k = 42;
+  int i;
+  foo(i);
+  for (i = 0; i < 9; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    a[i] = 42;
   }
   int b = 22 / (k - 42); // no-warning
   return 0;
