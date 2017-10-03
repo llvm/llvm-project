@@ -450,17 +450,17 @@ let Predicates = [Has16BitInsts] in {
 
 multiclass Ternary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
                              Instruction inst, SDPatternOperator op3> {
-def : Pat<
+def : GCNPat <
   (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
   (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
 >;
 
-def : Pat<
+def : GCNPat<
   (i32 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
   (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
 >;
 
-def : Pat<
+def : GCNPat<
   (i64 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
    (REG_SEQUENCE VReg_64,
      (inst i16:$src0, i16:$src1, i16:$src2, (i1 0)), sub0,
@@ -528,7 +528,7 @@ class getClampRes<VOPProfile P, Instruction inst> {
             ret1));
 }
 
-class IntClampPat<VOP3Inst inst, SDPatternOperator node> : Pat<
+class IntClampPat<VOP3Inst inst, SDPatternOperator node> : GCNPat<
   getClampPat<inst.Pfl, node>.ret,
   getClampRes<inst.Pfl, inst>.ret
 >;

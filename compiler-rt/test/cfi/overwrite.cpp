@@ -1,20 +1,20 @@
 // RUN: %clangxx_cfi -o %t1 %s
-// RUN: %expect_crash_unless_devirt %t1 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash_unless_devirt %run %t1 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi -DB32 -o %t2 %s
-// RUN: %expect_crash %t2 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t2 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi -DB64 -o %t3 %s
-// RUN: %expect_crash %t3 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t3 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi -DBM -o %t4 %s
-// RUN: %expect_crash %t4 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t4 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx -o %t5 %s
-// RUN: %t5 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // RUN: %clangxx_cfi_diag -o %t6 %s
-// RUN: %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+// RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI mechanism crashes the program when a virtual table is
 // replaced with a compatible table of function pointers that does not belong to

@@ -82,28 +82,29 @@ static int charTailAt(StringPair *P, size_t Pos) {
 
 // Three-way radix quicksort. This is much faster than std::sort with strcmp
 // because it does not compare characters that we already know the same.
-static void multikey_qsort(StringPair **Begin, StringPair **End, int Pos) {
+static void multikey_qsort(std::vector<StringPair *> &Vec, size_t Begin,
+                           size_t End, int Pos) {
 tailcall:
   if (End - Begin <= 1)
     return;
 
-  // Partition items. Items in [Begin, P) are greater than the pivot,
+  // Partition items so that items in [Begin, P) are greater than the pivot,
   // [P, Q) are the same as the pivot, and [Q, End) are less than the pivot.
-  int Pivot = charTailAt(*Begin, Pos);
-  StringPair **P = Begin;
-  StringPair **Q = End;
-  for (StringPair **R = Begin + 1; R < Q;) {
-    int C = charTailAt(*R, Pos);
+  int Pivot = charTailAt(Vec[Begin], Pos);
+  size_t P = Begin;
+  size_t Q = End;
+  for (size_t R = Begin + 1; R < Q;) {
+    int C = charTailAt(Vec[R], Pos);
     if (C > Pivot)
-      std::swap(*P++, *R++);
+      std::swap(Vec[P++], Vec[R++]);
     else if (C < Pivot)
-      std::swap(*--Q, *R);
+      std::swap(Vec[--Q], Vec[R]);
     else
       R++;
   }
 
-  multikey_qsort(Begin, P, Pos);
-  multikey_qsort(Q, End, Pos);
+  multikey_qsort(Vec, Begin, P, Pos);
+  multikey_qsort(Vec, Q, End, Pos);
   if (Pivot != -1) {
     // qsort(P, Q, Pos + 1), but with tail call optimization.
     Begin = P;
@@ -133,7 +134,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     if (!Strings.empty()) {
       // If we're optimizing, sort by name. If not, sort by previously assigned
       // offset.
-      multikey_qsort(&Strings[0], &Strings[0] + Strings.size(), 0);
+      multikey_qsort(Strings, 0, Strings.size(), 0);
     }
 
     initSize();

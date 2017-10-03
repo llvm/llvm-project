@@ -5,15 +5,15 @@
 
 	ADDs r1, r0, #0xFFFFFFF9
 # CHECK: subs r1, r0, #7
-# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: note: instruction requires: NegativeImmediates
 	ADDs r0, #0xFFFFFF01
 # CHECK: subs r0, #255
-# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: note: instruction requires: NegativeImmediates
 
 	SUBs r0, #0xFFFFFF01
 # CHECK: adds r0, #255
-# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: note: instruction requires: NegativeImmediates
 
 	SUBs r1, r0, #0xFFFFFFF9
 # CHECK: adds r1, r0, #7
-# CHECK-DISABLED: error: instruction requires: NegativeImmediates
+# CHECK-DISABLED: note: instruction requires: NegativeImmediates

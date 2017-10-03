@@ -27,9 +27,13 @@ class JSONOutput;
 /// dispatch and ClangdServer together.
 class ClangdLSPServer : private DiagnosticsConsumer, private ProtocolCallbacks {
 public:
+  /// If \p CompileCommandsDir has a value, compile_commands.json will be
+  /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
+  /// for compile_commands.json in all parent directories of each file.
   ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                   bool SnippetCompletions,
-                  llvm::Optional<StringRef> ResourceDir);
+                  llvm::Optional<StringRef> ResourceDir,
+                  llvm::Optional<Path> CompileCommandsDir);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to
@@ -67,6 +71,7 @@ private:
                         JSONOutput &Out) override;
   void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
                             JSONOutput &Out) override;
+  void onFileEvent(const DidChangeWatchedFilesParams &Params) override;
 
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);

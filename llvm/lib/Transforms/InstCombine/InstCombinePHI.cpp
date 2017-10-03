@@ -27,16 +27,17 @@ using namespace llvm::PatternMatch;
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
 /// locations of the original PHI node arguments.
-DebugLoc InstCombiner::PHIArgMergedDebugLoc(PHINode &PN) {
+void InstCombiner::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   auto *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
-  const DILocation *Loc = FirstInst->getDebugLoc();
+  Inst->setDebugLoc(FirstInst->getDebugLoc());
+  // We do not expect a CallInst here, otherwise, N-way merging of DebugLoc
+  // will be inefficient.
+  assert(!isa<CallInst>(Inst));
 
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     auto *I = cast<Instruction>(PN.getIncomingValue(i));
-    Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
+    Inst->applyMergedLocation(Inst->getDebugLoc(), I->getDebugLoc());
   }
-
-  return Loc;
 }
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
@@ -117,7 +118,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   if (CmpInst *CIOp = dyn_cast<CmpInst>(FirstInst)) {
     CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                      LHSVal, RHSVal);
-    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(NewCI, PN);
     return NewCI;
   }
 
@@ -130,7 +131,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
     NewBinOp->andIRFlags(PN.getIncomingValue(i));
 
-  NewBinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewBinOp, PN);
   return NewBinOp;
 }
 
@@ -239,7 +240,7 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
                                 makeArrayRef(FixedOperands).slice(1));
   if (AllInBounds) NewGEP->setIsInBounds();
-  NewGEP->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewGEP, PN);
   return NewGEP;
 }
 
@@ -399,7 +400,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
     for (Value *IncValue : PN.incoming_values())
       cast<LoadInst>(IncValue)->setVolatile(false);
 
-  NewLI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewLI, PN);
   return NewLI;
 }
 
@@ -565,7 +566,7 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   if (CastInst *FirstCI = dyn_cast<CastInst>(FirstInst)) {
     CastInst *NewCI = CastInst::Create(FirstCI->getOpcode(), PhiVal,
                                        PN.getType());
-    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(NewCI, PN);
     return NewCI;
   }
 
@@ -576,14 +577,14 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
       BinOp->andIRFlags(PN.getIncomingValue(i));
 
-    BinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
+    PHIArgMergedDebugLoc(BinOp, PN);
     return BinOp;
   }
 
   CmpInst *CIOp = cast<CmpInst>(FirstInst);
   CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                    PhiVal, ConstantOp);
-  NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
+  PHIArgMergedDebugLoc(NewCI, PN);
   return NewCI;
 }
 

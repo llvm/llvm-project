@@ -57,7 +57,7 @@ define void @any_extend_load_v8i16(<8 x i8> * %ptr) {
 ; KNL:       # BB#0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; KNL-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vmovq %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;

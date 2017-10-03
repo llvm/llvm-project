@@ -88,8 +88,7 @@ static bool TypeHasMayAlias(QualType QTy) {
   return false;
 }
 
-llvm::MDNode *
-CodeGenTBAA::getTBAAInfo(QualType QTy) {
+llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
   if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
     return nullptr;
@@ -120,15 +119,15 @@ CodeGenTBAA::getTBAAInfo(QualType QTy) {
 
     // Unsigned types can alias their corresponding signed types.
     case BuiltinType::UShort:
-      return getTBAAInfo(Context.ShortTy);
+      return getTypeInfo(Context.ShortTy);
     case BuiltinType::UInt:
-      return getTBAAInfo(Context.IntTy);
+      return getTypeInfo(Context.IntTy);
     case BuiltinType::ULong:
-      return getTBAAInfo(Context.LongTy);
+      return getTypeInfo(Context.LongTy);
     case BuiltinType::ULongLong:
-      return getTBAAInfo(Context.LongLongTy);
+      return getTypeInfo(Context.LongLongTy);
     case BuiltinType::UInt128:
-      return getTBAAInfo(Context.Int128Ty);
+      return getTypeInfo(Context.Int128Ty);
 
     // Treat all other builtin types as distinct types. This includes
     // treating wchar_t, char16_t, and char32_t as distinct from their
@@ -212,7 +211,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
   /* Otherwise, treat whatever it is as a field. */
   uint64_t Offset = BaseOffset;
   uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
-  llvm::MDNode *TBAAInfo = MayAlias ? getChar() : getTBAAInfo(QTy);
+  llvm::MDNode *TBAAInfo = MayAlias ? getChar() : getTypeInfo(QTy);
   llvm::MDNode *TBAATag = getTBAAScalarTagInfo(TBAAInfo);
   Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
   return true;
@@ -268,7 +267,7 @@ CodeGenTBAA::getTBAAStructTypeInfo(QualType QTy) {
       if (isTBAAPathStruct(FieldQTy))
         FieldNode = getTBAAStructTypeInfo(FieldQTy);
       else
-        FieldNode = getTBAAInfo(FieldQTy);
+        FieldNode = getTypeInfo(FieldQTy);
       if (!FieldNode)
         return StructTypeMetadataCache[Ty] = nullptr;
       Fields.push_back(std::make_pair(
@@ -291,30 +290,28 @@ CodeGenTBAA::getTBAAStructTypeInfo(QualType QTy) {
   return StructMetadataCache[Ty] = nullptr;
 }
 
-/// Return a TBAA tag node for both scalar TBAA and struct-path aware TBAA.
-llvm::MDNode *
-CodeGenTBAA::getTBAAStructTagInfo(QualType BaseQTy, llvm::MDNode *AccessNode,
-                                  uint64_t Offset) {
-  if (!AccessNode)
+llvm::MDNode *CodeGenTBAA::getTBAAStructTagInfo(TBAAAccessInfo Info) {
+  if (!Info.AccessType)
     return nullptr;
 
   if (!CodeGenOpts.StructPathTBAA)
-    return getTBAAScalarTagInfo(AccessNode);
+    return getTBAAScalarTagInfo(Info.AccessType);
 
-  const Type *BTy = Context.getCanonicalType(BaseQTy).getTypePtr();
-  TBAAPathTag PathTag = TBAAPathTag(BTy, AccessNode, Offset);
+  const Type *BTy = Context.getCanonicalType(Info.BaseType).getTypePtr();
+  TBAAPathTag PathTag = TBAAPathTag(BTy, Info.AccessType, Info.Offset);
   if (llvm::MDNode *N = StructTagMetadataCache[PathTag])
     return N;
 
   llvm::MDNode *BNode = nullptr;
-  if (isTBAAPathStruct(BaseQTy))
-    BNode  = getTBAAStructTypeInfo(BaseQTy);
+  if (isTBAAPathStruct(Info.BaseType))
+    BNode = getTBAAStructTypeInfo(Info.BaseType);
   if (!BNode)
     return StructTagMetadataCache[PathTag] =
-       MDHelper.createTBAAStructTagNode(AccessNode, AccessNode, 0);
+       MDHelper.createTBAAStructTagNode(Info.AccessType, Info.AccessType,
+                                        /* Offset= */ 0);
 
   return StructTagMetadataCache[PathTag] =
-    MDHelper.createTBAAStructTagNode(BNode, AccessNode, Offset);
+    MDHelper.createTBAAStructTagNode(BNode, Info.AccessType, Info.Offset);
 }
 
 llvm::MDNode *
@@ -326,4 +323,8 @@ CodeGenTBAA::getTBAAScalarTagInfo(llvm::MDNode *AccessNode) {
 
   return ScalarTagMetadataCache[AccessNode] =
     MDHelper.createTBAAStructTagNode(AccessNode, AccessNode, 0);
+}
+
+llvm::MDNode *CodeGenTBAA::getMayAliasTypeInfo() {
+  return getChar();
 }

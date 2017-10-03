@@ -28,7 +28,7 @@
 #ifndef LLD_ELF_ERROR_H
 #define LLD_ELF_ERROR_H
 
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 
 #include "llvm/Support/Error.h"
 

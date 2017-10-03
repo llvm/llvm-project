@@ -1,4 +1,4 @@
-//===- lib/Config/Version.cpp - LLD Version Number ---------------*- C++-=====//
+//===- lib/Common/Version.cpp - LLD Version Number ---------------*- C++-=====//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Config/Version.h"
+#include "lld/Common/Version.h"
 
 using namespace llvm;
 

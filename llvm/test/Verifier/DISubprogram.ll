@@ -1,4 +1,4 @@
-; RUN: not opt -S <%s 2>&1| FileCheck %s
+; RUN: llvm-as -disable-output <%s 2>&1| FileCheck %s
 
 define void @f() !dbg !14 {
   ret void
@@ -12,6 +12,7 @@ define void @f() !dbg !14 {
 !8 = distinct !DICompileUnit(language: DW_LANG_Swift, producer: "clang",
                              file: !2, emissionKind: 2)
 ; CHECK: invalid thrown type
+; CHECK: warning: ignoring invalid debug info
 !13 = !{!14}
 !14 = distinct !DISubprogram(name: "f", scope: !1,
                             file: !2, line: 1, type: !3, isLocal: true,

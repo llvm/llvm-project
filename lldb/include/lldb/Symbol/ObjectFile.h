@@ -352,6 +352,12 @@ public:
   virtual Symtab *GetSymtab() = 0;
 
   //------------------------------------------------------------------
+  /// Perform relocations on the section if necessary.
+  ///
+  //------------------------------------------------------------------
+  virtual void RelocateSection(lldb_private::Section *section);
+
+  //------------------------------------------------------------------
   /// Appends a Symbol for the specified so_addr to the symbol table.
   ///
   /// If verify_unique is false, the symbol table is not searched
@@ -792,15 +798,15 @@ public:
 
   size_t CopyData(lldb::offset_t offset, size_t length, void *dst) const;
 
-  virtual size_t ReadSectionData(const Section *section,
+  virtual size_t ReadSectionData(Section *section,
                                  lldb::offset_t section_offset, void *dst,
-                                 size_t dst_len) const;
+                                 size_t dst_len);
 
-  virtual size_t ReadSectionData(const Section *section,
-                                 DataExtractor &section_data) const;
+  virtual size_t ReadSectionData(Section *section,
+                                 DataExtractor &section_data);
 
-  size_t MemoryMapSectionData(const Section *section,
-                              DataExtractor &section_data) const;
+  size_t MemoryMapSectionData(Section *section,
+                              DataExtractor &section_data);
 
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 

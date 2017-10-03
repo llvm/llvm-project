@@ -1,9 +1,10 @@
-; RUN: not opt -S <%s 2>&1| FileCheck %s
+; RUN: llvm-as -disable-output <%s 2>&1| FileCheck %s
 
 ; CHECK: fragment is larger than or outside of variable
 ; CHECK: !DIGlobalVariableExpression(var: ![[VAR:[0-9]+]],
 ; CHECK-SAME:                        expr: !DIExpression(DW_OP_LLVM_fragment, 0, 64))
 ; CHECK: ![[VAR]] = !DIGlobalVariable(name: "g"
+; CHECK: warning: ignoring invalid debug info
 
 @g = common global i32 0, align 4, !dbg !0
 

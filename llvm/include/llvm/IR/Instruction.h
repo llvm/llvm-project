@@ -377,6 +377,21 @@ public:
   /// V and this instruction.
   void andIRFlags(const Value *V);
 
+  /// Merge 2 debug locations and apply it to the Instruction. If the
+  /// instruction is a CallIns, we need to traverse the inline chain to find
+  /// the common scope. This is not efficient for N-way merging as each time
+  /// you merge 2 iterations, you need to rebuild the hashmap to find the
+  /// common scope. However, we still choose this API because:
+  ///  1) Simplicity: it takes 2 locations instead of a list of locations.
+  ///  2) In worst case, it increases the complexity from O(N*I) to
+  ///     O(2*N*I), where N is # of Instructions to merge, and I is the
+  ///     maximum level of inline stack. So it is still linear.
+  ///  3) Merging of call instructions should be extremely rare in real
+  ///     applications, thus the N-way merging should be in code path.
+  /// The DebugLoc attached to this instruction will be overwritten by the
+  /// merged DebugLoc.
+  void applyMergedLocation(const DILocation *LocA, const DILocation *LocB);
+
 private:
   /// Return true if we have an entry in the on-the-side metadata hash.
   bool hasMetadataHashEntry() const {

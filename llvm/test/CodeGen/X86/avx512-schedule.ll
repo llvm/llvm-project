@@ -5973,20 +5973,16 @@ define <8 x i1> @vmov_test18(i8 %a, i16 %y) {
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    kshiftlw $7, %k1, %k2
 ; CHECK-NEXT:    kshiftrw $15, %k2, %k2
-; CHECK-NEXT:    kmovd %k2, %eax
 ; CHECK-NEXT:    kshiftlw $6, %k1, %k1
 ; CHECK-NEXT:    kshiftrw $15, %k1, %k1
-; CHECK-NEXT:    kmovd %k1, %ecx
 ; CHECK-NEXT:    vpmovm2q %k0, %zmm0
-; CHECK-NEXT:    kmovd %ecx, %k0
-; CHECK-NEXT:    vpmovm2q %k0, %zmm1
+; CHECK-NEXT:    vpmovm2q %k1, %zmm1
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,8,7] sched: [5:0.50]
 ; CHECK-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; CHECK-NEXT:    vpmovq2m %zmm2, %k0
 ; CHECK-NEXT:    kshiftlb $1, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $1, %k0, %k0
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlb $7, %k1, %k1
+; CHECK-NEXT:    kshiftlb $7, %k2, %k1
 ; CHECK-NEXT:    korb %k1, %k0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    vzeroupper # sched: [4:1.00]

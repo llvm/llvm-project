@@ -186,7 +186,7 @@ inline __device__ unsigned int __ballot_sync(unsigned int mask, int pred) {
   return __nvvm_vote_ballot_sync(mask, pred);
 }
 
-inline __device__ unsigned int activemask() { return __nvvm_vote_ballot(1); }
+inline __device__ unsigned int __activemask() { return __nvvm_vote_ballot(1); }
 
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
 

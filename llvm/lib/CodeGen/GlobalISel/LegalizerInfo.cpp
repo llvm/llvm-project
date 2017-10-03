@@ -48,6 +48,7 @@ LegalizerInfo::LegalizerInfo() {
   DefaultActions[TargetOpcode::G_ADD] = NarrowScalar;
   DefaultActions[TargetOpcode::G_LOAD] = NarrowScalar;
   DefaultActions[TargetOpcode::G_STORE] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_OR] = NarrowScalar;
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
   DefaultActions[TargetOpcode::G_INSERT] = NarrowScalar;

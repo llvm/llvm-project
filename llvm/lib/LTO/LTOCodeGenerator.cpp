@@ -83,16 +83,6 @@ cl::opt<bool> LTODiscardValueNames(
 #endif
     cl::Hidden);
 
-cl::opt<bool> LTOStripInvalidDebugInfo(
-    "lto-strip-invalid-debug-info",
-    cl::desc("Strip invalid debug info metadata during LTO instead of aborting."),
-#ifdef NDEBUG
-    cl::init(true),
-#else
-    cl::init(false),
-#endif
-    cl::Hidden);
-
 cl::opt<std::string>
     LTORemarksFilename("lto-pass-remarks-output",
                        cl::desc("Output filename for pass remarks"),
@@ -495,8 +485,7 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
   HasVerifiedInput = true;
 
   bool BrokenDebugInfo = false;
-  if (verifyModule(*MergedModule, &dbgs(),
-                   LTOStripInvalidDebugInfo ? &BrokenDebugInfo : nullptr))
+  if (verifyModule(*MergedModule, &dbgs(), &BrokenDebugInfo))
     report_fatal_error("Broken module found, compilation aborted!");
   if (BrokenDebugInfo) {
     emitWarning("Invalid debug info found, debug info will be stripped");

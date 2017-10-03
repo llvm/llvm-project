@@ -1317,24 +1317,26 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
     case '2':
     case 'x':
     case 'd':
-      if (&OptChar == ExpandChar) {
-        if (OptChar == 'd') {
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_O0));
-        } else {
-          if (OptChar == '1') {
-            DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
-          } else if (OptChar == '2' || OptChar == 'x') {
-            DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-            DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
-          }
-          if (SupportsForcingFramePointer &&
-              !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
-            DAL.AddFlagArg(A,
-                           Opts.getOption(options::OPT_fomit_frame_pointer));
-          if (OptChar == '1' || OptChar == '2')
-            DAL.AddFlagArg(A,
-                           Opts.getOption(options::OPT_ffunction_sections));
+      // Ignore /O[12xd] flags that aren't the last one on the command line.
+      // Only the last one gets expanded.
+      if (&OptChar != ExpandChar) {
+        A->claim();
+        break;
+      }
+      if (OptChar == 'd') {
+        DAL.AddFlagArg(A, Opts.getOption(options::OPT_O0));
+      } else {
+        if (OptChar == '1') {
+          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
+        } else if (OptChar == '2' || OptChar == 'x') {
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
+          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
         }
+        if (SupportsForcingFramePointer &&
+            !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fomit_frame_pointer));
+        if (OptChar == '1' || OptChar == '2')
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_ffunction_sections));
       }
       break;
     case 'b':
@@ -1430,9 +1432,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   // First step is to search for the character we'd like to expand.
   const char *ExpandChar = nullptr;
-  for (Arg *A : Args) {
-    if (!A->getOption().matches(options::OPT__SLASH_O))
-      continue;
+  for (Arg *A : Args.filtered(options::OPT__SLASH_O)) {
     StringRef OptStr = A->getValue();
     for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
       char OptChar = OptStr[I];

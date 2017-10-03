@@ -70,12 +70,21 @@ SparcTargetInfo::CPUKind SparcTargetInfo::getCPUKind(StringRef Name) const {
       .Case("niagara4", CK_NIAGARA4)
       .Case("ma2100", CK_MYRIAD2100)
       .Case("ma2150", CK_MYRIAD2150)
+      .Case("ma2155", CK_MYRIAD2155)
       .Case("ma2450", CK_MYRIAD2450)
+      .Case("ma2455", CK_MYRIAD2455)
+      .Case("ma2x5x", CK_MYRIAD2x5x)
+      .Case("ma2080", CK_MYRIAD2080)
+      .Case("ma2085", CK_MYRIAD2085)
+      .Case("ma2480", CK_MYRIAD2480)
+      .Case("ma2485", CK_MYRIAD2485)
+      .Case("ma2x8x", CK_MYRIAD2x8x)
       // FIXME: the myriad2[.n] spellings are obsolete,
       // but a grace period is needed to allow updating dependent builds.
-      .Case("myriad2", CK_MYRIAD2100)
+      .Case("myriad2", CK_MYRIAD2x5x)
       .Case("myriad2.1", CK_MYRIAD2100)
-      .Case("myriad2.2", CK_MYRIAD2150)
+      .Case("myriad2.2", CK_MYRIAD2x5x)
+      .Case("myriad2.3", CK_MYRIAD2x8x)
       .Case("leon2", CK_LEON2)
       .Case("at697e", CK_LEON2_AT697E)
       .Case("at697f", CK_LEON2_AT697F)
@@ -118,21 +127,57 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__sparc_v8__");
     Builder.defineMacro("__leon__");
     switch (CPU) {
+    case CK_MYRIAD2100:
+      MyriadArchValue = "__ma2100";
+      Myriad2Value = "1";
+      break;
     case CK_MYRIAD2150:
       MyriadArchValue = "__ma2150";
+      Myriad2Value = "2";
+      break;
+    case CK_MYRIAD2155:
+      MyriadArchValue = "__ma2155";
       Myriad2Value = "2";
       break;
     case CK_MYRIAD2450:
       MyriadArchValue = "__ma2450";
       Myriad2Value = "2";
       break;
+    case CK_MYRIAD2455:
+      MyriadArchValue = "__ma2455";
+      Myriad2Value = "2";
+      break;
+    case CK_MYRIAD2x5x:
+      Myriad2Value = "2";
+      break;
+    case CK_MYRIAD2080:
+      MyriadArchValue = "__ma2080";
+      Myriad2Value = "3";
+      break;
+    case CK_MYRIAD2085:
+      MyriadArchValue = "__ma2085";
+      Myriad2Value = "3";
+      break;
+    case CK_MYRIAD2480:
+      MyriadArchValue = "__ma2480";
+      Myriad2Value = "3";
+      break;
+    case CK_MYRIAD2485:
+      MyriadArchValue = "__ma2485";
+      Myriad2Value = "3";
+      break;
+    case CK_MYRIAD2x8x:
+      Myriad2Value = "3";
+      break;
     default:
       MyriadArchValue = "__ma2100";
       Myriad2Value = "1";
       break;
     }
-    Builder.defineMacro(MyriadArchValue, "1");
-    Builder.defineMacro(MyriadArchValue + "__", "1");
+    if (!MyriadArchValue.empty()) {
+      Builder.defineMacro(MyriadArchValue, "1");
+      Builder.defineMacro(MyriadArchValue + "__", "1");
+    }
     Builder.defineMacro("__myriad2__", Myriad2Value);
     Builder.defineMacro("__myriad2", Myriad2Value);
   }

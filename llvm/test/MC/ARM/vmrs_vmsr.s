@@ -112,8 +112,8 @@
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: FPARMv8
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: invalid operand for instruction
+// ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: invalid instruction
 
         vmsr  fpscr, APSR_nzcv
         vmsr  fpscr, r0
@@ -171,10 +171,10 @@
 // ERROR-V8M: invalid operand for instruction
 // ERROR-V8M: invalid operand for instruction
 
-// ERROR-NOVFP: invalid operand for instruction
+// ERROR-NOVFP: invalid instruction
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
 // ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: instruction requires: VFP2
-// ERROR-NOVFP: invalid operand for instruction
+// ERROR-NOVFP: invalid instruction
+// ERROR-NOVFP: invalid instruction

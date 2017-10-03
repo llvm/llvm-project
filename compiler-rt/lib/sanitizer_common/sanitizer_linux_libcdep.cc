@@ -474,7 +474,7 @@ static bool requiresProcmaps() {
 }
 
 static void procmapsInit(InternalMmapVectorNoCtor<LoadedModule> *modules) {
-  MemoryMappingLayout memory_mapping(false);
+  MemoryMappingLayout memory_mapping(/*cache_enabled*/true);
   memory_mapping.DumpListOfModules(modules);
 }
 
@@ -485,6 +485,17 @@ void ListOfModules::init() {
   } else {
     DlIteratePhdrData data = {&modules_, true};
     dl_iterate_phdr(dl_iterate_phdr_cb, &data);
+  }
+}
+
+// When a custom loader is used, dl_iterate_phdr may not contain the full
+// list of modules. Allow callers to fall back to using procmaps.
+void ListOfModules::fallbackInit() {
+  if (!requiresProcmaps()) {
+    clearOrInit();
+    procmapsInit(&modules_);
+  } else {
+    clear();
   }
 }
 

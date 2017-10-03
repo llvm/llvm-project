@@ -13,7 +13,7 @@
 #include "Config.h"
 #include "Strings.h"
 #include "Writer.h"
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"

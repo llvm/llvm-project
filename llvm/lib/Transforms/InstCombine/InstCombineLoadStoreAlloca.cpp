@@ -1544,8 +1544,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
                                    SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   // The debug locations of the original instructions might differ; merge them.
-  NewSI->setDebugLoc(DILocation::getMergedLocation(SI.getDebugLoc(),
-                                                   OtherStore->getDebugLoc()));
+  NewSI->applyMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
 
   // If the two stores had AA tags, merge them.
   AAMDNodes AATags;

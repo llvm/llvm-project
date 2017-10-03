@@ -139,11 +139,16 @@ namespace llvm {
     std::map<Value*, std::vector<unsigned> > ForwardRefAttrGroups;
     std::map<unsigned, AttrBuilder> NumberedAttrBuilders;
 
+    /// Only the llvm-as tool may set this to false to bypass
+    /// UpgradeDebuginfo so it can generate broken bitcode.
+    bool UpgradeDebugInfo;
+
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
-             SlotMapping *Slots = nullptr)
+             SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true)
         : Context(M->getContext()), Lex(F, SM, Err, M->getContext()), M(M),
-          Slots(Slots), BlockAddressPFS(nullptr) {}
+          Slots(Slots), BlockAddressPFS(nullptr),
+          UpgradeDebugInfo(UpgradeDebugInfo) {}
     bool Run();
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);

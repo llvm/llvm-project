@@ -31,7 +31,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
 
   Macro = MI;
   ActualArgs = Actuals;
-  CurToken = 0;
+  CurTokenIdx = 0;
 
   ExpandLocStart = Tok.getLocation();
   ExpandLocEnd = ELEnd;
@@ -90,7 +90,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   OwnsTokens = ownsTokens;
   DisableMacroExpansion = disableMacroExpansion;
   NumTokens = NumToks;
-  CurToken = 0;
+  CurTokenIdx = 0;
   ExpandLocStart = ExpandLocEnd = SourceLocation();
   AtStartOfLine = false;
   HasLeadingSpace = false;
@@ -431,7 +431,7 @@ bool TokenLexer::Lex(Token &Tok) {
     Tok.startToken();
     Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
-    if (CurToken == 0)
+    if (CurTokenIdx == 0)
       Tok.setFlag(Token::LeadingEmptyMacro);
     return PP.HandleEndOfTokenLexer(Tok);
   }
@@ -440,25 +440,25 @@ bool TokenLexer::Lex(Token &Tok) {
 
   // If this is the first token of the expanded result, we inherit spacing
   // properties later.
-  bool isFirstToken = CurToken == 0;
+  bool isFirstToken = CurTokenIdx == 0;
 
   // Get the next token to return.
-  Tok = Tokens[CurToken++];
+  Tok = Tokens[CurTokenIdx++];
 
   bool TokenIsFromPaste = false;
 
   // If this token is followed by a token paste (##) operator, paste the tokens!
   // Note that ## is a normal token when not expanding a macro.
   if (!isAtEnd() && Macro &&
-      (Tokens[CurToken].is(tok::hashhash) ||
+      (Tokens[CurTokenIdx].is(tok::hashhash) ||
        // Special processing of L#x macros in -fms-compatibility mode.
        // Microsoft compiler is able to form a wide string literal from
        // 'L#macro_arg' construct in a function-like macro.
        (PP.getLangOpts().MSVCCompat &&
-        isWideStringLiteralFromMacro(Tok, Tokens[CurToken])))) {
+        isWideStringLiteralFromMacro(Tok, Tokens[CurTokenIdx])))) {
     // When handling the microsoft /##/ extension, the final token is
-    // returned by PasteTokens, not the pasted token.
-    if (PasteTokens(Tok))
+    // returned by pasteTokens, not the pasted token.
+    if (pasteTokens(Tok))
       return true;
 
     TokenIsFromPaste = true;
@@ -521,40 +521,56 @@ bool TokenLexer::Lex(Token &Tok) {
   return true;
 }
 
-/// PasteTokens - Tok is the LHS of a ## operator, and CurToken is the ##
+bool TokenLexer::pasteTokens(Token &Tok) {
+  return pasteTokens(Tok, llvm::makeArrayRef(Tokens, NumTokens), CurTokenIdx);
+}
+/// LHSTok is the LHS of a ## operator, and CurTokenIdx is the ##
 /// operator.  Read the ## and RHS, and paste the LHS/RHS together.  If there
-/// are more ## after it, chomp them iteratively.  Return the result as Tok.
+/// are more ## after it, chomp them iteratively.  Return the result as LHSTok.
 /// If this returns true, the caller should immediately return the token.
-bool TokenLexer::PasteTokens(Token &Tok) {
+bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
+                             unsigned int &CurIdx) {
+  assert(CurIdx > 0 && "## can not be the first token within tokens");
+  assert((TokenStream[CurIdx].is(tok::hashhash) ||
+         (PP.getLangOpts().MSVCCompat &&
+          isWideStringLiteralFromMacro(LHSTok, TokenStream[CurIdx]))) &&
+             "Token at this Index must be ## or part of the MSVC 'L "
+             "#macro-arg' pasting pair");
+
   // MSVC: If previous token was pasted, this must be a recovery from an invalid
   // paste operation. Ignore spaces before this token to mimic MSVC output.
   // Required for generating valid UUID strings in some MS headers.
-  if (PP.getLangOpts().MicrosoftExt && (CurToken >= 2) &&
-      Tokens[CurToken - 2].is(tok::hashhash))
-    Tok.clearFlag(Token::LeadingSpace);
+  if (PP.getLangOpts().MicrosoftExt && (CurIdx >= 2) &&
+      TokenStream[CurIdx - 2].is(tok::hashhash))
+    LHSTok.clearFlag(Token::LeadingSpace);
   
   SmallString<128> Buffer;
   const char *ResultTokStrPtr = nullptr;
-  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation StartLoc = LHSTok.getLocation();
   SourceLocation PasteOpLoc;
+
+  auto IsAtEnd = [&TokenStream, &CurIdx] {
+    return TokenStream.size() == CurIdx;
+  };
+
   do {
     // Consume the ## operator if any.
-    PasteOpLoc = Tokens[CurToken].getLocation();
-    if (Tokens[CurToken].is(tok::hashhash))
-      ++CurToken;
-    assert(!isAtEnd() && "No token on the RHS of a paste operator!");
+    PasteOpLoc = TokenStream[CurIdx].getLocation();
+    if (TokenStream[CurIdx].is(tok::hashhash))
+      ++CurIdx;
+    assert(!IsAtEnd() && "No token on the RHS of a paste operator!");
 
     // Get the RHS token.
-    const Token &RHS = Tokens[CurToken];
+    const Token &RHS = TokenStream[CurIdx];
 
     // Allocate space for the result token.  This is guaranteed to be enough for
     // the two tokens.
-    Buffer.resize(Tok.getLength() + RHS.getLength());
+    Buffer.resize(LHSTok.getLength() + RHS.getLength());
 
     // Get the spelling of the LHS token in Buffer.
     const char *BufPtr = &Buffer[0];
     bool Invalid = false;
-    unsigned LHSLen = PP.getSpelling(Tok, BufPtr, &Invalid);
+    unsigned LHSLen = PP.getSpelling(LHSTok, BufPtr, &Invalid);
     if (BufPtr != &Buffer[0])   // Really, we want the chars in Buffer!
       memcpy(&Buffer[0], BufPtr, LHSLen);
     if (Invalid)
@@ -586,7 +602,7 @@ bool TokenLexer::PasteTokens(Token &Tok) {
     // Lex the resultant pasted token into Result.
     Token Result;
 
-    if (Tok.isAnyIdentifier() && RHS.isAnyIdentifier()) {
+    if (LHSTok.isAnyIdentifier() && RHS.isAnyIdentifier()) {
       // Common paste case: identifier+identifier = identifier.  Avoid creating
       // a lexer and other overhead.
       PP.IncrementPasteCounter(true);
@@ -626,7 +642,7 @@ bool TokenLexer::PasteTokens(Token &Tok) {
       isInvalid |= Result.is(tok::eof);
 
       // If pasting the two tokens didn't form a full new token, this is an
-      // error.  This occurs with "x ## +"  and other stuff.  Return with Tok
+      // error.  This occurs with "x ## +"  and other stuff.  Return with LHSTok
       // unmodified and with RHS as the next token to lex.
       if (isInvalid) {
         // Explicitly convert the token location to have proper expansion
@@ -637,9 +653,9 @@ bool TokenLexer::PasteTokens(Token &Tok) {
 
         // Test for the Microsoft extension of /##/ turning into // here on the
         // error path.
-        if (PP.getLangOpts().MicrosoftExt && Tok.is(tok::slash) &&
+        if (PP.getLangOpts().MicrosoftExt && LHSTok.is(tok::slash) &&
             RHS.is(tok::slash)) {
-          HandleMicrosoftCommentPaste(Tok, Loc);
+          HandleMicrosoftCommentPaste(LHSTok, Loc);
           return true;
         }
 
@@ -664,15 +680,15 @@ bool TokenLexer::PasteTokens(Token &Tok) {
     }
 
     // Transfer properties of the LHS over the Result.
-    Result.setFlagValue(Token::StartOfLine , Tok.isAtStartOfLine());
-    Result.setFlagValue(Token::LeadingSpace, Tok.hasLeadingSpace());
+    Result.setFlagValue(Token::StartOfLine , LHSTok.isAtStartOfLine());
+    Result.setFlagValue(Token::LeadingSpace, LHSTok.hasLeadingSpace());
     
     // Finally, replace LHS with the result, consume the RHS, and iterate.
-    ++CurToken;
-    Tok = Result;
-  } while (!isAtEnd() && Tokens[CurToken].is(tok::hashhash));
+    ++CurIdx;
+    LHSTok = Result;
+  } while (!IsAtEnd() && TokenStream[CurIdx].is(tok::hashhash));
 
-  SourceLocation EndLoc = Tokens[CurToken - 1].getLocation();
+  SourceLocation EndLoc = TokenStream[CurIdx - 1].getLocation();
 
   // The token's current location indicate where the token was lexed from.  We
   // need this information to compute the spelling of the token, but any
@@ -690,16 +706,16 @@ bool TokenLexer::PasteTokens(Token &Tok) {
   while (SM.getFileID(EndLoc) != MacroFID)
     EndLoc = SM.getImmediateExpansionRange(EndLoc).second;
     
-  Tok.setLocation(SM.createExpansionLoc(Tok.getLocation(), StartLoc, EndLoc,
-                                        Tok.getLength()));
+  LHSTok.setLocation(SM.createExpansionLoc(LHSTok.getLocation(), StartLoc, EndLoc,
+                                        LHSTok.getLength()));
 
   // Now that we got the result token, it will be subject to expansion.  Since
   // token pasting re-lexes the result token in raw mode, identifier information
   // isn't looked up.  As such, if the result is an identifier, look up id info.
-  if (Tok.is(tok::raw_identifier)) {
+  if (LHSTok.is(tok::raw_identifier)) {
     // Look up the identifier info for the token.  We disabled identifier lookup
     // by saying we're skipping contents, so we need to do this manually.
-    PP.LookUpIdentifierInfo(Tok);
+    PP.LookUpIdentifierInfo(LHSTok);
   }
   return false;
 }
@@ -711,7 +727,7 @@ unsigned TokenLexer::isNextTokenLParen() const {
   // Out of tokens?
   if (isAtEnd())
     return 2;
-  return Tokens[CurToken].is(tok::l_paren);
+  return Tokens[CurTokenIdx].is(tok::l_paren);
 }
 
 /// isParsingPreprocessorDirective - Return true if we are in the middle of a

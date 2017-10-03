@@ -20,6 +20,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Type.h"
 #include "Address.h"
+#include "CodeGenTBAA.h"
 
 namespace llvm {
   class Constant;
@@ -220,6 +221,7 @@ class LValue {
   bool ImpreciseLifetime : 1;
 
   LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
 
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
@@ -227,18 +229,10 @@ class LValue {
 
   Expr *BaseIvarExp;
 
-  /// Used by struct-path-aware TBAA.
-  QualType TBAABaseType;
-  /// Offset relative to the base type.
-  uint64_t TBAAOffset;
-
-  /// TBAAInfo - TBAA information to attach to dereferences of this LValue.
-  llvm::MDNode *TBAAInfo;
-
 private:
   void Initialize(QualType Type, Qualifiers Quals,
                   CharUnits Alignment, LValueBaseInfo BaseInfo,
-                  llvm::MDNode *TBAAInfo = nullptr) {
+                  llvm::MDNode *TBAAAccessType = nullptr) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->Type = Type;
@@ -247,6 +241,7 @@ private:
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;
+    this->TBAAInfo = TBAAAccessInfo(Type, TBAAAccessType, /* Offset= */ 0);
 
     // Initialize Objective-C flags.
     this->Ivar = this->ObjIsArray = this->NonGC = this->GlobalObjCRef = false;
@@ -254,11 +249,6 @@ private:
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
     this->BaseIvarExp = nullptr;
-
-    // Initialize fields for TBAA.
-    this->TBAABaseType = Type;
-    this->TBAAOffset = 0;
-    this->TBAAInfo = TBAAInfo;
   }
 
 public:
@@ -318,14 +308,11 @@ public:
   Expr *getBaseIvarExp() const { return BaseIvarExp; }
   void setBaseIvarExp(Expr *V) { BaseIvarExp = V; }
 
-  QualType getTBAABaseType() const { return TBAABaseType; }
-  void setTBAABaseType(QualType T) { TBAABaseType = T; }
+  TBAAAccessInfo getTBAAInfo() const { return TBAAInfo; }
+  void setTBAAInfo(TBAAAccessInfo Info) { TBAAInfo = Info; }
 
-  uint64_t getTBAAOffset() const { return TBAAOffset; }
-  void setTBAAOffset(uint64_t O) { TBAAOffset = O; }
-
-  llvm::MDNode *getTBAAInfo() const { return TBAAInfo; }
-  void setTBAAInfo(llvm::MDNode *N) { TBAAInfo = N; }
+  llvm::MDNode *getTBAAAccessType() const { return TBAAInfo.AccessType; }
+  void setTBAAAccessType(llvm::MDNode *N) { TBAAInfo.AccessType = N; }
 
   const Qualifiers &getQuals() const { return Quals; }
   Qualifiers &getQuals() { return Quals; }
@@ -386,7 +373,7 @@ public:
   static LValue MakeAddr(Address address, QualType type,
                          ASTContext &Context,
                          LValueBaseInfo BaseInfo,
-                         llvm::MDNode *TBAAInfo = nullptr) {
+                         llvm::MDNode *TBAAAccessType = nullptr) {
     Qualifiers qs = type.getQualifiers();
     qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
 
@@ -394,7 +381,7 @@ public:
     R.LVType = Simple;
     assert(address.getPointer()->getType()->isPointerTy());
     R.V = address.getPointer();
-    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
+    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAAccessType);
     return R;
   }
 

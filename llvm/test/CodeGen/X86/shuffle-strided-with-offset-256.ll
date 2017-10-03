@@ -88,7 +88,8 @@ define void @shuffle_v16i16_to_v8i16_1(<16 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX2-LABEL: shuffle_v16i16_to_v8i16_1:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[2,3,6,7,10,11,14,15,10,11,14,15,14,15],zero,zero,ymm0[18,19,22,23,26,27,30,31,26,27,30,31,30,31],zero,zero
+; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
+; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper

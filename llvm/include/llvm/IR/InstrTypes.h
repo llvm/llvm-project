@@ -789,6 +789,14 @@ public:
     Type *IntPtrTy ///< Integer type corresponding to Ptr types
   );
 
+  /// @brief Determine if the described cast is a no-op cast.
+  static bool isNoopCast(
+    Instruction::CastOps Opcode, ///< Opcode of cast
+    Type *SrcTy,         ///< SrcTy of cast
+    Type *DstTy,         ///< DstTy of cast
+    const DataLayout &DL ///< DataLayout to get the Int Ptr type from.
+  );
+
   /// @brief Determine if this cast is a no-op cast.
   bool isNoopCast(
     Type *IntPtrTy ///< Integer type corresponding to pointer

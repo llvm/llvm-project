@@ -1328,7 +1328,9 @@ const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
-void
-TargetLoweringObjectFileWasm::InitializeWasm() {
-  // TODO: Initialize StaticCtorSection and StaticDtorSection.
+void TargetLoweringObjectFileWasm::InitializeWasm() {
+  StaticCtorSection =
+      getContext().getWasmSection(".init_array", wasm::WASM_SEC_DATA);
+  StaticDtorSection =
+      getContext().getWasmSection(".fini_array", wasm::WASM_SEC_DATA);
 }

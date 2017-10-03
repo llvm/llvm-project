@@ -447,6 +447,84 @@ DidChangeTextDocumentParams::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
+llvm::Optional<FileEvent> FileEvent::parse(llvm::yaml::MappingNode *Params,
+                                           clangd::Logger &Logger) {
+  llvm::Optional<FileEvent> Result = FileEvent();
+  for (auto &NextKeyValue : *Params) {
+    // We have to consume the whole MappingNode because it doesn't support
+    // skipping and we want to be able to parse further valid events.
+    if (!Result)
+      continue;
+
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString) {
+      Result.reset();
+      continue;
+    }
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+    if (!Value) {
+      Result.reset();
+      continue;
+    }
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "uri") {
+      Result->uri = URI::parse(Value);
+    } else if (KeyValue == "type") {
+      long long Val;
+      if (llvm::getAsSignedInteger(Value->getValue(Storage), 0, Val)) {
+        Result.reset();
+        continue;
+      }
+      Result->type = static_cast<FileChangeType>(Val);
+      if (Result->type < FileChangeType::Created ||
+          Result->type > FileChangeType::Deleted)
+        Result.reset();
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  return Result;
+}
+
+llvm::Optional<DidChangeWatchedFilesParams>
+DidChangeWatchedFilesParams::parse(llvm::yaml::MappingNode *Params,
+                                   clangd::Logger &Logger) {
+  DidChangeWatchedFilesParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value = NextKeyValue.getValue();
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "changes") {
+      auto *Seq = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Seq)
+        return llvm::None;
+      for (auto &Item : *Seq) {
+        auto *I = dyn_cast<llvm::yaml::MappingNode>(&Item);
+        if (!I)
+          return llvm::None;
+        auto Parsed = FileEvent::parse(I, Logger);
+        if (Parsed)
+          Result.changes.push_back(std::move(*Parsed));
+        else
+          Logger.log("Failed to decode a FileEvent.\n");
+      }
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<TextDocumentContentChangeEvent>
 TextDocumentContentChangeEvent::parse(llvm::yaml::MappingNode *Params,
                                       clangd::Logger &Logger) {

@@ -40,8 +40,8 @@
 #include "Target.h"
 #include "Threads.h"
 #include "Writer.h"
-#include "lld/Config/Version.h"
-#include "lld/Driver/Driver.h"
+#include "lld/Common/Driver.h"
+#include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -1034,8 +1034,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a
   // few linker-synthesized ones will be added to the symbol table.
-  if (Symtab->find(Config->Entry))
-    Symtab->addUndefined<ELFT>(Config->Entry);
+  Symtab->fetchIfLazy<ELFT>(Config->Entry);
 
   // Return if there were name resolution errors.
   if (ErrorCount)
@@ -1079,6 +1078,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (BinaryFile *F : BinaryFiles)
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
+
+  if (Config->EMachine == EM_MIPS)
+    Config->MipsEFlags = calcMipsEFlags<ELFT>();
 
   // This adds a .comment section containing a version string. We have to add it
   // before decompressAndMergeSections because the .comment section is a

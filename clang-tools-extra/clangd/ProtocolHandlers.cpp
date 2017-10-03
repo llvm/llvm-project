@@ -226,6 +226,25 @@ private:
   ProtocolCallbacks &Callbacks;
 };
 
+struct WorkspaceDidChangeWatchedFilesHandler : Handler {
+  WorkspaceDidChangeWatchedFilesHandler(JSONOutput &Output,
+                                        ProtocolCallbacks &Callbacks)
+      : Handler(Output), Callbacks(Callbacks) {}
+
+  void handleNotification(llvm::yaml::MappingNode *Params) {
+    auto DCWFP = DidChangeWatchedFilesParams::parse(Params, Output);
+    if (!DCWFP) {
+      Output.log("Failed to decode DidChangeWatchedFilesParams.\n");
+      return;
+    }
+
+    Callbacks.onFileEvent(*DCWFP);
+  }
+
+private:
+  ProtocolCallbacks &Callbacks;
+};
+
 } // namespace
 
 void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
@@ -264,5 +283,8 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
       llvm::make_unique<GotoDefinitionHandler>(Out, Callbacks));
   Dispatcher.registerHandler(
       "textDocument/switchSourceHeader",
-      llvm::make_unique<SwitchSourceHeaderHandler>(Out, Callbacks));    
+      llvm::make_unique<SwitchSourceHeaderHandler>(Out, Callbacks));
+  Dispatcher.registerHandler(
+      "workspace/didChangeWatchedFiles",
+      llvm::make_unique<WorkspaceDidChangeWatchedFilesHandler>(Out, Callbacks));
 }

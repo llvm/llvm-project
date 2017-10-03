@@ -1,0 +1,61 @@
+# RUN: clangd -run-synchronously < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test initialize request parameters with rootUri
+Content-Length: 143
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
+# CHECK: Content-Length: 466
+# CHECK: {"jsonrpc":"2.0","id":0,"result":{"capabilities":{
+# CHECK:   "textDocumentSync": 1,
+# CHECK:   "documentFormattingProvider": true,
+# CHECK:   "documentRangeFormattingProvider": true,
+# CHECK:   "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
+# CHECK:   "codeActionProvider": true,
+# CHECK:   "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+# CHECK:   "definitionProvider": true
+# CHECK: }}}
+#
+#Normal case
+Content-Length: 217
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file.cpp","type":1},{"uri":"file:///path/to/file2.cpp","type":2},{"uri":"file:///path/to/file3.cpp","type":3}]}}
+
+# Wrong event type, integer
+Content-Length: 173
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file2.cpp","type":0},{"uri":"file:///path/to/file3.cpp","type":4}]}}
+# STDERR: Failed to decode a FileEvent.
+# Wrong event type, string
+Content-Length: 132
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file2.cpp","type":"foo"}]}}
+# STDERR: Failed to decode a FileEvent.
+#Custom event field
+Content-Length: 143
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file2.cpp","type":1,"custom":"foo"}]}}
+# STDERR: Failed to decode a FileEvent.
+#Event field with object
+Content-Length: 140
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file2.cpp","type":{"foo":"bar"}}]}}
+# STDERR: Failed to decode a FileEvent.
+# Changes field with sequence but no object
+Content-Length: 86
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[""]}}
+# STDERR: Failed to decode DidChangeWatchedFilesParams.
+# Changes field with no sequence
+Content-Length: 84
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":""}}
+# STDERR: Failed to decode DidChangeWatchedFilesParams.
+# Custom field
+Content-Length: 86
+
+{"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"custom":"foo"}}
+# STDERR: Ignored unknown field "custom"
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}

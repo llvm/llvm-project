@@ -23,7 +23,6 @@
 #include "CGOpenMPRuntimeNVPTX.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
-#include "CodeGenTBAA.h"
 #include "ConstantEmitter.h"
 #include "CoverageMappingGen.h"
 #include "TargetInfo.h"
@@ -573,10 +572,10 @@ void CodeGenModule::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
   Types.RefreshTypeCacheForClass(RD);
 }
 
-llvm::MDNode *CodeGenModule::getTBAAInfo(QualType QTy) {
+llvm::MDNode *CodeGenModule::getTBAATypeInfo(QualType QTy) {
   if (!TBAA)
     return nullptr;
-  return TBAA->getTBAAInfo(QTy);
+  return TBAA->getTypeInfo(QTy);
 }
 
 llvm::MDNode *CodeGenModule::getTBAAInfoForVTablePtr() {
@@ -591,12 +590,16 @@ llvm::MDNode *CodeGenModule::getTBAAStructInfo(QualType QTy) {
   return TBAA->getTBAAStructInfo(QTy);
 }
 
-llvm::MDNode *CodeGenModule::getTBAAStructTagInfo(QualType BaseTy,
-                                                  llvm::MDNode *AccessN,
-                                                  uint64_t O) {
+llvm::MDNode *CodeGenModule::getTBAAStructTagInfo(TBAAAccessInfo Info) {
   if (!TBAA)
     return nullptr;
-  return TBAA->getTBAAStructTagInfo(BaseTy, AccessN, O);
+  return TBAA->getTBAAStructTagInfo(Info);
+}
+
+llvm::MDNode *CodeGenModule::getTBAAMayAliasTypeInfo() {
+  if (!TBAA)
+    return nullptr;
+  return TBAA->getMayAliasTypeInfo();
 }
 
 /// Decorate the instruction with a TBAA tag. For both scalar TBAA

@@ -11,9 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+def isR600 : Predicate<"Subtarget->getGeneration() <= R600Subtarget::R700">;
+
+def isR600toCayman : Predicate<
+    "Subtarget->getGeneration() <= R600Subtarget::NORTHERN_ISLANDS">;
+
+class R600Pat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
+  let SubtargetPredicate = isR600toCayman;
+}
+
 class InstR600 <dag outs, dag ins, string asm, list<dag> pattern,
-                InstrItinClass itin>
-    : AMDGPUInst <outs, ins, asm, pattern> {
+                InstrItinClass itin = NoItinerary>
+    : AMDGPUInst <outs, ins, asm, pattern>, PredicateControl {
 
   field bits<64> Inst;
   bit Trig = 0;
@@ -31,6 +40,7 @@ class InstR600 <dag outs, dag ins, string asm, list<dag> pattern,
   bit IsExport = 0;
   bit LDS_1A2D = 0;
 
+  let SubtargetPredicate = isR600toCayman;
   let Namespace = "AMDGPU";
   let OutOperandList = outs;
   let InOperandList = ins;

@@ -538,6 +538,7 @@ private:
     DK_ERR,
     DK_ERROR,
     DK_WARNING,
+    DK_PRINT,
     DK_END
   };
 
@@ -681,6 +682,9 @@ private:
 
   // ".warning"
   bool parseDirectiveWarning(SMLoc DirectiveLoc);
+
+  // .print <double-quotes-string>
+  bool parseDirectivePrint(SMLoc DirectiveLoc);
 
   void initializeDirectiveKindMap();
 };
@@ -2130,6 +2134,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_DS_P:
     case DK_DS_X:
       return parseDirectiveDS(IDVal, 12);
+    case DK_PRINT:
+      return parseDirectivePrint(IDLoc);
     }
 
     return Error(IDLoc, "unknown directive");
@@ -5228,6 +5234,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".ds.s"] = DK_DS_S;
   DirectiveKindMap[".ds.w"] = DK_DS_W;
   DirectiveKindMap[".ds.x"] = DK_DS_X;
+  DirectiveKindMap[".print"] = DK_PRINT;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -5453,6 +5460,17 @@ bool AsmParser::parseDirectiveMSAlign(SMLoc IDLoc, ParseStatementInfo &Info) {
     return Error(ExprLoc, "literal value not a power of two greater then zero");
 
   Info.AsmRewrites->emplace_back(AOK_Align, IDLoc, 5, Log2_64(IntValue));
+  return false;
+}
+
+bool AsmParser::parseDirectivePrint(SMLoc DirectiveLoc) {
+  const AsmToken StrTok = getTok();
+  Lex();
+  if (StrTok.isNot(AsmToken::String) || StrTok.getString().front() != '"')
+    return Error(DirectiveLoc, "expected double quoted string after .print");
+  if (parseToken(AsmToken::EndOfStatement, "expected end of statement"))
+    return true;
+  llvm::outs() << StrTok.getStringContents() << '\n';
   return false;
 }
 

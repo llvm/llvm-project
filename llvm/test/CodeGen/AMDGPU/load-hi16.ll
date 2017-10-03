@@ -7,7 +7,7 @@
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 define <2 x i16> @load_local_hi_v2i16_undeflo(i16 addrspace(3)* %in) #0 {
 entry:
   %load = load i16, i16 addrspace(3)* %in
@@ -22,7 +22,7 @@ entry:
 ; GFX9-NEXT: v_mov_b32_e32 v0, v1
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 define <2 x i16> @load_local_hi_v2i16_reglo(i16 addrspace(3)* %in, i16 %reg) #0 {
 entry:
   %load = load i16, i16 addrspace(3)* %in
@@ -40,7 +40,7 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 define void @load_local_hi_v2i16_reglo_vreg(i16 addrspace(3)* %in, i16 %reg) #0 {
 entry:
   %load = load i16, i16 addrspace(3)* %in
@@ -58,7 +58,7 @@ entry:
 ; GFX9-NEXT: v_mov_b32_e32 v0, v1
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 define <2 x i16> @load_local_hi_v2i16_zerolo(i16 addrspace(3)* %in) #0 {
 entry:
   %load = load i16, i16 addrspace(3)* %in
@@ -75,7 +75,7 @@ entry:
 ; GFX9-NEXT: v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 ; VI: v_lshlrev_b32_e32 v0, 16, v0
 define i32 @load_local_hi_v2i16_zerolo_shift(i16 addrspace(3)* %in) #0 {
 entry:
@@ -93,7 +93,7 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u16
+; VI: ds_read_u16 v
 define void @load_local_hi_v2f16_reglo_vreg(half addrspace(3)* %in, half %reg) #0 {
 entry:
   %load = load half, half addrspace(3)* %in
@@ -111,7 +111,7 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_u8
+; VI: ds_read_u8 v
 define void @load_local_hi_v2i16_reglo_vreg_zexti8(i8 addrspace(3)* %in, i16 %reg) #0 {
 entry:
   %load = load i8, i8 addrspace(3)* %in
@@ -130,7 +130,7 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: ds_read_i8
+; VI: ds_read_i8 v
 define void @load_local_hi_v2i16_reglo_vreg_sexti8(i8 addrspace(3)* %in, i16 %reg) #0 {
 entry:
   %load = load i8, i8 addrspace(3)* %in

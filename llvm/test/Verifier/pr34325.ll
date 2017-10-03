@@ -1,6 +1,7 @@
-; RUN: not opt -verify %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: invalid type ref
+; CHECK: warning: ignoring invalid debug info
 
 @bar = global i64 0, align 8, !dbg !0
 

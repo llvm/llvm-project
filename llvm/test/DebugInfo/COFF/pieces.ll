@@ -113,14 +113,14 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 24
+; OBJ:         Register: EDI (0x18)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
 ; OBJ:         }
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 23
+; OBJ:         Register: ESI (0x17)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -143,7 +143,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 18
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -166,7 +166,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 18
+; OBJ:         Register: ECX (0x12)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
@@ -193,7 +193,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: 330
+; OBJ:         BaseRegister: RCX (0x14A)
 ; OBJ:         HasSpilledUDTMember: No
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         BasePointerOffset: 0
@@ -204,7 +204,7 @@
 ; OBJ:         VarName: p
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: 17
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -228,7 +228,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: 335
+; OBJ:         BaseRegister: RSP (0x14F)
 ; OBJ:         HasSpilledUDTMember: Yes
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         BasePointerOffset: 36

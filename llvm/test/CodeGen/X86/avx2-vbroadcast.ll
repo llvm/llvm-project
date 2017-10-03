@@ -267,15 +267,15 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ; X32-AVX2-LABEL: broadcast_mem_v4i16_v16i16:
 ; X32-AVX2:       ## BB#0:
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X32-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,4,5,6,7,6,7],zero,zero
+; X32-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X32-AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; X32-AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: broadcast_mem_v4i16_v16i16:
 ; X64-AVX2:       ## BB#0:
-; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,4,5,6,7,6,7],zero,zero
+; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -734,7 +734,6 @@ define void @crash() nounwind alwaysinline {
 ; X32-NEXT:  LBB33_1: ## %footer349VF
 ; X32-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    jmp LBB33_1
-; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: crash:
 ; X64:       ## BB#0: ## %WGLoopsEntry
@@ -747,7 +746,6 @@ define void @crash() nounwind alwaysinline {
 ; X64-NEXT:  LBB33_1: ## %footer349VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    jmp LBB33_1
-; X64-NEXT:    ## -- End function
 WGLoopsEntry:
   br i1 undef, label %ret, label %footer329VF
 
