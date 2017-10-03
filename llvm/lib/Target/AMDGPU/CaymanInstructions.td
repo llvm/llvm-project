@@ -18,7 +18,7 @@ def isCayman : Predicate<"Subtarget->hasCaymanISA()">;
 // Cayman Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [isCayman] in {
+let SubtargetPredicate = isCayman in {
 
 def MULADD_INT24_cm : R600_3OP <0x08, "MULADD_INT24",
   [(set i32:$dst, (AMDGPUmad_i24 i32:$src0, i32:$src1, i32:$src2))], VecALU
@@ -57,20 +57,21 @@ defm DIV_cm : DIV_Common<RECIP_IEEE_cm>;
 
 // RECIP_UINT emulation for Cayman
 // The multiplication scales from [0,1] to the unsigned integer range
-def : Pat <
+def : R600Pat <
   (AMDGPUurecip i32:$src0),
   (FLT_TO_UINT_eg (MUL_IEEE (RECIP_IEEE_cm (UINT_TO_FLT_eg $src0)),
                             (MOV_IMM_I32 CONST.FP_UINT_MAX_PLUS_1)))
 >;
 
-  def CF_END_CM : CF_CLAUSE_EG<32, (ins), "CF_END"> {
+def CF_END_CM : CF_CLAUSE_EG<32, (ins), "CF_END"> {
     let ADDR = 0;
     let POP_COUNT = 0;
     let COUNT = 0;
   }
 
 
-def : Pat<(fsqrt f32:$src), (MUL R600_Reg32:$src, (RECIPSQRT_CLAMPED_cm $src))>;
+
+def : R600Pat<(fsqrt f32:$src), (MUL R600_Reg32:$src, (RECIPSQRT_CLAMPED_cm $src))>;
 
 class RAT_STORE_DWORD <RegisterClass rc, ValueType vt, bits<4> mask> :
   CF_MEM_RAT_CACHELESS <0x14, 0, mask,
@@ -179,44 +180,43 @@ def VTX_READ_128_cm
 //===----------------------------------------------------------------------===//
 // VTX Read from parameter memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_cm MEMxi:$src_gpr, 3)>;
-def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_cm MEMxi:$src_gpr, 3)>;
-def : Pat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_cm MEMxi:$src_gpr, 3)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_cm MEMxi:$src_gpr, 3)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_cm MEMxi:$src_gpr, 3)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from constant memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_cm MEMxi:$src_gpr, 2)>;
-def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_cm MEMxi:$src_gpr, 2)>;
-def : Pat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_cm MEMxi:$src_gpr, 2)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_cm MEMxi:$src_gpr, 2)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_cm MEMxi:$src_gpr, 2)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from global memory space
 //===----------------------------------------------------------------------===//
-def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_8_cm MEMxi:$src_gpr, 1)>;
-def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
           (VTX_READ_16_cm MEMxi:$src_gpr, 1)>;
-def : Pat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_32_cm MEMxi:$src_gpr, 1)>;
-def : Pat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_64_cm MEMxi:$src_gpr, 1)>;
-def : Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+def : R600Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
           (VTX_READ_128_cm MEMxi:$src_gpr, 1)>;
 
-} // End isCayman
-
+} // End let SubtargetPredicate = isCayman

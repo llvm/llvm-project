@@ -625,63 +625,63 @@ defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_shor
 //===----------------------------------------------------------------------===//
 
 // Patterns for global loads with no offset.
-class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc))),
   (inst $vaddr, $offset, 0, $slc)
 >;
 
 multiclass FlatLoadPat_Hi16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt = i16> {
-  def : Pat <
+  def : GCNPat <
     (build_vector vt:$elt0, (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc)))),
     (v2i16 (inst $vaddr, $offset, 0, $slc, $elt0))
   >;
 
- def : Pat <
+ def : GCNPat <
     (build_vector f16:$elt0, (f16 (bitconvert (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc)))))),
     (v2f16 (inst $vaddr, $offset, 0, $slc, $elt0))
   >;
 }
 
 multiclass FlatSignedLoadPat_Hi16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt = i16> {
-  def : Pat <
+  def : GCNPat <
     (build_vector vt:$elt0, (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc)))),
     (v2i16 (inst $vaddr, $offset, 0, $slc, $elt0))
   >;
 
- def : Pat <
+ def : GCNPat <
     (build_vector f16:$elt0, (f16 (bitconvert (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc)))))),
     (v2f16 (inst $vaddr, $offset, 0, $slc, $elt0))
   >;
 }
 
-class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc))),
   (inst $vaddr, $offset, 0, $slc)
 >;
 
-class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc))),
   (inst $vaddr, $offset, 0, $slc)
 >;
 
-class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (FLATOffset i64:$vaddr, i16:$offset, i1:$slc)),
   (inst $vaddr, $data, $offset, 0, $slc)
 >;
 
-class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc)),
   (inst $vaddr, $data, $offset, 0, $slc)
 >;
 
-class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), vt:$data),
   (inst $vaddr, $data, $offset, 0, $slc)
 >;
 
-class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
+class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), vt:$data),
@@ -689,18 +689,18 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 >;
 
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
-                     ValueType data_vt = vt> : Pat <
+                     ValueType data_vt = vt> : GCNPat <
   (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$data)),
   (inst $vaddr, $data, $offset, $slc)
 >;
 
 class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
-                     ValueType data_vt = vt> : Pat <
+                     ValueType data_vt = vt> : GCNPat <
   (vt (node (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$data)),
   (inst $vaddr, $data, $offset, $slc)
 >;
 
-let Predicates = [HasFlatAddressSpace] in {
+let OtherPredicates = [HasFlatAddressSpace] in {
 
 def : FlatLoadPat <FLAT_LOAD_UBYTE, az_extloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
@@ -756,7 +756,7 @@ def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
 
- let Predicates = [HasD16LoadStore] in {
+let OtherPredicates = [HasD16LoadStore] in {
 def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
 
@@ -767,9 +767,9 @@ defm : FlatLoadPat_Hi16 <FLAT_LOAD_SHORT_D16_HI, load_flat>;
 }
 }
 
-} // End Predicates = [HasFlatAddressSpace]
+} // End OtherPredicates = [HasFlatAddressSpace]
 
-let Predicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
+let OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
@@ -794,7 +794,7 @@ def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, store_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, v2i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, v4i32>;
 
- let Predicates = [HasD16LoadStore] in {
+let OtherPredicates = [HasD16LoadStore] in {
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT_D16_HI, truncstorei16_hi16_global, i32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, i32>;
 
@@ -834,7 +834,7 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global, i64, v2i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 
-} // End Predicates = [HasFlatGlobalInsts]
+} // End OtherPredicates = [HasFlatGlobalInsts]
 
 
 //===----------------------------------------------------------------------===//

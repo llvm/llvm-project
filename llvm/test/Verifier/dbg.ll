@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
 
 define void @foo() {
 entry:
@@ -14,6 +14,7 @@ exit:
 ; CHECK-NEXT: ![[LOC]] = !{}
 }
 
+; CHECK: warning: ignoring invalid debug info
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DISubprogram()

@@ -11,9 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+def isGCN : Predicate<"Subtarget->getGeneration() "
+                      ">= SISubtarget::SOUTHERN_ISLANDS">,
+            AssemblerPredicate<"FeatureGCN">;
+def isSI : Predicate<"Subtarget->getGeneration() "
+                      "== SISubtarget::SOUTHERN_ISLANDS">,
+           AssemblerPredicate<"FeatureSouthernIslands">;
+
+
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
   AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
+  let SubtargetPredicate = isGCN;
 
   // Low bits - basic encoding information.
   field bit SALU = 0;

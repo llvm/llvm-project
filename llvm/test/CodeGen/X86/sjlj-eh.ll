@@ -88,7 +88,7 @@ try.cont:
 ; CHECK-X64: leaq __gxx_personality_sj0(%rip), %rax
 ; CHECK-X64: movq %rax, -280(%rbp)
 ;     UFC.__lsda = $LSDA
-; CHECK-X64: movl $[[LSDA:GCC_except_table[0-9]+]], %eax
+; CHECK-X64: leaq [[LSDA:GCC_except_table[0-9]+]](%rip), %rax
 ; CHECK-X64: movq %rax, -272(%rbp)
 ;     UFC.__jbuf[0] = $RBP
 ; CHECK-X64: movq %rbp, -264(%rbp)

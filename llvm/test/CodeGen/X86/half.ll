@@ -386,7 +386,7 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    subq $48, %rsp
 ; CHECK-LIBCALL-NEXT:    movq %rdi, %rbx
-; CHECK-LIBCALL-NEXT:    movzwl (%rbx), %edi
+; CHECK-LIBCALL-NEXT:    movzwl (%rdi), %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    movzwl 2(%rbx), %edi
@@ -472,7 +472,7 @@ define <4 x double> @test_extend64_vec4(<4 x half>* %p) #0 {
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    subq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    movq %rdi, %rbx
-; CHECK-LIBCALL-NEXT:    movzwl 4(%rbx), %edi
+; CHECK-LIBCALL-NEXT:    movzwl 4(%rdi), %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
 ; CHECK-LIBCALL-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
 ; CHECK-LIBCALL-NEXT:    movzwl 6(%rbx), %edi
@@ -657,7 +657,7 @@ define void @test_trunc32_vec4(<4 x float> %a, <4 x half>* %p) #0 {
 ; CHECK-I686-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp) # 16-byte Spill
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-I686-NEXT:    movaps %xmm0, %xmm1
-; CHECK-I686-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; CHECK-I686-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
 ; CHECK-I686-NEXT:    movss %xmm1, (%esp)
 ; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
 ; CHECK-I686-NEXT:    movw %ax, %si

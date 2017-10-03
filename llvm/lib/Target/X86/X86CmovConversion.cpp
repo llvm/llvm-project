@@ -53,12 +53,16 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-cmov-converter"
+#define DEBUG_TYPE "x86-cmov-conversion"
 
 STATISTIC(NumOfSkippedCmovGroups, "Number of unsupported CMOV-groups");
 STATISTIC(NumOfCmovGroupCandidate, "Number of CMOV-group candidates");
 STATISTIC(NumOfLoopCandidate, "Number of CMOV-conversion profitable loops");
 STATISTIC(NumOfOptimizedCmovGroups, "Number of optimized CMOV-groups");
+
+namespace llvm {
+  void initializeX86CmovConverterPassPass(PassRegistry &);
+}
 
 namespace {
 // This internal switch can be used to turn off the cmov/branch optimization.
@@ -80,16 +84,19 @@ static cl::opt<bool> ForceMemOperand(
 /// Converts X86 cmov instructions into branches when profitable.
 class X86CmovConverterPass : public MachineFunctionPass {
 public:
-  X86CmovConverterPass() : MachineFunctionPass(ID) {}
+  X86CmovConverterPass() : MachineFunctionPass(ID) {
+    initializeX86CmovConverterPassPass(*PassRegistry::getPassRegistry());
+  }
   ~X86CmovConverterPass() {}
 
   StringRef getPassName() const override { return "X86 cmov Conversion"; }
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-private:
   /// Pass identification, replacement for typeid.
   static char ID;
+
+private:
 
   MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
@@ -124,8 +131,6 @@ private:
   /// \param Group Consecutive CMOV instructions to be converted into branch.
   void convertCmovInstsToBranches(SmallVectorImpl<MachineInstr *> &Group) const;
 };
-
-char X86CmovConverterPass::ID = 0;
 
 void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -796,6 +801,14 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 }
 
 } // End anonymous namespace.
+
+char X86CmovConverterPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_END(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
+                    false, false)
 
 FunctionPass *llvm::createX86CmovConverterPass() {
   return new X86CmovConverterPass();

@@ -75,7 +75,7 @@ entry:
 
 ; CHECK-DAG: mr [[REG:[0-9]+]], 3
 ; CHECK-DAG: li 0, 1076
-; CHECK:     stw [[REG]],
+; CHECK-DAG:     stw 3,
 
 ; CHECK:     #APP
 ; CHECK:     sc

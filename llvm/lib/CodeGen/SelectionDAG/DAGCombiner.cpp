@@ -10702,6 +10702,19 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
   if (isConstantFPBuildVectorOrConstantFP(N0))
     return DAG.getNode(ISD::FTRUNC, SDLoc(N), VT, N0);
 
+  // fold ftrunc (known rounded int x) -> x
+  // ftrunc is a part of fptosi/fptoui expansion on some targets, so this is
+  // likely to be generated to extract integer from a rounded floating value.
+  switch (N0.getOpcode()) {
+  default: break;
+  case ISD::FRINT:
+  case ISD::FTRUNC:
+  case ISD::FNEARBYINT:
+  case ISD::FFLOOR:
+  case ISD::FCEIL:
+    return N0;
+  }
+
   return SDValue();
 }
 
