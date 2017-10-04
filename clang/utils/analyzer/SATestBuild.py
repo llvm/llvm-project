@@ -142,7 +142,10 @@ def getSBOutputDirName(IsReferenceBuild) :
 #------------------------------------------------------------------------------
 
 # Find Clang for static analysis.
-Clang = which("clang", os.environ['PATH'])
+if 'CC' in os.environ:
+    Clang = os.environ['CC']
+else:
+    Clang = which("clang", os.environ['PATH'])
 if not Clang:
     print "Error: cannot find 'clang' in PATH"
     sys.exit(-1)
