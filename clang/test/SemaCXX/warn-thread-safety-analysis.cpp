@@ -5233,3 +5233,18 @@ class acquired_before_empty_str {
   } // expected-warning {{mutex 'lock_' is still held at the end of function}}
   Mutex lock_ ACQUIRED_BEFORE("");
 };
+
+namespace PR34800 {
+struct A {
+  operator int() const;
+};
+struct B {
+  bool g() __attribute__((locks_excluded(h))); // expected-warning {{'locks_excluded' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
+  int h;
+};
+struct C {
+  B *operator[](int);
+};
+C c;
+void f() { c[A()]->g(); }
+} // namespace PR34800
