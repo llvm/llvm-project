@@ -47,6 +47,8 @@ void llvm::llvm_execute_on_thread(void (*Fn)(void *), void *UserData,
 
 unsigned llvm::heavyweight_hardware_concurrency() { return 1; }
 
+unsigned llvm::hardware_concurrency() { return 1; }
+
 uint64_t llvm::get_threadid() { return 0; }
 
 uint32_t llvm::get_max_thread_name_length() { return 0; }
@@ -69,6 +71,18 @@ unsigned llvm::heavyweight_hardware_concurrency() {
   if (NumPhysical == -1)
     return std::thread::hardware_concurrency();
   return NumPhysical;
+}
+
+unsigned llvm::hardware_concurrency() {
+#ifdef HAVE_SCHED_GETAFFINITY
+  cpu_set_t Set;
+  if (sched_getaffinity(0, sizeof(Set), &Set))
+    return CPU_COUNT(&Set);
+#endif
+  // Guard against std::thread::hardware_concurrency() returning 0.
+  if (unsigned Val = std::thread::hardware_concurrency())
+    return Val;
+  return 1;
 }
 
 // Include the platform-specific parts of this class.

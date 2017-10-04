@@ -146,17 +146,30 @@ struct OutlinedFunction {
   /// function.
   std::vector<unsigned> Sequence;
 
-  /// The number of instructions this function would save.
-  unsigned Benefit = 0;
-
   /// Contains all target-specific information for this \p OutlinedFunction.
   TargetInstrInfo::MachineOutlinerInfo MInfo;
 
+  /// \brief Return the number of instructions it would take to outline this
+  /// function.
+  unsigned getOutliningCost() {
+    return (OccurrenceCount * MInfo.CallOverhead) + Sequence.size() +
+           MInfo.FrameOverhead;
+  }
+
+  /// \brief Return the number of instructions that would be saved by outlining
+  /// this function.
+  unsigned getBenefit() {
+    unsigned NotOutlinedCost = OccurrenceCount * Sequence.size();
+    unsigned OutlinedCost = getOutliningCost();
+    return (NotOutlinedCost < OutlinedCost) ? 0
+                                            : NotOutlinedCost - OutlinedCost;
+  }
+
   OutlinedFunction(unsigned Name, unsigned OccurrenceCount,
-                   const std::vector<unsigned> &Sequence, unsigned Benefit,
+                   const std::vector<unsigned> &Sequence,
                    TargetInstrInfo::MachineOutlinerInfo &MInfo)
       : Name(Name), OccurrenceCount(OccurrenceCount), Sequence(Sequence),
-        Benefit(Benefit), MInfo(MInfo) {}
+        MInfo(MInfo) {}
 };
 
 /// Represents an undefined index in the suffix tree.
@@ -844,7 +857,6 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
                                 std::vector<OutlinedFunction> &FunctionList) {
   CandidateList.clear();
   FunctionList.clear();
-  unsigned FnIdx = 0;
   unsigned MaxLen = 0;
 
   // FIXME: Visit internal nodes instead of leaves.
@@ -891,7 +903,8 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
         MachineBasicBlock::iterator EndIt =
             Mapper.InstrList[M->SuffixIdx + StringLen - 1];
 
-        CandidatesForRepeatedSeq.emplace_back(M->SuffixIdx, StringLen, FnIdx);
+        CandidatesForRepeatedSeq.emplace_back(M->SuffixIdx, StringLen,
+                                              FunctionList.size());
         RepeatedSequenceLocs.emplace_back(std::make_pair(StartIt, EndIt));
 
         // Never visit this leaf again.
@@ -899,16 +912,20 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       }
     }
 
-    unsigned SequenceOverhead = StringLen;
+    // We've found something we might want to outline.
+    // Create an OutlinedFunction to store it and check if it'd be beneficial
+    // to outline.
     TargetInstrInfo::MachineOutlinerInfo MInfo =
         TII.getOutlininingCandidateInfo(RepeatedSequenceLocs);
-
-    unsigned OutliningCost =
-        (MInfo.CallOverhead * Parent.OccurrenceCount) + MInfo.FrameOverhead;
-    unsigned NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
+    std::vector<unsigned> Seq;
+    for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
+      Seq.push_back(ST.Str[i]);
+    OutlinedFunction OF(FunctionList.size(), Parent.OccurrenceCount, Seq,
+                        MInfo);
+    unsigned Benefit = OF.getBenefit();
 
     // Is it better to outline this candidate than not?
-    if (NotOutliningCost <= OutliningCost) {
+    if (Benefit < 1) {
       // Outlining this candidate would take more instructions than not
       // outlining.
       // Emit a remark explaining why we didn't outline this candidate.
@@ -923,9 +940,9 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
         << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
         << " locations."
         << " Instructions from outlining all occurrences ("
-        << NV("OutliningCost", OutliningCost) << ")"
+        << NV("OutliningCost", OF.getOutliningCost()) << ")"
         << " >= Unoutlined instruction count ("
-        << NV("NotOutliningCost", NotOutliningCost) << ")"
+        << NV("NotOutliningCost", StringLen * OF.OccurrenceCount) << ")"
         << " (Also found at: ";
 
       // Tell the user the other places the candidate was found.
@@ -943,8 +960,6 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       continue;
     }
 
-    unsigned Benefit = NotOutliningCost - OutliningCost;
-
     if (StringLen > MaxLen)
       MaxLen = StringLen;
 
@@ -956,16 +971,9 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       CandidateList.push_back(C);
     }
 
-    // Save the function for the new candidate sequence.
-    std::vector<unsigned> CandidateSequence;
-    for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
-      CandidateSequence.push_back(ST.Str[i]);
-
-    FunctionList.emplace_back(FnIdx, CandidatesForRepeatedSeq.size(),
-                              CandidateSequence, Benefit, MInfo);
+    FunctionList.push_back(OF);
 
     // Move to the next function.
-    FnIdx++;
     Parent.IsInTree = false;
   }
 
@@ -990,7 +998,7 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
     // pruning steps.
     OutlinedFunction &F = FunctionList[C.FunctionIdx];
 
-    if (F.OccurrenceCount < 2 || F.Benefit < 1) {
+    if (F.OccurrenceCount < 2 || F.getBenefit() < 1) {
       assert(F.OccurrenceCount > 0 &&
              "Can't remove OutlinedFunction with no occurrences!");
       F.OccurrenceCount--;
@@ -1013,20 +1021,13 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
            "Can't remove OutlinedFunction with no occurrences!");
     F.OccurrenceCount--;
 
-    // Remove the call overhead from the removed sequence.
-    F.Benefit += C.MInfo.CallOverhead;
-
-    // Add back one instance of the sequence.
-    F.Benefit =
-        (F.Sequence.size() > F.Benefit) ? 0 : F.Benefit - F.Sequence.size();
-
     // Remove C from the CandidateList.
     C.InCandidateList = false;
 
     DEBUG(dbgs() << "- Removed a Candidate \n";
           dbgs() << "--- Num fns left for candidate: " << F.OccurrenceCount
                  << "\n";
-          dbgs() << "--- Candidate's functions's benefit: " << F.Benefit
+          dbgs() << "--- Candidate's functions's benefit: " << F.getBenefit()
                  << "\n";);
   };
 
@@ -1187,7 +1188,7 @@ bool MachineOutliner::outline(Module &M,
     OutlinedFunction &OF = FunctionList[C.FunctionIdx];
 
     // Was its OutlinedFunction made unbeneficial during pruneOverlaps?
-    if (OF.OccurrenceCount < 2 || OF.Benefit < 1)
+    if (OF.OccurrenceCount < 2 || OF.getBenefit() < 1)
       continue;
 
     // If not, then outline it.

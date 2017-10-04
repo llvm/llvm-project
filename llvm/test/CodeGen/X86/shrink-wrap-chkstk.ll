@@ -61,7 +61,7 @@ false:
 
 ; CHECK-LABEL: @use_eax_before_prologue@8: # @use_eax_before_prologue
 ; CHECK: movl %ecx, %eax
-; CHECK: cmpl %edx, %ecx
+; CHECK: cmpl %edx, %eax
 ; CHECK: jge LBB1_2
 ; CHECK: pushl %eax
 ; CHECK: movl $4092, %eax

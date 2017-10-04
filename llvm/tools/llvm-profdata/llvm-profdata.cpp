@@ -211,8 +211,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)
-    NumThreads = std::max(1U, std::min(std::thread::hardware_concurrency(),
-                                       unsigned(Inputs.size() / 2)));
+    NumThreads =
+        std::min(hardware_concurrency(), unsigned((Inputs.size() + 1) / 2));
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;

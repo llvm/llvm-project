@@ -14,11 +14,11 @@ define void @fn1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx
-; CHECK-NEXT:    movl a(%rdx,%rcx,8), %ecx
-; CHECK-NEXT:    leaq (%rax,%rax,8), %rdx
-; CHECK-NEXT:    leaq (%rdx,%rdx,2), %rdx
-; CHECK-NEXT:    addq %rax, %rdx
-; CHECK-NEXT:    movl %ecx, b(%rdx,%rax,4)
+; CHECK-NEXT:    movl a(%rdx,%rcx,8), %edx
+; CHECK-NEXT:    leaq (%rcx,%rax,4), %rcx
+; CHECK-NEXT:    leaq (%rcx,%rcx,2), %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    movl %edx, b(%rcx,%rax,4)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, i32* @c, align 4, !tbaa !2
@@ -37,11 +37,11 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx
-; CHECK-NEXT:    movl a(%rdx,%rcx,8), %ecx
-; CHECK-NEXT:    leaq (%rax,%rax,8), %rdx
-; CHECK-NEXT:    leaq (%rdx,%rdx,2), %rdx
-; CHECK-NEXT:    addq %rax, %rdx
-; CHECK-NEXT:    movl %ecx, b(%rdx,%rax,4)
+; CHECK-NEXT:    movl a(%rdx,%rcx,8), %edx
+; CHECK-NEXT:    leaq (%rcx,%rax,4), %rcx
+; CHECK-NEXT:    leaq (%rcx,%rcx,2), %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    movl %edx, b(%rcx,%rax,4)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:

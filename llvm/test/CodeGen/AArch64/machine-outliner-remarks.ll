@@ -1,7 +1,7 @@
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -pass-remarks-missed=machine-outliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: machine-outliner-remarks.ll:5:9:
 ; CHECK-SAME: Did not outline 2 instructions from 2 locations.
-; CHECK-SAME: Instructions from outlining all occurrences (7) >=
+; CHECK-SAME: Instructions from outlining all occurrences (9) >=
 ; CHECK-SAME: Unoutlined instruction count (4)
 ; CHECK-SAME: (Also found at: machine-outliner-remarks.ll:13:9)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
@@ -19,7 +19,7 @@
 ; YAML-NEXT:   - NumOccurrences:  '2'
 ; YAML-NEXT:   - String:          ' locations.'
 ; YAML-NEXT:   - String:          ' Instructions from outlining all occurrences ('
-; YAML-NEXT:   - OutliningCost:   '7'
+; YAML-NEXT:   - OutliningCost:   '9'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT:   - String:          ' >= Unoutlined instruction count ('
 ; YAML-NEXT:   - NotOutliningCost: '4'

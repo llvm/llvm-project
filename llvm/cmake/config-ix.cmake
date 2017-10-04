@@ -269,6 +269,7 @@ if( LLVM_USING_GLIBC )
   add_definitions( -D_GNU_SOURCE )
 endif()
 # This check requires _GNU_SOURCE
+check_library_exists(c sched_getaffinity "" HAVE_SCHED_GETAFFINITY)
 if(HAVE_LIBPTHREAD)
   check_library_exists(pthread pthread_getname_np "" HAVE_PTHREAD_GETNAME_NP)
   check_library_exists(pthread pthread_setname_np "" HAVE_PTHREAD_SETNAME_NP)

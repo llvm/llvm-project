@@ -169,10 +169,7 @@ void OptimizationRemarkEmitter::emit(
     auto *P = &OptDiagBase;
     *Out << P;
   }
-  // FIXME: now that IsVerbose is part of DI, filtering for this will be moved
-  // from here to clang.
-  if (!OptDiag.isVerbose() || shouldEmitVerbose())
-    F->getContext().diagnose(OptDiag);
+  F->getContext().diagnose(OptDiag);
 }
 
 OptimizationRemarkEmitterWrapperPass::OptimizationRemarkEmitterWrapperPass()

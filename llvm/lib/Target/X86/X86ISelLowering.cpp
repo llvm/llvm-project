@@ -5967,13 +5967,13 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     // If we know input saturation won't happen we can treat this
     // as a truncation shuffle.
     if (Opcode == X86ISD::PACKSS) {
-      if (DAG.ComputeNumSignBits(N0) <= NumBitsPerElt ||
-          DAG.ComputeNumSignBits(N1) <= NumBitsPerElt)
+      if ((!N0.isUndef() && DAG.ComputeNumSignBits(N0) <= NumBitsPerElt) ||
+          (!N1.isUndef() && DAG.ComputeNumSignBits(N1) <= NumBitsPerElt))
         return false;
     } else {
       APInt ZeroMask = APInt::getHighBitsSet(2 * NumBitsPerElt, NumBitsPerElt);
-      if (!DAG.MaskedValueIsZero(N0, ZeroMask) ||
-          !DAG.MaskedValueIsZero(N1, ZeroMask))
+      if ((!N0.isUndef() && !DAG.MaskedValueIsZero(N0, ZeroMask)) ||
+          (!N1.isUndef() && !DAG.MaskedValueIsZero(N1, ZeroMask)))
         return false;
     }
 
@@ -6042,6 +6042,14 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
   for (int i = 0, e = Inputs.size(); i < e; ++i) {
     int lo = UsedInputs.size() * MaskWidth;
     int hi = lo + MaskWidth;
+
+    // Strip UNDEF input usage.
+    if (Inputs[i].isUndef())
+      for (int &M : Mask)
+        if ((lo <= M) && (M < hi))
+          M = SM_SentinelUndef;
+
+    // Check for unused inputs.
     if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
       UsedInputs.push_back(Inputs[i]);
       continue;
@@ -8660,6 +8668,39 @@ static SDValue lowerVectorShuffleWithUNPCK(const SDLoc &DL, MVT VT,
   ShuffleVectorSDNode::commuteMask(Unpckh);
   if (isShuffleEquivalent(V1, V2, Mask, Unpckh))
     return DAG.getNode(X86ISD::UNPCKH, DL, VT, V2, V1);
+
+  return SDValue();
+}
+
+// X86 has dedicated pack instructions that can handle specific truncation
+// operations: PACKSS and PACKUS.
+static SDValue lowerVectorShuffleWithPACK(const SDLoc &DL, MVT VT,
+                                          ArrayRef<int> Mask, SDValue V1,
+                                          SDValue V2, SelectionDAG &DAG,
+                                          const X86Subtarget &Subtarget) {
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned BitSize = VT.getScalarSizeInBits();
+  MVT PackSVT = MVT::getIntegerVT(BitSize * 2);
+  MVT PackVT = MVT::getVectorVT(PackSVT, NumElts / 2);
+
+  // TODO - Add support for unary packs.
+  SmallVector<int, 32> BinaryMask;
+  createPackShuffleMask(VT, BinaryMask, false);
+
+  if (isShuffleEquivalent(V1, V2, Mask, BinaryMask)) {
+    SDValue VV1 = DAG.getBitcast(PackVT, V1);
+    SDValue VV2 = DAG.getBitcast(PackVT, V2);
+    if ((V1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
+        (V2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize))
+      return DAG.getNode(X86ISD::PACKSS, DL, VT, VV1, VV2);
+
+    if (Subtarget.hasSSE41() || PackSVT == MVT::i16) {
+      APInt ZeroMask = APInt::getHighBitsSet(BitSize * 2, BitSize);
+      if ((V1.isUndef() || DAG.MaskedValueIsZero(VV1, ZeroMask)) &&
+          (V2.isUndef() || DAG.MaskedValueIsZero(VV2, ZeroMask)))
+        return DAG.getNode(X86ISD::PACKUS, DL, VT, VV1, VV2);
+    }
+  }
 
   return SDValue();
 }
@@ -11403,6 +11444,11 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
             lowerVectorShuffleWithUNPCK(DL, MVT::v8i16, Mask, V1, V2, DAG))
       return V;
 
+    // Use dedicated pack instructions for masks that match their pattern.
+    if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v8i16, Mask, V1, V2,
+                                               DAG, Subtarget))
+      return V;
+
     // Try to use byte rotation instructions.
     if (SDValue Rotate = lowerVectorShuffleAsByteRotate(DL, MVT::v8i16, V1, V1,
                                                         Mask, Subtarget, DAG))
@@ -11572,6 +11618,11 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
           DL, MVT::v16i8, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
+
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v16i8, Mask, V1, V2, DAG,
+                                             Subtarget))
+    return V;
 
   // Try to use a zext lowering.
   if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
@@ -13067,6 +13118,11 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           lowerVectorShuffleWithUNPCK(DL, MVT::v16i16, Mask, V1, V2, DAG))
     return V;
 
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v16i16, Mask, V1, V2, DAG,
+                                             Subtarget))
+    return V;
+
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v16i16, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))
@@ -13151,6 +13207,11 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Use dedicated unpack instructions for masks that match their pattern.
   if (SDValue V =
           lowerVectorShuffleWithUNPCK(DL, MVT::v32i8, Mask, V1, V2, DAG))
+    return V;
+
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v32i8, Mask, V1, V2, DAG,
+                                             Subtarget))
     return V;
 
   // Try to use shift instructions.
@@ -26592,8 +26653,8 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   SetupEntryBlockForSjLj(MI, BB, DispatchBB, FI);
 
   // Create the jump table and associated information
-  MachineJumpTableInfo *JTI =
-      MF->getOrCreateJumpTableInfo(getJumpTableEncoding());
+  unsigned JTE = getJumpTableEncoding();
+  MachineJumpTableInfo *JTI = MF->getOrCreateJumpTableInfo(JTE);
   unsigned MJTI = JTI->createJumpTableIndex(LPadList);
 
   const X86RegisterInfo &RI = TII->getRegisterInfo();
@@ -26616,7 +26677,8 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
         .addRegMask(RI.getNoPreservedMask());
   }
 
-  unsigned IReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+  // IReg is used as an index in a memory operand and therefore can't be SP
+  unsigned IReg = MRI->createVirtualRegister(&X86::GR32_NOSPRegClass);
   addFrameReference(BuildMI(DispatchBB, DL, TII->get(X86::MOV32rm), IReg), FI,
                     Subtarget.is64Bit() ? 8 : 4);
   BuildMI(DispatchBB, DL, TII->get(X86::CMP32ri))
@@ -26624,13 +26686,67 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addImm(LPadList.size());
   BuildMI(DispatchBB, DL, TII->get(X86::JAE_1)).addMBB(TrapBB);
 
-  BuildMI(DispContBB, DL,
-          TII->get(Subtarget.is64Bit() ? X86::JMP64m : X86::JMP32m))
-      .addReg(0)
-      .addImm(Subtarget.is64Bit() ? 8 : 4)
-      .addReg(IReg)
-      .addJumpTableIndex(MJTI)
-      .addReg(0);
+  if (Subtarget.is64Bit()) {
+    unsigned BReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+    unsigned IReg64 = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
+
+    // leaq .LJTI0_0(%rip), BReg
+    BuildMI(DispContBB, DL, TII->get(X86::LEA64r), BReg)
+        .addReg(X86::RIP)
+        .addImm(1)
+        .addReg(0)
+        .addJumpTableIndex(MJTI)
+        .addReg(0);
+    // movzx IReg64, IReg
+    BuildMI(DispContBB, DL, TII->get(TargetOpcode::SUBREG_TO_REG), IReg64)
+        .addImm(0)
+        .addReg(IReg)
+        .addImm(X86::sub_32bit);
+
+    switch (JTE) {
+    case MachineJumpTableInfo::EK_BlockAddress:
+      // jmpq *(BReg,IReg64,8)
+      BuildMI(DispContBB, DL, TII->get(X86::JMP64m))
+          .addReg(BReg)
+          .addImm(8)
+          .addReg(IReg64)
+          .addImm(0)
+          .addReg(0);
+      break;
+    case MachineJumpTableInfo::EK_LabelDifference32: {
+      unsigned OReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+      unsigned OReg64 = MRI->createVirtualRegister(&X86::GR64RegClass);
+      unsigned TReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+
+      // movl (BReg,IReg64,4), OReg
+      BuildMI(DispContBB, DL, TII->get(X86::MOV32rm), OReg)
+          .addReg(BReg)
+          .addImm(4)
+          .addReg(IReg64)
+          .addImm(0)
+          .addReg(0);
+      // movsx OReg64, OReg
+      BuildMI(DispContBB, DL, TII->get(X86::MOVSX64rr32), OReg64).addReg(OReg);
+      // addq BReg, OReg64, TReg
+      BuildMI(DispContBB, DL, TII->get(X86::ADD64rr), TReg)
+          .addReg(OReg64)
+          .addReg(BReg);
+      // jmpq *TReg
+      BuildMI(DispContBB, DL, TII->get(X86::JMP64r)).addReg(TReg);
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected jump table encoding");
+    }
+  } else {
+    // jmpl *.LJTI0_0(,IReg,4)
+    BuildMI(DispContBB, DL, TII->get(X86::JMP32m))
+        .addReg(0)
+        .addImm(4)
+        .addReg(IReg)
+        .addJumpTableIndex(MJTI)
+        .addReg(0);
+  }
 
   // Add the jump table entries as successors to the MBB.
   SmallPtrSet<MachineBasicBlock *, 8> SeenMBBs;
@@ -31853,7 +31969,6 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
          "Unexpected shift opcode");
 
   EVT VT = N->getValueType(0);
-  EVT SVT = VT.getScalarType();
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   unsigned DstBitsPerElt = VT.getScalarSizeInBits();

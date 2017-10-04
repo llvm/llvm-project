@@ -637,11 +637,12 @@ class DominatorTreeBase {
     assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->getChildren().empty() && "Node is not a leaf node.");
 
+    DFSInfoValid = false;
+
     // Remove node from immediate dominator's children list.
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
-      typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          find(IDom->Children, Node);
+      const auto I = find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -702,28 +703,25 @@ public:
       return;
     }
 
-    unsigned DFSNum = 0;
-
     SmallVector<std::pair<const DomTreeNodeBase<NodeT> *,
                           typename DomTreeNodeBase<NodeT>::const_iterator>,
                 32> WorkStack;
 
     const DomTreeNodeBase<NodeT> *ThisRoot = getRootNode();
-
+    assert((!Parent || ThisRoot) && "Empty constructed DomTree");
     if (!ThisRoot)
       return;
 
-    // Even in the case of multiple exits that form the post dominator root
-    // nodes, do not iterate over all exits, but start from the virtual root
-    // node. Otherwise bbs, that are not post dominated by any exit but by the
-    // virtual root node, will never be assigned a DFS number.
-    WorkStack.push_back(std::make_pair(ThisRoot, ThisRoot->begin()));
+    // Both dominators and postdominators have a single root node. In the case
+    // case of PostDominatorTree, this node is a virtual root.
+    WorkStack.push_back({ThisRoot, ThisRoot->begin()});
+
+    unsigned DFSNum = 0;
     ThisRoot->DFSNumIn = DFSNum++;
 
     while (!WorkStack.empty()) {
       const DomTreeNodeBase<NodeT> *Node = WorkStack.back().first;
-      typename DomTreeNodeBase<NodeT>::const_iterator ChildIt =
-          WorkStack.back().second;
+      const auto ChildIt = WorkStack.back().second;
 
       // If we visited all of the children of this node, "recurse" back up the
       // stack setting the DFOutNum.
@@ -735,7 +733,7 @@ public:
         const DomTreeNodeBase<NodeT> *Child = *ChildIt;
         ++WorkStack.back().second;
 
-        WorkStack.push_back(std::make_pair(Child, Child->begin()));
+        WorkStack.push_back({Child, Child->begin()});
         Child->DFSNumIn = DFSNum++;
       }
     }

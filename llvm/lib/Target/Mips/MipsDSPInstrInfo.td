@@ -1284,6 +1284,12 @@ let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
   def STORE_CCOND_DSP : Store<"store_ccond_dsp", DSPCC>;
 }
 
+let DecoderNamespace = "MipsDSP", Arch = "dsp",
+    AdditionalPredicates = [HasDSP] in {
+  def LWDSP : Load<"lw", DSPROpnd, null_frag, II_LW>, DspMMRel, LW_FM<0x23>;
+  def SWDSP : Store<"sw", DSPROpnd, null_frag, II_SW>, DspMMRel, LW_FM<0x2b>;
+}
+
 // Pseudo CMP and PICK instructions.
 class PseudoCMP<Instruction RealInst> :
   PseudoDSP<(outs DSPCC:$cmp), (ins DSPROpnd:$rs, DSPROpnd:$rt), []>,

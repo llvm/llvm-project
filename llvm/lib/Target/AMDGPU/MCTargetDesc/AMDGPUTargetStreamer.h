@@ -53,6 +53,8 @@ public:
 
   /// \returns True on success, false on failure.
   virtual bool EmitCodeObjectMetadata(StringRef YamlString) = 0;
+
+  virtual bool EmitPalMetadata(ArrayRef<uint32_t> Data) = 0;
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
@@ -72,6 +74,8 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitCodeObjectMetadata(StringRef YamlString) override;
+
+  bool EmitPalMetadata(ArrayRef<uint32_t> data) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -99,6 +103,8 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitCodeObjectMetadata(StringRef YamlString) override;
+
+  bool EmitPalMetadata(ArrayRef<uint32_t> data) override;
 };
 
 }
