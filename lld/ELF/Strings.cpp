@@ -54,18 +54,11 @@ std::vector<uint8_t> elf::parseHex(StringRef S) {
   return Hex;
 }
 
-static bool isAlpha(char C) {
-  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
-}
-
-// Returns true if C is a valid letter, digit or underscore as defined in the
-// "C" locale.
-bool elf::isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
-
 // Returns true if S is valid as a C language identifier.
 bool elf::isValidCIdentifier(StringRef S) {
-  return !S.empty() && isAlpha(S[0]) &&
-         std::all_of(S.begin() + 1, S.end(), isAlnum);
+  return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
+         std::all_of(S.begin() + 1, S.end(),
+                     [](char C) { return C == '_' || isAlnum(C); });
 }
 
 // Returns the demangled C++ symbol name for Name.

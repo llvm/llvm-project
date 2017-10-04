@@ -9,29 +9,21 @@ define void @test_func(%struct.SA* nocapture %ctx, i32 %n) local_unnamed_addr {
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    movl 16(%rdi), %ecx
-; X64-NEXT:    leal (%rax,%rcx), %edx
 ; X64-NEXT:    leal 1(%rax,%rcx), %eax
 ; X64-NEXT:    movl %eax, 12(%rdi)
-; X64-NEXT:    leal 1(%rcx,%rdx), %eax
+; X64-NEXT:    addq %rcx, %eax
 ; X64-NEXT:    movl %eax, 16(%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_func:
 ; X86:       # BB#0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi0:
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi1:
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 16(%eax), %edx
-; X86-NEXT:    leal 1(%ecx,%edx), %esi
+; X86-NEXT:    leal 1(%ecx,%edx), %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    movl %esi, 12(%eax)
-; X86-NEXT:    leal 1(%edx,%ecx), %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
  entry:
    %h0 = getelementptr inbounds %struct.SA, %struct.SA* %ctx, i64 0, i32 0

@@ -3,6 +3,6 @@
 hint #240
 hint #1000
 
-@ CHECK: error: immediate operand must be in the range [0,239]
-@ CHECK: error: immediate operand must be in the range [0,239]
+@ CHECK: error: operand must be an immediate in the range [0,239]
+@ CHECK: error: operand must be an immediate in the range [0,239]
 
