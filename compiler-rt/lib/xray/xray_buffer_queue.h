@@ -47,11 +47,18 @@ private:
   __sanitizer::SpinMutex Mutex;
   __sanitizer::atomic_uint8_t Finalizing;
 
-  // Sorted buffer pointers, making it quick to find buffers that we own.
+  // Pointers to buffers managed/owned by the BufferQueue.
   std::unique_ptr<void *[]> OwnedBuffers;
 
+  // Pointer to the next buffer to be handed out.
   std::tuple<Buffer, bool> *Next;
+
+  // Pointer to the entry in the array where the next released buffer will be
+  // placed.
   std::tuple<Buffer, bool> *First;
+
+  // Count of buffers that have been handed out through 'getBuffer'.
+  size_t LiveBuffers;
 
 public:
   enum class ErrorCode : unsigned {

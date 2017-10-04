@@ -116,6 +116,16 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
                        reinterpret_cast<char *>(B.Buffer) + B.Size);
     }
   });
+
+  // The buffer for this particular thread would have been finalised after
+  // we've written everything to disk, and we'd lose the thread's trace.
+  auto &TLD = __xray::__xray_fdr_internal::getThreadLocalData();
+  if (TLD.Buffer.Buffer != nullptr) {
+    __xray::__xray_fdr_internal::writeEOBMetadata();
+    auto Start = reinterpret_cast<char *>(TLD.Buffer.Buffer);
+    retryingWriteAll(Fd, Start, Start + TLD.Buffer.Size);
+  }
+
   __sanitizer::atomic_store(&LogFlushStatus,
                             XRayLogFlushStatus::XRAY_LOG_FLUSHED,
                             __sanitizer::memory_order_release);
