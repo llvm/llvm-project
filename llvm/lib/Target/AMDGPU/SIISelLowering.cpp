@@ -184,8 +184,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i1, Promote);
   setOperationAction(ISD::SETCC, MVT::v2i1, Expand);
   setOperationAction(ISD::SETCC, MVT::v4i1, Expand);
-  setOperationAction(ISD::SETCC, MVT::v2i32, Expand);
-  setOperationAction(ISD::SETCC, MVT::v4i32, Expand);
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
