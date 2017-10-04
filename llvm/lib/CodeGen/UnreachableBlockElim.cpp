@@ -207,11 +207,12 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
           MachineRegisterInfo &MRI = F.getRegInfo();
           unsigned InputSub = Input.getSubReg();
           if (InputSub == 0 &&
-              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg))) {
+              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg)) &&
+              !Input.isUndef()) {
             MRI.replaceRegWith(OutputReg, InputReg);
           } else {
             // The input register to the PHI has a subregister or it can't be
-            // constrained to the proper register class:
+            // constrained to the proper register class or it is undef:
             // insert a COPY instead of simply replacing the output
             // with the input.
             const TargetInstrInfo *TII = F.getSubtarget().getInstrInfo();

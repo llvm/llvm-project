@@ -8,15 +8,10 @@
 define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-LABEL: v8i64:
 ; SSE:       # BB#0:
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pcmpgtq %xmm7, %xmm3
-; SSE-NEXT:    pcmpgtq %xmm6, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,4,5,4,5,6,7,0,1,4,5,8,9,12,13]
-; SSE-NEXT:    pshufb %xmm3, %xmm2
 ; SSE-NEXT:    pcmpgtq %xmm5, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
@@ -24,24 +19,28 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    pcmpgtq %xmm7, %xmm3
+; SSE-NEXT:    pcmpgtq %xmm6, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE-NEXT:    packssdw %xmm2, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm11[0,2]
-; SSE-NEXT:    pshufb %xmm3, %xmm8
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm11[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm10[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm9[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm8[4,5,6,7]
-; SSE-NEXT:    pand %xmm0, %xmm2
-; SSE-NEXT:    psllw $15, %xmm2
-; SSE-NEXT:    psraw $15, %xmm2
-; SSE-NEXT:    packsswb %xmm0, %xmm2
-; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
+; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm9[0,2]
+; SSE-NEXT:    packssdw %xmm8, %xmm8
+; SSE-NEXT:    pblendw {{.*#+}} xmm8 = xmm1[0,1,2,3],xmm8[4,5,6,7]
+; SSE-NEXT:    pand %xmm2, %xmm8
+; SSE-NEXT:    psllw $15, %xmm8
+; SSE-NEXT:    psraw $15, %xmm8
+; SSE-NEXT:    packsswb %xmm0, %xmm8
+; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE-NEXT:    retq
 ;

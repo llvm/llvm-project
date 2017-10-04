@@ -9345,11 +9345,6 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm13
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm15
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm7
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm7 = [0,1,4,5,4,5,6,7,0,1,4,5,8,9,12,13]
-; SSE42-NEXT:    pshufb %xmm7, %xmm6
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm5
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[0,2,2,3,4,5,6,7]
@@ -9357,11 +9352,11 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,2,2,3]
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,2,2,3,4,5,6,7]
 ; SSE42-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm6[4,5,6,7]
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE42-NEXT:    pshufb %xmm7, %xmm2
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm7
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm6
+; SSE42-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
+; SSE42-NEXT:    packssdw %xmm6, %xmm6
+; SSE42-NEXT:    pblendw {{.*#+}} xmm6 = xmm4[0,1,2,3],xmm6[4,5,6,7]
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm1
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
@@ -9369,126 +9364,131 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; SSE42-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; SSE42-NEXT:    packsswb %xmm4, %xmm0
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE42-NEXT:    packssdw %xmm2, %xmm2
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE42-NEXT:    packsswb %xmm6, %xmm2
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,8,9,2,3,10,11,8,9,12,13,10,11,14,15]
-; SSE42-NEXT:    pshufb %xmm1, %xmm12
+; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,8,9,2,3,10,11,8,9,12,13,10,11,14,15]
+; SSE42-NEXT:    pshufb %xmm0, %xmm12
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm15
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm13
 ; SSE42-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,2],xmm15[0,2]
-; SSE42-NEXT:    pshufb %xmm7, %xmm13
+; SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,4,5,6,7,0,1,4,5,8,9,12,13]
+; SSE42-NEXT:    pshufb %xmm1, %xmm13
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm14
-; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm14[0,2,2,3]
-; SSE42-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,2,4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm13[4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm12[0,1],xmm2[2,3,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm14[0,2,2,3]
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,0,2,4,5,6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm13[4,5,6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm12[0,1],xmm3[2,3,4,5,6,7]
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    pshufb %xmm1, %xmm8
+; SSE42-NEXT:    pshufb %xmm0, %xmm8
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
 ; SSE42-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm11[0,2]
-; SSE42-NEXT:    pshufb %xmm7, %xmm9
+; SSE42-NEXT:    pshufb %xmm1, %xmm9
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
-; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm10[0,2,2,3]
-; SSE42-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,2,4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm9[4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm8[0,1],xmm1[2,3,4,5,6,7]
-; SSE42-NEXT:    packsswb %xmm2, %xmm1
-; SSE42-NEXT:    pextrb $15, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $14, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $13, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $12, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $11, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $10, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $9, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $8, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $7, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $6, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $5, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $4, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $3, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $2, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
-; SSE42-NEXT:    pextrb $0, %xmm1, %eax
-; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, 2(%rdi)
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm10[0,2,2,3]
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,0,2,4,5,6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm9[4,5,6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm8[0,1],xmm0[2,3,4,5,6,7]
+; SSE42-NEXT:    packsswb %xmm3, %xmm0
 ; SSE42-NEXT:    pextrb $15, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $14, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $13, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $12, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $11, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $10, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $9, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $7, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $6, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $5, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $4, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $3, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $2, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $1, %xmm0, %eax
 ; SSE42-NEXT:    andb $1, %al
-; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    movb %al, 2(%rdi)
 ; SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, 2(%rdi)
+; SSE42-NEXT:    pextrb $15, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $14, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $13, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $12, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $11, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $10, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $9, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $8, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $7, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $6, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $5, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $4, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $3, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $2, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $1, %xmm2, %eax
+; SSE42-NEXT:    andb $1, %al
+; SSE42-NEXT:    movb %al, (%rdi)
+; SSE42-NEXT:    pextrb $0, %xmm2, %eax
 ; SSE42-NEXT:    andb $1, %al
 ; SSE42-NEXT:    movb %al, (%rdi)
 ; SSE42-NEXT:    movq %rdi, %rax
