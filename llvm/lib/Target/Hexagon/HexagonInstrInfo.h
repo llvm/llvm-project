@@ -37,6 +37,7 @@ class MachineOperand;
 class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
+  const HexagonSubtarget &Subtarget;
   virtual void anchor();
 
 public:

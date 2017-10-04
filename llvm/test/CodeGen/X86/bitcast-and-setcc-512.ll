@@ -625,31 +625,23 @@ define i16 @v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d) {
 ; SSE-LABEL: v16i32:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pcmpgtd %xmm7, %xmm3
-; SSE-NEXT:    packssdw %xmm0, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm6, %xmm2
-; SSE-NEXT:    packssdw %xmm0, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE-NEXT:    packssdw %xmm3, %xmm2
 ; SSE-NEXT:    pcmpgtd %xmm5, %xmm1
-; SSE-NEXT:    packssdw %xmm0, %xmm1
 ; SSE-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE-NEXT:    packssdw %xmm0, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    packsswb %xmm2, %xmm0
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    packssdw %xmm0, %xmm11
-; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    packssdw %xmm0, %xmm9
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm9 = xmm9[0],xmm11[0]
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    packssdw %xmm0, %xmm10
+; SSE-NEXT:    packssdw %xmm11, %xmm10
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    packssdw %xmm0, %xmm8
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm10[0]
-; SSE-NEXT:    packsswb %xmm9, %xmm8
+; SSE-NEXT:    packssdw %xmm9, %xmm8
+; SSE-NEXT:    packsswb %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>

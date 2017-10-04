@@ -273,21 +273,6 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   OutStrings.push_back(Args.MakeArgString(Out));
 }
 
-static void getHexagonTargetFeatures(const ArgList &Args,
-                                     std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features,
-                            options::OPT_m_hexagon_Features_Group);
-
-  bool UseLongCalls = false;
-  if (Arg *A = Args.getLastArg(options::OPT_mlong_calls,
-                               options::OPT_mno_long_calls)) {
-    if (A->getOption().matches(options::OPT_mlong_calls))
-      UseLongCalls = true;
-  }
-
-  Features.push_back(UseLongCalls ? "+long-calls" : "-long-calls");
-}
-
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
                                          std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
@@ -349,7 +334,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
     x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
-    getHexagonTargetFeatures(Args, Features);
+    hexagon::getHexagonTargetFeatures(Args, Features);
     break;
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:

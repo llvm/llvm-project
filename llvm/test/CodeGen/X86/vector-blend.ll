@@ -724,8 +724,8 @@ define <8 x float> @blend_shufflevector_8xfloat(<8 x float> %a, <8 x float> %b) 
 ;
 ; SSE41-LABEL: blend_shufflevector_8xfloat:
 ; SSE41:       # BB#0: # %entry
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm3[0,1],xmm1[2],xmm3[3]
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm3[0,1],xmm1[2],xmm3[3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_shufflevector_8xfloat:
