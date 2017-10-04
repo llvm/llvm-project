@@ -99,6 +99,8 @@ cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
         "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 set(LIBCXX_ABI_VERSION 1 CACHE STRING "ABI version of libc++.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+option(LIBCXX_ABI_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
+option(LIBCXX_ABI_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
@@ -336,6 +338,10 @@ if (LIBCXX_HAS_MUSL_LIBC AND NOT LIBCXX_INSTALL_SUPPORT_HEADERS)
   message(FATAL_ERROR "LIBCXX_INSTALL_SUPPORT_HEADERS can not be turned off"
                       "when building for Musl with LIBCXX_HAS_MUSL_LIBC.")
 endif()
+
+if (LIBCXX_ABI_ITANIUM AND LIBCXX_ABI_MICROSOFT)
+  message(FATAL_ERROR "Only one of LIBCXX_ABI_ITANIUM and LIBCXX_ABI_MICROSOFT can be specified.")
+endif ()
 
 #===============================================================================
 # Configure System
@@ -594,6 +600,8 @@ if (NOT LIBCXX_ABI_VERSION EQUAL "1")
   config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 endif()
 config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)
+config_define_if(LIBCXX_ABI_ITANIUM _LIBCPP_ABI_ITANIUM)
+config_define_if(LIBCXX_ABI_MICROSOFT _LIBCPP_ABI_MICROSOFT)
 
 config_define_if_not(LIBCXX_ENABLE_GLOBAL_FILESYSTEM_NAMESPACE _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE)
 config_define_if_not(LIBCXX_ENABLE_STDIN _LIBCPP_HAS_NO_STDIN)
