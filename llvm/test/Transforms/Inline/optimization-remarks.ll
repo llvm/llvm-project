@@ -20,7 +20,7 @@
 ; CHECK: foz not inlined into bar because it should never be inlined (cost=never)
 
 ; Function Attrs: alwaysinline nounwind uwtable
-define i32 @foo(i32 %x, i32 %y) #0 {
+define i32 @foo(i32 %x, i32 %y) #0 !prof !1 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -33,7 +33,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define float @foz(i32 %x, i32 %y) #1 {
+define float @foz(i32 %x, i32 %y) #1 !prof !1 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -49,7 +49,7 @@ entry:
 declare i32 @fox()
 
 ; Function Attrs: nounwind uwtable
-define i32 @bar(i32 %j) #2 {
+define i32 @bar(i32 %j) #2 !prof !1 {
 entry:
   %j.addr = alloca i32, align 4
   store i32 %j, i32* %j.addr, align 4
@@ -76,3 +76,4 @@ attributes #2 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 3.5.0 "}
+!1 = !{!"function_entry_count", i64 10}

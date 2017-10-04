@@ -59,6 +59,21 @@ static inline unsigned hexDigitValue(char C) {
   return -1U;
 }
 
+/// Checks if character \p C is one of the 10 decimal digits.
+static inline bool isDigit(char C) { return C >= '0' && C <= '9'; }
+
+/// Checks if character \p C is a hexadecimal numeric character.
+static inline bool isHexDigit(char C) { return hexDigitValue(C) != -1U; }
+
+/// Checks if character \p C is a valid letter as classified by "C" locale.
+static inline bool isAlpha(char C) {
+  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z');
+}
+
+/// Checks whether character \p C is either a decimal digit or an uppercase or
+/// lowercase letter as classified by "C" locale.
+static inline bool isAlnum(char C) { return isAlpha(C) || isDigit(C); }
+
 static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);

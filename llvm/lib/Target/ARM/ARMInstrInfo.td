@@ -460,13 +460,13 @@ def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
 class ImmAsmOperand<int Low, int High> : AsmOperandClass {
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
-  let DiagnosticString = "immediate operand must be in the range [" # Low # "," # High # "]";
+  let DiagnosticString = "operand must be an immediate in the range [" # Low # "," # High # "]";
 }
 
 class ImmAsmOperandMinusOne<int Low, int High> : AsmOperandClass {
   let PredicateMethod = "isImmediate<" # Low # "," # High # ">";
   let DiagnosticType = "ImmRange" # Low # "_" # High;
-  let DiagnosticString = "immediate operand must be in the range [" # Low # "," # High # "]";
+  let DiagnosticString = "operand must be an immediate in the range [" # Low # "," # High # "]";
 }
 
 // Operands that are part of a memory addressing mode.
@@ -822,6 +822,7 @@ def imm0_65535_neg : Operand<i32>, ImmLeaf<i32, [{
 def Imm0_65535ExprAsmOperand: AsmOperandClass {
   let Name = "Imm0_65535Expr";
   let RenderMethod = "addImmOperands";
+  let DiagnosticString = "operand must be an immediate in the range [0,0xffff] or a relocatable expression";
 }
 
 def imm0_65535_expr : Operand<i32> {
@@ -837,7 +838,7 @@ def imm256_65535_expr : Operand<i32> {
 /// imm24b - True if the 32-bit immediate is encodable in 24 bits.
 def Imm24bitAsmOperand: ImmAsmOperand<0,0xffffff> {
   let Name = "Imm24bit";
-  let DiagnosticString = "immediate operand must be in the range [0,0xffffff]";
+  let DiagnosticString = "operand must be an immediate in the range [0,0xffffff]";
 }
 def imm24b : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm <= 0xffffff;
