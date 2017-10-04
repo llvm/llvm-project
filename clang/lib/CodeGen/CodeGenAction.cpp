@@ -631,6 +631,10 @@ void BackendConsumer::EmitOptimizationMessage(
 
 void BackendConsumer::OptimizationRemarkHandler(
     const llvm::DiagnosticInfoOptimizationBase &D) {
+  // Without hotness information, don't show noisy remarks.
+  if (D.isVerbose() && !D.getHotness())
+    return;
+
   if (D.isPassed()) {
     // Optimization remarks are active only if the -Rpass flag has a regular
     // expression that matches the name of the pass name in \p D.

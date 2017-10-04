@@ -11914,7 +11914,11 @@ bool Sema::ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc) {
   DeclContext *CurLexicalContext = getCurLexicalContext();
   if (!CurLexicalContext->isFileContext() &&
       !CurLexicalContext->isExternCContext() &&
-      !CurLexicalContext->isExternCXXContext()) {
+      !CurLexicalContext->isExternCXXContext() &&
+      !isa<CXXRecordDecl>(CurLexicalContext) &&
+      !isa<ClassTemplateDecl>(CurLexicalContext) &&
+      !isa<ClassTemplatePartialSpecializationDecl>(CurLexicalContext) &&
+      !isa<ClassTemplateSpecializationDecl>(CurLexicalContext)) {
     Diag(Loc, diag::err_omp_region_not_file_context);
     return false;
   }
