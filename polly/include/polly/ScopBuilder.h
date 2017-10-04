@@ -229,6 +229,12 @@ class ScopBuilder {
   /// @returns True if the instruction should be modeled.
   bool shouldModelInst(Instruction *Inst, Loop *L);
 
+  /// Create one or more ScopStmts for @p BB.
+  ///
+  /// Consecutive instructions are associated to the same statement until a
+  /// separator is found.
+  void buildSequentialBlockStmts(BasicBlock *BB);
+
   /// Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
   /// @param SR A subregion of @p R.
