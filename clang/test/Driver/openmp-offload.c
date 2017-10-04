@@ -64,10 +64,18 @@
 /// ##########################################################################
 
 /// Check -march=pwr7 is NOT passed to nvptx64-nvidia-cuda.
-// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -march=pwr7 %s 2>&1 \
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -target powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-GPU %s
 
 // CHK-FOPENMP-MARCH-TO-GPU-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+
+/// ###########################################################################
+
+/// Check -march=pwr7 is NOT passed to x86_64-unknown-linux-gnu.
+// RUN:    %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu -target powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-X86 %s
+
+// CHK-FOPENMP-MARCH-TO-X86-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
 
 /// ###########################################################################
 

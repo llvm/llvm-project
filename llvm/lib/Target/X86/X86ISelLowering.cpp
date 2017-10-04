@@ -8683,24 +8683,36 @@ static SDValue lowerVectorShuffleWithPACK(const SDLoc &DL, MVT VT,
   MVT PackSVT = MVT::getIntegerVT(BitSize * 2);
   MVT PackVT = MVT::getVectorVT(PackSVT, NumElts / 2);
 
-  // TODO - Add support for unary packs.
-  SmallVector<int, 32> BinaryMask;
-  createPackShuffleMask(VT, BinaryMask, false);
-
-  if (isShuffleEquivalent(V1, V2, Mask, BinaryMask)) {
-    SDValue VV1 = DAG.getBitcast(PackVT, V1);
-    SDValue VV2 = DAG.getBitcast(PackVT, V2);
-    if ((V1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
-        (V2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize))
+  auto LowerWithPACK = [&](SDValue N1, SDValue N2) {
+    SDValue VV1 = DAG.getBitcast(PackVT, N1);
+    SDValue VV2 = DAG.getBitcast(PackVT, N2);
+    if ((N1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
+        (N2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize))
       return DAG.getNode(X86ISD::PACKSS, DL, VT, VV1, VV2);
 
     if (Subtarget.hasSSE41() || PackSVT == MVT::i16) {
       APInt ZeroMask = APInt::getHighBitsSet(BitSize * 2, BitSize);
-      if ((V1.isUndef() || DAG.MaskedValueIsZero(VV1, ZeroMask)) &&
-          (V2.isUndef() || DAG.MaskedValueIsZero(VV2, ZeroMask)))
+      if ((N1.isUndef() || DAG.MaskedValueIsZero(VV1, ZeroMask)) &&
+          (N2.isUndef() || DAG.MaskedValueIsZero(VV2, ZeroMask)))
         return DAG.getNode(X86ISD::PACKUS, DL, VT, VV1, VV2);
     }
-  }
+
+    return SDValue();
+  };
+
+  // Try binary shuffle.
+  SmallVector<int, 32> BinaryMask;
+  createPackShuffleMask(VT, BinaryMask, false);
+  if (isShuffleEquivalent(V1, V2, Mask, BinaryMask))
+    if (SDValue Pack = LowerWithPACK(V1, V2))
+      return Pack;
+
+  // Try unary shuffle.
+  SmallVector<int, 32> UnaryMask;
+  createPackShuffleMask(VT, UnaryMask, true);
+  if (isShuffleEquivalent(V1, V2, Mask, UnaryMask))
+    if (SDValue Pack = LowerWithPACK(V1, V1))
+      return Pack;
 
   return SDValue();
 }
@@ -11497,6 +11509,11 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Use dedicated unpack instructions for masks that match their pattern.
   if (SDValue V =
           lowerVectorShuffleWithUNPCK(DL, MVT::v8i16, Mask, V1, V2, DAG))
+    return V;
+
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v8i16, Mask, V1, V2, DAG,
+                                             Subtarget))
     return V;
 
   // Try to use byte rotation instructions.
@@ -27198,20 +27215,24 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   case X86ISD::VSHLI: {
+    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
-    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
     if (ShiftVal.uge(VTBits))
       return VTBits; // Shifted all bits out --> zero.
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     if (ShiftVal.uge(Tmp))
       return 1; // Shifted all sign bits out --> unknown.
     return Tmp - ShiftVal.getZExtValue();
   }
 
   case X86ISD::VSRAI: {
+    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
-    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
+    if (ShiftVal.uge(VTBits - 1))
+      return VTBits; // Sign splat.
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     ShiftVal += Tmp;
     return ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
   }
@@ -29484,9 +29505,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     FPCastVT = MVT::v4f32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
-    if (N0->getOpcode() == ISD::SETCC &&
-        N0->getOperand(0)->getValueType(0).is256BitVector() &&
-        Subtarget.hasAVX()) {
+    if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        N0->getOperand(0)->getValueType(0).is256BitVector()) {
       SExtVT = MVT::v4i64;
       FPCastVT = MVT::v4f64;
     }
@@ -29498,9 +29518,9 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
-    if (N0->getOpcode() == ISD::SETCC &&
-        N0->getOperand(0)->getValueType(0).is256BitVector() &&
-        Subtarget.hasAVX()) {
+    if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        (N0->getOperand(0)->getValueType(0).is256BitVector() ||
+         N0->getOperand(0)->getValueType(0).is512BitVector())) {
       SExtVT = MVT::v8i32;
       FPCastVT = MVT::v8f32;
     }

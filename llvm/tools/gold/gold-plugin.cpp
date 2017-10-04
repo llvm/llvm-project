@@ -608,16 +608,11 @@ static std::string getThinLTOObjectFileName(StringRef Path, StringRef OldSuffix,
   return NewNewPath;
 }
 
-static bool isAlpha(char C) {
-  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
-}
-
-static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
-
 // Returns true if S is valid as a C language identifier.
 static bool isValidCIdentifier(StringRef S) {
-  return !S.empty() && isAlpha(S[0]) &&
-         std::all_of(S.begin() + 1, S.end(), isAlnum);
+  return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
+         std::all_of(S.begin() + 1, S.end(),
+                     [](char C) { return C == '_' || isAlnum(C); });
 }
 
 static void addModule(LTO &Lto, claimed_file &F, const void *View,

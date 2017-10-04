@@ -142,11 +142,13 @@ void test_deletion() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
   delete unowned_int1; // BAD, since no owner
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+  // CHECK-MESSAGES: [[@LINE-4]]:3: note: variable declared here
 
   int *unowned_int2 = new int[42]; // BAD, since new creates and owner
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
   delete[] unowned_int2; // BAD since no owner
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+  // CHECK-MESSAGES: [[@LINE-4]]:3: note: variable declared here
 
   delete new int(42);   // Technically ok, but stupid
   delete[] new int[42]; // Technically ok, but stupid

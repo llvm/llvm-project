@@ -2235,8 +2235,8 @@ void MergeNoTailSection::finalizeContents() {
   // operations in the following tight loop.
   size_t Concurrency = 1;
   if (Config->Threads)
-    Concurrency =
-        std::min<size_t>(PowerOf2Floor(hardware_concurrency()), NumShards);
+    if (int N = std::thread::hardware_concurrency())
+      Concurrency = std::min<size_t>(PowerOf2Floor(N), NumShards);
 
   // Add section pieces to the builders.
   parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
