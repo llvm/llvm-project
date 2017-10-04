@@ -13,8 +13,8 @@ define void @c() local_unnamed_addr #0 {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
+; CHECK-NEXT:    leaq (%rcx,%rax,4), %rax
 ; CHECK-NEXT:    negq %rcx
-; CHECK-NEXT:    leaq (%rax,%rax,8), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rax
 ; CHECK-NEXT:    testq %rax, %rcx
 ; CHECK-NEXT:    je .LBB0_2

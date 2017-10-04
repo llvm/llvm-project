@@ -1022,6 +1022,10 @@ def ARMAsmWriter : AsmWriter {
   bit isMCAsmWriter = 1;
 }
 
+def ARMAsmParser : AsmParser {
+  bit ReportMultipleNearMisses = 1;
+}
+
 def ARMAsmParserVariant : AsmParserVariant {
   int Variant = 0;
   string Name = "ARM";
@@ -1032,5 +1036,6 @@ def ARM : Target {
   // Pull in Instruction Info.
   let InstructionSet = ARMInstrInfo;
   let AssemblyWriters = [ARMAsmWriter];
+  let AssemblyParsers = [ARMAsmParser];
   let AssemblyParserVariants = [ARMAsmParserVariant];
 }

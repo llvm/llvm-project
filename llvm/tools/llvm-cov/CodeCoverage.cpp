@@ -882,7 +882,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
       }
       auto OS = std::move(OSOrErr.get());
 
-      bool ShowTitle = true;
+      bool ShowTitle = ViewOpts.hasOutputDirectory();
       for (const auto *Function : Functions) {
         auto FunctionView = createFunctionView(*Function, *Coverage);
         if (!FunctionView) {

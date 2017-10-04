@@ -40,7 +40,7 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-NEXT:    pand %xmm0, %xmm2
 ; SSE-NEXT:    psllw $15, %xmm2
 ; SSE-NEXT:    psraw $15, %xmm2
-; SSE-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    packsswb %xmm0, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE-NEXT:    retq
@@ -77,7 +77,7 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    vzeroupper
@@ -107,7 +107,7 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX2-NEXT:    vzeroupper
@@ -172,7 +172,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; SSE-NEXT:    pand %xmm0, %xmm2
 ; SSE-NEXT:    psllw $15, %xmm2
 ; SSE-NEXT:    psraw $15, %xmm2
-; SSE-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    packsswb %xmm0, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE-NEXT:    retq
@@ -201,7 +201,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX12-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX12-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    vzeroupper
@@ -235,33 +235,24 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ; SSE-LABEL: v32i16:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pcmpgtw %xmm5, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm5 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE-NEXT:    pshufb %xmm5, %xmm1
 ; SSE-NEXT:    pcmpgtw %xmm4, %xmm0
-; SSE-NEXT:    pshufb %xmm5, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    pcmpgtw %xmm7, %xmm3
-; SSE-NEXT:    pshufb %xmm5, %xmm3
 ; SSE-NEXT:    pcmpgtw %xmm6, %xmm2
-; SSE-NEXT:    pshufb %xmm5, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE-NEXT:    packsswb %xmm3, %xmm2
 ; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pshufb %xmm5, %xmm11
-; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    pshufb %xmm5, %xmm9
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm9 = xmm9[0],xmm11[0]
-; SSE-NEXT:    pand %xmm0, %xmm9
 ; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    pshufb %xmm5, %xmm10
+; SSE-NEXT:    packsswb %xmm11, %xmm10
+; SSE-NEXT:    pand %xmm0, %xmm10
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    pshufb %xmm5, %xmm8
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm10[0]
+; SSE-NEXT:    packsswb %xmm9, %xmm8
 ; SSE-NEXT:    pand %xmm2, %xmm8
-; SSE-NEXT:    pmovmskb %xmm9, %ecx
+; SSE-NEXT:    pmovmskb %xmm10, %ecx
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    shll $16, %eax
 ; SSE-NEXT:    orl %ecx, %eax
@@ -639,33 +630,27 @@ define i16 @v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d) {
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pcmpgtd %xmm7, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE-NEXT:    pshufb %xmm7, %xmm3
+; SSE-NEXT:    packssdw %xmm0, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm6, %xmm2
-; SSE-NEXT:    pshufb %xmm7, %xmm2
+; SSE-NEXT:    packssdw %xmm0, %xmm2
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE-NEXT:    pshufb %xmm3, %xmm2
 ; SSE-NEXT:    pcmpgtd %xmm5, %xmm1
-; SSE-NEXT:    pshufb %xmm7, %xmm1
+; SSE-NEXT:    packssdw %xmm0, %xmm1
 ; SSE-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE-NEXT:    pshufb %xmm7, %xmm0
+; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    pshufb %xmm3, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    packsswb %xmm2, %xmm0
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pshufb %xmm7, %xmm11
+; SSE-NEXT:    packssdw %xmm0, %xmm11
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm9
-; SSE-NEXT:    pshufb %xmm7, %xmm9
+; SSE-NEXT:    packssdw %xmm0, %xmm9
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm9 = xmm9[0],xmm11[0]
-; SSE-NEXT:    pshufb %xmm3, %xmm9
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    pshufb %xmm7, %xmm10
+; SSE-NEXT:    packssdw %xmm0, %xmm10
 ; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm8
-; SSE-NEXT:    pshufb %xmm7, %xmm8
+; SSE-NEXT:    packssdw %xmm0, %xmm8
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm10[0]
-; SSE-NEXT:    pshufb %xmm3, %xmm8
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm9[0]
+; SSE-NEXT:    packsswb %xmm9, %xmm8
 ; SSE-NEXT:    pand %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>

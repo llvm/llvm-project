@@ -12,10 +12,10 @@
 @ CHECK-DARWIN-ARM: ldr pc, Ltmp0
 @ CHECK-T2: ldr.w pc, .Ltmp[[TMP0:[0-9]+]]
 @ CHECK-DARWIN-T2: ldr.w pc, Ltmp0
-@ CHECK-NONE: error: instruction requires: thumb2
+@ CHECK-NONE: instruction requires: thumb2
   ldr sp, = 0x8
 @ CHECK-ARM: ldr sp, .Ltmp[[TMP1:[0-9]+]]
 @ CHECK-DARWIN-ARM: ldr sp, Ltmp1
 @ CHECK-T2: ldr.w sp, .Ltmp[[TMP1:[0-9]+]]
 @ CHECK-DARWIN-T2: ldr.w sp, Ltmp1
-@ CHECK-NONE: error: instruction requires: thumb2
+@ CHECK-NONE: instruction requires: thumb2

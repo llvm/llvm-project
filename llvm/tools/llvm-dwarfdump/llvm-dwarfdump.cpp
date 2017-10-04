@@ -27,6 +27,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -149,11 +150,12 @@ static opt<bool>
                value_desc("i"), cat(DwarfDumpCategory));
 static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case"),
                              aliasopt(IgnoreCase));
-static list<std::string>
-    Name("name",
-         desc("Find and print all debug info entries whose name (DW_AT_name "
-              "attribute) matches the exact text in <name>."),
-         value_desc("name"), cat(DwarfDumpCategory));
+static list<std::string> Name(
+    "name",
+    desc("Find and print all debug info entries whose name (DW_AT_name "
+         "attribute) matches the exact text in <pattern>.  When used with the "
+         "the -regex option <pattern> is interpreted as a regular expression."),
+    value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
 static opt<std::string>
     OutputFilename("out-file", cl::init(""),
@@ -162,6 +164,12 @@ static opt<std::string>
 static alias OutputFilenameAlias("o", desc("Alias for -out-file"),
                                  aliasopt(OutputFilename),
                                  cat(DwarfDumpCategory));
+static opt<bool>
+    UseRegex("regex",
+             desc("Treat any <pattern> strings as regular expressions when "
+                  "searching instead of just as an exact string match."),
+             cat(DwarfDumpCategory));
+static alias RegexAlias("x", desc("Alias for -regex"), aliasopt(UseRegex));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
@@ -272,8 +280,22 @@ static void filterByName(const StringSet<> &Names,
     for (const auto &Entry : CU->dies()) {
       DWARFDie Die = {CU.get(), &Entry};
       if (const char *NamePtr = Die.getName(DINameKind::ShortName)) {
-        std::string Name = IgnoreCase ? StringRef(NamePtr).lower() : NamePtr;
-        if (Names.count(Name))
+        std::string Name =
+            (IgnoreCase && !UseRegex) ? StringRef(NamePtr).lower() : NamePtr;
+        // Match regular expression.
+        if (UseRegex)
+          for (auto Pattern : Names.keys()) {
+            Regex RE(Pattern, IgnoreCase ? Regex::IgnoreCase : Regex::NoFlags);
+            std::string Error;
+            if (!RE.isValid(Error)) {
+              errs() << "error in regular expression: " << Error << "\n";
+              exit(1);
+            }
+            if (RE.match(Name))
+              Die.dump(OS, 0, getDumpOpts());
+          }
+        // Match full text.
+        else if (Names.count(Name))
           Die.dump(OS, 0, getDumpOpts());
       }
     }
@@ -292,7 +314,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   if (!Name.empty()) {
     StringSet<> Names;
     for (auto name : Name)
-      Names.insert(IgnoreCase ? StringRef(name).lower() : name);
+      Names.insert((IgnoreCase && !UseRegex) ? StringRef(name).lower() : name);
 
     filterByName(Names, DICtx.compile_units(), OS);
     filterByName(Names, DICtx.dwo_compile_units(), OS);

@@ -227,7 +227,7 @@ define fp128 @TestI128_4(fp128 %x) #0 {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, (%rsp)
@@ -275,7 +275,7 @@ define fp128 @acosl(fp128 %x) #0 {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, (%rsp)

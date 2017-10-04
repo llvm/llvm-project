@@ -416,4 +416,56 @@ bb2:
   ret void
 }
 
+; FUNC-LABEL: setcc_v2i32_expand
+; GCN: v_cmp_gt_i32
+; GCN: v_cmp_gt_i32
+define amdgpu_kernel void @setcc_v2i32_expand(
+  <2 x i32> addrspace(1)* %a,
+  <2 x i32> addrspace(1)* %b,
+  <2 x i32> addrspace(1)* %c,
+  <2 x float> addrspace(1)* %r) {
+entry:
+  %a.val = load <2 x i32>, <2 x i32> addrspace(1)* %a
+  %b.val = load <2 x i32>, <2 x i32> addrspace(1)* %b
+  %c.val = load <2 x i32>, <2 x i32> addrspace(1)* %c
+
+  %icmp.val.1 = icmp sgt <2 x i32> %a.val, <i32 1, i32 1>
+  %zext.val.1 = zext <2 x i1> %icmp.val.1 to <2 x i32>
+  %shl.val.1 = shl nuw <2 x i32> %zext.val.1, <i32 31, i32 31>
+  %xor.val.1 = xor <2 x i32> %shl.val.1, %b.val
+  %bitcast.val.1 = bitcast <2 x i32> %xor.val.1 to <2 x float>
+  %icmp.val.2 = icmp sgt <2 x i32> %c.val, <i32 1199570944, i32 1199570944>
+  %select.val.1 = select <2 x i1> %icmp.val.2, <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> %bitcast.val.1
+
+  store <2 x float> %select.val.1, <2 x float> addrspace(1)* %r
+  ret void
+}
+
+; FUNC-LABEL: setcc_v4i32_expand
+; GCN: v_cmp_gt_i32
+; GCN: v_cmp_gt_i32
+; GCN: v_cmp_gt_i32
+; GCN: v_cmp_gt_i32
+define amdgpu_kernel void @setcc_v4i32_expand(
+  <4 x i32> addrspace(1)* %a,
+  <4 x i32> addrspace(1)* %b,
+  <4 x i32> addrspace(1)* %c,
+  <4 x float> addrspace(1)* %r) {
+entry:
+  %a.val = load <4 x i32>, <4 x i32> addrspace(1)* %a
+  %b.val = load <4 x i32>, <4 x i32> addrspace(1)* %b
+  %c.val = load <4 x i32>, <4 x i32> addrspace(1)* %c
+
+  %icmp.val.1 = icmp sgt <4 x i32> %a.val, <i32 1, i32 1, i32 1, i32 1>
+  %zext.val.1 = zext <4 x i1> %icmp.val.1 to <4 x i32>
+  %shl.val.1 = shl nuw <4 x i32> %zext.val.1, <i32 31, i32 31, i32 31, i32 31>
+  %xor.val.1 = xor <4 x i32> %shl.val.1, %b.val
+  %bitcast.val.1 = bitcast <4 x i32> %xor.val.1 to <4 x float>
+  %icmp.val.2 = icmp sgt <4 x i32> %c.val, <i32 1199570944, i32 1199570944, i32 1199570944, i32 1199570944>
+  %select.val.1 = select <4 x i1> %icmp.val.2, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> %bitcast.val.1
+
+  store <4 x float> %select.val.1, <4 x float> addrspace(1)* %r
+  ret void
+}
+
 attributes #0 = { nounwind }

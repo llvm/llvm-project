@@ -30,7 +30,7 @@ public:
 
   Error createIndexFile(ArrayRef<std::string> SourceFiles,
                         const coverage::CoverageMapping &Coverage,
-                        const CoverageFilter &Filters) override;
+                        const CoverageFiltersMatchAll &Filters) override;
 
   CoveragePrinterHTML(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
