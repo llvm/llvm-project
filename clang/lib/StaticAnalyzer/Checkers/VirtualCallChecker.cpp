@@ -146,7 +146,7 @@ static bool isVirtualCall(const CallExpr *CE) {
     if (CME->getQualifier())
       CallIsNonVirtual = true;
 
-    if (const Expr *Base = CME->getBase()->IgnoreImpCasts()) {
+    if (const Expr *Base = CME->getBase()) {
       // The most derived class is marked final.
       if (Base->getBestDynamicClassType()->hasAttr<FinalAttr>())
         CallIsNonVirtual = true;
