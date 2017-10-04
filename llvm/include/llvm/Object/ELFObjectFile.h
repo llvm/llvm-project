@@ -995,9 +995,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_WEBASSEMBLY:
       return "ELF64-wasm";
     case ELF::EM_AMDGPU:
-      return (EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
-              && IsLittleEndian) ?
-             "ELF64-amdgpu-hsacobj" : "ELF64-amdgpu";
+      return "ELF64-amdgpu";
     case ELF::EM_BPF:
       return "ELF64-BPF";
     default:
@@ -1066,10 +1064,13 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     }
 
   case ELF::EM_AMDGPU:
-    return (EF.getHeader()->e_ident[ELF::EI_CLASS] == ELF::ELFCLASS64
-         && EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
-         && IsLittleEndian) ?
-      Triple::amdgcn : Triple::UnknownArch;
+    if (EF.getHeader()->e_ident[ELF::EI_CLASS] != ELF::ELFCLASS64)
+      return Triple::UnknownArch;
+    if (!IsLittleEndian)
+      return Triple::UnknownArch;
+
+    // TODO: Determine r600/amdgcn architecture based e_flags.
+    return Triple::amdgcn;
 
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;

@@ -82,33 +82,34 @@ static int charTailAt(StringPair *P, size_t Pos) {
 
 // Three-way radix quicksort. This is much faster than std::sort with strcmp
 // because it does not compare characters that we already know the same.
-static void multikey_qsort(std::vector<StringPair *> &Vec, size_t Begin,
-                           size_t End, int Pos) {
+static void multikeySort(MutableArrayRef<StringPair *> Vec, int Pos) {
 tailcall:
-  if (End - Begin <= 1)
+  if (Vec.size() <= 1)
     return;
 
-  // Partition items so that items in [Begin, P) are greater than the pivot,
-  // [P, Q) are the same as the pivot, and [Q, End) are less than the pivot.
-  int Pivot = charTailAt(Vec[Begin], Pos);
-  size_t P = Begin;
-  size_t Q = End;
-  for (size_t R = Begin + 1; R < Q;) {
-    int C = charTailAt(Vec[R], Pos);
+  // Partition items so that items in [0, I) are greater than the pivot,
+  // [I, J) are the same as the pivot, and [J, Vec.size()) are less than
+  // the pivot.
+  int Pivot = charTailAt(Vec[0], Pos);
+  size_t I = 0;
+  size_t J = Vec.size();
+  for (size_t K = 1; K < J;) {
+    int C = charTailAt(Vec[K], Pos);
     if (C > Pivot)
-      std::swap(Vec[P++], Vec[R++]);
+      std::swap(Vec[I++], Vec[K++]);
     else if (C < Pivot)
-      std::swap(Vec[--Q], Vec[R]);
+      std::swap(Vec[--J], Vec[K]);
     else
-      R++;
+      K++;
   }
 
-  multikey_qsort(Vec, Begin, P, Pos);
-  multikey_qsort(Vec, Q, End, Pos);
+  multikeySort(Vec.slice(0, I), Pos);
+  multikeySort(Vec.slice(J), Pos);
+
+  // multikeySort(Vec.slice(I, J - I), Pos + 1), but with
+  // tail call optimization.
   if (Pivot != -1) {
-    // qsort(P, Q, Pos + 1), but with tail call optimization.
-    Begin = P;
-    End = Q;
+    Vec = Vec.slice(I, J - I);
     ++Pos;
     goto tailcall;
   }
@@ -131,12 +132,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     for (StringPair &P : StringIndexMap)
       Strings.push_back(&P);
 
-    if (!Strings.empty()) {
-      // If we're optimizing, sort by name. If not, sort by previously assigned
-      // offset.
-      multikey_qsort(Strings, 0, Strings.size(), 0);
-    }
-
+    multikeySort(Strings, 0);
     initSize();
 
     StringRef Previous;

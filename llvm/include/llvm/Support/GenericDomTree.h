@@ -637,11 +637,12 @@ class DominatorTreeBase {
     assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->getChildren().empty() && "Node is not a leaf node.");
 
+    DFSInfoValid = false;
+
     // Remove node from immediate dominator's children list.
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
-      typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          find(IDom->Children, Node);
+      const auto I = find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...

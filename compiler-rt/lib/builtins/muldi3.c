@@ -54,8 +54,5 @@ __muldi3(di_int a, di_int b)
 }
 
 #if defined(__ARM_EABI__)
-AEABI_RTABI di_int __aeabi_lmul(di_int a, di_int b) {
-  return __muldi3(a, b);
-}
+AEABI_RTABI di_int __aeabi_lmul(di_int a, di_int b) COMPILER_RT_ALIAS(__muldi3);
 #endif
-
