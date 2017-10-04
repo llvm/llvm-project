@@ -17,7 +17,7 @@
 @ CHECK-ERRORS: note: instruction requires: arm-mode
 @ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: note: invalid operand for instruction
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: note: no flag-preserving variant of this instruction available
 
 @ Instructions which require v6+ for both registers to be low regs.
@@ -38,7 +38,7 @@
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         asrs r2, r3, #33
 @ CHECK-ERRORS:                      ^
-@ CHECK-ERRORS: note: immediate operand must be in the range [1,32]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [1,32]
 @ CHECK-ERRORS: note: too many operands for instruction
 
 @ Out of range immediates for BKPT instruction.
@@ -48,13 +48,13 @@
 @ CHECK-ERRORS:        bkpt #256
 @ CHECK-ERRORS:             ^
 @ CHECK-ERRORS: note: instruction requires: arm-mode
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,255]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,255]
 @ CHECK-ERRORS: note: too many operands for instruction
 
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:        bkpt #-1
 @ CHECK-ERRORS:             ^
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,255]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,255]
 @ CHECK-ERRORS: note: too many operands for instruction
 
 @ Out of range immediates for v8 HLT instruction.
@@ -67,11 +67,11 @@
 @CHECK-ERRORS-V8:         hlt #64
 @CHECK-ERRORS-V8:              ^
 @CHECK-ERRORS-V8: note: instruction requires: arm-mode
-@CHECK-ERRORS-V8: immediate operand must be in the range [0,63]
+@CHECK-ERRORS-V8: operand must be an immediate in the range [0,63]
 @CHECK-ERRORS: error: invalid instruction
 @CHECK-ERRORS:        hlt #-1
 @CHECK-ERRORS:        ^
-@CHECK-ERRORS-V8: error: immediate operand must be in the range [0,63]
+@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,63]
 @CHECK-ERRORS-V8:         hlt #-1
 @CHECK-ERRORS-V8:              ^
 
@@ -178,12 +178,12 @@
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         lsls r4, r5, #-1
 @ CHECK-ERRORS:                      ^
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,31]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,31]
 @ CHECK-ERRORS: note: too many operands for instruction
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         lsls r4, r5, #32
 @ CHECK-ERRORS:                      ^
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,31]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,31]
 @ CHECK-ERRORS: note: too many operands for instruction
 
 @ Mismatched source/destination operands for MUL instruction.
@@ -219,14 +219,14 @@
 @ Out of range immediate for SVC instruction.
         svc #-1
         svc #256
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,255]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,255]
 @ CHECK-ERRORS:         svc #-1
 @ CHECK-ERRORS:             ^
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         svc #256
 @ CHECK-ERRORS:         ^
 @ CHECK-ERRORS: note: instruction requires: arm-mode
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,255]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,255]
 
 
 @ Out of range immediate for ADD SP instructions

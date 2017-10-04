@@ -94,7 +94,7 @@
         bkpt #65536
 
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
-@ CHECK-ERRORS: note: immediate operand must be in the range [0,65535]
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,65535]
 @ CHECK-ERRORS: note: too many operands for instruction
 @ CHECK-ERRORS:         bkpt #65536
 @ CHECK-ERRORS:              ^
@@ -103,11 +103,11 @@
         hlt #65536
         hlt #-1
 @CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: immediate operand must be in the range [0,65535]
+@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #65536
 @CHECK-ERRORS:              ^
 @CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: immediate operand must be in the range [0,65535]
+@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
 @CHECK-ERRORS:             ^
 
@@ -129,10 +129,10 @@
         cdp2  p7, #2, c1, c1, c1, #8
         cdp2  p7, #1, c1, c1, c1, #8
 
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: error: invalid instruction
 @ CHECK-ERRORS-V8: error: invalid instruction
 @ CHECK-ERRORS-V8: error: invalid instruction
@@ -142,10 +142,10 @@
         dbg #-1
         dbg #16
 
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V8: error: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V8: error: immediate operand must be in the range [0,15]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,15]
 @  Double-check that we're synced up with the right diagnostics.
 @ CHECK-ERRORS: dbg #16
 @ CHECK-ERRORS:     ^
@@ -157,14 +157,14 @@
         mcr2  p7, #1, r5, c1, c1, #8
         mcrr  p7, #16, r5, r4, c1
         mcrr2  p7, #16, r5, r4, c1
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: invalid instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
-@ CHECK-ERRORS: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,15]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V8: invalid instruction
 
         @ p10 and p11 are reserved for NEON
@@ -175,7 +175,7 @@
 
         @ Out of range immediate for MOV
         movw r9, 0x10000
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 @ CHECK-ERRORS:        movw r9, 0x10000
 @ CHECK-ERRORS:                 ^
 
@@ -187,7 +187,7 @@
 
         @ Out of range immediate for MOVT
         movt r9, 0x10000
-@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 @ CHECK-ERRORS:        movt r9, 0x10000
 @ CHECK-ERRORS:                 ^
 
@@ -198,14 +198,14 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: invalid instruction
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: too many operands for instruction
-@ CHECK-ERRORS: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,15]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V8: invalid instruction
 
         @ Shifter operand validation for PKH instructions.
@@ -263,10 +263,10 @@
         ssat    r8, #1, r10, lsl fred
         ssat    r8, #1, r10, lsl #fred
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #0, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,32]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,32]
 @ CHECK-ERRORS: 	ssat	r8, #33, r10, lsl #8
 @ CHECK-ERRORS: 	    	    ^
 @ CHECK-ERRORS: error: 'lsr' shift amount must be in range [0,31]
@@ -295,10 +295,10 @@
 	ssat16	r2, #0, r7
 	ssat16	r3, #17, r5
 
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r2, #0, r7
 @ CHECK-ERRORS: 	      	    ^
-@ CHECK-ERRORS: error: immediate operand must be in the range [1,16]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [1,16]
 @ CHECK-ERRORS: 	ssat16	r3, #17, r5
 @ CHECK-ERRORS: 	      	    ^
 
@@ -313,7 +313,7 @@
 
         @ Out of range immediate on SVC
         svc #0x1000000
-@ CHECK-ERRORS: error: immediate operand must be in the range [0,0xffffff]
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffffff]
 @ CHECK-ERRORS:   svc #0x1000000
 @ CHECK-ERRORS:       ^
 

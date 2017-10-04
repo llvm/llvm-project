@@ -39,14 +39,14 @@
         mrc2  p14, #0, r1, c1, c2, #9
         mrrc  p7, #16, r5, r4, c1
         mrrc2  p7, #17, r5, r4, c1
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: invalid instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
-@ CHECK-ERRORS: immediate operand must be in the range [0,15]
-@ CHECK-ERRORS-V7: immediate operand must be in the range [0,15]
+@ CHECK-ERRORS: operand must be an immediate in the range [0,15]
+@ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V8: invalid instruction
 
         isb  #-1
@@ -80,10 +80,14 @@
 foo2:
         movw r0, foo2
         movt r0, foo2
+        movt r0, #0x10000
+        movt r0, #0x10000
 @ CHECK-ERRORS: error: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
 @ CHECK-ERRORS: immediate expression for mov requires :lower16: or :upper16
 @ CHECK-ERRORS:                  ^
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
+@ CHECK-ERRORS: error: operand must be an immediate in the range [0,0xffff] or a relocatable expression
 
         and sp, r1, #80008000
         and pc, r1, #80008000

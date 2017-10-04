@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -irce-allow-unsigned-latch=true -S < %s 2>&1 | FileCheck %s
 
 ; The test demonstrates that incorrect behavior of Clamp may lead to incorrect
 ; calculation of post-loop exit condition.

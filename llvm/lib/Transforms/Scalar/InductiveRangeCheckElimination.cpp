@@ -79,6 +79,9 @@ static cl::opt<int> MaxExitProbReciprocal("irce-max-exit-prob-reciprocal",
 static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
                                              cl::Hidden, cl::init(false));
 
+static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
+                                                 cl::Hidden, cl::init(false));
+
 static const char *ClonedLoopTag = "irce.loop.clone";
 
 #define DEBUG_TYPE "irce"
@@ -889,6 +892,15 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
 
     IsSignedPredicate =
         Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT;
+
+    // FIXME: We temporarily disable unsigned latch conditions by default
+    // because of found problems with intersecting signed and unsigned ranges.
+    // We are going to turn it on once the problems are fixed.
+    if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
+      FailureReason = "unsigned latch conditions are explicitly prohibited";
+      return None;
+    }
+
     // The predicate that we need to check that the induction variable lies
     // within bounds.
     ICmpInst::Predicate BoundPred =
@@ -964,6 +976,15 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
 
     IsSignedPredicate =
         Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT;
+
+    // FIXME: We temporarily disable unsigned latch conditions by default
+    // because of found problems with intersecting signed and unsigned ranges.
+    // We are going to turn it on once the problems are fixed.
+    if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
+      FailureReason = "unsigned latch conditions are explicitly prohibited";
+      return None;
+    }
+
     // The predicate that we need to check that the induction variable lies
     // within bounds.
     ICmpInst::Predicate BoundPred =
