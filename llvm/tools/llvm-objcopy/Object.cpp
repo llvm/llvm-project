@@ -30,18 +30,6 @@ template <class ELFT> void Segment::writeHeader(FileOutputBuffer &Out) const {
   Phdr.p_align = Align;
 }
 
-void Segment::finalize() {
-  auto FirstSec = firstSection();
-  if (FirstSec) {
-    // It is possible for a gap to be at the begining of a segment. Because of
-    // this we need to compute the new offset based on how large this gap was
-    // in the source file. Section layout should have already ensured that this
-    // space is not used for something else.
-    uint64_t OriginalOffset = Offset;
-    Offset = FirstSec->Offset - (FirstSec->OriginalOffset - OriginalOffset);
-  }
-}
-
 void Segment::writeSegment(FileOutputBuffer &Out) const {
   uint8_t *Buf = Out.getBufferStart() + Offset;
   // We want to maintain segments' interstitial data and contents exactly.
@@ -656,8 +644,8 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
     } else {
       Offset = alignTo(Offset, Segment->Align == 0 ? 1 : Segment->Align);
       Segment->Offset = Offset;
-      Offset += Segment->FileSize;
     }
+    Offset = std::max(Offset, Segment->Offset + Segment->FileSize);
   }
   // Now the offset of every segment has been set we can assign the offsets
   // of each section. For sections that are covered by a segment we should use
@@ -673,7 +661,7 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
       Section->Offset =
           Segment->Offset + (Section->OriginalOffset - Segment->OriginalOffset);
     } else {
-      Offset = alignTo(Offset, Section->Offset);
+      Offset = alignTo(Offset, Section->Align == 0 ? 1 : Section->Align);
       Section->Offset = Offset;
       if (Section->Type != SHT_NOBITS)
         Offset += Section->Size;
@@ -720,9 +708,6 @@ template <class ELFT> void ELFObject<ELFT>::finalize() {
     Section->NameIndex = this->SectionNames->findIndex(Section->Name);
     Section->finalize();
   }
-
-  for (auto &Segment : this->Segments)
-    Segment->finalize();
 }
 
 template <class ELFT> size_t BinaryObject<ELFT>::totalSize() const {
@@ -742,8 +727,6 @@ void BinaryObject<ELFT>::write(FileOutputBuffer &Out) const {
 }
 
 template <class ELFT> void BinaryObject<ELFT>::finalize() {
-  for (auto &Segment : this->Segments)
-    Segment->finalize();
 
   // Put all segments in offset order.
   auto CompareSegments = [](const SegPtr &A, const SegPtr &B) {

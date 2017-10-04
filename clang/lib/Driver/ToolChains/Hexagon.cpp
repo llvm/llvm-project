@@ -27,6 +27,22 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
+// Hexagon target features.
+void hexagon::getHexagonTargetFeatures(const ArgList &Args,
+                                       std::vector<StringRef> &Features) {
+  handleTargetFeaturesGroup(Args, Features,
+                            options::OPT_m_hexagon_Features_Group);
+
+  bool UseLongCalls = false;
+  if (Arg *A = Args.getLastArg(options::OPT_mlong_calls,
+                               options::OPT_mno_long_calls)) {
+    if (A->getOption().matches(options::OPT_mlong_calls))
+      UseLongCalls = true;
+  }
+
+  Features.push_back(UseLongCalls ? "+long-calls" : "-long-calls");
+}
+
 // Hexagon tools start.
 void hexagon::Assembler::RenderExtraToolArgs(const JobAction &JA,
                                              ArgStringList &CmdArgs) const {

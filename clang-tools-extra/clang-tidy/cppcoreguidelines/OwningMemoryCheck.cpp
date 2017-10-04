@@ -156,6 +156,13 @@ bool OwningMemoryCheck::handleDeletion(const BoundNodes &Nodes) {
          "not marked 'gsl::owner<>'; consider using a "
          "smart pointer instead")
         << DeletedVariable->getSourceRange();
+
+    // FIXME: The declaration of the variable that was deleted can be
+    // rewritten.
+    const ValueDecl *Decl = DeletedVariable->getDecl();
+    diag(Decl->getLocStart(), "variable declared here", DiagnosticIDs::Note)
+        << Decl->getSourceRange();
+
     return true;
   }
   return false;
@@ -244,7 +251,9 @@ bool OwningMemoryCheck::handleAssignmentFromNewOwner(const BoundNodes &Nodes) {
          "initializing non-owner %0 with a newly created 'gsl::owner<>'")
         << BadOwnerInitialization->getType()
         << BadOwnerInitialization->getSourceRange();
-    // FIXME: FixitHint to rewrite the type if possible.
+
+    // FIXME: FixitHint to rewrite the type of the initialized variable
+    // as 'gsl::owner<OriginalType>'
 
     // If the type of the variable was deduced, the wrapping owner typedef is
     // eliminated, therefore the check emits a special note for that case.
@@ -277,14 +286,15 @@ bool OwningMemoryCheck::handleReturnValues(const BoundNodes &Nodes) {
 
   // Function return values, that should be owners but aren't.
   if (BadReturnType) {
-    // The returned value is of type owner, but not the declared return type.
+    // The returned value is a resource or variable that was not annotated with
+    // owner<> and the function return type is not owner<>.
     diag(BadReturnType->getLocStart(),
          "returning a newly created resource of "
          "type %0 or 'gsl::owner<>' from a "
          "function whose return type is not 'gsl::owner<>'")
         << Function->getReturnType() << BadReturnType->getSourceRange();
-    // The returned value is a resource that was not annotated with owner<> and
-    // the function return type is not owner<>.
+
+    // FIXME: Rewrite the return type as 'gsl::owner<OriginalType>'
     return true;
   }
   return false;

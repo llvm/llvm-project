@@ -987,6 +987,12 @@ public:
   void print(DiagnosticPrinter &DP) const override;
 };
 
+namespace yaml {
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag);
+};
+} // namespace yaml
+
 } // end namespace llvm
 
 #endif // LLVM_IR_DIAGNOSTICINFO_H

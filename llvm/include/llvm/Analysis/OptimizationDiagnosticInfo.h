@@ -164,11 +164,5 @@ public:
   /// \brief Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
-
-namespace yaml {
-template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
-  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag);
-};
-}
 }
 #endif // LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H
