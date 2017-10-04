@@ -26,7 +26,7 @@ using namespace __sanitizer;
 BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
     : BufferSize(B), Buffers(new std::tuple<Buffer, bool>[N]()),
       BufferCount(N), Finalizing{0}, OwnedBuffers(new void *[N]()),
-      Next(Buffers.get()), First(nullptr) {
+      Next(Buffers.get()), First(Buffers.get()), LiveBuffers(0) {
   for (size_t i = 0; i < N; ++i) {
     auto &T = Buffers[i];
     void *Tmp = malloc(BufferSize);
@@ -47,18 +47,15 @@ BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   if (__sanitizer::atomic_load(&Finalizing, __sanitizer::memory_order_acquire))
     return ErrorCode::QueueFinalizing;
   __sanitizer::SpinMutexLock Guard(&Mutex);
-
-  if (Next == First)
+  if (LiveBuffers == BufferCount)
     return ErrorCode::NotEnoughMemory;
 
   auto &T = *Next;
   auto &B = std::get<0>(T);
   Buf = B;
+  ++LiveBuffers;
 
-  if (First == nullptr)
-    First = Next;
-  ++Next;
-  if (Next == (Buffers.get() + BufferCount))
+  if (++Next == (Buffers.get() + BufferCount))
     Next = Buffers.get();
 
   return ErrorCode::Ok;
@@ -73,16 +70,17 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
 
   // This points to a semantic bug, we really ought to not be releasing more
   // buffers than we actually get.
-  if (First == nullptr || First == Next)
+  if (LiveBuffers == 0)
     return ErrorCode::NotEnoughMemory;
 
   // Now that the buffer has been released, we mark it as "used".
   *First = std::make_tuple(Buf, true);
   Buf.Buffer = nullptr;
   Buf.Size = 0;
-  ++First;
-  if (First == (Buffers.get() + BufferCount))
+  --LiveBuffers;
+  if (++First == (Buffers.get() + BufferCount))
     First = Buffers.get();
+
   return ErrorCode::Ok;
 }
 
