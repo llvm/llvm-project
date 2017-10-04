@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s 
 
 // Verify that using an initializer list for a non-aggregate looks for
 // constructors..
@@ -149,4 +149,34 @@ namespace ProtectedBaseCtor {
 #endif
   // expected-error@-5 {{protected constructor}}
   // expected-note@-30 {{here}}
+}
+
+namespace IdiomaticStdArrayInitDoesNotWarn {
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wmissing-braces"
+  template<typename T, int N> struct StdArray {
+    T contents[N];
+  };
+  StdArray<int, 3> x = {1, 2, 3};
+  
+  template<typename T, int N> struct ArrayAndSomethingElse {
+    T contents[N];
+    int something_else;
+  };
+  ArrayAndSomethingElse<int, 3> y = {1, 2, 3}; // expected-warning {{suggest braces}}
+
+#if __cplusplus >= 201703L
+  template<typename T, int N> struct ArrayAndBaseClass : StdArray<int, 3> {
+    T contents[N];
+  };
+  ArrayAndBaseClass<int, 3> z = {1, 2, 3}; // expected-warning {{suggest braces}}
+
+  // It's not clear whether we should be warning in this case. If this
+  // pattern becomes idiomatic, it would be reasonable to suppress the
+  // warning here too.
+  template<typename T, int N> struct JustABaseClass : StdArray<T, N> {};
+  JustABaseClass<int, 3> w = {1, 2, 3}; // expected-warning {{suggest braces}}
+#endif
+
+#pragma clang diagnostic pop
 }

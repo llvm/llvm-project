@@ -1375,9 +1375,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
                           lvalue.getType(), Loc, lvalue.getBaseInfo(),
-                          lvalue.getTBAAAccessType(),
-                          lvalue.getTBAABaseType(), lvalue.getTBAAOffset(),
-                          lvalue.isNontemporal());
+                          lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
 static bool hasBooleanRepresentation(QualType Ty) {
@@ -1487,9 +1485,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                                QualType Ty,
                                                SourceLocation Loc,
                                                LValueBaseInfo BaseInfo,
-                                               llvm::MDNode *TBAAAccessType,
-                                               QualType TBAABaseType,
-                                               uint64_t TBAAOffset,
+                                               TBAAAccessInfo TBAAInfo,
                                                bool isNontemporal) {
   if (!CGM.getCodeGenOpts().PreserveVec3Type) {
     // For better performance, handle vector loads differently.
@@ -1518,7 +1514,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   // Atomic operations have to be done on integral types.
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAAccessType);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo.AccessType);
   if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
@@ -1529,11 +1525,11 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
         Load->getContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Load->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAAccessType) {
+  if (TBAAInfo.AccessType) {
     bool MayAlias = BaseInfo.getMayAlias();
     llvm::MDNode *TBAA = MayAlias
         ? CGM.getTBAAMayAliasTypeInfo()
-        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAAccessType, TBAAOffset);
+        : CGM.getTBAAStructTagInfo(TBAAInfo);
     if (TBAA)
       CGM.DecorateInstructionWithTBAA(Load, TBAA, MayAlias);
   }
@@ -1576,11 +1572,8 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo,
-                                        llvm::MDNode *TBAAAccessType,
-                                        bool isInit, QualType TBAABaseType,
-                                        uint64_t TBAAOffset,
-                                        bool isNontemporal) {
-
+                                        TBAAAccessInfo TBAAInfo,
+                                        bool isInit, bool isNontemporal) {
   if (!CGM.getCodeGenOpts().PreserveVec3Type) {
     // Handle vectors differently to get better performance.
     if (Ty->isVectorType()) {
@@ -1606,7 +1599,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   Value = EmitToMemory(Value, Ty);
 
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAAccessType);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo.AccessType);
   if (Ty->isAtomicType() ||
       (!isInit && LValueIsSuitableForInlineAtomic(AtomicLValue))) {
     EmitAtomicStore(RValue::get(Value), AtomicLValue, isInit);
@@ -1620,11 +1613,11 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                           llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Store->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAAccessType) {
+  if (TBAAInfo.AccessType) {
     bool MayAlias = BaseInfo.getMayAlias();
     llvm::MDNode *TBAA = MayAlias
         ? CGM.getTBAAMayAliasTypeInfo()
-        : CGM.getTBAAStructTagInfo(TBAABaseType, TBAAAccessType, TBAAOffset);
+        : CGM.getTBAAStructTagInfo(TBAAInfo);
     if (TBAA)
       CGM.DecorateInstructionWithTBAA(Store, TBAA, MayAlias);
   }
@@ -1634,9 +1627,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
                                         bool isInit) {
   EmitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(),
-                    lvalue.getTBAAAccessType(), isInit,
-                    lvalue.getTBAABaseType(), lvalue.getTBAAOffset(),
-                    lvalue.isNontemporal());
+                    lvalue.getTBAAInfo(), isInit, lvalue.isNontemporal());
 }
 
 /// EmitLoadOfLValue - Given an expression that represents a value lvalue, this
@@ -3776,10 +3767,13 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
         getContext().getASTRecordLayout(field->getParent());
     // Set the base type to be the base type of the base LValue and
     // update offset to be relative to the base type.
-    LV.setTBAABaseType(mayAlias ? getContext().CharTy : base.getTBAABaseType());
-    LV.setTBAAOffset(mayAlias ? 0 : base.getTBAAOffset() +
-                     Layout.getFieldOffset(field->getFieldIndex()) /
-                                           getContext().getCharWidth());
+    unsigned CharWidth = getContext().getCharWidth();
+    TBAAAccessInfo TBAAInfo = mayAlias ?
+      TBAAAccessInfo(CGM.getTBAAMayAliasTypeInfo()) :
+      TBAAAccessInfo(base.getTBAAInfo().BaseType, CGM.getTBAATypeInfo(type),
+                     base.getTBAAInfo().Offset + Layout.getFieldOffset(
+                         field->getFieldIndex()) / CharWidth);
+    LV.setTBAAInfo(TBAAInfo);
   }
 
   // __weak attribute on a field is ignored.

@@ -355,7 +355,7 @@ def warn_implicit_function_decl : Warning<
   "implicit declaration of function %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultIgnore;
 def ext_implicit_function_decl : ExtWarn<
-  "implicit declaration of function %0 is invalid in C99">,
+  "implicit declaration of function %0 is invalid in %select{C99|OpenCL}1">,
   InGroup<ImplicitFunctionDeclare>;
 def note_function_suggestion : Note<"did you mean %0?">;
 
@@ -366,8 +366,10 @@ def err_language_linkage_spec_unknown : Error<"unknown linkage language">;
 def err_language_linkage_spec_not_ascii : Error<
   "string literal in language linkage specifier cannot have an "
   "encoding-prefix">;
-def warn_use_out_of_scope_declaration : Warning<
-  "use of out-of-scope declaration of %0">;
+def ext_use_out_of_scope_declaration : ExtWarn<
+  "use of out-of-scope declaration of %0%select{| whose type is not "
+  "compatible with that of an implicit declaration}1">,
+  InGroup<DiagGroup<"out-of-scope-function">>;
 def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
 def err_noreturn_non_function : Error<
@@ -8530,8 +8532,6 @@ def err_opencl_scalar_type_rank_greater_than_vector_type : Error<
     "element. (%0 and %1)">;
 def err_bad_kernel_param_type : Error<
   "%0 cannot be used as the type of a kernel parameter">;
-def err_opencl_implicit_function_decl : Error<
-  "implicit declaration of function %0 is invalid in OpenCL">;
 def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<

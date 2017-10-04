@@ -581,12 +581,16 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
     addFile<ELFT>(F);
 }
 
-// Process undefined (-u) flags by loading lazy symbols named by those flags.
-template <class ELFT> void SymbolTable::scanUndefinedFlags() {
-  for (StringRef S : Config->Undefined)
-    if (auto *L = dyn_cast_or_null<Lazy>(find(S)))
+// If we already saw this symbol, force loading its file.
+template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
+  if (SymbolBody *B = find(Name)) {
+    // Mark the symbol not to be eliminated by LTO
+    // even if it is a bitcode symbol.
+    B->symbol()->IsUsedInRegularObj = true;
+    if (auto *L = dyn_cast_or_null<Lazy>(B))
       if (InputFile *File = L->fetch())
         addFile<ELFT>(File);
+  }
 }
 
 // This function takes care of the case in which shared libraries depend on
@@ -869,10 +873,10 @@ template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> *,
                                               const typename ELF64BE::Sym &,
                                               const typename ELF64BE::Verdef *);
 
-template void SymbolTable::scanUndefinedFlags<ELF32LE>();
-template void SymbolTable::scanUndefinedFlags<ELF32BE>();
-template void SymbolTable::scanUndefinedFlags<ELF64LE>();
-template void SymbolTable::scanUndefinedFlags<ELF64BE>();
+template void SymbolTable::fetchIfLazy<ELF32LE>(StringRef);
+template void SymbolTable::fetchIfLazy<ELF32BE>(StringRef);
+template void SymbolTable::fetchIfLazy<ELF64LE>(StringRef);
+template void SymbolTable::fetchIfLazy<ELF64BE>(StringRef);
 
 template void SymbolTable::scanShlibUndefined<ELF32LE>();
 template void SymbolTable::scanShlibUndefined<ELF32BE>();

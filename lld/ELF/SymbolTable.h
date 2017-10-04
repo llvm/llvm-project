@@ -84,7 +84,7 @@ public:
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  template <class ELFT> void scanUndefinedFlags();
+  template <class ELFT> void fetchIfLazy(StringRef Name);
   template <class ELFT> void scanShlibUndefined();
   void scanVersionScript();
 

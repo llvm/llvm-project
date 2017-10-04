@@ -876,8 +876,8 @@
 		966C6B7C18E6A56A0093F5EC /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
 		9694FA711B32AA64005EBB16 /* ABISysV_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9694FA6F1B32AA64005EBB16 /* ABISysV_mips.cpp */; };
 		9A0FDEA71E8EF5110086B2F5 /* RegisterContextLinux_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A0FDE971E8EF5010086B2F5 /* RegisterContextLinux_mips.cpp */; };
-		9A1542F91F0EE48600DEA1D8 /* MockTildeExpressionResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1542F51F0EE44000DEA1D8 /* MockTildeExpressionResolver.cpp */; };
-		9A1542FA1F0EE48600DEA1D8 /* TestUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1542F71F0EE44000DEA1D8 /* TestUtilities.cpp */; };
+		9A18903B1F47D5E600394BCA /* MockTildeExpressionResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1890321F47D5D400394BCA /* MockTildeExpressionResolver.cpp */; };
+		9A18903C1F47D5E600394BCA /* TestUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1890341F47D5D400394BCA /* TestUtilities.cpp */; };
 		9A19A6AF1163BBB200E0D453 /* SBValue.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A19A6A51163BB7E00E0D453 /* SBValue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9A19A6B01163BBB300E0D453 /* SBValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A19A6AD1163BB9800E0D453 /* SBValue.cpp */; };
 		9A1E595C1EB2B141002206A5 /* SBTrace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1E59521EB2B0B9002206A5 /* SBTrace.cpp */; };
@@ -2864,11 +2864,11 @@
 		9A0FDE991E8EF5010086B2F5 /* RegisterInfos_arm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_arm.h; path = Utility/RegisterInfos_arm.h; sourceTree = "<group>"; };
 		9A0FDE9A1E8EF5010086B2F5 /* RegisterInfos_arm64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_arm64.h; path = Utility/RegisterInfos_arm64.h; sourceTree = "<group>"; };
 		9A0FDE9B1E8EF5010086B2F5 /* RegisterInfos_mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_mips.h; path = Utility/RegisterInfos_mips.h; sourceTree = "<group>"; };
-		9A1542F41F0EE44000DEA1D8 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		9A1542F51F0EE44000DEA1D8 /* MockTildeExpressionResolver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MockTildeExpressionResolver.cpp; sourceTree = "<group>"; };
-		9A1542F61F0EE44000DEA1D8 /* MockTildeExpressionResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockTildeExpressionResolver.h; sourceTree = "<group>"; };
-		9A1542F71F0EE44000DEA1D8 /* TestUtilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestUtilities.cpp; sourceTree = "<group>"; };
-		9A1542F81F0EE44000DEA1D8 /* TestUtilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestUtilities.h; sourceTree = "<group>"; };
+		9A1890311F47D5D400394BCA /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = TestingSupport/CMakeLists.txt; sourceTree = "<group>"; };
+		9A1890321F47D5D400394BCA /* MockTildeExpressionResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MockTildeExpressionResolver.cpp; path = TestingSupport/MockTildeExpressionResolver.cpp; sourceTree = "<group>"; };
+		9A1890331F47D5D400394BCA /* MockTildeExpressionResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MockTildeExpressionResolver.h; path = TestingSupport/MockTildeExpressionResolver.h; sourceTree = "<group>"; };
+		9A1890341F47D5D400394BCA /* TestUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TestUtilities.cpp; path = TestingSupport/TestUtilities.cpp; sourceTree = "<group>"; };
+		9A1890351F47D5D400394BCA /* TestUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TestUtilities.h; path = TestingSupport/TestUtilities.h; sourceTree = "<group>"; };
 		9A19A6A51163BB7E00E0D453 /* SBValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBValue.h; path = include/lldb/API/SBValue.h; sourceTree = "<group>"; };
 		9A19A6AD1163BB9800E0D453 /* SBValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBValue.cpp; path = source/API/SBValue.cpp; sourceTree = "<group>"; };
 		9A1E59521EB2B0B9002206A5 /* SBTrace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBTrace.cpp; path = source/API/SBTrace.cpp; sourceTree = "<group>"; };
@@ -3337,6 +3337,7 @@
 		2321F9331BDD326500BA9A93 /* unittests */ = {
 			isa = PBXGroup;
 			children = (
+				9A1890301F47D5BC00394BCA /* TestingSupport */,
 				23E2E52C1D903806006F38BB /* Breakpoint */,
 				23CB14E51D66CBEB00EDDDE1 /* Core */,
 				9A2057421F3B904C00F6C293 /* debugserver */,
@@ -3408,7 +3409,6 @@
 				9A3D43CC1F3150D200EB767C /* TimeoutTest.cpp */,
 				9A3D43C51F3150D200EB767C /* TimerTest.cpp */,
 				9A3D43C41F3150D200EB767C /* VASprintfTest.cpp */,
-				9A1542F31F0EE44000DEA1D8 /* Helpers */,
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
@@ -6339,16 +6339,16 @@
 			name = "SysV-mips";
 			sourceTree = "<group>";
 		};
-		9A1542F31F0EE44000DEA1D8 /* Helpers */ = {
+		9A1890301F47D5BC00394BCA /* TestingSupport */ = {
 			isa = PBXGroup;
 			children = (
-				9A1542F41F0EE44000DEA1D8 /* CMakeLists.txt */,
-				9A1542F51F0EE44000DEA1D8 /* MockTildeExpressionResolver.cpp */,
-				9A1542F61F0EE44000DEA1D8 /* MockTildeExpressionResolver.h */,
-				9A1542F71F0EE44000DEA1D8 /* TestUtilities.cpp */,
-				9A1542F81F0EE44000DEA1D8 /* TestUtilities.h */,
+				9A1890311F47D5D400394BCA /* CMakeLists.txt */,
+				9A1890321F47D5D400394BCA /* MockTildeExpressionResolver.cpp */,
+				9A1890331F47D5D400394BCA /* MockTildeExpressionResolver.h */,
+				9A1890341F47D5D400394BCA /* TestUtilities.cpp */,
+				9A1890351F47D5D400394BCA /* TestUtilities.h */,
 			);
-			path = Helpers;
+			name = TestingSupport;
 			sourceTree = "<group>";
 		};
 		9A2057091F3B81DE00F6C293 /* DWARF */ = {
@@ -7221,7 +7221,6 @@
 				23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				9A3D43D81F3151C400EB767C /* NameMatchesTest.cpp in Sources */,
-				9A1542F91F0EE48600DEA1D8 /* MockTildeExpressionResolver.cpp in Sources */,
 				23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */,
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
@@ -7232,7 +7231,6 @@
 				23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				9A3D43D71F3151C400EB767C /* LogTest.cpp in Sources */,
-				9A1542FA1F0EE48600DEA1D8 /* TestUtilities.cpp in Sources */,
 				9A2057181F3B861400F6C293 /* TestType.cpp in Sources */,
 				9A2057171F3B861400F6C293 /* TestDWARFCallFrameInfo.cpp in Sources */,
 				9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */,
@@ -7244,9 +7242,11 @@
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */,
+				9A18903C1F47D5E600394BCA /* TestUtilities.cpp in Sources */,
 				23CB15421D66DA9300EDDDE1 /* TaskPoolTest.cpp in Sources */,
 				23CB15431D66DA9300EDDDE1 /* BroadcasterTest.cpp in Sources */,
 				9A3D43EE1F3237F900EB767C /* StreamCallbackTest.cpp in Sources */,
+				9A18903B1F47D5E600394BCA /* MockTildeExpressionResolver.cpp in Sources */,
 				23CB15441D66DA9300EDDDE1 /* ScalarTest.cpp in Sources */,
 				9A2057391F3B8E7E00F6C293 /* HostTest.cpp in Sources */,
 				23CB15451D66DA9300EDDDE1 /* SocketAddressTest.cpp in Sources */,
@@ -8496,7 +8496,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8538,7 +8538,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8580,7 +8580,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8622,7 +8622,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8664,7 +8664,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8706,7 +8706,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8748,7 +8748,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8790,7 +8790,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",

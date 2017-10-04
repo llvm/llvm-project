@@ -27,7 +27,9 @@ void SignedBitwiseCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(allOf(anyOf(hasOperatorName("|"), hasOperatorName("&"),
                                  hasOperatorName("^"), hasOperatorName("<<"),
                                  hasOperatorName(">>")),
-                           hasEitherOperand(SignedIntegerOperand)))
+                           hasEitherOperand(SignedIntegerOperand),
+                           hasLHS(hasType(isInteger())),
+                           hasRHS(hasType(isInteger()))))
           .bind("binary_signed"),
       this);
 

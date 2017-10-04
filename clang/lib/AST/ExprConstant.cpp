@@ -573,6 +573,31 @@ namespace {
     /// declaration whose initializer is being evaluated, if any.
     APValue *EvaluatingDeclValue;
 
+    /// EvaluatingObject - Pair of the AST node that an lvalue represents and
+    /// the call index that that lvalue was allocated in.
+    typedef std::pair<APValue::LValueBase, unsigned> EvaluatingObject;
+
+    /// EvaluatingConstructors - Set of objects that are currently being
+    /// constructed.
+    llvm::DenseSet<EvaluatingObject> EvaluatingConstructors;
+
+    struct EvaluatingConstructorRAII {
+      EvalInfo &EI;
+      EvaluatingObject Object;
+      bool DidInsert;
+      EvaluatingConstructorRAII(EvalInfo &EI, EvaluatingObject Object)
+          : EI(EI), Object(Object) {
+        DidInsert = EI.EvaluatingConstructors.insert(Object).second;
+      }
+      ~EvaluatingConstructorRAII() {
+        if (DidInsert) EI.EvaluatingConstructors.erase(Object);
+      }
+    };
+
+    bool isEvaluatingConstructor(APValue::LValueBase Decl, unsigned CallIndex) {
+      return EvaluatingConstructors.count(EvaluatingObject(Decl, CallIndex));
+    }
+
     /// The current array initialization index, if we're performing array
     /// initialization.
     uint64_t ArrayInitIndex = -1;
@@ -666,6 +691,7 @@ namespace {
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
       EvaluatingDeclValue = &Value;
+      EvaluatingConstructors.insert({Base, 0});
     }
 
     const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
@@ -3098,10 +3124,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   // During the construction of an object, it is not yet 'const'.
-  // FIXME: We don't set up EvaluatingDecl for local variables or temporaries,
-  // and this doesn't do quite the right thing for const subobjects of the
+  // FIXME: This doesn't do quite the right thing for const subobjects of the
   // object under construction.
-  if (LVal.getLValueBase() == Info.EvaluatingDecl) {
+  if (Info.isEvaluatingConstructor(LVal.getLValueBase(), LVal.CallIndex)) {
     BaseType = Info.Ctx.getCanonicalType(BaseType);
     BaseType.removeLocalConst();
   }
@@ -4254,6 +4279,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     return false;
   }
 
+  EvalInfo::EvaluatingConstructorRAII EvalObj(
+      Info, {This.getLValueBase(), This.CallIndex});
   CallStackFrame Frame(Info, CallLoc, Definition, &This, ArgValues);
 
   // FIXME: Creating an APValue just to hold a nonexistent return value is

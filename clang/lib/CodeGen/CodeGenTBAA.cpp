@@ -290,30 +290,28 @@ CodeGenTBAA::getTBAAStructTypeInfo(QualType QTy) {
   return StructMetadataCache[Ty] = nullptr;
 }
 
-/// Return a TBAA tag node for both scalar TBAA and struct-path aware TBAA.
-llvm::MDNode *
-CodeGenTBAA::getTBAAStructTagInfo(QualType BaseQTy, llvm::MDNode *AccessNode,
-                                  uint64_t Offset) {
-  if (!AccessNode)
+llvm::MDNode *CodeGenTBAA::getTBAAStructTagInfo(TBAAAccessInfo Info) {
+  if (!Info.AccessType)
     return nullptr;
 
   if (!CodeGenOpts.StructPathTBAA)
-    return getTBAAScalarTagInfo(AccessNode);
+    return getTBAAScalarTagInfo(Info.AccessType);
 
-  const Type *BTy = Context.getCanonicalType(BaseQTy).getTypePtr();
-  TBAAPathTag PathTag = TBAAPathTag(BTy, AccessNode, Offset);
+  const Type *BTy = Context.getCanonicalType(Info.BaseType).getTypePtr();
+  TBAAPathTag PathTag = TBAAPathTag(BTy, Info.AccessType, Info.Offset);
   if (llvm::MDNode *N = StructTagMetadataCache[PathTag])
     return N;
 
   llvm::MDNode *BNode = nullptr;
-  if (isTBAAPathStruct(BaseQTy))
-    BNode  = getTBAAStructTypeInfo(BaseQTy);
+  if (isTBAAPathStruct(Info.BaseType))
+    BNode = getTBAAStructTypeInfo(Info.BaseType);
   if (!BNode)
     return StructTagMetadataCache[PathTag] =
-       MDHelper.createTBAAStructTagNode(AccessNode, AccessNode, 0);
+       MDHelper.createTBAAStructTagNode(Info.AccessType, Info.AccessType,
+                                        /* Offset= */ 0);
 
   return StructTagMetadataCache[PathTag] =
-    MDHelper.createTBAAStructTagNode(BNode, AccessNode, Offset);
+    MDHelper.createTBAAStructTagNode(BNode, Info.AccessType, Info.Offset);
 }
 
 llvm::MDNode *

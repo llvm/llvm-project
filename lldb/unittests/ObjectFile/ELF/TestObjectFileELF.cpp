@@ -14,7 +14,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/HostInfo.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"

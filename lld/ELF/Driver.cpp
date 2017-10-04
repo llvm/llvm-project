@@ -89,6 +89,13 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Config->Argv = {Args.begin(), Args.end()};
 
   Driver->main(Args, CanExitEarly);
+
+  // Exit immediately if we don't need to return to the caller.
+  // This saves time because the overhead of calling destructors
+  // for all globally-allocated objects is not negligible.
+  if (Config->ExitEarly)
+    exitLld(ErrorCount ? 1 : 0);
+
   freeArena();
   return !ErrorCount;
 }
@@ -1031,18 +1038,18 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (StringRef Sym : Script->Opt.ReferencedSymbols)
     Symtab->addUndefined<ELFT>(Sym);
 
+  // Handle the `--undefined <sym>` options.
+  for (StringRef S : Config->Undefined)
+    Symtab->fetchIfLazy<ELFT>(S);
+
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a
   // few linker-synthesized ones will be added to the symbol table.
-  if (Symtab->find(Config->Entry))
-    Symtab->addUndefined<ELFT>(Config->Entry);
+  Symtab->fetchIfLazy<ELFT>(Config->Entry);
 
   // Return if there were name resolution errors.
   if (ErrorCount)
     return;
-
-  // Handle the `--undefined <sym>` options.
-  Symtab->scanUndefinedFlags<ELFT>();
 
   // Handle undefined symbols in DSOs.
   Symtab->scanShlibUndefined<ELFT>();
