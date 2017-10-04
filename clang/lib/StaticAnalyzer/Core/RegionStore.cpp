@@ -1393,16 +1393,19 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
   }
 
-  if (isa<AllocaRegion>(MR) ||
-      isa<SymbolicRegion>(MR) ||
-      isa<CodeTextRegion>(MR)) {
+  if (!isa<TypedValueRegion>(MR)) {
     if (T.isNull()) {
       if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR))
-        T = TR->getLocationType();
-      else {
-        const SymbolicRegion *SR = cast<SymbolicRegion>(MR);
-        T = SR->getSymbol()->getType();
-      }
+        T = TR->getLocationType()->getPointeeType();
+      else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR))
+        T = SR->getSymbol()->getType()->getPointeeType();
+      else if (isa<AllocaRegion>(MR))
+        T = Ctx.VoidTy;
+    }
+    assert(!T.isNull() && "Unable to auto-detect binding type!");
+    if (T->isVoidType()) {
+      // When trying to dereference a void pointer, read the first byte.
+      T = Ctx.CharTy;
     }
     MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
   }
