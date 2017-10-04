@@ -238,9 +238,7 @@ class NEG_RR<BPFOpClass Class, BPFArithOp Opc,
              dag outs, dag ins, string asmstr, list<dag> pattern>
     : TYPE_ALU_JMP<Opc.Value, 0, outs, ins, asmstr, pattern> {
   bits<4> dst;
-  bits<4> src;
 
-  let Inst{55-52} = src;
   let Inst{51-48} = dst;
   let BPFClass = Class;
 }

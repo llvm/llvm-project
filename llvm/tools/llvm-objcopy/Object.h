@@ -93,7 +93,6 @@ public:
   Segment *ParentSegment = nullptr;
 
   Segment(llvm::ArrayRef<uint8_t> Data) : Contents(Data) {}
-  void finalize();
   const SectionBase *firstSection() const {
     if (!Sections.empty())
       return *Sections.begin();

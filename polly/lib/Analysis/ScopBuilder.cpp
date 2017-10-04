@@ -102,6 +102,16 @@ static cl::opt<bool> DisableMultiplicativeReductions(
     cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
     cl::init(false), cl::cat(PollyCategory));
 
+enum class GranularityChoice { BasicBlocks };
+
+static cl::opt<GranularityChoice> StmtGranularity(
+    "polly-stmt-granularity",
+    cl::desc(
+        "Algorithm to use for splitting basic blocks into multiple statements"),
+    cl::values(clEnumValN(GranularityChoice::BasicBlocks, "bb",
+                          "One statement per basic block")),
+    cl::init(GranularityChoice::BasicBlocks), cl::cat(PollyCategory));
+
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
@@ -673,6 +683,24 @@ bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
          !canSynthesize(Inst, *scop, &SE, L);
 }
 
+void ScopBuilder::buildSequentialBlockStmts(BasicBlock *BB) {
+  Loop *SurroundingLoop = LI.getLoopFor(BB);
+
+  int Count = 0;
+  std::vector<Instruction *> Instructions;
+  for (Instruction &Inst : *BB) {
+    if (shouldModelInst(&Inst, SurroundingLoop))
+      Instructions.push_back(&Inst);
+    if (Inst.getMetadata("polly_split_after")) {
+      scop->addScopStmt(BB, SurroundingLoop, Instructions, Count);
+      Count++;
+      Instructions.clear();
+    }
+  }
+
+  scop->addScopStmt(BB, SurroundingLoop, Instructions, Count);
+}
+
 void ScopBuilder::buildStmts(Region &SR) {
   if (scop->isNonAffineSubRegion(&SR)) {
     std::vector<Instruction *> Instructions;
@@ -689,23 +717,12 @@ void ScopBuilder::buildStmts(Region &SR) {
     if (I->isSubRegion())
       buildStmts(*I->getNodeAs<Region>());
     else {
-      int Count = 0;
-      std::vector<Instruction *> Instructions;
-      for (Instruction &Inst : *I->getNodeAs<BasicBlock>()) {
-        Loop *L = LI.getLoopFor(Inst.getParent());
-        if (shouldModelInst(&Inst, L))
-          Instructions.push_back(&Inst);
-        if (Inst.getMetadata("polly_split_after")) {
-          Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
-          scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
-                            Instructions, Count);
-          Count++;
-          Instructions.clear();
-        }
+      BasicBlock *BB = I->getNodeAs<BasicBlock>();
+      switch (StmtGranularity) {
+      case GranularityChoice::BasicBlocks:
+        buildSequentialBlockStmts(BB);
+        break;
       }
-      Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
-      scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
-                        Instructions, Count);
     }
 }
 

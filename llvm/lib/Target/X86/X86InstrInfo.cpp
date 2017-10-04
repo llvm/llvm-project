@@ -5189,18 +5189,8 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     case X86::VMOVSSrr: Opc = X86::VBLENDPSrri; Mask = 0x0E; break;
     }
 
-    // MOVSD/MOVSS's 2nd operand is a FR64/FR32 reg class - we need to copy
-    // this over to a VR128 class like the 1st operand to use a BLENDPD/BLENDPS.
-    auto &MRI = MI.getParent()->getParent()->getRegInfo();
-    auto VR128RC = MRI.getRegClass(MI.getOperand(1).getReg());
-    unsigned VR128 = MRI.createVirtualRegister(VR128RC);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY),
-            VR128)
-        .addReg(MI.getOperand(2).getReg());
-
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.setDesc(get(Opc));
-    WorkingMI.getOperand(2).setReg(VR128);
     WorkingMI.addOperand(MachineOperand::CreateImm(Mask));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);

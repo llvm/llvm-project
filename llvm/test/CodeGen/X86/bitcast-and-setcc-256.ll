@@ -213,15 +213,11 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-LABEL: v8i32:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSE2-NEXT:    packssdw %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-NEXT:    packssdw %xmm0, %xmm0
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm7, %xmm5
-; SSE2-NEXT:    packssdw %xmm0, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSE2-NEXT:    packssdw %xmm0, %xmm4
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm5[0]
+; SSE2-NEXT:    packssdw %xmm5, %xmm4
 ; SSE2-NEXT:    pand %xmm0, %xmm4
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm4
 ; SSE2-NEXT:    packuswb %xmm4, %xmm4
@@ -232,15 +228,11 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSSE3-LABEL: v8i32:
 ; SSSE3:       # BB#0:
 ; SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSSE3-NEXT:    packssdw %xmm0, %xmm1
 ; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSSE3-NEXT:    packssdw %xmm0, %xmm0
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
-; SSSE3-NEXT:    packssdw %xmm0, %xmm5
 ; SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSSE3-NEXT:    packssdw %xmm0, %xmm4
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm5[0]
+; SSSE3-NEXT:    packssdw %xmm5, %xmm4
 ; SSSE3-NEXT:    pand %xmm0, %xmm4
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    pmovmskb %xmm4, %eax

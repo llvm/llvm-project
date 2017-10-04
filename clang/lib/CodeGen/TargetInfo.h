@@ -37,6 +37,7 @@ namespace CodeGen {
 class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
+class CGBlockInfo;
 class CGFunctionInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
@@ -265,6 +266,27 @@ public:
   /// Get the syncscope used in LLVM IR.
   virtual llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
                                                  llvm::LLVMContext &C) const;
+
+  /// Inteface class for filling custom fields of a block literal for OpenCL.
+  class TargetOpenCLBlockHelper {
+  public:
+    typedef std::pair<llvm::Value *, StringRef> ValueTy;
+    TargetOpenCLBlockHelper() {}
+    virtual ~TargetOpenCLBlockHelper() {}
+    /// Get the custom field types for OpenCL blocks.
+    virtual llvm::SmallVector<llvm::Type *, 1> getCustomFieldTypes() = 0;
+    /// Get the custom field values for OpenCL blocks.
+    virtual llvm::SmallVector<ValueTy, 1>
+    getCustomFieldValues(CodeGenFunction &CGF, const CGBlockInfo &Info) = 0;
+    virtual bool areAllCustomFieldValuesConstant(const CGBlockInfo &Info) = 0;
+    /// Get the custom field values for OpenCL blocks if all values are LLVM
+    /// constants.
+    virtual llvm::SmallVector<llvm::Constant *, 1>
+    getCustomFieldValues(CodeGenModule &CGM, const CGBlockInfo &Info) = 0;
+  };
+  virtual TargetOpenCLBlockHelper *getTargetOpenCLBlockHelper() const {
+    return nullptr;
+  }
 };
 
 } // namespace CodeGen
