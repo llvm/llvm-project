@@ -988,3 +988,36 @@ constexpr void Void(int n) {
   void();
 }
 constexpr int void_test = (Void(0), 1);
+
+namespace PR19741 {
+constexpr void addone(int &m) { m++; }
+
+struct S {
+  int m = 0;
+  constexpr S() { addone(m); }
+};
+constexpr bool evalS() {
+  constexpr S s;
+  return s.m == 1;
+}
+static_assert(evalS(), "");
+
+struct Nested {
+  struct First { int x = 42; };
+  union {
+    First first;
+    int second;
+  };
+  int x;
+  constexpr Nested(int x) : first(), x(x) { x = 4; }
+  constexpr Nested() : Nested(42) {
+    addone(first.x);
+    x = 3;
+  }
+};
+constexpr bool evalNested() {
+  constexpr Nested N;
+  return N.first.x == 43;
+}
+static_assert(evalNested(), "");
+} // namespace PR19741

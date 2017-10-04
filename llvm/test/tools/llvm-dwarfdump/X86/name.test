@@ -44,3 +44,20 @@ RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -name=Main -i - | FileCheck %s
 RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -name=MAIN -ignore-case - | FileCheck %s
+
+Test the -regex option.
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -regex -name=m.+n - | FileCheck %s
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -x -name=m.+n - | FileCheck %s
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | llvm-dwarfdump -x -i -name=M.+n - | FileCheck %s
+RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
+RUN:   | not llvm-dwarfdump -x -name=+ - 2>&1 | FileCheck %s --check-prefix=ERR
+ERR: error
+RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   -x -name=x86_64h_var -name=i386_var \
+RUN:   | FileCheck %s --check-prefix=MULTI
+RUN: llvm-dwarfdump %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   -x -name=.*86.*_var \
+RUN:   | FileCheck %s --check-prefix=MULTI

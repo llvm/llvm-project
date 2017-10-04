@@ -2,7 +2,7 @@ add_custom_target(LLDBUnitTests)
 set_target_properties(LLDBUnitTests PROPERTIES FOLDER "LLDB tests")
 
 include_directories(${LLDB_SOURCE_ROOT})
-include_directories(${LLDB_PROJECT_ROOT})
+include_directories(${LLDB_PROJECT_ROOT}/unittests)
 
 set(LLDB_GTEST_COMMON_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/gtest_common.h)
 if (MSVC)
@@ -59,6 +59,7 @@ function(add_unittest_inputs test_name inputs)
   endforeach()
 endfunction()
 
+add_subdirectory(TestingSupport)
 add_subdirectory(Breakpoint)
 add_subdirectory(Core)
 add_subdirectory(Editline)

@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -filetype asm -o - %s | FileCheck %s
 ; RUN: llc -mtriple x86_64-windows-gnu -exception-model sjlj -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-X64
+; RUN: llc -mtriple x86_64-linux -exception-model sjlj -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-X64-LINUX
 
 declare void @_Z20function_that_throwsv()
 declare i32 @__gxx_personality_sj0(...)
@@ -116,4 +117,19 @@ try.cont:
 ; CHECK-X64: ud2
 ; CHECK-X64: [[CONT]]:
 ;     *Handlers[UFC.__callsite]
-; CHECK-X64: jmpq *.LJTI
+; CHECK-X64: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
+; CHECK-X64: movl (%rcx,%rax,4), %eax
+; CHECK-X64: cltq
+; CHECK-X64: addq %rcx, %rax
+; CHECK-X64: jmpq *%rax
+
+; CHECK-X64-LINUX: .[[RESUME:LBB[0-9]+_[0-9]+]]:
+;     assert(UFC.__callsite < 1);
+; CHECK-X64-LINUX: movl -120(%rbp), %eax
+; CHECK-X64-LINUX: cmpl $1, %eax
+; CHECK-X64-LINUX: jb .[[CONT:LBB[0-9]+_[0-9]+]]
+; CHECK-X64-LINUX: ud2
+; CHECK-X64-LINUX: [[CONT]]:
+;     *Handlers[UFC.__callsite]
+; CHECK-X64-LINUX: leaq .[[TABLE:LJTI[0-9]+_[0-9]+]](%rip), %rcx
+; CHECK-X64-LINUX: jmpq *(%rcx,%rax,8)

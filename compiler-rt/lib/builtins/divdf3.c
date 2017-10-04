@@ -183,8 +183,11 @@ __divdf3(fp_t a, fp_t b) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI fp_t __aeabi_ddiv(fp_t a, fp_t b) {
   return __divdf3(a, b);
 }
+#else
+AEABI_RTABI fp_t __aeabi_ddiv(fp_t a, fp_t b) COMPILER_RT_ALIAS(__divdf3);
 #endif
-
+#endif
