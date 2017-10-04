@@ -48,7 +48,6 @@
 #include <cstdint>
 #include <map>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -721,6 +720,35 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForAddress(uint64_t Address) {
   uint32_t CUOffset = getDebugAranges()->findAddress(Address);
   // Retrieve the compile unit.
   return getCompileUnitForOffset(CUOffset);
+}
+
+DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
+  DIEsForAddress Result;
+
+  DWARFCompileUnit *CU = getCompileUnitForAddress(Address);
+  if (!CU)
+    return Result;
+
+  Result.CompileUnit = CU;
+  Result.FunctionDIE = CU->getSubroutineForAddress(Address);
+
+  std::vector<DWARFDie> Worklist;
+  Worklist.push_back(Result.FunctionDIE);
+  while (!Worklist.empty()) {
+    DWARFDie DIE = Worklist.back();
+    Worklist.pop_back();
+
+    if (DIE.getTag() == DW_TAG_lexical_block &&
+        DIE.addressRangeContainsAddress(Address)) {
+      Result.BlockDIE = DIE;
+      break;
+    }
+
+    for (auto Child : DIE)
+      Worklist.push_back(Child);
+  }
+
+  return Result;
 }
 
 static bool getFunctionNameAndStartLineForAddress(DWARFCompileUnit *CU,
