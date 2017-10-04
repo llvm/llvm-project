@@ -607,6 +607,19 @@ config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 
+set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header")
+if (LIBCXX_ABI_DEFINES)
+  set(abi_defines)
+  foreach (abi_define ${LIBCXX_ABI_DEFINES})
+    if (NOT abi_define MATCHES "^_LIBCPP_ABI_")
+      message(SEND_ERROR "Invalid ABI macro ${abi_define} in LIBCXX_ABI_DEFINES")
+    endif()
+    list(APPEND abi_defines "#define ${abi_define}")
+  endforeach()
+  string(REPLACE ";" "\n" abi_defines "${abi_defines}")
+  config_define(${abi_defines} _LIBCPP_ABI_DEFINES)
+endif()
+
 # By default libc++ on Windows expects to use a shared library, which requires
 # the headers to use DLL import/export semantics. However when building a
 # static library only we modify the headers to disable DLL import/export.
