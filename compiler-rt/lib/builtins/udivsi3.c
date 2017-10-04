@@ -64,8 +64,5 @@ __udivsi3(su_int n, su_int d)
 }
 
 #if defined(__ARM_EABI__)
-AEABI_RTABI su_int __aeabi_uidiv(su_int n, su_int d) {
-  return __udivsi3(n, d);
-}
+AEABI_RTABI su_int __aeabi_uidiv(su_int n, su_int d) COMPILER_RT_ALIAS(__udivsi3);
 #endif
-

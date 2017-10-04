@@ -48,8 +48,11 @@ __floatunsisf(unsigned int a) {
 }
 
 #if defined(__ARM_EABI__)
+#if defined(COMPILER_RT_ARMHF_TARGET)
 AEABI_RTABI fp_t __aeabi_ui2f(unsigned int a) {
   return __floatunsisf(a);
 }
+#else
+AEABI_RTABI fp_t __aeabi_ui2f(unsigned int a) COMPILER_RT_ALIAS(__floatunsisf);
 #endif
-
+#endif

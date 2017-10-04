@@ -1,5 +1,3 @@
-add_subdirectory(Helpers)
-
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
   JSONTest.cpp

@@ -210,9 +210,15 @@ OutputSection *SectionBase::getOutputSection() {
   return Sec ? Sec->getParent() : nullptr;
 }
 
-// Uncompress section contents. Note that this function is called
-// from parallelForEach, so it must be thread-safe.
-void InputSectionBase::uncompress() {
+// Uncompress section contents if required. Note that this function
+// is called from parallelForEach, so it must be thread-safe.
+void InputSectionBase::maybeUncompress() {
+  if (UncompressBuf)
+    return;
+
+  if (!Decompressor::isCompressedELFSection(Flags, Name))
+    return;
+
   Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
                                                 Config->IsLE, Config->Is64));
 
