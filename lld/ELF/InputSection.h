@@ -165,7 +165,7 @@ public:
 
   InputSection *getLinkOrderDep() const;
 
-  void uncompress();
+  void maybeUncompress();
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);

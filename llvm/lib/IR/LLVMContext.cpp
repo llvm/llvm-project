@@ -199,8 +199,12 @@ static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {
   // pattern, passed via one of the -pass-remarks* flags, matches the name of
   // the pass that is emitting the diagnostic. If there is no match, ignore the
   // diagnostic and return.
+  //
+  // Also noisy remarks are only enabled if we have hotness information to sort
+  // them.
   if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-    return Remark->isEnabled();
+    return Remark->isEnabled() &&
+           (!Remark->isVerbose() || Remark->getHotness());
 
   return true;
 }

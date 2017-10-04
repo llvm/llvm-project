@@ -16,7 +16,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"

@@ -364,10 +364,10 @@ The AMDGPU backend uses the following ELF header:
      ========================== ===============================
      ``e_ident[EI_CLASS]``      ``ELFCLASS64``
      ``e_ident[EI_DATA]``       ``ELFDATA2LSB``
-     ``e_ident[EI_OSABI]``      ``ELFOSABI_AMDGPU_HSA`` or
+     ``e_ident[EI_OSABI]``      ``ELFOSABI_AMDGPU_HSA``,
                                 ``ELFOSABI_AMDGPU_PAL`` or
                                 ``ELFOSABI_AMDGPU_MESA3D``
-     ``e_ident[EI_ABIVERSION]`` ``ELFABIVERSION_AMDGPU_HSA`` or
+     ``e_ident[EI_ABIVERSION]`` ``ELFABIVERSION_AMDGPU_HSA``,
                                 ``ELFABIVERSION_AMDGPU_PAL`` or
                                 ``ELFABIVERSION_AMDGPU_MESA3D``
      ``e_type``                 ``ET_REL`` or ``ET_DYN``
