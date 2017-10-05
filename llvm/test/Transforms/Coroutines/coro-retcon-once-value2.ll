@@ -5,11 +5,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 define {i8*, i32*} @f(i8* %buffer, i32* %ptr) "coroutine.presplit"="1" {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, i8* %buffer, i8* bitcast (void (i8*, i8)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, i8* %buffer, i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
   %oldvalue = load i32, i32* %ptr
   store i32 %oldvalue, i32* %temp
-  %unwind = call i1 (...) @llvm.coro.suspend.retcon(i32* %temp)
+  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i32* %temp)
   br i1 %unwind, label %cleanup, label %cont
 
 cont:
@@ -33,18 +33,17 @@ cleanup:
 ; CHECK-NEXT:    store i32* %ptr, i32** [[SPILL]]
 ; CHECK-NEXT:    %oldvalue = load i32, i32* %ptr
 ; CHECK-NEXT:    store i32 %oldvalue, i32* %temp
-; CHECK-NEXT:    [[T0:%.*]] = insertvalue { i8*, i32* } { i8* bitcast (void (i8*, i8)* @f.resume.0 to i8*), i32* undef }, i32* %temp, 1
+; CHECK-NEXT:    [[T0:%.*]] = insertvalue { i8*, i32* } { i8* bitcast (void (i8*, i1)* @f.resume.0 to i8*), i32* undef }, i32* %temp, 1
 ; CHECK-NEXT:    ret { i8*, i32* } [[T0]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal void @f.resume.0(i8* noalias nonnull, i8 zeroext)
+; CHECK-LABEL: define internal void @f.resume.0(i8* noalias nonnull, i1 zeroext)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %0 to [[FRAME_T:%.*]]**
 ; CHECK-NEXT:    [[FRAME:%.*]] = load [[FRAME_T]]*, [[FRAME_T]]** [[T0]]
 ; CHECK-NEXT:    bitcast [[FRAME_T]]* [[FRAME]] to i8*
-; CHECK-NEXT:    [[T0:%.*]] = icmp ne i8 %1, 0
 ; CHECK-NEXT:    %temp = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 1
-; CHECK-NEXT:    br i1 [[T0]],
+; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
 ; CHECK-NEXT:    [[TEMP_SLOT:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 1
 ; CHECK-NEXT:    [[PTR_SLOT:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 0
@@ -60,11 +59,10 @@ cleanup:
 
 declare token @llvm.coro.id.retcon.once(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.suspend.retcon(...)
+declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.prepare.retcon(i8*)
 
-declare void @prototype(i8*, i8 zeroext)
+declare void @prototype(i8*, i1 zeroext)
 
 declare noalias i8* @allocate(i32 %size)
 declare fastcc void @deallocate(i8* %ptr)
