@@ -610,10 +610,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       CoverageFeatures |= CoverageFunc;
   }
 
+  SharedRuntime =
+      Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
+                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia());
+
   if (AllAddedKinds & Address) {
-    AsanSharedRuntime =
-        Args.hasArg(options::OPT_shared_libasan) ||
-        TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();
     NeedPIE |= TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();
     if (Arg *A =
             Args.getLastArg(options::OPT_fsanitize_address_field_padding)) {

@@ -1,5 +1,5 @@
-// RUN: %clangxx -g -DSHARED_LIB %s -fPIC -shared -o %T/target_uninstrumented-so.so
-// RUN: %clangxx_cfi_diag -g %s -o %t %T/target_uninstrumented-so.so
+// RUN: %clangxx -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_cfi_diag -g %s -o %t %ld_flags_rpath_exe
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: cxxabi
@@ -32,7 +32,7 @@ void A::f() {}
 int main(int argc, char *argv[]) {
   void *p = create_B();
   // CHECK: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
-  // CHECK: invalid vtable in module {{.*}}target_uninstrumented-so.so
+  // CHECK: invalid vtable in module {{.*}}libtarget_uninstrumented.cpp.dynamic.so
   A *a = (A *)p;
   memset(p, 0, sizeof(A));
   // CHECK: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type

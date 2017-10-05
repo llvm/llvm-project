@@ -560,8 +560,20 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
   // Collect shared runtimes.
-  if (SanArgs.needsAsanRt() && SanArgs.needsSharedAsanRt()) {
-    SharedRuntimes.push_back("asan");
+  if (SanArgs.needsSharedRt()) {
+    if (SanArgs.needsAsanRt()) {
+      SharedRuntimes.push_back("asan");
+      if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
+        HelperStaticRuntimes.push_back("asan-preinit");
+    }
+
+    if (SanArgs.needsUbsanRt()) {
+      if (SanArgs.requiresMinimalRuntime()) {
+        SharedRuntimes.push_back("ubsan_minimal");
+      } else {
+        SharedRuntimes.push_back("ubsan_standalone");
+      }
+    }
   }
 
   // The stats_client library is also statically linked into DSOs.
@@ -569,18 +581,14 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("stats_client");
 
   // Collect static runtimes.
-  if (Args.hasArg(options::OPT_shared) || TC.getTriple().isAndroid()) {
-    // Don't link static runtimes into DSOs or if compiling for Android.
+  if (Args.hasArg(options::OPT_shared) || SanArgs.needsSharedRt()) {
+    // Don't link static runtimes into DSOs or if -shared-libasan.
     return;
   }
   if (SanArgs.needsAsanRt()) {
-    if (SanArgs.needsSharedAsanRt()) {
-      HelperStaticRuntimes.push_back("asan-preinit");
-    } else {
-      StaticRuntimes.push_back("asan");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("asan_cxx");
-    }
+    StaticRuntimes.push_back("asan");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("asan_cxx");
   }
   if (SanArgs.needsDfsanRt())
     StaticRuntimes.push_back("dfsan");

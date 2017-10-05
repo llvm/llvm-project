@@ -64,9 +64,8 @@ struct InstRegexOp : public SetTheory::Operator {
   void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     SmallVector<Regex, 4> RegexList;
-    for (DagInit::const_arg_iterator
-           AI = Expr->arg_begin(), AE = Expr->arg_end(); AI != AE; ++AI) {
-      StringInit *SI = dyn_cast<StringInit>(*AI);
+    for (Init *Arg : make_range(Expr->arg_begin(), Expr->arg_end())) {
+      StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
         PrintFatalError(Loc, "instregex requires pattern string: "
           + Expr->getAsString());
@@ -586,11 +585,11 @@ void CodeGenSchedModels::collectSchedClasses() {
     }
     // If ProcIndices contains zero, the class applies to all processors.
     if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
-      for (std::vector<CodeGenProcModel>::iterator PI = ProcModels.begin(),
-             PE = ProcModels.end(); PI != PE; ++PI) {
-        if (!std::count(ProcIndices.begin(), ProcIndices.end(), PI->Index))
+      for (const CodeGenProcModel &PM :
+           make_range(ProcModels.begin(), ProcModels.end())) {
+        if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
           dbgs() << "No machine model for " << Inst->TheDef->getName()
-                 << " on processor " << PI->ModelName << '\n';
+                 << " on processor " << PM.ModelName << '\n';
       }
     }
   }
@@ -693,10 +692,10 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
   if (InstDefs->empty())
     PrintFatalError(InstRWDef->getLoc(), "No matching instruction opcodes");
 
-  for (RecIter I = InstDefs->begin(), E = InstDefs->end(); I != E; ++I) {
-    InstClassMapTy::const_iterator Pos = InstrClassMap.find(*I);
+  for (Record *InstDef : make_range(InstDefs->begin(), InstDefs->end())) {
+    InstClassMapTy::const_iterator Pos = InstrClassMap.find(InstDef);
     if (Pos == InstrClassMap.end())
-      PrintFatalError((*I)->getLoc(), "No sched class for instruction.");
+      PrintFatalError(InstDef->getLoc(), "No sched class for instruction.");
     unsigned SCIdx = Pos->second;
     unsigned CIdx = 0, CEnd = ClassInstrs.size();
     for (; CIdx != CEnd; ++CIdx) {
@@ -707,7 +706,7 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       ClassInstrs.resize(CEnd + 1);
       ClassInstrs[CIdx].first = SCIdx;
     }
-    ClassInstrs[CIdx].second.push_back(*I);
+    ClassInstrs[CIdx].second.push_back(InstDef);
   }
   // For each set of Instrs, create a new class if necessary, and map or remap
   // the Instrs to it.
@@ -799,8 +798,7 @@ void CodeGenSchedModels::collectProcItins() {
 
     // Insert each itinerary data record in the correct position within
     // the processor model's ItinDefList.
-    for (unsigned i = 0, N = ItinRecords.size(); i < N; i++) {
-      Record *ItinData = ItinRecords[i];
+    for (Record *ItinData : ItinRecords) {
       Record *ItinDef = ItinData->getValueAsDef("TheClass");
       bool FoundClass = false;
       for (SchedClassIter SCI = schedClassBegin(), SCE = schedClassEnd();
@@ -997,12 +995,11 @@ private:
 // conditions implicitly negate any prior condition.
 bool PredTransitions::mutuallyExclusive(Record *PredDef,
                                         ArrayRef<PredCheck> Term) {
-  for (ArrayRef<PredCheck>::iterator I = Term.begin(), E = Term.end();
-       I != E; ++I) {
-    if (I->Predicate == PredDef)
+  for (const PredCheck &PC: make_range(Term.begin(), Term.end())) {
+    if (PC.Predicate == PredDef)
       return false;
 
-    const CodeGenSchedRW &SchedRW = SchedModels.getSchedRW(I->RWIdx, I->IsRead);
+    const CodeGenSchedRW &SchedRW = SchedModels.getSchedRW(PC.RWIdx, PC.IsRead);
     assert(SchedRW.HasVariants && "PredCheck must refer to a SchedVariant");
     RecVec Variants = SchedRW.TheDef->getValueAsListOfDefs("Variants");
     for (RecIter VI = Variants.begin(), VE = Variants.end(); VI != VE; ++VI) {
@@ -1018,9 +1015,9 @@ static bool hasAliasedVariants(const CodeGenSchedRW &RW,
   if (RW.HasVariants)
     return true;
 
-  for (RecIter I = RW.Aliases.begin(), E = RW.Aliases.end(); I != E; ++I) {
+  for (Record *Alias : make_range(RW.Aliases.begin(), RW.Aliases.end())) {
     const CodeGenSchedRW &AliasRW =
-      SchedModels.getSchedRW((*I)->getValueAsDef("AliasRW"));
+      SchedModels.getSchedRW(Alias->getValueAsDef("AliasRW"));
     if (AliasRW.HasVariants)
       return true;
     if (AliasRW.IsSequence) {
@@ -1507,13 +1504,12 @@ void CodeGenSchedModels::collectProcResources() {
   // Add ProcResGroups that are defined within this processor model, which may
   // not be directly referenced but may directly specify a buffer size.
   RecVec ProcResGroups = Records.getAllDerivedDefinitions("ProcResGroup");
-  for (RecIter RI = ProcResGroups.begin(), RE = ProcResGroups.end();
-       RI != RE; ++RI) {
-    if (!(*RI)->getValueInit("SchedModel")->isComplete())
+  for (Record *PRG : make_range(ProcResGroups.begin(), ProcResGroups.end())) {
+    if (!PRG->getValueInit("SchedModel")->isComplete())
       continue;
-    CodeGenProcModel &PM = getProcModel((*RI)->getValueAsDef("SchedModel"));
-    if (!is_contained(PM.ProcResourceDefs, *RI))
-      PM.ProcResourceDefs.push_back(*RI);
+    CodeGenProcModel &PM = getProcModel(PRG->getValueAsDef("SchedModel"));
+    if (!is_contained(PM.ProcResourceDefs, PRG))
+      PM.ProcResourceDefs.push_back(PRG);
   }
   // Finalize each ProcModel by sorting the record arrays.
   for (CodeGenProcModel &PM : ProcModels) {
