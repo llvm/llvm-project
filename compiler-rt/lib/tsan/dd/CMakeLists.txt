@@ -10,13 +10,11 @@ set(DD_SOURCES
   dd_interceptors.cc
 )
 
-set(DD_LINKLIBS ${SANITIZER_COMMON_LINK_LIBS})
+set(DD_LINKLIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl DD_LINKLIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt DD_LINKLIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread DD_LINKLIBS)
-
-list(APPEND DD_LINKLIBS ${SANITIZER_CXX_ABI_LIBRARY})
 
 add_custom_target(dd)
 # Deadlock detector is currently supported on 64-bit Linux only.

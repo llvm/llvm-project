@@ -347,6 +347,13 @@ The following options allow building libc++ for a different ABI version.
   Build the "unstable" ABI version of libc++. Includes all ABI changing features
   on top of the current stable version.
 
+.. option:: LIBCXX_ABI_DEFINES:STRING
+
+  **Default**: ``""``
+
+  A semicolon-separated list of ABI macros to persist in the site config header.
+  See ``include/__config`` for the list of ABI macros.
+
 .. _LLVM-specific variables:
 
 LLVM-specific options
