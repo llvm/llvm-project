@@ -57,7 +57,6 @@ if (LIBUNWIND_ENABLE_THREADS)
 endif()
 
 # Setup flags.
-append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_FPIC_FLAG -fPIC)
 append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NO_RTTI_FLAG -fno-rtti)
 
 append_if(LIBUNWIND_LINK_FLAGS LIBUNWIND_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs)
@@ -100,7 +99,8 @@ add_library(unwind_objects OBJECT ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
 
 set_target_properties(unwind_objects
                       PROPERTIES
-                        COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
+                        COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
+                        POSITION_INDEPENDENT_CODE ON)
 
 set(LIBUNWIND_TARGETS)
 
