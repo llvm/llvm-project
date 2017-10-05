@@ -890,6 +890,9 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_teams);
     break;
+  case OMPD_teams_distribute:
+    CaptureRegions.push_back(OMPD_teams);
+    break;
   case OMPD_teams:
   case OMPD_simd:
   case OMPD_for:
@@ -913,7 +916,6 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_taskloop_simd:
   case OMPD_distribute_parallel_for_simd:
   case OMPD_distribute_simd:
-  case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
   case OMPD_teams_distribute_parallel_for_simd:
   case OMPD_teams_distribute_parallel_for:

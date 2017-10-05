@@ -151,3 +151,17 @@ void testConstrainState(int p) {
   ASSERT_TRUE(false);
   clang_analyzer_warnIfReached(); // no-warning
 }
+
+void testAssertSymbolicPtr(const bool *b) {
+  ASSERT_TRUE(*b); // no-crash
+
+  // FIXME: Our solver doesn't handle this well yet.
+  clang_analyzer_eval(*b); // expected-warning{{UNKNOWN}}
+}
+
+void testAssertSymbolicRef(const bool &b) {
+  ASSERT_TRUE(b); // no-crash
+
+  // FIXME: Our solver doesn't handle this well yet.
+  clang_analyzer_eval(b); // expected-warning{{UNKNOWN}}
+}

@@ -199,7 +199,7 @@ namespace PODUninitialized {
     Inner p;
   };
 
-  void testPOD() {
+  void testPOD(const POD &pp) {
     POD p;
     p.x = 1;
     POD p2 = p; // no-warning
@@ -209,6 +209,15 @@ namespace PODUninitialized {
 
     // Use rvalues as well.
     clang_analyzer_eval(POD(p3).x == 1); // expected-warning{{TRUE}}
+
+    // Copy from symbolic references correctly.
+    POD p4 = pp;
+    // Make sure that p4.x contains a symbol after copy.
+    if (p4.x > 0)
+      clang_analyzer_eval(p4.x > 0); // expected-warning{{TRUE}}
+    // FIXME: Element region gets in the way, so these aren't the same symbols
+    // as they should be.
+    clang_analyzer_eval(pp.x == p4.x); // expected-warning{{UNKNOWN}}
 
     PODWrapper w;
     w.p.y = 1;
