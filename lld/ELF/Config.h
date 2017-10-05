@@ -67,12 +67,6 @@ struct VersionDefinition {
   size_t NameOff = 0; // Offset in the string table
 };
 
-// Structure for mapping renamed symbols
-struct RenamedSymbol {
-  Symbol *Target;
-  uint8_t OriginalBinding;
-};
-
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
@@ -108,7 +102,6 @@ struct Configuration {
   std::vector<SymbolVersion> VersionScriptGlobals;
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
-  llvm::MapVector<Symbol *, RenamedSymbol> RenamedSymbols;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;
