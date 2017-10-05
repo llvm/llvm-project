@@ -11,10 +11,19 @@ include(LLDBStandalone)
 include(LLDBConfig)
 include(AddLLDB)
 
+# BEGIN - Swift Mods
 if(NOT LLDB_BUILT_STANDALONE AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
    list(APPEND CMAKE_MODULE_PATH
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+endif()
+# END - Swift Mods
+
+# Define the LLDB_CONFIGURATION_xxx matching the build type
+if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+  add_definitions( -DLLDB_CONFIGURATION_DEBUG )
+else()
+  add_definitions( -DLLDB_CONFIGURATION_RELEASE )
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows|Android")

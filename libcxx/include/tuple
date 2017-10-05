@@ -929,7 +929,7 @@ public:
     void swap(tuple&) _NOEXCEPT {}
 };
 
-#ifdef __cpp_deduction_guides
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 // NOTE: These are not yet standardized, but are required to simulate the
 // implicit deduction guide that should be generated had libc++ declared the
 // tuple-like constructors "correctly"
