@@ -67,10 +67,9 @@ template <class ELFT> void elf::createCommonSections() {
       continue;
 
     // Create a synthetic section for the common data.
-    auto *Section = make<BssSection>("COMMON");
+    auto *Section = make<BssSection>("COMMON", Sym->Size, Sym->Alignment);
     Section->File = Sym->getFile();
     Section->Live = !Config->GcSections;
-    Section->reserveSpace(Sym->Size, Sym->Alignment);
     InputSections.push_back(Section);
 
     // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
@@ -361,15 +360,11 @@ void BuildIdSection::computeHash(
   HashFn(HashBuf, Hashes);
 }
 
-BssSection::BssSection(StringRef Name)
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
-
-size_t BssSection::reserveSpace(uint64_t Size, uint32_t Alignment) {
+BssSection::BssSection(StringRef Name, uint64_t Size, uint32_t Alignment)
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Name) {
   if (OutputSection *Sec = getParent())
     Sec->updateAlignment(Alignment);
-  this->Size = alignTo(this->Size, Alignment) + Size;
-  this->Alignment = std::max(this->Alignment, Alignment);
-  return this->Size - Size;
+  this->Size = Size;
 }
 
 void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -2300,8 +2295,7 @@ void elf::decompressAndMergeSections() {
   parallelForEach(InputSections, [](InputSectionBase *S) {
     if (!S->Live)
       return;
-    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-      S->uncompress();
+    S->maybeUncompress();
     if (auto *MS = dyn_cast<MergeInputSection>(S))
       MS->splitIntoPieces();
   });

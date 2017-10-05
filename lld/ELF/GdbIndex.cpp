@@ -33,6 +33,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
                                  .Case(".debug_ranges", &RangeSection)
                                  .Case(".debug_line", &LineSection)
                                  .Default(nullptr)) {
+      Sec->maybeUncompress();
       M->Data = toStringRef(Sec->Data);
       M->Sec = Sec;
       continue;
