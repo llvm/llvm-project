@@ -120,6 +120,15 @@ struct SuspendCrossingInfo {
         return false;
 
     BasicBlock *UseBB = I->getParent();
+
+    // As a special case, treat uses by an llvm.coro.suspend.retcon
+    // as if they were uses in the suspend's single predecessor: the
+    // uses conceptually occur before the suspend.
+    if (isa<CoroSuspendRetconInst>(I)) {
+      UseBB = UseBB->getSinglePredecessor();
+      assert(UseBB && "should have split coro.suspend into its own block");
+    }
+
     return hasPathCrossingSuspendPoint(DefBB, UseBB);
   }
 
@@ -128,7 +137,17 @@ struct SuspendCrossingInfo {
   }
 
   bool isDefinitionAcrossSuspend(Instruction &I, User *U) const {
-    return isDefinitionAcrossSuspend(I.getParent(), U);
+    auto *DefBB = I.getParent();
+
+    // As a special case, treat values produced by an llvm.coro.suspend.*
+    // as if they were defined in the single successor: the uses
+    // conceptually occur after the suspend.
+    if (isa<AnyCoroSuspendInst>(I)) {
+      DefBB = DefBB->getSingleSuccessor();
+      assert(DefBB && "should have split coro.suspend into its own block");
+    }
+
+    return isDefinitionAcrossSuspend(DefBB, U);
   }
 };
 } // end anonymous namespace
@@ -183,9 +202,10 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
     B.Suspend = true;
     B.Kills |= B.Consumes;
   };
-  for (CoroSuspendInst *CSI : Shape.CoroSuspends) {
+  for (auto *CSI : Shape.CoroSuspends) {
     markSuspendBlock(CSI);
-    markSuspendBlock(CSI->getCoroSave());
+    if (auto *Save = CSI->getCoroSave())
+      markSuspendBlock(Save);
   }
 
   // Iterate propagating consumes and kills until they stop changing.
@@ -310,18 +330,30 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   SmallString<32> Name(F.getName());
   Name.append(".Frame");
   StructType *FrameTy = StructType::create(C, Name);
-  auto *FramePtrTy = FrameTy->getPointerTo();
-  auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                 /*IsVarArgs=*/false);
-  auto *FnPtrTy = FnTy->getPointerTo();
+  SmallVector<Type *, 8> Types;
 
-  // Figure out how wide should be an integer type storing the suspend index.
-  unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-  Type *PromiseType = Shape.PromiseAlloca
-                          ? Shape.PromiseAlloca->getType()->getElementType()
-                          : Type::getInt1Ty(C);
-  SmallVector<Type *, 8> Types{FnPtrTy, FnPtrTy, PromiseType,
-                               Type::getIntNTy(C, IndexBits)};
+  AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
+
+  if (Shape.ABI == coro::ABI::Switch) {
+    auto *FramePtrTy = FrameTy->getPointerTo();
+    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
+                                   /*IsVarArgs=*/false);
+    auto *FnPtrTy = FnTy->getPointerTo();
+
+    // Figure out how wide should be an integer type storing the suspend index.
+    unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
+    Type *PromiseType = PromiseAlloca
+                            ? PromiseAlloca->getType()->getElementType()
+                            : Type::getInt1Ty(C);
+    Type *IndexType = Type::getIntNTy(C, IndexBits);
+    Types.push_back(FnPtrTy);
+    Types.push_back(FnPtrTy);
+    Types.push_back(PromiseType);
+    Types.push_back(IndexType);
+  } else {
+    assert(PromiseAlloca == nullptr && "lowering doesn't support promises");
+  }
+
   Value *CurrentDef = nullptr;
 
   // Create an entry for every spilled value.
@@ -331,7 +363,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
     CurrentDef = S.def();
     // PromiseAlloca was already added to Types array earlier.
-    if (CurrentDef == Shape.PromiseAlloca)
+    if (CurrentDef == PromiseAlloca)
       continue;
 
     Type *Ty = nullptr;
@@ -343,6 +375,22 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     Types.push_back(Ty);
   }
   FrameTy->setBody(Types);
+
+  switch (Shape.ABI) {
+  case coro::ABI::Switch:
+    break;
+
+  // Remember whether the frame is inline in the storage.
+  case coro::ABI::Retcon:
+  case coro::ABI::RetconOnce: {
+    auto &Layout = F.getParent()->getDataLayout();
+    auto Id = Shape.getRetconCoroId();
+    Shape.RetconLowering.IsFrameInlineInStorage
+      = (Layout.getTypeAllocSize(FrameTy) <= Id->getStorageSize() &&
+         Layout.getABITypeAlignment(FrameTy) <= Id->getStorageAlignment());
+    break;
+  }
+  }
 
   return FrameTy;
 }
@@ -401,7 +449,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
   Value *CurrentReload = nullptr;
-  unsigned Index = coro::Shape::LastKnownField;
+  unsigned Index = Shape.getFirstSpillFieldIndex() - 1;
 
   // We need to keep track of any allocas that need "spilling"
   // since they will live in the coroutine frame now, all access to them
@@ -409,9 +457,11 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   // we remember allocas and their indices to be handled once we processed
   // all the spills.
   SmallVector<std::pair<AllocaInst *, unsigned>, 4> Allocas;
-  // Promise alloca (if present) has a fixed field number (Shape::PromiseField)
-  if (Shape.PromiseAlloca)
-    Allocas.emplace_back(Shape.PromiseAlloca, coro::Shape::PromiseField);
+  // Promise alloca (if present) has a fixed field number.
+  if (auto *PromiseAlloca = Shape.getPromiseAlloca()) {
+    assert(Shape.ABI == coro::ABI::Switch);
+    Allocas.emplace_back(PromiseAlloca, coro::Shape::SwitchFieldIndex::Promise);
+  }
 
   // Create a load instruction to reload the spilled value from the coroutine
   // frame.
@@ -433,7 +483,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
       CurrentBlock = nullptr;
       CurrentReload = nullptr;
 
-      ++Index;
+      Index++;
 
       if (auto *AI = dyn_cast<AllocaInst>(CurrentValue)) {
         // Spilled AllocaInst will be replaced with GEP from the coroutine frame
@@ -446,23 +496,33 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
         // coroutine frame.
 
         Instruction *InsertPt = nullptr;
-        if (isa<Argument>(CurrentValue)) {
+        if (auto Arg = dyn_cast<Argument>(CurrentValue)) {
           // For arguments, we will place the store instruction right after
           // the coroutine frame pointer instruction, i.e. bitcast of
           // coro.begin from i8* to %f.frame*.
           InsertPt = FramePtr->getNextNode();
+
+          // If we're spilling an Argument, make sure we clear 'nocapture'
+          // from the coroutine function.
+          Arg->getParent()->removeParamAttr(Arg->getArgNo(),
+                                            Attribute::NoCapture);
+
         } else if (auto *II = dyn_cast<InvokeInst>(CurrentValue)) {
           // If we are spilling the result of the invoke instruction, split the
           // normal edge and insert the spill in the new block.
           auto NewBB = SplitEdge(II->getParent(), II->getNormalDest());
           InsertPt = NewBB->getTerminator();
-        } else if (dyn_cast<PHINode>(CurrentValue)) {
+        } else if (isa<PHINode>(CurrentValue)) {
           // Skip the PHINodes and EH pads instructions.
           BasicBlock *DefBlock = cast<Instruction>(E.def())->getParent();
           if (auto *CSI = dyn_cast<CatchSwitchInst>(DefBlock->getTerminator()))
             InsertPt = splitBeforeCatchSwitch(CSI);
           else
             InsertPt = &*DefBlock->getFirstInsertionPt();
+        } else if (auto CSI = dyn_cast<AnyCoroSuspendInst>(CurrentValue)) {
+          // Don't spill immediately after a suspend; splitting assumes
+          // that the suspend will be followed by a branch.
+          InsertPt = CSI->getParent()->getSingleSuccessor()->getFirstNonPHI();
         } else {
           // For all other values, the spill is placed immediately after
           // the definition.
@@ -500,13 +560,14 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   }
 
   BasicBlock *FramePtrBB = FramePtr->getParent();
-  Shape.AllocaSpillBlock =
-      FramePtrBB->splitBasicBlock(FramePtr->getNextNode(), "AllocaSpillBB");
-  Shape.AllocaSpillBlock->splitBasicBlock(&Shape.AllocaSpillBlock->front(),
-                                          "PostSpill");
 
-  Builder.SetInsertPoint(&Shape.AllocaSpillBlock->front());
+  auto SpillBlock =
+    FramePtrBB->splitBasicBlock(FramePtr->getNextNode(), "AllocaSpillBB");      
+  SpillBlock->splitBasicBlock(&SpillBlock->front(), "PostSpill");
+  Shape.AllocaSpillBlock = SpillBlock;
+
   // If we found any allocas, replace all of their remaining uses with Geps.
+  Builder.SetInsertPoint(&SpillBlock->front());
   for (auto &P : Allocas) {
     auto *G =
         Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, P.second);
@@ -786,16 +847,17 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   // access to local variables.
   LowerDbgDeclare(F);
 
-  Shape.PromiseAlloca = Shape.CoroBegin->getId()->getPromise();
-  if (Shape.PromiseAlloca) {
-    Shape.CoroBegin->getId()->clearPromise();
+  if (Shape.ABI == coro::ABI::Switch &&
+      Shape.SwitchLowering.PromiseAlloca) {
+    Shape.getSwitchCoroId()->clearPromise();
   }
 
   // Make sure that all coro.save, coro.suspend and the fallthrough coro.end
   // intrinsics are in their own blocks to simplify the logic of building up
   // SuspendCrossing data.
-  for (CoroSuspendInst *CSI : Shape.CoroSuspends) {
-    splitAround(CSI->getCoroSave(), "CoroSave");
+  for (auto *CSI : Shape.CoroSuspends) {
+    if (auto *Save = CSI->getCoroSave())
+      splitAround(Save, "CoroSave");
     splitAround(CSI, "CoroSuspend");
   }
 
@@ -843,7 +905,8 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       continue;
     // The Coroutine Promise always included into coroutine frame, no need to
     // check for suspend crossing.
-    if (Shape.PromiseAlloca == &I)
+    if (Shape.ABI == coro::ABI::Switch &&
+        Shape.SwitchLowering.PromiseAlloca == &I)
       continue;
 
     for (User *U : I.users())
