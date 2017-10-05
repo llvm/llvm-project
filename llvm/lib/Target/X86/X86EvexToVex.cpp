@@ -1,4 +1,4 @@
-//===----------------------- X86EvexToVex.cpp ----------------------------===//
+//===- X86EvexToVex.cpp ---------------------------------------------------===//
 // Compress EVEX instructions to VEX encoding when possible to reduce code size
 //
 //                     The LLVM Compiler Infrastructure
@@ -6,7 +6,8 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file defines the pass that goes over all AVX-512 instructions which
 /// are encoded using the EVEX prefix and if possible replaces them by their
@@ -16,8 +17,8 @@
 /// use the xmm or the mask registers or xmm/ymm registers wuith indexes
 /// higher than 15.
 /// The pass applies code reduction on the generated code for AVX-512 instrs.
-///
-//===---------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
 
 #include "InstPrinter/X86InstComments.h"
 #include "MCTargetDesc/X86BaseInfo.h"
@@ -54,7 +55,7 @@ namespace {
 class EvexToVexInstPass : public MachineFunctionPass {
 
   /// X86EvexToVexCompressTable - Evex to Vex encoding opcode map.
-  typedef DenseMap<unsigned, uint16_t> EvexToVexTableType;
+  using EvexToVexTableType = DenseMap<unsigned, uint16_t>;
   EvexToVexTableType EvexToVex128Table;
   EvexToVexTableType EvexToVex256Table;
 
@@ -101,9 +102,9 @@ private:
   const X86InstrInfo *TII;
 };
 
-char EvexToVexInstPass::ID = 0;
-
 } // end anonymous namespace
+
+char EvexToVexInstPass::ID = 0;
 
 bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
@@ -176,7 +177,6 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
     if (It != EvexToVex256Table.end())
       NewOpc = It->second;
   }
-
   // Check for EVEX_V128 or Scalar instructions.
   else if (IsEVEX_V128) {
     // Search for opcode in the EvexToVex128 table.

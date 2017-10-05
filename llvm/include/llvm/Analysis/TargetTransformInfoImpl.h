@@ -720,10 +720,10 @@ public:
     // Assumes the address space is 0 when Ptr is nullptr.
     unsigned AS =
         (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
+
     if (static_cast<T *>(this)->isLegalAddressingMode(
             TargetType, const_cast<GlobalValue *>(BaseGV),
-            static_cast<int64_t>(BaseOffset.getLimitedValue()), HasBaseReg,
-            Scale, AS))
+            BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale, AS))
       return TTI::TCC_Free;
     return TTI::TCC_Basic;
   }

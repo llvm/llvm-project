@@ -4371,6 +4371,18 @@ unsigned SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return AMDGPU::NoRegister;
 }
 
+unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
+  unsigned Size = 0;
+  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
+  while (++I != E && I->isInsideBundle()) {
+    assert(!I->isBundle() && "No nested bundle!");
+    Size += getInstSizeInBytes(*I);
+  }
+
+  return Size;
+}
+
 unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
@@ -4414,9 +4426,10 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::IMPLICIT_DEF:
   case TargetOpcode::KILL:
   case TargetOpcode::DBG_VALUE:
-  case TargetOpcode::BUNDLE:
   case TargetOpcode::EH_LABEL:
     return 0;
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   case TargetOpcode::INLINEASM: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();

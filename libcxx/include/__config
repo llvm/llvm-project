@@ -157,11 +157,15 @@
 
 // FIXME: ABI detection should be done via compiler builtin macros. This
 // is just a placeholder until Clang implements such macros. For now assume
-// that Windows compilers pretending to be MSVC++ target the microsoft ABI.
-#if defined(_WIN32) && defined(_MSC_VER)
-# define _LIBCPP_ABI_MICROSOFT
-#else
-# define _LIBCPP_ABI_ITANIUM
+// that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
+// and allow the user to explicitly specify the ABI to handle cases where this
+// heuristic falls short.
+#if !defined(_LIBCPP_ABI_ITANIUM) && !defined(_LIBCPP_ABI_MICROSOFT)
+# if defined(_WIN32) && defined(_MSC_VER)
+#  define _LIBCPP_ABI_MICROSOFT
+# else
+#  define _LIBCPP_ABI_ITANIUM
+# endif
 #endif
 
 // Need to detect which libc we're using if we're on Linux.
