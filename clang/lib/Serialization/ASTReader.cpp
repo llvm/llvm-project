@@ -9170,30 +9170,6 @@ void ASTReader::finishPendingActions() {
   }
   PendingDefinitions.clear();
 
-  // Load the bodies of any functions or methods we've encountered. We do
-  // this now (delayed) so that we can be sure that the declaration chains
-  // have been fully wired up (hasBody relies on this).
-  // FIXME: We shouldn't require complete redeclaration chains here.
-  for (PendingBodiesMap::iterator PB = PendingBodies.begin(),
-                               PBEnd = PendingBodies.end();
-       PB != PBEnd; ++PB) {
-    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(PB->first)) {
-      // FIXME: Check for =delete/=default?
-      // FIXME: Complain about ODR violations here?
-      const FunctionDecl *Defn = nullptr;
-      if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn)) {
-        FD->setLazyBody(PB->second);
-      } else
-        mergeDefinitionVisibility(const_cast<FunctionDecl*>(Defn), FD);
-      continue;
-    }
-
-    ObjCMethodDecl *MD = cast<ObjCMethodDecl>(PB->first);
-    if (!getContext().getLangOpts().Modules || !MD->hasBody())
-      MD->setLazyBody(PB->second);
-  }
-  PendingBodies.clear();
-
   // Do some cleanup.
   for (auto *ND : PendingMergedDefinitionsToDeduplicate)
     getContext().deduplicateMergedDefinitonsFor(ND);

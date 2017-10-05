@@ -23,3 +23,12 @@ enum __attribute__((section("NEAR,x"))) e { one }; // expected-error {{'section'
 extern int a; // expected-note {{previous declaration is here}}
 int *b = &a;
 extern int a __attribute__((section("foo,zed"))); // expected-warning {{section attribute is specified on redeclared variable}}
+
+// Not a warning.
+int c;
+int c __attribute__((section("foo,zed")));
+
+// Also OK.
+struct r_debug {};
+extern struct r_debug _r_debug;
+struct r_debug _r_debug __attribute__((nocommon, section(".r_debug,bar")));

@@ -59,6 +59,9 @@ public:
   // \brief Returnes a value which indicates the alignment in bytes of the pipe
   // element.
   virtual llvm::Value *getPipeElemAlign(const Expr *PipeArg);
+
+  /// \return __generic void* type.
+  llvm::PointerType *getGenericVoidPointerType();
 };
 
 }
