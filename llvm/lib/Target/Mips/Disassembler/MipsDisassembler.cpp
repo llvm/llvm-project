@@ -1283,9 +1283,9 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return Result;
     }
 
-    if (hasMips32r6() && isFP64()) {
-      DEBUG(dbgs() << "Trying MicroMips32r6FP64 table (32-bit opcodes):\n");
-      Result = decodeInstruction(DecoderTableMicroMips32r6FP6432, Instr, Insn,
+    if (isFP64()) {
+      DEBUG(dbgs() << "Trying MicroMipsFP64 table (32-bit opcodes):\n");
+      Result = decodeInstruction(DecoderTableMicroMipsFP6432, Instr, Insn,
                                  Address, this, STI);
       if (Result != MCDisassembler::Fail) {
         Size = 4;
@@ -1363,6 +1363,14 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   if (isGP64()) {
     DEBUG(dbgs() << "Trying Mips64 (GPR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips6432, Instr, Insn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail)
+      return Result;
+  }
+
+  if (isFP64()) {
+    DEBUG(dbgs() << "Trying MipsFP64 (64 bit FPU) table (32-bit opcodes):\n");
+    Result = decodeInstruction(DecoderTableMipsFP6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
       return Result;

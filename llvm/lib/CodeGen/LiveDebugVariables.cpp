@@ -166,9 +166,11 @@ class UserValue {
   SmallSet<SlotIndex, 2> trimmedDefs;
 
   /// insertDebugValue - Insert a DBG_VALUE into MBB at Idx for LocNo.
-  void insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
+  void insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
+                        SlotIndex StopIdx,
                         DbgValueLocation Loc, bool Spilled, LiveIntervals &LIS,
-                        const TargetInstrInfo &TII);
+                        const TargetInstrInfo &TII,
+                        const TargetRegisterInfo &TRI);
 
   /// splitLocation - Replace OldLocNo ranges with NewRegs ranges where NewRegs
   /// is live. Returns true if any changes were made.
@@ -306,7 +308,8 @@ public:
 
   /// emitDebugValues - Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
-                       const TargetInstrInfo &TRI,
+                       const TargetInstrInfo &TII,
+                       const TargetRegisterInfo &TRI,
                        const BitVector &SpilledLocations);
 
   /// getDebugLoc - Return DebugLoc of this UserValue.
@@ -1055,8 +1058,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const TargetRegisterInfo &TRI,
   }
 }
 
-/// findInsertLocation - Find an iterator for inserting a DBG_VALUE
-/// instruction.
+/// Find an iterator for inserting a DBG_VALUE instruction.
 static MachineBasicBlock::iterator
 findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
                    LiveIntervals &LIS) {
@@ -1079,11 +1081,41 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
                               std::next(MachineBasicBlock::iterator(MI));
 }
 
-void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
+/// Find an iterator for inserting the next DBG_VALUE instruction
+/// (or end if no more insert locations found).
+static MachineBasicBlock::iterator
+findNextInsertLocation(MachineBasicBlock *MBB,
+                       MachineBasicBlock::iterator I,
+                       SlotIndex StopIdx, MachineOperand &LocMO,
+                       LiveIntervals &LIS,
+                       const TargetRegisterInfo &TRI) {
+  if (!LocMO.isReg())
+    return MBB->instr_end();
+  unsigned Reg = LocMO.getReg();
+
+  // Find the next instruction in the MBB that define the register Reg.
+  while (I != MBB->end()) {
+    if (!LIS.isNotInMIMap(*I) &&
+        SlotIndex::isEarlierEqualInstr(StopIdx, LIS.getInstructionIndex(*I)))
+      break;
+    if (I->definesRegister(Reg, &TRI))
+      // The insert location is directly after the instruction/bundle.
+      return std::next(I);
+    ++I;
+  }
+  return MBB->end();
+}
+
+void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
+                                 SlotIndex StopIdx,
                                  DbgValueLocation Loc, bool Spilled,
                                  LiveIntervals &LIS,
-                                 const TargetInstrInfo &TII) {
-  MachineBasicBlock::iterator I = findInsertLocation(MBB, Idx, LIS);
+                                 const TargetInstrInfo &TII,
+                                 const TargetRegisterInfo &TRI) {
+  SlotIndex MBBEndIdx = LIS.getMBBEndIdx(&*MBB);
+  // Only search within the current MBB.
+  StopIdx = (MBBEndIdx < StopIdx) ? MBBEndIdx : StopIdx;
+  MachineBasicBlock::iterator I = findInsertLocation(MBB, StartIdx, LIS);
   MachineOperand &MO = locations[Loc.locNo()];
   ++NumInsertedDebugValues;
 
@@ -1104,18 +1136,25 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
 
   assert((!Spilled || MO.isFI()) && "a spilled location must be a frame index");
 
-  MachineInstrBuilder MIB =
+  do {
+    MachineInstrBuilder MIB =
       BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
           .add(MO);
-  if (IsIndirect)
-    MIB.addImm(0U);
-  else
-    MIB.addReg(0U, RegState::Debug);
-  MIB.addMetadata(Variable).addMetadata(Expr);
+    if (IsIndirect)
+      MIB.addImm(0U);
+    else
+      MIB.addReg(0U, RegState::Debug);
+    MIB.addMetadata(Variable).addMetadata(Expr);
+
+    // Continue and insert DBG_VALUES after every redefinition of register
+    // associated with the debug value within the range
+    I = findNextInsertLocation(MBB, I, StopIdx, MO, LIS, TRI);
+  } while (I != MBB->end());
 }
 
 void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
                                 const TargetInstrInfo &TII,
+                                const TargetRegisterInfo &TRI,
                                 const BitVector &SpilledLocations) {
   MachineFunction::iterator MFEnd = VRM->getMachineFunction().end();
 
@@ -1136,17 +1175,17 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
     SlotIndex MBBEnd = LIS.getMBBEndIdx(&*MBB);
 
     DEBUG(dbgs() << " BB#" << MBB->getNumber() << '-' << MBBEnd);
-    insertDebugValue(&*MBB, Start, Loc, Spilled, LIS, TII);
+    insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     // This interval may span multiple basic blocks.
     // Insert a DBG_VALUE into each one.
-    while(Stop > MBBEnd) {
+    while (Stop > MBBEnd) {
       // Move to the next block.
       Start = MBBEnd;
       if (++MBB == MFEnd)
         break;
       MBBEnd = LIS.getMBBEndIdx(&*MBB);
       DEBUG(dbgs() << " BB#" << MBB->getNumber() << '-' << MBBEnd);
-      insertDebugValue(&*MBB, Start, Loc, Spilled, LIS, TII);
+      insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     }
     DEBUG(dbgs() << '\n');
     if (MBB == MFEnd)
@@ -1165,7 +1204,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
     DEBUG(userValues[i]->print(dbgs(), TRI));
     userValues[i]->rewriteLocations(*VRM, *TRI, SpilledLocations);
-    userValues[i]->emitDebugValues(VRM, *LIS, *TII, SpilledLocations);
+    userValues[i]->emitDebugValues(VRM, *LIS, *TII, *TRI, SpilledLocations);
   }
   EmitDone = true;
 }

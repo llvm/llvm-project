@@ -1425,8 +1425,8 @@ llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
   // Other decoration.
   if (IsVolatile)
     Load->setVolatile(true);
-  if (LVal.getTBAAAccessType())
-    CGF.CGM.DecorateInstructionWithTBAA(Load, LVal.getTBAAAccessType());
+  TBAAAccessInfo TBAAInfo(LVal.getTBAAAccessType());
+  CGF.CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
   return Load;
 }
 
@@ -1942,8 +1942,8 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
     // Other decoration.
     if (IsVolatile)
       store->setVolatile(true);
-    if (dest.getTBAAAccessType())
-      CGM.DecorateInstructionWithTBAA(store, dest.getTBAAAccessType());
+    TBAAAccessInfo TBAAInfo(dest.getTBAAAccessType());
+    CGM.DecorateInstructionWithTBAA(store, TBAAInfo);
     return;
   }
 

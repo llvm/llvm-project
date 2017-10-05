@@ -5,6 +5,16 @@ void clang_analyzer_eval(int);
 typedef signed char BOOL;
 typedef long NSInteger;
 typedef unsigned long NSUInteger;
+
+@protocol NSObject
+@end
+@interface NSObject <NSObject> {}
+@end
+@protocol NSCopying
+@end
+@protocol NSCoding
+@end
+
 @interface NSString @end
 @interface NSString (NSStringExtensionMethods)
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
@@ -28,7 +38,15 @@ typedef unsigned long NSUInteger;
 + (NSNumber *)numberWithUnsignedInteger:(NSUInteger)value ;
 @end
 
+@interface NSValue : NSObject <NSCopying, NSCoding>
+- (void)getValue:(void *)value;
++ (NSValue *)valueWithBytes:(const void *)value
+                   objCType:(const char *)type;
+@end
 
+typedef typeof(sizeof(int)) size_t;
+extern void *malloc(size_t);
+extern void free(void *);
 extern char *strdup(const char *str);
 
 id constant_string() {
@@ -37,6 +55,23 @@ id constant_string() {
 
 id dynamic_string() {
     return @(strdup("boxed dynamic string")); // expected-warning{{Potential memory leak}}
+}
+
+typedef struct __attribute__((objc_boxable)) {
+  const char *str;
+} BoxableStruct;
+
+id leak_within_boxed_struct() {
+  BoxableStruct bs;
+  bs.str = strdup("dynamic string"); // The duped string shall be owned by val.
+  NSValue *val = @(bs); // no-warning
+  return val;
+}
+
+id leak_of_boxed_struct() {
+  BoxableStruct *bs = malloc(sizeof(BoxableStruct)); // The pointer stored in bs isn't owned by val.
+  NSValue *val = @(*bs); // expected-warning{{Potential leak of memory pointed to by 'bs'}}
+  return val;
 }
 
 id const_char_pointer(int *x) {

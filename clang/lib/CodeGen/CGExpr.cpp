@@ -1526,12 +1526,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     Load->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
   if (TBAAInfo.AccessType) {
-    bool MayAlias = BaseInfo.getMayAlias();
-    llvm::MDNode *TBAA = MayAlias
-        ? CGM.getTBAAMayAliasTypeInfo()
-        : CGM.getTBAAStructTagInfo(TBAAInfo);
-    if (TBAA)
-      CGM.DecorateInstructionWithTBAA(Load, TBAA, MayAlias);
+    if (BaseInfo.getMayAlias())
+      TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+    CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
   }
 
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
@@ -1614,12 +1611,9 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     Store->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
   if (TBAAInfo.AccessType) {
-    bool MayAlias = BaseInfo.getMayAlias();
-    llvm::MDNode *TBAA = MayAlias
-        ? CGM.getTBAAMayAliasTypeInfo()
-        : CGM.getTBAAStructTagInfo(TBAAInfo);
-    if (TBAA)
-      CGM.DecorateInstructionWithTBAA(Store, TBAA, MayAlias);
+    if (BaseInfo.getMayAlias())
+      TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+    CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
   }
 }
 
@@ -3727,12 +3721,9 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
 
       // Loading the reference will disable path-aware TBAA.
       TBAAPath = false;
-      if (CGM.shouldUseTBAA()) {
-        llvm::MDNode *tbaa = mayAlias ? CGM.getTBAAMayAliasTypeInfo() :
-                                        CGM.getTBAATypeInfo(type);
-        if (tbaa)
-          CGM.DecorateInstructionWithTBAA(load, tbaa);
-      }
+      TBAAAccessInfo TBAAInfo = mayAlias ? CGM.getTBAAMayAliasAccessInfo() :
+                                           CGM.getTBAAAccessInfo(type);
+      CGM.DecorateInstructionWithTBAA(load, TBAAInfo);
 
       mayAlias = false;
       type = refType->getPointeeType();
@@ -3769,7 +3760,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     // update offset to be relative to the base type.
     unsigned CharWidth = getContext().getCharWidth();
     TBAAAccessInfo TBAAInfo = mayAlias ?
-      TBAAAccessInfo(CGM.getTBAAMayAliasTypeInfo()) :
+      CGM.getTBAAMayAliasAccessInfo() :
       TBAAAccessInfo(base.getTBAAInfo().BaseType, CGM.getTBAATypeInfo(type),
                      base.getTBAAInfo().Offset + Layout.getFieldOffset(
                          field->getFieldIndex()) / CharWidth);
@@ -3784,7 +3775,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // FIXME: this should get propagated down through anonymous structs
   // and unions.
   if (mayAlias && LV.getTBAAAccessType())
-    LV.setTBAAAccessType(CGM.getTBAAMayAliasTypeInfo());
+    LV.setTBAAInfo(CGM.getTBAAMayAliasAccessInfo());
 
   return LV;
 }
