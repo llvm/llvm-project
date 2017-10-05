@@ -44,6 +44,7 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   RegisterContextThreadMemory.cpp
   RegisterInfoPOSIX_arm.cpp
   RegisterInfoPOSIX_arm64.cpp
+  RegisterInfoPOSIX_ppc64le.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp
   UnwindLLDB.cpp

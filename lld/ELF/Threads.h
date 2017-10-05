@@ -81,6 +81,10 @@ inline void parallelForEachN(size_t Begin, size_t End,
   else
     for_each_n(llvm::parallel::seq, Begin, End, Fn);
 }
+
+void runBackground(std::function<void()> Fn);
+void waitForBackgroundThreads();
+
 } // namespace elf
 } // namespace lld
 
