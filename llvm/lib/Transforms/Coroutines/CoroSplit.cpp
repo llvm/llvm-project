@@ -109,6 +109,7 @@ private:
   void createDeclaration();
   void replaceEntryBlock();
   Value *deriveNewFramePointer();
+  void replaceRetconSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
   void handleFinalSuspend();
@@ -363,6 +364,52 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
   return F;
 }
 
+/// Replace uses of the active llvm.coro.suspend.retcon call with the
+/// arguments to the continuation function.
+///
+/// This assumes that the builder has a meaningful insertion point.
+void CoroCloner::replaceRetconSuspendUses() {
+  assert(Shape.ABI == coro::ABI::Retcon ||
+         Shape.ABI == coro::ABI::RetconOnce);
+
+  auto NewS = VMap[ActiveSuspend];
+  if (NewS->use_empty()) return;
+
+  // Copy out all the continuation arguments after the buffer pointer into
+  // an easily-indexed data structure for convenience.
+  SmallVector<Value*, 8> Args;
+  for (auto I = std::next(NewF->arg_begin()), E = NewF->arg_end(); I != E; ++I)
+    Args.push_back(&*I);
+
+  // If the suspend returns a single scalar value, we can just do a simple
+  // replacement.
+  if (!isa<StructType>(NewS->getType())) {
+    assert(Args.size() == 1);
+    NewS->replaceAllUsesWith(Args.front());
+    return;
+  }
+
+  // Try to peephole extracts of an aggregate return.
+  for (auto UI = NewS->use_begin(), UE = NewS->use_end(); UI != UE; ) {
+    auto EVI = dyn_cast<ExtractValueInst>((UI++)->getUser());
+    if (!EVI || EVI->getNumIndices() != 1)
+      continue;
+
+    EVI->replaceAllUsesWith(Args[EVI->getIndices().front()]);
+    EVI->eraseFromParent();
+  }
+
+  // If we have no remaining uses, we're done.
+  if (NewS->use_empty()) return;
+
+  // Otherwise, we need to create an aggregate.
+  Value *Agg = UndefValue::get(NewS->getType());
+  for (size_t I = 0, E = Args.size(); I != E; ++I)
+    Agg = Builder.CreateInsertValue(Agg, Args[I], I);
+
+  NewS->replaceAllUsesWith(Agg);
+}
+
 void CoroCloner::replaceCoroSuspends() {
   Value *SuspendResult;
 
@@ -377,15 +424,12 @@ void CoroCloner::replaceCoroSuspends() {
     SuspendResult = Builder.getInt8(isSwitchDestroyFunction() ? 1 : 0);
     break;
 
-  // In continuation lowering, replace all of the suspend uses with false to
-  // indicate that they're not unwinding resumes.  We've already mapped the
-  // active suspend to the appropriate argument, so any other suspend values
-  // that are still being used must be from previous suspends.  It's UB to try
-  // to suspend during unwind, so they must be from regular resumes.
+  // In returned-continuation lowering, the arguments from earlier
+  // continuations are theoretically arbitrary, and they should have been
+  // spilled.
   case coro::ABI::RetconOnce:
   case coro::ABI::Retcon:
-    SuspendResult = Builder.getInt1(false);
-    break;
+    return;
   }
 
   for (AnyCoroSuspendInst *CS : Shape.CoroSuspends) {
@@ -580,14 +624,11 @@ void CoroCloner::create() {
 
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    // Replace the active suspend with the should-unwind argument.
-    // Coerce it to i1 if necessary.
+    // Replace uses of the active suspend with the corresponding
+    // continuation-function arguments.
     assert(ActiveSuspend != nullptr &&
            "no active suspend when lowering a continuation-style coroutine");
-    Value *ShouldUnwind = &*std::next(NewF->arg_begin());
-    if (!ShouldUnwind->getType()->isIntegerTy(1))
-      ShouldUnwind = Builder.CreateIsNotNull(ShouldUnwind);
-    VMap[ActiveSuspend]->replaceAllUsesWith(ShouldUnwind);
+    replaceRetconSuspendUses();
     break;
   }
 

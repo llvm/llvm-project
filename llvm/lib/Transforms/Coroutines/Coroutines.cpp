@@ -367,6 +367,7 @@ void coro::Shape::buildFrom(Function &F) {
     // Determine the result value types, and make sure they match up with
     // the values passed to the suspends.
     auto ResultTys = getRetconResultTypes();
+    auto ResumeTys = getRetconResumeTypes();
 
     for (auto AnySuspend : CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendRetconInst>(AnySuspend);
@@ -376,6 +377,7 @@ void coro::Shape::buildFrom(Function &F) {
                            "coro.suspend.retcon");
       }
 
+      // Check that the argument types of the suspend match the results.
       auto SI = Suspend->value_begin(), SE = Suspend->value_end();
       auto RI = ResultTys.begin(), RE = ResultTys.end();
       for (; SI != SE && RI != RE; ++SI, ++RI) {
@@ -390,6 +392,26 @@ void coro::Shape::buildFrom(Function &F) {
         Suspend->dump();
         Prototype->getFunctionType()->dump();
         report_fatal_error("wrong number of arguments to coro.suspend.retcon");
+      }
+
+      // Check that the result type of the suspend matches the resume types.
+      Type *SResultTy = Suspend->getType();
+      ArrayRef<Type*> SuspendResultTys =
+        (isa<StructType>(SResultTy)
+           ? cast<StructType>(SResultTy)->elements()
+           : SResultTy); // forms an ArrayRef using SResultTy, be careful
+      if (SuspendResultTys.size() != ResumeTys.size()) {
+        Suspend->dump();
+        Prototype->getFunctionType()->dump();
+        report_fatal_error("wrong number of results from coro.suspend.retcon");
+      }
+      for (size_t I = 0, E = ResumeTys.size(); I != E; ++I) {
+        if (SuspendResultTys[I] != ResumeTys[I]) {
+          Suspend->dump();
+          Prototype->getFunctionType()->dump();
+          report_fatal_error("result from coro.suspend.retcon does not "
+                             "match corresponding prototype function param");
+        }
       }
     }
     break;
@@ -481,7 +503,7 @@ static void fail(const Instruction *I, const char *Reason, Value *V) {
 static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
   auto F = dyn_cast<Function>(V->stripPointerCasts());
   if (!F)
-    fail(I, "llvm.coro.retcon.* prototype not a Function", V);
+    fail(I, "llvm.coro.id.retcon.* prototype not a Function", V);
 
   auto FT = F->getFunctionType();
 
@@ -497,23 +519,20 @@ static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
       ResultOkay = false;
     }
     if (!ResultOkay)
-      fail(I, "llvm.coro.retcon prototype must return pointer as first result",
-           F);
+      fail(I, "llvm.coro.id.retcon prototype must return pointer as first "
+              "result", F);
 
     if (FT->getReturnType() !=
           I->getFunction()->getFunctionType()->getReturnType())
-      fail(I, "llvm.coro.retcon.* prototype return type must be same as"
+      fail(I, "llvm.coro.id.retcon prototype return type must be same as"
               "current function return type", F);
   } else {
     // No meaningful validation to do here for llvm.coro.id.unique.once.
   }
 
-  if (FT->getNumParams() != 2)
-    fail(I, "llvm.coro.retcon.* prototype must take exactly two parameters", F);
-  if (!FT->getParamType(0)->isPointerTy())
-    fail(I, "llvm.coro.retcon.* prototype must take pointer as 1st param", F);
-  if (!FT->getParamType(1)->isIntegerTy()) // an i1, but not for abi purposes
-    fail(I, "llvm.coro.retcon.* prototype must take integer as 2nd param", F);
+  if (FT->getNumParams() == 0 || !FT->getParamType(0)->isPointerTy())
+    fail(I, "llvm.coro.id.retcon.* prototype must take pointer as "
+            "its first parameter", F);
 }
 
 /// Check that the given value is a well-formed allocator.

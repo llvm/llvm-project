@@ -167,12 +167,21 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
            ABI == coro::ABI::RetconOnce);
     auto FTy = CoroBegin->getFunction()->getFunctionType();
 
-    // This is checked by AnyCoroIdRetconInst::isWellFormed().
+    // The safety of all this is checked by checkWFRetconPrototype.
     if (auto STy = dyn_cast<StructType>(FTy->getReturnType())) {
       return STy->elements().slice(1);
     } else {
       return ArrayRef<Type*>();
     }
+  }
+
+  ArrayRef<Type*> getRetconResumeTypes() const {
+    assert(ABI == coro::ABI::Retcon ||
+           ABI == coro::ABI::RetconOnce);
+
+    // The safety of all this is checked by checkWFRetconPrototype.
+    auto FTy = RetconLowering.ResumePrototype->getFunctionType();
+    return FTy->params().slice(1);
   }
 
   CallingConv::ID getResumeFunctionCC() const {

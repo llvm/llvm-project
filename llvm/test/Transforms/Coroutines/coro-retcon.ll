@@ -3,14 +3,14 @@
 
 define i8* @f(i8* %buffer, i32 %n) {
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, i8* %buffer, i8* bitcast (i8* (i8*, i8)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, i8* %buffer, i8* bitcast (i8* (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
   br label %loop
 
 loop:
   %n.val = phi i32 [ %n, %entry ], [ %inc, %resume ]
   call void @print(i32 %n.val)
-  %unwind0 = call i1 (...) @llvm.coro.suspend.retcon()
+  %unwind0 = call i1 (...) @llvm.coro.suspend.retcon.i1()
   br i1 %unwind0, label %cleanup, label %resume
 
 resume:
@@ -27,20 +27,19 @@ cleanup:
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %buffer to i32*
 ; CHECK-NEXT:    store i32 %n, i32* [[T0]], align 4
 ; CHECK-NEXT:    call void @print(i32 %n)
-; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i8)* @f.resume.0 to i8*)
+; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i1)* @f.resume.0 to i8*)
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal i8* @f.resume.0(i8* noalias nonnull, i8 zeroext)
+; CHECK-LABEL: define internal i8* @f.resume.0(i8* noalias nonnull, i1 zeroext)
 ; CHECK-NEXT:  :
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq i8 %1, 0
-; CHECK-NEXT:    br i1 [[T0]],
+; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %0 to i32*
 ; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[T0]], align 4
 ; CHECK-NEXT:    %inc = add i32 [[T1]], 1
 ; CHECK-NEXT:    store i32 %inc, i32* [[T0]], align 4
 ; CHECK-NEXT:    call void @print(i32 %inc)
-; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i8)* @f.resume.0 to i8*)
+; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i1)* @f.resume.0 to i8*)
 ; CHECK:       :
 ; CHECK-NEXT:    ret i8* null
 ; CHECK-NEXT:  }
@@ -52,12 +51,12 @@ entry:
   %prepare = call i8* @llvm.coro.prepare.retcon(i8* bitcast (i8* (i8*, i32)* @f to i8*))
   %f = bitcast i8* %prepare to i8* (i8*, i32)*
   %cont0 = call i8* %f(i8* %buffer, i32 4)
-  %cont0.cast = bitcast i8* %cont0 to i8* (i8*, i8)*
-  %cont1 = call i8* %cont0.cast(i8* %buffer, i8 zeroext 0)
-  %cont1.cast = bitcast i8* %cont1 to i8* (i8*, i8)*
-  %cont2 = call i8* %cont1.cast(i8* %buffer, i8 zeroext 0)
-  %cont2.cast = bitcast i8* %cont2 to i8* (i8*, i8)*
-  call i8* %cont2.cast(i8* %buffer, i8 zeroext 1)
+  %cont0.cast = bitcast i8* %cont0 to i8* (i8*, i1)*
+  %cont1 = call i8* %cont0.cast(i8* %buffer, i1 zeroext false)
+  %cont1.cast = bitcast i8* %cont1 to i8* (i8*, i1)*
+  %cont2 = call i8* %cont1.cast(i8* %buffer, i1 zeroext false)
+  %cont2.cast = bitcast i8* %cont2 to i8* (i8*, i1)*
+  call i8* %cont2.cast(i8* %buffer, i1 zeroext true)
   ret i32 0
 }
 
@@ -81,11 +80,11 @@ entry:
 
 declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.suspend.retcon(...)
+declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare i1 @llvm.coro.end(i8*, i1)
 declare i8* @llvm.coro.prepare.retcon(i8*)
 
-declare i8* @prototype(i8*, i8 zeroext)
+declare i8* @prototype(i8*, i1 zeroext)
 
 declare noalias i8* @allocate(i32 %size)
 declare void @deallocate(i8* %ptr)
