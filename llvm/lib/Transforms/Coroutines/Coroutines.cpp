@@ -340,7 +340,9 @@ void coro::Shape::buildFrom(Function &F) {
     for (auto AnySuspend : CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendInst>(AnySuspend);
       if (!Suspend) {
+#ifndef NDEBUG
         AnySuspend->dump();
+#endif
         report_fatal_error("coro.id must be paired with coro.suspend");
       }
 
@@ -372,7 +374,9 @@ void coro::Shape::buildFrom(Function &F) {
     for (auto AnySuspend : CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendRetconInst>(AnySuspend);
       if (!Suspend) {
+#ifndef NDEBUG
         AnySuspend->dump();
+#endif
         report_fatal_error("coro.id.retcon.* must be paired with "
                            "coro.suspend.retcon");
       }
@@ -382,15 +386,19 @@ void coro::Shape::buildFrom(Function &F) {
       auto RI = ResultTys.begin(), RE = ResultTys.end();
       for (; SI != SE && RI != RE; ++SI, ++RI) {
         if ((*SI)->getType() != *RI) {
+#ifndef NDEBUG
           Suspend->dump();
           Prototype->getFunctionType()->dump();
+#endif
           report_fatal_error("argument to coro.suspend.retcon does not "
                              "match corresponding prototype function result");
         }
       }
       if (SI != SE || RI != RE) {
+#ifndef NDEBUG
         Suspend->dump();
         Prototype->getFunctionType()->dump();
+#endif
         report_fatal_error("wrong number of arguments to coro.suspend.retcon");
       }
 
@@ -401,14 +409,18 @@ void coro::Shape::buildFrom(Function &F) {
            ? cast<StructType>(SResultTy)->elements()
            : SResultTy); // forms an ArrayRef using SResultTy, be careful
       if (SuspendResultTys.size() != ResumeTys.size()) {
+#ifndef NDEBUG
         Suspend->dump();
         Prototype->getFunctionType()->dump();
+#endif
         report_fatal_error("wrong number of results from coro.suspend.retcon");
       }
       for (size_t I = 0, E = ResumeTys.size(); I != E; ++I) {
         if (SuspendResultTys[I] != ResumeTys[I]) {
+#ifndef NDEBUG
           Suspend->dump();
           Prototype->getFunctionType()->dump();
+#endif
           report_fatal_error("result from coro.suspend.retcon does not "
                              "match corresponding prototype function param");
         }
@@ -489,12 +501,14 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
 
 LLVM_ATTRIBUTE_NORETURN
 static void fail(const Instruction *I, const char *Reason, Value *V) {
+#ifndef NDEBUG
   I->dump();
   if (V) {
     errs() << "  Value: ";
     V->printAsOperand(llvm::errs());
     errs() << '\n';
   }
+#endif
   report_fatal_error(Reason);
 }
 
