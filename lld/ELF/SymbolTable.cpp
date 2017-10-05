@@ -162,8 +162,6 @@ template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
   Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
 
-  // Tell LTO not to eliminate this symbol.
-  Wrap->IsUsedInRegularObj = true;
   defsym(Real, Sym);
   defsym(Sym, Wrap);
 }
@@ -177,8 +175,6 @@ void SymbolTable::addSymbolAlias(StringRef Alias, StringRef Name) {
     return;
   }
 
-  // Tell LTO not to eliminate this symbol.
-  B->symbol()->IsUsedInRegularObj = true;
   defsym(addUndefined<ELFT>(Alias), B->symbol());
 }
 
@@ -529,6 +525,10 @@ void SymbolTable::defsym(Symbol *Dst, Symbol *Src) {
   // We want to tell LTO not to inline Dst symbol because LTO doesn't
   // know the final symbol contents after renaming.
   Dst->CanInline = false;
+
+  // Tell LTO not to eliminate this symbol.
+  Src->IsUsedInRegularObj = true;
+
   Defsyms.push_back({Dst, Src, Dst->Binding});
 }
 

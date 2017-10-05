@@ -22,7 +22,7 @@ namespace {
 
 class AMDGPUELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  AMDGPUELFObjectWriter(bool Is64Bit, bool HasRelocationAddend);
+  AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend);
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -33,10 +33,9 @@ protected:
 } // end anonymous namespace
 
 AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit,
+                                             uint8_t OSABI,
                                              bool HasRelocationAddend)
-  : MCELFObjectTargetWriter(Is64Bit,
-                            ELF::ELFOSABI_AMDGPU_HSA,
-                            ELF::EM_AMDGPU,
+  : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_AMDGPU,
                             HasRelocationAddend) {}
 
 unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
@@ -83,9 +82,10 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 MCObjectWriter *llvm::createAMDGPUELFObjectWriter(bool Is64Bit,
+                                                  uint8_t OSABI,
                                                   bool HasRelocationAddend,
                                                   raw_pwrite_stream &OS) {
   MCELFObjectTargetWriter *MOTW =
-      new AMDGPUELFObjectWriter(Is64Bit, HasRelocationAddend);
+      new AMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
   return createELFObjectWriter(MOTW, OS, true);
 }

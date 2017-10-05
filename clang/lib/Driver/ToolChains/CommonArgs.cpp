@@ -454,6 +454,14 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-plugin-opt=sample-profile=") + FName));
   }
+
+  // Need this flag to turn on new pass manager via Gold plugin.
+  if (Args.hasFlag(options::OPT_fexperimental_new_pass_manager,
+                   options::OPT_fno_experimental_new_pass_manager,
+                   /* Default */ false)) {
+    CmdArgs.push_back("-plugin-opt=new-pass-manager");
+  }
+
 }
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,

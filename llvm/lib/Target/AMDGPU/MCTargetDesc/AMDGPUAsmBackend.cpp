@@ -11,6 +11,7 @@
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -167,14 +168,29 @@ namespace {
 class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
   bool Is64Bit;
   bool HasRelocationAddend;
+  uint8_t OSABI = ELF::ELFOSABI_NONE;
 
 public:
   ELFAMDGPUAsmBackend(const Target &T, const Triple &TT) :
       AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
-      HasRelocationAddend(TT.getOS() == Triple::AMDHSA) { }
+      HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
+    switch (TT.getOS()) {
+    case Triple::AMDHSA:
+      OSABI = ELF::ELFOSABI_AMDGPU_HSA;
+      break;
+    case Triple::AMDPAL:
+      OSABI = ELF::ELFOSABI_AMDGPU_PAL;
+      break;
+    case Triple::Mesa3D:
+      OSABI = ELF::ELFOSABI_AMDGPU_MESA3D;
+      break;
+    default:
+      break;
+    }
+  }
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, HasRelocationAddend, OS);
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend, OS);
   }
 };
 

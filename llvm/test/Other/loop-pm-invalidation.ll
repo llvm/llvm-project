@@ -57,7 +57,7 @@ define void @one_loop(i1* %ptr) {
 ; CHECK-LOOP-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: l0.header
+; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
@@ -84,7 +84,7 @@ define void @one_loop(i1* %ptr) {
 ; CHECK-SCEV-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: l0.header
+; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-SCEV-INV-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}> on one_loop
@@ -124,8 +124,8 @@ define void @nested_loops(i1* %ptr) {
 ; CHECK-LOOP-INV: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: l.0.header
-; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: l.0.0.header
+; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
+; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
@@ -158,8 +158,8 @@ define void @nested_loops(i1* %ptr) {
 ; CHECK-SCEV-INV: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: l.0.header
-; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: l.0.0.header
+; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
+; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-SCEV-INV-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}> on nested_loops
@@ -206,7 +206,7 @@ define void @dead_loop() {
 ; CHECK-LOOP-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: l0.header
+; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
@@ -233,7 +233,7 @@ define void @dead_loop() {
 ; CHECK-SCEV-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
-; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: l0.header
+; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-SCEV-INV-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}> on dead_loop
