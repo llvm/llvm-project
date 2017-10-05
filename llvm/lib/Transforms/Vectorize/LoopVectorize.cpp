@@ -2215,14 +2215,13 @@ private:
   VPWidenIntOrFpInductionRecipe *tryToOptimizeInduction(Instruction *I,
                                                         VFRange &Range);
 
-  /// Check if \I can be widened within the given VF \p Range. If \I can be
-  /// widened for Range.Start, extend \p LastWidenRecipe to include \p I if
-  /// possible or else build a new VPWidenRecipe for it, and return the
-  /// VPWidenRecipe that includes \p I. If \p I cannot be widened for
-  /// Range.Start \return null. Range.End may be decreased to ensure same
-  /// decision from \p Range.Start to \p Range.End.
-  VPWidenRecipe *tryToWiden(Instruction *I, VPWidenRecipe *LastWidenRecipe,
-                            VFRange &Range);
+  /// Check if \p I can be widened within the given VF \p Range. If \p I can be
+  /// widened for \p Range.Start, check if the last recipe of \p VPBB can be
+  /// extended to include \p I or else build a new VPWidenRecipe for it and
+  /// append it to \p VPBB. Return true if \p I can be widened for Range.Start,
+  /// false otherwise. Range.End may be decreased to ensure same decision from
+  /// \p Range.Start to \p Range.End.
+  bool tryToWiden(Instruction *I, VPBasicBlock *VPBB, VFRange &Range);
 
   /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
   /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
@@ -7988,11 +7987,11 @@ LoopVectorizationPlanner::tryToOptimizeInduction(Instruction *I,
   return nullptr;
 }
 
-VPWidenRecipe *LoopVectorizationPlanner::tryToWiden(
-    Instruction *I, VPWidenRecipe *LastWidenRecipe, VFRange &Range) {
+bool LoopVectorizationPlanner::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
+                                          VFRange &Range) {
 
   if (Legal->isScalarWithPredication(I))
-    return nullptr;
+    return false;
 
   auto IsVectorizableOpcode = [](unsigned Opcode) {
     switch (Opcode) {
@@ -8041,13 +8040,13 @@ VPWidenRecipe *LoopVectorizationPlanner::tryToWiden(
   };
 
   if (!IsVectorizableOpcode(I->getOpcode()))
-    return nullptr;
+    return false;
 
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
     if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
                ID == Intrinsic::lifetime_start))
-      return nullptr;
+      return false;
   }
 
   auto willWiden = [&](unsigned VF) -> bool {
@@ -8079,13 +8078,18 @@ VPWidenRecipe *LoopVectorizationPlanner::tryToWiden(
   };
 
   if (!getDecisionAndClampRange(willWiden, Range))
-    return nullptr;
+    return false;
 
   // Success: widen this instruction. We optimize the common case where
   // consecutive instructions can be represented by a single recipe.
-  if (LastWidenRecipe && LastWidenRecipe->appendInstruction(I))
-    return LastWidenRecipe;
-  return new VPWidenRecipe(I);
+  if (!VPBB->empty()) {
+    VPWidenRecipe *LastWidenRecipe = dyn_cast<VPWidenRecipe>(&VPBB->back());
+    if (LastWidenRecipe && LastWidenRecipe->appendInstruction(I))
+      return true;
+  }
+
+  VPBB->appendRecipe(new VPWidenRecipe(I));
+  return true;
 }
 
 VPBasicBlock *LoopVectorizationPlanner::handleReplication(
@@ -8182,7 +8186,6 @@ VPlan *LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
     auto *FirstVPBBForBB = new VPBasicBlock(BB->getName());
     VPBB->setOneSuccessor(FirstVPBBForBB);
     VPBB = FirstVPBBForBB;
-    VPWidenRecipe *LastWidenRecipe = nullptr;
 
     std::vector<Instruction *> Ingredients;
 
@@ -8250,12 +8253,8 @@ VPlan *LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       // Check if Instr is to be widened by a general VPWidenRecipe, after
       // having first checked for specific widening recipes that deal with
       // Interleave Groups, Inductions and Phi nodes.
-      if ((Recipe = tryToWiden(Instr, LastWidenRecipe, Range))) {
-        if (Recipe != LastWidenRecipe)
-          VPBB->appendRecipe(Recipe);
-        LastWidenRecipe = cast<VPWidenRecipe>(Recipe);
+      if (tryToWiden(Instr, VPBB, Range))
         continue;
-      }
 
       // Otherwise, if all widening options failed, Instruction is to be
       // replicated. This may create a successor for VPBB.

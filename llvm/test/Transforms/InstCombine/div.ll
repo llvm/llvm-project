@@ -553,3 +553,12 @@ define i32 @shrink_no3(i16 %x) {
   ret i32 %div
 }
 
+; This previously crashed when trying to simplify the zext/icmp this becomes.
+define <2 x i8> @PR34841(<2 x i8> %x) {
+; CHECK-LABEL: @PR34841(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %neg = and <2 x i8> %x, <i8 2, i8 2>
+  %div = udiv <2 x i8> <i8 1, i8 1>, %neg
+  ret <2 x i8> %div
+}

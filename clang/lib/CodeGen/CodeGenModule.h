@@ -656,28 +656,31 @@ public:
   /// the given type.
   llvm::MDNode *getTBAATypeInfo(QualType QTy);
 
-  llvm::MDNode *getTBAAInfoForVTablePtr();
+  /// getTBAAAccessInfo - Get TBAA information that describes an access to
+  /// an object of the given type.
+  TBAAAccessInfo getTBAAAccessInfo(QualType AccessType);
+
+  /// getTBAAVTablePtrAccessInfo - Get the TBAA information that describes an
+  /// access to a virtual table pointer.
+  TBAAAccessInfo getTBAAVTablePtrAccessInfo();
+
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// Get path-aware TBAA tag for a given memory access.
-  llvm::MDNode *getTBAAStructTagInfo(TBAAAccessInfo Info);
+  /// getTBAAAccessTagInfo - Get TBAA tag for a given memory access.
+  llvm::MDNode *getTBAAAccessTagInfo(TBAAAccessInfo Info);
 
-  /// getTBAAMayAliasTypeInfo - Get TBAA information that represents
+  /// getTBAAMayAliasAccessInfo - Get TBAA information that represents
   /// may-alias accesses.
-  llvm::MDNode *getTBAAMayAliasTypeInfo();
+  TBAAAccessInfo getTBAAMayAliasAccessInfo();
 
   bool isTypeConstant(QualType QTy, bool ExcludeCtorDtor);
 
   bool isPaddedAtomicType(QualType type);
   bool isPaddedAtomicType(const AtomicType *type);
 
-  /// Decorate the instruction with a TBAA tag. For scalar TBAA, the tag
-  /// is the same as the type. For struct-path aware TBAA, the tag
-  /// is different from the type: base type, access type and offset.
-  /// When ConvertTypeToTag is true, we create a tag based on the scalar type.
+  /// DecorateInstructionWithTBAA - Decorate the instruction with a TBAA tag.
   void DecorateInstructionWithTBAA(llvm::Instruction *Inst,
-                                   llvm::MDNode *TBAAInfo,
-                                   bool ConvertTypeToTag = true);
+                                   TBAAAccessInfo TBAAInfo);
 
   /// Adds !invariant.barrier !tag to instruction
   void DecorateInstructionWithInvariantGroup(llvm::Instruction *I,

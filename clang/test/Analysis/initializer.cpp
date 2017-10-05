@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++11 -verify %s
 
 void clang_analyzer_eval(bool);
+
+#include "Inputs/system-header-simulator-cxx.h"
 
 class A {
   int x;
@@ -203,4 +205,18 @@ struct C {
    C() : f("}") { } // no-crash
    const char(&f)[2];
 };
+}
+
+namespace CXX_initializer_lists {
+struct C {
+  C(std::initializer_list<int *> list);
+};
+void foo() {
+  C empty{}; // no-crash
+
+  // Do not warn that 'x' leaks. It might have been deleted by
+  // the destructor of 'c'.
+  int *x = new int;
+  C c{x}; // no-warning
+}
 }
