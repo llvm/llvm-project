@@ -149,6 +149,9 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
                    .codeComplete(Params.textDocument.uri.file,
                                  Position{Params.position.line,
                                           Params.position.character})
+                   .get() // FIXME(ibiryukov): This could be made async if we
+                          // had an API that would allow to attach callbacks to
+                          // futures returned by ClangdServer.
                    .Value;
 
   std::string Completions;
