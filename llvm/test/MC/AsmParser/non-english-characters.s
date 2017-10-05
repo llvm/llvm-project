@@ -1,14 +1,9 @@
-# RUN: llvm-mc -triple i386-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-mc -triple i386-linux-gnu -filetype=obj -o %t \
+# RUN:   %S/Inputs/non-english-characters-comments.s
 # RUN: llvm-readobj %t | FileCheck %s
 # CHECK: Format: ELF32-i386
 
-# 0bÑ
-# 0xÑ
-# .Ñ4
-# .XÑ
-# .1Ñ
-# .1eÑ
-# 0x.Ñ
-# 0x0pÑ
-.intel_syntax
-# 1Ñ
+# RUN: not llvm-mc -triple i386-linux-gnu -filetype=obj -o %t \
+# RUN:   %S/Inputs/non-english-characters-section-name.s 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=ERR
+# ERR: invalid character in input

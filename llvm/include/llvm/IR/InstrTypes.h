@@ -775,20 +775,10 @@ public:
 
   /// A no-op cast is one that can be effected without changing any bits.
   /// It implies that the source and destination types are the same size. The
-  /// IntPtrTy argument is used to make accurate determinations for casts
+  /// DataLayout argument is to determine the pointer size when examining casts
   /// involving Integer and Pointer types. They are no-op casts if the integer
   /// is the same size as the pointer. However, pointer size varies with
-  /// platform. Generally, the result of DataLayout::getIntPtrType() should be
-  /// passed in. If that's not available, use Type::Int64Ty, which will make
-  /// the isNoopCast call conservative.
-  /// @brief Determine if the described cast is a no-op cast.
-  static bool isNoopCast(
-    Instruction::CastOps Opcode,  ///< Opcode of cast
-    Type *SrcTy,   ///< SrcTy of cast
-    Type *DstTy,   ///< DstTy of cast
-    Type *IntPtrTy ///< Integer type corresponding to Ptr types
-  );
-
+  /// platform.
   /// @brief Determine if the described cast is a no-op cast.
   static bool isNoopCast(
     Instruction::CastOps Opcode, ///< Opcode of cast
@@ -798,13 +788,8 @@ public:
   );
 
   /// @brief Determine if this cast is a no-op cast.
-  bool isNoopCast(
-    Type *IntPtrTy ///< Integer type corresponding to pointer
-  ) const;
-
-  /// @brief Determine if this cast is a no-op cast.
   ///
-  /// \param DL is the DataLayout to get the Int Ptr type from.
+  /// \param DL is the DataLayout to determine pointer size.
   bool isNoopCast(const DataLayout &DL) const;
 
   /// Determine how a pair of casts can be eliminated, if they can be at all.
