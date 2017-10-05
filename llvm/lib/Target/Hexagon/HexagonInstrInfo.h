@@ -411,13 +411,9 @@ public:
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
-  short getAbsoluteForm(const MachineInstr &MI) const;
   unsigned getAddrMode(const MachineInstr &MI) const;
   unsigned getBaseAndOffset(const MachineInstr &MI, int &Offset,
                             unsigned &AccessSize) const;
-  short getBaseWithLongOffset(short Opcode) const;
-  short getBaseWithLongOffset(const MachineInstr &MI) const;
-  short getBaseWithRegOffset(const MachineInstr &MI) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup
@@ -465,7 +461,33 @@ public:
   bool reversePredSense(MachineInstr &MI) const;
   unsigned reversePrediction(unsigned Opcode) const;
   bool validateBranchCond(const ArrayRef<MachineOperand> &Cond) const;
-  short xformRegToImmOffset(const MachineInstr &MI) const;
+
+  // Addressing mode relations.
+  short changeAddrMode_abs_io(short Opc) const;
+  short changeAddrMode_io_abs(short Opc) const;
+  short changeAddrMode_io_rr(short Opc) const;
+  short changeAddrMode_rr_io(short Opc) const;
+  short changeAddrMode_rr_ur(short Opc) const;
+  short changeAddrMode_ur_rr(short Opc) const;
+
+  short changeAddrMode_abs_io(const MachineInstr &MI) const {
+    return changeAddrMode_abs_io(MI.getOpcode());
+  }
+  short changeAddrMode_io_abs(const MachineInstr &MI) const {
+    return changeAddrMode_io_abs(MI.getOpcode());
+  }
+  short changeAddrMode_io_rr(const MachineInstr &MI) const {
+    return changeAddrMode_io_rr(MI.getOpcode());
+  }
+  short changeAddrMode_rr_io(const MachineInstr &MI) const {
+    return changeAddrMode_rr_io(MI.getOpcode());
+  }
+  short changeAddrMode_rr_ur(const MachineInstr &MI) const {
+    return changeAddrMode_rr_ur(MI.getOpcode());
+  }
+  short changeAddrMode_ur_rr(const MachineInstr &MI) const {
+    return changeAddrMode_ur_rr(MI.getOpcode());
+  }
 };
 
 } // end namespace llvm

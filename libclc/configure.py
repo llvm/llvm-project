@@ -185,7 +185,8 @@ for target in targets:
 
   incdirs = filter(os.path.isdir,
                [os.path.join(srcdir, subdir, 'include') for subdir in subdirs])
-  libdirs = filter(lambda d: os.path.isfile(os.path.join(d, 'SOURCES')),
+  libdirs = filter(lambda d: os.path.isfile(os.path.join(d, 'SOURCES')) or
+                             os.path.isfile(os.path.join(d, 'SOURCES_' + llvm_string_version)),
                    [os.path.join(srcdir, subdir, 'lib') for subdir in subdirs])
 
   # The above are iterables in python3 but we might use them multiple times
@@ -218,7 +219,8 @@ for target in targets:
 
     for libdir in libdirs:
       subdir_list_file = os.path.join(libdir, 'SOURCES')
-      manifest_deps.add(subdir_list_file)
+      if os.path.exists(subdir_list_file):
+        manifest_deps.add(subdir_list_file)
       override_list_file = os.path.join(libdir, 'OVERRIDES')
       compat_list_file = os.path.join(libdir,
         'SOURCES_' + llvm_string_version)
@@ -227,6 +229,7 @@ for target in targets:
 
       # Build compat list
       if os.path.exists(compat_list_file):
+        manifest_deps.add(compat_list_file)
         for compat in open(compat_list_file).readlines():
           compat = compat.rstrip()
           compats.append(compat)
@@ -243,7 +246,8 @@ for target in targets:
           override = override.rstrip()
           sources_seen.add(override)
 
-      for src in open(subdir_list_file).readlines() + compats:
+      files = open(subdir_list_file).readlines() if os.path.exists(subdir_list_file) else []
+      for src in files + compats:
         src = src.rstrip()
         if src not in sources_seen:
           sources_seen.add(src)

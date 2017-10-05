@@ -1,4 +1,4 @@
-import os, subprocess, tempfile
+import os, sys, subprocess, tempfile
 import time
 
 ANDROID_TMPDIR = '/data/local/tmp/Output'
@@ -7,6 +7,11 @@ ADB = os.environ.get('ADB', 'adb')
 verbose = False
 if os.environ.get('ANDROID_RUN_VERBOSE') == '1':
     verbose = True
+
+def host_to_device_path(path):
+    rel = os.path.relpath(path, "/")
+    dev = os.path.join(ANDROID_TMPDIR, rel)
+    return dev
 
 def adb(args, attempts = 1):
     if verbose:
@@ -37,5 +42,5 @@ def pull_from_device(path):
     return text
 
 def push_to_device(path):
-    dst_path = os.path.join(ANDROID_TMPDIR, os.path.basename(path))
+    dst_path = host_to_device_path(path)
     adb(['push', path, dst_path], 5)

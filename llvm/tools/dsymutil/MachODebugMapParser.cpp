@@ -135,7 +135,8 @@ void MachODebugMapParser::switchToNewDebugMapObject(
                    Err.message() + "\n");
   }
 
-  CurrentDebugMapObject = &Result->addDebugMapObject(Path, Timestamp);
+  CurrentDebugMapObject =
+      &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
   loadCurrentObjectFileSymbols(*ErrOrAchObj);
 }
 
@@ -348,6 +349,13 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   // An N_OSO entry represents the start of a new object file description.
   if (Type == MachO::N_OSO)
     return switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
+
+  if (Type == MachO::N_AST) {
+    SmallString<80> Path(PathPrefix);
+    sys::path::append(Path, Name);
+    Result->addDebugMapObject(Path, sys::toTimePoint(Value), Type);
+    return;
+  }
 
   // If the last N_OSO object file wasn't found,
   // CurrentDebugMapObject will be null. Do not update anything

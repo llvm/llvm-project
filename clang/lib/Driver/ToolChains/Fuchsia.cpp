@@ -81,7 +81,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_shared)) {
     std::string Dyld = D.DyldPrefix;
     if (ToolChain.getSanitizerArgs().needsAsanRt() &&
-        ToolChain.getSanitizerArgs().needsSharedAsanRt())
+        ToolChain.getSanitizerArgs().needsSharedRt())
       Dyld += "asan/";
     Dyld += "ld.so.1";
     CmdArgs.push_back("-dynamic-linker");

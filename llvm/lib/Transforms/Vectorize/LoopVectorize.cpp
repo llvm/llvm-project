@@ -8206,8 +8206,11 @@ VPlan *LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       if (IG && Instr != IG->getInsertPos() &&
           Range.Start >= 2 && // Query is illegal for VF == 1
           CM.getWideningDecision(Instr, Range.Start) ==
-              LoopVectorizationCostModel::CM_Interleave)
+              LoopVectorizationCostModel::CM_Interleave) {
+        if (SinkAfterInverse.count(Instr))
+          Ingredients.push_back(SinkAfterInverse.find(Instr)->second);
         continue;
+      }
 
       // Move instructions to handle first-order recurrences, step 1: avoid
       // handling this instruction until after we've handled the instruction it
