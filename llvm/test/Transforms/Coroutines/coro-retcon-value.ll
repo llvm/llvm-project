@@ -9,7 +9,8 @@ entry:
 
 loop:
   %n.val = phi i32 [ %n, %entry ], [ %inc, %resume ]
-  %unwind0 = call i1 (...) @llvm.coro.suspend.retcon(i32 %n.val)
+  %unwind = call i8 (...) @llvm.coro.suspend.retcon.i8(i32 %n.val)
+  %unwind0 = icmp ne i8 %unwind, 0
   br i1 %unwind0, label %cleanup, label %resume
 
 resume:
@@ -89,7 +90,7 @@ entry:
 
 declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.suspend.retcon(...)
+declare i8 @llvm.coro.suspend.retcon.i8(...)
 declare i1 @llvm.coro.end(i8*, i1)
 declare i8* @llvm.coro.prepare.retcon(i8*)
 
