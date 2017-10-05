@@ -50,6 +50,9 @@ typedef std::string VFSTag;
 /// FileSystemProvider when this value was computed.
 template <class T> class Tagged {
 public:
+  // MSVC requires future<> arguments to be default-constructible.
+  Tagged() = default;
+
   template <class U>
   Tagged(U &&Value, VFSTag Tag)
       : Value(std::forward<U>(Value)), Tag(std::move(Tag)) {}
@@ -61,8 +64,8 @@ public:
   Tagged(Tagged<U> &&Other)
       : Value(std::move(Other.Value)), Tag(std::move(Other.Tag)) {}
 
-  T Value;
-  VFSTag Tag;
+  T Value = T();
+  VFSTag Tag = VFSTag();
 };
 
 template <class T>
