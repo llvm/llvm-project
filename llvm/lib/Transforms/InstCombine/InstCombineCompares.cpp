@@ -2057,15 +2057,15 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
           (!IsAShr && C.shl(ShAmtVal).lshr(ShAmtVal) == C)) &&
          "Expected icmp+shr simplify did not occur.");
 
-  // If the bits shifted out are known zero, compare the unshifted value:
+  // Check if the bits shifted out are known to be zero. If so, we can compare
+  // against the unshifted value:
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
   Constant *ShiftedCmpRHS = ConstantInt::get(Shr->getType(), C << ShAmtVal);
-  if (Shr->isExact())
-    return new ICmpInst(Pred, X, ShiftedCmpRHS);
-
   if (Shr->hasOneUse()) {
-    // Canonicalize the shift into an 'and':
-    // icmp eq/ne (shr X, ShAmt), C --> icmp eq/ne (and X, HiMask), (C << ShAmt)
+    if (Shr->isExact())
+      return new ICmpInst(Pred, X, ShiftedCmpRHS);
+
+    // Otherwise strength reduce the shift into an 'and'.
     APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
     Constant *Mask = ConstantInt::get(Shr->getType(), Val);
     Value *And = Builder.CreateAnd(X, Mask, Shr->getName() + ".mask");

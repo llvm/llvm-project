@@ -489,9 +489,11 @@ void PassManagerBuilder::populateModulePassManager(
   // Start of CallGraph SCC passes.
   if (!DisableUnitAtATime)
     MPM.add(createPruneEHPass()); // Remove dead EH info
+  bool RunInliner = false;
   if (Inliner) {
     MPM.add(Inliner);
     Inliner = nullptr;
+    RunInliner = true;
   }
   if (!DisableUnitAtATime)
     MPM.add(createPostOrderFunctionAttrsLegacyPass());
@@ -505,6 +507,7 @@ void PassManagerBuilder::populateModulePassManager(
   // pass manager that we are specifically trying to avoid. To prevent this
   // we must insert a no-op module pass to reset the pass manager.
   MPM.add(createBarrierNoopPass());
+
   if (RunPartialInlining)
     MPM.add(createPartialInliningPass());
 
@@ -524,12 +527,21 @@ void PassManagerBuilder::populateModulePassManager(
   if (!DisableUnitAtATime)
     MPM.add(createReversePostOrderFunctionAttrsPass());
 
+  // The inliner performs some kind of dead code elimination as it goes,
+  // but there are cases that are not really caught by it. We might
+  // at some point consider teaching the inliner about them, but it
+  // is OK for now to run GlobalOpt + GlobalDCE in tandem as their
+  // benefits generally outweight the cost, making the whole pipeline
+  // faster.
+  if (RunInliner) {
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+  }
+
   // If we are planning to perform ThinLTO later, let's not bloat the code with
   // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
   // during ThinLTO and perform the rest of the optimizations afterward.
   if (PrepareForThinLTO) {
-    // Reduce the size of the IR as much as possible.
-    MPM.add(createGlobalOptimizerPass());
     // Rename anon globals to be able to export them in the summary.
     MPM.add(createNameAnonGlobalPass());
     return;

@@ -1,14 +1,13 @@
 ; RUN: llc < %s -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
 
-; ARM & AArch64 run an extra SimplifyCFG which disrupts this test.
-; UNSUPPORTED: arm,aarch64
-
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
 ; XFAIL: hexagon
 
 ; Bug: PR31899
 ; XFAIL: avr
+
+declare void @foo()
 
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {
@@ -29,6 +28,8 @@ entry:
 ; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}36.36%) BB#3({{[0-9a-fx/= ]+}}63.64%)
 
 sw.bb:
+; this call will prevent simplifyCFG from optimizing the block away in ARM/AArch64.
+  tail call void @foo()
   br label %return
 
 sw.bb1:

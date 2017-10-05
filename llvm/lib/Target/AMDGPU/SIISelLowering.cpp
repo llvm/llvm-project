@@ -468,6 +468,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f16, Custom);
 
+    setOperationAction(ISD::ANY_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::SIGN_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);

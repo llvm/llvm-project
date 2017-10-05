@@ -128,10 +128,10 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
 
   if (HII->getAddrMode(MI) == HexagonII::BaseRegOffset)
     // Tranform to Absolute plus register offset.
-    return (HII->getBaseWithLongOffset(MI) >= 0);
+    return (HII->changeAddrMode_rr_ur(MI) >= 0);
   else if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset)
     // Tranform to absolute addressing mode.
-    return (HII->getAbsoluteForm(MI) >= 0);
+    return (HII->changeAddrMode_io_abs(MI) >= 0);
 
   return false;
 }
@@ -337,7 +337,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
 
   if (ImmOpNum == 1) {
     if (HII->getAddrMode(*OldMI) == HexagonII::BaseRegOffset) {
-      short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
+      short NewOpCode = HII->changeAddrMode_rr_ur(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       MIB.add(OldMI->getOperand(0));
@@ -347,7 +347,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
       OpStart = 4;
       Changed = true;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
-      short NewOpCode = HII->getAbsoluteForm(*OldMI);
+      short NewOpCode = HII->changeAddrMode_io_abs(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode))
                 .add(OldMI->getOperand(0));
@@ -363,7 +363,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
     DEBUG(dbgs() << "[TO]: " << MIB << "\n");
   } else if (ImmOpNum == 2 && OldMI->getOperand(3).getImm() == 0) {
-    short NewOpCode = HII->xformRegToImmOffset(*OldMI);
+    short NewOpCode = HII->changeAddrMode_rr_io(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
     MIB.add(OldMI->getOperand(0));
@@ -394,7 +394,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
   MachineInstrBuilder MIB;
   if (ImmOpNum == 0) {
     if (HII->getAddrMode(*OldMI) == HexagonII::BaseRegOffset) {
-      short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
+      short NewOpCode = HII->changeAddrMode_rr_ur(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       MIB.add(OldMI->getOperand(1));
@@ -403,7 +403,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       MIB.add(OldMI->getOperand(3));
       OpStart = 4;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
-      short NewOpCode = HII->getAbsoluteForm(*OldMI);
+      short NewOpCode = HII->changeAddrMode_io_abs(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
       const GlobalValue *GV = ImmOp.getGlobal();
@@ -416,7 +416,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
     DEBUG(dbgs() << "[TO]: " << MIB << "\n");
   } else if (ImmOpNum == 1 && OldMI->getOperand(2).getImm() == 0) {
-    short NewOpCode = HII->xformRegToImmOffset(*OldMI);
+    short NewOpCode = HII->changeAddrMode_rr_io(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
     MIB.add(OldMI->getOperand(0));
@@ -436,10 +436,10 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
 
 short HexagonOptAddrMode::getBaseWithLongOffset(const MachineInstr &MI) const {
   if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset) {
-    short TempOpCode = HII->getBaseWithRegOffset(MI);
-    return HII->getBaseWithLongOffset(TempOpCode);
-  } else
-    return HII->getBaseWithLongOffset(MI);
+    short TempOpCode = HII->changeAddrMode_io_rr(MI);
+    return HII->changeAddrMode_rr_ur(TempOpCode);
+  }
+  return HII->changeAddrMode_rr_ur(MI);
 }
 
 bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,

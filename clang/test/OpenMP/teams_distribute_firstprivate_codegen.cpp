@@ -82,6 +82,7 @@ int main() {
     // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i{{64|32}} {{%.+}}, i{{64|32}} {{%.+}})
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
+    // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: [[G_CAST:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[SIVAR_CAST:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA-DAG: [[G_CAST_VAL:%.+]] = load{{.+}} [[G_CAST]],

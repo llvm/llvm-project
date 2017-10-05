@@ -1,5 +1,5 @@
-// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -I%p/Helpers -g %s -fPIC -shared -o %t-lib.so -DBUILD_SO
-// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -I%p/Helpers -g %s -O3 -o %t %t-lib.so
+// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -I%p/Helpers -g %s -fPIC -shared -o %dynamiclib -DBUILD_SO %ld_flags_rpath_so
+// RUN: %clangxx -frtti -fsanitize=vptr -fno-sanitize-recover=vptr -I%p/Helpers -g %s -O3 -o %t %ld_flags_rpath_exe
 // RUN: %run %t
 //
 // REQUIRES: cxxabi

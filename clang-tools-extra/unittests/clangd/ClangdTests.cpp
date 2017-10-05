@@ -473,13 +473,13 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // thread.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).get().Tag, FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).get().Tag, FS.Tag);
 }
 
 // Only enable this test on Unix
@@ -631,7 +631,7 @@ int b =   ;
 
   {
     auto CodeCompletionResults1 =
-        Server.codeComplete(FooCpp, CompletePos, None).Value;
+        Server.codeComplete(FooCpp, CompletePos, None).get().Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults1, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults1, "cbc"));
   }
@@ -641,6 +641,7 @@ int b =   ;
         Server
             .codeComplete(FooCpp, CompletePos,
                           StringRef(OverridenSourceContents))
+            .get()
             .Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResultsOverriden, "cbc"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResultsOverriden, "aba"));
@@ -648,7 +649,7 @@ int b =   ;
 
   {
     auto CodeCompletionResults2 =
-        Server.codeComplete(FooCpp, CompletePos, None).Value;
+        Server.codeComplete(FooCpp, CompletePos, None).get().Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
   }
@@ -840,7 +841,13 @@ int d;
         AddDocument(FileIndex);
 
       Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
-      Server.codeComplete(FilePaths[FileIndex], Pos);
+      // FIXME(ibiryukov): Also test async completion requests.
+      // Simply putting CodeCompletion into async requests now would make
+      // tests slow, since there's no way to cancel previous completion
+      // requests as opposed to AddDocument/RemoveDocument, which are implicitly
+      // cancelled by any subsequent AddDocument/RemoveDocument request to the
+      // same file.
+      Server.codeComplete(FilePaths[FileIndex], Pos).wait();
     };
 
     auto FindDefinitionsRequest = [&]() {

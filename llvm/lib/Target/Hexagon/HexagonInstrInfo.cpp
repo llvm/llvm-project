@@ -2704,16 +2704,16 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr &MI) const {
     case HexagonII::Absolute:
       // Load/store with absolute addressing mode can be converted into
       // base+offset mode.
-      NonExtOpcode = Hexagon::getBaseWithImmOffset(MI.getOpcode());
+      NonExtOpcode = Hexagon::changeAddrMode_abs_io(MI.getOpcode());
       break;
     case HexagonII::BaseImmOffset:
       // Load/store with base+offset addressing mode can be converted into
       // base+register offset addressing mode. However left shift operand should
       // be set to 0.
-      NonExtOpcode = Hexagon::getBaseWithRegOffset(MI.getOpcode());
+      NonExtOpcode = Hexagon::changeAddrMode_io_rr(MI.getOpcode());
       break;
     case HexagonII::BaseLongOffset:
-      NonExtOpcode = Hexagon::getRegShlForm(MI.getOpcode());
+      NonExtOpcode = Hexagon::changeAddrMode_ur_rr(MI.getOpcode());
       break;
     default:
       return false;
@@ -2825,10 +2825,6 @@ bool HexagonInstrInfo::predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const {
   if (Cond.empty() || !isPredicated(Cond[0].getImm()))
     return false;
   return !isPredicatedTrue(Cond[0].getImm());
-}
-
-short HexagonInstrInfo::getAbsoluteForm(const MachineInstr &MI) const {
-  return Hexagon::getAbsoluteForm(MI.getOpcode());
 }
 
 unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
@@ -2961,20 +2957,6 @@ SmallVector<MachineInstr*, 2> HexagonInstrInfo::getBranchingInstrs(
     --I;
   } while (true);
   return Jumpers;
-}
-
-short HexagonInstrInfo::getBaseWithLongOffset(short Opcode) const {
-  if (Opcode < 0)
-    return -1;
-  return Hexagon::getBaseWithLongOffset(Opcode);
-}
-
-short HexagonInstrInfo::getBaseWithLongOffset(const MachineInstr &MI) const {
-  return Hexagon::getBaseWithLongOffset(MI.getOpcode());
-}
-
-short HexagonInstrInfo::getBaseWithRegOffset(const MachineInstr &MI) const {
-  return Hexagon::getBaseWithRegOffset(MI.getOpcode());
 }
 
 // Returns Operand Index for the constant extended instruction.
@@ -3892,11 +3874,11 @@ short HexagonInstrInfo::getNonExtOpcode(const MachineInstr &MI) const {
     // Check addressing mode and retrieve non-ext equivalent instruction.
     switch (getAddrMode(MI)) {
     case HexagonII::Absolute:
-      return Hexagon::getBaseWithImmOffset(MI.getOpcode());
+      return Hexagon::changeAddrMode_abs_io(MI.getOpcode());
     case HexagonII::BaseImmOffset:
-      return Hexagon::getBaseWithRegOffset(MI.getOpcode());
+      return Hexagon::changeAddrMode_io_rr(MI.getOpcode());
     case HexagonII::BaseLongOffset:
-      return Hexagon::getRegShlForm(MI.getOpcode());
+      return Hexagon::changeAddrMode_ur_rr(MI.getOpcode());
 
     default:
       return -1;
@@ -4075,6 +4057,27 @@ bool HexagonInstrInfo::validateBranchCond(const ArrayRef<MachineOperand> &Cond)
   return Cond.empty() || (Cond[0].isImm() && (Cond.size() != 1));
 }
 
-short HexagonInstrInfo::xformRegToImmOffset(const MachineInstr &MI) const {
-  return Hexagon::xformRegToImmOffset(MI.getOpcode());
+// Addressing mode relations.
+short HexagonInstrInfo::changeAddrMode_abs_io(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_abs_io(Opc) : Opc;
+}
+
+short HexagonInstrInfo::changeAddrMode_io_abs(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_io_abs(Opc) : Opc;
+}
+
+short HexagonInstrInfo::changeAddrMode_io_rr(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_io_rr(Opc) : Opc;
+}
+
+short HexagonInstrInfo::changeAddrMode_rr_io(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_rr_io(Opc) : Opc;
+}
+
+short HexagonInstrInfo::changeAddrMode_rr_ur(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_rr_ur(Opc) : Opc;
+}
+
+short HexagonInstrInfo::changeAddrMode_ur_rr(short Opc) const {
+  return Opc >= 0 ? Hexagon::changeAddrMode_ur_rr(Opc) : Opc;
 }
