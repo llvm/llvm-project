@@ -1,4 +1,4 @@
-//====-- X86CmovConversion.cpp - Convert Cmov to Branch -------------------===//
+//====- X86CmovConversion.cpp - Convert Cmov to Branch --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file implements a pass that converts X86 cmov instructions into
 /// branches when profitable. This pass is conservative. It transforms if and
@@ -31,26 +32,46 @@
 ///         25% branch misprediction.
 ///
 /// Note: This pass is assumed to run on SSA machine code.
+//
 //===----------------------------------------------------------------------===//
 //
 //  External interfaces:
 //      FunctionPass *llvm::createX86CmovConverterPass();
 //      bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF);
 //
+//===----------------------------------------------------------------------===//
 
 #include "X86.h"
 #include "X86InstrInfo.h"
-#include "X86Subtarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCSchedule.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-cmov-conversion"
@@ -61,10 +82,11 @@ STATISTIC(NumOfLoopCandidate, "Number of CMOV-conversion profitable loops");
 STATISTIC(NumOfOptimizedCmovGroups, "Number of optimized CMOV-groups");
 
 namespace llvm {
-  void initializeX86CmovConverterPassPass(PassRegistry &);
-}
 
-namespace {
+void initializeX86CmovConverterPassPass(PassRegistry &);
+
+} // end namespace llvm
+
 // This internal switch can be used to turn off the cmov/branch optimization.
 static cl::opt<bool>
     EnableCmovConverter("x86-cmov-converter",
@@ -81,13 +103,14 @@ static cl::opt<bool> ForceMemOperand(
     cl::desc("Convert cmovs to branches whenever they have memory operands."),
     cl::init(true), cl::Hidden);
 
+namespace {
+
 /// Converts X86 cmov instructions into branches when profitable.
 class X86CmovConverterPass : public MachineFunctionPass {
 public:
   X86CmovConverterPass() : MachineFunctionPass(ID) {
     initializeX86CmovConverterPassPass(*PassRegistry::getPassRegistry());
   }
-  ~X86CmovConverterPass() {}
 
   StringRef getPassName() const override { return "X86 cmov Conversion"; }
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -97,15 +120,14 @@ public:
   static char ID;
 
 private:
-
   MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   TargetSchedModel TSchedModel;
 
   /// List of consecutive CMOV instructions.
-  typedef SmallVector<MachineInstr *, 2> CmovGroup;
-  typedef SmallVector<CmovGroup, 2> CmovGroups;
+  using CmovGroup = SmallVector<MachineInstr *, 2>;
+  using CmovGroups = SmallVector<CmovGroup, 2>;
 
   /// Collect all CMOV-group-candidates in \p CurrLoop and update \p
   /// CmovInstGroups accordingly.
@@ -131,6 +153,10 @@ private:
   /// \param Group Consecutive CMOV instructions to be converted into branch.
   void convertCmovInstsToBranches(SmallVectorImpl<MachineInstr *> &Group) const;
 };
+
+} // end anonymous namespace
+
+char X86CmovConverterPass::ID = 0;
 
 void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -665,7 +691,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
           MI.getOperand(X86::getCondFromCMovOpc(MI.getOpcode()) == CC ? 1 : 2)
               .getReg();
       // Walk back through any intermediate cmovs referenced.
-      for (;;) {
+      while (true) {
         auto FRIt = FalseBBRegRewriteTable.find(FalseReg);
         if (FRIt == FalseBBRegRewriteTable.end())
           break;
@@ -799,10 +825,6 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // Now remove the CMOV(s).
   MBB->erase(MIItBegin, MIItEnd);
 }
-
-} // End anonymous namespace.
-
-char X86CmovConverterPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                       false, false)

@@ -183,6 +183,8 @@ namespace options {
   static std::vector<const char *> extra;
   // Sample profile file path
   static std::string sample_profile;
+  // New pass manager
+  static bool new_pass_manager = false;
 
   static void process_plugin_option(const char *opt_)
   {
@@ -242,6 +244,8 @@ namespace options {
       DisableVerify = true;
     } else if (opt.startswith("sample-profile=")) {
       sample_profile= opt.substr(strlen("sample-profile="));
+    } else if (opt == "new-pass-manager") {
+      new_pass_manager = true;
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -804,6 +808,9 @@ static std::unique_ptr<LTO> createLTO() {
 
   if (!options::sample_profile.empty())
     Conf.SampleProfile = options::sample_profile;
+
+  // Use new pass manager if set in driver
+  Conf.UseNewPM = options::new_pass_manager;
 
   return llvm::make_unique<LTO>(std::move(Conf), Backend,
                                 options::ParallelCodeGenParallelismLevel);

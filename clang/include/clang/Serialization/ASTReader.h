@@ -559,13 +559,9 @@ private:
   /// declarations that have not yet been linked to their definitions.
   llvm::SmallPtrSet<Decl *, 4> PendingDefinitions;
 
-  typedef llvm::MapVector<Decl *, uint64_t,
-                          llvm::SmallDenseMap<Decl *, unsigned, 4>,
-                          SmallVector<std::pair<Decl *, uint64_t>, 4> >
-    PendingBodiesMap;
-
-  /// \brief Functions or methods that have bodies that will be attached.
-  PendingBodiesMap PendingBodies;
+  /// \brief Functions or methods that are known to already have a definition
+  /// (that might not yet be merged into the redeclaration chain).
+  llvm::SmallDenseMap<FunctionDecl *, FunctionDecl*, 4> FunctionDefinitions;
 
   /// \brief Definitions for which we have added merged definitions but not yet
   /// performed deduplication.
@@ -991,25 +987,13 @@ private:
   /// the last time we loaded information about this identifier.
   llvm::DenseMap<IdentifierInfo *, unsigned> IdentifierGeneration;
 
-  class InterestingDecl {
-    Decl *D;
-    bool DeclHasPendingBody;
-
-  public:
-    InterestingDecl(Decl *D, bool HasBody)
-        : D(D), DeclHasPendingBody(HasBody) {}
-    Decl *getDecl() { return D; }
-    /// Whether the declaration has a pending body.
-    bool hasPendingBody() { return DeclHasPendingBody; }
-  };
-
   /// \brief Contains declarations and definitions that could be
   /// "interesting" to the ASTConsumer, when we get that AST consumer.
   ///
   /// "Interesting" declarations are those that have data that may
   /// need to be emitted, such as inline function definitions or
   /// Objective-C protocols.
-  std::deque<InterestingDecl> PotentiallyInterestingDecls;
+  std::deque<Decl*> PotentiallyInterestingDecls;
 
   /// \brief The list of redeclaration chains that still need to be 
   /// reconstructed, and the local offset to the corresponding list

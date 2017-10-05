@@ -2233,8 +2233,18 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // If we selected just the header for the loop top, look for a potentially
   // profitable exit block in the event that rotating the loop can eliminate
   // branches by placing an exit edge at the bottom.
+  //
+  // Loops are processed innermost to uttermost, make sure we clear
+  // PreferredLoopExit before processing a new loop.
+  PreferredLoopExit = nullptr;
   if (!RotateLoopWithProfile && LoopTop == L.getHeader())
     PreferredLoopExit = findBestLoopExit(L, LoopBlockSet);
+
+  // Make sure PreferredLoopExit actually exits the current loop.
+  if (PreferredLoopExit) {
+    assert(L.isLoopExiting(PreferredLoopExit) &&
+           "not an exiting block of current loop");
+  }
 
   BlockChain &LoopChain = *BlockToChain[LoopTop];
 
