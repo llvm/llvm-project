@@ -1,4 +1,4 @@
-//===-- X86OptimizeLEAs.cpp - optimize usage of LEA instructions ----------===//
+//===- X86OptimizeLEAs.cpp - optimize usage of LEA instructions -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,22 +17,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -60,6 +74,7 @@ static bool isSimilarDispOp(const MachineOperand &MO1,
 static inline bool isLEA(const MachineInstr &MI);
 
 namespace {
+
 /// A key based on instruction's memory operands.
 class MemOpKey {
 public:
@@ -92,12 +107,14 @@ public:
   // Address' displacement operand.
   const MachineOperand *Disp;
 };
+
 } // end anonymous namespace
 
 /// Provide DenseMapInfo for MemOpKey.
 namespace llvm {
+
 template <> struct DenseMapInfo<MemOpKey> {
-  typedef DenseMapInfo<const MachineOperand *> PtrInfo;
+  using PtrInfo = DenseMapInfo<const MachineOperand *>;
 
   static inline MemOpKey getEmptyKey() {
     return MemOpKey(PtrInfo::getEmptyKey(), PtrInfo::getEmptyKey(),
@@ -164,7 +181,8 @@ template <> struct DenseMapInfo<MemOpKey> {
     return LHS == RHS;
   }
 };
-}
+
+} // end namespace llvm
 
 /// \brief Returns a hash table key based on memory operands of \p MI. The
 /// number of the first memory operand of \p MI is specified through \p N.
@@ -217,6 +235,7 @@ static inline bool isLEA(const MachineInstr &MI) {
 }
 
 namespace {
+
 class OptimizeLEAPass : public MachineFunctionPass {
 public:
   OptimizeLEAPass() : MachineFunctionPass(ID) {}
@@ -229,7 +248,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  typedef DenseMap<MemOpKey, SmallVector<MachineInstr *, 16>> MemOpMap;
+  using MemOpMap = DenseMap<MemOpKey, SmallVector<MachineInstr *, 16>>;
 
   /// \brief Returns a distance between two instructions inside one basic block.
   /// Negative result means, that instructions occur in reverse order.
@@ -281,8 +300,10 @@ private:
 
   static char ID;
 };
+
+} // end anonymous namespace
+
 char OptimizeLEAPass::ID = 0;
-}
 
 FunctionPass *llvm::createX86OptimizeLEAs() { return new OptimizeLEAPass(); }
 

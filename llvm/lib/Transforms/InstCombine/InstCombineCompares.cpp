@@ -1524,25 +1524,28 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
   const APInt *C3;
   if (match(Shift->getOperand(1), m_APInt(C3))) {
     bool CanFold = false;
-    if (ShiftOpcode == Instruction::AShr) {
-      // There may be some constraints that make this possible, but nothing
-      // simple has been discovered yet.
-      CanFold = false;
-    } else if (ShiftOpcode == Instruction::Shl) {
+    if (ShiftOpcode == Instruction::Shl) {
       // For a left shift, we can fold if the comparison is not signed. We can
       // also fold a signed comparison if the mask value and comparison value
       // are not negative. These constraints may not be obvious, but we can
       // prove that they are correct using an SMT solver.
       if (!Cmp.isSigned() || (!C2.isNegative() && !C1.isNegative()))
         CanFold = true;
-    } else if (ShiftOpcode == Instruction::LShr) {
+    } else {
+      bool IsAshr = ShiftOpcode == Instruction::AShr;
       // For a logical right shift, we can fold if the comparison is not signed.
       // We can also fold a signed comparison if the shifted mask value and the
       // shifted comparison value are not negative. These constraints may not be
       // obvious, but we can prove that they are correct using an SMT solver.
-      if (!Cmp.isSigned() ||
-          (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
-        CanFold = true;
+      // For an arithmetic shift right we can do the same, if we ensure
+      // the And doesn't use any bits being shifted in. Normally these would
+      // be turned into lshr by SimplifyDemandedBits, but not if there is an
+      // additional user.
+      if (!IsAshr || (C2.shl(*C3).lshr(*C3) == C2)) {
+        if (!Cmp.isSigned() ||
+            (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
+          CanFold = true;
+      }
     }
 
     if (CanFold) {
