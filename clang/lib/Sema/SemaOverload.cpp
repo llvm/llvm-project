@@ -11927,7 +11927,7 @@ static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
 ExprResult
 Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                               const UnresolvedSetImpl &Fns,
-                              Expr *Input) {
+                              Expr *Input, bool PerformADL) {
   OverloadedOperatorKind Op = UnaryOperator::getOverloadedOperator(Opc);
   assert(Op != OO_None && "Invalid opcode for overloaded unary operator");
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
@@ -11978,9 +11978,11 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
   AddMemberOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
 
   // Add candidates from ADL.
-  AddArgumentDependentLookupCandidates(OpName, OpLoc, ArgsArray,
-                                       /*ExplicitTemplateArgs*/nullptr,
-                                       CandidateSet);
+  if (PerformADL) {
+    AddArgumentDependentLookupCandidates(OpName, OpLoc, ArgsArray,
+                                         /*ExplicitTemplateArgs*/nullptr,
+                                         CandidateSet);
+  }
 
   // Add builtin operator candidates.
   AddBuiltinOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
@@ -12118,7 +12120,7 @@ ExprResult
 Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                             BinaryOperatorKind Opc,
                             const UnresolvedSetImpl &Fns,
-                            Expr *LHS, Expr *RHS) {
+                            Expr *LHS, Expr *RHS, bool PerformADL) {
   Expr *Args[2] = { LHS, RHS };
   LHS=RHS=nullptr; // Please use only Args instead of LHS/RHS couple
 
@@ -12149,7 +12151,7 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     UnresolvedLookupExpr *Fn
       = UnresolvedLookupExpr::Create(Context, NamingClass,
                                      NestedNameSpecifierLoc(), OpNameInfo,
-                                     /*ADL*/ true, IsOverloaded(Fns),
+                                     /*ADL*/PerformADL, IsOverloaded(Fns),
                                      Fns.begin(), Fns.end());
     return new (Context)
         CXXOperatorCallExpr(Context, Op, Fn, Args, Context.DependentTy,
@@ -12192,7 +12194,7 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   // Add candidates from ADL. Per [over.match.oper]p2, this lookup is not
   // performed for an assignment operator (nor for operator[] nor operator->,
   // which don't get here).
-  if (Opc != BO_Assign)
+  if (Opc != BO_Assign && PerformADL)
     AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
                                          /*ExplicitTemplateArgs*/ nullptr,
                                          CandidateSet);

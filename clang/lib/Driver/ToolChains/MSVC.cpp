@@ -375,7 +375,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.getSanitizerArgs().needsAsanRt()) {
     CmdArgs.push_back(Args.MakeArgString("-debug"));
     CmdArgs.push_back(Args.MakeArgString("-incremental:no"));
-    if (TC.getSanitizerArgs().needsSharedAsanRt() ||
+    if (TC.getSanitizerArgs().needsSharedRt() ||
         Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd)) {
       for (const auto &Lib : {"asan_dynamic", "asan_dynamic_runtime_thunk"})
         CmdArgs.push_back(TC.getCompilerRTArgString(Args, Lib));

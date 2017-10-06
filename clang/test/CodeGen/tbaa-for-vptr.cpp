@@ -23,12 +23,12 @@ void CallFoo(A *a, int (A::*fp)() const) {
 }
 
 // CHECK-LABEL: @_Z7CallFoo
-// CHECK: %{{.*}} = load {{.*}} !tbaa ![[NUM:[0-9]+]]
+// CHECK: %{{.*}} = load i32 (%struct.A*)**, {{.*}} !tbaa ![[NUM:[0-9]+]]
 // CHECK: br i1
-// CHECK: load {{.*}}, !tbaa ![[NUM]]
+// CHECK: load i8*, {{.*}}, !tbaa ![[NUM]]
 //
 // CHECK-LABEL: @_ZN1AC2Ev
-// CHECK: store {{.*}} !tbaa ![[NUM]]
+// CHECK: store i32 (...)** {{.*}}, !tbaa ![[NUM]]
 //
 // CHECK: [[NUM]] = !{[[TYPE:!.*]], [[TYPE]], i64 0}
 // CHECK: [[TYPE]] = !{!"vtable pointer", !{{.*}}

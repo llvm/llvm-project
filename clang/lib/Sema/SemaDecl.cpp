@@ -6047,6 +6047,21 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
            diag::warn_dllimport_dropped_from_inline_function)
         << NewDecl << OldImportAttr;
   }
+
+  // A specialization of a class template member function is processed here
+  // since it's a redeclaration. If the parent class is dllexport, the
+  // specialization inherits that attribute. This doesn't happen automatically
+  // since the parent class isn't instantiated until later.
+  if (IsSpecialization && isa<CXXMethodDecl>(NewDecl) && !NewImportAttr &&
+      !NewExportAttr) {
+    if (const DLLExportAttr *ParentExportAttr = cast<CXXMethodDecl>(NewDecl)
+                                             ->getParent()
+                                             ->getAttr<DLLExportAttr>()) {
+      DLLExportAttr *NewAttr = ParentExportAttr->clone(S.Context);
+      NewAttr->setInherited(true);
+      NewDecl->addAttr(NewAttr);
+    }
+  }
 }
 
 /// Given that we are within the definition of the given function,

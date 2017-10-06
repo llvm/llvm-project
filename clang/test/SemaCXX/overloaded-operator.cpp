@@ -550,3 +550,38 @@ namespace PR27027 {
   bool test_global_1 = +a_global; // expected-error {{overload resolution selected deleted operator '+'}}
   bool test_global_2 = a_global + a_global; // expected-error {{overload resolution selected deleted operator '+'}}
 }
+
+namespace LateADLInNonDependentExpressions {
+  struct A {};
+  struct B : A {};
+  int &operator+(A, A);
+  int &operator!(A);
+  int &operator+=(A, A);
+  int &operator<<(A, A);
+  int &operator++(A);
+  int &operator++(A, int);
+  int &operator->*(A, A);
+
+  template<typename T> void f() {
+    // An instantiation-dependent value of type B.
+    // These are all non-dependent operator calls of type int&.
+#define idB ((void()), B())
+    int &a = idB + idB,
+        &b = !idB,
+        &c = idB += idB,
+        &d = idB << idB,
+        &e = ++idB,
+        &f = idB++,
+        &g = idB ->* idB;
+  }
+
+  // These should not be found by ADL in the template instantiation.
+  float &operator+(B, B);
+  float &operator!(B);
+  float &operator+=(B, B);
+  float &operator<<(B, B);
+  float &operator++(B);
+  float &operator++(B, int);
+  float &operator->*(B, B);
+  template void f<int>();
+}
