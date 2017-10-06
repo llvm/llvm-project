@@ -247,7 +247,11 @@ raw_ostream &CaptionStmt::log(raw_ostream &OS) const {
 }
 
 raw_ostream &FontStmt::log(raw_ostream &OS) const {
-  return OS << "Font: size = " << Size << ", face = " << Typeface << "\n";
+  OS << "Font: size = " << Size << ", face = " << Name
+     << ", weight = " << Weight;
+  if (Italic)
+    OS << ", italic";
+  return OS << ", charset = " << Charset << "\n";
 }
 
 raw_ostream &StyleStmt::log(raw_ostream &OS) const {

@@ -665,11 +665,13 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380778(v=vs.85).aspx
 class CaptionStmt : public OptionalStmt {
+public:
   StringRef Value;
 
-public:
   CaptionStmt(StringRef Caption) : Value(Caption) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "CAPTION"; }
+  Error visit(Visitor *V) const override { return V->visitCaptionStmt(this); }
 };
 
 // FONT optional statement.
@@ -679,24 +681,31 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381013(v=vs.85).aspx
 class FontStmt : public OptionalStmt {
-  uint32_t Size;
-  StringRef Typeface;
-
 public:
-  FontStmt(uint32_t FontSize, StringRef FontName)
-      : Size(FontSize), Typeface(FontName) {}
+  uint32_t Size, Weight, Charset;
+  StringRef Name;
+  bool Italic;
+
+  FontStmt(uint32_t FontSize, StringRef FontName, uint32_t FontWeight,
+           bool FontItalic, uint32_t FontCharset)
+      : Size(FontSize), Weight(FontWeight), Charset(FontCharset),
+        Name(FontName), Italic(FontItalic) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "FONT"; }
+  Error visit(Visitor *V) const override { return V->visitFontStmt(this); }
 };
 
 // STYLE optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381051(v=vs.85).aspx
 class StyleStmt : public OptionalStmt {
+public:
   uint32_t Value;
 
-public:
   StyleStmt(uint32_t Style) : Value(Style) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "STYLE"; }
+  Error visit(Visitor *V) const override { return V->visitStyleStmt(this); }
 };
 
 } // namespace rc

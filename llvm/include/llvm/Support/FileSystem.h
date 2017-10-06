@@ -343,7 +343,11 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting = true);
 ///          platform-specific error code.
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors = true);
 
-/// @brief Rename \a from to \a to. Files are renamed as if by POSIX rename().
+/// @brief Rename \a from to \a to.
+///
+/// Files are renamed as if by POSIX rename(), except that on Windows there may
+/// be a short interval of time during which the destination file does not
+/// exist.
 ///
 /// @param from The path to rename from.
 /// @param to The path to rename to. This is created.

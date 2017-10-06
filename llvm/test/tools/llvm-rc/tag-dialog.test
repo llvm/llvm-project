@@ -132,6 +132,393 @@
 ; DIALOG-NEXT: )
 
 
+; RUN: llvm-rc /FO %t %p/Inputs/tag-dialog-headers.rc
+; RUN: llvm-readobj %t | FileCheck %s --check-prefix=HEADERS
+
+; HEADERS: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 1
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 00008880  |................|
+; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 2
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 24
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 00008880 00000000 00000100 02000300  |................|
+; HEADERS-NEXT:   0010: 04000000 00000000                    |........|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 3
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 52
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 0000C880  |................|
+; HEADERS-NEXT:   0010: 00001027 204E3075 FF7F0000 00004D00  |...' N0u......M.|
+; HEADERS-NEXT:   0020: 79002000 43006100 70007400 69006F00  |y. .C.a.p.t.i.o.|
+; HEADERS-NEXT:   0030: 6E000000                             |n...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 4
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 44
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0000C880 00000000 00000080 FF7F0000  |................|
+; HEADERS-NEXT:   0010: FF7F0000 00004D00 79002000 43006100  |......M.y. .C.a.|
+; HEADERS-NEXT:   0020: 70007400 69006F00 6E000000           |p.t.i.o.n...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 5
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 27452301  |............'E#.|
+; HEADERS-NEXT:   0010: 00000000 01000000 09000000 00000000  |................|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 6
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 24
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 27452301 00000000 00000000 01000000  |'E#.............|
+; HEADERS-NEXT:   0010: 09000000 00000000                    |........|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 7
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 42
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 40008880  |............@...|
+; HEADERS-NEXT:   0010: 00000800 07000600 05000000 00000000  |................|
+; HEADERS-NEXT:   0020: 32000000 00016100 0000               |2.....a...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 8
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 36
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 40008880 00000000 00000800 07000600  |@...............|
+; HEADERS-NEXT:   0010: 05000000 00000000 32006100 61006100  |........2.a.a.a.|
+; HEADERS-NEXT:   0020: 61000000                             |a...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 9
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 42
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 40008880  |............@...|
+; HEADERS-NEXT:   0010: 00000800 07000600 05000000 00000000  |................|
+; HEADERS-NEXT:   0020: 32000000 00016100 0000               |2.....a...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 10
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 36
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 40008880 00000000 00000800 07000600  |@...............|
+; HEADERS-NEXT:   0010: 05000000 00000000 32006100 61006100  |........2.a.a.a.|
+; HEADERS-NEXT:   0020: 61000000                             |a...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 11
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 48
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 40008880  |............@...|
+; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
+; HEADERS-NEXT:   0020: 32003300 00014600 4F004E00 54000000  |2.3...F.O.N.T...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 12
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 48
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 40008880  |............@...|
+; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
+; HEADERS-NEXT:   0020: 32003300 01014600 4F004E00 54000000  |2.3...F.O.N.T...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 13
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 48
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 40008880  |............@...|
+; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
+; HEADERS-NEXT:   0020: 32003300 01354600 4F004E00 54000000  |2.3..5F.O.N.T...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 14
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 62
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 4000C880  |............@...|
+; HEADERS-NEXT:   0010: 00000100 01000100 01000000 00004300  |..............C.|
+; HEADERS-NEXT:   0020: 41005000 54004900 4F004E00 00002A00  |A.P.T.I.O.N...*.|
+; HEADERS-NEXT:   0030: 00000001 46004F00 4E005400 0000      |....F.O.N.T...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 15
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 50
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 4000C880 00000000 00000100 01000100  |@...............|
+; HEADERS-NEXT:   0010: 01000000 00004300 41005000 54004900  |......C.A.P.T.I.|
+; HEADERS-NEXT:   0020: 4F004E00 00002A00 46004F00 4E005400  |O.N...*.F.O.N.T.|
+; HEADERS-NEXT:   0030: 0000                                 |..|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 16
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 62
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 4000C000  |............@...|
+; HEADERS-NEXT:   0010: 00000200 02000200 02000000 00004300  |..............C.|
+; HEADERS-NEXT:   0020: 41005000 54004900 4F004E00 00002A00  |A.P.T.I.O.N...*.|
+; HEADERS-NEXT:   0030: 00000001 46004F00 4E005400 0000      |....F.O.N.T...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 17
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 50
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 4000C000 00000000 00000200 02000200  |@...............|
+; HEADERS-NEXT:   0010: 02000000 00004300 41005000 54004900  |......C.A.P.T.I.|
+; HEADERS-NEXT:   0020: 4F004E00 00002A00 46004F00 4E005400  |O.N...*.F.O.N.T.|
+; HEADERS-NEXT:   0030: 0000                                 |..|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 18
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 46
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 0000C000  |................|
+; HEADERS-NEXT:   0010: 00000300 03000300 03000000 00004300  |..............C.|
+; HEADERS-NEXT:   0020: 41005000 54004900 4F004E00 0000      |A.P.T.I.O.N...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 19
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 38
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0000C000 00000000 00000300 03000300  |................|
+; HEADERS-NEXT:   0010: 03000000 00004300 41005000 54004900  |......C.A.P.T.I.|
+; HEADERS-NEXT:   0020: 4F004E00 0000                        |O.N...|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 20
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 00FF00FF  |................|
+; HEADERS-NEXT:   0010: 00000400 04000400 04000000 00000000  |................|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 21
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 24
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 00FF00FF 00000000 00000400 04000400  |................|
+; HEADERS-NEXT:   0010: 04000000 00000000                    |........|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 22
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 BF00FF00  |................|
+; HEADERS-NEXT:   0010: 00000400 04000400 04000000 00000000  |................|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 23
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 24
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: BF00FF00 00000000 00000400 04000400  |................|
+; HEADERS-NEXT:   0010: 04000000 00000000                    |........|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 24
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 0000C000  |................|
+; HEADERS-NEXT:   0010: 00000500 05000500 05000000 00000000  |................|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 25
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 24
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0000C000 00000000 00000500 05000500  |................|
+; HEADERS-NEXT:   0010: 05000000 00000000                    |........|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 26
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 32
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 05000000 00000000 00008880  |................|
+; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
+; HEADERS-NEXT: )
+
 
 ; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-large-coord.rc 2>&1 | FileCheck %s --check-prefix COORD1
 
@@ -197,3 +584,9 @@
 ; CTL-REF-ID: llvm-rc: Error in DIALOGEX statement (ID 1):
 ; CTL-REF-ID-NEXT: Error in CTEXT control (ID 42):
 ; CTL-REF-ID-NEXT: Control reference ID (65536) does not fit in 16 bits.
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-bad-style.rc 2>&1 | FileCheck %s --check-prefix STYLE
+
+; STYLE: llvm-rc: Error in DIALOG statement (ID 1):
+; STYLE-NEXT: 16 higher bits of DIALOG resource style cannot be equal to 0xFFFF

@@ -224,6 +224,11 @@ Error ResourceFileWriter::visitDialogResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeDialogBody);
 }
 
+Error ResourceFileWriter::visitCaptionStmt(const CaptionStmt *Stmt) {
+  ObjectData.Caption = Stmt->Value;
+  return Error::success();
+}
+
 Error ResourceFileWriter::visitHTMLResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeHTMLBody);
 }
@@ -238,10 +243,25 @@ Error ResourceFileWriter::visitCharacteristicsStmt(
   return Error::success();
 }
 
+Error ResourceFileWriter::visitFontStmt(const FontStmt *Stmt) {
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Size, "Font size"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Weight, "Font weight"));
+  RETURN_IF_ERROR(checkNumberFits<uint8_t>(Stmt->Charset, "Font charset"));
+  ObjectInfo::FontInfo Font{Stmt->Size, Stmt->Name, Stmt->Weight, Stmt->Italic,
+                            Stmt->Charset};
+  ObjectData.Font.emplace(Font);
+  return Error::success();
+}
+
 Error ResourceFileWriter::visitLanguageStmt(const LanguageResource *Stmt) {
   RETURN_IF_ERROR(checkNumberFits(Stmt->Lang, 10, "Primary language ID"));
   RETURN_IF_ERROR(checkNumberFits(Stmt->SubLang, 6, "Sublanguage ID"));
   ObjectData.LanguageInfo = Stmt->Lang | (Stmt->SubLang << 10);
+  return Error::success();
+}
+
+Error ResourceFileWriter::visitStyleStmt(const StyleStmt *Stmt) {
+  ObjectData.Style = Stmt->Value;
   return Error::success();
 }
 
@@ -474,10 +494,36 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   auto *Res = cast<DialogResource>(Base);
 
   // Default style: WS_POPUP | WS_BORDER | WS_SYSMENU.
-  const uint32_t UsedStyle = 0x80880000;
+  const uint32_t DefaultStyle = 0x80880000;
+  const uint32_t StyleFontFlag = 0x40;
+  const uint32_t StyleCaptionFlag = 0x00C00000;
+
+  uint32_t UsedStyle = ObjectData.Style.getValueOr(DefaultStyle);
+  if (ObjectData.Font)
+    UsedStyle |= StyleFontFlag;
+  else
+    UsedStyle &= ~StyleFontFlag;
+
+  // Actually, in case of empty (but existent) caption, the examined field
+  // is equal to "\"\"". That's why empty captions are still noticed.
+  if (ObjectData.Caption != "")
+    UsedStyle |= StyleCaptionFlag;
+
+  const uint16_t DialogExMagic = 0xFFFF;
 
   // Write DIALOG(EX) header prefix. These are pretty different.
   if (!Res->IsExtended) {
+    // We cannot let the higher word of DefaultStyle be equal to 0xFFFF.
+    // In such a case, whole object (in .res file) is equivalent to a
+    // DIALOGEX. It might lead to access violation/segmentation fault in
+    // resource readers. For example,
+    //   1 DIALOG 0, 0, 0, 65432
+    //   STYLE 0xFFFF0001 {}
+    // would be compiled to a DIALOGEX with 65432 controls.
+    if ((UsedStyle >> 16) == DialogExMagic)
+      return createError("16 higher bits of DIALOG resource style cannot be"
+                         " equal to 0xFFFF");
+
     struct {
       ulittle32_t Style;
       ulittle32_t ExtStyle;
@@ -486,8 +532,6 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
 
     writeObject(Prefix);
   } else {
-    const uint16_t DialogExMagic = 0xFFFF;
-
     struct {
       ulittle16_t Version;
       ulittle16_t Magic;
@@ -529,8 +573,21 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   // Window CLASS field. Not kept here.
   writeInt<uint16_t>(0);
 
-  // Window title. There is no title for now, so all we output is '\0'.
-  writeInt<uint16_t>(0);
+  // Window title or a single word equal to 0.
+  RETURN_IF_ERROR(writeCString(ObjectData.Caption));
+
+  // If there *is* a window font declared, output its data.
+  auto &Font = ObjectData.Font;
+  if (Font) {
+    writeInt<uint16_t>(Font->Size);
+    // Additional description occurs only in DIALOGEX.
+    if (Res->IsExtended) {
+      writeInt<uint16_t>(Font->Weight);
+      writeInt<uint8_t>(Font->IsItalic);
+      writeInt<uint8_t>(Font->Charset);
+    }
+    RETURN_IF_ERROR(writeCString(Font->Typeface));
+  }
 
   auto handleCtlError = [&](Error &&Err, const Control &Ctl) -> Error {
     if (!Err)

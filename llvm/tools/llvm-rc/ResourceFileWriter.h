@@ -35,14 +35,28 @@ public:
   Error visitHTMLResource(const RCResource *) override;
   Error visitMenuResource(const RCResource *) override;
 
+  Error visitCaptionStmt(const CaptionStmt *) override;
   Error visitCharacteristicsStmt(const CharacteristicsStmt *) override;
+  Error visitFontStmt(const FontStmt *) override;
   Error visitLanguageStmt(const LanguageResource *) override;
+  Error visitStyleStmt(const StyleStmt *) override;
   Error visitVersionStmt(const VersionStmt *) override;
 
   struct ObjectInfo {
     uint16_t LanguageInfo;
     uint32_t Characteristics;
     uint32_t VersionInfo;
+
+    Optional<uint32_t> Style;
+    StringRef Caption;
+    struct FontInfo {
+      uint32_t Size;
+      StringRef Typeface;
+      uint32_t Weight;
+      bool IsItalic;
+      uint32_t Charset;
+    };
+    Optional<FontInfo> Font;
 
     ObjectInfo() : LanguageInfo(0), Characteristics(0), VersionInfo(0) {}
   } ObjectData;

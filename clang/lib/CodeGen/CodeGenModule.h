@@ -666,6 +666,10 @@ public:
 
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
+  /// getTBAABaseTypeInfo - Get metadata that describes the given base access
+  /// type. Return null if the type is not suitable for use in TBAA access tags.
+  llvm::MDNode *getTBAABaseTypeInfo(QualType QTy);
+
   /// getTBAAAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getTBAAAccessTagInfo(TBAAAccessInfo Info);
 

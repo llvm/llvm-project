@@ -1599,7 +1599,11 @@ Sema::DiagnosePropertyMismatch(ObjCPropertyDecl *Property,
   // meaningless for readonly properties, so don't diagnose if the
   // atomic property is 'readonly'.
   checkAtomicPropertyMismatch(*this, SuperProperty, Property, false);
-  if (Property->getSetterName() != SuperProperty->getSetterName()) {
+  // Readonly properties from protocols can be implemented as "readwrite"
+  // with a custom setter name.
+  if (Property->getSetterName() != SuperProperty->getSetterName() &&
+      !(SuperProperty->isReadOnly() &&
+        isa<ObjCProtocolDecl>(SuperProperty->getDeclContext()))) {
     Diag(Property->getLocation(), diag::warn_property_attribute)
       << Property->getDeclName() << "setter" << inheritedName;
     Diag(SuperProperty->getLocation(), diag::note_property_declare);

@@ -50,11 +50,11 @@ using namespace llvm;
 #define DEBUG_TYPE "prologepilog"
 
 typedef SmallVector<MachineBasicBlock *, 4> MBBVector;
-static void doSpillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCXFrameIndex,
-                                   const MBBVector &SaveBlocks,
-                                   const MBBVector &RestoreBlocks);
+static void spillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
+                                 unsigned &MinCSFrameIndex,
+                                 unsigned &MaxCXFrameIndex,
+                                 const MBBVector &SaveBlocks,
+                                 const MBBVector &RestoreBlocks);
 
 namespace {
 class PEI : public MachineFunctionPass {
@@ -66,29 +66,12 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    MachineFunctionProperties MFP;
-    if (UsesCalleeSaves)
-      MFP.set(MachineFunctionProperties::Property::NoVRegs);
-    return MFP;
-  }
-
   /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
   /// frame indexes with appropriate references.
   ///
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
-  std::function<void(MachineFunction &MF, RegScavenger *RS,
-                     unsigned &MinCSFrameIndex, unsigned &MaxCSFrameIndex,
-                     const MBBVector &SaveBlocks,
-                     const MBBVector &RestoreBlocks)>
-      SpillCalleeSavedRegisters;
-  std::function<void(MachineFunction &MF, RegScavenger &RS)>
-      ScavengeFrameVirtualRegs;
-
-  bool UsesCalleeSaves = false;
-
   RegScavenger *RS;
 
   // MinCSFrameIndex, MaxCSFrameIndex - Keeps the range of callee saved
@@ -166,20 +149,6 @@ typedef SmallSetVector<int, 8> StackObjSet;
 /// frame indexes with appropriate references.
 ///
 bool PEI::runOnMachineFunction(MachineFunction &Fn) {
-  if (!SpillCalleeSavedRegisters) {
-    const TargetMachine &TM = Fn.getTarget();
-    if (!TM.usesPhysRegsForPEI()) {
-      SpillCalleeSavedRegisters = [](MachineFunction &, RegScavenger *,
-                                     unsigned &, unsigned &, const MBBVector &,
-                                     const MBBVector &) {};
-      ScavengeFrameVirtualRegs = [](MachineFunction &, RegScavenger &) {};
-    } else {
-      SpillCalleeSavedRegisters = doSpillCalleeSavedRegs;
-      ScavengeFrameVirtualRegs = scavengeFrameVirtualRegs;
-      UsesCalleeSaves = true;
-    }
-  }
-
   const Function* F = Fn.getFunction();
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
@@ -200,8 +169,9 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   calculateSaveRestoreBlocks(Fn);
 
   // Handle CSR spilling and restoring, for targets that need it.
-  SpillCalleeSavedRegisters(Fn, RS, MinCSFrameIndex, MaxCSFrameIndex,
-                            SaveBlocks, RestoreBlocks);
+  if (Fn.getTarget().usesPhysRegsForPEI())
+    spillCalleeSavedRegs(Fn, RS, MinCSFrameIndex, MaxCSFrameIndex, SaveBlocks,
+                         RestoreBlocks);
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
@@ -226,12 +196,8 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   // If register scavenging is needed, as we've enabled doing it as a
   // post-pass, scavenge the virtual registers that frame index elimination
   // inserted.
-  if (TRI->requiresRegisterScavenging(Fn) && FrameIndexVirtualScavenging) {
-      ScavengeFrameVirtualRegs(Fn, *RS);
-
-      // Clear any vregs created by virtual scavenging.
-      Fn.getRegInfo().clearVirtRegs();
-  }
+  if (TRI->requiresRegisterScavenging(Fn) && FrameIndexVirtualScavenging)
+    scavengeFrameVirtualRegs(Fn, *RS);
 
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = Fn.getFrameInfo();
@@ -512,11 +478,19 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   }
 }
 
-static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex,
-                                   const MBBVector &SaveBlocks,
-                                   const MBBVector &RestoreBlocks) {
+static void spillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
+                                 unsigned &MinCSFrameIndex,
+                                 unsigned &MaxCSFrameIndex,
+                                 const MBBVector &SaveBlocks,
+                                 const MBBVector &RestoreBlocks) {
+  // We can't list this requirement in getRequiredProperties because some
+  // targets (WebAssembly) use virtual registers past this point, and the pass
+  // pipeline is set up without giving the passes a chance to look at the
+  // TargetMachine.
+  // FIXME: Find a way to express this in getRequiredProperties.
+  assert(Fn.getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoVRegs));
+
   const Function *F = Fn.getFunction();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
   MachineFrameInfo &MFI = Fn.getFrameInfo();

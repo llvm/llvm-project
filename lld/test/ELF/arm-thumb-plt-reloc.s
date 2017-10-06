@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t2
 // RUN: ld.lld %t1 %t2 -o %t
 // RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t | FileCheck %s
-// RUN: ld.lld -shared %t1 %t2 -o %t3
+// RUN: ld.lld --hash-style=sysv -shared %t1 %t2 -o %t3
 // RUN: llvm-objdump -triple=thumbv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOTHUMB %s
 // RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t3 | FileCheck -check-prefix=DSOARM %s
 // RUN: llvm-readobj -s -r %t3 | FileCheck -check-prefix=DSOREL %s

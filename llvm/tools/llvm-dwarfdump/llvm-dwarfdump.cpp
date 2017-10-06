@@ -143,12 +143,12 @@ static list<std::string>
               "accelerator tables are available, the slower but more complete "
               "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
-static alias FindAlias("f", desc("Alias for -find"), aliasopt(Find));
+static alias FindAlias("f", desc("Alias for -find."), aliasopt(Find));
 static opt<bool>
     IgnoreCase("ignore-case",
                desc("Ignore case distinctions in when searching by name."),
                value_desc("i"), cat(DwarfDumpCategory));
-static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case"),
+static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case."),
                              aliasopt(IgnoreCase));
 static list<std::string> Name(
     "name",
@@ -159,9 +159,9 @@ static list<std::string> Name(
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
 static opt<std::string>
     OutputFilename("out-file", cl::init(""),
-                   cl::desc("Redirect output to the specified file"),
+                   cl::desc("Redirect output to the specified file."),
                    cl::value_desc("filename"));
-static alias OutputFilenameAlias("o", desc("Alias for -out-file"),
+static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
                                  aliasopt(OutputFilename),
                                  cat(DwarfDumpCategory));
 static opt<bool>
@@ -173,45 +173,49 @@ static alias RegexAlias("x", desc("Alias for -regex"), aliasopt(UseRegex));
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
-                      "printing with the =<offset> option"),
+                      "printing with the =<offset> option."),
                  cat(DwarfDumpCategory));
-static alias ShowChildrenAlias("c", desc("Alias for -show-children"),
+static alias ShowChildrenAlias("c", desc("Alias for -show-children."),
                                aliasopt(ShowChildren));
 static opt<bool>
     ShowParents("show-parents",
                 desc("Show a debug info entry's parents when selectively "
-                     "printing with the =<offset> option"),
+                     "printing with the =<offset> option."),
                 cat(DwarfDumpCategory));
-static alias ShowParentsAlias("p", desc("Alias for -show-parents"),
+static alias ShowParentsAlias("p", desc("Alias for -show-parents."),
                               aliasopt(ShowParents));
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
              cat(DwarfDumpCategory));
-static alias ShowFormAlias("F", desc("Alias for -show-form"),
+static alias ShowFormAlias("F", desc("Alias for -show-form."),
                            aliasopt(ShowForm), cat(DwarfDumpCategory));
 static opt<unsigned> RecurseDepth(
     "recurse-depth",
     desc("Only recurse to a depth of N when displaying debug info entries."),
     cat(DwarfDumpCategory), init(-1U), value_desc("N"));
-static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth"),
+static alias RecurseDepthAlias("r", desc("Alias for -recurse-depth."),
                                aliasopt(RecurseDepth));
 
 static opt<bool>
     SummarizeTypes("summarize-types",
-                   desc("Abbreviate the description of type unit entries"),
+                   desc("Abbreviate the description of type unit entries."),
                    cat(DwarfDumpCategory));
-static opt<bool> Verify("verify", desc("Verify the DWARF debug info"),
+static cl::opt<bool>
+    Statistics("statistics",
+               cl::desc("Emit JSON-formatted debug info quality metrics."),
+               cat(DwarfDumpCategory));
+static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
-static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture"),
+static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
                           cat(DwarfDumpCategory));
-static alias DumpUUIDAlias("u", desc("Alias for -uuid"), aliasopt(DumpUUID));
+static alias DumpUUIDAlias("u", desc("Alias for -uuid."), aliasopt(DumpUUID));
 static opt<bool> Verbose("verbose",
-                         desc("Print more low-level encoding details"),
+                         desc("Print more low-level encoding details."),
                          cat(DwarfDumpCategory));
-static alias VerboseAlias("v", desc("Alias for -verbose"), aliasopt(Verbose),
+static alias VerboseAlias("v", desc("Alias for -verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory));
 } // namespace
 /// @}
@@ -300,6 +304,9 @@ static void filterByName(const StringSet<> &Names,
       }
     }
 }
+
+bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                               Twine Filename, raw_ostream &OS);
 
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
@@ -536,7 +543,10 @@ int main(int argc, char **argv) {
           return handleFile(Object, verifyObjectFile, OS);
         }))
       exit(1);
-  } else
+  } else if (Statistics)
+    for (auto Object : Objects)
+      handleFile(Object, collectStatsForObjectFile, OS);
+  else
     for (auto Object : Objects)
       handleFile(Object, dumpObjectFile, OS);
 

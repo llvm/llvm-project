@@ -92,6 +92,32 @@ define void @test_norecursive_inline() !dbg !24 {
   ret void
 }
 
+define i32* @return_arg(i32* readnone returned) !dbg !29{
+  ret i32* %0
+}
+
+; CHECK-LABEL: @return_arg_caller
+; When the promoted indirect call returns a parameter that was defined by the
+; return value of a previous direct call. Checks both direct call and promoted
+; indirect call are inlined.
+define i32* @return_arg_caller(i32* (i32*)* nocapture) !dbg !30{
+; CHECK-NOT: call i32* @foo_inline1
+; CHECK: if.true.direct_targ:
+; CHECK-NOT: call
+; CHECK: if.false.orig_indirect:
+; CHECK: call
+  %2 = call i32* @foo_inline1(i32* null), !dbg !31
+  %cmp = icmp ne i32* %2, null
+  br i1 %cmp, label %then, label %else
+
+then:
+  %3 = tail call i32* %0(i32* %2), !dbg !32
+  ret i32* %3
+
+else:
+  ret i32* null
+}
+
 @x = global i32 0, align 4
 @y = global void ()* null, align 8
 
@@ -176,3 +202,7 @@ define void @test_direct() !dbg !22 {
 !26 = distinct !DISubprogram(name: "test_noinline_bitcast", scope: !1, file: !1, line: 12, unit: !0)
 !27 = !DILocation(line: 13, scope: !26)
 !28 = distinct !DISubprogram(name: "foo_direct_i32", scope: !1, file: !1, line: 11, unit: !0)
+!29 = distinct !DISubprogram(name: "return_arg", scope: !1, file: !1, line: 11, unit: !0)
+!30 = distinct !DISubprogram(name: "return_arg_caller", scope: !1, file: !1, line: 11, unit: !0)
+!31 = !DILocation(line: 12, scope: !30)
+!32 = !DILocation(line: 13, scope: !30)

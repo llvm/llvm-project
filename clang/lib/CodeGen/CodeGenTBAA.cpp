@@ -234,8 +234,6 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (QTy == QualType())
-    return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     if (RD->hasFlexibleArrayMember())
@@ -249,10 +247,11 @@ static bool isValidBaseType(QualType QTy) {
 }
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  assert(isValidBaseType(QTy));
+  if (!isValidBaseType(QTy))
+    return nullptr;
 
-  if (llvm::MDNode *N = StructTypeMetadataCache[Ty])
+  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
+  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
     return N;
 
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
@@ -267,7 +266,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
       llvm::MDNode *FieldNode = isValidBaseType(FieldQTy) ?
           getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
       if (!FieldNode)
-        return StructTypeMetadataCache[Ty] = nullptr;
+        return BaseTypeMetadataCache[Ty] = nullptr;
       Fields.push_back(std::make_pair(
           FieldNode, Layout.getFieldOffset(idx) / Context.getCharWidth()));
     }
@@ -281,11 +280,11 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
       OutName = RD->getName();
     }
     // Create the struct type node with a vector of pairs (offset, type).
-    return StructTypeMetadataCache[Ty] =
+    return BaseTypeMetadataCache[Ty] =
       MDHelper.createTBAAStructTypeNode(OutName, Fields);
   }
 
-  return StructMetadataCache[Ty] = nullptr;
+  return BaseTypeMetadataCache[Ty] = nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
@@ -295,23 +294,16 @@ llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
   if (!CodeGenOpts.StructPathTBAA)
     Info = TBAAAccessInfo(Info.AccessType);
 
-  const Type *BTy = nullptr;
-  if (Info.BaseType != QualType())
-    BTy = Context.getCanonicalType(Info.BaseType).getTypePtr();
-  TBAAPathTag PathTag = TBAAPathTag(BTy, Info.AccessType, Info.Offset);
-  if (llvm::MDNode *N = StructTagMetadataCache[PathTag])
+  llvm::MDNode *&N = AccessTagMetadataCache[Info];
+  if (N)
     return N;
 
-  llvm::MDNode *BNode = nullptr;
-  if (isValidBaseType(Info.BaseType))
-    BNode = getBaseTypeInfo(Info.BaseType);
-  if (!BNode)
-    return StructTagMetadataCache[PathTag] =
-       MDHelper.createTBAAStructTagNode(Info.AccessType, Info.AccessType,
-                                        /* Offset= */ 0);
-
-  return StructTagMetadataCache[PathTag] =
-    MDHelper.createTBAAStructTagNode(BNode, Info.AccessType, Info.Offset);
+  if (!Info.BaseType) {
+    Info.BaseType = Info.AccessType;
+    assert(!Info.Offset && "Nonzero offset for an access with no base type!");
+  }
+  return N = MDHelper.createTBAAStructTagNode(Info.BaseType, Info.AccessType,
+                                              Info.Offset);
 }
 
 TBAAAccessInfo CodeGenTBAA::getMayAliasAccessInfo() {

@@ -1,0 +1,42 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+
+# Start a session.
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+# Modify the document.
+Content-Length: 333
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"void foo(int x, int y);\nvoid foo(int x, float y);\nvoid foo(float x, int y);\nvoid foo(float x, float y);\nvoid bar(int x, int y = 0);\nvoid bar(float x = 0, int y = 42);\nint main() { foo("}}}
+
+# Ask for signature help.
+Content-Length: 151
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":8,"character":9}}}
+# CHECK: {"jsonrpc":"2.0","id":1,"result":{"activeSignature":0,"activeParameter":0,"signatures":[
+# CHECK-DAG: {"label":"foo(float x, float y) -> void","parameters":[{"label":"float x"},{"label":"float y"}]}
+# CHECK-DAG: {"label":"foo(float x, int y) -> void","parameters":[{"label":"float x"},{"label":"int y"}]}
+# CHECK-DAG: {"label":"foo(int x, float y) -> void","parameters":[{"label":"int x"},{"label":"float y"}]}
+# CHECK-DAG: {"label":"foo(int x, int y) -> void","parameters":[{"label":"int x"},{"label":"int y"}]}
+# CHECK: ]}
+
+# Modify the document
+Content-Length: 333
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":2,"text":"void foo(int x, int y);\nvoid foo(int x, float y);\nvoid foo(float x, int y);\nvoid foo(float x, float y);\nvoid bar(int x, int y = 0);\nvoid bar(float x = 0, int y = 42);\nint main() { bar("}}}
+
+# Ask for signature help (this checks default argument handling).
+Content-Length: 151
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":8,"character":9}}}
+# CHECK: {"jsonrpc":"2.0","id":2,"result":{"activeSignature":0,"activeParameter":0,"signatures":[
+# CHECK-DAG: {"label":"bar(int x, int y = 0) -> void","parameters":[{"label":"int x"},{"label":"int y = 0"}]}
+# CHECK-DAG: {"label":"bar(float x = 0, int y = 42) -> void","parameters":[{"label":"float x = 0"},{"label":"int y = 42"}]}
+# CHECK: ]}
+
+# Shutdown.
+Content-Length: 49
+
+{"jsonrpc":"2.0","id":100000,"method":"shutdown"}

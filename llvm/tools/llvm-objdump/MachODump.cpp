@@ -202,6 +202,36 @@ typedef std::pair<uint64_t, DiceRef> DiceTableEntry;
 typedef std::vector<DiceTableEntry> DiceTable;
 typedef DiceTable::iterator dice_table_iterator;
 
+#ifdef HAVE_LIBXAR
+namespace {
+struct ScopedXarFile {
+  xar_t xar;
+  ScopedXarFile(const char *filename, int32_t flags) {
+    xar = xar_open(filename, flags);
+  }
+  ~ScopedXarFile() {
+    if (xar)
+      xar_close(xar);
+  }
+  ScopedXarFile(const ScopedXarFile &) = delete;
+  ScopedXarFile &operator=(const ScopedXarFile &) = delete;
+  operator xar_t() { return xar; }
+};
+
+struct ScopedXarIter {
+  xar_iter_t iter;
+  ScopedXarIter() { iter = xar_iter_new(); }
+  ~ScopedXarIter() {
+    if (iter)
+      xar_iter_free(iter);
+  }
+  ScopedXarIter(const ScopedXarIter &) = delete;
+  ScopedXarIter &operator=(const ScopedXarIter &) = delete;
+  operator xar_iter_t() { return iter; }
+};
+} // namespace
+#endif // defined(HAVE_LIBXAR)
+
 // This is used to search for a data in code table entry for the PC being
 // disassembled.  The j parameter has the PC in j.first.  A single data in code
 // table entry can cover many bytes for each of its Kind's.  So if the offset,
@@ -5802,14 +5832,12 @@ static void PrintModeVerbose(uint32_t mode) {
 }
 
 static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
-  xar_iter_t xi;
   xar_file_t xf;
-  xar_iter_t xp;
   const char *key, *type, *mode, *user, *group, *size, *mtime, *name, *m;
   char *endp;
   uint32_t mode_value;
 
-  xi = xar_iter_new();
+  ScopedXarIter xi;
   if (!xi) {
     errs() << "Can't obtain an xar iterator for xar archive "
            << XarFilename << "\n";
@@ -5818,7 +5846,7 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
 
   // Go through the xar's files.
   for (xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)) {
-    xp = xar_iter_new();
+    ScopedXarIter xp;
     if(!xp){
       errs() << "Can't obtain an xar iterator for xar archive "
              << XarFilename << "\n";
@@ -5880,9 +5908,7 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
     if(name != nullptr)
       outs() << name;
     outs() << "\n";
-    xar_iter_free(xp);
   }
-  xar_iter_free(xi);
 }
 
 static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
@@ -5958,7 +5984,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   if (XarOut.has_error())
     return;
 
-  xar_t xar = xar_open(XarFilename.c_str(), READ);
+  ScopedXarFile xar(XarFilename.c_str(), READ);
   if (!xar) {
     errs() << "Can't create temporary xar archive " << XarFilename << "\n";
     return;
@@ -5998,24 +6024,21 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   outs() << Buffer->getBuffer() << "\n";
 
   // TODO: Go through the xar's files.
-  xar_iter_t xi = xar_iter_new();
+  ScopedXarIter xi;
   if(!xi){
     errs() << "Can't obtain an xar iterator for xar archive "
            << XarFilename.c_str() << "\n";
-    xar_close(xar);
     return;
   }
   for(xar_file_t xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)){
     const char *key;
-    xar_iter_t xp;
     const char *member_name, *member_type, *member_size_string;
     size_t member_size;
 
-    xp = xar_iter_new();
+    ScopedXarIter xp;
     if(!xp){
       errs() << "Can't obtain an xar iterator for xar archive "
              << XarFilename.c_str() << "\n";
-      xar_close(xar);
       return;
     }
     member_name = NULL;
@@ -6080,10 +6103,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
         }
       }
     }
-    xar_iter_free(xp);
   }
-  xar_iter_free(xi);
-  xar_close(xar);
 }
 #endif // defined(HAVE_LIBXAR)
 

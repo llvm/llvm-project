@@ -388,8 +388,6 @@ entry:
 
 define arm_aapcscc i32 @test_cmp_i16_slt(i16 %a, i16 %b) {
 ; CHECK-LABEL: test_cmp_i16_slt:
-; CHECK-DAG: sxth r0, r0
-; CHECK-DAG: sxth r1, r1
 ; CHECK-DAG: mov [[V:r[0-9]+]], #0
 ; CHECK: cmp r0, r1
 ; CHECK: movlt [[V]], #1

@@ -8,9 +8,9 @@
 ; CHECK-LABEL: test:
 ; CHECK: st %r2
 ; CHECK: brasl %r14, gen
-; CHECK-DAG: lhr %r2, %r2
-; CHECK-DAG: lbr %[[REG1:r[0-9]+]], %r3
-; CHECK: ar %r2, %[[REG1]]
+; CHECK-DAG: lhr %{{r[0,2]+}}, %r2
+; CHECK-DAG: lbr %{{r[0,2]+}}, %r3
+; CHECK: ar %r2, %r0
 ; CHECK-O0-LABEL: test
 ; CHECK-O0: st %r2
 ; CHECK-O0: brasl %r14, gen

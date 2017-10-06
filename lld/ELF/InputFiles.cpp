@@ -775,9 +775,16 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // Ignore local symbols.
     if (Versym && VersymIndex == VER_NDX_LOCAL)
       continue;
-
-    const Elf_Verdef *V =
-        VersymIndex == VER_NDX_GLOBAL ? nullptr : Verdefs[VersymIndex];
+    const Elf_Verdef *V = nullptr;
+    if (VersymIndex != VER_NDX_GLOBAL) {
+      if (VersymIndex >= Verdefs.size()) {
+        error("corrupt input file: version definition index " +
+              Twine(VersymIndex) + " for symbol " + Name +
+              " is out of bounds\n>>> defined in " + toString(this));
+        continue;
+      }
+      V = Verdefs[VersymIndex];
+    }
 
     if (!Hidden)
       Symtab->addShared(Name, this, Sym, V);

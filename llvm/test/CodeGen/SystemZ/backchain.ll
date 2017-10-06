@@ -60,18 +60,18 @@ define void @f5(i32 %count1, i32 %count2) "backchain" {
 ; CHECK: aghi %r15, -160
 ; CHECK: stg %r1, 0(%r15)
 ; CHECK: lgr %r11, %r15
-; CHECK: lgr [[SAVESP:%r[0-9]+]], %r15
-; CHECK: lg [[BC:%r[0-9]+]], 0(%r15)
-; CHECK: lgr [[NEWSP:%r[0-9]+]], %r15
-; CHECK: lgr %r15, [[NEWSP]]
-; CHECK: stg [[BC]], 0([[NEWSP]])
-; CHECK: lg [[BC2:%r[0-9]+]], 0(%r15)
-; CHECK: lgr %r15, [[SAVESP]]
-; CHECK: stg [[BC2]], 0([[SAVESP]])
-; CHECK: lg [[BC3:%r[0-9]+]], 0(%r15)
-; CHECK: lgr [[NEWSP2:%r[0-9]+]], %r15
-; CHECK: lgr %r15, [[NEWSP2]]
-; CHECK: stg [[BC3]], 0([[NEWSP2]])
+; CHECK-DAG: lgr [[SAVESP:%r[0-9]+]], %r15
+; CHECK-DAG: lg [[BC:%r[0-9]+]], 0(%r15)
+; CHECK-DAG: lgr [[NEWSP:%r[0-9]+]], %r15
+; CHECK-DAG: lgr %r15, [[NEWSP]]
+; CHECK-DAG: stg [[BC]], 0([[NEWSP]])
+; CHECK-DAG: lg [[BC2:%r[0-9]+]], 0(%r15)
+; CHECK-DAG: lgr %r15, [[SAVESP]]
+; CHECK-DAG: stg [[BC2]], 0([[SAVESP]])
+; CHECK-DAG: lg [[BC3:%r[0-9]+]], 0(%r15)
+; CHECK-DAG: lgr [[NEWSP2:%r[0-9]+]], %r15
+; CHECK-DAG: lgr %r15, [[NEWSP2]]
+; CHECK-DAG: stg [[BC3]], 0([[NEWSP2]])
 ; CHECK: lmg %r11, %r15, 248(%r11)
 ; CHECK: br %r14
   %src = call i8 *@llvm.stacksave()
