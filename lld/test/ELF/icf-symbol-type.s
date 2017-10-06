@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t --icf=all -shared
+# RUN: ld.lld --hash-style=sysv %t.o -o %t --icf=all -shared
 # RUN: llvm-readelf --dyn-symbols %t | FileCheck %s
 
 # We used to mark bar as absolute.

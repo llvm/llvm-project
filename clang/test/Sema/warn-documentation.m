@@ -299,3 +299,14 @@ void (^_Nullable blockPointerVariableThatLeadsNowhere)();
 @property void (^blockReturnsNothing)();
 
 @end
+
+/*!
+ * Block typedef with variadic params.
+ *
+ * @param a
+ * works
+ *
+ * @param ...
+ * now should work too.
+ */
+typedef void (^VariadicBlockType)(int a, ...);

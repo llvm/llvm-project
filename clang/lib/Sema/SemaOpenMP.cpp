@@ -1838,6 +1838,10 @@ public:
       if (DVar.RefExpr || !ImplicitDeclarations.insert(VD).second)
         return;
 
+      // Skip internally declared static variables.
+      if (VD->hasGlobalStorage() && !CS->capturesVariable(VD))
+        return;
+
       auto ELoc = E->getExprLoc();
       auto DKind = Stack->getCurrentDirective();
       // The default(none) clause requires that each variable that is referenced

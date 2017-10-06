@@ -94,7 +94,8 @@ public:
   /// debug map.
   DebugMapObject &
   addDebugMapObject(StringRef ObjectFilePath,
-                    sys::TimePoint<std::chrono::seconds> Timestamp);
+                    sys::TimePoint<std::chrono::seconds> Timestamp,
+                    uint8_t Type);
 
   const Triple &getTriple() const { return BinaryTriple; }
 
@@ -154,6 +155,8 @@ public:
     return Timestamp;
   }
 
+  uint8_t getType() const { return Type; }
+
   iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
     return make_range(Symbols.begin(), Symbols.end());
   }
@@ -166,12 +169,13 @@ private:
   friend class DebugMap;
   /// DebugMapObjects can only be constructed by the owning DebugMap.
   DebugMapObject(StringRef ObjectFilename,
-                 sys::TimePoint<std::chrono::seconds> Timestamp);
+                 sys::TimePoint<std::chrono::seconds> Timestamp, uint8_t Type);
 
   std::string Filename;
   sys::TimePoint<std::chrono::seconds> Timestamp;
   StringMap<SymbolMapping> Symbols;
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
+  uint8_t Type;
 
   /// For YAMLIO support.
   ///@{

@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc-unknown-freebsd %s -o %t
-# RUN: ld.lld -discard-all -shared %t -o %t2
+# RUN: ld.lld --hash-style=sysv -discard-all -shared %t -o %t2
 # RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
 # REQUIRES: ppc
 

@@ -32,6 +32,10 @@
   define void @test_or_s32() { ret void }
   define void @test_xor_s32() { ret void }
 
+  define void @test_lshr_s32() { ret void }
+  define void @test_ashr_s32() { ret void }
+  define void @test_shl_s32() { ret void }
+
   define void @test_load_from_stack() { ret void }
   define void @test_load_f32() #0 { ret void }
   define void @test_load_f64() #0 { ret void }
@@ -883,6 +887,105 @@ body:             |
 
     %2(s32) = G_XOR %0, %1
     ; CHECK: [[VREGRES:%[0-9]+]] = EORrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_lshr_s32
+# CHECK-LABEL: name: test_lshr_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_LSHR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 3, 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_ashr_s32
+# CHECK-LABEL: name: test_ashr_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ASHR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 1, 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_shl_s32
+# CHECK-LABEL: name: test_shl_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_SHL %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 2, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]

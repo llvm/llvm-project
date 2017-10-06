@@ -1174,8 +1174,7 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
       llvm::Value *V = LV.getPointer();
       Scope.ForceCleanup({&V});
       return LValue::MakeAddr(Address(V, LV.getAlignment()), LV.getType(),
-                              getContext(), LV.getBaseInfo(),
-                              LV.getTBAAAccessType());
+                              getContext(), LV.getBaseInfo(), LV.getTBAAInfo());
     }
     // FIXME: Is it possible to create an ExprWithCleanups that produces a
     // bitfield lvalue or some other non-simple lvalue?
@@ -1514,7 +1513,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   // Atomic operations have to be done on integral types.
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo.AccessType);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo);
   if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
@@ -1525,11 +1524,10 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
         Load->getContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Load->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAInfo.AccessType) {
-    if (BaseInfo.getMayAlias())
-      TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
-    CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
-  }
+
+  if (BaseInfo.getMayAlias())
+    TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
     // In order to prevent the optimizer from throwing away the check, don't
@@ -1596,7 +1594,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   Value = EmitToMemory(Value, Ty);
 
   LValue AtomicLValue =
-      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo.AccessType);
+      LValue::MakeAddr(Addr, Ty, getContext(), BaseInfo, TBAAInfo);
   if (Ty->isAtomicType() ||
       (!isInit && LValueIsSuitableForInlineAtomic(AtomicLValue))) {
     EmitAtomicStore(RValue::get(Value), AtomicLValue, isInit);
@@ -1610,11 +1608,10 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                           llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
     Store->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
   }
-  if (TBAAInfo.AccessType) {
-    if (BaseInfo.getMayAlias())
-      TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
-    CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
-  }
+
+  if (BaseInfo.getMayAlias())
+    TBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
@@ -2300,8 +2297,12 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
         VD->isUsableInConstantExpressions(getContext()) &&
         VD->checkInitIsICE() &&
         // Do not emit if it is private OpenMP variable.
-        !(E->refersToEnclosingVariableOrCapture() && CapturedStmtInfo &&
-          LocalDeclMap.count(VD))) {
+        !(E->refersToEnclosingVariableOrCapture() &&
+          ((CapturedStmtInfo &&
+            (LocalDeclMap.count(VD->getCanonicalDecl()) ||
+             CapturedStmtInfo->lookup(VD->getCanonicalDecl()))) ||
+           LambdaCaptureFields.lookup(VD->getCanonicalDecl()) ||
+           isa<BlockDecl>(CurCodeDecl)))) {
       llvm::Constant *Val =
         ConstantEmitter(*this).emitAbstract(E->getLocation(),
                                             *VD->evaluateValue(),
@@ -3753,29 +3754,39 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
 
   LValue LV = MakeAddrLValue(addr, type, FieldBaseInfo);
   LV.getQuals().addCVRQualifiers(cvr);
-  if (TBAAPath) {
+
+  // Fields of may_alias structs act like 'char' for TBAA purposes.
+  // FIXME: this should get propagated down through anonymous structs
+  // and unions.
+  if (mayAlias) {
+    LV.setTBAAInfo(CGM.getTBAAMayAliasAccessInfo());
+  } else if (TBAAPath) {
+    // If no base type been assigned for the base access, then try to generate
+    // one for this base lvalue.
+    TBAAAccessInfo TBAAInfo = base.getTBAAInfo();
+    if (!TBAAInfo.BaseType) {
+        TBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
+        assert(!TBAAInfo.Offset &&
+               "Nonzero offset for an access with no base type!");
+    }
+
+    // Adjust offset to be relative to the base type.
     const ASTRecordLayout &Layout =
         getContext().getASTRecordLayout(field->getParent());
-    // Set the base type to be the base type of the base LValue and
-    // update offset to be relative to the base type.
     unsigned CharWidth = getContext().getCharWidth();
-    TBAAAccessInfo TBAAInfo = mayAlias ?
-      CGM.getTBAAMayAliasAccessInfo() :
-      TBAAAccessInfo(base.getTBAAInfo().BaseType, CGM.getTBAATypeInfo(type),
-                     base.getTBAAInfo().Offset + Layout.getFieldOffset(
-                         field->getFieldIndex()) / CharWidth);
+    if (TBAAInfo.BaseType)
+      TBAAInfo.Offset +=
+          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
+
+    // Update the final access type.
+    TBAAInfo.AccessType = LV.getTBAAInfo().AccessType;
+
     LV.setTBAAInfo(TBAAInfo);
   }
 
   // __weak attribute on a field is ignored.
   if (LV.getQuals().getObjCGCAttr() == Qualifiers::Weak)
     LV.getQuals().removeObjCGCAttr();
-
-  // Fields of may_alias structs act like 'char' for TBAA purposes.
-  // FIXME: this should get propagated down through anonymous structs
-  // and unions.
-  if (mayAlias && LV.getTBAAAccessType())
-    LV.setTBAAInfo(CGM.getTBAAMayAliasAccessInfo());
 
   return LV;
 }

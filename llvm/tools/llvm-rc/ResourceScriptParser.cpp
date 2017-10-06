@@ -320,13 +320,13 @@ Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc,
   return Result;
 }
 
-// As for now, we ignore the extended set of statements.
-Expected<OptionalStmtList> RCParser::parseOptionalStatements(bool IsExtended) {
+Expected<OptionalStmtList>
+RCParser::parseOptionalStatements(OptStmtType StmtsType) {
   OptionalStmtList Result;
 
   // The last statement is always followed by the start of the block.
   while (!isNextTokenKind(Kind::BlockBegin)) {
-    ASSIGN_OR_RETURN(SingleParse, parseSingleOptionalStatement(IsExtended));
+    ASSIGN_OR_RETURN(SingleParse, parseSingleOptionalStatement(StmtsType));
     Result.addStmt(std::move(*SingleParse));
   }
 
@@ -334,7 +334,7 @@ Expected<OptionalStmtList> RCParser::parseOptionalStatements(bool IsExtended) {
 }
 
 Expected<std::unique_ptr<OptionalStmt>>
-RCParser::parseSingleOptionalStatement(bool IsExtended) {
+RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
   ASSIGN_OR_RETURN(TypeToken, readIdentifier());
   if (TypeToken->equals_lower("CHARACTERISTICS"))
     return parseCharacteristicsStmt();
@@ -343,11 +343,11 @@ RCParser::parseSingleOptionalStatement(bool IsExtended) {
   if (TypeToken->equals_lower("VERSION"))
     return parseVersionStmt();
 
-  if (IsExtended) {
+  if (StmtsType != OptStmtType::BasicStmt) {
     if (TypeToken->equals_lower("CAPTION"))
       return parseCaptionStmt();
     if (TypeToken->equals_lower("FONT"))
-      return parseFontStmt();
+      return parseFontStmt(StmtsType);
     if (TypeToken->equals_lower("STYLE"))
       return parseStyleStmt();
   }
@@ -401,8 +401,9 @@ RCParser::ParseType RCParser::parseDialogResource(bool IsExtended) {
     HelpID = *HelpIDResult;
   }
 
-  ASSIGN_OR_RETURN(OptStatements,
-                   parseOptionalStatements(/*UseExtendedStmts = */ true));
+  ASSIGN_OR_RETURN(OptStatements, parseOptionalStatements(
+                                      IsExtended ? OptStmtType::DialogExStmt
+                                                 : OptStmtType::DialogStmt));
 
   assert(isNextTokenKind(Kind::BlockBegin) &&
          "parseOptionalStatements, when successful, halts on BlockBegin.");
@@ -666,11 +667,30 @@ RCParser::ParseOptionType RCParser::parseCaptionStmt() {
   return llvm::make_unique<CaptionStmt>(*Arg);
 }
 
-RCParser::ParseOptionType RCParser::parseFontStmt() {
+RCParser::ParseOptionType RCParser::parseFontStmt(OptStmtType DialogType) {
+  assert(DialogType != OptStmtType::BasicStmt);
+
   ASSIGN_OR_RETURN(SizeResult, readInt());
   RETURN_IF_ERROR(consumeType(Kind::Comma));
   ASSIGN_OR_RETURN(NameResult, readString());
-  return llvm::make_unique<FontStmt>(*SizeResult, *NameResult);
+
+  // Default values for the optional arguments.
+  uint32_t FontWeight = 0;
+  bool FontItalic = false;
+  uint32_t FontCharset = 1;
+  if (DialogType == OptStmtType::DialogExStmt) {
+    if (consumeOptionalType(Kind::Comma)) {
+      ASSIGN_OR_RETURN(Args, readIntsWithCommas(/* min = */ 0, /* max = */ 3));
+      if (Args->size() >= 1)
+        FontWeight = (*Args)[0];
+      if (Args->size() >= 2)
+        FontItalic = (*Args)[1] != 0;
+      if (Args->size() >= 3)
+        FontCharset = (*Args)[2];
+    }
+  }
+  return llvm::make_unique<FontStmt>(*SizeResult, *NameResult, FontWeight,
+                                     FontItalic, FontCharset);
 }
 
 RCParser::ParseOptionType RCParser::parseStyleStmt() {

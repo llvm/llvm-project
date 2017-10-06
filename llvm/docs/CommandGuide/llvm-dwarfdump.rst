@@ -84,6 +84,11 @@ OPTIONS
             Only recurse to a maximum depth of <n> when dumping debug info
             entries.
 
+.. option:: --statistics
+
+            Collect debug info quality metrics and print the results
+            as machine-readable single-line JSON output.
+
 .. option:: -x, --regex
 
             Treat any <pattern> strings as regular expressions when searching

@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-none %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t
+# RUN: ld.lld --hash-style=sysv -shared %t.o -o %t
 # RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-readobj -elf-output-style=GNU %t -t | FileCheck %s --check-prefix=SYM
 

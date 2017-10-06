@@ -208,8 +208,8 @@ define float @f11(float %a, float %b, float %c, float *%dest1, float *%dest2) {
 ; CHECK-LABEL: f11:
 ; CHECK: aebr %f0, %f2
 ; CHECK-NEXT: sebr %f4, %f0
-; CHECK-NEXT: ste %f4, 0(%r2)
-; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-DAG: ste %f4, 0(%r2)
+; CHECK-DAG: ltebr %f0, %f0
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:

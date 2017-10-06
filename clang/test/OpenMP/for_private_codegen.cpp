@@ -52,6 +52,8 @@ int main() {
   for (int i = 0; i < 2; ++i) {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
     // LAMBDA: [[G_PRIVATE_ADDR:%.+]] = alloca double,
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = alloca double,
+    // LAMBDA: [[G1_PRIVATE_REF:%.+]] = alloca double*,
     // LAMBDA: [[SVAR_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[SFVAR_PRIVATE_ADDR:%.+]] = alloca float,
     g = 1;
@@ -60,13 +62,18 @@ int main() {
     sfvar = 4.0;
     // LAMBDA: call {{.*}}void @__kmpc_for_static_init_4(
     // LAMBDA: store double 1.0{{.+}}, double* [[G_PRIVATE_ADDR]],
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load double*, double** [[G1_PRIVATE_REF]],
+    // LAMBDA: store volatile double 1.0{{.+}}, double* [[G1_PRIVATE_ADDR]],
     // LAMBDA: store i{{[0-9]+}} 3, i{{[0-9]+}}* [[SVAR_PRIVATE_ADDR]],
     // LAMBDA: store float 4.0{{.+}}, float* [[SFVAR_PRIVATE_ADDR]],
     // LAMBDA: [[G_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
     // LAMBDA: store double* [[G_PRIVATE_ADDR]], double** [[G_PRIVATE_ADDR_REF]]
-    // LAMBDA: [[SVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load double*, double** [[G1_PRIVATE_REF]],
+    // LAMBDA: store double* [[G1_PRIVATE_ADDR]], double** [[G1_PRIVATE_ADDR_REF]]
+    // LAMBDA: [[SVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
     // LAMBDA: store i{{[0-9]+}}* [[SVAR_PRIVATE_ADDR]], i{{[0-9]+}}** [[SVAR_PRIVATE_ADDR_REF]]
-    // LAMBDA: [[SFVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+    // LAMBDA: [[SFVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
     // LAMBDA: store float* [[SFVAR_PRIVATE_ADDR]], float** [[SFVAR_PRIVATE_ADDR_REF]]
     // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
     // LAMBDA: call {{.*}}void @__kmpc_for_static_fini(
@@ -81,10 +88,13 @@ int main() {
       // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
       // LAMBDA: [[G_REF:%.+]] = load double*, double** [[G_PTR_REF]]
       // LAMBDA: store double 2.0{{.+}}, double* [[G_REF]]
-      // LAMBDA: [[SVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_REF:%.+]] = load double*, double** [[G1_PTR_REF]]
+      // LAMBDA: store double 2.0{{.+}}, double* [[G1_REF]]
+      // LAMBDA: [[SVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
       // LAMBDA: [[SVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SVAR_PTR_REF]]
       // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SVAR_REF]]
-      // LAMBDA: [[SFVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+      // LAMBDA: [[SFVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
       // LAMBDA: [[SFVAR_REF:%.+]] = load float*, float** [[SFVAR_PTR_REF]]
       // LAMBDA: store float 8.0{{.+}}, float* [[SFVAR_REF]]
     }();

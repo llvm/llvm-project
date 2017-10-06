@@ -359,65 +359,126 @@ std::error_code is_local(int FD, bool &Result) {
   return is_local_internal(FinalPath, Result);
 }
 
-std::error_code rename(const Twine &from, const Twine &to) {
+static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
+                                       bool ReplaceIfExists) {
+  SmallVector<wchar_t, 0> ToWide;
+  if (auto EC = widenPath(To, ToWide))
+    return EC;
+
+  std::vector<char> RenameInfoBuf(sizeof(FILE_RENAME_INFO) - sizeof(wchar_t) +
+                                  (ToWide.size() * sizeof(wchar_t)));
+  FILE_RENAME_INFO &RenameInfo =
+      *reinterpret_cast<FILE_RENAME_INFO *>(RenameInfoBuf.data());
+  RenameInfo.ReplaceIfExists = ReplaceIfExists;
+  RenameInfo.RootDirectory = 0;
+  RenameInfo.FileNameLength = ToWide.size();
+  std::copy(ToWide.begin(), ToWide.end(), RenameInfo.FileName);
+
+  if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
+                                  RenameInfoBuf.size()))
+    return mapWindowsError(GetLastError());
+
+  return std::error_code();
+}
+
+std::error_code rename(const Twine &From, const Twine &To) {
   // Convert to utf-16.
-  SmallVector<wchar_t, 128> wide_from;
-  SmallVector<wchar_t, 128> wide_to;
-  if (std::error_code ec = widenPath(from, wide_from))
-    return ec;
-  if (std::error_code ec = widenPath(to, wide_to))
-    return ec;
+  SmallVector<wchar_t, 128> WideFrom;
+  SmallVector<wchar_t, 128> WideTo;
+  if (std::error_code EC = widenPath(From, WideFrom))
+    return EC;
+  if (std::error_code EC = widenPath(To, WideTo))
+    return EC;
 
-  std::error_code ec = std::error_code();
+  ScopedFileHandle FromHandle;
+  // Retry this a few times to defeat badly behaved file system scanners.
+  for (unsigned Retry = 0; Retry != 200; ++Retry) {
+    if (Retry != 0)
+      ::Sleep(10);
+    FromHandle =
+        ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FromHandle)
+      break;
+  }
+  if (!FromHandle)
+    return mapWindowsError(GetLastError());
 
-  // Retry while we see recoverable errors.
-  // System scanners (eg. indexer) might open the source file when it is written
-  // and closed.
+  // We normally expect this loop to succeed after a few iterations. If it
+  // requires more than 200 tries, it's more likely that the failures are due to
+  // a true error, so stop trying.
+  for (unsigned Retry = 0; Retry != 200; ++Retry) {
+    auto EC = rename_internal(FromHandle, To, true);
+    if (!EC || EC != errc::permission_denied)
+      return EC;
 
-  bool TryReplace = true;
-
-  for (int i = 0; i < 2000; i++) {
-    if (i > 0)
-      ::Sleep(1);
-
-    if (TryReplace) {
-      // Try ReplaceFile first, as it is able to associate a new data stream
-      // with the destination even if the destination file is currently open.
-      if (::ReplaceFileW(wide_to.data(), wide_from.data(), NULL, 0, NULL, NULL))
-        return std::error_code();
-
-      DWORD ReplaceError = ::GetLastError();
-      ec = mapWindowsError(ReplaceError);
-
-      // If ReplaceFileW returned ERROR_UNABLE_TO_MOVE_REPLACEMENT or
-      // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2, retry but only use MoveFileExW().
-      if (ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT ||
-          ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) {
-        TryReplace = false;
+    // The destination file probably exists and is currently open in another
+    // process, either because the file was opened without FILE_SHARE_DELETE or
+    // it is mapped into memory (e.g. using MemoryBuffer). Rename it in order to
+    // move it out of the way of the source file. Use FILE_FLAG_DELETE_ON_CLOSE
+    // to arrange for the destination file to be deleted when the other process
+    // closes it.
+    ScopedFileHandle ToHandle(
+        ::CreateFileW(WideTo.begin(), GENERIC_READ | DELETE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, NULL));
+    if (!ToHandle) {
+      auto EC = mapWindowsError(GetLastError());
+      // Another process might have raced with us and moved the existing file
+      // out of the way before we had a chance to open it. If that happens, try
+      // to rename the source file again.
+      if (EC == errc::no_such_file_or_directory)
         continue;
-      }
-      // If ReplaceFileW returned ERROR_UNABLE_TO_REMOVE_REPLACED, retry
-      // using ReplaceFileW().
-      if (ReplaceError == ERROR_UNABLE_TO_REMOVE_REPLACED)
-        continue;
-      // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
-      // MoveFileEx can handle this case.
-      if (ReplaceError != ERROR_ACCESS_DENIED &&
-          ReplaceError != ERROR_FILE_NOT_FOUND &&
-          ReplaceError != ERROR_SHARING_VIOLATION)
-        break;
+      return EC;
     }
 
-    if (::MoveFileExW(wide_from.begin(), wide_to.begin(),
-                      MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
-      return std::error_code();
+    BY_HANDLE_FILE_INFORMATION FI;
+    if (!GetFileInformationByHandle(ToHandle, &FI))
+      return mapWindowsError(GetLastError());
 
-    DWORD MoveError = ::GetLastError();
-    ec = mapWindowsError(MoveError);
-    if (MoveError != ERROR_ACCESS_DENIED) break;
+    // Try to find a unique new name for the destination file.
+    for (unsigned UniqueId = 0; UniqueId != 200; ++UniqueId) {
+      std::string TmpFilename = (To + ".tmp" + utostr(UniqueId)).str();
+      if (auto EC = rename_internal(ToHandle, TmpFilename, false)) {
+        if (EC == errc::file_exists || EC == errc::permission_denied) {
+          // Again, another process might have raced with us and moved the file
+          // before we could move it. Check whether this is the case, as it
+          // might have caused the permission denied error. If that was the
+          // case, we don't need to move it ourselves.
+          ScopedFileHandle ToHandle2(::CreateFileW(
+              WideTo.begin(), 0,
+              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+          if (!ToHandle2) {
+            auto EC = mapWindowsError(GetLastError());
+            if (EC == errc::no_such_file_or_directory)
+              break;
+            return EC;
+          }
+          BY_HANDLE_FILE_INFORMATION FI2;
+          if (!GetFileInformationByHandle(ToHandle2, &FI2))
+            return mapWindowsError(GetLastError());
+          if (FI.nFileIndexHigh != FI2.nFileIndexHigh ||
+              FI.nFileIndexLow != FI2.nFileIndexLow ||
+              FI.dwVolumeSerialNumber != FI2.dwVolumeSerialNumber)
+            break;
+          continue;
+        }
+        return EC;
+      }
+      break;
+    }
+
+    // Okay, the old destination file has probably been moved out of the way at
+    // this point, so try to rename the source file again. Still, another
+    // process might have raced with us to create and open the destination
+    // file, so we need to keep doing this until we succeed.
   }
 
-  return ec;
+  // The most likely root cause.
+  return errc::permission_denied;
 }
 
 std::error_code resize_file(int FD, uint64_t Size) {

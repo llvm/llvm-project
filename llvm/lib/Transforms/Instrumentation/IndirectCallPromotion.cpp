@@ -461,11 +461,13 @@ static Instruction *insertCallRetCast(const Instruction *Inst,
 // MergeBB is the bottom BB of the if-then-else-diamond after the
 // transformation. For invoke instruction, the edges from DirectCallBB and
 // IndirectCallBB to MergeBB are removed before this call (during
-// createIfThenElse).
+// createIfThenElse). Stores the pointer to the Instruction that cast
+// the direct call in \p CastInst.
 static Instruction *createDirectCallInst(const Instruction *Inst,
                                          Function *DirectCallee,
                                          BasicBlock *DirectCallBB,
-                                         BasicBlock *MergeBB) {
+                                         BasicBlock *MergeBB,
+                                         Instruction *&CastInst) {
   Instruction *NewInst = Inst->clone();
   if (CallInst *CI = dyn_cast<CallInst>(NewInst)) {
     CI->setCalledFunction(DirectCallee);
@@ -499,7 +501,8 @@ static Instruction *createDirectCallInst(const Instruction *Inst,
     }
   }
 
-  return insertCallRetCast(Inst, NewInst, DirectCallee);
+  CastInst = insertCallRetCast(Inst, NewInst, DirectCallee);
+  return NewInst;
 }
 
 // Create a PHI to unify the return values of calls.
@@ -559,15 +562,17 @@ Instruction *llvm::promoteIndirectCall(Instruction *Inst,
   createIfThenElse(Inst, DirectCallee, Count, TotalCount, &DirectCallBB,
                    &IndirectCallBB, &MergeBB);
 
+  // If the return type of the NewInst is not the same as the Inst, a CastInst
+  // is needed for type casting. Otherwise CastInst is the same as NewInst.
+  Instruction *CastInst = nullptr;
   Instruction *NewInst =
-      createDirectCallInst(Inst, DirectCallee, DirectCallBB, MergeBB);
+      createDirectCallInst(Inst, DirectCallee, DirectCallBB, MergeBB, CastInst);
 
   if (AttachProfToDirectCall) {
     SmallVector<uint32_t, 1> Weights;
     Weights.push_back(Count);
     MDBuilder MDB(NewInst->getContext());
-    if (Instruction *DI = dyn_cast<Instruction>(NewInst->stripPointerCasts()))
-      DI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+    NewInst->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
   }
 
   // Move Inst from MergeBB to IndirectCallBB.
@@ -589,10 +594,10 @@ Instruction *llvm::promoteIndirectCall(Instruction *Inst,
     // We don't need to update the operand from NormalDest for DirectCallBB.
     // Pass nullptr here.
     fixupPHINodeForNormalDest(Inst, II->getNormalDest(), MergeBB,
-                              IndirectCallBB, NewInst);
+                              IndirectCallBB, CastInst);
   }
 
-  insertCallRetPHI(Inst, NewInst, DirectCallee);
+  insertCallRetPHI(Inst, CastInst, DirectCallee);
 
   DEBUG(dbgs() << "\n== Basic Blocks After ==\n");
   DEBUG(dbgs() << *BB << *DirectCallBB << *IndirectCallBB << *MergeBB << "\n");

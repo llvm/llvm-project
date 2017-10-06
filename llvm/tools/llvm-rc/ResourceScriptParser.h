@@ -124,12 +124,14 @@ private:
   //
   // Ref (to the list of all optional statements):
   //    msdn.microsoft.com/en-us/library/windows/desktop/aa381002(v=vs.85).aspx
+  enum class OptStmtType { BasicStmt, DialogStmt, DialogExStmt };
+
   Expected<OptionalStmtList>
-  parseOptionalStatements(bool UseExtendedStatements = false);
+  parseOptionalStatements(OptStmtType StmtsType = OptStmtType::BasicStmt);
 
   // Read a single optional statement.
   Expected<std::unique_ptr<OptionalStmt>>
-  parseSingleOptionalStatement(bool UseExtendedStatements = false);
+  parseSingleOptionalStatement(OptStmtType StmtsType = OptStmtType::BasicStmt);
 
   // Top-level resource parsers.
   ParseType parseLanguageResource();
@@ -163,7 +165,7 @@ private:
   ParseOptionType parseCharacteristicsStmt();
   ParseOptionType parseVersionStmt();
   ParseOptionType parseCaptionStmt();
-  ParseOptionType parseFontStmt();
+  ParseOptionType parseFontStmt(OptStmtType DialogType);
   ParseOptionType parseStyleStmt();
 
   // Raises an error. If IsAlreadyRead = false (default), this complains about

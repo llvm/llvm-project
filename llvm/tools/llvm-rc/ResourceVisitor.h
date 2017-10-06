@@ -21,8 +21,11 @@ namespace rc {
 
 class RCResource;
 
+class CaptionStmt;
 class CharacteristicsStmt;
+class FontStmt;
 class LanguageResource;
+class StyleStmt;
 class VersionStmt;
 
 class Visitor {
@@ -33,8 +36,11 @@ public:
   virtual Error visitHTMLResource(const RCResource *) = 0;
   virtual Error visitMenuResource(const RCResource *) = 0;
 
+  virtual Error visitCaptionStmt(const CaptionStmt *) = 0;
   virtual Error visitCharacteristicsStmt(const CharacteristicsStmt *) = 0;
+  virtual Error visitFontStmt(const FontStmt *) = 0;
   virtual Error visitLanguageStmt(const LanguageResource *) = 0;
+  virtual Error visitStyleStmt(const StyleStmt *) = 0;
   virtual Error visitVersionStmt(const VersionStmt *) = 0;
 
   virtual ~Visitor() {}

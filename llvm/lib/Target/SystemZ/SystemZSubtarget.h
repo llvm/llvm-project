@@ -91,6 +91,11 @@ public:
     return &TSInfo;
   }
 
+  // True if the subtarget should run MachineScheduler after aggressive
+  // coalescing. This currently replaces the SelectionDAG scheduler with the
+  // "source" order scheduler.
+  bool enableMachineScheduler() const override { return true; }
+
   // This is important for reducing register pressure in vector code.
   bool useAA() const override { return true; }
 

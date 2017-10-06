@@ -133,8 +133,8 @@ define i64 @f9(i64 %dummy, i64 %base, i64 %index, i64 %b) {
 ; Check that constants are handled.
 define i64 @f10(i64 %dummy, i64 *%ptr) {
 ; CHECK-LABEL: f10:
-; CHECK: lghi [[LIMIT:%r[0-9]+]], 42
-; CHECK: lg %r2, 0(%r3)
+; CHECK-DAG: lghi [[LIMIT:%r[0-9]+]], 42
+; CHECK-DAG: lg %r2, 0(%r3)
 ; CHECK: j [[LOOP:\.[^:]*]]
 ; CHECK: [[BB1:\.[^:]*]]:
 ; CHECK: csg %r2, [[NEW:%r[0-9]+]], 0(%r3)
