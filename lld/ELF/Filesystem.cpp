@@ -13,9 +13,9 @@
 
 #include "Filesystem.h"
 #include "Config.h"
-#include "llvm/Support/FileSystem.h"
+#include "Threads.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include <thread>
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 
@@ -55,7 +55,7 @@ void elf::unlinkAsync(StringRef Path) {
   }
 
   // Remove TempPath in background.
-  std::thread([=] { ::remove(TempPath.str().str().c_str()); }).detach();
+  runBackground([=] { ::remove(TempPath.str().str().c_str()); });
 }
 
 // Simulate file creation to see if Path is writable.

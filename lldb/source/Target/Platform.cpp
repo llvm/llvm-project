@@ -1878,6 +1878,12 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_ppc_opcode);
   } break;
 
+  case llvm::Triple::ppc64le: {
+    static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+    trap_opcode = g_ppc64le_opcode;
+    trap_opcode_size = sizeof(g_ppc64le_opcode);
+  } break;
+
   case llvm::Triple::x86:
   case llvm::Triple::x86_64: {
     static const uint8_t g_i386_opcode[] = {0xCC};

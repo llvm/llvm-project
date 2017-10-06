@@ -242,6 +242,8 @@ public:
                      bool repeat_on_empty_command = true,
                      bool no_context_switching = false);
 
+  bool WasInterrupted() const;
+
   //------------------------------------------------------------------
   /// Execute a list of commands in sequence.
   ///
@@ -521,6 +523,25 @@ private:
   void FindCommandsForApropos(llvm::StringRef word, StringList &commands_found,
                               StringList &commands_help,
                               CommandObject::CommandMap &command_map);
+
+  // An interruptible wrapper around the stream output
+  void PrintCommandOutput(Stream &stream, llvm::StringRef str);
+
+  // A very simple state machine which models the command handling transitions
+  enum class CommandHandlingState {
+    eIdle,
+    eInProgress,
+    eInterrupted,
+  };
+
+  std::atomic<CommandHandlingState> m_command_state{
+      CommandHandlingState::eIdle};
+
+  int m_iohandler_nesting_level = 0;
+
+  void StartHandlingCommand();
+  void FinishHandlingCommand();
+  bool InterruptCommand();
 
   Debugger &m_debugger; // The debugger session that this interpreter is
                         // associated with

@@ -1170,7 +1170,7 @@ TestPromptFormats (StackFrame *frame)
         return;
 
     StreamString s;
-    const char *prompt_format =         
+    const char *prompt_format =
     "{addr = '${addr}'\n}"
     "{addr-file-or-load = '${addr-file-or-load}'\n}"
     "{current-pc-arrow = '${current-pc-arrow}'\n}"
