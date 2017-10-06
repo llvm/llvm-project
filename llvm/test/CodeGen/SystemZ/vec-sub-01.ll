@@ -52,12 +52,11 @@ define <4 x float> @f5(<4 x float> %val1, <4 x float> %val2) {
 ; CHECK-DAG: vrepf %v[[C2:[0-5]]], %v[[A2]], 2
 ; CHECK-DAG: vrepf %v[[D1:[0-5]]], %v[[A1]], 3
 ; CHECK-DAG: vrepf %v[[D2:[0-5]]], %v[[A2]], 3
-; CHECK-DAG: ldr %f[[A1copy:[0-5]]], %f[[A1]]
-; CHECK-DAG: sebr %f[[A1copy]], %f[[A2]]
+; CHECK-DAG: sebr %f[[A1]], %f[[A2]]
 ; CHECK-DAG: sebr %f[[B1]], %f[[B2]]
 ; CHECK-DAG: sebr %f[[C1]], %f[[C2]]
 ; CHECK-DAG: sebr %f[[D1]], %f[[D2]]
-; CHECK-DAG: vmrhf [[HIGH:%v[0-9]+]], %v[[A1copy]], %v[[B1]]
+; CHECK-DAG: vmrhf [[HIGH:%v[0-9]+]], %v[[A1]], %v[[B1]]
 ; CHECK-DAG: vmrhf [[LOW:%v[0-9]+]], %v[[C1]], %v[[D1]]
 ; CHECK: vmrhg %v24, [[HIGH]], [[LOW]]
 ; CHECK: br %r14

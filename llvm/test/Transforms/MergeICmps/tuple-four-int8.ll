@@ -20,54 +20,54 @@ define zeroext i1 @opeq(
     %"class.std::tuple"* nocapture readonly dereferenceable(4) %a,
     %"class.std::tuple"* nocapture readonly dereferenceable(4) %b) local_unnamed_addr #1 {
 entry:
-  %0 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %a, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %add.ptr.i.i.i.i.i = getelementptr inbounds i8, i8* %0, i64 3
-  %1 = load i8, i8* %add.ptr.i.i.i.i.i, align 1
-  %2 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %b, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
-  %add.ptr.i.i.i6.i.i = getelementptr inbounds i8, i8* %2, i64 3
-  %3 = load i8, i8* %add.ptr.i.i.i6.i.i, align 1
-  %cmp.i.i = icmp eq i8 %1, %3
-  br i1 %cmp.i.i, label %land.rhs.i.i, label %opeq.exit
+  %a.base = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %a, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
+  %a.elem3.addr = getelementptr inbounds i8, i8* %a.base, i64 3
+  %0 = load i8, i8* %a.elem3.addr, align 1
+  %b.base = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %b, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0
+  %b.elem3.addr = getelementptr inbounds i8, i8* %b.base, i64 3
+  %1 = load i8, i8* %b.elem3.addr, align 1
+  %cmp.elem3 = icmp eq i8 %0, %1
+  br i1 %cmp.elem3, label %land.elem2, label %opeq.exit
 
-land.rhs.i.i:
-  %add.ptr.i.i.i.i.i.i = getelementptr inbounds i8, i8* %0, i64 2
-  %4 = load i8, i8* %add.ptr.i.i.i.i.i.i, align 1
-  %add.ptr.i.i.i6.i.i.i = getelementptr inbounds i8, i8* %2, i64 2
-  %5 = load i8, i8* %add.ptr.i.i.i6.i.i.i, align 1
-  %cmp.i.i.i = icmp eq i8 %4, %5
-  br i1 %cmp.i.i.i, label %land.rhs.i.i.i, label %opeq.exit
+land.elem2:
+  %a.elem2.addr = getelementptr inbounds i8, i8* %a.base, i64 2
+  %2 = load i8, i8* %a.elem2.addr, align 1
+  %b.elem2.addr = getelementptr inbounds i8, i8* %b.base, i64 2
+  %3 = load i8, i8* %b.elem2.addr, align 1
+  %cmp.elem2 = icmp eq i8 %2, %3
+  br i1 %cmp.elem2, label %land.elem1, label %opeq.exit
 
-land.rhs.i.i.i:
-  %add.ptr.i.i.i.i.i.i.i = getelementptr inbounds i8, i8* %0, i64 1
-  %6 = load i8, i8* %add.ptr.i.i.i.i.i.i.i, align 1
-  %add.ptr.i.i.i6.i.i.i.i = getelementptr inbounds i8, i8* %2, i64 1
-  %7 = load i8, i8* %add.ptr.i.i.i6.i.i.i.i, align 1
-  %cmp.i.i.i.i = icmp eq i8 %6, %7
-  br i1 %cmp.i.i.i.i, label %land.rhs.i.i.i.i, label %opeq.exit
+land.elem1:
+  %a.elem1.addr = getelementptr inbounds i8, i8* %a.base, i64 1
+  %4 = load i8, i8* %a.elem1.addr, align 1
+  %b.elem1.addr = getelementptr inbounds i8, i8* %b.base, i64 1
+  %5 = load i8, i8* %b.elem1.addr, align 1
+  %cmp.elem1 = icmp eq i8 %4, %5
+  br i1 %cmp.elem1, label %land.elem0, label %opeq.exit
 
-land.rhs.i.i.i.i:
-  %8 = load i8, i8* %0, align 1
-  %9 = load i8, i8* %2, align 1
-  %cmp.i.i.i.i.i = icmp eq i8 %8, %9
+land.elem0:
+  %6 = load i8, i8* %a.base, align 1
+  %7 = load i8, i8* %b.base, align 1
+  %cmp.elem0 = icmp eq i8 %6, %7
   br label %opeq.exit
 
 opeq.exit:
-  %10 = phi i1 [ false, %entry ], [ false, %land.rhs.i.i ], [ false, %land.rhs.i.i.i ], [ %cmp.i.i.i.i.i, %land.rhs.i.i.i.i ]
-  ret i1 %10
+  %8 = phi i1 [ false, %entry ], [ false, %land.elem2 ], [ false, %land.elem1 ], [ %cmp.elem0, %land.elem0 ]
+  ret i1 %8
 ; CHECK-LABEL: @opeq(
 ; The entry block is kept as is, but the next block is now the merged comparison
 ; block for bytes [1,2] or the block for the head.
 ; CHECK:     entry
-; CHECK:     br i1 %cmp.i.i, label %land.rhs.i.i.i{{(.i)?}}, label %opeq.exit
+; CHECK:     br i1 %cmp.elem3, label %land.elem{{[01]}}, label %opeq.exit
 ; The two 1 byte loads and compares at offset 1 are replaced with a single
 ; 2-byte memcmp.
-; CHECK:     land.rhs.i.i.i
+; CHECK:     land.elem1
 ; CHECK:     @memcmp({{.*}}2)
 ; CHECK:     icmp eq {{.*}} 0
 ; In the end we have three blocks.
 ; CHECK: phi i1
 ; CHECK-SAME %entry
-; CHECK-SAME %land.rhs.i.i.i.i
-; CHECK-SAME %land.rhs.i.i.i
+; CHECK-SAME %land.elem0
+; CHECK-SAME %land.elem1
 }
 

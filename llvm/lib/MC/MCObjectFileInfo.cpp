@@ -214,6 +214,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       Ctx->getMachOSection("__DWARF", "__apple_types", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "types_begin");
 
+  DwarfSwiftASTSection =
+      Ctx->getMachOSection("__DWARF", "__swift_ast", MachO::S_ATTR_DEBUG,
+                           SectionKind::getMetadata());
+
   DwarfAbbrevSection =
       Ctx->getMachOSection("__DWARF", "__debug_abbrev", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "section_abbrev");

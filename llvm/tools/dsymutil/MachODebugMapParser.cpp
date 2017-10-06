@@ -135,7 +135,8 @@ void MachODebugMapParser::switchToNewDebugMapObject(
                    Err.message() + "\n");
   }
 
-  CurrentDebugMapObject = &Result->addDebugMapObject(Path, Timestamp);
+  CurrentDebugMapObject =
+      &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
   loadCurrentObjectFileSymbols(*ErrOrAchObj);
 }
 
@@ -349,6 +350,13 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   if (Type == MachO::N_OSO)
     return switchToNewDebugMapObject(Name, sys::toTimePoint(Value));
 
+  if (Type == MachO::N_AST) {
+    SmallString<80> Path(PathPrefix);
+    sys::path::append(Path, Name);
+    Result->addDebugMapObject(Path, sys::toTimePoint(Value), Type);
+    return;
+  }
+
   // If the last N_OSO object file wasn't found,
   // CurrentDebugMapObject will be null. Do not update anything
   // until we find the next valid N_OSO entry.
@@ -474,7 +482,9 @@ void MachODebugMapParser::loadMainBinarySymbols(
     // are the only ones that need to be queried because the address
     // of common data won't be described in the debug map. All other
     // addresses should be fetched for the debug map.
-    if (!(Sym.getFlags() & SymbolRef::SF_Global))
+    uint8_t SymType =
+        MainBinary.getSymbolTableEntry(Sym.getRawDataRefImpl()).n_type;
+    if (!(SymType & (MachO::N_EXT | MachO::N_PEXT)))
       continue;
     Expected<section_iterator> SectionOrErr = Sym.getSection();
     if (!SectionOrErr) {

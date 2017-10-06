@@ -36,9 +36,9 @@ define void @f7(fp128 *%cptr, fp128 *%aptr, float %bf) {
 ; CHECK-LABEL: f7:
 ; CHECK: vl [[REG1:%v[0-7]+]], 0(%r3)
 ; CHECK: tmlh
-; CHECK: wflnxb [[REG1]], [[REG1]]
-; CHECK: wflpxb [[REG1]], [[REG1]]
-; CHECK: vst [[REG1]], 0(%r2)
+; CHECK: wflnxb [[REG2:%v[0-9]+]], [[REG1]]
+; CHECK: wflpxb [[REG2]], [[REG1]]
+; CHECK: vst [[REG2]], 0(%r2)
 ; CHECK: br %r14
   %a = load volatile fp128, fp128 *%aptr
   %b = fpext float %bf to fp128
@@ -52,9 +52,9 @@ define void @f8(fp128 *%cptr, fp128 *%aptr, double %bd) {
 ; CHECK-LABEL: f8:
 ; CHECK: vl [[REG1:%v[0-7]+]], 0(%r3)
 ; CHECK: tmhh
-; CHECK: wflnxb [[REG1]], [[REG1]]
-; CHECK: wflpxb [[REG1]], [[REG1]]
-; CHECK: vst [[REG1]], 0(%r2)
+; CHECK: wflnxb [[REG2:%v[0-9]+]], [[REG1]]
+; CHECK: wflpxb [[REG2]], [[REG1]]
+; CHECK: vst [[REG2]], 0(%r2)
 ; CHECK: br %r14
   %a = load volatile fp128, fp128 *%aptr
   %b = fpext double %bd to fp128

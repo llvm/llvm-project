@@ -218,6 +218,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_AND:
   case G_OR:
   case G_XOR:
+  case G_LSHR:
+  case G_ASHR:
+  case G_SHL:
   case G_SDIV:
   case G_UDIV:
   case G_SEXT:

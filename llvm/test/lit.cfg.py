@@ -11,7 +11,8 @@ import subprocess
 import lit.util
 import lit.formats
 from lit.llvm import llvm_config
-from lit.llvm import ToolFilter
+from lit.llvm.subst import FindTool
+from lit.llvm.subst import ToolSubst
 
 # name: The name of this test suite.
 config.name = 'LLVM'
@@ -38,7 +39,8 @@ config.test_exec_root = os.path.join(config.llvm_obj_root, 'test')
 llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
 
 # Propagate some variables from the host environment.
-llvm_config.with_system_environment(['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP', 'ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
+llvm_config.with_system_environment(
+    ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP', 'ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
 
 
 # Set up OCAMLPATH to include newly built OCaml libraries.
@@ -50,57 +52,61 @@ llvm_config.with_environment('OCAMLPATH', top_ocaml_lib, append_path=True)
 llvm_config.with_environment('OCAMLPATH', llvm_ocaml_lib, append_path=True)
 
 llvm_config.with_system_environment('CAML_LD_LIBRARY_PATH')
-llvm_config.with_environment('CAML_LD_LIBRARY_PATH', llvm_ocaml_lib, append_path=True)
+llvm_config.with_environment(
+    'CAML_LD_LIBRARY_PATH', llvm_ocaml_lib, append_path=True)
 
 # Set up OCAMLRUNPARAM to enable backtraces in OCaml tests.
 llvm_config.with_environment('OCAMLRUNPARAM', 'b')
 
 # Provide the path to asan runtime lib 'libclang_rt.asan_osx_dynamic.dylib' if
 # available. This is darwin specific since it's currently only needed on darwin.
+
+
 def get_asan_rtlib():
-    if not "Address" in config.llvm_use_sanitizer or \
-       not "Darwin" in config.host_os or \
-       not "x86" in config.host_triple:
-        return ""
+    if not 'Address' in config.llvm_use_sanitizer or \
+       not 'Darwin' in config.host_os or \
+       not 'x86' in config.host_triple:
+        return ''
     try:
         import glob
     except:
-        print("glob module not found, skipping get_asan_rtlib() lookup")
-        return ""
+        print('glob module not found, skipping get_asan_rtlib() lookup')
+        return ''
     # The libclang_rt.asan_osx_dynamic.dylib path is obtained using the relative
     # path from the host cc.
-    host_lib_dir = os.path.join(os.path.dirname(config.host_cc), "../lib")
+    host_lib_dir = os.path.join(os.path.dirname(config.host_cc), '../lib')
     asan_dylib_dir_pattern = host_lib_dir + \
-        "/clang/*/lib/darwin/libclang_rt.asan_osx_dynamic.dylib"
+        '/clang/*/lib/darwin/libclang_rt.asan_osx_dynamic.dylib'
     found_dylibs = glob.glob(asan_dylib_dir_pattern)
     if len(found_dylibs) != 1:
-        return ""
+        return ''
     return found_dylibs[0]
 
-lli = 'lli'
+
+llvm_config.use_default_substitutions()
+
+# Add site-specific substitutions.
+config.substitutions.append(('%llvmshlibdir', config.llvm_shlib_dir))
+config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
+config.substitutions.append(('%exeext', config.llvm_exe_ext))
+config.substitutions.append(('%host_cc', config.host_cc))
+
+
+lli_args = []
 # The target triple used by default by lli is the process target triple (some
 # triple appropriate for generating code for the current process) but because
 # we don't support COFF in MCJIT well enough for the tests, force ELF format on
 # Windows.  FIXME: the process target triple should be used here, but this is
 # difficult to obtain on Windows.
 if re.search(r'cygwin|mingw32|windows-gnu|windows-msvc|win32', config.host_triple):
-  lli += ' -mtriple='+config.host_triple+'-elf'
-config.substitutions.append( ('%lli', lli ) )
+    lli_args = ['-mtriple=' + config.host_triple + '-elf']
+
+llc_args = []
 
 # Similarly, have a macro to use llc with DWARF even when the host is win32.
-llc_dwarf = 'llc'
 if re.search(r'win32', config.target_triple):
-  llc_dwarf += ' -mtriple='+config.target_triple.replace('-win32', '-mingw32')
-config.substitutions.append( ('%llc_dwarf', llc_dwarf) )
-
-# Add site-specific substitutions.
-config.substitutions.append( ('%gold', config.gold_executable) )
-config.substitutions.append( ('%go', config.go_executable) )
-config.substitutions.append( ('%llvmshlibdir', config.llvm_shlib_dir) )
-config.substitutions.append( ('%shlibext', config.llvm_shlib_ext) )
-config.substitutions.append( ('%exeext', config.llvm_exe_ext) )
-config.substitutions.append( ('%python', config.python_executable) )
-config.substitutions.append( ('%host_cc', config.host_cc) )
+    llc_args = [' -mtriple=' +
+                config.target_triple.replace('-win32', '-mingw32')]
 
 # Provide the path to asan runtime lib if available. On darwin, this lib needs
 # to be loaded via DYLD_INSERT_LIBRARIES before libLTO.dylib in case the files
@@ -108,37 +114,29 @@ config.substitutions.append( ('%host_cc', config.host_cc) )
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-  ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
-config.substitutions.append( ('%ld64', ld64_cmd) )
+    ld64_cmd = 'DYLD_INSERT_LIBRARIES={} {}'.format(asan_rtlib, ld64_cmd)
 
-# OCaml substitutions.
-# Support tests for both native and bytecode builds.
-config.substitutions.append( ('%ocamlc',
-    "%s ocamlc -cclib -L%s %s" %
-        (config.ocamlfind_executable, config.llvm_lib_dir, config.ocaml_flags)) )
+ocamlc_command = '%s ocamlc -cclib -L%s %s' % (
+    config.ocamlfind_executable, config.llvm_lib_dir, config.ocaml_flags)
+ocamlopt_command = 'true'
 if config.have_ocamlopt:
-    config.substitutions.append( ('%ocamlopt',
-        "%s ocamlopt -cclib -L%s -cclib -Wl,-rpath,%s %s" %
-            (config.ocamlfind_executable, config.llvm_lib_dir, config.llvm_lib_dir, config.ocaml_flags)) )
-else:
-    config.substitutions.append( ('%ocamlopt', "true" ) )
+    ocamlopt_command = '%s ocamlopt -cclib -L%s -cclib -Wl,-rpath,%s %s' % (
+        config.ocamlfind_executable, config.llvm_lib_dir, config.llvm_lib_dir, config.ocaml_flags)
 
-# For each occurrence of an llvm tool name as its own word, replace it
-# with the full path to the build directory holding that tool.  This
-# ensures that we are testing the tools just built and not some random
-# tools that might happen to be in the user's PATH.  Thus this list
-# includes every tool placed in $(LLVM_OBJ_ROOT)/$(BuildMode)/bin
-# (llvm_tools_dir in lit parlance).
 
-# Avoid matching RUN line fragments that are actually part of
-# path names or options or whatever.
-# The regex is a pre-assertion to avoid matching a preceding
-# dot, hyphen, carat, or slash (.foo, -foo, etc.).  Some patterns
-# also have a post-assertion to not match a trailing hyphen (foo-).
-JUNKCHARS = r".-^/<"
+tools = [
+    ToolSubst('%lli', FindTool('lli'), post='.', extra_args=lli_args),
+    ToolSubst('%llc_dwarf', FindTool('llc'), extra_args=llc_args),
+    ToolSubst('%go', config.go_executable, unresolved='ignore'),
+    ToolSubst('%gold', config.gold_executable, unresolved='ignore'),
+    ToolSubst('%ld64', ld64_cmd, unresolved='ignore'),
+    ToolSubst('%ocamlc', ocamlc_command, unresolved='ignore'),
+    ToolSubst('%ocamlopt', ocamlopt_command, unresolved='ignore'),
+]
 
-required_tools = [
-    'lli', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
+# FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
+tools.extend([
+    'lli', 'lli-child-target', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
     'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis', 'llvm-dsymutil',
     'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-lib',
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mcmarkup',
@@ -146,37 +144,30 @@ required_tools = [
     'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-readobj',
     'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings', 'llvm-tblgen',
     'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
-    'FileCheck', 'yaml-bench', 'verify-uselistorder',
-    ToolFilter('bugpoint', post='-'),
-    ToolFilter('llc', pre=JUNKCHARS),
-    ToolFilter('llvm-symbolizer', pre=JUNKCHARS),
-    ToolFilter('opt', JUNKCHARS),
-    ToolFilter('sancov', pre=JUNKCHARS),
-    ToolFilter('sanstats', pre=JUNKCHARS),
-    # Handle these specially as they are strings searched for during testing.
-    ToolFilter(r'\| \bcount\b', verbatim=True),
-    ToolFilter(r'\| \bnot\b', verbatim=True)]
+    'yaml-bench', 'verify-uselistorder',
+    'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
 
-llvm_config.add_tool_substitutions(required_tools, config.llvm_tools_dir)
+# The following tools are optional
+tools.extend([
+    ToolSubst('llvm-go', unresolved='ignore'),
+    ToolSubst('llvm-mt', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch3', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch4', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch5', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch6', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch7', unresolved='ignore'),
+    ToolSubst('Kaleidoscope-Ch8', unresolved='ignore')])
 
-# For tools that are optional depending on the config, we won't warn
-# if they're missing.
+llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
-optional_tools = [
-    'llvm-go', 'llvm-mt', 'Kaleidoscope-Ch3', 'Kaleidoscope-Ch4',
-    'Kaleidoscope-Ch5', 'Kaleidoscope-Ch6', 'Kaleidoscope-Ch7',
-    'Kaleidoscope-Ch8']
-llvm_config.add_tool_substitutions(optional_tools, config.llvm_tools_dir,
-                                   warn_missing=False)
-
-### Targets
+# Targets
 
 config.targets = frozenset(config.targets_to_build.split())
 
 for arch in config.targets_to_build.split():
     config.available_features.add(arch.lower() + '-registered-target')
 
-### Features
+# Features
 
 # Others/can-execute.txt
 if sys.platform not in ['win32']:
@@ -195,27 +186,29 @@ if loadable_module:
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs:
-    config.available_features.add("static-libs")
+    config.available_features.add('static-libs')
 
 # Direct object generation
 if not 'hexagon' in config.target_triple:
-    config.available_features.add("object-emission")
+    config.available_features.add('object-emission')
 
 # LLVM can be configured with an empty default triple
 # Some tests are "generic" and require a valid default triple
 if config.target_triple:
-    config.available_features.add("default_triple")
+    config.available_features.add('default_triple')
 
 if lit.util.isMacOSTriple(config.target_triple):
    config.available_features.add('darwin')
 
 import subprocess
 
+
 def have_ld_plugin_support():
     if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold.so')):
         return False
 
-    ld_cmd = subprocess.Popen([config.gold_executable, '--help'], stdout = subprocess.PIPE, env={'LANG': 'C'})
+    ld_cmd = subprocess.Popen(
+        [config.gold_executable, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
 
@@ -236,21 +229,25 @@ def have_ld_plugin_support():
     if 'elf32ppc' in emulations:
         config.available_features.add('ld_emu_elf32ppc')
 
-    ld_version = subprocess.Popen([config.gold_executable, '--version'], stdout = subprocess.PIPE, env={'LANG': 'C'})
+    ld_version = subprocess.Popen(
+        [config.gold_executable, '--version'], stdout=subprocess.PIPE, env={'LANG': 'C'})
     if not 'GNU gold' in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
+
 if have_ld_plugin_support():
     config.available_features.add('ld_plugin')
+
 
 def have_ld64_plugin_support():
     if not config.llvm_tool_lto_build or config.ld64_executable == '':
         return False
 
-    ld_cmd = subprocess.Popen([config.ld64_executable, '-v'], stderr = subprocess.PIPE)
+    ld_cmd = subprocess.Popen(
+        [config.ld64_executable, '-v'], stderr=subprocess.PIPE)
     ld_out = ld_cmd.stderr.read().decode()
     ld_cmd.wait()
 
@@ -259,22 +256,23 @@ def have_ld64_plugin_support():
 
     return True
 
+
 if have_ld64_plugin_support():
     config.available_features.add('ld64_plugin')
 
 # Ask llvm-config about asserts and global-isel.
 llvm_config.feature_config(
-  [('--assertion-mode', {'ON' : 'asserts'}),
-   ('--has-global-isel', {'ON' : 'global-isel'})])
+    [('--assertion-mode', {'ON': 'asserts'}),
+     ('--has-global-isel', {'ON': 'global-isel'})])
 
 if lit.util.isMacOSTriple(config.target_triple):
     try:
         sysctl_cmd = subprocess.Popen(['sysctl', 'hw.optional.fma'],
-                                    stdout = subprocess.PIPE)
+                                      stdout=subprocess.PIPE)
     except OSError:
-        print("Could not exec sysctl")
+        print('Could not exec sysctl')
     result = sysctl_cmd.stdout.read().decode('ascii')
-    if -1 != result.find("hw.optional.fma: 1"):
+    if -1 != result.find('hw.optional.fma: 1'):
         config.available_features.add('fma3')
     sysctl_cmd.wait()
 
@@ -285,5 +283,5 @@ if not re.match(r'^x86_64.*-(mingw32|windows-gnu|win32)', config.target_triple):
 if config.have_libxar:
     config.available_features.add('xar')
 
-if config.llvm_libxml2_enabled == "1":
+if config.llvm_libxml2_enabled == '1':
     config.available_features.add('libxml2')
