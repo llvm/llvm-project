@@ -398,12 +398,11 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
       return NewPath.str().str(); // First str() to convert from SmallString to
                                   // StringRef, second to convert from StringRef
                                   // to std::string
-    
+
     // Also check NewExt in upper-case, just in case.
     llvm::sys::path::replace_extension(NewPath, NewExt.upper());
     if (FS->exists(NewPath))
       return NewPath.str().str();
-
   }
 
   return llvm::None;
