@@ -142,12 +142,12 @@
 # VERDSO-NEXT: ]
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld -shared %t.o %t2.so -o %t.so
+# RUN: ld.lld --hash-style=sysv -shared %t.o %t2.so -o %t.so
 # RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
 
 # RUN: echo "{ global: foo1; foo3; };" > %t2.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld --version-script %t2.script -shared %t.o %t2.so -o %t.so
+# RUN: ld.lld --hash-style=sysv --version-script %t2.script -shared %t.o %t2.so -o %t.so
 # RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
 
 # ALL:      DynamicSymbols [

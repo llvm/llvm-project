@@ -39,10 +39,10 @@
 # GNU-NEXT:   EntrySize: 1
 # GNU-NEXT: }
 
-# RUN: ld.lld %t -o %t.so -shared
+# RUN: ld.lld --hash-style=sysv %t -o %t.so -shared
 # RUN: llvm-readobj -sections -section-data %t.so | FileCheck -check-prefix=DATA %s
 
-# RUN: ld.lld %t2 -o %t2.so -shared
+# RUN: ld.lld --hash-style=sysv %t2 -o %t2.so -shared
 # RUN: llvm-readobj -sections -section-data %t2.so | FileCheck -check-prefix=DATA %s
 
 # DATA:      Section {

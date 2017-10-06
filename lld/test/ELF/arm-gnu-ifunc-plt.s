@@ -1,7 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf %S/Inputs/arm-shared.s -o %t1.o
 // RUN: ld.lld %t1.o --shared -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf %s -o %t.o
-// RUN: ld.lld %t.so %t.o -o %tout
+// RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump -triple=armv7a-linux-gnueabihf -d %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r -dynamic-table %tout | FileCheck %s

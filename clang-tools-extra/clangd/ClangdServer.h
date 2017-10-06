@@ -253,6 +253,18 @@ public:
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
+  /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
+  /// not None, they will used only for signature help, i.e. no diagnostics
+  /// update will be scheduled and a draft for \p File will not be updated. If
+  /// \p OverridenContents is None, contents of the current draft for \p File
+  /// will be used. If \p UsedFS is non-null, it will be overwritten by
+  /// vfs::FileSystem used for signature help. This method should only be called
+  /// for currently tracked files.
+  Tagged<SignatureHelp>
+  signatureHelp(PathRef File, Position Pos,
+                llvm::Optional<StringRef> OverridenContents = llvm::None,
+                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
   Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 
