@@ -33,7 +33,7 @@ void *test_builtin_os_log(void *buf) {
   // CHECK: %[[ARGDATA_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
   // CHECK: %[[ARGDATACAST_I:.*]] = bitcast i8* %[[ARGDATA_I]] to i64*
   // CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST_I]], align 1
-  // CHECK: tail call void (...) @clang.arc.use(%[[V0]]* %[[CALL]])
+  // CHECK: tail call void (...) @clang.arc.use(%[[TY0]]* %[[CALL]])
   // CHECK: tail call void @objc_release(i8* %[[V0]])
   // CHECK: ret i8* %[[BUF]]
 
