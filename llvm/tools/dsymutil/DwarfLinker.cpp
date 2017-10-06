@@ -525,6 +525,9 @@ public:
   /// Emit the string table described by \p Pool.
   void emitStrings(const NonRelocatableStringpool &Pool);
 
+  /// Emit the swift_ast section stored in \p Buffers.
+  void emitSwiftAST(const std::vector<MemoryBufferRef> &Buffers);
+
   /// Emit debug_ranges for \p FuncRange by translating the
   /// original \p Entries.
   void emitRangesEntries(
@@ -706,6 +709,15 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
        Entry = Pool.getNextEntry(Entry))
     Asm->OutStreamer->EmitBytes(
         StringRef(Entry->getKey().data(), Entry->getKey().size() + 1));
+}
+
+/// Emit the swift_ast section stored in \p Buffers.
+void DwarfStreamer::emitSwiftAST(const std::vector<MemoryBufferRef> &Buffers) {
+  MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
+  SwiftASTSection->setAlignment(1 << 5);
+  MS->SwitchSection(SwiftASTSection);
+  for (auto Buf : Buffers)
+    MS->EmitBytes(Buf.getBuffer());
 }
 
 /// Emit the debug_range section contents for \p FuncRange by
@@ -3329,8 +3341,8 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   else
     sys::path::append(Path, Filename);
   BinaryHolder ObjHolder(Options.Verbose);
-  auto &Obj =
-      ModuleMap.addDebugMapObject(Path, sys::TimePoint<std::chrono::seconds>());
+  auto &Obj = ModuleMap.addDebugMapObject(
+      Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
   auto ErrOrObj = loadObject(ObjHolder, Obj, ModuleMap);
   if (!ErrOrObj) {
     // Try and emit more helpful warnings by applying some heuristics.
@@ -3475,6 +3487,19 @@ bool DwarfLinker::link(const DebugMap &Map) {
 
     if (Options.Verbose)
       outs() << "DEBUG MAP OBJECT: " << Obj->getObjectFilename() << "\n";
+
+    // N_AST objects (swiftmodule files) should get dumped directly into the
+    // appropriate DWARF section.
+    if (Obj->getType() == MachO::N_AST) {
+      auto ErrOrMemBufferRefs = BinHolder.GetMemoryBuffersForFile(
+          Obj->getObjectFilename(), Obj->getTimestamp());
+      if (ErrOrMemBufferRefs.getError())
+        continue;
+      if (!Options.NoOutput)
+        Streamer->emitSwiftAST(ErrOrMemBufferRefs.get());
+      continue;
+    }
+
     auto ErrOrObj = loadObject(BinHolder, *Obj, Map);
     if (!ErrOrObj)
       continue;
