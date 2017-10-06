@@ -378,229 +378,385 @@ long long test_builtin_readcyclecounter() {
 #ifdef __x86_64__
 
 // CHECK-LABEL: define void @test_builtin_os_log
-// CHECK: (i8* [[BUF:%.*]], i32 [[I:%.*]], i8* [[DATA:%.*]])
+// CHECK: (i8* %[[BUF:.*]], i32 %[[I:.*]], i8* %[[DATA:.*]])
 void test_builtin_os_log(void *buf, int i, const char *data) {
   volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i32 [[I]], i32* [[I_ADDR:%.*]], align 4
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[I_ADDR:.*]] = alloca i32, align 4
+  // CHECK: %[[DATA_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[LEN:.*]] = alloca i32, align 4
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store i32 %[[I]], i32* %[[I_ADDR]], align 4
+  // CHECK: store i8* %[[DATA]], i8** %[[DATA_ADDR]], align 8
 
-  // CHECK: store volatile i32 34
+  // CHECK: store volatile i32 34, i32* %[[LEN]]
   len = __builtin_os_log_format_buffer_size("%d %{public}s %{private}.16P", i, data, data);
 
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 3, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 4, i8* [[NUM_ARGS]]
-  //
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 0, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 4, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
-  // CHECK: [[I2:%.*]] = load i32, i32* [[I_ADDR]]
-  // CHECK: store i32 [[I2]], i32* [[ARG1_INT]]
-
-  // CHECK: [[ARG2_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 8
-  // CHECK: store i8 34, i8* [[ARG2_DESC]]
-  // CHECK: [[ARG2_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 9
-  // CHECK: store i8 8, i8* [[ARG2_SIZE]]
-  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 10
-  // CHECK: [[ARG2_PTR:%.*]] = bitcast i8* [[ARG2]] to i8**
-  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
-  // CHECK: store i8* [[DATA2]], i8** [[ARG2_PTR]]
-
-  // CHECK: [[ARG3_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 18
-  // CHECK: store i8 17, i8* [[ARG3_DESC]]
-  // CHECK: [[ARG3_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 19
-  // CHECK: store i8 4, i8* [[ARG3_SIZE]]
-  // CHECK: [[ARG3:%.*]] = getelementptr i8, i8* [[BUF2]], i64 20
-  // CHECK: [[ARG3_INT:%.*]] = bitcast i8* [[ARG3]] to i32*
-  // CHECK: store i32 16, i32* [[ARG3_INT]]
-
-  // CHECK: [[ARG4_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 24
-  // CHECK: store i8 49, i8* [[ARG4_DESC]]
-  // CHECK: [[ARG4_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 25
-  // CHECK: store i8 8, i8* [[ARG4_SIZE]]
-  // CHECK: [[ARG4:%.*]] = getelementptr i8, i8* [[BUF2]], i64 26
-  // CHECK: [[ARG4_PTR:%.*]] = bitcast i8* [[ARG4]] to i8**
-  // CHECK: [[DATA3:%.*]] = load i8*, i8** [[DATA_ADDR]]
-  // CHECK: store i8* [[DATA3]], i8** [[ARG4_PTR]]
-
+  // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]]
+  // CHECK: %[[V2:.*]] = load i32, i32* %[[I_ADDR]]
+  // CHECK: %[[V3:.*]] = load i8*, i8** %[[DATA_ADDR]]
+  // CHECK: %[[V4:.*]] = ptrtoint i8* %[[V3]] to i64
+  // CHECK: %[[V5:.*]] = load i8*, i8** %[[DATA_ADDR]]
+  // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V5]] to i64
+  // CHECK: call void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49(i8* %[[V1]], i32 %[[V2]], i64 %[[V4]], i32 16, i64 %[[V6]])
   __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
 }
 
-// CHECK-LABEL: define void @test_builtin_os_log_errno
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA:%.*]])
-void test_builtin_os_log_errno(void *buf, const char *data) {
-  volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49
+// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]], i64 %[[ARG1:.*]], i32 %[[ARG2:.*]], i64 %[[ARG3:.*]])
 
-  // CHECK: store volatile i32 2
-  len = __builtin_os_log_format_buffer_size("%S");
-
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 96, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 0, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
-  // CHECK: store i32 0, i32* [[ARG1_INT]]
-
-  __builtin_os_log_format(buf, "%m");
-}
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
+// CHECK: %[[ARG1_ADDR:.*]] = alloca i64, align 8
+// CHECK: %[[ARG2_ADDR:.*]] = alloca i32, align 4
+// CHECK: %[[ARG3_ADDR:.*]] = alloca i64, align 8
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i32 %[[ARG0]], i32* %[[ARG0_ADDR]], align 4
+// CHECK: store i64 %[[ARG1]], i64* %[[ARG1_ADDR]], align 8
+// CHECK: store i32 %[[ARG2]], i32* %[[ARG2_ADDR]], align 4
+// CHECK: store i64 %[[ARG3]], i64* %[[ARG3_ADDR]], align 8
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 3, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 4, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 0, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 4, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i32*
+// CHECK: %[[V0:.*]] = load i32, i32* %[[ARG0_ADDR]], align 4
+// CHECK: store i32 %[[V0]], i32* %[[ARGDATACAST]], align 1
+// CHECK: %[[ARGDESCRIPTOR1:.*]] = getelementptr i8, i8* %[[BUF]], i64 8
+// CHECK: store i8 34, i8* %[[ARGDESCRIPTOR1]], align 1
+// CHECK: %[[ARGSIZE2:.*]] = getelementptr i8, i8* %[[BUF]], i64 9
+// CHECK: store i8 8, i8* %[[ARGSIZE2]], align 1
+// CHECK: %[[ARGDATA3:.*]] = getelementptr i8, i8* %[[BUF]], i64 10
+// CHECK: %[[ARGDATACAST4:.*]] = bitcast i8* %[[ARGDATA3]] to i64*
+// CHECK: %[[V1:.*]] = load i64, i64* %[[ARG1_ADDR]], align 8
+// CHECK: store i64 %[[V1]], i64* %[[ARGDATACAST4]], align 1
+// CHECK: %[[ARGDESCRIPTOR5:.*]] = getelementptr i8, i8* %[[BUF]], i64 18
+// CHECK: store i8 17, i8* %[[ARGDESCRIPTOR5]], align 1
+// CHECK: %[[ARGSIZE6:.*]] = getelementptr i8, i8* %[[BUF]], i64 19
+// CHECK: store i8 4, i8* %[[ARGSIZE6]], align 1
+// CHECK: %[[ARGDATA7:.*]] = getelementptr i8, i8* %[[BUF]], i64 20
+// CHECK: %[[ARGDATACAST8:.*]] = bitcast i8* %[[ARGDATA7]] to i32*
+// CHECK: %[[V2:.*]] = load i32, i32* %[[ARG2_ADDR]], align 4
+// CHECK: store i32 %[[V2]], i32* %[[ARGDATACAST8]], align 1
+// CHECK: %[[ARGDESCRIPTOR9:.*]] = getelementptr i8, i8* %[[BUF]], i64 24
+// CHECK: store i8 49, i8* %[[ARGDESCRIPTOR9]], align 1
+// CHECK: %[[ARGSIZE10:.*]] = getelementptr i8, i8* %[[BUF]], i64 25
+// CHECK: store i8 8, i8* %[[ARGSIZE10]], align 1
+// CHECK: %[[ARGDATA11:.*]] = getelementptr i8, i8* %[[BUF]], i64 26
+// CHECK: %[[ARGDATACAST12:.*]] = bitcast i8* %[[ARGDATA11]] to i64*
+// CHECK: %[[V3:.*]] = load i64, i64* %[[ARG3_ADDR]], align 8
+// CHECK: store i64 %[[V3]], i64* %[[ARGDATACAST12]], align 1
 
 // CHECK-LABEL: define void @test_builtin_os_log_wide
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA:%.*]], i32* [[STR:%.*]])
+// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32* %[[STR:.*]])
 typedef int wchar_t;
 void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
   volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
-  // CHECK: store i32* [[STR]], i32** [[STR_ADDR:%.*]],
 
-  // CHECK: store volatile i32 12
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[DATA_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[STR_ADDR:.*]] = alloca i32*, align 8
+  // CHECK: %[[LEN:.*]] = alloca i32, align 4
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store i8* %[[DATA]], i8** %[[DATA_ADDR]], align 8
+  // CHECK: store i32* %[[STR]], i32** %[[STR_ADDR]], align 8
+
+  // CHECK: store volatile i32 12, i32* %[[LEN]], align 4
   len = __builtin_os_log_format_buffer_size("%S", str);
 
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 80, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 8, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_PTR:%.*]] = bitcast i8* [[ARG1]] to i32**
-  // CHECK: [[STR2:%.*]] = load i32*, i32** [[STR_ADDR]]
-  // CHECK: store i32* [[STR2]], i32** [[ARG1_PTR]]
+  // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
+  // CHECK: %[[V2:.*]] = load i32*, i32** %[[STR_ADDR]], align 8
+  // CHECK: %[[V3:.*]] = ptrtoint i32* %[[V2]] to i64
+  // CHECK: call void @__os_log_helper_1_2_1_8_80(i8* %[[V1]], i64 %[[V3]])
 
   __builtin_os_log_format(buf, "%S", str);
 }
 
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_1_8_80
+// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0:.*]])
+
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i64, align 8
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i64 %[[ARG0]], i64* %[[ARG0_ADDR]], align 8
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 1, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 80, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 8, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i64*
+// CHECK: %[[V0:.*]] = load i64, i64* %[[ARG0_ADDR]], align 8
+// CHECK: store i64 %[[V0]], i64* %[[ARGDATACAST]], align 1
+
 // CHECK-LABEL: define void @test_builtin_os_log_precision_width
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA:%.*]], i32 [[PRECISION:%.*]], i32 [[WIDTH:%.*]])
+// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32 %[[PRECISION:.*]], i32 %[[WIDTH:.*]])
 void test_builtin_os_log_precision_width(void *buf, const char *data,
                                          int precision, int width) {
   volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
-  // CHECK: store i32 [[PRECISION]], i32* [[PRECISION_ADDR:%.*]], align 4
-  // CHECK: store i32 [[WIDTH]], i32* [[WIDTH_ADDR:%.*]], align 4
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[DATA_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[PRECISION_ADDR:.*]] = alloca i32, align 4
+  // CHECK: %[[WIDTH_ADDR:.*]] = alloca i32, align 4
+  // CHECK: %[[LEN:.*]] = alloca i32, align 4
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store i8* %[[DATA]], i8** %[[DATA_ADDR]], align 8
+  // CHECK: store i32 %[[PRECISION]], i32* %[[PRECISION_ADDR]], align 4
+  // CHECK: store i32 %[[WIDTH]], i32* %[[WIDTH_ADDR]], align 4
 
-  // CHECK: store volatile i32 24,
+  // CHECK: store volatile i32 24, i32* %[[LEN]], align 4
   len = __builtin_os_log_format_buffer_size("Hello %*.*s World", precision, width, data);
 
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 3, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 0, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 4, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
-  // CHECK: [[ARG1_VAL:%.*]] = load i32, i32* [[PRECISION_ADDR]]
-  // CHECK: store i32 [[ARG1_VAL]], i32* [[ARG1_INT]]
-
-  // CHECK: [[ARG2_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 8
-  // CHECK: store i8 16, i8* [[ARG2_DESC]]
-  // CHECK: [[ARG2_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 9
-  // CHECK: store i8 4, i8* [[ARG2_SIZE]]
-  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 10
-  // CHECK: [[ARG2_INT:%.*]] = bitcast i8* [[ARG2]] to i32*
-  // CHECK: [[ARG2_VAL:%.*]] = load i32, i32* [[WIDTH_ADDR]]
-  // CHECK: store i32 [[ARG2_VAL]], i32* [[ARG2_INT]]
-
-  // CHECK: [[ARG3_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 14
-  // CHECK: store i8 32, i8* [[ARG3_DESC]]
-  // CHECK: [[ARG3_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 15
-  // CHECK: store i8 8, i8* [[ARG3_SIZE]]
-  // CHECK: [[ARG3:%.*]] = getelementptr i8, i8* [[BUF2]], i64 16
-  // CHECK: [[ARG3_PTR:%.*]] = bitcast i8* [[ARG3]] to i8**
-  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
-  // CHECK: store i8* [[DATA2]], i8** [[ARG3_PTR]]
-
+  // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
+  // CHECK: %[[V2:.*]] = load i32, i32* %[[PRECISION_ADDR]], align 4
+  // CHECK: %[[V3:.*]] = load i32, i32* %[[WIDTH_ADDR]], align 4
+  // CHECK: %[[V4:.*]] = load i8*, i8** %[[DATA_ADDR]], align 8
+  // CHECK: %[[V5:.*]] = ptrtoint i8* %[[V4]] to i64
+  // CHECK: call void @__os_log_helper_1_2_3_4_0_4_16_8_32(i8* %[[V1]], i32 %[[V2]], i32 %[[V3]], i64 %[[V5]])
   __builtin_os_log_format(buf, "Hello %*.*s World", precision, width, data);
 }
 
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_3_4_0_4_16_8_32
+// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]], i32 %[[ARG1:.*]], i64 %[[ARG2:.*]])
+
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
+// CHECK: %[[ARG1_ADDR:.*]] = alloca i32, align 4
+// CHECK: %[[ARG2_ADDR:.*]] = alloca i64, align 8
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i32 %[[ARG0]], i32* %[[ARG0_ADDR]], align 4
+// CHECK: store i32 %[[ARG1]], i32* %[[ARG1_ADDR]], align 4
+// CHECK: store i64 %[[ARG2]], i64* %[[ARG2_ADDR]], align 8
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 3, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 0, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 4, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i32*
+// CHECK: %[[V0:.*]] = load i32, i32* %[[ARG0_ADDR]], align 4
+// CHECK: store i32 %[[V0]], i32* %[[ARGDATACAST]], align 1
+// CHECK: %[[ARGDESCRIPTOR1:.*]] = getelementptr i8, i8* %[[BUF]], i64 8
+// CHECK: store i8 16, i8* %[[ARGDESCRIPTOR1]], align 1
+// CHECK: %[[ARGSIZE2:.*]] = getelementptr i8, i8* %[[BUF]], i64 9
+// CHECK: store i8 4, i8* %[[ARGSIZE2]], align 1
+// CHECK: %[[ARGDATA3:.*]] = getelementptr i8, i8* %[[BUF]], i64 10
+// CHECK: %[[ARGDATACAST4:.*]] = bitcast i8* %[[ARGDATA3]] to i32*
+// CHECK: %[[V1:.*]] = load i32, i32* %[[ARG1_ADDR]], align 4
+// CHECK: store i32 %[[V1]], i32* %[[ARGDATACAST4]], align 1
+// CHECK: %[[ARGDESCRIPTOR5:.*]] = getelementptr i8, i8* %[[BUF]], i64 14
+// CHECK: store i8 32, i8* %[[ARGDESCRIPTOR5]], align 1
+// CHECK: %[[ARGSIZE6:.*]] = getelementptr i8, i8* %[[BUF]], i64 15
+// CHECK: store i8 8, i8* %[[ARGSIZE6]], align 1
+// CHECK: %[[ARGDATA7:.*]] = getelementptr i8, i8* %[[BUF]], i64 16
+// CHECK: %[[ARGDATACAST8:.*]] = bitcast i8* %[[ARGDATA7]] to i64*
+// CHECK: %[[V2:.*]] = load i64, i64* %[[ARG2_ADDR]], align 8
+// CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST8]], align 1
+
 // CHECK-LABEL: define void @test_builtin_os_log_invalid
-// CHECK: (i8* [[BUF:%.*]], i32 [[DATA:%.*]])
+// CHECK: (i8* %[[BUF:.*]], i32 %[[DATA:.*]])
 void test_builtin_os_log_invalid(void *buf, int data) {
   volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i32 [[DATA]], i32* [[DATA_ADDR:%.*]]
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[DATA_ADDR:.*]] = alloca i32, align 4
+  // CHECK: %[[LEN:.*]] = alloca i32, align 4
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store i32 %[[DATA]], i32* %[[DATA_ADDR]], align 4
 
-  // CHECK: store volatile i32 8,
+  // CHECK: store volatile i32 8, i32* %[[LEN]], align 4
   len = __builtin_os_log_format_buffer_size("invalid specifier %: %d even a trailing one%", data);
 
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 0, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 0, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 4, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
-  // CHECK: [[ARG1_VAL:%.*]] = load i32, i32* [[DATA_ADDR]]
-  // CHECK: store i32 [[ARG1_VAL]], i32* [[ARG1_INT]]
+  // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
+  // CHECK: %[[V2:.*]] = load i32, i32* %[[DATA_ADDR]], align 4
+  // CHECK: call void @__os_log_helper_1_0_1_4_0(i8* %[[V1]], i32 %[[V2]])
 
   __builtin_os_log_format(buf, "invalid specifier %: %d even a trailing one%", data);
 }
 
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_1_4_0
+// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]])
+
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i32 %[[ARG0]], i32* %[[ARG0_ADDR]], align 4
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 0, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 1, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 0, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 4, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i32*
+// CHECK: %[[V0:.*]] = load i32, i32* %[[ARG0_ADDR]], align 4
+// CHECK: store i32 %[[V0]], i32* %[[ARGDATACAST]], align 1
+
 // CHECK-LABEL: define void @test_builtin_os_log_percent
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA1:%.*]], i8* [[DATA2:%.*]])
+// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA1:.*]], i8* %[[DATA2:.*]])
 // Check that the %% which does not consume any argument is correctly handled
 void test_builtin_os_log_percent(void *buf, const char *data1, const char *data2) {
   volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA1]], i8** [[DATA1_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA2]], i8** [[DATA2_ADDR:%.*]], align 8
-  // CHECK: store volatile i32 22
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[DATA1_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[DATA2_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[LEN:.*]] = alloca i32, align 4
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store i8* %[[DATA1]], i8** %[[DATA1_ADDR]], align 8
+  // CHECK: store i8* %[[DATA2]], i8** %[[DATA2_ADDR]], align 8
+  // CHECK: store volatile i32 22, i32* %[[LEN]], align 4
+
   len = __builtin_os_log_format_buffer_size("%s %% %s", data1, data2);
 
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 2, i8* [[NUM_ARGS]]
-  //
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 32, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 8, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_PTR:%.*]] = bitcast i8* [[ARG1]] to i8**
-  // CHECK: [[DATA1:%.*]] = load i8*, i8** [[DATA1_ADDR]]
-  // CHECK: store i8* [[DATA1]], i8** [[ARG1_PTR]]
-  //
-  // CHECK: [[ARG2_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 12
-  // CHECK: store i8 32, i8* [[ARG2_DESC]]
-  // CHECK: [[ARG2_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 13
-  // CHECK: store i8 8, i8* [[ARG2_SIZE]]
-  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 14
-  // CHECK: [[ARG2_PTR:%.*]] = bitcast i8* [[ARG2]] to i8**
-  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA2_ADDR]]
-  // CHECK: store i8* [[DATA2]], i8** [[ARG2_PTR]]
+  // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
+  // CHECK: %[[V2:.*]] = load i8*, i8** %[[DATA1_ADDR]], align 8
+  // CHECK: %[[V3:.*]] = ptrtoint i8* %[[V2]] to i64
+  // CHECK: %[[V4:.*]] = load i8*, i8** %[[DATA2_ADDR]], align 8
+  // CHECK: %[[V5:.*]] = ptrtoint i8* %[[V4]] to i64
+  // CHECK: call void @__os_log_helper_1_2_2_8_32_8_32(i8* %[[V1]], i64 %[[V3]], i64 %[[V5]])
+
   __builtin_os_log_format(buf, "%s %% %s", data1, data2);
 }
+
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_2_8_32_8_32
+// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0:.*]], i64 %[[ARG1:.*]])
+
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i64, align 8
+// CHECK: %[[ARG1_ADDR:.*]] = alloca i64, align 8
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i64 %[[ARG0]], i64* %[[ARG0_ADDR]], align 8
+// CHECK: store i64 %[[ARG1]], i64* %[[ARG1_ADDR]], align 8
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 2, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 32, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 8, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i64*
+// CHECK: %[[V0:.*]] = load i64, i64* %[[ARG0_ADDR]], align 8
+// CHECK: store i64 %[[V0]], i64* %[[ARGDATACAST]], align 1
+// CHECK: %[[ARGDESCRIPTOR1:.*]] = getelementptr i8, i8* %[[BUF]], i64 12
+// CHECK: store i8 32, i8* %[[ARGDESCRIPTOR1]], align 1
+// CHECK: %[[ARGSIZE2:.*]] = getelementptr i8, i8* %[[BUF]], i64 13
+// CHECK: store i8 8, i8* %[[ARGSIZE2]], align 1
+// CHECK: %[[ARGDATA3:.*]] = getelementptr i8, i8* %[[BUF]], i64 14
+// CHECK: %[[ARGDATACAST4:.*]] = bitcast i8* %[[ARGDATA3]] to i64*
+// CHECK: %[[V1:.*]] = load i64, i64* %[[ARG1_ADDR]], align 8
+// CHECK: store i64 %[[V1]], i64* %[[ARGDATACAST4]], align 1
+
+// Check that the following two functions call the same helper function.
+
+// CHECK-LABEL: define void @test_builtin_os_log_merge_helper0
+// CHECK: call void @__os_log_helper_1_0_2_4_0_8_0(
+void test_builtin_os_log_merge_helper0(void *buf, int i, double d) {
+  __builtin_os_log_format(buf, "%d %f", i, d);
+}
+
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_2_4_0_8_0(
+
+// CHECK-LABEL: define void @test_builtin_os_log_merge_helper1
+// CHECK: call void @__os_log_helper_1_0_2_4_0_8_0(
+void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
+  __builtin_os_log_format(buf, "%u %lld", u, ll);
+}
+
+// Check that this function doesn't write past the end of array 'buf'.
+
+// CHECK-LABEL: define void @test_builtin_os_log_errno
+void test_builtin_os_log_errno() {
+  // CHECK: %[[VLA:.*]] = alloca i8, i64 4, align 16
+  // CHECK: call void @__os_log_helper_16_2_1_0_96(i8* %[[VLA]])
+
+  char buf[__builtin_os_log_format_buffer_size("%m")];
+  __builtin_os_log_format(buf, "%m");
+}
+
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_16_2_1_0_96
+// CHECK: (i8* %[[BUFFER:.*]])
+
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 16
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 1, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 96, i8* %[[ARGDESCRIPTOR]], align 2
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 0, i8* %[[ARGSIZE]], align 1
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: define void @test_builtin_os_log_long_double
+// CHECK: (i8* %[[BUF:.*]], x86_fp80 %[[LD:.*]])
+void test_builtin_os_log_long_double(void *buf, long double ld) {
+  // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
+  // CHECK: %[[LD_ADDR:.*]] = alloca x86_fp80, align 16
+  // CHECK: %[[COERCE:.*]] = alloca i128, align 16
+  // CHECK: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
+  // CHECK: store x86_fp80 %[[LD]], x86_fp80* %[[LD_ADDR]], align 16
+  // CHECK: %[[V0:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
+  // CHECK: %[[V1:.*]] = load x86_fp80, x86_fp80* %[[LD_ADDR]], align 16
+  // CHECK: %[[V2:.*]] = bitcast x86_fp80 %[[V1]] to i80
+  // CHECK: %[[V3:.*]] = zext i80 %[[V2]] to i128
+  // CHECK: store i128 %[[V3]], i128* %[[COERCE]], align 16
+  // CHECK: %[[V4:.*]] = bitcast i128* %[[COERCE]] to { i64, i64 }*
+  // CHECK: %[[V5:.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %[[V4]], i32 0, i32 0
+  // CHECK: %[[V6:.*]] = load i64, i64* %[[V5]], align 16
+  // CHECK: %[[V7:.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %[[V4]], i32 0, i32 1
+  // CHECK: %[[V8:.*]] = load i64, i64* %[[V7]], align 8
+  // CHECK: call void @__os_log_helper_1_0_1_16_0(i8* %[[V0]], i64 %[[V6]], i64 %[[V8]])
+
+  __builtin_os_log_format(buf, "%Lf", ld);
+}
+
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_1_16_0
+// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0_COERCE0:.*]], i64 %[[ARG0_COERCE1:.*]])
+
+// CHECK: %[[ARG0:.*]] = alloca i128, align 16
+// CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[ARG0_ADDR:.*]] = alloca i128, align 16
+// CHECK: %[[V0:.*]] = bitcast i128* %[[ARG0]] to { i64, i64 }*
+// CHECK: %[[V1:.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %[[V0]], i32 0, i32 0
+// CHECK: store i64 %[[ARG0_COERCE0]], i64* %[[V1]], align 16
+// CHECK: %[[V2:.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %[[V0]], i32 0, i32 1
+// CHECK: store i64 %[[ARG0_COERCE1]], i64* %[[V2]], align 8
+// CHECK: %[[ARG01:.*]] = load i128, i128* %[[ARG0]], align 16
+// CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
+// CHECK: store i128 %[[ARG01]], i128* %[[ARG0_ADDR]], align 16
+// CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
+// CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
+// CHECK: store i8 0, i8* %[[SUMMARY]], align 1
+// CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
+// CHECK: store i8 1, i8* %[[NUMARGS]], align 1
+// CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
+// CHECK: store i8 0, i8* %[[ARGDESCRIPTOR]], align 1
+// CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
+// CHECK: store i8 16, i8* %[[ARGSIZE]], align 1
+// CHECK: %[[ARGDATA:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
+// CHECK: %[[ARGDATACAST:.*]] = bitcast i8* %[[ARGDATA]] to i128*
+// CHECK: %[[V3:.*]] = load i128, i128* %[[ARG0_ADDR]], align 16
+// CHECK: store i128 %[[V3]], i128* %[[ARGDATACAST]], align 1
 
 #endif
