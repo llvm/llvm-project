@@ -76,12 +76,6 @@ OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
   Live = false;
 }
 
-static uint64_t updateOffset(uint64_t Off, InputSection *S) {
-  Off = alignTo(Off, S->Alignment);
-  S->OutSecOff = Off;
-  return Off + S->getSize();
-}
-
 void OutputSection::addSection(InputSection *S) {
   assert(S->Live);
   Live = true;
@@ -92,13 +86,14 @@ void OutputSection::addSection(InputSection *S) {
   // crude approximation so that it is at least easy for other code to know the
   // section order. It is also used to calculate the output section size early
   // for compressed debug sections.
-  this->Size = updateOffset(Size, S);
+  S->OutSecOff = alignTo(Size, S->Alignment);
+  this->Size = S->OutSecOff + S->getSize();
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. Consequently, if this contains two or more
   // input sections, all of them must have the same sh_entsize. However,
   // you can put different types of input sections into one output
-  // sectin by using linker scripts. I don't know what to do here.
+  // section by using linker scripts. I don't know what to do here.
   // Probably we sholuld handle that as an error. But for now we just
   // pick the largest sh_entsize.
   this->Entsize = std::max(this->Entsize, S->Entsize);

@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: echo "{ foo; zed; };" > %t.list
 # RUN: echo "{ global: foo; bar; local: *; };" > %t.vers
-# RUN: ld.lld -fatal-warnings -dynamic-list %t.list -version-script %t.vers -shared %t.o -o %t.so
+# RUN: ld.lld --hash-style=sysv -fatal-warnings -dynamic-list %t.list -version-script %t.vers -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=RELOCS %s
 # RUN: llvm-readobj -dyn-symbols  %t.so | FileCheck --check-prefix=DYNSYMS %s
 

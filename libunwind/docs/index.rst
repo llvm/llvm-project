@@ -50,6 +50,7 @@ Linux        i386, x86_64         Clang, GCC   DWARF CFI
 Linux        ARM                  Clang, GCC   EHABI
 Bare Metal   ARM                  Clang, GCC   EHABI
 NetBSD       x86_64               Clang, GCC   DWARF CFI
+Any          i386, x86_64, ARM    Clang        SjLj
 ============ ==================== ============ ========================
 
 The following minimum compiler versions are strongly recommended.

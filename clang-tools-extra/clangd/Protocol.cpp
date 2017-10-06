@@ -909,3 +909,58 @@ std::string CompletionItem::unparse(const CompletionItem &CI) {
   Result.back() = '}';
   return Result;
 }
+
+std::string ParameterInformation::unparse(const ParameterInformation &PI) {
+  std::string Result = "{";
+  llvm::raw_string_ostream Os(Result);
+  assert(!PI.label.empty() && "parameter information label is required");
+  Os << R"("label":")" << llvm::yaml::escape(PI.label) << '\"';
+  if (!PI.documentation.empty())
+    Os << R"(,"documentation":")" << llvm::yaml::escape(PI.documentation)
+       << '\"';
+  Os << '}';
+  Os.flush();
+  return Result;
+}
+
+std::string SignatureInformation::unparse(const SignatureInformation &SI) {
+  std::string Result = "{";
+  llvm::raw_string_ostream Os(Result);
+  assert(!SI.label.empty() && "signature information label is required");
+  Os << R"("label":")" << llvm::yaml::escape(SI.label) << '\"';
+  if (!SI.documentation.empty())
+    Os << R"(,"documentation":")" << llvm::yaml::escape(SI.documentation)
+       << '\"';
+  Os << R"(,"parameters":[)";
+  for (const auto &Parameter : SI.parameters) {
+    Os << ParameterInformation::unparse(Parameter) << ',';
+  }
+  Os.flush();
+  if (SI.parameters.empty())
+    Result.push_back(']');
+  else
+    Result.back() = ']'; // Replace the last `,` with an `]`.
+  Result.push_back('}');
+  return Result;
+}
+
+std::string SignatureHelp::unparse(const SignatureHelp &SH) {
+  std::string Result = "{";
+  llvm::raw_string_ostream Os(Result);
+  assert(SH.activeSignature >= 0 &&
+         "Unexpected negative value for number of active signatures.");
+  assert(SH.activeParameter >= 0 &&
+         "Unexpected negative value for active parameter index");
+  Os << R"("activeSignature":)" << SH.activeSignature
+     << R"(,"activeParameter":)" << SH.activeParameter << R"(,"signatures":[)";
+  for (const auto &Signature : SH.signatures) {
+    Os << SignatureInformation::unparse(Signature) << ',';
+  }
+  Os.flush();
+  if (SH.signatures.empty())
+    Result.push_back(']');
+  else
+    Result.back() = ']'; // Replace the last `,` with an `]`.
+  Result.push_back('}');
+  return Result;
+}
