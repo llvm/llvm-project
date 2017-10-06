@@ -30,6 +30,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <sstream>
 
 using namespace clang;
@@ -697,9 +698,10 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
     if (!Size)
       continue;
 
-    Params.emplace_back(Ctx, nullptr, SourceLocation(),
-                        &Ctx.Idents.get(std::string("arg") + std::to_string(I)),
-                        getOSLogArgType(Ctx, Size), ImplicitParamDecl::Other);
+    Params.emplace_back(
+        Ctx, nullptr, SourceLocation(),
+        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)),
+        getOSLogArgType(Ctx, Size), ImplicitParamDecl::Other);
   }
 
   FunctionArgList Args;
