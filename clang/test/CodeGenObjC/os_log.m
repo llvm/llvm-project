@@ -19,10 +19,10 @@ extern __attribute__((visibility("default"))) NSString *GenString();
 void *test_builtin_os_log(void *buf) {
   return __builtin_os_log_format(buf, "capabilities: %@", GenString());
 
-  // CHECK: %[[CALL:.*]] = tail call %[[V0:.*]]* (...) @GenString()
-  // CHECK: %[[V0]] = bitcast %[[V0]]* %[[CALL]] to i8*
+  // CHECK: %[[CALL:.*]] = tail call %[[TY0:.*]]* (...) @GenString()
+  // CHECK: %[[V0:.*]] = bitcast %[[TY0]]* %[[CALL]] to i8*
   // CHECK: %[[V1:.*]] = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %[[V0]])
-  // CHECK: %[[V2:.*]] = ptrtoint %[[V0]]* %[[CALL]] to i64
+  // CHECK: %[[V2:.*]] = ptrtoint %[[TY0]]* %[[CALL]] to i64
   // CHECK: store i8 2, i8* %[[BUF]], align 1
   // CHECK: %[[NUMARGS_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
   // CHECK: store i8 1, i8* %[[NUMARGS_I]], align 1
@@ -43,13 +43,13 @@ void *test_builtin_os_log(void *buf) {
   // CHECK-O0: %[[BUF_ADDR:.*]] = alloca i8*, align 8
   // CHECK-O0: store i8* %[[BUF]], i8** %[[BUF_ADDR]], align 8
   // CHECK-O0: %[[V0:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
-  // CHECK-O0: %[[CALL:.*]] = call %[[V0]]* (...) @GenString()
-  // CHECK-O0: %[[V1:.*]] = bitcast %[[V0]]* %[[CALL]] to i8*
+  // CHECK-O0: %[[CALL:.*]] = call %[[TY0:.*]]* (...) @GenString()
+  // CHECK-O0: %[[V1:.*]] = bitcast %[[TY0]]* %[[CALL]] to i8*
   // CHECK-O0: %[[V2:.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* %[[V1]])
   // CHECK-O0: %[[V3:.*]] = bitcast i8* %[[V2]] to %[[V0]]*
-  // CHECK-O0: %[[V4:.*]] = ptrtoint %[[V0]]* %[[V3]] to i64
+  // CHECK-O0: %[[V4:.*]] = ptrtoint %[[TY0]]* %[[V3]] to i64
   // CHECK-O0: call void @__os_log_helper_1_2_1_8_64(i8* %[[V0]], i64 %[[V4]])
-  // CHECK-O0: %[[V5:.*]] = bitcast %[[V0]]* %[[V3]] to i8*
+  // CHECK-O0: %[[V5:.*]] = bitcast %[[TY0]]* %[[V3]] to i8*
   // CHECK-O0-NOT call void (...) @clang.arc.use({{.*}}
   // CHECK-O0: call void @objc_release(i8* %[[V5]])
   // CHECK-O0: ret i8* %[[V0]]
