@@ -205,6 +205,11 @@ private:
   unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;
 
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
+
+  /// Materialize the catchret target MBB in RAX.
+  void emitCatchRetReturnValue(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineInstr *CatchRet) const;
 };
 
 } // End llvm namespace
