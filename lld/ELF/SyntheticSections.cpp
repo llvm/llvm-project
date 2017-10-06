@@ -57,7 +57,7 @@ uint64_t SyntheticSection::getVA() const {
   return 0;
 }
 
-// Create a .bss section for each common section and replace the common symbol
+// Create a .bss section for each common symbol and replace the common symbol
 // with a DefinedRegular symbol.
 template <class ELFT> void elf::createCommonSections() {
   for (Symbol *S : Symtab->getSymbols()) {

@@ -80,6 +80,7 @@ class TracePC {
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
+  void SetUseClangCoverage(bool UCC) { UseClangCoverage = UCC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
   void SetPrintNewFuncs(size_t P) { NumPrintNewFuncs = P; }
@@ -92,7 +93,8 @@ class TracePC {
       memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
     ClearInlineCounters();
-    ClearClangCounters();
+    if (UseClangCoverage)
+      ClearClangCounters();
   }
 
   void ClearInlineCounters();
@@ -133,6 +135,7 @@ class TracePC {
 private:
   bool UseCounters = false;
   bool UseValueProfile = false;
+  bool UseClangCoverage = false;
   bool DoPrintNewPCs = false;
   size_t NumPrintNewFuncs = 0;
 

@@ -831,6 +831,14 @@ template <typename T> struct ExplicitInstantiationTwoAttributes { void f() {} };
 template struct __declspec(dllexport) __declspec(dllimport) ExplicitInstantiationTwoAttributes<int>;
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ExplicitInstantiationTwoAttributes@H@@QAEXXZ"
 
+// Specializations of exported class template functions get exported.
+namespace pr34849 {
+template <typename T> struct __declspec(dllexport) ExportedClass { void foo(); };
+template<> void ExportedClass<int>::foo() {}
+template struct ExportedClass<int>;
+// M32-DAG: define dllexport x86_thiscallcc void @"\01?foo@?$ExportedClass@H@pr34849@@QAEXXZ"
+}
+
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes
