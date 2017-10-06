@@ -1522,7 +1522,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator Terminator = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator MBBI = Terminator;
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -1536,7 +1537,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool NeedsWinCFI =
       IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
-  MachineBasicBlock *CatchRetTarget = nullptr;
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI.getStackSize();
@@ -1548,13 +1548,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (IsFunclet) {
     assert(HasFP && "EH funclets without FP not yet implemented");
     NumBytes = getWinEHFuncletFrameSize(MF);
-    if (MBBI->getOpcode() == X86::CATCHRET) {
-      // SEH shouldn't use catchret.
-      assert(!isAsynchronousEHPersonality(
-                 classifyEHPersonality(MF.getFunction()->getPersonalityFn())) &&
-             "SEH should not use CATCHRET");
-      CatchRetTarget = MBBI->getOperand(0).getMBB();
-    }
   } else if (HasFP) {
     // Calculate required stack adjustment.
     uint64_t FrameSize = StackSize - SlotSize;
@@ -1593,26 +1586,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   MBBI = FirstCSPop;
 
-  if (CatchRetTarget) {
-    // Fill EAX/RAX with the address of the target block.
-    unsigned ReturnReg = STI.is64Bit() ? X86::RAX : X86::EAX;
-    if (STI.is64Bit()) {
-      // LEA64r CatchRetTarget(%rip), %rax
-      BuildMI(MBB, FirstCSPop, DL, TII.get(X86::LEA64r), ReturnReg)
-          .addReg(X86::RIP)
-          .addImm(0)
-          .addReg(0)
-          .addMBB(CatchRetTarget)
-          .addReg(0);
-    } else {
-      // MOV32ri $CatchRetTarget, %eax
-      BuildMI(MBB, FirstCSPop, DL, TII.get(X86::MOV32ri), ReturnReg)
-          .addMBB(CatchRetTarget);
-    }
-    // Record that we've taken the address of CatchRetTarget and no longer just
-    // reference it in a terminator.
-    CatchRetTarget->setHasAddressTaken();
-  }
+  if (IsFunclet && Terminator->getOpcode() == X86::CATCHRET)
+    emitCatchRetReturnValue(MBB, FirstCSPop, &*Terminator);
 
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -1667,15 +1642,14 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (NeedsWinCFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
-  MBBI = MBB.getFirstTerminator();
-  if (MBBI == MBB.end() || !isTailCallOpcode(MBBI->getOpcode())) {
+  if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {
     // Add the return addr area delta back since we are not tail calling.
     int Offset = -1 * X86FI->getTCReturnAddrDelta();
     assert(Offset >= 0 && "TCDelta should never be positive");
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      Offset += mergeSPUpdates(MBB, MBBI, true);
-      emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
+      Offset += mergeSPUpdates(MBB, Terminator, true);
+      emitSPUpdate(MBB, Terminator, Offset, /*InEpilogue=*/true);
     }
   }
 }
@@ -1984,6 +1958,36 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   }
 
   return true;
+}
+
+void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
+                                               MachineBasicBlock::iterator MBBI,
+                                               MachineInstr *CatchRet) const {
+  // SEH shouldn't use catchret.
+  assert(!isAsynchronousEHPersonality(classifyEHPersonality(
+             MBB.getParent()->getFunction()->getPersonalityFn())) &&
+         "SEH should not use CATCHRET");
+  DebugLoc DL = CatchRet->getDebugLoc();
+  MachineBasicBlock *CatchRetTarget = CatchRet->getOperand(0).getMBB();
+
+  // Fill EAX/RAX with the address of the target block.
+  if (STI.is64Bit()) {
+    // LEA64r CatchRetTarget(%rip), %rax
+    BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), X86::RAX)
+        .addReg(X86::RIP)
+        .addImm(0)
+        .addReg(0)
+        .addMBB(CatchRetTarget)
+        .addReg(0);
+  } else {
+    // MOV32ri $CatchRetTarget, %eax
+    BuildMI(MBB, MBBI, DL, TII.get(X86::MOV32ri), X86::EAX)
+        .addMBB(CatchRetTarget);
+  }
+
+  // Record that we've taken the address of CatchRetTarget and no longer just
+  // reference it in a terminator.
+  CatchRetTarget->setHasAddressTaken();
 }
 
 bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,

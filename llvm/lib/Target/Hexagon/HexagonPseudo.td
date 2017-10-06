@@ -247,11 +247,14 @@ def PS_aligna : Pseudo<(outs IntRegs:$Rd), (ins u32_0Imm:$A), "", []>;
 // This simplifies the frame-index elimination code.
 //
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1,
-    isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
+    isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, isExtendable = 1,
+    isExtentSigned = 1, opExtentBits = 16, opExtentAlign = 0 in {
+  let opExtendable = 2 in
   def PS_fi  : Pseudo<(outs IntRegs:$Rd),
-                         (ins IntRegs:$fi, s32_0Imm:$off), "">;
+                      (ins IntRegs:$fi, s32_0Imm:$off), "">;
+  let opExtendable = 3 in
   def PS_fia : Pseudo<(outs IntRegs:$Rd),
-                         (ins IntRegs:$Rs, IntRegs:$fi, s32_0Imm:$off), "">;
+                      (ins IntRegs:$Rs, IntRegs:$fi, s32_0Imm:$off), "">;
 }
 
 class CondStr<string CReg, bit True, bit New> {
