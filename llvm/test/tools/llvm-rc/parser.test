@@ -53,7 +53,7 @@
 ; PGOOD-NEXT:    Option: Language: 1, Sublanguage: 2
 ; PGOOD-NEXT:    Option: Characteristics: 50
 ; PGOOD-NEXT:    Option: Version: 100
-; PGOOD-NEXT:    Option: Font: size = 12, face = "Arial"
+; PGOOD-NEXT:    Option: Font: size = 12, face = "Arial", weight = 500, italic, charset = 13
 ; PGOOD-NEXT:    Option: Caption: "RC parser dialog"
 ; PGOOD-NEXT:    Option: Style: 332340
 ; PGOOD-NEXT:    Control (14): LTEXT, title: "Hello world!", loc: (20, 20), size: [50, 50]
@@ -218,6 +218,11 @@
 ; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-unnecessary-string.rc 2>&1 | FileCheck %s --check-prefix PDIALOG5
 
 ; PDIALOG5:  llvm-rc: Error parsing file: expected '-', '~', integer or '(', got "This shouldn't be here"
+
+
+; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-dialog-simple-font.rc 2>&1 | FileCheck %s --check-prefix PDIALOG6
+
+; PDIALOG6:  llvm-rc: Error parsing file: expected identifier, got ,
 
 
 ; RUN: not llvm-rc /dry-run /V %p/Inputs/parser-versioninfo-wrong-fixed.rc 2>&1 | FileCheck %s --check-prefix PVERSIONINFO1

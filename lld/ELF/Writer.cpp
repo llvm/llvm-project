@@ -1911,16 +1911,14 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
-  parallelForEach(OutputSections, [&](OutputSection *Sec) {
+  for (OutputSection *Sec : OutputSections)
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
-  });
 
-  parallelForEach(OutputSections, [&](OutputSection *Sec) {
+  for (OutputSection *Sec : OutputSections)
     if (Sec != Out::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
         Sec->Type != SHT_RELA)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
-  });
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.

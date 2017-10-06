@@ -48,6 +48,7 @@ void ClangdLSPServer::onInitialize(StringRef ID, InitializeParams IP,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
           "codeActionProvider": true,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+          "signatureHelpProvider": {"triggerCharacters": ["(",","]},
           "definitionProvider": true
         }}})");
   if (IP.rootUri && !IP.rootUri->file.empty())
@@ -164,6 +165,18 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID.str() +
       R"(,"result":[)" + Completions + R"(]})");
+}
+
+void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams Params,
+                                      StringRef ID, JSONOutput &Out) {
+  const auto SigHelp = SignatureHelp::unparse(
+      Server
+          .signatureHelp(
+              Params.textDocument.uri.file,
+              Position{Params.position.line, Params.position.character})
+          .Value);
+  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() + R"(,"result":)" +
+                   SigHelp + "}");
 }
 
 void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams Params,

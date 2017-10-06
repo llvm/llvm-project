@@ -72,7 +72,7 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32* {{.+}}@{{[^,]+}}, i32 0, i32 0))
+    // LAMBDA: call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32* {{.+}}@{{[^,]+}}, i32 0, i32 0))
     // LAMBDA: call void @[[LOFFL1:.+]](
     // LAMBDA:  ret
 #pragma omp target
@@ -118,7 +118,10 @@ int main() {
       // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
       // LAMBDA: [[G_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_PTR_REF]]
       // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_REF]]
-      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PTR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G1_REF]]
+      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
       // LAMBDA: [[SIVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SIVAR_PTR_REF]]
       // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIVAR_REF]]
     }();

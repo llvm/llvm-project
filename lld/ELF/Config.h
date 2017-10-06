@@ -118,7 +118,7 @@ struct Configuration {
   bool FatalWarnings;
   bool GcSections;
   bool GdbIndex;
-  bool GnuHash;
+  bool GnuHash = false;
   bool HasDynamicList = false;
   bool HasDynSymTab;
   bool ICF;
@@ -137,7 +137,7 @@ struct Configuration {
   bool SingleRoRx;
   bool Shared;
   bool Static = false;
-  bool SysvHash;
+  bool SysvHash = false;
   bool Target1Rel;
   bool Threads;
   bool Trace;

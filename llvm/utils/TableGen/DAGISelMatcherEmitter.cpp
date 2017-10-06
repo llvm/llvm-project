@@ -47,14 +47,14 @@ static cl::opt<bool> InstrumentCoverage(
 namespace {
 class MatcherTableEmitter {
   const CodeGenDAGPatterns &CGP;
-  
+
   DenseMap<TreePattern *, unsigned> NodePredicateMap;
   std::vector<TreePredicateFn> NodePredicates;
 
   // We de-duplicate the predicates by code string, and use this map to track
   // all the patterns with "identical" predicates.
   StringMap<TinyPtrVector<TreePattern *>> NodePredicatesByCodeToRun;
-  
+
   StringMap<unsigned> PatternPredicateMap;
   std::vector<std::string> PatternPredicates;
 
@@ -116,7 +116,7 @@ private:
     }
     return Entry-1;
   }
-  
+
   unsigned getPatternPredicate(StringRef PredName) {
     unsigned &Entry = PatternPredicateMap[PredName];
     if (Entry == 0) {
@@ -773,13 +773,13 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
     for (unsigned i = 0, e = NodePredicates.size(); i != e; ++i) {
       // Emit the predicate code corresponding to this pattern.
       TreePredicateFn PredFn = NodePredicates[i];
-      
+
       assert(!PredFn.isAlwaysTrue() && "No code in this predicate");
       OS << "  case " << i << ": { \n";
       for (auto *SimilarPred :
            NodePredicatesByCodeToRun[PredFn.getCodeToRunOnSDNode()])
         OS << "    // " << TreePredicateFn(SimilarPred).getFnName() <<'\n';
-      
+
       OS << PredFn.getCodeToRunOnSDNode() << "\n  }\n";
     }
     OS << "  }\n";

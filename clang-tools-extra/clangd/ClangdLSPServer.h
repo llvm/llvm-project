@@ -67,6 +67,8 @@ private:
                     JSONOutput &Out) override;
   void onCompletion(TextDocumentPositionParams Params, StringRef ID,
                     JSONOutput &Out) override;
+  void onSignatureHelp(TextDocumentPositionParams Params, StringRef ID,
+                       JSONOutput &Out) override;
   void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
                         JSONOutput &Out) override;
   void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,

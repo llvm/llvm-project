@@ -1505,49 +1505,181 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
 void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
                                       SelectionDAG &DAG,
                                       SmallVectorImpl<SDValue> &Results) const {
-  assert(Op.getValueType() == MVT::i64);
-
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
+
+  assert(VT == MVT::i64 && "LowerUDIVREM64 expects an i64");
+
   EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
 
-  SDValue one = DAG.getConstant(1, DL, HalfVT);
-  SDValue zero = DAG.getConstant(0, DL, HalfVT);
+  SDValue One = DAG.getConstant(1, DL, HalfVT);
+  SDValue Zero = DAG.getConstant(0, DL, HalfVT);
 
   //HiLo split
   SDValue LHS = Op.getOperand(0);
-  SDValue LHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, zero);
-  SDValue LHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, one);
+  SDValue LHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, Zero);
+  SDValue LHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, LHS, One);
 
   SDValue RHS = Op.getOperand(1);
-  SDValue RHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, zero);
-  SDValue RHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, one);
+  SDValue RHS_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, Zero);
+  SDValue RHS_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, RHS, One);
 
-  if (VT == MVT::i64 &&
-    DAG.MaskedValueIsZero(RHS, APInt::getHighBitsSet(64, 32)) &&
-    DAG.MaskedValueIsZero(LHS, APInt::getHighBitsSet(64, 32))) {
+  if (DAG.MaskedValueIsZero(RHS, APInt::getHighBitsSet(64, 32)) &&
+      DAG.MaskedValueIsZero(LHS, APInt::getHighBitsSet(64, 32))) {
 
     SDValue Res = DAG.getNode(ISD::UDIVREM, DL, DAG.getVTList(HalfVT, HalfVT),
                               LHS_Lo, RHS_Lo);
 
-    SDValue DIV = DAG.getBuildVector(MVT::v2i32, DL, {Res.getValue(0), zero});
-    SDValue REM = DAG.getBuildVector(MVT::v2i32, DL, {Res.getValue(1), zero});
+    SDValue DIV = DAG.getBuildVector(MVT::v2i32, DL, {Res.getValue(0), Zero});
+    SDValue REM = DAG.getBuildVector(MVT::v2i32, DL, {Res.getValue(1), Zero});
 
     Results.push_back(DAG.getNode(ISD::BITCAST, DL, MVT::i64, DIV));
     Results.push_back(DAG.getNode(ISD::BITCAST, DL, MVT::i64, REM));
     return;
   }
 
+  if (isTypeLegal(MVT::i64)) {
+    // Compute denominator reciprocal.
+    unsigned FMAD = Subtarget->hasFP32Denormals() ?
+                    (unsigned)AMDGPUISD::FMAD_FTZ :
+                    (unsigned)ISD::FMAD;
+
+    SDValue Cvt_Lo = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Lo);
+    SDValue Cvt_Hi = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Hi);
+    SDValue Mad1 = DAG.getNode(FMAD, DL, MVT::f32, Cvt_Hi,
+      DAG.getConstantFP(APInt(32, 0x4f800000).bitsToFloat(), DL, MVT::f32),
+      Cvt_Lo);
+    SDValue Rcp = DAG.getNode(AMDGPUISD::RCP, DL, MVT::f32, Mad1);
+    SDValue Mul1 = DAG.getNode(ISD::FMUL, DL, MVT::f32, Rcp,
+      DAG.getConstantFP(APInt(32, 0x5f7ffffc).bitsToFloat(), DL, MVT::f32));
+    SDValue Mul2 = DAG.getNode(ISD::FMUL, DL, MVT::f32, Mul1,
+      DAG.getConstantFP(APInt(32, 0x2f800000).bitsToFloat(), DL, MVT::f32));
+    SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, MVT::f32, Mul2);
+    SDValue Mad2 = DAG.getNode(FMAD, DL, MVT::f32, Trunc,
+      DAG.getConstantFP(APInt(32, 0xcf800000).bitsToFloat(), DL, MVT::f32),
+      Mul1);
+    SDValue Rcp_Lo = DAG.getNode(ISD::FP_TO_UINT, DL, HalfVT, Mad2);
+    SDValue Rcp_Hi = DAG.getNode(ISD::FP_TO_UINT, DL, HalfVT, Trunc);
+    SDValue Rcp64 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Rcp_Lo, Rcp_Hi}));
+
+    SDValue Zero64 = DAG.getConstant(0, DL, VT);
+    SDValue One64  = DAG.getConstant(1, DL, VT);
+    SDValue Zero1 = DAG.getConstant(0, DL, MVT::i1);
+    SDVTList HalfCarryVT = DAG.getVTList(HalfVT, MVT::i1);
+
+    SDValue Neg_RHS = DAG.getNode(ISD::SUB, DL, VT, Zero64, RHS);
+    SDValue Mullo1 = DAG.getNode(ISD::MUL, DL, VT, Neg_RHS, Rcp64);
+    SDValue Mulhi1 = DAG.getNode(ISD::MULHU, DL, VT, Rcp64, Mullo1);
+    SDValue Mulhi1_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi1,
+                                    Zero);
+    SDValue Mulhi1_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi1,
+                                    One);
+
+    SDValue Add1_Lo = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Rcp_Lo,
+                                  Mulhi1_Lo, Zero1);
+    SDValue Add1_Hi = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Rcp_Hi,
+                                  Mulhi1_Hi, Add1_Lo.getValue(1));
+    SDValue Add1_HiNc = DAG.getNode(ISD::ADD, DL, HalfVT, Rcp_Hi, Mulhi1_Hi);
+    SDValue Add1 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Add1_Lo, Add1_Hi}));
+
+    SDValue Mullo2 = DAG.getNode(ISD::MUL, DL, VT, Neg_RHS, Add1);
+    SDValue Mulhi2 = DAG.getNode(ISD::MULHU, DL, VT, Add1, Mullo2);
+    SDValue Mulhi2_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi2,
+                                    Zero);
+    SDValue Mulhi2_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mulhi2,
+                                    One);
+
+    SDValue Add2_Lo = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Add1_Lo,
+                                  Mulhi2_Lo, Zero1);
+    SDValue Add2_HiC = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Add1_HiNc,
+                                   Mulhi2_Hi, Add1_Lo.getValue(1));
+    SDValue Add2_Hi = DAG.getNode(ISD::ADDCARRY, DL, HalfCarryVT, Add2_HiC,
+                                  Zero, Add2_Lo.getValue(1));
+    SDValue Add2 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Add2_Lo, Add2_Hi}));
+    SDValue Mulhi3 = DAG.getNode(ISD::MULHU, DL, VT, LHS, Add2);
+
+    SDValue Mul3 = DAG.getNode(ISD::MUL, DL, VT, RHS, Mulhi3);
+
+    SDValue Mul3_Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mul3, Zero);
+    SDValue Mul3_Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, HalfVT, Mul3, One);
+    SDValue Sub1_Lo = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, LHS_Lo,
+                                  Mul3_Lo, Zero1);
+    SDValue Sub1_Hi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, LHS_Hi,
+                                  Mul3_Hi, Sub1_Lo.getValue(1));
+    SDValue Sub1_Mi = DAG.getNode(ISD::SUB, DL, HalfVT, LHS_Hi, Mul3_Hi);
+    SDValue Sub1 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Sub1_Lo, Sub1_Hi}));
+
+    SDValue MinusOne = DAG.getConstant(0xffffffffu, DL, HalfVT);
+    SDValue C1 = DAG.getSelectCC(DL, Sub1_Hi, RHS_Hi, MinusOne, Zero,
+                                 ISD::SETUGE);
+    SDValue C2 = DAG.getSelectCC(DL, Sub1_Lo, RHS_Lo, MinusOne, Zero,
+                                 ISD::SETUGE);
+    SDValue C3 = DAG.getSelectCC(DL, Sub1_Hi, RHS_Hi, C2, C1, ISD::SETEQ);
+
+    // TODO: Here and below portions of the code can be enclosed into if/endif.
+    // Currently control flow is unconditional and we have 4 selects after
+    // potential endif to substitute PHIs.
+
+    // if C3 != 0 ...
+    SDValue Sub2_Lo = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub1_Lo,
+                                  RHS_Lo, Zero1);
+    SDValue Sub2_Mi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub1_Mi,
+                                  RHS_Hi, Sub1_Lo.getValue(1));
+    SDValue Sub2_Hi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub2_Mi,
+                                  Zero, Sub2_Lo.getValue(1));
+    SDValue Sub2 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Sub2_Lo, Sub2_Hi}));
+
+    SDValue Add3 = DAG.getNode(ISD::ADD, DL, VT, Mulhi3, One64);
+
+    SDValue C4 = DAG.getSelectCC(DL, Sub2_Hi, RHS_Hi, MinusOne, Zero,
+                                 ISD::SETUGE);
+    SDValue C5 = DAG.getSelectCC(DL, Sub2_Lo, RHS_Lo, MinusOne, Zero,
+                                 ISD::SETUGE);
+    SDValue C6 = DAG.getSelectCC(DL, Sub2_Hi, RHS_Hi, C5, C4, ISD::SETEQ);
+
+    // if (C6 != 0)
+    SDValue Add4 = DAG.getNode(ISD::ADD, DL, VT, Add3, One64);
+
+    SDValue Sub3_Lo = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub2_Lo,
+                                  RHS_Lo, Zero1);
+    SDValue Sub3_Mi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub2_Mi,
+                                  RHS_Hi, Sub2_Lo.getValue(1));
+    SDValue Sub3_Hi = DAG.getNode(ISD::SUBCARRY, DL, HalfCarryVT, Sub3_Mi,
+                                  Zero, Sub3_Lo.getValue(1));
+    SDValue Sub3 = DAG.getBitcast(VT,
+                        DAG.getBuildVector(MVT::v2i32, DL, {Sub3_Lo, Sub3_Hi}));
+
+    // endif C6
+    // endif C3
+
+    SDValue Sel1 = DAG.getSelectCC(DL, C6, Zero, Add4, Add3, ISD::SETNE);
+    SDValue Div  = DAG.getSelectCC(DL, C3, Zero, Sel1, Mulhi3, ISD::SETNE);
+
+    SDValue Sel2 = DAG.getSelectCC(DL, C6, Zero, Sub3, Sub2, ISD::SETNE);
+    SDValue Rem  = DAG.getSelectCC(DL, C3, Zero, Sel2, Sub1, ISD::SETNE);
+
+    Results.push_back(Div);
+    Results.push_back(Rem);
+
+    return;
+  }
+
+  // r600 expandion.
   // Get Speculative values
   SDValue DIV_Part = DAG.getNode(ISD::UDIV, DL, HalfVT, LHS_Hi, RHS_Lo);
   SDValue REM_Part = DAG.getNode(ISD::UREM, DL, HalfVT, LHS_Hi, RHS_Lo);
 
-  SDValue REM_Lo = DAG.getSelectCC(DL, RHS_Hi, zero, REM_Part, LHS_Hi, ISD::SETEQ);
-  SDValue REM = DAG.getBuildVector(MVT::v2i32, DL, {REM_Lo, zero});
+  SDValue REM_Lo = DAG.getSelectCC(DL, RHS_Hi, Zero, REM_Part, LHS_Hi, ISD::SETEQ);
+  SDValue REM = DAG.getBuildVector(MVT::v2i32, DL, {REM_Lo, Zero});
   REM = DAG.getNode(ISD::BITCAST, DL, MVT::i64, REM);
 
-  SDValue DIV_Hi = DAG.getSelectCC(DL, RHS_Hi, zero, DIV_Part, zero, ISD::SETEQ);
-  SDValue DIV_Lo = zero;
+  SDValue DIV_Hi = DAG.getSelectCC(DL, RHS_Hi, Zero, DIV_Part, Zero, ISD::SETEQ);
+  SDValue DIV_Lo = Zero;
 
   const unsigned halfBitWidth = HalfVT.getSizeInBits();
 
@@ -1556,7 +1688,7 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     SDValue POS = DAG.getConstant(bitPos, DL, HalfVT);
     // Get value of high bit
     SDValue HBit = DAG.getNode(ISD::SRL, DL, HalfVT, LHS_Lo, POS);
-    HBit = DAG.getNode(ISD::AND, DL, HalfVT, HBit, one);
+    HBit = DAG.getNode(ISD::AND, DL, HalfVT, HBit, One);
     HBit = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, HBit);
 
     // Shift
@@ -1565,7 +1697,7 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     REM = DAG.getNode(ISD::OR, DL, VT, REM, HBit);
 
     SDValue BIT = DAG.getConstant(1ULL << bitPos, DL, HalfVT);
-    SDValue realBIT = DAG.getSelectCC(DL, REM, RHS, BIT, zero, ISD::SETUGE);
+    SDValue realBIT = DAG.getSelectCC(DL, REM, RHS, BIT, Zero, ISD::SETUGE);
 
     DIV_Lo = DAG.getNode(ISD::OR, DL, HalfVT, DIV_Lo, realBIT);
 

@@ -144,6 +144,9 @@ private:
   // For -defsym or -wrap.
   std::vector<SymbolRenaming> Defsyms;
 
+  // For -wrap.
+  std::vector<std::pair<Symbol *, Symbol *>> WrapSymbols;
+
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;
 };

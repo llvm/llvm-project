@@ -13,8 +13,8 @@
 define i8 @f1(i8 %dummy, i8 *%src, i8 %cmp, i8 %swap) {
 ; CHECK-MAIN-LABEL: f1:
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
-; CHECK-MAIN: sll %r3, 3
-; CHECK-MAIN: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: sll %r3, 3
+; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll %r2, [[OLD]], 8(%r3)
 ; CHECK-MAIN: risbg %r4, %r2, 32, 55, 0
@@ -60,8 +60,8 @@ define i8 @f2(i8 *%src) {
 define i32 @f3(i8 %dummy, i8 *%src, i8 %cmp, i8 %swap) {
 ; CHECK-MAIN-LABEL: f3:
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
-; CHECK-MAIN: sll %r3, 3
-; CHECK-MAIN: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: sll %r3, 3
+; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 8(%r3)
 ; CHECK-MAIN: risbg %r4, [[TMP]], 32, 55, 0

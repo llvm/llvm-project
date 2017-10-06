@@ -5,7 +5,7 @@
 Content-Length: 142
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":"","rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
-# CHECK: Content-Length: 466
+# CHECK: Content-Length: 535
 # CHECK: {"jsonrpc":"2.0","id":0,"result":{"capabilities":{
 # CHECK:   "textDocumentSync": 1,
 # CHECK:   "documentFormattingProvider": true,
@@ -13,6 +13,7 @@ Content-Length: 142
 # CHECK:   "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
 # CHECK:   "codeActionProvider": true,
 # CHECK:   "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+# CHECK:   "signatureHelpProvider": {"triggerCharacters": ["(",","]},
 # CHECK:   "definitionProvider": true
 # CHECK: }}}
 #

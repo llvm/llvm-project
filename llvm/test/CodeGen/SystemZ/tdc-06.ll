@@ -10,30 +10,30 @@ declare fp128 @llvm.fabs.f128(fp128)
 define i32 @fpc(double %x) {
 entry:
 ; CHECK-LABEL: fpc
-; CHECK: lhi %r2, 5
-; CHECK: ltdbr %f0, %f0
+; CHECK-DAG: lhi %r2, 5
+; CHECK-DAG: ltdbr %f0, %f0
 ; CHECK: je [[RET:.L.*]]
   %testeq = fcmp oeq double %x, 0.000000e+00
   br i1 %testeq, label %ret, label %nonzero, !prof !1
 
 nonzero:
-; CHECK: lhi %r2, 1
-; CHECK: cdbr %f0, %f0
+; CHECK-DAG: lhi %r2, 1
+; CHECK-DAG: cdbr %f0, %f0
 ; CHECK: jo [[RET]]
   %testnan = fcmp uno double %x, 0.000000e+00
   br i1 %testnan, label %ret, label %nonzeroord, !prof !1
 
 nonzeroord:
-; CHECK: lhi %r2, 2
-; CHECK: tcdb %f0, 48
+; CHECK-DAG: lhi %r2, 2
+; CHECK-DAG: tcdb %f0, 48
 ; CHECK: jl [[RET]]
   %abs = tail call double @llvm.fabs.f64(double %x)
   %testinf = fcmp oeq double %abs, 0x7FF0000000000000
   br i1 %testinf, label %ret, label %finite, !prof !1
 
 finite:
-; CHECK: lhi %r2, 3
-; CHECK: tcdb %f0, 831
+; CHECK-DAG: lhi %r2, 3
+; CHECK-DAG: tcdb %f0, 831
 ; CHECK: blr %r14
 ; CHECK: lhi %r2, 4
   %testnormal = fcmp uge double %abs, 0x10000000000000

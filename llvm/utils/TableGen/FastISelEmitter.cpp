@@ -363,7 +363,7 @@ struct OperandsSignature {
 
 namespace {
 class FastISelMap {
-  // A multimap is needed instead of a "plain" map because the key is 
+  // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.
   typedef std::multimap<int, InstructionMemo> PredMap;
   typedef std::map<MVT::SimpleValueType, PredMap> RetPredMap;
@@ -374,7 +374,7 @@ class FastISelMap {
 
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
-  // This is used to check that there are no duplicate predicates            
+  // This is used to check that there are no duplicate predicates
   typedef std::multimap<std::string, bool> PredCheckMap;
   typedef std::map<MVT::SimpleValueType, PredCheckMap> RetPredCheckMap;
   typedef std::map<MVT::SimpleValueType, RetPredCheckMap> TypeRetPredCheckMap;
@@ -395,10 +395,10 @@ public:
   void collectPatterns(CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
-private:  
-  void emitInstructionCode(raw_ostream &OS, 
+private:
+  void emitInstructionCode(raw_ostream &OS,
                            const OperandsSignature &Operands,
-                           const PredMap &PM, 
+                           const PredMap &PM,
                            const std::string &RetVTName);
 };
 } // End anonymous namespace
@@ -572,7 +572,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
       PhysRegInputs,
       PredicateCheck
     };
-    
+
     int complexity = Pattern.getPatternComplexity(CGP);
 
     if (SimplePatternsCheck[Operands][OpcodeName][VT]
@@ -612,9 +612,9 @@ void FastISelMap::printImmediatePredicates(raw_ostream &OS) {
   OS << "\n\n";
 }
 
-void FastISelMap::emitInstructionCode(raw_ostream &OS, 
+void FastISelMap::emitInstructionCode(raw_ostream &OS,
                                       const OperandsSignature &Operands,
-                                      const PredMap &PM, 
+                                      const PredMap &PM,
                                       const std::string &RetVTName) {
   // Emit code for each possible instruction. There may be
   // multiple if there are subtarget concerns.  A reverse iterator

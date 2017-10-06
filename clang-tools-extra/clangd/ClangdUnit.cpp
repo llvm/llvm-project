@@ -119,6 +119,44 @@ static int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
+/// Get the optional chunk as a string. This function is possibly recursive.
+///
+/// The parameter info for each parameter is appended to the Parameters.
+std::string
+getOptionalParameters(const CodeCompletionString &CCS,
+                      std::vector<ParameterInformation> &Parameters) {
+  std::string Result;
+  for (const auto &Chunk : CCS) {
+    switch (Chunk.Kind) {
+    case CodeCompletionString::CK_Optional:
+      assert(Chunk.Optional &&
+             "Expected the optional code completion string to be non-null.");
+      Result += getOptionalParameters(*Chunk.Optional, Parameters);
+      break;
+    case CodeCompletionString::CK_VerticalSpace:
+      break;
+    case CodeCompletionString::CK_Placeholder:
+      // A string that acts as a placeholder for, e.g., a function call
+      // argument.
+      // Intentional fallthrough here.
+    case CodeCompletionString::CK_CurrentParameter: {
+      // A piece of text that describes the parameter that corresponds to
+      // the code-completion location within a function call, message send,
+      // macro invocation, etc.
+      Result += Chunk.Text;
+      ParameterInformation Info;
+      Info.label = Chunk.Text;
+      Parameters.push_back(std::move(Info));
+      break;
+    }
+    default:
+      Result += Chunk.Text;
+      break;
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<DiagWithFixIts> toClangdDiag(StoredDiagnostic D) {
   auto Location = D.getLocation();
   if (!Location.isValid() || !Location.getManager().isInMainFile(Location))
@@ -284,8 +322,36 @@ std::string escapeSnippet(const llvm::StringRef Text) {
   return Result;
 }
 
-class CompletionItemsCollector : public CodeCompleteConsumer {
+std::string getDocumentation(const CodeCompletionString &CCS) {
+  // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
+  // information in the documentation field.
+  std::string Result;
+  const unsigned AnnotationCount = CCS.getAnnotationCount();
+  if (AnnotationCount > 0) {
+    Result += "Annotation";
+    if (AnnotationCount == 1) {
+      Result += ": ";
+    } else /* AnnotationCount > 1 */ {
+      Result += "s: ";
+    }
+    for (unsigned I = 0; I < AnnotationCount; ++I) {
+      Result += CCS.getAnnotation(I);
+      Result.push_back(I == AnnotationCount - 1 ? '\n' : ' ');
+    }
+  }
+  // Add brief documentation (if there is any).
+  if (CCS.getBriefComment() != nullptr) {
+    if (!Result.empty()) {
+      // This means we previously added annotations. Add an extra newline
+      // character to make the annotations stand out.
+      Result.push_back('\n');
+    }
+    Result += CCS.getBriefComment();
+  }
+  return Result;
+}
 
+class CompletionItemsCollector : public CodeCompleteConsumer {
 public:
   CompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
                            std::vector<CompletionItem> &Items)
@@ -322,7 +388,7 @@ private:
     CompletionItem Item;
     Item.insertTextFormat = InsertTextFormat::PlainText;
 
-    FillDocumentation(CCS, Item);
+    Item.documentation = getDocumentation(CCS);
 
     // Fill in the label, detail, insertText and filterText fields of the
     // CompletionItem.
@@ -338,35 +404,6 @@ private:
 
   virtual void ProcessChunks(const CodeCompletionString &CCS,
                              CompletionItem &Item) const = 0;
-
-  void FillDocumentation(const CodeCompletionString &CCS,
-                         CompletionItem &Item) const {
-    // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
-    // information in the documentation field.
-    const unsigned AnnotationCount = CCS.getAnnotationCount();
-    if (AnnotationCount > 0) {
-      Item.documentation += "Annotation";
-      if (AnnotationCount == 1) {
-        Item.documentation += ": ";
-      } else /* AnnotationCount > 1 */ {
-        Item.documentation += "s: ";
-      }
-      for (unsigned I = 0; I < AnnotationCount; ++I) {
-        Item.documentation += CCS.getAnnotation(I);
-        Item.documentation.push_back(I == AnnotationCount - 1 ? '\n' : ' ');
-      }
-    }
-
-    // Add brief documentation (if there is any).
-    if (CCS.getBriefComment() != nullptr) {
-      if (!Item.documentation.empty()) {
-        // This means we previously added annotations. Add an extra newline
-        // character to make the annotations stand out.
-        Item.documentation.push_back('\n');
-      }
-      Item.documentation += CCS.getBriefComment();
-    }
-  }
 
   static int GetSortPriority(const CodeCompletionString &CCS) {
     int Score = CCS.getPriority();
@@ -560,14 +597,107 @@ private:
     }
   }
 }; // SnippetCompletionItemsCollector
-} // namespace
 
-std::vector<CompletionItem>
-clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
-                     PrecompiledPreamble const *Preamble, StringRef Contents,
-                     Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                     std::shared_ptr<PCHContainerOperations> PCHs,
-                     bool SnippetCompletions, clangd::Logger &Logger) {
+class SignatureHelpCollector final : public CodeCompleteConsumer {
+
+public:
+  SignatureHelpCollector(const CodeCompleteOptions &CodeCompleteOpts,
+                         SignatureHelp &SigHelp)
+      : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
+        SigHelp(SigHelp),
+        Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
+        CCTUInfo(Allocator) {}
+
+  void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
+                                 OverloadCandidate *Candidates,
+                                 unsigned NumCandidates) override {
+    SigHelp.signatures.reserve(NumCandidates);
+    // FIXME(rwols): How can we determine the "active overload candidate"?
+    // Right now the overloaded candidates seem to be provided in a "best fit"
+    // order, so I'm not too worried about this.
+    SigHelp.activeSignature = 0;
+    assert(CurrentArg <= std::numeric_limits<int>::max() &&
+           "too many arguments");
+    SigHelp.activeParameter = static_cast<int>(CurrentArg);
+    for (unsigned I = 0; I < NumCandidates; ++I) {
+      const auto &Candidate = Candidates[I];
+      const auto *CCS = Candidate.CreateSignatureString(
+          CurrentArg, S, *Allocator, CCTUInfo, true);
+      assert(CCS && "Expected the CodeCompletionString to be non-null");
+      SigHelp.signatures.push_back(ProcessOverloadCandidate(Candidate, *CCS));
+    }
+  }
+
+  GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
+
+  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+
+private:
+  SignatureInformation
+  ProcessOverloadCandidate(const OverloadCandidate &Candidate,
+                           const CodeCompletionString &CCS) const {
+    SignatureInformation Result;
+    const char *ReturnType = nullptr;
+
+    Result.documentation = getDocumentation(CCS);
+
+    for (const auto &Chunk : CCS) {
+      switch (Chunk.Kind) {
+      case CodeCompletionString::CK_ResultType:
+        // A piece of text that describes the type of an entity or,
+        // for functions and methods, the return type.
+        assert(!ReturnType && "Unexpected CK_ResultType");
+        ReturnType = Chunk.Text;
+        break;
+      case CodeCompletionString::CK_Placeholder:
+        // A string that acts as a placeholder for, e.g., a function call
+        // argument.
+        // Intentional fallthrough here.
+      case CodeCompletionString::CK_CurrentParameter: {
+        // A piece of text that describes the parameter that corresponds to
+        // the code-completion location within a function call, message send,
+        // macro invocation, etc.
+        Result.label += Chunk.Text;
+        ParameterInformation Info;
+        Info.label = Chunk.Text;
+        Result.parameters.push_back(std::move(Info));
+        break;
+      }
+      case CodeCompletionString::CK_Optional: {
+        // The rest of the parameters are defaulted/optional.
+        assert(Chunk.Optional &&
+               "Expected the optional code completion string to be non-null.");
+        Result.label +=
+            getOptionalParameters(*Chunk.Optional, Result.parameters);
+        break;
+      }
+      case CodeCompletionString::CK_VerticalSpace:
+        break;
+      default:
+        Result.label += Chunk.Text;
+        break;
+      }
+    }
+    if (ReturnType) {
+      Result.label += " -> ";
+      Result.label += ReturnType;
+    }
+    return Result;
+  }
+
+  SignatureHelp &SigHelp;
+  std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
+  CodeCompletionTUInfo CCTUInfo;
+
+}; // SignatureHelpCollector
+
+bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
+                        const CodeCompleteOptions &Options, PathRef FileName,
+                        const tooling::CompileCommand &Command,
+                        PrecompiledPreamble const *Preamble, StringRef Contents,
+                        Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                        std::shared_ptr<PCHContainerOperations> PCHs,
+                        clangd::Logger &Logger) {
   std::vector<const char *> ArgStrs;
   for (const auto &S : Command.CommandLine)
     ArgStrs.push_back(S.c_str());
@@ -603,38 +733,73 @@ clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
 
   auto &FrontendOpts = Clang->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
-
-  FrontendOpts.CodeCompleteOpts.IncludeGlobals = true;
-  FrontendOpts.CodeCompleteOpts.IncludeMacros = true;
-  FrontendOpts.CodeCompleteOpts.IncludeBriefComments = true;
-
+  FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = FileName;
   FrontendOpts.CodeCompletionAt.Line = Pos.line + 1;
   FrontendOpts.CodeCompletionAt.Column = Pos.character + 1;
 
-  std::vector<CompletionItem> Items;
-  if (SnippetCompletions) {
-    FrontendOpts.CodeCompleteOpts.IncludeCodePatterns = true;
-    Clang->setCodeCompletionConsumer(new SnippetCompletionItemsCollector(
-        FrontendOpts.CodeCompleteOpts, Items));
-  } else {
-    FrontendOpts.CodeCompleteOpts.IncludeCodePatterns = false;
-    Clang->setCodeCompletionConsumer(new PlainTextCompletionItemsCollector(
-        FrontendOpts.CodeCompleteOpts, Items));
-  }
+  Clang->setCodeCompletionConsumer(Consumer.release());
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     Logger.log("BeginSourceFile() failed when running codeComplete for " +
                FileName);
-    return Items;
+    return false;
   }
-  if (!Action.Execute())
+  if (!Action.Execute()) {
     Logger.log("Execute() failed when running codeComplete for " + FileName);
+    return false;
+  }
 
   Action.EndSourceFile();
 
-  return Items;
+  return true;
+}
+
+} // namespace
+
+std::vector<CompletionItem>
+clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
+                     PrecompiledPreamble const *Preamble, StringRef Contents,
+                     Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                     std::shared_ptr<PCHContainerOperations> PCHs,
+                     bool SnippetCompletions, clangd::Logger &Logger) {
+  std::vector<CompletionItem> Results;
+  CodeCompleteOptions Options;
+  std::unique_ptr<CodeCompleteConsumer> Consumer;
+  Options.IncludeGlobals = true;
+  Options.IncludeMacros = true;
+  Options.IncludeBriefComments = true;
+  if (SnippetCompletions) {
+    Options.IncludeCodePatterns = true;
+    Consumer =
+        llvm::make_unique<SnippetCompletionItemsCollector>(Options, Results);
+  } else {
+    Options.IncludeCodePatterns = false;
+    Consumer =
+        llvm::make_unique<PlainTextCompletionItemsCollector>(Options, Results);
+  }
+  invokeCodeComplete(std::move(Consumer), Options, FileName, Command, Preamble,
+                     Contents, Pos, std::move(VFS), std::move(PCHs), Logger);
+  return Results;
+}
+
+SignatureHelp
+clangd::signatureHelp(PathRef FileName, tooling::CompileCommand Command,
+                      PrecompiledPreamble const *Preamble, StringRef Contents,
+                      Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                      std::shared_ptr<PCHContainerOperations> PCHs,
+                      clangd::Logger &Logger) {
+  SignatureHelp Result;
+  CodeCompleteOptions Options;
+  Options.IncludeGlobals = false;
+  Options.IncludeMacros = false;
+  Options.IncludeCodePatterns = false;
+  Options.IncludeBriefComments = true;
+  invokeCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
+                     Options, FileName, Command, Preamble, Contents, Pos,
+                     std::move(VFS), std::move(PCHs), Logger);
+  return Result;
 }
 
 void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {

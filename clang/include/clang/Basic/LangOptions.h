@@ -197,6 +197,10 @@ public:
   bool allowsNonTrivialObjCLifetimeQualifiers() const {
     return ObjCAutoRefCount || ObjCWeak;
   }
+
+  bool assumeFunctionsAreConvergent() const {
+    return (CUDA && CUDAIsDevice) || OpenCL;
+  }
 };
 
 /// \brief Floating point control options
