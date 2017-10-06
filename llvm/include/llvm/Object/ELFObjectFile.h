@@ -1063,14 +1063,20 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     default: return Triple::UnknownArch;
     }
 
-  case ELF::EM_AMDGPU:
-    if (EF.getHeader()->e_ident[ELF::EI_CLASS] != ELF::ELFCLASS64)
-      return Triple::UnknownArch;
+  case ELF::EM_AMDGPU: {
     if (!IsLittleEndian)
       return Triple::UnknownArch;
 
-    // TODO: Determine r600/amdgcn architecture based e_flags.
-    return Triple::amdgcn;
+    unsigned EFlags = EF.getHeader()->e_flags;
+    switch (EFlags & ELF::EF_AMDGPU_ARCH) {
+    case ELF::EF_AMDGPU_ARCH_R600:
+      return Triple::r600;
+    case ELF::EF_AMDGPU_ARCH_GCN:
+      return Triple::amdgcn;
+    default:
+      return Triple::UnknownArch;
+    }
+  }
 
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;

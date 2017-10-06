@@ -1,25 +1,44 @@
-//===--------- X86InterleavedAccess.cpp ----------------------------------===//
+//===- X86InterleavedAccess.cpp -------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
-///
+//===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file contains the X86 implementation of the interleaved accesses
 /// optimization generating X86-specific instructions/intrinsics for
 /// interleaved access groups.
-///
-//===--------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
 
-#include "X86TargetMachine.h"
+#include "X86ISelLowering.h"
+#include "X86Subtarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
+
 /// \brief This class holds necessary information to represent an interleaved
 /// access group and supports utilities to lower the group into
 /// X86-specific instructions/intrinsics.
@@ -104,6 +123,7 @@ public:
   /// instructions/intrinsics.
   bool lowerIntoOptimizedSequence();
 };
+
 } // end anonymous namespace
 
 bool X86InterleavedAccessGroup::isSupported() const {
@@ -146,7 +166,6 @@ bool X86InterleavedAccessGroup::isSupported() const {
 void X86InterleavedAccessGroup::decompose(
     Instruction *VecInst, unsigned NumSubVectors, VectorType *SubVecTy,
     SmallVectorImpl<Instruction *> &DecomposedVectors) {
-
   assert((isa<LoadInst>(VecInst) || isa<ShuffleVectorInst>(VecInst)) &&
          "Expected Load or Shuffle");
 
@@ -210,7 +229,6 @@ static uint32_t Concat[] = {
   16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
   32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
   48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63 };
-
 
 // genShuffleBland - Creates shuffle according to two vectors.This function is
 // only works on instructions with lane inside 256 registers. According to
@@ -289,8 +307,6 @@ static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
     for (unsigned i = 0; i < Stride; i++)
       TransposedMatrix[i] =
       Builder.CreateShuffleVector(Temp[2 * i], Temp[2 * i + 1], Concat);
-
-  return;
 }
 
 void X86InterleavedAccessGroup::interleave8bitStride4VF8(
@@ -336,7 +352,6 @@ void X86InterleavedAccessGroup::interleave8bitStride4VF8(
 void X86InterleavedAccessGroup::interleave8bitStride4(
     ArrayRef<Instruction *> Matrix, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned NumOfElm) {
-
   // Example: Assuming we start from the following vectors:
   // Matrix[0]= c0 c1 c2 c3 c4 ... c31
   // Matrix[1]= m0 m1 m2 m3 m4 ... m31
@@ -452,7 +467,6 @@ static void setGroupSize(MVT VT, SmallVectorImpl<uint32_t> &SizeInfo) {
 static void DecodePALIGNRMask(MVT VT, unsigned Imm,
                               SmallVectorImpl<uint32_t> &ShuffleMask,
                               bool AlignDirection = true, bool Unary = false) {
-
   unsigned NumElts = VT.getVectorNumElements();
   unsigned NumLanes = std::max((int)VT.getSizeInBits() / 128, 1);
   unsigned NumLaneElts = NumElts / NumLanes;
@@ -517,14 +531,11 @@ static void concatSubVector(Value **Vec, ArrayRef<Instruction *> InVec,
 
   for (int i = 0; i < 3; i++)
     Vec[i] = Builder.CreateShuffleVector(Vec[i], Vec[i + 3], Concat);
-
-  return;
 }
 
 void X86InterleavedAccessGroup::deinterleave8bitStride3(
     ArrayRef<Instruction *> InVec, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned VecElems) {
-
   // Example: Assuming we start from the following vectors:
   // Matrix[0]= a0 b0 c0 a1 b1 c1 a2 b2
   // Matrix[1]= c2 a3 b3 c3 a4 b4 c4 a5
@@ -584,8 +595,6 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
       Vec[0], UndefValue::get(Vec[1]->getType()), VPAlign2);
   TransposedMatrix[1] = VecElems == 8 ? Vec[2] : TempVec;
   TransposedMatrix[2] = VecElems == 8 ? TempVec : Vec[2];
-
-  return;
 }
 
 // group2Shuffle reorder the shuffle stride back into continuous order.
@@ -613,7 +622,6 @@ static void group2Shuffle(MVT VT, SmallVectorImpl<uint32_t> &Mask,
 void X86InterleavedAccessGroup::interleave8bitStride3(
     ArrayRef<Instruction *> InVec, SmallVectorImpl<Value *> &TransposedMatrix,
     unsigned VecElems) {
-
   // Example: Assuming we start from the following vectors:
   // Matrix[0]= a0 a1 a2 a3 a4 a5 a6 a7
   // Matrix[1]= b0 b1 b2 b3 b4 b5 b6 b7
@@ -670,8 +678,6 @@ void X86InterleavedAccessGroup::interleave8bitStride3(
   unsigned NumOfElm = VT.getVectorNumElements();
   group2Shuffle(VT, GroupSize, VPShuf);
   reorderSubVector(VT, TransposedMatrix, Vec, VPShuf, NumOfElm,3, Builder);
-
-  return;
 }
 
 void X86InterleavedAccessGroup::transpose_4x4(
@@ -834,4 +840,3 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();
 }
-

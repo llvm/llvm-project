@@ -13,4 +13,6 @@ $al = comdat any
 
 @al = external unnamed_addr alias i8*, getelementptr inbounds ({ [1 x i8*] }, { [1 x i8*] }* @anon, i32 0, i32 0, i32 1)
 
+@foo = global i32 1
+
 !0 = !{i64 8, !"?AVA@@"}

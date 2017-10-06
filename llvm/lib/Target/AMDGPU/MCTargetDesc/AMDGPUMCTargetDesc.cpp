@@ -80,10 +80,7 @@ static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     MCAsmBackend &MAB, raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll) {
-  if (T.getOS() == Triple::AMDHSA)
-    return createAMDGPUELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
-
-  return createELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
+  return createAMDGPUELFStreamer(T, Context, MAB, OS, Emitter, RelaxAll);
 }
 
 extern "C" void LLVMInitializeAMDGPUTargetMC() {

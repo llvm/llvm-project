@@ -55,28 +55,19 @@ def regPlusGA : PatFrag<(ops node:$addr, node:$off),
 
 let Defs = [ARGUMENTS] in {
 
-// Classes to define both atomic and non-atomic integer loads
-class CLoadI32<string Name, int Opcode> :
-  I<(outs I32:$dst),
-    (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-    [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"), Opcode>;
-
-class CLoadI64<string Name, int Opcode> :
-  I<(outs I64:$dst),
+// Defines atomic and non-atomic loads, regular and extending.
+class WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode> :
+  I<(outs rc:$dst),
     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
     [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"), Opcode>;
 
 // Basic load.
 // FIXME: When we can break syntax compatibility, reorder the fields in the
 // asmstrings to match the binary encoding.
-def LOAD_I32 : CLoadI32<"i32.load", 0x28>;
-def LOAD_I64 : CLoadI64<"i64.load", 0x29>;
-def LOAD_F32 : I<(outs F32:$dst),
-                 (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                 [], "f32.load\t$dst, ${off}(${addr})${p2align}", 0x2a>;
-def LOAD_F64 : I<(outs F64:$dst),
-                 (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                 [], "f64.load\t$dst, ${off}(${addr})${p2align}", 0x2b>;
+def LOAD_I32 : WebAssemblyLoad<I32, "i32.load", 0x28>;
+def LOAD_I64 : WebAssemblyLoad<I64, "i64.load", 0x29>;
+def LOAD_F32 : WebAssemblyLoad<F32, "f32.load", 0x2a>;
+def LOAD_F64 : WebAssemblyLoad<F64, "f64.load", 0x2b>;
 
 } // Defs = [ARGUMENTS]
 
@@ -153,36 +144,16 @@ def : LoadPatExternSymOffOnly<f64, load, LOAD_F64>;
 let Defs = [ARGUMENTS] in {
 
 // Extending load.
-def LOAD8_S_I32  : I<(outs I32:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i32.load8_s\t$dst, ${off}(${addr})${p2align}", 0x2c>;
-def LOAD8_U_I32  : I<(outs I32:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i32.load8_u\t$dst, ${off}(${addr})${p2align}", 0x2d>;
-def LOAD16_S_I32 : I<(outs I32:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i32.load16_s\t$dst, ${off}(${addr})${p2align}", 0x2e>;
-def LOAD16_U_I32 : I<(outs I32:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i32.load16_u\t$dst, ${off}(${addr})${p2align}", 0x2f>;
-def LOAD8_S_I64  : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load8_s\t$dst, ${off}(${addr})${p2align}", 0x30>;
-def LOAD8_U_I64  : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load8_u\t$dst, ${off}(${addr})${p2align}", 0x31>;
-def LOAD16_S_I64 : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load16_s\t$dst, ${off}(${addr})${p2align}", 0x32>;
-def LOAD16_U_I64 : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load16_u\t$dst, ${off}(${addr})${p2align}", 0x33>;
-def LOAD32_S_I64 : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load32_s\t$dst, ${off}(${addr})${p2align}", 0x34>;
-def LOAD32_U_I64 : I<(outs I64:$dst),
-                     (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-                     [], "i64.load32_u\t$dst, ${off}(${addr})${p2align}", 0x35>;
+def LOAD8_S_I32 : WebAssemblyLoad<I32, "i32.load8_s", 0x2c>;
+def LOAD8_U_I32 : WebAssemblyLoad<I32, "i32.load8_u", 0x2d>;
+def LOAD16_S_I32 : WebAssemblyLoad<I32, "i32.load16_s", 0x2e>;
+def LOAD16_U_I32 : WebAssemblyLoad<I32, "i32.load16_u", 0x2f>;
+def LOAD8_S_I64 : WebAssemblyLoad<I64, "i64.load8_s", 0x30>;
+def LOAD8_U_I64 : WebAssemblyLoad<I64, "i64.load8_u", 0x31>;
+def LOAD16_S_I64 : WebAssemblyLoad<I64, "i64.load16_s", 0x32>;
+def LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.load16_u", 0x32>;
+def LOAD32_S_I64 : WebAssemblyLoad<I64, "i64.load32_s", 0x34>;
+def LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.load32_u", 0x35>;
 
 } // Defs = [ARGUMENTS]
 
@@ -290,7 +261,6 @@ def : LoadPatNoOffset<i64, extloadi8, LOAD8_U_I64>;
 def : LoadPatNoOffset<i64, extloadi16, LOAD16_U_I64>;
 def : LoadPatNoOffset<i64, extloadi32, LOAD32_U_I64>;
 
-
 // Select "don't care" extending loads with a constant offset.
 def : LoadPatImmOff<i32, extloadi8, regPlusImm, LOAD8_U_I32>;
 def : LoadPatImmOff<i32, extloadi16, regPlusImm, LOAD16_U_I32>;
@@ -312,7 +282,6 @@ def : LoadPatExternalSym<i32, extloadi16, LOAD16_U_I32>;
 def : LoadPatExternalSym<i64, extloadi8, LOAD8_U_I64>;
 def : LoadPatExternalSym<i64, extloadi16, LOAD16_U_I64>;
 def : LoadPatExternalSym<i64, extloadi32, LOAD32_U_I64>;
-
 
 // Select "don't care" extending loads with just a constant offset.
 def : LoadPatOffsetOnly<i32, extloadi8, LOAD8_U_I32>;

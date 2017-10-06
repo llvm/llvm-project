@@ -59,12 +59,15 @@ struct SimplifyCFGOptions {
   int BonusInstThreshold;
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
+  AssumptionCache *AC;
 
   SimplifyCFGOptions(int BonusThreshold = 1, bool SwitchToLookup = false,
-                     bool CanonicalLoops = true)
+                     bool CanonicalLoops = true,
+                     AssumptionCache *AssumpCache = nullptr)
       : BonusInstThreshold(BonusThreshold),
         ConvertSwitchToLookupTable(SwitchToLookup),
-        NeedCanonicalLoop(CanonicalLoops) {}
+        NeedCanonicalLoop(CanonicalLoops),
+        AC(AssumpCache) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -157,8 +160,7 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 /// It returns true if a modification was made, possibly deleting the basic
 /// block that was pointed to. LoopHeaders is an optional input parameter
 /// providing the set of loop headers that SimplifyCFG should not eliminate.
-bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 AssumptionCache *AC = nullptr,
+bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                  const SimplifyCFGOptions &Options = {},
                  SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 

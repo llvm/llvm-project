@@ -651,19 +651,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   return newFunction;
 }
 
-/// FindPhiPredForUseInBlock - Given a value and a basic block, find a PHI
-/// that uses the value within the basic block, and return the predecessor
-/// block associated with that use, or return 0 if none is found.
-static BasicBlock* FindPhiPredForUseInBlock(Value* Used, BasicBlock* BB) {
-  for (Use &U : Used->uses()) {
-     PHINode *P = dyn_cast<PHINode>(U.getUser());
-     if (P && P->getParent() == BB)
-       return P->getIncomingBlock(U);
-  }
-
-  return nullptr;
-}
-
 /// emitCallAndSwitchStatement - This method sets up the caller side by adding
 /// the call instruction, splitting any PHI nodes in the header block as
 /// necessary.
@@ -736,7 +723,8 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
   if (!AggregateArgs)
     std::advance(OutputArgBegin, inputs.size());
 
-  // Reload the outputs passed in by reference
+  // Reload the outputs passed in by reference.
+  Function::arg_iterator OAI = OutputArgBegin;
   for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
     Value *Output = nullptr;
     if (AggregateArgs) {
@@ -758,6 +746,34 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
       Instruction *inst = cast<Instruction>(Users[u]);
       if (!Blocks.count(inst->getParent()))
         inst->replaceUsesOfWith(outputs[i], load);
+    }
+
+    // Store to argument right after the definition of output value.
+    auto *OutI = dyn_cast<Instruction>(outputs[i]);
+    if (!OutI)
+      continue;
+    // Find proper insertion point.
+    Instruction *InsertPt = OutI->getNextNode();
+    // Let's assume that there is no other guy interleave non-PHI in PHIs.
+    if (isa<PHINode>(InsertPt))
+      InsertPt = InsertPt->getParent()->getFirstNonPHI();
+
+    assert(OAI != newFunction->arg_end() &&
+           "Number of output arguments should match "
+           "the amount of defined values");
+    if (AggregateArgs) {
+      Value *Idx[2];
+      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+      GetElementPtrInst *GEP = GetElementPtrInst::Create(
+          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertPt);
+      new StoreInst(outputs[i], GEP, InsertPt);
+      // Since there should be only one struct argument aggregating
+      // all the output values, we shouldn't increment OAI, which always
+      // points to the struct argument, in this case.
+    } else {
+      new StoreInst(outputs[i], &*OAI, InsertPt);
+      ++OAI;
     }
   }
 
@@ -801,75 +817,13 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
             break;
           }
 
-          ReturnInst *NTRet = ReturnInst::Create(Context, brVal, NewTarget);
+          ReturnInst::Create(Context, brVal, NewTarget);
 
           // Update the switch instruction.
           TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
                                               SuccNum),
                              OldTarget);
 
-          // Restore values just before we exit
-          Function::arg_iterator OAI = OutputArgBegin;
-          for (unsigned out = 0, e = outputs.size(); out != e; ++out) {
-            // For an invoke, the normal destination is the only one that is
-            // dominated by the result of the invocation
-            BasicBlock *DefBlock = cast<Instruction>(outputs[out])->getParent();
-
-            bool DominatesDef = true;
-
-            BasicBlock *NormalDest = nullptr;
-            if (auto *Invoke = dyn_cast<InvokeInst>(outputs[out]))
-              NormalDest = Invoke->getNormalDest();
-
-            if (NormalDest) {
-              DefBlock = NormalDest;
-
-              // Make sure we are looking at the original successor block, not
-              // at a newly inserted exit block, which won't be in the dominator
-              // info.
-              for (const auto &I : ExitBlockMap)
-                if (DefBlock == I.second) {
-                  DefBlock = I.first;
-                  break;
-                }
-
-              // In the extract block case, if the block we are extracting ends
-              // with an invoke instruction, make sure that we don't emit a
-              // store of the invoke value for the unwind block.
-              if (!DT && DefBlock != OldTarget)
-                DominatesDef = false;
-            }
-
-            if (DT) {
-              DominatesDef = DT->dominates(DefBlock, OldTarget);
-              
-              // If the output value is used by a phi in the target block,
-              // then we need to test for dominance of the phi's predecessor
-              // instead.  Unfortunately, this a little complicated since we
-              // have already rewritten uses of the value to uses of the reload.
-              BasicBlock* pred = FindPhiPredForUseInBlock(Reloads[out], 
-                                                          OldTarget);
-              if (pred && DT && DT->dominates(DefBlock, pred))
-                DominatesDef = true;
-            }
-
-            if (DominatesDef) {
-              if (AggregateArgs) {
-                Value *Idx[2];
-                Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-                Idx[1] = ConstantInt::get(Type::getInt32Ty(Context),
-                                          FirstOut+out);
-                GetElementPtrInst *GEP = GetElementPtrInst::Create(
-                    StructArgTy, &*OAI, Idx, "gep_" + outputs[out]->getName(),
-                    NTRet);
-                new StoreInst(outputs[out], GEP, NTRet);
-              } else {
-                new StoreInst(outputs[out], &*OAI, NTRet);
-              }
-            }
-            // Advance output iterator even if we don't emit a store
-            if (!AggregateArgs) ++OAI;
-          }
         }
 
         // rewrite the original branch instruction with this new target

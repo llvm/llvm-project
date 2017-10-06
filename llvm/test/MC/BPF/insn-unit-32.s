@@ -7,7 +7,7 @@
   w1 -= w2    // BPF_SUB  | BPF_X
   w2 *= w3    // BPF_MUL  | BPF_X
   w3 /= w4    // BPF_DIV  | BPF_X
-// CHECK: 84 11 00 00 00 00 00 00      w1 = -w1
+// CHECK: 84 01 00 00 00 00 00 00      w1 = -w1
 // CHECK: 0c 10 00 00 00 00 00 00      w0 += w1
 // CHECK: 1c 21 00 00 00 00 00 00      w1 -= w2
 // CHECK: 2c 32 00 00 00 00 00 00      w2 *= w3

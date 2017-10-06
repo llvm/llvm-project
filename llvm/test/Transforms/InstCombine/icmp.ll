@@ -1634,6 +1634,50 @@ define i1 @icmp_and_shr_multiuse(i32 %X) {
   ret i1 %and3
 }
 
+; Variation of the above with an ashr
+define i1 @icmp_and_ashr_multiuse(i32 %X) {
+; CHECK-LABEL: @icmp_and_ashr_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 224
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[AND2]], 432
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %shr = ashr i32 %X, 4
+  %and = and i32 %shr, 15
+  %and2 = and i32 %shr, 31 ; second use of the shift
+  %tobool = icmp ne i32 %and, 14
+  %tobool2 = icmp ne i32 %and2, 27
+  %and3 = and i1 %tobool, %tobool2
+  ret i1 %and3
+}
+
+define i1 @icmp_lshr_and_overshift(i8 %X) {
+; CHECK-LABEL: @icmp_lshr_and_overshift(
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ugt i8 [[X:%.*]], 31
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %shr = lshr i8 %X, 5
+  %and = and i8 %shr, 15
+  %tobool = icmp ne i8 %and, 0
+  ret i1 %tobool
+}
+
+; We shouldn't simplify this because the and uses bits that are shifted in.
+define i1 @icmp_ashr_and_overshift(i8 %X) {
+; CHECK-LABEL: @icmp_ashr_and_overshift(
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHR]], 15
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %shr = ashr i8 %X, 5
+  %and = and i8 %shr, 15
+  %tobool = icmp ne i8 %and, 0
+  ret i1 %tobool
+}
+
 ; PR16244
 define i1 @test71(i8* %x) {
 ; CHECK-LABEL: @test71(

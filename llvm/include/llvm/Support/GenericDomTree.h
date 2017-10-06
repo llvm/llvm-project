@@ -522,7 +522,9 @@ class DominatorTreeBase {
   ///
   /// Batch updates should be generally faster when performing longer sequences
   /// of updates than calling insertEdge/deleteEdge manually multiple times, as
-  /// they can reorder the updates and remove redundant ones internally.
+  /// it can reorder the updates and remove redundant ones internally.
+  /// The batch updater is also able to detect sequences of zero and exactly one
+  /// update -- it's optimized to do less work in these cases.
   ///
   /// Note that for postdominators it automatically takes care of applying
   /// updates on reverse edges internally (so there's no need to swap the

@@ -384,22 +384,21 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 // don't use movss/movsd for copies.
 //===----------------------------------------------------------------------===//
 
-multiclass sse12_move_rr<RegisterClass RC, SDNode OpNode, ValueType vt,
+multiclass sse12_move_rr<SDNode OpNode, ValueType vt,
                          X86MemOperand x86memop, string base_opc,
                          string asm_opr, Domain d = GenericDomain,
                          string Name> {
   let isCommutable = 1 in
   def rr : SI<0x10, MRMSrcReg, (outs VR128:$dst),
-              (ins VR128:$src1, RC:$src2),
+              (ins VR128:$src1, VR128:$src2),
               !strconcat(base_opc, asm_opr),
-              [(set VR128:$dst, (vt (OpNode VR128:$src1,
-                                 (scalar_to_vector RC:$src2))))],
+              [(set VR128:$dst, (vt (OpNode VR128:$src1, VR128:$src2)))],
               IIC_SSE_MOV_S_RR, d>, Sched<[WriteFShuffle]>;
 
   // For the disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rr_REV : SI<0x11, MRMDestReg, (outs VR128:$dst),
-                  (ins VR128:$src1, RC:$src2),
+                  (ins VR128:$src1, VR128:$src2),
                   !strconcat(base_opc, asm_opr),
                   [], IIC_SSE_MOV_S_RR>, Sched<[WriteFShuffle]>,
                   FoldGenData<Name#rr>;
@@ -409,7 +408,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                       X86MemOperand x86memop, string OpcodeStr,
                       Domain d = GenericDomain, string Name> {
   // AVX
-  defm V#NAME : sse12_move_rr<RC, OpNode, vt, x86memop, OpcodeStr,
+  defm V#NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
                               "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d,
                               "V"#Name>,
                               VEX_4V, VEX_LIG, VEX_WIG;
@@ -420,7 +419,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                      VEX, VEX_LIG, Sched<[WriteStore]>, VEX_WIG;
   // SSE1 & 2
   let Constraints = "$src1 = $dst" in {
-    defm NAME : sse12_move_rr<RC, OpNode, vt, x86memop, OpcodeStr,
+    defm NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
                               "\t{$src2, $dst|$dst, $src2}", d, Name>;
   }
 
@@ -506,30 +505,30 @@ let Predicates = [UseAVX] in {
 
   // Shuffle with VMOVSS
   def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
-            (VMOVSSrr (v4i32 VR128:$src1),
-                      (COPY_TO_REGCLASS (v4i32 VR128:$src2), FR32))>;
-  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
-            (VMOVSSrr (v4f32 VR128:$src1),
-                      (COPY_TO_REGCLASS (v4f32 VR128:$src2), FR32))>;
+            (VMOVSSrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v4f32 (X86Movss VR128:$src1, (scalar_to_vector FR32:$src2))),
+            (VMOVSSrr VR128:$src1, (COPY_TO_REGCLASS FR32:$src2, VR128))>;
 
   // Shuffle with VMOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, (scalar_to_vector FR64:$src2))),
+            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS FR64:$src2, VR128))>;
 
   // FIXME: Instead of a X86Movlps there should be a X86Movsd here, the problem
   // is during lowering, where it's not possible to recognize the fold cause
   // it has two uses through a bitcast. One use disappears at isel time and the
   // fold opportunity reappears.
   def : Pat<(v2f64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v2i64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4f32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4i32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
 let Predicates = [UseSSE1] in {
@@ -537,9 +536,9 @@ let Predicates = [UseSSE1] in {
   // Move scalar to XMM zero-extended, zeroing a VR128 then do a
   // MOVSS to the lower bits.
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
-            (MOVSSrr (v4f32 (V_SET0)), (COPY_TO_REGCLASS VR128:$src, FR32))>;
+            (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
-            (MOVSSrr (v4i32 (V_SET0)), (COPY_TO_REGCLASS VR128:$src, FR32))>;
+            (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
   }
 
   let AddedComplexity = 20 in {
@@ -561,9 +560,10 @@ let Predicates = [UseSSE1] in {
 
   // Shuffle with MOVSS
   def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
-            (MOVSSrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR32))>;
-  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
-            (MOVSSrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR32))>;
+            (MOVSSrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v4f32 (X86Movss VR128:$src1, (scalar_to_vector FR32:$src2))),
+            (MOVSSrr VR128:$src1, (COPY_TO_REGCLASS FR32:$src2, VR128))>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -571,7 +571,7 @@ let Predicates = [UseSSE2] in {
   // Move scalar to XMM zero-extended, zeroing a VR128 then do a
   // MOVSD to the lower bits.
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector FR64:$src)))),
-            (MOVSDrr (v2f64 (V_SET0)), FR64:$src)>;
+            (MOVSDrr (v2f64 (V_SET0)), (COPY_TO_REGCLASS FR64:$src, VR128))>;
   }
 
   let AddedComplexity = 20 in {
@@ -590,22 +590,23 @@ let Predicates = [UseSSE2] in {
 
   // Shuffle with MOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (MOVSDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, (scalar_to_vector FR64:$src2))),
+            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS FR64:$src2, VR128))>;
 
   // FIXME: Instead of a X86Movlps there should be a X86Movsd here, the problem
   // is during lowering, where it's not possible to recognize the fold because
   // it has two uses through a bitcast. One use disappears at isel time and the
   // fold opportunity reappears.
   def : Pat<(v2f64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (MOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v2i64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (MOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4f32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (MOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4i32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
+            (MOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
 // Aliases to help the assembler pick two byte VEX encodings by swapping the
@@ -6722,7 +6723,7 @@ let Predicates = [UseAVX] in {
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (VPBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector FR64:$src)))),
-            (VMOVSDrr (v2f64 (V_SET0)), FR64:$src)>;
+            (VMOVSDrr (v2f64 (V_SET0)), (COPY_TO_REGCLASS FR64:$src, VR128))>;
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),

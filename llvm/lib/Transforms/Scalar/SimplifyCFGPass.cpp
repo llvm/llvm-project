@@ -129,7 +129,6 @@ static bool mergeEmptyReturnBlocks(Function &F) {
 /// Call SimplifyCFG on all the blocks in the function,
 /// iterating until no more changes are made.
 static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
-                                   AssumptionCache *AC,
                                    const SimplifyCFGOptions &Options) {
   bool Changed = false;
   bool LocalChange = true;
@@ -145,7 +144,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
-      if (SimplifyCFG(&*BBIt++, TTI, AC, Options, &LoopHeaders)) {
+      if (simplifyCFG(&*BBIt++, TTI, Options, &LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }
@@ -156,11 +155,10 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                AssumptionCache *AC,
                                 const SimplifyCFGOptions &Options) {
   bool EverChanged = removeUnreachableBlocks(F);
   EverChanged |= mergeEmptyReturnBlocks(F);
-  EverChanged |= iterativelySimplifyCFG(F, TTI, AC, Options);
+  EverChanged |= iterativelySimplifyCFG(F, TTI, Options);
 
   // If neither pass changed anything, we're done.
   if (!EverChanged) return false;
@@ -174,7 +172,7 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
     return true;
 
   do {
-    EverChanged = iterativelySimplifyCFG(F, TTI, AC, Options);
+    EverChanged = iterativelySimplifyCFG(F, TTI, Options);
     EverChanged |= removeUnreachableBlocks(F);
   } while (EverChanged);
 
@@ -190,9 +188,8 @@ SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &PassOptions)
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
-
-  if (!simplifyFunctionCFG(F, TTI, &AC, Options))
+  Options.AC = &AM.getResult<AssumptionAnalysis>(F);
+  if (!simplifyFunctionCFG(F, TTI, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<GlobalsAA>();
@@ -221,9 +218,9 @@ struct BaseCFGSimplifyPass : public FunctionPass {
         &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return simplifyFunctionCFG(
-        F, TTI, AC,
-        {BonusInstThreshold, ConvertSwitchToLookupTable, KeepCanonicalLoops});
+    return simplifyFunctionCFG(F, TTI,
+                               {BonusInstThreshold, ConvertSwitchToLookupTable,
+                                KeepCanonicalLoops, AC});
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

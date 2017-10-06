@@ -107,9 +107,13 @@ class LLVMConfig(object):
             def norm(x):
                 return os.path.normcase(os.path.normpath(x))
 
-            current_paths = self.config.environment.get(variable, "")
-            current_paths = current_paths.split(os.path.pathsep)
-            paths = [norm(p) for p in current_paths]
+            current_paths = self.config.environment.get(variable, None)
+            if current_paths:
+                current_paths = current_paths.split(os.path.pathsep)
+                paths = [norm(p) for p in current_paths]
+            else:
+                paths = []
+
             # If we are passed a list [a b c], then iterating this list forwards
             # and adding each to the beginning would result in b c a.  So we
             # need to iterate in reverse to end up with the original ordering.
