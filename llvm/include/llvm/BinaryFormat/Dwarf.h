@@ -325,6 +325,33 @@ enum UnitType : unsigned char {
   DW_UT_hi_user = 0xff
 };
 
+inline bool isUnitType(uint8_t UnitType) {
+  switch (UnitType) {
+  case DW_UT_compile:
+  case DW_UT_type:
+  case DW_UT_partial:
+  case DW_UT_skeleton:
+  case DW_UT_split_compile:
+  case DW_UT_split_type:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline bool isUnitType(dwarf::Tag T) {
+  switch (T) {
+  case DW_TAG_compile_unit:
+  case DW_TAG_type_unit:
+  case DW_TAG_partial_unit:
+  case DW_TAG_skeleton_unit:
+  case DW_TAG_imported_unit:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Constants for the DWARF v5 Accelerator Table Proposal
 enum AcceleratorTable {
   // Data layout descriptors.
