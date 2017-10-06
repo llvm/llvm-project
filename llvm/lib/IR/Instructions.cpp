@@ -2299,7 +2299,7 @@ bool CastInst::isLosslessCast() const {
 bool CastInst::isNoopCast(Instruction::CastOps Opcode,
                           Type *SrcTy,
                           Type *DestTy,
-                          Type *IntPtrTy) {
+                          const DataLayout &DL) {
   switch (Opcode) {
     default: llvm_unreachable("Invalid CastOp");
     case Instruction::Trunc:
@@ -2317,34 +2317,12 @@ bool CastInst::isNoopCast(Instruction::CastOps Opcode,
     case Instruction::BitCast:
       return true;  // BitCast never modifies bits.
     case Instruction::PtrToInt:
-      return IntPtrTy->getScalarSizeInBits() ==
+      return DL.getIntPtrType(SrcTy)->getScalarSizeInBits() ==
              DestTy->getScalarSizeInBits();
     case Instruction::IntToPtr:
-      return IntPtrTy->getScalarSizeInBits() ==
+      return DL.getIntPtrType(DestTy)->getScalarSizeInBits() ==
              SrcTy->getScalarSizeInBits();
   }
-}
-
-/// @brief Determine if a cast is a no-op.
-bool CastInst::isNoopCast(Instruction::CastOps Opcode,
-                          Type *SrcTy,
-                          Type *DestTy,
-                          const DataLayout &DL) {
-  Type *PtrOpTy = nullptr;
-  if (Opcode == Instruction::PtrToInt)
-    PtrOpTy = SrcTy;
-  else if (Opcode == Instruction::IntToPtr)
-    PtrOpTy = DestTy;
-
-  Type *IntPtrTy = PtrOpTy ? DL.getIntPtrType(PtrOpTy) :
-                             DL.getIntPtrType(SrcTy->getContext(), 0);
-
-  return isNoopCast(Opcode, SrcTy, DestTy, IntPtrTy);
-}
-
-/// @brief Determine if a cast is a no-op.
-bool CastInst::isNoopCast(Type *IntPtrTy) const {
-  return isNoopCast(getOpcode(), getOperand(0)->getType(), getType(), IntPtrTy);
 }
 
 bool CastInst::isNoopCast(const DataLayout &DL) const {

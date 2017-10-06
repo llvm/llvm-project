@@ -491,6 +491,55 @@ for.end:
   ret void
 }
 
+; PR34711: given three consecutive instructions such that the first will be
+; widened, the second is a cast that will be widened and needs to sink after the
+; third, and the third is a first-order-recurring load that will be replicated
+; instead of widened. Although the cast and the first instruction will both be
+; widened, and are originally adjacent to each other, make sure the replicated
+; load ends up appearing between them.
+;
+; void PR34711(short[2] *a, int *b, int *c, int n) {
+;   for(int i = 0; i < n; i++) {
+;     c[i] = 7;
+;     b[i] = (a[i][0] * a[i][1]);
+;   }
+; }
+;
+; SINK-AFTER-LABEL: @PR34711
+; Check that the sext sank after the load in the vector loop.
+; SINK-AFTER: vector.body
+; SINK-AFTER:   %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ {{.*}}, %vector.body ]
+; SINK-AFTER:   %[[VSHUF:.+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> %{{.*}}, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; SINK-AFTER:   %[[VCONV:.+]] = sext <4 x i16> %[[VSHUF]] to <4 x i32>
+; SINK-AFTER:   %[[VCONV3:.+]] = sext <4 x i16> {{.*}} to <4 x i32>
+; SINK-AFTER:   mul nsw <4 x i32> %[[VCONV3]], %[[VCONV]]
+;
+define void @PR34711([2 x i16]* %a, i32* %b, i32* %c, i64 %n) {
+entry:
+  %pre.index = getelementptr inbounds [2 x i16], [2 x i16]* %a, i64 0, i64 0
+  %.pre = load i16, i16* %pre.index
+  br label %for.body
+
+for.body:
+  %0 = phi i16 [ %.pre, %entry ], [ %1, %for.body ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arraycidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
+  %cur.index = getelementptr inbounds [2 x i16], [2 x i16]* %a, i64 %indvars.iv, i64 1
+  store i32 7, i32* %arraycidx   ; 1st instruction, to be widened.
+  %conv = sext i16 %0 to i32     ; 2nd, cast to sink after third.
+  %1 = load i16, i16* %cur.index ; 3rd, first-order-recurring load not widened.
+  %conv3 = sext i16 %1 to i32
+  %mul = mul nsw i32 %conv3, %conv
+  %arrayidx5 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  store i32 %mul, i32* %arrayidx5
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 ; void no_sink_after(short *a, int n, int *b) {
 ;   for(int i = 0; i < n; i++)
 ;     b[i] = ((a[i] + 2) * a[i + 1]);

@@ -243,7 +243,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   bool ExportsSymbols = false;
   auto AddGlobal = [&](GlobalValue &GV) {
     if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
-        !GV.hasExternalLinkage())
+        !GV.hasExternalLinkage() || GV.hasComdat())
       return;
     ExportsSymbols = true;
     Md5.update(GV.getName());

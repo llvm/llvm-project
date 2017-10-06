@@ -360,8 +360,8 @@ void implicit_maps_host_global (int a){
 // CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 8]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_IS_FIRST = 288
 // CK7-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 288]
-// Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_IS_FIRST | OMP_MAP_IMPLICIT = 547
-// CK7-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 547]
+// Map types: OMP_MAP_TO  | OMP_MAP_PRIVATE_PTR | OMP_MAP_FIRST_REF = 161
+// CK7-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 161]
 
 // CK7-LABEL: implicit_maps_double
 void implicit_maps_double (int a){
@@ -562,7 +562,7 @@ void implicit_maps_double_complex (int a){
   // CK11-DAG: store { double, double }* [[PTR]], { double, double }** [[CP1]]
 
   // CK11: call void [[KERNEL:@.+]]({ double, double }* [[PTR]])
-  #pragma omp target
+  #pragma omp target defaultmap(tofrom:scalar)
   {
    dc *= dc;
   }
@@ -589,8 +589,8 @@ void implicit_maps_double_complex (int a){
 // CK12-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 8]
 // Map types: OMP_MAP_PRIVATE_VAL + OMP_MAP_IS_FIRST = 288
 // CK12-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 288]
-// Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_IS_FIRST + OMP_MAP_IMPLICIT = 547
-// CK12-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 547]
+// Map types: OMP_MAP_TO  | OMP_MAP_PRIVATE_PTR | OMP_MAP_FIRST_REF = 161
+// CK12-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 161]
 
 // CK12-LABEL: implicit_maps_float_complex
 void implicit_maps_float_complex (int a){

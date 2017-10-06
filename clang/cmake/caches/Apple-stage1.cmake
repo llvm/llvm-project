@@ -46,6 +46,7 @@ set(CLANG_BOOTSTRAP_TARGETS
   distribution
   install-distribution
   install-xcode-toolchain
+  install-distribution-toolchain
   clang CACHE STRING "")
 
 #bootstrap

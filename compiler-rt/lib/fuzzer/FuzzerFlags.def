@@ -131,6 +131,7 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
 FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
 FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
+FUZZER_FLAG_INT(use_clang_coverage, 0, "Experimental")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

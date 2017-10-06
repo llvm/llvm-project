@@ -903,8 +903,11 @@ void DataFlowGraph::build(unsigned Options) {
   NodeList Blocks = Func.Addr->members(*this);
 
   // Collect information about block references.
-  BlockRefsMap RefM;
-  buildBlockRefs(EA, RefM);
+  RegisterSet AllRefs;
+  for (NodeAddr<BlockNode*> BA : Blocks)
+    for (NodeAddr<InstrNode*> IA : BA.Addr->members(*this))
+      for (NodeAddr<RefNode*> RA : IA.Addr->members(*this))
+        AllRefs.insert(RA.Addr->getRegRef(*this));
 
   // Collect function live-ins and entry block live-ins.
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -964,9 +967,9 @@ void DataFlowGraph::build(unsigned Options) {
   // of references that will require phi definitions in that block.
   BlockRefsMap PhiM;
   for (NodeAddr<BlockNode*> BA : Blocks)
-    recordDefsForDF(PhiM, RefM, BA);
+    recordDefsForDF(PhiM, BA);
   for (NodeAddr<BlockNode*> BA : Blocks)
-    buildPhis(PhiM, RefM, BA);
+    buildPhis(PhiM, AllRefs, BA);
 
   // Link all the refs. This will recursively traverse the dominator tree.
   DefStackMap DM;
@@ -1394,29 +1397,9 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
   }
 }
 
-// Build a map that for each block will have the set of all references from
-// that block, and from all blocks dominated by it.
-void DataFlowGraph::buildBlockRefs(NodeAddr<BlockNode*> BA,
-      BlockRefsMap &RefM) {
-  RegisterSet &Refs = RefM[BA.Id];
-  MachineDomTreeNode *N = MDT.getNode(BA.Addr->getCode());
-  assert(N);
-  for (auto I : *N) {
-    MachineBasicBlock *SB = I->getBlock();
-    NodeAddr<BlockNode*> SBA = findBlock(SB);
-    buildBlockRefs(SBA, RefM);
-    const RegisterSet &RefsS = RefM[SBA.Id];
-    Refs.insert(RefsS.begin(), RefsS.end());
-  }
-
-  for (NodeAddr<InstrNode*> IA : BA.Addr->members(*this))
-    for (NodeAddr<RefNode*> RA : IA.Addr->members(*this))
-      Refs.insert(RA.Addr->getRegRef(*this));
-}
-
 // Scan all defs in the block node BA and record in PhiM the locations of
 // phi nodes corresponding to these defs.
-void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
+void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM,
       NodeAddr<BlockNode*> BA) {
   // Check all defs from block BA and record them in each block in BA's
   // iterated dominance frontier. This information will later be used to
@@ -1446,14 +1429,6 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
       IDF.insert(F->second.begin(), F->second.end());
   }
 
-  // Get the register references that are reachable from this block.
-  RegisterSet &Refs = RefM[BA.Id];
-  for (auto DB : IDF) {
-    NodeAddr<BlockNode*> DBA = findBlock(DB);
-    const RegisterSet &RefsD = RefM[DBA.Id];
-    Refs.insert(RefsD.begin(), RefsD.end());
-  }
-
   // Finally, add the set of defs to each block in the iterated dominance
   // frontier.
   for (auto DB : IDF) {
@@ -1464,7 +1439,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
 
 // Given the locations of phi nodes in the map PhiM, create the phi nodes
 // that are located in the block node BA.
-void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
+void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
       NodeAddr<BlockNode*> BA) {
   // Check if this blocks has any DF defs, i.e. if there are any defs
   // that this block is in the iterated dominance frontier of.
@@ -1488,9 +1463,8 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
     MaxDF.insert(MaxCoverIn(I, HasDF->second));
 
   std::vector<RegisterRef> MaxRefs;
-  RegisterSet &RefB = RefM[BA.Id];
   for (RegisterRef I : MaxDF)
-    MaxRefs.push_back(MaxCoverIn(I, RefB));
+    MaxRefs.push_back(MaxCoverIn(I, AllRefs));
 
   // Now, for each R in MaxRefs, get the alias closure of R. If the closure
   // only has R in it, create a phi a def for R. Otherwise, create a phi,

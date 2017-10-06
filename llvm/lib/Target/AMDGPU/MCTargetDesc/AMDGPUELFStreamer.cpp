@@ -9,13 +9,37 @@
 
 #include "AMDGPUELFStreamer.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;
 
-MCELFStreamer *llvm::createAMDGPUELFStreamer(MCContext &Context,
-                                           MCAsmBackend &MAB,
-                                           raw_pwrite_stream &OS,
-                                           MCCodeEmitter *Emitter,
-                                           bool RelaxAll) {
-  return new AMDGPUELFStreamer(Context, MAB, OS, Emitter);
+AMDGPUELFStreamer::AMDGPUELFStreamer(const Triple &T, MCContext &Context,
+                                     MCAsmBackend &MAB, raw_pwrite_stream &OS,
+                                     MCCodeEmitter *Emitter)
+    : MCELFStreamer(Context, MAB, OS, Emitter) {
+  unsigned Arch = ELF::EF_AMDGPU_ARCH_NONE;
+  switch (T.getArch()) {
+  case Triple::r600:
+    Arch = ELF::EF_AMDGPU_ARCH_R600;
+    break;
+  case Triple::amdgcn:
+    Arch = ELF::EF_AMDGPU_ARCH_GCN;
+    break;
+  default:
+    break;
+  }
+
+  MCAssembler &MCA = getAssembler();
+  unsigned EFlags = MCA.getELFHeaderEFlags();
+  EFlags &= ~ELF::EF_AMDGPU_ARCH;
+  EFlags |= Arch;
+  MCA.setELFHeaderEFlags(EFlags);
+}
+
+MCELFStreamer *llvm::createAMDGPUELFStreamer(const Triple &T, MCContext &Context,
+                                             MCAsmBackend &MAB,
+                                             raw_pwrite_stream &OS,
+                                             MCCodeEmitter *Emitter,
+                                             bool RelaxAll) {
+  return new AMDGPUELFStreamer(T, Context, MAB, OS, Emitter);
 }

@@ -168,8 +168,7 @@ bool FastISel::hasTrivialKill(const Value *V) {
 
   // No-op casts are trivially coalesced by fast-isel.
   if (const auto *Cast = dyn_cast<CastInst>(I))
-    if (Cast->isNoopCast(DL.getIntPtrType(Cast->getContext())) &&
-        !hasTrivialKill(Cast->getOperand(0)))
+    if (Cast->isNoopCast(DL) && !hasTrivialKill(Cast->getOperand(0)))
       return false;
 
   // Even the value might have only one use in the LLVM IR, it is possible that

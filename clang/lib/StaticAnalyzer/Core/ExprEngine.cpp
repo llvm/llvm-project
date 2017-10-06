@@ -827,6 +827,21 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
   }
 }
 
+namespace {
+class CollectReachableSymbolsCallback final : public SymbolVisitor {
+  InvalidatedSymbols Symbols;
+
+public:
+  explicit CollectReachableSymbolsCallback(ProgramStateRef State) {}
+  const InvalidatedSymbols &getSymbols() const { return Symbols; }
+
+  bool VisitSymbol(SymbolRef Sym) override {
+    Symbols.insert(Sym);
+    return true;
+  }
+};
+} // end anonymous namespace
+
 void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                        ExplodedNodeSet &DstTop) {
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
@@ -1103,8 +1118,29 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         SVal result = svalBuilder.conjureSymbolVal(nullptr, Ex, LCtx,
                                                    resultType,
                                                    currBldrCtx->blockCount());
-        ProgramStateRef state = N->getState()->BindExpr(Ex, LCtx, result);
-        Bldr2.generateNode(S, N, state);
+        ProgramStateRef State = N->getState()->BindExpr(Ex, LCtx, result);
+
+        // Escape pointers passed into the list, unless it's an ObjC boxed
+        // expression which is not a boxable C structure.
+        if (!(isa<ObjCBoxedExpr>(Ex) &&
+              !cast<ObjCBoxedExpr>(Ex)->getSubExpr()
+                                      ->getType()->isRecordType()))
+          for (auto Child : Ex->children()) {
+            assert(Child);
+
+            SVal Val = State->getSVal(Child, LCtx);
+
+            CollectReachableSymbolsCallback Scanner =
+                State->scanReachableSymbols<CollectReachableSymbolsCallback>(
+                    Val);
+            const InvalidatedSymbols &EscapedSymbols = Scanner.getSymbols();
+
+            State = getCheckerManager().runCheckersForPointerEscape(
+                State, EscapedSymbols,
+                /*CallEvent*/ nullptr, PSK_EscapeOther, nullptr);
+          }
+
+        Bldr2.generateNode(S, N, State);
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
@@ -2236,21 +2272,6 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
 
   getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
 }
-
-namespace {
-class CollectReachableSymbolsCallback final : public SymbolVisitor {
-  InvalidatedSymbols Symbols;
-
-public:
-  CollectReachableSymbolsCallback(ProgramStateRef State) {}
-  const InvalidatedSymbols &getSymbols() const { return Symbols; }
-
-  bool VisitSymbol(SymbolRef Sym) override {
-    Symbols.insert(Sym);
-    return true;
-  }
-};
-} // end anonymous namespace
 
 // A value escapes in three possible cases:
 // (1) We are binding to something that is not a memory region.

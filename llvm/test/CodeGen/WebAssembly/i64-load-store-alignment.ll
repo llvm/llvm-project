@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
 
 ; Test loads and stores with custom alignment values.
 
@@ -322,4 +322,27 @@ define void @sti32_a8(i32 *%p, i64 %w) {
   %v = trunc i64 %w to i32
   store i32 %v, i32* %p, align 8
   ret void
+}
+
+; Atomics.
+; CHECK-LABEL: ldi64_atomic_a8:
+; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define i64 @ldi64_atomic_a8(i64 *%p) {
+  %v = load atomic i64, i64* %p seq_cst, align 8
+  ret i64 %v
+}
+
+; 16 is greater than the default alignment so it is ignored.
+
+; CHECK-LABEL: ldi64_atomic_a16:
+; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define i64 @ldi64_atomic_a16(i64 *%p) {
+  %v = load atomic i64, i64* %p seq_cst, align 16
+  ret i64 %v
 }

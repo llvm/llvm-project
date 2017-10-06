@@ -670,6 +670,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // Optimize globals now that the module is fully simplified.
   MPM.addPass(GlobalOptPass());
+  MPM.addPass(GlobalDCEPass());
 
   // Run partial inlining pass to partially inline functions that have
   // large bodies.

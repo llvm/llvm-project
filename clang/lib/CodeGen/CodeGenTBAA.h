@@ -86,8 +86,6 @@ class CodeGenTBAA {
   llvm::DenseMap<const Type *, llvm::MDNode *> StructTypeMetadataCache;
   /// This maps TBAAPathTags to a tag node.
   llvm::DenseMap<TBAAPathTag, llvm::MDNode *> StructTagMetadataCache;
-  /// This maps a scalar type to a scalar tag node.
-  llvm::DenseMap<const llvm::MDNode *, llvm::MDNode *> ScalarTagMetadataCache;
 
   /// StructMetadataCache - This maps clang::Types to llvm::MDNodes describing
   /// them for struct assignments.
@@ -127,26 +125,23 @@ public:
   /// given type.
   llvm::MDNode *getTypeInfo(QualType QTy);
 
-  /// getTBAAInfoForVTablePtr - Get the TBAA MDNode to be used for a
-  /// dereference of a vtable pointer.
-  llvm::MDNode *getTBAAInfoForVTablePtr();
+  /// getVTablePtrAccessInfo - Get the TBAA information that describes an
+  /// access to a virtual table pointer.
+  TBAAAccessInfo getVTablePtrAccessInfo();
 
   /// getTBAAStructInfo - Get the TBAAStruct MDNode to be used for a memcpy of
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// Get the MDNode in the type DAG for given struct type QType.
-  llvm::MDNode *getTBAAStructTypeInfo(QualType QType);
+  /// getBaseTypeInfo - Get metadata node for a given base access type.
+  llvm::MDNode *getBaseTypeInfo(QualType QType);
 
-  /// Get path-aware TBAA tag for a given memory access.
-  llvm::MDNode *getTBAAStructTagInfo(TBAAAccessInfo Info);
+  /// getAccessTagInfo - Get TBAA tag for a given memory access.
+  llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
 
-  /// Get the scalar tag MDNode for a given scalar type.
-  llvm::MDNode *getTBAAScalarTagInfo(llvm::MDNode *AccessNode);
-
-  /// getMayAliasTypeInfo - Get TBAA information that represents may-alias
+  /// getMayAliasAccessInfo - Get TBAA information that represents may-alias
   /// accesses.
-  llvm::MDNode *getMayAliasTypeInfo();
+  TBAAAccessInfo getMayAliasAccessInfo();
 };
 
 }  // end namespace CodeGen

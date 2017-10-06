@@ -50,6 +50,9 @@ typedef std::string VFSTag;
 /// FileSystemProvider when this value was computed.
 template <class T> class Tagged {
 public:
+  // MSVC requires future<> arguments to be default-constructible.
+  Tagged() = default;
+
   template <class U>
   Tagged(U &&Value, VFSTag Tag)
       : Value(std::forward<U>(Value)), Tag(std::move(Tag)) {}
@@ -61,8 +64,8 @@ public:
   Tagged(Tagged<U> &&Other)
       : Value(std::move(Other.Value)), Tag(std::move(Other.Tag)) {}
 
-  T Value;
-  VFSTag Tag;
+  T Value = T();
+  VFSTag Tag = VFSTag();
 };
 
 template <class T>
@@ -231,19 +234,25 @@ public:
   /// and AST and rebuild them from scratch.
   std::future<void> forceReparse(PathRef File);
 
-  /// Run code completion for \p File at \p Pos. If \p OverridenContents is not
-  /// None, they will used only for code completion, i.e. no diagnostics update
-  /// will be scheduled and a draft for \p File will not be updated.
-  /// If \p OverridenContents is None, contents of the current draft for \p File
-  /// will be used.
-  /// If \p UsedFS is non-null, it will be overwritten by vfs::FileSystem used
-  /// for completion.
-  /// This method should only be called for currently tracked
-  /// files.
-  Tagged<std::vector<CompletionItem>>
+  /// Run code completion for \p File at \p Pos.
+  ///
+  /// Request is processed asynchronously. You can use the returned future to
+  /// wait for the results of the async request.
+  ///
+  /// If \p OverridenContents is not None, they will used only for code
+  /// completion, i.e. no diagnostics update will be scheduled and a draft for
+  /// \p File will not be updated. If \p OverridenContents is None, contents of
+  /// the current draft for \p File will be used. If \p UsedFS is non-null, it
+  /// will be overwritten by vfs::FileSystem used for completion.
+  ///
+  /// This method should only be called for currently tracked files. However, it
+  /// is safe to call removeDocument for \p File after this method returns, even
+  /// while returned future is not yet ready.
+  std::future<Tagged<std::vector<CompletionItem>>>
   codeComplete(PathRef File, Position Pos,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
   Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 

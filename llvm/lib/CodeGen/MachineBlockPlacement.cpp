@@ -2240,12 +2240,6 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   if (!RotateLoopWithProfile && LoopTop == L.getHeader())
     PreferredLoopExit = findBestLoopExit(L, LoopBlockSet);
 
-  // Make sure PreferredLoopExit actually exits the current loop.
-  if (PreferredLoopExit) {
-    assert(L.isLoopExiting(PreferredLoopExit) &&
-           "not an exiting block of current loop");
-  }
-
   BlockChain &LoopChain = *BlockToChain[LoopTop];
 
   // FIXME: This is a really lame way of walking the chains in the loop: we

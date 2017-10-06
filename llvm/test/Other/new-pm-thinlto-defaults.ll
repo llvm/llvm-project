@@ -168,6 +168,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA

@@ -888,8 +888,7 @@ define i1 @lshrult_03_15(i4 %x) {
 
 define i1 @ashrsgt_01_00(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_00(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -899,8 +898,7 @@ define i1 @ashrsgt_01_00(i4 %x) {
 
 define i1 @ashrsgt_01_01(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_01(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -910,8 +908,7 @@ define i1 @ashrsgt_01_01(i4 %x) {
 
 define i1 @ashrsgt_01_02(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_02(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, 5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1002,8 +999,7 @@ define i1 @ashrsgt_01_11(i4 %x) {
 
 define i1 @ashrsgt_01_12(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_12(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], -4
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, -7
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1013,8 +1009,7 @@ define i1 @ashrsgt_01_12(i4 %x) {
 
 define i1 @ashrsgt_01_13(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_13(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, -5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1024,8 +1019,7 @@ define i1 @ashrsgt_01_13(i4 %x) {
 
 define i1 @ashrsgt_01_14(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_01_14(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], -2
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, -3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1045,8 +1039,7 @@ define i1 @ashrsgt_01_15(i4 %x) {
 
 define i1 @ashrsgt_02_00(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_02_00(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 2
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 2
@@ -1173,8 +1166,7 @@ define i1 @ashrsgt_02_13(i4 %x) {
 
 define i1 @ashrsgt_02_14(i4 %x) {
 ; CHECK-LABEL: @ashrsgt_02_14(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 2
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 [[S]], -2
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i4 %x, -5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 2
@@ -1349,8 +1341,7 @@ define i1 @ashrslt_01_00(i4 %x) {
 
 define i1 @ashrslt_01_01(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_01(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, 2
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1360,8 +1351,7 @@ define i1 @ashrslt_01_01(i4 %x) {
 
 define i1 @ashrslt_01_02(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_02(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1371,8 +1361,7 @@ define i1 @ashrslt_01_02(i4 %x) {
 
 define i1 @ashrslt_01_03(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_03(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, 6
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1463,8 +1452,7 @@ define i1 @ashrslt_01_12(i4 %x) {
 
 define i1 @ashrslt_01_13(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_13(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, -6
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1474,8 +1462,7 @@ define i1 @ashrslt_01_13(i4 %x) {
 
 define i1 @ashrslt_01_14(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_14(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], -2
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, -4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1485,8 +1472,7 @@ define i1 @ashrslt_01_14(i4 %x) {
 
 define i1 @ashrslt_01_15(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_15(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, -2
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 1
@@ -1506,8 +1492,7 @@ define i1 @ashrslt_02_00(i4 %x) {
 
 define i1 @ashrslt_02_01(i4 %x) {
 ; CHECK-LABEL: @ashrslt_02_01(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 2
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 2
@@ -1634,8 +1619,7 @@ define i1 @ashrslt_02_14(i4 %x) {
 
 define i1 @ashrslt_02_15(i4 %x) {
 ; CHECK-LABEL: @ashrslt_02_15(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 %x, 2
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[S]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 %x, -4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i4 %x, 2

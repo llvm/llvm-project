@@ -247,7 +247,7 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
     return false;
   }
 
-  while (true) {
+  while (!getParser().hasPendingError()) {
     SMLoc PrevLoc = getLexer().getLoc();
     if (getLexer().is(AsmToken::Comma) ||
       getLexer().is(AsmToken::EndOfStatement))

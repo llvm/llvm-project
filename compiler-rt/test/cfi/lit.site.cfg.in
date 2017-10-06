@@ -2,6 +2,8 @@
 
 config.name_suffix = "@CFI_TEST_CONFIG_SUFFIX@"
 config.cfi_lit_test_mode = "@CFI_LIT_TEST_MODE@"
+config.target_arch = "@CFI_TEST_TARGET_ARCH@"
+config.target_cflags = "@CFI_TEST_TARGET_CFLAGS@"
 config.use_lld = @CFI_TEST_USE_LLD@
 config.use_thinlto = @CFI_TEST_USE_THINLTO@
 
