@@ -232,7 +232,7 @@ class LValue {
 private:
   void Initialize(QualType Type, Qualifiers Quals,
                   CharUnits Alignment, LValueBaseInfo BaseInfo,
-                  llvm::MDNode *TBAAAccessType = nullptr) {
+                  TBAAAccessInfo TBAAInfo = TBAAAccessInfo()) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->Type = Type;
@@ -241,7 +241,7 @@ private:
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;
-    this->TBAAInfo = TBAAAccessInfo(Type, TBAAAccessType, /* Offset= */ 0);
+    this->TBAAInfo = TBAAInfo;
 
     // Initialize Objective-C flags.
     this->Ivar = this->ObjIsArray = this->NonGC = this->GlobalObjCRef = false;
@@ -311,9 +311,6 @@ public:
   TBAAAccessInfo getTBAAInfo() const { return TBAAInfo; }
   void setTBAAInfo(TBAAAccessInfo Info) { TBAAInfo = Info; }
 
-  llvm::MDNode *getTBAAAccessType() const { return TBAAInfo.AccessType; }
-  void setTBAAAccessType(llvm::MDNode *N) { TBAAInfo.AccessType = N; }
-
   const Qualifiers &getQuals() const { return Quals; }
   Qualifiers &getQuals() { return Quals; }
 
@@ -370,10 +367,8 @@ public:
   // global register lvalue
   llvm::Value *getGlobalReg() const { assert(isGlobalReg()); return V; }
 
-  static LValue MakeAddr(Address address, QualType type,
-                         ASTContext &Context,
-                         LValueBaseInfo BaseInfo,
-                         llvm::MDNode *TBAAAccessType = nullptr) {
+  static LValue MakeAddr(Address address, QualType type, ASTContext &Context,
+                         LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     Qualifiers qs = type.getQualifiers();
     qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
 
@@ -381,7 +376,7 @@ public:
     R.LVType = Simple;
     assert(address.getPointer()->getType()->isPointerTy());
     R.V = address.getPointer();
-    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAAccessType);
+    R.Initialize(type, qs, address.getAlignment(), BaseInfo, TBAAInfo);
     return R;
   }
 

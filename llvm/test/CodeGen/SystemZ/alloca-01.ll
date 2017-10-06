@@ -13,6 +13,10 @@ declare i64 @bar(i8 *%a, i8 *%b, i8 *%c, i8 *%d, i8 *%e, i64 %f, i64 %g)
 ; Allocate %length bytes and take addresses based on the result.
 ; There are two stack arguments, so an offset of 160 + 2 * 8 == 176
 ; is added to the copy of %r15.
+;
+; NOTE: 'la %r0, 177(%r1)' is actually an expected fail as it would
+; be better (and possible) to load into %r3 directly.
+;
 define i64 @f1(i64 %length, i64 %index) {
 ; FIXME: a better sequence would be:
 ;
@@ -29,12 +33,12 @@ define i64 @f1(i64 %length, i64 %index) {
 ; CHECK: lgr %r15, [[REG2]]
 ;
 ; CHECK-A-LABEL: f1:
-; CHECK-A: lgr %r15, %r1
-; CHECK-A: la %r2, 176(%r1)
+; CHECK-A-DAG: lgr %r15, %r1
+; CHECK-A-DAG: la %r2, 176(%r1)
 ;
 ; CHECK-B-LABEL: f1:
 ; CHECK-B: lgr %r15, %r1
-; CHECK-B: la %r3, 177(%r1)
+; CHECK-B: la %r0, 177(%r1)
 ;
 ; CHECK-C-LABEL: f1:
 ; CHECK-C: lgr %r15, %r1

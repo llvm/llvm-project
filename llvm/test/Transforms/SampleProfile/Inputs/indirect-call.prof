@@ -24,3 +24,8 @@ test_norecursive_inline:3000:0
 test_noinline_bitcast:3000:0
  1: foo_direct_i32:3000
   1: 3000
+return_arg_caller:3000:0
+ 1: foo_inline1:3000
+  11: 3000
+ 2: return_arg:3000
+  1: 3000

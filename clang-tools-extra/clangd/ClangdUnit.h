@@ -259,6 +259,14 @@ codeComplete(PathRef FileName, tooling::CompileCommand Command,
              std::shared_ptr<PCHContainerOperations> PCHs,
              bool SnippetCompletions, clangd::Logger &Logger);
 
+/// Get signature help at a specified \p Pos in \p FileName.
+SignatureHelp signatureHelp(PathRef FileName, tooling::CompileCommand Command,
+                            PrecompiledPreamble const *Preamble,
+                            StringRef Contents, Position Pos,
+                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                            std::shared_ptr<PCHContainerOperations> PCHs,
+                            clangd::Logger &Logger);
+
 /// Get definition of symbol at a specified \p Pos.
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
                                       clangd::Logger &Logger);

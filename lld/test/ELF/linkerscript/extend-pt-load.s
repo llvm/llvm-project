@@ -15,7 +15,7 @@
 # RUN:  . = ALIGN(0x1000); \
 # RUN:  .data.rel.ro : { *(.data.rel.ro) } \
 # RUN: }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t.o -shared
+# RUN: ld.lld --hash-style=sysv -o %t1 --script %t.script %t.o -shared
 # RUN: llvm-readobj --elf-output-style=GNU -l -s %t1 | FileCheck --check-prefix=CHECK1 %s
 
 # CHECK1:      .text        PROGBITS 00000000000001bc 0001bc 000001 00 AX
@@ -37,7 +37,7 @@
 # RUN:  bar : { HIDDEN(bar_sym = .); } \
 # RUN:  .data.rel.ro : { *(.data.rel.ro) } \
 # RUN: }" > %t.script
-# RUN: ld.lld -o %t2 --script %t.script %t.o -shared
+# RUN: ld.lld --hash-style=sysv -o %t2 --script %t.script %t.o -shared
 # RUN: llvm-readobj --elf-output-style=GNU -l -s %t2 | FileCheck --check-prefix=CHECK2 %s
 
 # CHECK2:      .text        PROGBITS 00000000000001bc 0001bc 000001 00 AX
@@ -60,7 +60,7 @@
 # RUN:  HIDDEN(bar_sym = .); \
 # RUN:  .data.rel.ro : { *(.data.rel.ro) } \
 # RUN: }" > %t.script
-# RUN: ld.lld -o %t3 --script %t.script %t.o -shared
+# RUN: ld.lld --hash-style=sysv -o %t3 --script %t.script %t.o -shared
 # RUN: llvm-readobj --elf-output-style=GNU -l -s %t3 | FileCheck --check-prefix=CHECK1 %s
 
 nop

@@ -248,6 +248,35 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   return Future;
 }
 
+Tagged<SignatureHelp>
+ClangdServer::signatureHelp(PathRef File, Position Pos,
+                            llvm::Optional<StringRef> OverridenContents,
+                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  std::string DraftStorage;
+  if (!OverridenContents) {
+    auto FileContents = DraftMgr.getDraft(File);
+    assert(FileContents.Draft &&
+           "signatureHelp is called for non-added document");
+
+    DraftStorage = std::move(*FileContents.Draft);
+    OverridenContents = DraftStorage;
+  }
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  if (UsedFS)
+    *UsedFS = TaggedFS.Value;
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  assert(Resources && "Calling signatureHelp on non-added file");
+
+  auto Preamble = Resources->getPossiblyStalePreamble();
+  auto Result = clangd::signatureHelp(File, Resources->getCompileCommand(),
+                                      Preamble ? &Preamble->Preamble : nullptr,
+                                      *OverridenContents, Pos, TaggedFS.Value,
+                                      PCHs, Logger);
+  return make_tagged(std::move(Result), TaggedFS.Tag);
+}
+
 std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,
                                                             Range Rng) {
   std::string Code = getDocument(File);
@@ -369,12 +398,11 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
       return NewPath.str().str(); // First str() to convert from SmallString to
                                   // StringRef, second to convert from StringRef
                                   // to std::string
-    
+
     // Also check NewExt in upper-case, just in case.
     llvm::sys::path::replace_extension(NewPath, NewExt.upper());
     if (FS->exists(NewPath))
       return NewPath.str().str();
-
   }
 
   return llvm::None;

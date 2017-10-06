@@ -5,7 +5,7 @@
 # RUN:       . = 0x2000 + SIZEOF_HEADERS; \
 # RUN:       .text : {*(.text)} :all \
 # RUN:     }" > %t.script
-# RUN: ld.lld -o %t.so --script %t.script %t.o -shared
+# RUN: ld.lld --hash-style=sysv -o %t.so --script %t.script %t.o -shared
 # RUN: llvm-readobj -program-headers %t.so | FileCheck %s
 
 # CHECK:      ProgramHeaders [
@@ -25,7 +25,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# RUN: ld.lld -o %t2.so --script %t.script %t.o -shared -z max-page-size=0x2000
+# RUN: ld.lld --hash-style=sysv -o %t2.so --script %t.script %t.o -shared -z max-page-size=0x2000
 # RUN: llvm-readobj -program-headers %t2.so \
 # RUN:   | FileCheck --check-prefix=MAXPAGE %s
 

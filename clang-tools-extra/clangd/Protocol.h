@@ -480,6 +480,48 @@ struct CompletionItem {
   static std::string unparse(const CompletionItem &P);
 };
 
+/// A single parameter of a particular signature.
+struct ParameterInformation {
+
+  /// The label of this parameter. Mandatory.
+  std::string label;
+
+  /// The documentation of this parameter. Optional.
+  std::string documentation;
+
+  static std::string unparse(const ParameterInformation &);
+};
+
+/// Represents the signature of something callable.
+struct SignatureInformation {
+
+  /// The label of this signature. Mandatory.
+  std::string label;
+
+  /// The documentation of this signature. Optional.
+  std::string documentation;
+
+  /// The parameters of this signature.
+  std::vector<ParameterInformation> parameters;
+
+  static std::string unparse(const SignatureInformation &);
+};
+
+/// Represents the signature of a callable.
+struct SignatureHelp {
+
+  /// The resulting signatures.
+  std::vector<SignatureInformation> signatures;
+
+  /// The active signature.
+  int activeSignature = 0;
+
+  /// The active parameter of the active signature.
+  int activeParameter = 0;
+
+  static std::string unparse(const SignatureHelp &);
+};
+
 } // namespace clangd
 } // namespace clang
 

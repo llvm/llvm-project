@@ -32,22 +32,15 @@ namespace clang {
 namespace CodeGen {
 class CGRecordLayout;
 
-struct TBAAPathTag {
-  TBAAPathTag(const Type *B, const llvm::MDNode *A, uint64_t O)
-    : BaseT(B), AccessN(A), Offset(O) {}
-  const Type *BaseT;
-  const llvm::MDNode *AccessN;
-  uint64_t Offset;
-};
-
 // TBAAAccessInfo - Describes a memory access in terms of TBAA.
 struct TBAAAccessInfo {
-  TBAAAccessInfo(QualType BaseType, llvm::MDNode *AccessType, uint64_t Offset)
+  TBAAAccessInfo(llvm::MDNode *BaseType, llvm::MDNode *AccessType,
+                 uint64_t Offset)
     : BaseType(BaseType), AccessType(AccessType), Offset(Offset)
   {}
 
   explicit TBAAAccessInfo(llvm::MDNode *AccessType)
-    : TBAAAccessInfo(/* BaseType= */ QualType(), AccessType, /* Offset= */ 0)
+    : TBAAAccessInfo(/* BaseType= */ nullptr, AccessType, /* Offset= */ 0)
   {}
 
   TBAAAccessInfo()
@@ -57,7 +50,7 @@ struct TBAAAccessInfo {
   /// BaseType - The base/leading access type. May be null if this access
   /// descriptor represents an access that is not considered to be an access
   /// to an aggregate or union member.
-  QualType BaseType;
+  llvm::MDNode *BaseType;
 
   /// AccessType - The final access type. May be null if there is no TBAA
   /// information available about this access.
@@ -82,10 +75,10 @@ class CodeGenTBAA {
   /// MetadataCache - This maps clang::Types to scalar llvm::MDNodes describing
   /// them.
   llvm::DenseMap<const Type *, llvm::MDNode *> MetadataCache;
-  /// This maps clang::Types to a struct node in the type DAG.
-  llvm::DenseMap<const Type *, llvm::MDNode *> StructTypeMetadataCache;
-  /// This maps TBAAPathTags to a tag node.
-  llvm::DenseMap<TBAAPathTag, llvm::MDNode *> StructTagMetadataCache;
+  /// This maps clang::Types to a base access type in the type DAG.
+  llvm::DenseMap<const Type *, llvm::MDNode *> BaseTypeMetadataCache;
+  /// This maps TBAA access descriptors to tag nodes.
+  llvm::DenseMap<TBAAAccessInfo, llvm::MDNode *> AccessTagMetadataCache;
 
   /// StructMetadataCache - This maps clang::Types to llvm::MDNodes describing
   /// them for struct assignments.
@@ -133,8 +126,9 @@ public:
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// getBaseTypeInfo - Get metadata node for a given base access type.
-  llvm::MDNode *getBaseTypeInfo(QualType QType);
+  /// getBaseTypeInfo - Get metadata that describes the given base access type.
+  /// Return null if the type is not suitable for use in TBAA access tags.
+  llvm::MDNode *getBaseTypeInfo(QualType QTy);
 
   /// getAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
@@ -149,31 +143,31 @@ public:
 
 namespace llvm {
 
-template<> struct DenseMapInfo<clang::CodeGen::TBAAPathTag> {
-  static clang::CodeGen::TBAAPathTag getEmptyKey() {
-    return clang::CodeGen::TBAAPathTag(
-      DenseMapInfo<const clang::Type *>::getEmptyKey(),
-      DenseMapInfo<const MDNode *>::getEmptyKey(),
+template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
+  static clang::CodeGen::TBAAAccessInfo getEmptyKey() {
+    return clang::CodeGen::TBAAAccessInfo(
+      DenseMapInfo<MDNode *>::getEmptyKey(),
+      DenseMapInfo<MDNode *>::getEmptyKey(),
       DenseMapInfo<uint64_t>::getEmptyKey());
   }
 
-  static clang::CodeGen::TBAAPathTag getTombstoneKey() {
-    return clang::CodeGen::TBAAPathTag(
-      DenseMapInfo<const clang::Type *>::getTombstoneKey(),
-      DenseMapInfo<const MDNode *>::getTombstoneKey(),
+  static clang::CodeGen::TBAAAccessInfo getTombstoneKey() {
+    return clang::CodeGen::TBAAAccessInfo(
+      DenseMapInfo<MDNode *>::getTombstoneKey(),
+      DenseMapInfo<MDNode *>::getTombstoneKey(),
       DenseMapInfo<uint64_t>::getTombstoneKey());
   }
 
-  static unsigned getHashValue(const clang::CodeGen::TBAAPathTag &Val) {
-    return DenseMapInfo<const clang::Type *>::getHashValue(Val.BaseT) ^
-           DenseMapInfo<const MDNode *>::getHashValue(Val.AccessN) ^
+  static unsigned getHashValue(const clang::CodeGen::TBAAAccessInfo &Val) {
+    return DenseMapInfo<MDNode *>::getHashValue(Val.BaseType) ^
+           DenseMapInfo<MDNode *>::getHashValue(Val.AccessType) ^
            DenseMapInfo<uint64_t>::getHashValue(Val.Offset);
   }
 
-  static bool isEqual(const clang::CodeGen::TBAAPathTag &LHS,
-                      const clang::CodeGen::TBAAPathTag &RHS) {
-    return LHS.BaseT == RHS.BaseT &&
-           LHS.AccessN == RHS.AccessN &&
+  static bool isEqual(const clang::CodeGen::TBAAAccessInfo &LHS,
+                      const clang::CodeGen::TBAAAccessInfo &RHS) {
+    return LHS.BaseType == RHS.BaseType &&
+           LHS.AccessType == RHS.AccessType &&
            LHS.Offset == RHS.Offset;
   }
 };

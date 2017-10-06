@@ -21,8 +21,9 @@ namespace dsymutil {
 using namespace llvm::object;
 
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
-                               sys::TimePoint<std::chrono::seconds> Timestamp)
-    : Filename(ObjectFilename), Timestamp(Timestamp) {}
+                               sys::TimePoint<std::chrono::seconds> Timestamp,
+                               uint8_t Type)
+    : Filename(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name, Optional<uint64_t> ObjectAddress,
                                uint64_t LinkedAddress, uint32_t Size) {
@@ -64,8 +65,9 @@ void DebugMapObject::dump() const { print(errs()); }
 
 DebugMapObject &
 DebugMap::addDebugMapObject(StringRef ObjectFilePath,
-                            sys::TimePoint<std::chrono::seconds> Timestamp) {
-  Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp));
+                            sys::TimePoint<std::chrono::seconds> Timestamp,
+                            uint8_t Type) {
+  Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp, Type));
   return *Objects.back();
 }
 
@@ -241,7 +243,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     }
   }
 
-  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp));
+  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp), MachO::N_OSO);
   for (auto &Entry : Entries) {
     auto &Mapping = Entry.second;
     Optional<uint64_t> ObjAddress;

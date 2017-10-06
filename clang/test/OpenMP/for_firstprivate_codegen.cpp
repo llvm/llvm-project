@@ -83,6 +83,7 @@ int main() {
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: [[G_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[G1_PRIVATE_REF:%.+]] = alloca i{{[0-9]+}}*,
     // LAMBDA: [[SIVAR2_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}},
 
     // LAMBDA:  store i{{[0-9]+}}* [[SIVAR_REF]], i{{[0-9]+}}** %{{.+}},
@@ -91,20 +92,26 @@ int main() {
 
     // LAMBDA: [[G_VAL:%.+]] = load volatile i{{[0-9]+}}, i{{[0-9]+}}* [[G]]
     // LAMBDA: store i{{[0-9]+}} [[G_VAL]], i{{[0-9]+}}* [[G_PRIVATE_ADDR]]
+    // LAMBDA: store i{{[0-9]+}}* [[G1_PRIVATE_ADDR]], i{{[0-9]+}}** [[G1_PRIVATE_REF]],
     // LAMBDA: [[SIVAR2_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR_REF]]
     // LAMBDA: store i{{[0-9]+}} [[SIVAR2_VAL]], i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]]
 
     // LAMBDA-NOT: call void @__kmpc_barrier(
     g = 1;
-    g1 = 1;
-    sivar = 2;
+    g1 = 2;
+    sivar = 3;
     // LAMBDA: call void @__kmpc_for_static_init_4(
 
     // LAMBDA: store i{{[0-9]+}} 1, i{{[0-9]+}}* [[G_PRIVATE_ADDR]],
-    // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]],
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PRIVATE_REF]],
+    // LAMBDA: store volatile i{{[0-9]+}} 2, i{{[0-9]+}}* [[G1_PRIVATE_ADDR]],
+    // LAMBDA: store i{{[0-9]+}} 3, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]],
     // LAMBDA: [[G_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
     // LAMBDA: store i{{[0-9]+}}* [[G_PRIVATE_ADDR]], i{{[0-9]+}}** [[G_PRIVATE_ADDR_REF]]
-    // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+    // LAMBDA: [[G1_PRIVATE_ADDR:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PRIVATE_REF]],
+    // LAMBDA: store i{{[0-9]+}}* [[G1_PRIVATE_ADDR]], i{{[0-9]+}}** [[G1_PRIVATE_ADDR_REF]]
+    // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
     // LAMBDA: store i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]], i{{[0-9]+}}** [[SIVAR_PRIVATE_ADDR_REF]]
     // LAMBDA: call void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
     // LAMBDA: call void @__kmpc_for_static_fini(
@@ -112,17 +119,20 @@ int main() {
     [&]() {
       // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
       // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
-      g = 2;
-      g1 = 2;
-      sivar = 4;
+      g = 4;
+      g1 = 5;
+      sivar = 6;
       // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
 
       // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
       // LAMBDA: [[G_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_PTR_REF]]
-      // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_REF]]
-      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[G_REF]]
+      // LAMBDA: [[G1_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PTR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 5, i{{[0-9]+}}* [[G1_REF]]
+      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
       // LAMBDA: [[SIVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SIVAR_PTR_REF]]
-      // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIVAR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 6, i{{[0-9]+}}* [[SIVAR_REF]]
     }();
   }
   }();

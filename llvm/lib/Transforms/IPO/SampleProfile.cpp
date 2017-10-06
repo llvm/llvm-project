@@ -790,9 +790,8 @@ bool SampleProfileLoader::inlineHotFunctions(
             // as a result, we do not have profile info for the branch
             // probability. We set the probability to 80% taken to indicate
             // that the static call is likely taken.
-            Instruction *DI = dyn_cast<Instruction>(
-                promoteIndirectCall(I, R->getValue(), 80, 100, false, ORE)
-                    ->stripPointerCasts());
+            Instruction *DI = promoteIndirectCall(
+                I, R->getValue(), 80, 100, false, ORE);
             PromotedInsns.insert(I);
             // If profile mismatches, we should not attempt to inline DI.
             if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
