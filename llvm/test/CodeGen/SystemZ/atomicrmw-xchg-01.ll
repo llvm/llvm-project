@@ -13,8 +13,8 @@
 define i8 @f1(i8 *%src, i8 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
-; CHECK: sll %r2, 3
-; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-DAG: sll %r2, 3
+; CHECK-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: risbg [[ROT]], %r3, 32, 39, 24

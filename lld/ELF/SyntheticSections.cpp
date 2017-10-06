@@ -1171,10 +1171,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       add({DT_MIPS_RLD_MAP, InX::MipsRldMap});
   }
 
-  getParent()->Link = this->Link;
+  add({DT_NULL, (uint64_t)0});
 
-  // +1 for DT_NULL
-  this->Size = (Entries.size() + 1) * this->Entsize;
+  getParent()->Link = this->Link;
+  this->Size = Entries.size() * this->Entsize;
 }
 
 template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1386,6 +1386,7 @@ SymbolTableSection<ELFT>::SymbolTableSection(StringTableSection &StrTabSec)
 // Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   // The first entry is a null entry as per the ELF spec.
+  memset(Buf, 0, sizeof(Elf_Sym));
   Buf += sizeof(Elf_Sym);
 
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
@@ -1394,6 +1395,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     SymbolBody *Body = Ent.Symbol;
 
     // Set st_info and st_other.
+    ESym->st_other = 0;
     if (Body->isLocal()) {
       ESym->setBindingAndType(STB_LOCAL, Body->Type);
     } else {
@@ -1410,13 +1412,17 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       ESym->st_shndx = SHN_ABS;
     else if (isa<DefinedCommon>(Body))
       ESym->st_shndx = SHN_COMMON;
+    else
+      ESym->st_shndx = SHN_UNDEF;
 
     // Copy symbol size if it is a defined symbol. st_size is not significant
     // for undefined symbols, so whether copying it or not is up to us if that's
     // the case. We'll leave it as zero because by not setting a value, we can
     // get the exact same outputs for two sets of input files that differ only
     // in undefined symbol size in DSOs.
-    if (ESym->st_shndx != SHN_UNDEF)
+    if (ESym->st_shndx == SHN_UNDEF)
+      ESym->st_size = 0;
+    else
       ESym->st_size = Body->getSize<ELFT>();
 
     // st_value is usually an address of a symbol, but that has a

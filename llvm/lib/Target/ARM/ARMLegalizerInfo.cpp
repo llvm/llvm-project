@@ -80,6 +80,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setAction({Op, 1, Ty}, Legal);
   }
 
+  for (unsigned Op : {G_ASHR, G_LSHR, G_SHL})
+    setAction({Op, s32}, Legal);
+
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
 

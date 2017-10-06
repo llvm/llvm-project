@@ -23,7 +23,7 @@ NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NamespaceCommentPattern("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                              "namespace( +([a-zA-Z0-9_]+))?\\.? *(\\*/)?$",
+                              "namespace( +([a-zA-Z0-9_:]+))?\\.? *(\\*/)?$",
                               llvm::Regex::IgnoreCase),
       ShortNamespaceLines(Options.get("ShortNamespaceLines", 1u)),
       SpacesBeforeComments(Options.get("SpacesBeforeComments", 1u)) {}
@@ -56,6 +56,15 @@ static std::string getNamespaceComment(const NamespaceDecl *ND,
   return Fix;
 }
 
+static std::string getNamespaceComment(const std::string &NameSpaceName,
+                                       bool InsertLineBreak) {
+  std::string Fix = "// namespace ";
+  Fix.append(NameSpaceName);
+  if (InsertLineBreak)
+    Fix.append("\n");
+  return Fix;
+}
+
 void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ND = Result.Nodes.getNodeAs<NamespaceDecl>("namespace");
   const SourceManager &Sources = *Result.SourceManager;
@@ -74,11 +83,38 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation AfterRBrace = ND->getRBraceLoc().getLocWithOffset(1);
   SourceLocation Loc = AfterRBrace;
   Token Tok;
+  SourceLocation LBracketLocation = ND->getLocation();
+  SourceLocation NestedNamespaceBegin = LBracketLocation;
+
+  // Currently for nested namepsace (n1::n2::...) the AST matcher will match foo
+  // then bar instead of a single match. So if we got a nested namespace we have
+  // to skip the next ones.
+  for (const auto &EndOfNameLocation : Ends) {
+    if (Sources.isBeforeInTranslationUnit(NestedNamespaceBegin,
+                                          EndOfNameLocation))
+      return;
+  }
+  while (Lexer::getRawToken(LBracketLocation, Tok, Sources, getLangOpts()) ||
+         !Tok.is(tok::l_brace)) {
+    LBracketLocation = LBracketLocation.getLocWithOffset(1);
+  }
+
+  auto TextRange =
+      Lexer::getAsCharRange(SourceRange(NestedNamespaceBegin, LBracketLocation),
+                            Sources, getLangOpts());
+  auto NestedNamespaceName =
+      Lexer::getSourceText(TextRange, Sources, getLangOpts()).rtrim();
+  bool IsNested = NestedNamespaceName.contains(':');
+
+  if (IsNested)
+    Ends.push_back(LBracketLocation);
+
   // Skip whitespace until we find the next token.
   while (Lexer::getRawToken(Loc, Tok, Sources, getLangOpts()) ||
          Tok.is(tok::semi)) {
     Loc = Loc.getLocWithOffset(1);
   }
+
   if (!locationsInSameFile(Sources, ND->getRBraceLoc(), Loc))
     return;
 
@@ -98,10 +134,14 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
       StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
       StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
 
-      // Check if the namespace in the comment is the same.
-      if ((ND->isAnonymousNamespace() && NamespaceNameInComment.empty()) ||
-          (ND->getNameAsString() == NamespaceNameInComment &&
-           Anonymous.empty())) {
+      if (IsNested && NestedNamespaceName == NamespaceNameInComment) {
+        // C++17 nested namespace.
+        return;
+      } else if ((ND->isAnonymousNamespace() &&
+                  NamespaceNameInComment.empty()) ||
+                 (ND->getNameAsString() == NamespaceNameInComment &&
+                  Anonymous.empty())) {
+        // Check if the namespace in the comment is the same.
         // FIXME: Maybe we need a strict mode, where we always fix namespace
         // comments with different format.
         return;
@@ -131,13 +171,16 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   std::string NamespaceName =
       ND->isAnonymousNamespace()
           ? "anonymous namespace"
-          : ("namespace '" + ND->getNameAsString() + "'");
+          : ("namespace '" + NestedNamespaceName.str() + "'");
 
   diag(AfterRBrace, Message)
-      << NamespaceName << FixItHint::CreateReplacement(
-                              CharSourceRange::getCharRange(OldCommentRange),
-                              std::string(SpacesBeforeComments, ' ') +
-                                  getNamespaceComment(ND, NeedLineBreak));
+      << NamespaceName
+      << FixItHint::CreateReplacement(
+             CharSourceRange::getCharRange(OldCommentRange),
+             std::string(SpacesBeforeComments, ' ') +
+                 (IsNested
+                      ? getNamespaceComment(NestedNamespaceName, NeedLineBreak)
+                      : getNamespaceComment(ND, NeedLineBreak)));
   diag(ND->getLocation(), "%0 starts here", DiagnosticIDs::Note)
       << NamespaceName;
 }

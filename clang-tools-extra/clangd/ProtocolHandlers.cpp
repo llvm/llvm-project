@@ -192,6 +192,23 @@ private:
   ProtocolCallbacks &Callbacks;
 };
 
+struct SignatureHelpHandler : Handler {
+  SignatureHelpHandler(JSONOutput &Output, ProtocolCallbacks &Callbacks)
+      : Handler(Output), Callbacks(Callbacks) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
+    auto TDPP = TextDocumentPositionParams::parse(Params, Output);
+    if (!TDPP) {
+      Output.log("Failed to decode TextDocumentPositionParams!\n");
+      return;
+    }
+    Callbacks.onSignatureHelp(*TDPP, ID, Output);
+  }
+
+private:
+  ProtocolCallbacks &Callbacks;
+};
+
 struct GotoDefinitionHandler : Handler {
   GotoDefinitionHandler(JSONOutput &Output, ProtocolCallbacks &Callbacks)
       : Handler(Output), Callbacks(Callbacks) {}
@@ -278,6 +295,9 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Dispatcher.registerHandler(
       "textDocument/completion",
       llvm::make_unique<CompletionHandler>(Out, Callbacks));
+  Dispatcher.registerHandler(
+      "textDocument/signatureHelp",
+      llvm::make_unique<SignatureHelpHandler>(Out, Callbacks));
   Dispatcher.registerHandler(
       "textDocument/definition",
       llvm::make_unique<GotoDefinitionHandler>(Out, Callbacks));
