@@ -122,6 +122,7 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
   TPC.SetUseCounters(Options.UseCounters);
   TPC.SetUseValueProfile(Options.UseValueProfile);
+  TPC.SetUseClangCoverage(Options.UseClangCoverage);
 
   if (Options.Verbosity)
     TPC.PrintModuleInfo();

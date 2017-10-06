@@ -5,8 +5,7 @@ from android_common import *
 
 ANDROID_TMPDIR = '/data/local/tmp/Output'
 
-here = os.path.abspath(os.path.dirname(sys.argv[0]))
-device_binary = os.path.join(ANDROID_TMPDIR, os.path.basename(sys.argv[0]))
+device_binary = host_to_device_path(sys.argv[0])
 
 def build_env():
     args = []
