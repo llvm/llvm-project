@@ -144,6 +144,10 @@ public:
   Expected<Elf_Phdr_Range> program_headers() const {
     if (getHeader()->e_phnum && getHeader()->e_phentsize != sizeof(Elf_Phdr))
       return createError("invalid e_phentsize");
+    if (getHeader()->e_phoff +
+            (getHeader()->e_phnum * getHeader()->e_phentsize) >
+        getBufSize())
+      return createError("program headers longer than binary");
     auto *Begin =
         reinterpret_cast<const Elf_Phdr *>(base() + getHeader()->e_phoff);
     return makeArrayRef(Begin, Begin + getHeader()->e_phnum);

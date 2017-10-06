@@ -225,6 +225,14 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
 }
 
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
+  if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI)) {
+    yaml::Output *Out = getDiagnosticsOutputFile();
+    if (Out) {
+      // For remarks the << operator takes a reference to a pointer.
+      auto *P = const_cast<DiagnosticInfoOptimizationBase *>(OptDiagBase);
+      *Out << P;
+    }
+  }
   // If there is a report handler, use it.
   if (pImpl->DiagHandler &&
       (!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI)) &&

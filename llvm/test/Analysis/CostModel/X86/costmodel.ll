@@ -45,6 +45,10 @@ define i64 @foo(i64 %arg) {
   ; CODESIZE: cost of 1 {{.*}} call
   %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 undef, i32 undef)
 
+  ; LATENCY:  cost of 40 {{.*}} call void undef
+  ; CODESIZE: cost of 1 {{.*}} call void undef
+  call void undef()
+
   ; LATENCY:  cost of 1 {{.*}} ret
   ; CODESIZE: cost of 1 {{.*}} ret
   ret i64 undef

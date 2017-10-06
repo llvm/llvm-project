@@ -439,6 +439,20 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
                  LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
+/// This function deletes dead loops. The caller of this function needs to
+/// guarantee that the loop is infact dead.
+/// The function requires a bunch or prerequisites to be present:
+///   - The loop needs to be in LCSSA form
+///   - The loop needs to have a Preheader
+///   - A unique dedicated exit block must exist
+///
+/// This also updates the relevant analysis information in \p DT, \p SE, and \p
+/// LI if pointers to those are provided.
+/// It also updates the loop PM if an updater struct is provided.
+
+void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
+                    LoopInfo *LI);
+
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
 /// the stores in the loop, looking for stores to Must pointers which are

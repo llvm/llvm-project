@@ -1122,6 +1122,22 @@ struct SemiNCAInfo {
   //~~
 
   static void ApplyUpdates(DomTreeT &DT, ArrayRef<UpdateT> Updates) {
+    const size_t NumUpdates = Updates.size();
+    if (NumUpdates == 0)
+      return;
+
+    // Take the fast path for a single update and avoid running the batch update
+    // machinery.
+    if (NumUpdates == 1) {
+      const auto &Update = Updates.front();
+      if (Update.getKind() == UpdateKind::Insert)
+        DT.insertEdge(Update.getFrom(), Update.getTo());
+      else
+        DT.deleteEdge(Update.getFrom(), Update.getTo());
+
+      return;
+    }
+
     BatchUpdateInfo BUI;
     LegalizeUpdates(Updates, BUI.Updates);
 

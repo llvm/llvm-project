@@ -172,7 +172,7 @@ size_t DwarfEHPrepare::pruneUnreachableResumes(
       BasicBlock *BB = RI->getParent();
       new UnreachableInst(Ctx, RI);
       RI->eraseFromParent();
-      SimplifyCFG(BB, TTI);
+      simplifyCFG(BB, TTI);
     }
   }
   Resumes.resize(ResumesLeft);

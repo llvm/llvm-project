@@ -7,6 +7,8 @@
 ; Bug: PR31899
 ; XFAIL: avr
 
+declare void @foo()
+
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: Machine code for function test2:
@@ -26,6 +28,8 @@ entry:
 ; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}36.36%) BB#3({{[0-9a-fx/= ]+}}63.64%)
 
 sw.bb:
+; this call will prevent simplifyCFG from optimizing the block away in ARM/AArch64.
+  tail call void @foo()
   br label %return
 
 sw.bb1:

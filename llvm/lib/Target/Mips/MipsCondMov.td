@@ -149,7 +149,7 @@ def MOVN_I_D32 : MMRel, CMov_I_F_FT<"movn.d", GPR32Opnd, AFGR64Opnd,
                                     II_MOVN_D>, CMov_I_F_FM<19, 17>,
                  INSN_MIPS4_32_NOT_32R6_64R6, FGR_32;
 
-let DecoderNamespace = "Mips64" in {
+let DecoderNamespace = "MipsFP64" in {
   def MOVZ_I_D64 : CMov_I_F_FT<"movz.d", GPR32Opnd, FGR64Opnd, II_MOVZ_D>,
                    CMov_I_F_FM<18, 17>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
   def MOVN_I_D64 : CMov_I_F_FT<"movn.d", GPR32Opnd, FGR64Opnd, II_MOVN_D>,
@@ -188,7 +188,7 @@ def MOVF_D32 : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
                                   MipsCMovFP_F>, CMov_F_F_FM<17, 0>,
                INSN_MIPS4_32_NOT_32R6_64R6, FGR_32;
 
-let DecoderNamespace = "Mips64" in {
+let DecoderNamespace = "MipsFP64" in {
   def MOVT_D64 : CMov_F_F_FT<"movt.d", FGR64Opnd, II_MOVT_D, MipsCMovFP_T>,
                  CMov_F_F_FM<17, 1>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
   def MOVF_D64 : CMov_F_F_FT<"movf.d", FGR64Opnd, II_MOVF_D, MipsCMovFP_F>,

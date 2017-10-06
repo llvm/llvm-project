@@ -128,8 +128,8 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
 
   // Make sure the constraints list for each operand is large enough to hold
   // constraint info, even if none is present.
-  for (unsigned i = 0, e = OperandList.size(); i != e; ++i)
-    OperandList[i].Constraints.resize(OperandList[i].MINumOperands);
+  for (OperandInfo &OpInfo : OperandList)
+    OpInfo.Constraints.resize(OpInfo.MINumOperands);
 }
 
 

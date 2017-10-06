@@ -511,10 +511,12 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst))
     return std::error_code();
 
-  // If a call/invoke instruction is inlined in profile, but not inlined here,
+  // If a direct call/invoke instruction is inlined in profile
+  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
   // it means that the inlined callsite has no sample, thus the call
   // instruction should have 0 count.
   if ((isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) &&
+      !ImmutableCallSite(&Inst).isIndirectCall() &&
       findCalleeFunctionSamples(Inst))
     return 0;
 

@@ -83,5 +83,8 @@ define void @test_geps(i32 %i) {
 ;CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds <4 x double>, <4 x double>*
   %c12 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 %i
 
+;CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %d0 = getelementptr inbounds i8, i8* undef, i32 -1
+
   ret void
 }

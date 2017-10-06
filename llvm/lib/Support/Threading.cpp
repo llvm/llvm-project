@@ -74,7 +74,7 @@ unsigned llvm::heavyweight_hardware_concurrency() {
 }
 
 unsigned llvm::hardware_concurrency() {
-#ifdef HAVE_SCHED_GETAFFINITY
+#if defined(HAVE_SCHED_GETAFFINITY) && defined(HAVE_CPU_COUNT)
   cpu_set_t Set;
   if (sched_getaffinity(0, sizeof(Set), &Set))
     return CPU_COUNT(&Set);

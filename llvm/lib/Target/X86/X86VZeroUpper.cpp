@@ -1,4 +1,4 @@
-//===-- X86VZeroUpper.cpp - AVX vzeroupper instruction inserter -----------===//
+//===- X86VZeroUpper.cpp - AVX vzeroupper instruction inserter ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,14 +17,25 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-vzeroupper"
@@ -35,23 +46,25 @@ namespace {
 
   class VZeroUpperInserter : public MachineFunctionPass {
   public:
-
     VZeroUpperInserter() : MachineFunctionPass(ID) {}
+
     bool runOnMachineFunction(MachineFunction &MF) override;
+
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
     }
+
     StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
   private:
-
     void processBasicBlock(MachineBasicBlock &MBB);
     void insertVZeroUpper(MachineBasicBlock::iterator I,
                           MachineBasicBlock &MBB);
     void addDirtySuccessor(MachineBasicBlock &MBB);
 
-    typedef enum { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY } BlockExitState;
+    using BlockExitState = enum { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+
     static const char* getBlockExitStateName(BlockExitState ST);
 
     // Core algorithm state:
@@ -73,13 +86,15 @@ namespace {
     //                      to be guarded until we discover a predecessor that
     //                      is DIRTY_OUT.
     struct BlockState {
-      BlockState() : ExitState(PASS_THROUGH), AddedToDirtySuccessors(false) {}
-      BlockExitState ExitState;
-      bool AddedToDirtySuccessors;
+      BlockExitState ExitState = PASS_THROUGH;
+      bool AddedToDirtySuccessors = false;
       MachineBasicBlock::iterator FirstUnguardedCall;
+
+      BlockState() = default;
     };
-    typedef SmallVector<BlockState, 8> BlockStateMap;
-    typedef SmallVector<MachineBasicBlock*, 8> DirtySuccessorsWorkList;
+
+    using BlockStateMap = SmallVector<BlockState, 8>;
+    using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
 
     BlockStateMap BlockStates;
     DirtySuccessorsWorkList DirtySuccessors;
@@ -90,8 +105,9 @@ namespace {
     static char ID;
   };
 
-  char VZeroUpperInserter::ID = 0;
-}
+} // end anonymous namespace
+
+char VZeroUpperInserter::ID = 0;
 
 FunctionPass *llvm::createX86IssueVZeroUpperPass() {
   return new VZeroUpperInserter();

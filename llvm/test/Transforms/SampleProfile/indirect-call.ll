@@ -24,7 +24,7 @@ define void @test_inline(i64* (i32*)*, i32* %x) !dbg !6 {
 ; CHECK: if.true.direct_targ1:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect2:
-; CHECK: call
+; CHECK: call {{.*}} !prof ![[VP:[0-9]+]]
   call i64* %3(i32* %x), !dbg !7
   ret void
 }
@@ -152,6 +152,7 @@ define void @test_direct() !dbg !22 {
 !4 = !DILocation(line: 4, scope: !3)
 !5 = !DILocation(line: 6, scope: !3)
 ; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 3457, i64 9191153033785521275, i64 2059, i64 -1069303473483922844, i64 1398}
+; CHECK: ![[VP]] = !{!"VP", i32 0, i64 1000, i64 -6391416044382067764, i64 1000}
 !6 = distinct !DISubprogram(name: "test_inline", scope: !1, file: !1, line: 6, unit: !0)
 !7 = !DILocation(line: 7, scope: !6)
 !8 = distinct !DISubprogram(name: "test_inline_strip", scope: !1, file: !1, line: 8, unit: !0)

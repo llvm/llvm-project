@@ -22,6 +22,10 @@
 
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+#include <numeric>
+#include <utility>
+#include <vector>
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/Function.h"
@@ -30,10 +34,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
-#include <algorithm>
-#include <numeric>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -106,8 +106,7 @@ class BCECmpBlock {
 
   BCECmpBlock(BCEAtom L, BCEAtom R, int SizeBits)
       : Lhs_(L), Rhs_(R), SizeBits_(SizeBits) {
-    if (Rhs_ < Lhs_)
-      std::swap(Rhs_, Lhs_);
+    if (Rhs_ < Lhs_) std::swap(Rhs_, Lhs_);
   }
 
   bool IsValid() const {
@@ -152,17 +151,13 @@ bool BCECmpBlock::doesOtherWork() const {
   // Note: The GEPs and/or loads are not necessarily in the same block.
   for (const Instruction &Inst : *BB) {
     if (const auto *const GEP = dyn_cast<GetElementPtrInst>(&Inst)) {
-      if (!(Lhs_.GEP == GEP || Rhs_.GEP == GEP))
-        return true;
+      if (!(Lhs_.GEP == GEP || Rhs_.GEP == GEP)) return true;
     } else if (const auto *const L = dyn_cast<LoadInst>(&Inst)) {
-      if (!(Lhs_.LoadI == L || Rhs_.LoadI == L))
-        return true;
+      if (!(Lhs_.LoadI == L || Rhs_.LoadI == L)) return true;
     } else if (const auto *const C = dyn_cast<ICmpInst>(&Inst)) {
-      if (C != CmpI)
-        return true;
+      if (C != CmpI) return true;
     } else if (const auto *const Br = dyn_cast<BranchInst>(&Inst)) {
-      if (Br != BranchI)
-        return true;
+      if (Br != BranchI) return true;
     } else {
       return true;
     }
@@ -179,11 +174,9 @@ BCECmpBlock visitICmp(const ICmpInst *const CmpI,
                  << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
                  << "\n");
     auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0));
-    if (!Lhs.Base())
-      return {};
+    if (!Lhs.Base()) return {};
     auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1));
-    if (!Rhs.Base())
-      return {};
+    if (!Rhs.Base()) return {};
     return BCECmpBlock(std::move(Lhs), std::move(Rhs),
                        CmpI->getOperand(0)->getType()->getScalarSizeInBits());
   }
@@ -194,11 +187,9 @@ BCECmpBlock visitICmp(const ICmpInst *const CmpI,
 // BCE atoms, returns the comparison.
 BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
                           const BasicBlock *const PhiBlock) {
-  if (Block->empty())
-    return {};
+  if (Block->empty()) return {};
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
-  if (!BranchI)
-    return {};
+  if (!BranchI) return {};
   DEBUG(dbgs() << "branch\n");
   if (BranchI->isUnconditional()) {
     // In this case, we expect an incoming value which is the result of the
@@ -206,8 +197,7 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // that this does not mean that this is the last incoming value, blocks
     // can be reordered).
     auto *const CmpI = dyn_cast<ICmpInst>(Val);
-    if (!CmpI)
-      return {};
+    if (!CmpI) return {};
     DEBUG(dbgs() << "icmp\n");
     auto Result = visitICmp(CmpI, ICmpInst::ICMP_EQ);
     Result.CmpI = CmpI;
@@ -218,12 +208,10 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // chained).
     const auto *const Const = dyn_cast<ConstantInt>(Val);
     DEBUG(dbgs() << "const\n");
-    if (!Const->isZero())
-      return {};
+    if (!Const->isZero()) return {};
     DEBUG(dbgs() << "false\n");
     auto *const CmpI = dyn_cast<ICmpInst>(BranchI->getCondition());
-    if (!CmpI)
-      return {};
+    if (!CmpI) return {};
     DEBUG(dbgs() << "icmp\n");
     assert(BranchI->getNumSuccessors() == 2 && "expecting a cond branch");
     BasicBlock *const FalseBlock = BranchI->getSuccessor(1);
@@ -359,8 +347,7 @@ void BCECmpChain::dump() const {
            << Comparison.Rhs().Offset << " (" << (Comparison.SizeBits() / 8)
            << " bytes)\"];\n";
     const Value *const Val = Phi_.getIncomingValueForBlock(Comparison.BB);
-    if (I > 0)
-      errs() << " \"" << (I - 1) << "\" -> \"" << I << "\";\n";
+    if (I > 0) errs() << " \"" << (I - 1) << "\" -> \"" << I << "\";\n";
     errs() << " \"" << I << "\" -> \"Phi\" [label=\"" << *Val << "\"];\n";
   }
   errs() << " \"Phi\" [label=\"Phi\"];\n";
@@ -379,8 +366,7 @@ bool BCECmpChain::simplify(const TargetLibraryInfo *const TLI) {
         break;
       }
     }
-    if (!AtLeastOneMerged)
-      return false;
+    if (!AtLeastOneMerged) return false;
   }
 
   // Remove phi references to comparison blocks, they will be rebuilt as we
@@ -561,8 +547,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
   // last block and reconstruct the order.
   BasicBlock *LastBlock = nullptr;
   for (unsigned I = 0; I < Phi.getNumIncomingValues(); ++I) {
-    if (isa<ConstantInt>(Phi.getIncomingValue(I)))
-      continue;
+    if (isa<ConstantInt>(Phi.getIncomingValue(I))) continue;
     if (LastBlock) {
       // There are several non-constant values.
       DEBUG(dbgs() << "skip: several non-constant values\n");
@@ -582,8 +567,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
 
   const auto Blocks =
       getOrderedBlocks(Phi, LastBlock, Phi.getNumIncomingValues());
-  if (Blocks.empty())
-    return false;
+  if (Blocks.empty()) return false;
   BCECmpChain CmpChain(Blocks, Phi);
 
   if (CmpChain.size() < 2) {
@@ -629,8 +613,7 @@ PreservedAnalyses MergeICmps::runImpl(Function &F,
       MadeChange |= processPhi(*Phi, TLI);
   }
 
-  if (MadeChange)
-    return PreservedAnalyses::none();
+  if (MadeChange) return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
 
@@ -644,4 +627,3 @@ INITIALIZE_PASS_END(MergeICmps, "mergeicmps",
                     "Merge contiguous icmps into a memcmp", false, false)
 
 Pass *llvm::createMergeICmpsPass() { return new MergeICmps(); }
-

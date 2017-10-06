@@ -846,10 +846,8 @@ namespace rdf {
     using BlockRefsMap = std::map<NodeId, RegisterSet>;
 
     void buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In);
-    void buildBlockRefs(NodeAddr<BlockNode*> BA, BlockRefsMap &RefM);
-    void recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
-        NodeAddr<BlockNode*> BA);
-    void buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
+    void recordDefsForDF(BlockRefsMap &PhiM, NodeAddr<BlockNode*> BA);
+    void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
         NodeAddr<BlockNode*> BA);
     void removeUnusedPhis();
 

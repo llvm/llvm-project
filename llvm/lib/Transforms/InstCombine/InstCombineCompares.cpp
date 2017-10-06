@@ -1524,25 +1524,28 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
   const APInt *C3;
   if (match(Shift->getOperand(1), m_APInt(C3))) {
     bool CanFold = false;
-    if (ShiftOpcode == Instruction::AShr) {
-      // There may be some constraints that make this possible, but nothing
-      // simple has been discovered yet.
-      CanFold = false;
-    } else if (ShiftOpcode == Instruction::Shl) {
+    if (ShiftOpcode == Instruction::Shl) {
       // For a left shift, we can fold if the comparison is not signed. We can
       // also fold a signed comparison if the mask value and comparison value
       // are not negative. These constraints may not be obvious, but we can
       // prove that they are correct using an SMT solver.
       if (!Cmp.isSigned() || (!C2.isNegative() && !C1.isNegative()))
         CanFold = true;
-    } else if (ShiftOpcode == Instruction::LShr) {
+    } else {
+      bool IsAshr = ShiftOpcode == Instruction::AShr;
       // For a logical right shift, we can fold if the comparison is not signed.
       // We can also fold a signed comparison if the shifted mask value and the
       // shifted comparison value are not negative. These constraints may not be
       // obvious, but we can prove that they are correct using an SMT solver.
-      if (!Cmp.isSigned() ||
-          (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
-        CanFold = true;
+      // For an arithmetic shift right we can do the same, if we ensure
+      // the And doesn't use any bits being shifted in. Normally these would
+      // be turned into lshr by SimplifyDemandedBits, but not if there is an
+      // additional user.
+      if (!IsAshr || (C2.shl(*C3).lshr(*C3) == C2)) {
+        if (!Cmp.isSigned() ||
+            (!C2.shl(*C3).isNegative() && !C1.shl(*C3).isNegative()))
+          CanFold = true;
+      }
     }
 
     if (CanFold) {
@@ -2008,42 +2011,45 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
     return nullptr;
 
   bool IsAShr = Shr->getOpcode() == Instruction::AShr;
-  if (!Cmp.isEquality()) {
-    // If we have an unsigned comparison and an ashr, we can't simplify this.
-    // Similarly for signed comparisons with lshr.
-    if (Cmp.isSigned() != IsAShr)
-      return nullptr;
-
-    // Otherwise, all lshr and most exact ashr's are equivalent to a udiv/sdiv
-    // by a power of 2.  Since we already have logic to simplify these,
-    // transform to div and then simplify the resultant comparison.
-    if (IsAShr && (!Shr->isExact() || ShAmtVal == TypeBits - 1))
-      return nullptr;
-
-    // Revisit the shift (to delete it).
-    Worklist.Add(Shr);
-
-    Constant *DivCst = ConstantInt::get(
-        Shr->getType(), APInt::getOneBitSet(TypeBits, ShAmtVal));
-
-    Value *Tmp = IsAShr ? Builder.CreateSDiv(X, DivCst, "", Shr->isExact())
-                        : Builder.CreateUDiv(X, DivCst, "", Shr->isExact());
-
-    Cmp.setOperand(0, Tmp);
-
-    // If the builder folded the binop, just return it.
-    BinaryOperator *TheDiv = dyn_cast<BinaryOperator>(Tmp);
-    if (!TheDiv)
-      return &Cmp;
-
-    // Otherwise, fold this div/compare.
-    assert(TheDiv->getOpcode() == Instruction::SDiv ||
-           TheDiv->getOpcode() == Instruction::UDiv);
-
-    Instruction *Res = foldICmpDivConstant(Cmp, TheDiv, C);
-    assert(Res && "This div/cst should have folded!");
-    return Res;
+  bool IsExact = Shr->isExact();
+  Type *ShrTy = Shr->getType();
+  // TODO: If we could guarantee that InstSimplify would handle all of the
+  // constant-value-based preconditions in the folds below, then we could assert
+  // those conditions rather than checking them. This is difficult because of
+  // undef/poison (PR34838).
+  if (IsAShr) {
+    if (Pred == CmpInst::ICMP_SLT || (Pred == CmpInst::ICMP_SGT && IsExact)) {
+      // icmp slt (ashr X, ShAmtC), C --> icmp slt X, (C << ShAmtC)
+      // icmp sgt (ashr exact X, ShAmtC), C --> icmp sgt X, (C << ShAmtC)
+      APInt ShiftedC = C.shl(ShAmtVal);
+      if (ShiftedC.ashr(ShAmtVal) == C)
+        return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
+    }
+    if (Pred == CmpInst::ICMP_SGT) {
+      // icmp sgt (ashr X, ShAmtC), C --> icmp sgt X, ((C + 1) << ShAmtC) - 1
+      APInt ShiftedC = (C + 1).shl(ShAmtVal) - 1;
+      if (!C.isMaxSignedValue() && !(C + 1).shl(ShAmtVal).isMinSignedValue() &&
+          (ShiftedC + 1).ashr(ShAmtVal) == (C + 1))
+        return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
+    }
+  } else {
+    if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
+      // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
+      // icmp ugt (lshr exact X, ShAmtC), C --> icmp ugt X, (C << ShAmtC)
+      APInt ShiftedC = C.shl(ShAmtVal);
+      if (ShiftedC.lshr(ShAmtVal) == C)
+        return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
+    }
+    if (Pred == CmpInst::ICMP_UGT) {
+      // icmp ugt (lshr X, ShAmtC), C --> icmp ugt X, ((C + 1) << ShAmtC) - 1
+      APInt ShiftedC = (C + 1).shl(ShAmtVal) - 1;
+      if ((ShiftedC + 1).lshr(ShAmtVal) == (C + 1))
+        return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
+    }
   }
+
+  if (!Cmp.isEquality())
+    return nullptr;
 
   // Handle equality comparisons of shift-by-constant.
 
@@ -2054,17 +2060,17 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
           (!IsAShr && C.shl(ShAmtVal).lshr(ShAmtVal) == C)) &&
          "Expected icmp+shr simplify did not occur.");
 
-  // If the bits shifted out are known zero, compare the unshifted value:
+  // Check if the bits shifted out are known to be zero. If so, we can compare
+  // against the unshifted value:
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
-  Constant *ShiftedCmpRHS = ConstantInt::get(Shr->getType(), C << ShAmtVal);
-  if (Shr->isExact())
-    return new ICmpInst(Pred, X, ShiftedCmpRHS);
-
+  Constant *ShiftedCmpRHS = ConstantInt::get(ShrTy, C << ShAmtVal);
   if (Shr->hasOneUse()) {
-    // Canonicalize the shift into an 'and':
-    // icmp eq/ne (shr X, ShAmt), C --> icmp eq/ne (and X, HiMask), (C << ShAmt)
+    if (Shr->isExact())
+      return new ICmpInst(Pred, X, ShiftedCmpRHS);
+
+    // Otherwise strength reduce the shift into an 'and'.
     APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
-    Constant *Mask = ConstantInt::get(Shr->getType(), Val);
+    Constant *Mask = ConstantInt::get(ShrTy, Val);
     Value *And = Builder.CreateAnd(X, Mask, Shr->getName() + ".mask");
     return new ICmpInst(Pred, And, ShiftedCmpRHS);
   }
