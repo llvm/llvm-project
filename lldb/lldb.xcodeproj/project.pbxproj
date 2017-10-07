@@ -7105,6 +7105,7 @@
 			);
 			name = "Prepare Swig Bindings";
 			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/LLDBWrapPython.cpp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;

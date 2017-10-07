@@ -93,15 +93,15 @@ BEGIN
         BLOCK "040904E4"
         {
             VALUE "CompanyName",      "a"
-            VALUE "FileDescription",  "b"
+            VALUE "FileDescription",  "b" "c" "d",   1 3  7L, "y", "h" "d"
             VALUE "FileVersion",      "c"
             VALUE "InternalName",     "d"
-            VALUE "LegalCopyright",   "e"
-            VALUE "LegalTrademarks1", "f"
+            VALUE "LegalCopyright",   "e" 0
+            VALUE "LegalTrademarks1", 1 2, 3
             VALUE "LegalTrademarks2", "g"
             VALUE "OriginalFilename", L"h"
-            VALUE "ProductName",      "ii", 2, 3
-            VALUE "ProductVersion"
+            VALUE "ProductName",      "ii", 2L, 3
+            VALUE "ProductVersion",   0x12345678L
         }
     END
 

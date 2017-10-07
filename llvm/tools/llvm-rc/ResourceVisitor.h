@@ -32,9 +32,14 @@ class Visitor {
 public:
   virtual Error visitNullResource(const RCResource *) = 0;
   virtual Error visitAcceleratorsResource(const RCResource *) = 0;
+  virtual Error visitCursorResource(const RCResource *) = 0;
   virtual Error visitDialogResource(const RCResource *) = 0;
   virtual Error visitHTMLResource(const RCResource *) = 0;
+  virtual Error visitIconResource(const RCResource *) = 0;
   virtual Error visitMenuResource(const RCResource *) = 0;
+  virtual Error visitStringTableResource(const RCResource *) = 0;
+  virtual Error visitUserDefinedResource(const RCResource *) = 0;
+  virtual Error visitVersionInfoResource(const RCResource *) = 0;
 
   virtual Error visitCaptionStmt(const CaptionStmt *) = 0;
   virtual Error visitCharacteristicsStmt(const CharacteristicsStmt *) = 0;

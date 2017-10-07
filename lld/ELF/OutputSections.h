@@ -56,11 +56,6 @@ public:
 
   uint32_t getPhdrFlags() const;
 
-  void updateAlignment(uint32_t Val) {
-    if (Val > Alignment)
-      Alignment = Val;
-  }
-
   // Pointer to the PT_LOAD segment, which this section resides in. This field
   // is used to correctly compute file offset of a section. When two sections
   // share the same load segment, difference between their file offsets should
@@ -82,11 +77,7 @@ public:
   uint64_t Addr = 0;
   uint32_t ShName = 0;
 
-  void addSection(InputSection *S);
-
-  // Used for implementation of --compress-debug-sections option.
-  std::vector<uint8_t> ZDebugHeader;
-  llvm::SmallVector<char, 1> CompressedData;
+  void addSection(InputSection *IS);
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;
@@ -108,11 +99,17 @@ public:
   template <class ELFT> void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void maybeCompress();
-  uint32_t getFiller();
 
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
+
+private:
+  // Used for implementation of --compress-debug-sections option.
+  std::vector<uint8_t> ZDebugHeader;
+  llvm::SmallVector<char, 1> CompressedData;
+
+  uint32_t getFiller();
 };
 
 int getPriority(StringRef S);
@@ -140,6 +137,7 @@ struct SectionKey {
 };
 } // namespace elf
 } // namespace lld
+
 namespace llvm {
 template <> struct DenseMapInfo<lld::elf::SectionKey> {
   static lld::elf::SectionKey getEmptyKey();
@@ -149,9 +147,9 @@ template <> struct DenseMapInfo<lld::elf::SectionKey> {
                       const lld::elf::SectionKey &RHS);
 };
 } // namespace llvm
+
 namespace lld {
 namespace elf {
-
 // This class knows how to create an output section for a given
 // input section. Output section type is determined by various
 // factors, including input section's sh_flags, sh_type and
@@ -161,8 +159,7 @@ public:
   OutputSectionFactory();
   ~OutputSectionFactory();
 
-  void addInputSec(InputSectionBase *IS, StringRef OutsecName,
-                   OutputSection *OS = nullptr);
+  OutputSection *addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
   llvm::SmallDenseMap<SectionKey, OutputSection *> Map;

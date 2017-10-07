@@ -1646,7 +1646,8 @@ public:
   /// A function \p MF is considered safe for outlining if an outlined function
   /// produced from instructions in F will produce a program which produces the
   /// same output for any set of given inputs.
-  virtual bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
+  virtual bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                           bool OutlineFromLinkOnceODRs) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
   }

@@ -161,8 +161,12 @@ raw_ostream &VersionInfoBlock::log(raw_ostream &OS) const {
 
 raw_ostream &VersionInfoValue::log(raw_ostream &OS) const {
   OS << "  " << Key << " =>";
-  for (auto &Value : Values)
-    OS << " " << Value;
+  size_t NumValues = Values.size();
+  for (size_t Id = 0; Id < NumValues; ++Id) {
+    if (Id > 0 && HasPrecedingComma[Id])
+      OS << ",";
+    OS << " " << Values[Id];
+  }
   return OS << "\n";
 }
 
