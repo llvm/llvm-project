@@ -778,24 +778,23 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
-/// Try to fold a divide or remainder of a select instruction.
-bool InstCombiner::SimplifyDivRemOfSelect(BinaryOperator &I) {
-  SelectInst *SI = cast<SelectInst>(I.getOperand(1));
-
-  // div/rem X, (Cond ? 0 : Y) -> div/rem X, Y
-  int NonNullOperand = -1;
-  if (Constant *ST = dyn_cast<Constant>(SI->getOperand(1)))
-    if (ST->isNullValue())
-      NonNullOperand = 2;
-  // div/rem X, (Cond ? Y : 0) -> div/rem X, Y
-  if (Constant *ST = dyn_cast<Constant>(SI->getOperand(2)))
-    if (ST->isNullValue())
-      NonNullOperand = 1;
-
-  if (NonNullOperand == -1)
+/// Fold a divide or remainder with a select instruction divisor when one of the
+/// select operands is zero. In that case, we can use the other select operand
+/// because div/rem by zero is undefined.
+bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
+  SelectInst *SI = dyn_cast<SelectInst>(I.getOperand(1));
+  if (!SI)
     return false;
 
-  Value *SelectCond = SI->getOperand(0);
+  int NonNullOperand;
+  if (match(SI->getTrueValue(), m_Zero()))
+    // div/rem X, (Cond ? 0 : Y) -> div/rem X, Y
+    NonNullOperand = 2;
+  else if (match(SI->getFalseValue(), m_Zero()))
+    // div/rem X, (Cond ? Y : 0) -> div/rem X, Y
+    NonNullOperand = 1;
+  else
+    return false;
 
   // Change the div/rem to use 'Y' instead of the select.
   I.setOperand(1, SI->getOperand(NonNullOperand));
@@ -808,12 +807,13 @@ bool InstCombiner::SimplifyDivRemOfSelect(BinaryOperator &I) {
 
   // If the select and condition only have a single use, don't bother with this,
   // early exit.
+  Value *SelectCond = SI->getCondition();
   if (SI->use_empty() && SelectCond->hasOneUse())
     return true;
 
   // Scan the current block backward, looking for other uses of SI.
   BasicBlock::iterator BBI = I.getIterator(), BBFront = I.getParent()->begin();
-
+  Type *CondTy = SelectCond->getType();
   while (BBI != BBFront) {
     --BBI;
     // If we found a call to a function, we can't assume it will return, so
@@ -828,7 +828,8 @@ bool InstCombiner::SimplifyDivRemOfSelect(BinaryOperator &I) {
         *I = SI->getOperand(NonNullOperand);
         Worklist.Add(&*BBI);
       } else if (*I == SelectCond) {
-        *I = Builder.getInt1(NonNullOperand == 1);
+        *I = NonNullOperand == 1 ? ConstantInt::getTrue(CondTy)
+                                 : ConstantInt::getFalse(CondTy);
         Worklist.Add(&*BBI);
       }
     }
@@ -863,7 +864,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
 
   // Handle cases involving: [su]div X, (select Cond, Y, Z)
   // This does not apply for fdiv.
-  if (isa<SelectInst>(Op1) && SimplifyDivRemOfSelect(I))
+  if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
   if (Instruction *LHS = dyn_cast<Instruction>(Op0)) {
@@ -1458,7 +1459,7 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
   }
 
   // Handle cases involving: rem X, (select Cond, Y, Z)
-  if (isa<SelectInst>(Op1) && SimplifyDivRemOfSelect(I))
+  if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
   if (isa<Constant>(Op1)) {
@@ -1613,7 +1614,7 @@ Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   // Handle cases involving: rem X, (select Cond, Y, Z)
-  if (isa<SelectInst>(Op1) && SimplifyDivRemOfSelect(I))
+  if (simplifyDivRemOfSelectWithZeroOp(I))
     return &I;
 
   return nullptr;

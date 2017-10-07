@@ -134,12 +134,12 @@ void RCParser::consume() {
 //    1 => 01 00, -1 => ff ff, --1 => 01 00, ---1 => ff ff;
 //    1 => 01 00, ~1 => fe ff, ~~1 => 01 00, ~~~1 => fe ff.
 
-Expected<uint32_t> RCParser::readInt() { return parseIntExpr1(); }
+Expected<RCInt> RCParser::readInt() { return parseIntExpr1(); }
 
-Expected<uint32_t> RCParser::parseIntExpr1() {
+Expected<RCInt> RCParser::parseIntExpr1() {
   // Exp1 ::= Exp2 || Exp1 + Exp2 || Exp1 - Exp2 || Exp1 | Exp2 || Exp1 & Exp2.
   ASSIGN_OR_RETURN(FirstResult, parseIntExpr2());
-  uint32_t Result = *FirstResult;
+  RCInt Result = *FirstResult;
 
   while (!isEof() && look().isBinaryOp()) {
     auto OpToken = read();
@@ -170,7 +170,7 @@ Expected<uint32_t> RCParser::parseIntExpr1() {
   return Result;
 }
 
-Expected<uint32_t> RCParser::parseIntExpr2() {
+Expected<RCInt> RCParser::parseIntExpr2() {
   // Exp2 ::= -Exp2 || ~Exp2 || Int || (Exp1).
   static const char ErrorMsg[] = "'-', '~', integer or '('";
 
@@ -191,7 +191,7 @@ Expected<uint32_t> RCParser::parseIntExpr2() {
   }
 
   case Kind::Int:
-    return read().intValue();
+    return RCInt(read());
 
   case Kind::LeftParen: {
     consume();
@@ -261,14 +261,14 @@ bool RCParser::consumeOptionalType(Kind TokenKind) {
   return false;
 }
 
-Expected<SmallVector<uint32_t, 8>>
-RCParser::readIntsWithCommas(size_t MinCount, size_t MaxCount) {
+Expected<SmallVector<RCInt, 8>> RCParser::readIntsWithCommas(size_t MinCount,
+                                                             size_t MaxCount) {
   assert(MinCount <= MaxCount);
 
-  SmallVector<uint32_t, 8> Result;
+  SmallVector<RCInt, 8> Result;
 
   auto FailureHandler =
-      [&](llvm::Error Err) -> Expected<SmallVector<uint32_t, 8>> {
+      [&](llvm::Error Err) -> Expected<SmallVector<RCInt, 8>> {
     if (Result.size() < MinCount)
       return std::move(Err);
     consumeError(std::move(Err));
@@ -477,7 +477,7 @@ Expected<Control> RCParser::parseControl() {
   ASSIGN_OR_RETURN(Args, readIntsWithCommas(5, 8));
 
   auto TakeOptArg = [&Args](size_t Id) -> Optional<uint32_t> {
-    return Args->size() > Id ? (*Args)[Id] : Optional<uint32_t>();
+    return Args->size() > Id ? (uint32_t)(*Args)[Id] : Optional<uint32_t>();
   };
 
   return Control(*ClassResult, Caption, (*Args)[0], (*Args)[1], (*Args)[2],
@@ -608,15 +608,22 @@ Expected<std::unique_ptr<VersionInfoStmt>> RCParser::parseVersionInfoStmt() {
 
   if (TypeResult->equals_lower("VALUE")) {
     ASSIGN_OR_RETURN(KeyResult, readString());
-    // Read a (possibly empty) list of strings and/or ints, each preceded by
-    // a comma.
+    // Read a non-empty list of strings and/or ints, each
+    // possibly preceded by a comma. Unfortunately, the tool behavior depends
+    // on them existing or not, so we need to memorize where we found them.
     std::vector<IntOrString> Values;
-
-    while (consumeOptionalType(Kind::Comma)) {
+    std::vector<bool> PrecedingCommas;
+    RETURN_IF_ERROR(consumeType(Kind::Comma));
+    while (!isNextTokenKind(Kind::Identifier) &&
+           !isNextTokenKind(Kind::BlockEnd)) {
+      // Try to eat a comma if it's not the first statement.
+      bool HadComma = Values.size() > 0 && consumeOptionalType(Kind::Comma);
       ASSIGN_OR_RETURN(ValueResult, readIntOrString());
       Values.push_back(*ValueResult);
+      PrecedingCommas.push_back(HadComma);
     }
-    return llvm::make_unique<VersionInfoValue>(*KeyResult, std::move(Values));
+    return llvm::make_unique<VersionInfoValue>(*KeyResult, std::move(Values),
+                                               std::move(PrecedingCommas));
   }
 
   return getExpectedError("BLOCK or VALUE", true);
@@ -641,7 +648,8 @@ RCParser::parseVersionInfoFixed() {
     // VERSION variations take multiple integers.
     size_t NumInts = RetType::isVersionType(FixedType) ? 4 : 1;
     ASSIGN_OR_RETURN(ArgsResult, readIntsWithCommas(NumInts, NumInts));
-    Result.setValue(FixedType, *ArgsResult);
+    SmallVector<uint32_t, 4> ArgInts(ArgsResult->begin(), ArgsResult->end());
+    Result.setValue(FixedType, ArgInts);
   }
 
   return Result;

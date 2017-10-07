@@ -564,7 +564,8 @@ public:
           std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
           &RepeatedSequenceLocs) const override;
 
-  bool isFunctionSafeToOutlineFrom(MachineFunction &MF) const override;
+  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                   bool OutlineFromLinkOnceODRs) const override;
 
   llvm::X86GenInstrInfo::MachineOutlinerInstrType
   getOutliningType(MachineInstr &MI) const override;

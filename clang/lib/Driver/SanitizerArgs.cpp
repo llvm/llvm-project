@@ -612,7 +612,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   SharedRuntime =
       Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
-                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia());
+                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
+                       TC.getTriple().isOSDarwin());
 
   if (AllAddedKinds & Address) {
     NeedPIE |= TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();

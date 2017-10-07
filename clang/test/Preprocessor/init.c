@@ -253,18 +253,18 @@
 // SCHAR-NOT:#define __UNSIGNED_CHAR__
 // SCHAR:#define __clang__ 1
 //
-// RUN: %clang_cc1 -E -dM -fshort-wchar < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=short -fno-signed-wchar < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
 // wchar_t is u16 for targeting Win32.
-// FIXME: Implement and check x86_64-cygwin.
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=x86_64-w64-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=short -fno-signed-wchar -triple=x86_64-w64-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
+// RUN: %clang_cc1 -dM -fwchar-type=short -fno-signed-wchar -triple=x86_64-unknown-windows-cygnus -E /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR %s
 //
 // SHORTWCHAR: #define __SIZEOF_WCHAR_T__ 2
 // SHORTWCHAR: #define __WCHAR_MAX__ 65535
 // SHORTWCHAR: #define __WCHAR_TYPE__ unsigned short
 // SHORTWCHAR: #define __WCHAR_WIDTH__ 16
 //
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=i686-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
-// RUN: %clang_cc1 -E -dM -fno-short-wchar -triple=x86_64-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=int -triple=i686-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
+// RUN: %clang_cc1 -E -dM -fwchar-type=int -triple=x86_64-unknown-unknown < /dev/null | FileCheck -match-full-lines -check-prefix SHORTWCHAR2 %s
 //
 // SHORTWCHAR2: #define __SIZEOF_WCHAR_T__ 4
 // SHORTWCHAR2: #define __WCHAR_WIDTH__ 32

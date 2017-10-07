@@ -35,10 +35,19 @@ foreach(arch ${UBSAN_TEST_ARCH})
   if(COMPILER_RT_HAS_MSAN AND ";${MSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     add_ubsan_testsuite("MemorySanitizer" msan ${arch})
   endif()
-  if(COMPILER_RT_HAS_TSAN AND ";${TSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
+  if(COMPILER_RT_HAS_TSAN AND ";${TSAN_SUPPORTED_ARCH};" MATCHES ";${arch};" AND NOT ANDROID)
     add_ubsan_testsuite("ThreadSanitizer" tsan ${arch})
   endif()
 endforeach()
+
+if(APPLE)
+  foreach(arch ${UBSAN_TEST_ARCH})
+    set(UBSAN_TEST_TARGET_ARCH ${arch})
+    get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
+    append("-lc++abi" UBSAN_TEST_TARGET_CFLAGS)
+    add_ubsan_testsuite("StandaloneStatic" ubsan ${arch})
+  endforeach()
+endif()
 
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}

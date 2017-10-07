@@ -477,7 +477,7 @@ protected:
 public:
   PS4OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    this->WCharType = this->UnsignedShort;
+    this->WCharType = TargetInfo::UnsignedShort;
 
     // On PS4, TLS variable cannot be aligned to more than 32 bytes (256 bits).
     this->MaxTLSAlign = 256;
@@ -561,7 +561,6 @@ protected:
 public:
   SolarisTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    this->WCharType = this->SignedInt;
     // FIXME: WIntType should be SignedLong
   }
 };
@@ -628,7 +627,9 @@ protected:
 
 public:
   WindowsTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedShort;
+  }
 };
 
 template <typename Target>
