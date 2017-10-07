@@ -241,6 +241,7 @@ bool LLParser::ValidateEndOfModule() {
     llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
+  UpgradeSectionAttributes(*M);
 
   if (!Slots)
     return false;

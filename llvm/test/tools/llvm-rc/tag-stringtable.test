@@ -1,0 +1,170 @@
+; RUN: llvm-rc /FO %t %p/Inputs/tag-stringtable-basic.rc
+; RUN: llvm-readobj %t | FileCheck %s
+
+; CHECK:      Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 32
+; CHECK-NEXT: Characteristics: 50
+; CHECK-NEXT: Data size: 40
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 01006100 01006200 01006300 01006400  |..a...b...c...d.|
+; CHECK-NEXT:   0010: 00000000 00000000 00000000 00000000  |................|
+; CHECK-NEXT:   0020: 00000000 00000000                    |........|
+; CHECK-NEXT: )
+
+; CHECK-DAG:  Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 2
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 40
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 02006200 62000200 63006300 00000000  |..b.b...c.c.....|
+; CHECK-NEXT:   0010: 00000000 00000000 00000000 00000000  |................|
+; CHECK-NEXT:   0020: 00000000 00000000                    |........|
+; CHECK-NEXT: )
+
+; CHECK-DAG:  Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 2
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 7172
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 100
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 80
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 05006800 65006C00 6C006F00 05007700  |..h.e.l.l.o...w.|
+; CHECK-NEXT:   0010: 6F007200 6C006400 00000000 00000000  |o.r.l.d.........|
+; CHECK-NEXT:   0020: 00000E00 73006F00 6D006500 74006800  |....s.o.m.e.t.h.|
+; CHECK-NEXT:   0030: 69006E00 67002000 65006C00 73006500  |i.n.g. .e.l.s.e.|
+; CHECK-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
+; CHECK-NEXT: )
+
+; CHECK-DAG:  Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 3
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 50
+; CHECK-NEXT: Characteristics: 50
+; CHECK-NEXT: Data size: 38
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 03006300 63006300 00000000 00000000  |..c.c.c.........|
+; CHECK-NEXT:   0010: 00000000 00000000 00000000 00000000  |................|
+; CHECK-NEXT:   0020: 00000000 0000                        |......|
+; CHECK-NEXT: )
+
+; CHECK-DAG:  Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 4096
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 7172
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 101
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 74
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 00000000 00000000 00000000 00000000  |................|
+; CHECK-NEXT:   0010: 00000C00 6C006100 72006700 65002000  |....l.a.r.g.e. .|
+; CHECK-NEXT:   0020: 6E007500 6D006200 65007200 00000000  |n.u.m.b.e.r.....|
+; CHECK-NEXT:   0030: 00000000 00000900 6D006900 6E007500  |........m.i.n.u.|
+; CHECK-NEXT:   0040: 73002000 6F006E00 6500               |s. .o.n.e.|
+; CHECK-NEXT: )
+
+
+; RUN: llvm-rc /N /FO %t0 %p/Inputs/tag-stringtable-basic.rc
+; RUN: llvm-readobj %t0 | FileCheck %s --check-prefix=NULL
+
+; NULL:      Resource type (int): 6
+; NULL-NEXT: Resource name (int): 1
+; NULL-NEXT: Data version: 0
+; NULL-NEXT: Memory flags: 0x1030
+; NULL-NEXT: Language ID: 1033
+; NULL-NEXT: Version (major): 0
+; NULL-NEXT: Version (minor): 32
+; NULL-NEXT: Characteristics: 50
+; NULL-NEXT: Data size: 52
+; NULL-NEXT: Data: (
+; NULL-NEXT:   0000: 02006100 00000200 62000000 02006300  |..a.....b.....c.|
+; NULL-NEXT:   0010: 00000200 64000000 01000000 00000000  |....d...........|
+; NULL-NEXT:   0020: 00000100 00000000 00000000 00000000  |................|
+; NULL-NEXT:   0030: 00000000                             |....|
+; NULL-NEXT: )
+
+; NULL-DAG:  Resource type (int): 6
+; NULL-NEXT: Resource name (int): 2
+; NULL-NEXT: Data version: 0
+; NULL-NEXT: Memory flags: 0x1030
+; NULL-NEXT: Language ID: 1033
+; NULL-NEXT: Version (major): 0
+; NULL-NEXT: Version (minor): 0
+; NULL-NEXT: Characteristics: 0
+; NULL-NEXT: Data size: 44
+; NULL-NEXT: Data: (
+; NULL-NEXT:   0000: 03006200 62000000 03006300 63000000  |..b.b.....c.c...|
+; NULL-NEXT:   0010: 00000000 00000000 00000000 00000000  |................|
+; NULL-NEXT:   0020: 00000000 00000000 00000000           |............|
+; NULL-NEXT: )
+
+; NULL-DAG:  Resource type (int): 6
+; NULL-NEXT: Resource name (int): 2
+; NULL-NEXT: Data version: 0
+; NULL-NEXT: Memory flags: 0x1030
+; NULL-NEXT: Language ID: 7172
+; NULL-NEXT: Version (major): 0
+; NULL-NEXT: Version (minor): 100
+; NULL-NEXT: Characteristics: 0
+; NULL-NEXT: Data size: 86
+; NULL-NEXT: Data: (
+; NULL-NEXT:   0000: 06006800 65006C00 6C006F00 00000600  |..h.e.l.l.o.....|
+; NULL-NEXT:   0010: 77006F00 72006C00 64000000 00000000  |w.o.r.l.d.......|
+; NULL-NEXT:   0020: 00000000 00000F00 73006F00 6D006500  |........s.o.m.e.|
+; NULL-NEXT:   0030: 74006800 69006E00 67002000 65006C00  |t.h.i.n.g. .e.l.|
+; NULL-NEXT:   0040: 73006500 00000000 00000000 00000000  |s.e.............|
+; NULL-NEXT:   0050: 00000000 0000                        |......|
+; NULL-NEXT: )
+
+; NULL-DAG:  Resource type (int): 6
+; NULL-NEXT: Resource name (int): 3
+; NULL-NEXT: Data version: 0
+; NULL-NEXT: Memory flags: 0x1030
+; NULL-NEXT: Language ID: 1033
+; NULL-NEXT: Version (major): 0
+; NULL-NEXT: Version (minor): 50
+; NULL-NEXT: Characteristics: 50
+; NULL-NEXT: Data size: 40
+; NULL-NEXT: Data: (
+; NULL-NEXT:   0000: 04006300 63006300 00000000 00000000  |..c.c.c.........|
+; NULL-NEXT:   0010: 00000000 00000000 00000000 00000000  |................|
+; NULL-NEXT:   0020: 00000000 00000000                    |........|
+; NULL-NEXT: )
+
+; NULL-DAG:  Resource type (int): 6
+; NULL-NEXT: Resource name (int): 4096
+; NULL-NEXT: Data version: 0
+; NULL-NEXT: Memory flags: 0x1030
+; NULL-NEXT: Language ID: 7172
+; NULL-NEXT: Version (major): 0
+; NULL-NEXT: Version (minor): 101
+; NULL-NEXT: Characteristics: 0
+; NULL-NEXT: Data size: 78
+; NULL-NEXT: Data: (
+; NULL-NEXT:   0000: 00000000 00000000 00000000 00000000  |................|
+; NULL-NEXT:   0010: 00000D00 6C006100 72006700 65002000  |....l.a.r.g.e. .|
+; NULL-NEXT:   0020: 6E007500 6D006200 65007200 00000000  |n.u.m.b.e.r.....|
+; NULL-NEXT:   0030: 00000000 00000000 0A006D00 69006E00  |..........m.i.n.|
+; NULL-NEXT:   0040: 75007300 20006F00 6E006500 0000      |u.s. .o.n.e...|
+; NULL-NEXT: )
+
+
+; RUN: not llvm-rc /FO %t %p/Inputs/tag-stringtable-same-ids.rc 2>&1 | FileCheck %s --check-prefix SAMEIDS
+; SAMEIDS: llvm-rc: Multiple STRINGTABLE strings located under ID 1
