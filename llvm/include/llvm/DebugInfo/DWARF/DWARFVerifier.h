@@ -136,8 +136,22 @@ private:
                         uint32_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
                         bool &isUnitDWARF64);
 
-
-  bool verifyUnitContents(DWARFUnit Unit);
+  /// Verifies the header of a unit in the .debug_info section.
+  ///
+  /// This function currently verifies:
+  ///  - The debug info attributes.
+  ///  - The debug info form=s.
+  ///  - The presence of a root DIE.
+  ///  - That the root DIE is a unit DIE.
+  ///  - If a unit type is provided, that the unit DIE matches the unit type.
+  ///  - The DIE ranges.
+  ///
+  /// \param Unit      The DWARF Unit to verifiy.
+  /// \param UnitType  An optional unit type which will be used to verify the
+  ///                  type of the unit DIE.
+  ///
+  /// \returns true if the content is verified successfully, false otherwise.
+  bool verifyUnitContents(DWARFUnit Unit, uint8_t UnitType = 0);
 
   /// Verify that all Die ranges are valid.
   ///

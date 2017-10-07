@@ -76,19 +76,19 @@
 ; PGOOD-NEXT:    Start of block (name: "StringFileInfo")
 ; PGOOD-NEXT:    Start of block (name: "040904E4")
 ; PGOOD-NEXT:    "CompanyName" => "a"
-; PGOOD-NEXT:    "FileDescription" => "b"
+; PGOOD-NEXT:    "FileDescription" => "b" "c" "d", 1 3 7L, "y", "h" "d"
 ; PGOOD-NEXT:    "FileVersion" => "c"
 ; PGOOD-NEXT:    "InternalName" => "d"
 ; PGOOD-NEXT:    "LegalCopyright" => "e"
-; PGOOD-NEXT:    "LegalTrademarks1" => "f"
+; PGOOD-NEXT:    "LegalTrademarks1" => 1 2, 3
 ; PGOOD-NEXT:    "LegalTrademarks2" => "g"
 ; PGOOD-NEXT:    "OriginalFilename" => L"h"
-; PGOOD-NEXT:    "ProductName" => "ii" 2 3
-; PGOOD-NEXT:    "ProductVersion" =>
+; PGOOD-NEXT:    "ProductName" => "ii", 2L, 3
+; PGOOD-NEXT:    "ProductVersion" => 305419896L
 ; PGOOD-NEXT:    End of block
 ; PGOOD-NEXT:    End of block
 ; PGOOD-NEXT:    Start of block (name: "VarFileInfo")
-; PGOOD-NEXT:    "Translation" => 1033 1252
+; PGOOD-NEXT:    "Translation" => 1033, 1252
 ; PGOOD-NEXT:    End of block
 ; PGOOD-NEXT:    End of block
 ; PGOOD-NEXT:  User-defined (type: MYTYPE, name: MYNAME): "filename"

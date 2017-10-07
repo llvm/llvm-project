@@ -36,20 +36,10 @@ void ARMTargetInfo::setABIAAPCS() {
   else
     SizeType = UnsignedInt;
 
-  switch (T.getOS()) {
-  case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
-    WCharType = SignedInt;
-    break;
-  case llvm::Triple::Win32:
-    WCharType = UnsignedShort;
-    break;
-  case llvm::Triple::Linux:
-  default:
-    // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
+  bool IsNetBSD = T.getOS() == llvm::Triple::NetBSD;
+  bool IsOpenBSD = T.getOS() == llvm::Triple::OpenBSD;
+  if (!T.isOSWindows() && !IsNetBSD && !IsOpenBSD)
     WCharType = UnsignedInt;
-    break;
-  }
 
   UseBitFieldTypeAlignment = true;
 
@@ -99,7 +89,6 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
   else
     SizeType = UnsignedLong;
 
-  // Revert to using SignedInt on apcs-gnu to comply with existing behaviour.
   WCharType = SignedInt;
 
   // Do not respect the alignment of bit-field types when laying out
@@ -689,7 +678,8 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                         "0x" + llvm::utohexstr(HW_FP & ~HW_FP_DP));
   }
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Opts.ShortWChar ? "2" : "4");
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
+                      llvm::utostr(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
@@ -932,7 +922,6 @@ void ARMbeTargetInfo::getTargetDefines(const LangOptions &Opts,
 WindowsARMTargetInfo::WindowsARMTargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsTargetInfo<ARMleTargetInfo>(Triple, Opts), Triple(Triple) {
-  WCharType = UnsignedShort;
   SizeType = UnsignedInt;
 }
 
@@ -1023,8 +1012,8 @@ void MinGWARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : ARMleTargetInfo(Triple, Opts) {
+  this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
-  WCharType = UnsignedShort;
   DoubleAlign = LongLongAlign = 64;
   resetDataLayout("e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
 }

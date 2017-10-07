@@ -746,6 +746,10 @@ struct MachineOutliner : public ModulePass {
 
   static char ID;
 
+  /// \brief Set to true if the outliner should consider functions with
+  /// linkonceodr linkage.
+  bool OutlineFromLinkOnceODRs = false;
+
   StringRef getPassName() const override { return "Machine Outliner"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -755,7 +759,8 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
+  MachineOutliner(bool OutlineFromLinkOnceODRs = false) :
+  ModulePass(ID), OutlineFromLinkOnceODRs(OutlineFromLinkOnceODRs) {
     initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -844,7 +849,10 @@ struct MachineOutliner : public ModulePass {
 char MachineOutliner::ID = 0;
 
 namespace llvm {
-ModulePass *createMachineOutlinerPass() { return new MachineOutliner(); }
+ModulePass *createMachineOutlinerPass(bool OutlineFromLinkOnceODRs) {
+  return new MachineOutliner(OutlineFromLinkOnceODRs);
+}
+
 } // namespace llvm
 
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
@@ -1248,7 +1256,8 @@ bool MachineOutliner::runOnModule(Module &M) {
     MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
     // Is the function empty? Safe to outline from?
-    if (F.empty() || !TII->isFunctionSafeToOutlineFrom(MF))
+    if (F.empty() ||
+        !TII->isFunctionSafeToOutlineFrom(MF, OutlineFromLinkOnceODRs))
       continue;
 
     // If it is, look at each MachineBasicBlock in the function.

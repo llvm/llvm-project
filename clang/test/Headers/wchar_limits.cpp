@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding -fsyntax-only -verify %s
-// RUN: %clang_cc1 -ffreestanding -fsyntax-only -verify -fshort-wchar %s
+// RUN: %clang_cc1 -ffreestanding -fsyntax-only -verify -fwchar-type=short -fno-signed-wchar %s
 // expected-no-diagnostics
 
 #include <stdint.h>

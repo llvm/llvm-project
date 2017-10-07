@@ -57,10 +57,15 @@ if (NOT LLDB_DISABLE_PYTHON)
   add_subdirectory(scripts)
 endif ()
 add_subdirectory(source)
-add_subdirectory(test)
 add_subdirectory(tools)
-add_subdirectory(unittests)
-add_subdirectory(lit)
+
+option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
+  ${LLVM_INCLUDE_TESTS})
+if(LLDB_INCLUDE_TESTS)
+  add_subdirectory(test)
+  add_subdirectory(unittests)
+  add_subdirectory(lit)
+endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink
