@@ -1177,6 +1177,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Make sure we have resolved all symbols.
   Symtab->reportRemainingUndefines();
+  if (ErrorCount)
+    return;
 
   // Windows specific -- if no /subsystem is given, we need to infer
   // that from entry point name.

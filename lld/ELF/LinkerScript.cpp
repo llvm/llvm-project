@@ -416,7 +416,8 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
 
       // Add input sections to an output section.
       for (InputSectionBase *S : V)
-        Factory.addInputSec(S, Sec->Name, Sec);
+        Factory.addInputSec(S, Sec);
+
       assert(Sec->SectionIndex == INT_MAX);
       Sec->SectionIndex = I;
       if (Sec->Noload)
@@ -443,30 +444,35 @@ void LinkerScript::fabricateDefaultCommands() {
                       make<SymbolAssignment>(".", Expr, ""));
 }
 
+static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,
+                                 StringRef Name) {
+  for (BaseCommand *Base : Vec)
+    if (auto *Sec = dyn_cast<OutputSection>(Base))
+      if (Sec->Name == Name)
+        return Sec;
+  return nullptr;
+}
+
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
-  unsigned NumCommands = Opt.Commands.size();
+  unsigned End = Opt.Commands.size();
+
   for (InputSectionBase *S : InputSections) {
     if (!S->Live || S->Parent)
       continue;
+
     StringRef Name = getOutputSectionName(S->Name);
-    auto End = Opt.Commands.begin() + NumCommands;
-    auto I = std::find_if(Opt.Commands.begin(), End, [&](BaseCommand *Base) {
-      if (auto *Sec = dyn_cast<OutputSection>(Base))
-        return Sec->Name == Name;
-      return false;
-    });
     log(toString(S) + " is being placed in '" + Name + "'");
-    if (I == End) {
-      Factory.addInputSec(S, Name);
-      assert(S->getOutputSection()->SectionIndex == INT_MAX);
-    } else {
-      OutputSection *Sec = cast<OutputSection>(*I);
-      Factory.addInputSec(S, Name, Sec);
-      unsigned Index = std::distance(Opt.Commands.begin(), I);
-      assert(Sec->SectionIndex == INT_MAX || Sec->SectionIndex == Index);
-      Sec->SectionIndex = Index;
+
+    if (OutputSection *Sec = findByName(
+            makeArrayRef(Opt.Commands).slice(0, End), Name)) {
+      Factory.addInputSec(S, Sec);
+      continue;
     }
+
+    if (OutputSection *OS = Factory.addInputSec(S, Name))
+      Script->Opt.Commands.push_back(OS);
+    assert(S->getOutputSection()->SectionIndex == INT_MAX);
   }
 }
 

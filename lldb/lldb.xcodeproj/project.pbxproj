@@ -7506,7 +7506,6 @@
 			files = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/scripts/Python/static-binding/LLDBWrapPython.cpp",
 			);
 			name = "Prepare Swig Bindings";
 			outputPaths = (

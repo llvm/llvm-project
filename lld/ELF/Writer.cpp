@@ -876,13 +876,15 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  std::vector<BaseCommand *> Old = Script->Opt.Commands;
-  Script->Opt.Commands.clear();
+  std::vector<OutputSection *> Vec;
   for (InputSectionBase *IS : InputSections)
     if (IS)
-      Factory.addInputSec(IS, getOutputSectionName(IS->Name));
-  Script->Opt.Commands.insert(Script->Opt.Commands.end(), Old.begin(),
-                              Old.end());
+      if (OutputSection *Sec =
+              Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
+        Vec.push_back(Sec);
+
+  Script->Opt.Commands.insert(Script->Opt.Commands.begin(), Vec.begin(),
+                              Vec.end());
 
   Script->fabricateDefaultCommands();
   sortBySymbolsOrder();

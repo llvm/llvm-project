@@ -200,14 +200,22 @@ void elf::reportDiscarded(InputSectionBase *IS) {
           IS->File->getName() + "'");
 }
 
-static OutputSection *addSection(InputSectionBase *IS, StringRef OutsecName,
-                                 OutputSection *Sec) {
-  if (Sec && Sec->Live) {
+static OutputSection *createSection(InputSectionBase *IS, StringRef OutsecName) {
+  OutputSection *Sec = Script->createOutputSection(OutsecName, "<internal>");
+  Sec->Type = IS->Type;
+  Sec->Flags = IS->Flags;
+  Sec->addSection(cast<InputSection>(IS));
+  return Sec;
+}
+
+static void addSection(OutputSection *Sec, InputSectionBase *IS) {
+  if (Sec->Live) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("incompatible section flags for " + Sec->Name + "\n>>> " +
             toString(IS) + ": 0x" + utohexstr(IS->Flags) +
             "\n>>> output section " + Sec->Name + ": 0x" +
             utohexstr(Sec->Flags));
+
     if (Sec->Type != IS->Type) {
       if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(IS->Type))
         Sec->Type = SHT_PROGBITS;
@@ -218,32 +226,27 @@ static OutputSection *addSection(InputSectionBase *IS, StringRef OutsecName,
               "\n>>> output section " + Sec->Name + ": " +
               getELFSectionTypeName(Config->EMachine, Sec->Type));
     }
-    Sec->Flags |= IS->Flags;
   } else {
-    if (!Sec) {
-      Sec = Script->createOutputSection(OutsecName, "<internal>");
-      Script->Opt.Commands.push_back(Sec);
-    }
     Sec->Type = IS->Type;
-    Sec->Flags = IS->Flags;
   }
 
+  Sec->Flags |= IS->Flags;
   Sec->addSection(cast<InputSection>(IS));
-  return Sec;
 }
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
-                                       StringRef OutsecName,
                                        OutputSection *OS) {
+  if (IS->Live)
+    addSection(OS, IS);
+  else
+    reportDiscarded(IS);
+}
+
+OutputSection *OutputSectionFactory::addInputSec(InputSectionBase *IS,
+                                                 StringRef OutsecName) {
   if (!IS->Live) {
     reportDiscarded(IS);
-    return;
-  }
-
-  // If we have destination output section - use it directly.
-  if (OS) {
-    addSection(IS, OutsecName, OS);
-    return;
+    return nullptr;
   }
 
   // Sections with SHT_GROUP or SHF_GROUP attributes reach here only when the -r
@@ -253,10 +256,8 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
   // However, for the -r option, we want to pass through all section groups
   // as-is because adding/removing members or merging them with other groups
   // change their semantics.
-  if (IS->Type == SHT_GROUP || (IS->Flags & SHF_GROUP)) {
-    addSection(IS, OutsecName, nullptr);
-    return;
-  }
+  if (IS->Type == SHT_GROUP || (IS->Flags & SHF_GROUP))
+    return createSection(IS, OutsecName);
 
   // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
   // relocation sections .rela.foo and .rela.bar for example. Most tools do
@@ -268,13 +269,25 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
       (IS->Type == SHT_REL || IS->Type == SHT_RELA)) {
     auto *Sec = cast<InputSection>(IS);
     OutputSection *Out = Sec->getRelocatedSection()->getOutputSection();
-    Out->RelocationSection = addSection(IS, OutsecName, Out->RelocationSection);
-    return;
+
+    if (Out->RelocationSection) {
+      addSection(Out->RelocationSection, IS);
+      return nullptr;
+    }
+
+    Out->RelocationSection = createSection(IS, OutsecName);
+    return Out->RelocationSection;
   }
 
   SectionKey Key = createKey(IS, OutsecName);
   OutputSection *&Sec = Map[Key];
-  Sec = addSection(IS, OutsecName, Sec);
+  if (Sec) {
+    addSection(Sec, IS);
+    return nullptr;
+  }
+
+  Sec = createSection(IS, OutsecName);
+  return Sec;
 }
 
 OutputSectionFactory::~OutputSectionFactory() {}

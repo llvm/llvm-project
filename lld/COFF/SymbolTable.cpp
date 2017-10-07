@@ -84,8 +84,16 @@ void SymbolTable::addFile(InputFile *File) {
   Driver->parseDirectives(S);
 }
 
+static void errorOrWarn(const Twine &S) {
+  if (Config->Force)
+    warn(S);
+  else
+    error(S);
+}
+
 void SymbolTable::reportRemainingUndefines() {
   SmallPtrSet<SymbolBody *, 8> Undefs;
+
   for (auto &I : Symtab) {
     Symbol *Sym = I.second;
     auto *Undef = dyn_cast<Undefined>(Sym->body());
@@ -93,7 +101,9 @@ void SymbolTable::reportRemainingUndefines() {
       continue;
     if (!Sym->IsUsedInRegularObj)
       continue;
+
     StringRef Name = Undef->getName();
+
     // A weak alias may have been resolved, so check for that.
     if (Defined *D = Undef->getWeakAlias()) {
       // We resolve weak aliases by replacing the alias's SymbolBody with the
@@ -112,6 +122,7 @@ void SymbolTable::reportRemainingUndefines() {
         Sym->Body = D->symbol()->Body;
       continue;
     }
+
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
     if (Name.startswith("__imp_")) {
@@ -124,23 +135,25 @@ void SymbolTable::reportRemainingUndefines() {
         continue;
       }
     }
+
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
     if (Config->Force)
       replaceBody<DefinedAbsolute>(Sym, Name, 0);
     Undefs.insert(Sym->body());
   }
+
   if (Undefs.empty())
     return;
+
   for (SymbolBody *B : Config->GCRoot)
     if (Undefs.count(B))
-      warn("<root>: undefined symbol: " + B->getName());
+      errorOrWarn("<root>: undefined symbol: " + B->getName());
+
   for (ObjFile *File : ObjFile::Instances)
     for (SymbolBody *Sym : File->getSymbols())
       if (Undefs.count(Sym))
-        warn(toString(File) + ": undefined symbol: " + Sym->getName());
-  if (!Config->Force)
-    fatal("link failed");
+        errorOrWarn(toString(File) + ": undefined symbol: " + Sym->getName());
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
