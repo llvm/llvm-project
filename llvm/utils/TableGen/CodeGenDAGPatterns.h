@@ -452,8 +452,8 @@ public:
   /// getImmediatePredicateCode - Return the code that evaluates this pattern if
   /// this is an immediate predicate.  It is an error to call this on a
   /// non-immediate pattern.
-  std::string getImmediatePredicateCode() const {
-    std::string Result = getImmCode();
+  StringRef getImmediatePredicateCode() const {
+    StringRef Result = getImmCode();
     assert(!Result.empty() && "Isn't an immediate pattern!");
     return Result;
   }
@@ -476,8 +476,8 @@ public:
   std::string getCodeToRunOnSDNode() const;
 
 private:
-  std::string getPredCode() const;
-  std::string getImmCode() const;
+  StringRef getPredCode() const;
+  StringRef getImmCode() const;
 };
 
 
@@ -995,7 +995,7 @@ public:
   const CodeGenTarget &getTargetInfo() const { return Target; }
   const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
 
-  Record *getSDNodeNamed(const std::string &Name) const;
+  Record *getSDNodeNamed(StringRef Name) const;
 
   const SDNodeInfo &getSDNodeInfo(Record *R) const {
     assert(SDNodes.count(R) && "Unknown node!");

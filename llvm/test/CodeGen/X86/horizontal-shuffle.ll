@@ -9,16 +9,12 @@
 define <4 x float> @test_unpackl_fhadd_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> %a3) {
 ; X32-LABEL: test_unpackl_fhadd_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vhaddps %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_fhadd_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vhaddps %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a2, <4 x float> %a3)
@@ -29,16 +25,12 @@ define <4 x float> @test_unpackl_fhadd_128(<4 x float> %a0, <4 x float> %a1, <4 
 define <2 x double> @test_unpackh_fhadd_128(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> %a3) {
 ; X32-LABEL: test_unpackh_fhadd_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vhaddpd %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    vhaddpd %xmm3, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_fhadd_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vhaddpd %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    vhaddpd %xmm3, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %a0, <2 x double> %a1)
   %2 = call <2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %a2, <2 x double> %a3)
@@ -49,16 +41,12 @@ define <2 x double> @test_unpackh_fhadd_128(<2 x double> %a0, <2 x double> %a1, 
 define <2 x double> @test_unpackl_fhsub_128(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, <2 x double> %a3) {
 ; X32-LABEL: test_unpackl_fhsub_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vhsubpd %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vhsubpd %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_fhsub_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vhsubpd %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vhsubpd %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %a0, <2 x double> %a1)
   %2 = call <2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %a2, <2 x double> %a3)
@@ -69,16 +57,12 @@ define <2 x double> @test_unpackl_fhsub_128(<2 x double> %a0, <2 x double> %a1, 
 define <4 x float> @test_unpackh_fhsub_128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, <4 x float> %a3) {
 ; X32-LABEL: test_unpackh_fhsub_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vhsubps %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    vhsubps %xmm3, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_fhsub_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhsubps %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vhsubps %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    vhsubps %xmm3, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %a2, <4 x float> %a3)
@@ -89,16 +73,12 @@ define <4 x float> @test_unpackh_fhsub_128(<4 x float> %a0, <4 x float> %a1, <4 
 define <8 x i16> @test_unpackl_hadd_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; X32-LABEL: test_unpackl_hadd_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vphaddw %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vphaddw %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_hadd_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vphaddw %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vphaddw %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a2, <8 x i16> %a3)
@@ -109,16 +89,12 @@ define <8 x i16> @test_unpackl_hadd_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> 
 define <4 x i32> @test_unpackh_hadd_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; X32-LABEL: test_unpackh_hadd_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vphaddd %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    vphaddd %xmm3, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_hadd_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vphaddd %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    vphaddd %xmm3, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %a2, <4 x i32> %a3)
@@ -129,16 +105,12 @@ define <4 x i32> @test_unpackh_hadd_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> 
 define <4 x i32> @test_unpackl_hsub_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; X32-LABEL: test_unpackl_hsub_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vphsubd %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vphsubd %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_hsub_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vphsubd %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vphsubd %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %a2, <4 x i32> %a3)
@@ -149,16 +121,12 @@ define <4 x i32> @test_unpackl_hsub_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> 
 define <8 x i16> @test_unpackh_hsub_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; X32-LABEL: test_unpackh_hsub_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vphsubw %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    vphsubw %xmm3, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_hsub_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphsubw %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vphsubw %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    vphsubw %xmm3, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> %a2, <8 x i16> %a3)
@@ -169,16 +137,12 @@ define <8 x i16> @test_unpackh_hsub_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> 
 define <16 x i8> @test_unpackl_packss_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; X32-LABEL: test_unpackl_packss_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpacksswb %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_packss_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpacksswb %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a2, <8 x i16> %a3)
@@ -189,16 +153,12 @@ define <16 x i8> @test_unpackl_packss_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 define <8 x i16> @test_unpackh_packss_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; X32-LABEL: test_unpackh_packss_128:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    vpackssdw %xmm3, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_packss_128:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    vpackssdw %xmm3, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a0, <4 x i32> %a1)
   %2 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a2, <4 x i32> %a3)
@@ -245,16 +205,12 @@ define <16 x i8> @test_unpackh_packus_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 define <8 x float> @test_unpackl_fhadd_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2, <8 x float> %a3) {
 ; X32-LABEL: test_unpackl_fhadd_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vhaddps %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_fhadd_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vhaddps %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a2, <8 x float> %a3)
@@ -265,16 +221,12 @@ define <8 x float> @test_unpackl_fhadd_256(<8 x float> %a0, <8 x float> %a1, <8 
 define <4 x double> @test_unpackh_fhadd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, <4 x double> %a3) {
 ; X32-LABEL: test_unpackh_fhadd_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vhaddpd %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vhaddpd %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_fhadd_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vhaddpd %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vhaddpd %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %a0, <4 x double> %a1)
   %2 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %a2, <4 x double> %a3)
@@ -285,16 +237,12 @@ define <4 x double> @test_unpackh_fhadd_256(<4 x double> %a0, <4 x double> %a1, 
 define <4 x double> @test_unpackl_fhsub_256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, <4 x double> %a3) {
 ; X32-LABEL: test_unpackl_fhsub_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vhsubpd %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vhsubpd %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_fhsub_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vhsubpd %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vhsubpd %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %a0, <4 x double> %a1)
   %2 = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %a2, <4 x double> %a3)
@@ -305,16 +253,12 @@ define <4 x double> @test_unpackl_fhsub_256(<4 x double> %a0, <4 x double> %a1, 
 define <8 x float> @test_unpackh_fhsub_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2, <8 x float> %a3) {
 ; X32-LABEL: test_unpackh_fhsub_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vhsubps %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vhsubps %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vhsubps %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_fhsub_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vhsubps %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vhsubps %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vhsubps %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %a2, <8 x float> %a3)
@@ -325,16 +269,12 @@ define <8 x float> @test_unpackh_fhsub_256(<8 x float> %a0, <8 x float> %a1, <8 
 define <16 x i16> @test_unpackl_hadd_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
 ; X32-LABEL: test_unpackl_hadd_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vphaddw %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vphaddw %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_hadd_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vphaddw %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vphaddw %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a2, <16 x i16> %a3)
@@ -345,16 +285,12 @@ define <16 x i16> @test_unpackl_hadd_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i
 define <8 x i32> @test_unpackh_hadd_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; X32-LABEL: test_unpackh_hadd_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vphaddd %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vphaddd %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_hadd_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vphaddd %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vphaddd %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %a0, <8 x i32> %a1)
   %2 = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %a2, <8 x i32> %a3)
@@ -365,16 +301,12 @@ define <8 x i32> @test_unpackh_hadd_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> 
 define <8 x i32> @test_unpackl_hsub_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; X32-LABEL: test_unpackl_hsub_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vphsubd %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vphsubd %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_hsub_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphsubd %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vphsubd %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vphsubd %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %a0, <8 x i32> %a1)
   %2 = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %a2, <8 x i32> %a3)
@@ -385,16 +317,12 @@ define <8 x i32> @test_unpackl_hsub_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> 
 define <16 x i16> @test_unpackh_hsub_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
 ; X32-LABEL: test_unpackh_hsub_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vphsubw %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vphsubw %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vphsubw %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_hsub_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vphsubw %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vphsubw %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vphsubw %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> %a2, <16 x i16> %a3)
@@ -405,16 +333,12 @@ define <16 x i16> @test_unpackh_hsub_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i
 define <32 x i8> @test_unpackl_packss_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
 ; X32-LABEL: test_unpackl_packss_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vpacksswb %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_packss_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vpacksswb %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a2, <16 x i16> %a3)
@@ -425,16 +349,12 @@ define <32 x i8> @test_unpackl_packss_256(<16 x i16> %a0, <16 x i16> %a1, <16 x 
 define <16 x i16> @test_unpackh_packss_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; X32-LABEL: test_unpackh_packss_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vpackssdw %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vpackssdw %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_packss_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vpackssdw %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vpackssdw %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a0, <8 x i32> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a2, <8 x i32> %a3)
@@ -445,16 +365,12 @@ define <16 x i16> @test_unpackh_packss_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 define <16 x i16> @test_unpackl_packus_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; X32-LABEL: test_unpackl_packus_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vpackusdw %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X32-NEXT:    vpackusdw %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackl_packus_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vpackusdw %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X64-NEXT:    vpackusdw %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> %a1)
   %2 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a2, <8 x i32> %a3)
@@ -465,16 +381,12 @@ define <16 x i16> @test_unpackl_packus_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 define <32 x i8> @test_unpackh_packus_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
 ; X32-LABEL: test_unpackh_packus_256:
 ; X32:       ## BB#0:
-; X32-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vpacksswb %ymm3, %ymm2, %ymm1
-; X32-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X32-NEXT:    vpacksswb %ymm3, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_unpackh_packus_256:
 ; X64:       ## BB#0:
-; X64-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vpacksswb %ymm3, %ymm2, %ymm1
-; X64-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-NEXT:    vpacksswb %ymm3, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a0, <16 x i16> %a1)
   %2 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a2, <16 x i16> %a3)
