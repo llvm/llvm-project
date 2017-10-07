@@ -79,6 +79,18 @@ if(APPLE)
                   RTInterception
       LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
+
+    add_compiler_rt_runtime(clang_rt.ubsan
+      STATIC
+      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      ARCHS ${UBSAN_SUPPORTED_ARCH}
+      OBJECT_LIBS RTUbsan
+                  RTUbsan_standalone
+                  RTSanitizerCommonNoHooks
+                  RTSanitizerCommonLibcNoHooks
+                  RTInterception
+      LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
+      PARENT_TARGET ubsan)
   endif()
 
 else()
