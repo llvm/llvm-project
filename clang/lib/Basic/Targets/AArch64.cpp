@@ -15,6 +15,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -34,17 +35,18 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), ABI("aapcs") {
   if (getTriple().getOS() == llvm::Triple::NetBSD ||
       getTriple().getOS() == llvm::Triple::OpenBSD) {
-    WCharType = SignedInt;
-
     // NetBSD apparently prefers consistency across ARM targets to
     // consistency across 64-bit targets.
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    WCharType = UnsignedInt;
+    if (!getTriple().isOSDarwin())
+      WCharType = UnsignedInt;
+
     Int64Type = SignedLong;
     IntMaxType = SignedLong;
   }
+
 
   LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
   MaxVectorAlign = 128;
@@ -154,7 +156,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Opts.ShortWChar ? "2" : "4");
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
+                      llvm::utostr(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
@@ -420,7 +423,6 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
   // This is an LLP64 platform.
   // int:4, long:4, long long:8, long double:8.
-  WCharType = UnsignedShort;
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   DoubleAlign = LongLongAlign = 64;
@@ -502,7 +504,6 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
   Int64Type = SignedLongLong;
-  WCharType = SignedInt;
   UseSignedCharForObjCBool = false;
 
   LongDoubleWidth = LongDoubleAlign = SuitableAlign = 64;

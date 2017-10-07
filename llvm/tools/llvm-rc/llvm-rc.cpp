@@ -154,6 +154,7 @@ int main(int argc_, const char *argv_[]) {
       fatalError("Error opening output file '" + OutArgsInfo[0] +
                  "': " + EC.message());
     Visitor = llvm::make_unique<ResourceFileWriter>(std::move(FOut));
+    Visitor->AppendNull = InputArgs.hasArg(OPT_ADD_NULL);
 
     ExitOnErr(NullResource().visit(Visitor.get()));
 
@@ -169,6 +170,10 @@ int main(int argc_, const char *argv_[]) {
     if (!IsDryRun)
       ExitOnErr(Resource->visit(Visitor.get()));
   }
+
+  // STRINGTABLE resources come at the very end.
+  if (!IsDryRun)
+    ExitOnErr(Visitor->dumpAllStringTables());
 
   return 0;
 }

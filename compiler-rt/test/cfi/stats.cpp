@@ -5,6 +5,9 @@
 // FIXME: We currently emit the wrong debug info under devirtualization.
 // UNSUPPORTED: devirt
 
+// FIXME: %t.stats must be transferred from device to host for this to work on Android.
+// XFAIL: android
+
 struct ABase {};
 
 struct A : ABase {

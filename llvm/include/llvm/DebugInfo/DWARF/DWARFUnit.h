@@ -285,12 +285,21 @@ public:
 
   uint8_t getUnitType() const { return UnitType; }
 
-  static bool isValidUnitType(uint8_t UnitType) {
-    return UnitType == dwarf::DW_UT_compile || UnitType == dwarf::DW_UT_type ||
-           UnitType == dwarf::DW_UT_partial ||
-           UnitType == dwarf::DW_UT_skeleton ||
-           UnitType == dwarf::DW_UT_split_compile ||
-           UnitType == dwarf::DW_UT_split_type;
+  static bool isMatchingUnitTypeAndTag(uint8_t UnitType, dwarf::Tag Tag) {
+    switch (UnitType) {
+    case dwarf::DW_UT_compile:
+      return Tag == dwarf::DW_TAG_compile_unit;
+    case dwarf::DW_UT_type:
+      return Tag == dwarf::DW_TAG_type_unit;
+    case dwarf::DW_UT_partial:
+      return Tag == dwarf::DW_TAG_partial_unit;
+    case dwarf::DW_UT_skeleton:
+      return Tag == dwarf::DW_TAG_skeleton_unit;
+    case dwarf::DW_UT_split_compile:
+    case dwarf::DW_UT_split_type:
+      return dwarf::isUnitType(Tag);
+    }
+    return false;
   }
 
   /// \brief Return the number of bytes for the header of a unit of

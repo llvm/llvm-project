@@ -95,6 +95,9 @@ TEST(AddressSanitizer, StrLenOOBTest) {
   free(heap_string);
 }
 
+// 32-bit android libc++-based NDK toolchain links wcslen statically, disabling
+// the interceptor.
+#if !defined(__ANDROID__) || defined(__LP64__)
 TEST(AddressSanitizer, WcsLenTest) {
   EXPECT_EQ(0U, wcslen(Ident(L"")));
   size_t hello_len = 13;
@@ -106,6 +109,7 @@ TEST(AddressSanitizer, WcsLenTest) {
   EXPECT_DEATH(Ident(wcslen(heap_string + 14)), RightOOBReadMessage(0));
   free(heap_string);
 }
+#endif
 
 #if SANITIZER_TEST_HAS_STRNLEN
 TEST(AddressSanitizer, StrNLenOOBTest) {
@@ -629,5 +633,3 @@ TEST(AddressSanitizer, StrtolOOBTest) {
   RunStrtolOOBTest(&CallStrtol);
 }
 #endif
-
-

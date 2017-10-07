@@ -10763,8 +10763,22 @@ X86InstrInfo::getOutlininingCandidateInfo(
                              MachineOutlinerDefault);
 }
 
-bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
-  return MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                           bool OutlineFromLinkOnceODRs) const {
+  const Function *F = MF.getFunction();
+
+  // Does the function use a red zone? If it does, then we can't risk messing
+  // with the stack.
+  if (!F->hasFnAttribute(Attribute::NoRedZone))
+      return false;
+  
+  // If we *don't* want to outline from things that could potentially be deduped
+  // then return false.
+  if (!OutlineFromLinkOnceODRs && F->hasLinkOnceODRLinkage())
+      return false;
+  
+  // This function is viable for outlining, so return true.
+  return true;
 }
 
 X86GenInstrInfo::MachineOutlinerInstrType
