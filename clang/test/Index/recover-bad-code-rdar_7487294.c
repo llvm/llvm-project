@@ -1,4 +1,4 @@
-// RUN: not %clang-cc1 -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
 // IMPORTANT: This test case intentionally DOES NOT use --disable-free.  It
 // tests that we are properly reclaiming the ASTs and we do not have a double free.

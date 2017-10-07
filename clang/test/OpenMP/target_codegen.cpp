@@ -34,7 +34,9 @@
 // code, only 6 will have mapped arguments, and only 4 have all-constant map
 // sizes.
 
-// CHECK-DAG: [[SIZET2:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ:32|64]] 2]
+// CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 0, i[[SZ]] 4]
+// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i32] [i32 32, i32 288]
+// CHECK-DAG: [[SIZET2:@.+]] = private unnamed_addr constant [1 x i{{32|64}}] [i[[SZ]] 2]
 // CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [1 x i32] [i32 288]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2]
 // CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i32] [i32 288, i32 288]
@@ -59,6 +61,7 @@
 // TCHECK: @{{.+}} = constant [[ENTTY]]
 // TCHECK: @{{.+}} = constant [[ENTTY]]
 // TCHECK: @{{.+}} = constant [[ENTTY]]
+// TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
 
 // Check if offloading descriptor is created.
@@ -91,6 +94,7 @@ int foo(int n) {
   double c[5][10];
   double cn[5][n];
   TT<long long, char> d;
+  static long *plocal;
 
   // CHECK:       [[ADD:%.+]] = add nsw i32
   // CHECK:       store i32 [[ADD]], i32* [[CAPTURE:%.+]],
@@ -104,6 +108,39 @@ int foo(int n) {
   // CHECK:       [[END]]
   #pragma omp target device(global + a)
   {
+  }
+
+  // CHECK:       [[ADD:%.+]] = add nsw i32
+  // CHECK:       store i32 [[ADD]], i32* [[CAPTURE:%.+]],
+  // CHECK-DAG:   [[LD:%.+]] = load i32, i32* [[CAPTURE]],
+  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 [[LD]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i32* getelementptr inbounds ([2 x i32], [2 x i32]* [[MAPT]], i32 0, i32 0)
+  // CHECK-DAG:   [[BPR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
+  // CHECK-DAG:   [[PR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%[^,]+]], i32 0, i32 0
+
+  // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 0
+  // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 0
+  // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to i[[SZ]]**
+  // CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to i[[SZ]]**
+  // CHECK-DAG:   store i[[SZ]]* [[BP0:%[^,]+]], i[[SZ]]** [[CBPADDR0]]
+  // CHECK-DAG:   store i[[SZ]]* [[BP0]], i[[SZ]]** [[CPADDR0]]
+
+  // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 1
+  // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 1
+  // CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
+  // CHECK-DAG:   store i[[SZ]] [[BP1:%[^,]+]], i[[SZ]]* [[CBPADDR1]]
+  // CHECK-DAG:   store i[[SZ]] [[BP1]], i[[SZ]]* [[CPADDR1]]
+  // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+  // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+  // CHECK:       [[FAIL]]
+  // CHECK:       call void [[HVT0_:@.+]](i[[SZ]]* [[BP0]], i[[SZ]] [[BP1]])
+  // CHECK-NEXT:  br label %[[END]]
+  // CHECK:       [[END]]
+  #pragma omp target device(global + a)
+  {
+    static int local1;
+    *plocal = global;
+    local1 = global;
   }
 
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})

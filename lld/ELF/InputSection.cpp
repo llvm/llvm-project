@@ -702,28 +702,22 @@ template <class ELFT> ObjFile<ELFT> *InputSectionBase::getFile() const {
 
 template <class ELFT>
 void InputSectionBase::relocate(uint8_t *Buf, uint8_t *BufEnd) {
-  if (Flags & SHF_ALLOC)
+  if (Flags & SHF_ALLOC) {
     relocateAlloc(Buf, BufEnd);
-  else
-    relocateNonAlloc<ELFT>(Buf, BufEnd);
-}
+    return;
+  }
 
-template <class ELFT>
-void InputSectionBase::relocateNonAlloc(uint8_t *Buf, uint8_t *BufEnd) {
-  // scanReloc function in Writer.cpp constructs Relocations
-  // vector only for SHF_ALLOC'ed sections. For other sections,
-  // we handle relocations directly here.
-  auto *IS = cast<InputSection>(this);
-  assert(!(IS->Flags & SHF_ALLOC));
-  if (IS->AreRelocsRela)
-    IS->relocateNonAlloc<ELFT>(Buf, IS->template relas<ELFT>());
+  auto *Sec = cast<InputSection>(this);
+  if (Sec->AreRelocsRela)
+    Sec->relocateNonAlloc<ELFT>(Buf, Sec->template relas<ELFT>());
   else
-    IS->relocateNonAlloc<ELFT>(Buf, IS->template rels<ELFT>());
+    Sec->relocateNonAlloc<ELFT>(Buf, Sec->template rels<ELFT>());
 }
 
 void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
   assert(Flags & SHF_ALLOC);
   const unsigned Bits = Config->Wordsize * 8;
+
   for (const Relocation &Rel : Relocations) {
     uint64_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;

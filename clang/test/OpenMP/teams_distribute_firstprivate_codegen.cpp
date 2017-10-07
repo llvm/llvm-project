@@ -73,7 +73,7 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32* {{.+}}@{{[^,]+}}, i32 0, i32 0))
+    // LAMBDA: call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32* {{.+}}@{{[^,]+}}, i32 0, i32 0))
     // LAMBDA: call void @[[LOFFL1:.+]](i{{64|32}} %{{.+}})
     // LAMBDA:  ret
 #pragma omp target
@@ -84,10 +84,12 @@ int main() {
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: {{%.+}} = alloca i{{[0-9]+}},
     // LAMBDA: [[G_CAST:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[G1_CAST:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[SIVAR_CAST:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA-DAG: [[G_CAST_VAL:%.+]] = load{{.+}} [[G_CAST]],
+    // LAMBDA-DAG: [[G1_CAST_VAL:%.+]] = load{{.+}} [[G1_CAST]],
     // LAMBDA-DAG: [[SIVAR_CAST_VAL:%.+]] = load{{.+}} [[SIVAR_CAST]],
-    // LAMBDA: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 2, {{.+}} @[[LOUTL1:.+]] to {{.+}}, {{.+}} [[G_CAST_VAL]], {{.+}} [[SIVAR_CAST_VAL]])
+    // LAMBDA: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 3, {{.+}} @[[LOUTL1:.+]] to {{.+}}, {{.+}} [[G_CAST_VAL]], {{.+}} [[G1_CAST_VAL]], {{.+}} [[SIVAR_CAST_VAL]])
     // LAMBDA: ret void
 
     // LAMBDA: define internal void @[[LOUTL1]]({{.+}})
@@ -95,27 +97,24 @@ int main() {
     // LAMBDA: {{.+}} = alloca i32*,
     // LAMBDA: {{.+}} = alloca i32*,
     // LAMBDA: [[G_ADDR:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[G1_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
-    // skip loop vars
-    // LAMBDA: = alloca i32,
-    // LAMBDA: = alloca i32,
-    // LAMBDA: = alloca i32,
-    // LAMBDA: = alloca i32,
-    // LAMBDA: = alloca i32,
-    // LAMBDA: [[G1:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_TMP:%.+]] = alloca i32*,
+    // skip loop vars
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[G_ADDR]],
+    // LAMBDA-DAG: store {{.+}}, {{.+}} [[G1_ADDR]],
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[SIVAR_ADDR]],
     // LAMBDA-DAG: [[G_CONV:%.+]] = bitcast {{.+}} [[G_ADDR]] to
+    // LAMBDA-DAG: [[G1_CONV:%.+]] = bitcast {{.+}} [[G1_ADDR]] to
     // LAMBDA-DAG: [[SIVAR_CONV:%.+]] = bitcast {{.+}} [[SIVAR_ADDR]] to
-    // LAMBDA-DAG: [[G_GBL:%.+]] = load{{.+}}, {{.+}} [[G]],
-    // LAMBDA-DAG: store{{.+}}, {{.+}} [[G1]],
-    // LAMBDA-DAG: store{{.+}} [[G1]], {{.+}} [[G1_TMP]],
+    // LAMBDA-DAG: store{{.+}} [[G1_CONV]], {{.+}} [[G1_TMP]],
     g = 1;
     g1 = 1;
     sivar = 2;
     // LAMBDA: call void @__kmpc_for_static_init_4(
     // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G_CONV]],
+    // LAMBDA-DAG: [[G1:%.+]] = load{{.+}}, {{.+}}* [[G1_TMP]]
+    // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G1]],
     // LAMBDA-DAG: store{{.+}} 2, {{.+}} [[SIVAR_CONV]],
     // LAMBDA-DAG: [[G1_REF:%.+]] = load{{.+}}, {{.+}} [[G1_TMP]],
     // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G1_REF]],
@@ -132,7 +131,10 @@ int main() {
       // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
       // LAMBDA: [[G_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_PTR_REF]]
       // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G_REF]]
-      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+      // LAMBDA: [[G1_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G1_PTR_REF]]
+      // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[G1_REF]]
+      // LAMBDA: [[SIVAR_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
       // LAMBDA: [[SIVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SIVAR_PTR_REF]]
       // LAMBDA: store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIVAR_REF]]
     }();
