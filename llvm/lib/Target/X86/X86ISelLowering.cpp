@@ -22150,9 +22150,9 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  // Special case in 32-bit mode, where i64 is expanded into high and low parts.
+  // Check cases (mainly 32-bit) where i64 is expanded into high and low parts.
   // TODO: Replace constant extraction with getTargetConstantBitsFromNode.
-  if (!Subtarget.is64Bit() && !Subtarget.hasXOP() &&
+  if (!Subtarget.hasXOP() &&
       (VT == MVT::v2i64 || (Subtarget.hasInt256() && VT == MVT::v4i64) ||
        (Subtarget.hasAVX512() && VT == MVT::v8i64))) {
 
@@ -22279,9 +22279,8 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  // Special case in 32-bit mode, where i64 is expanded into high and low parts.
-  if (!Subtarget.is64Bit() && VT == MVT::v2i64  &&
-      Amt.getOpcode() == ISD::BITCAST &&
+  // Check cases (mainly 32-bit) where i64 is expanded into high and low parts.
+  if (VT == MVT::v2i64  && Amt.getOpcode() == ISD::BITCAST &&
       Amt.getOperand(0).getOpcode() == ISD::BUILD_VECTOR) {
     Amt = Amt.getOperand(0);
     unsigned Ratio = Amt.getSimpleValueType().getVectorNumElements() /
@@ -27165,6 +27164,19 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(InBitWidth);
     break;
   }
+  case X86ISD::CMOV: {
+    DAG.computeKnownBits(Op.getOperand(1), Known, Depth+1);
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    KnownBits Known2;
+    DAG.computeKnownBits(Op.getOperand(0), Known2, Depth+1);
+
+    // Only known if known in both the LHS and RHS.
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
+    break;
+  }
   }
 }
 
@@ -27227,6 +27239,13 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   case X86ISD::VPCOMU:
     // Vector compares return zero/all-bits result values.
     return VTBits;
+
+  case X86ISD::CMOV: {
+    unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    if (Tmp0 == 1) return 1;  // Early out.
+    unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth+1);
+    return std::min(Tmp0, Tmp1);
+  }
   }
 
   // Fallback case.

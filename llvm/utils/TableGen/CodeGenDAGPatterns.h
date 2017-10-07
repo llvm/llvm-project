@@ -998,15 +998,17 @@ public:
   Record *getSDNodeNamed(StringRef Name) const;
 
   const SDNodeInfo &getSDNodeInfo(Record *R) const {
-    assert(SDNodes.count(R) && "Unknown node!");
-    return SDNodes.find(R)->second;
+    auto F = SDNodes.find(R);
+    assert(F != SDNodes.end() && "Unknown node!");
+    return F->second;
   }
 
   // Node transformation lookups.
   typedef std::pair<Record*, std::string> NodeXForm;
   const NodeXForm &getSDNodeTransform(Record *R) const {
-    assert(SDNodeXForms.count(R) && "Invalid transform!");
-    return SDNodeXForms.find(R)->second;
+    auto F = SDNodeXForms.find(R);
+    assert(F != SDNodeXForms.end() && "Invalid transform!");
+    return F->second;
   }
 
   typedef std::map<Record*, NodeXForm, LessRecordByID>::const_iterator
@@ -1016,8 +1018,9 @@ public:
 
 
   const ComplexPattern &getComplexPattern(Record *R) const {
-    assert(ComplexPatterns.count(R) && "Unknown addressing mode!");
-    return ComplexPatterns.find(R)->second;
+    auto F = ComplexPatterns.find(R);
+    assert(F != ComplexPatterns.end() && "Unknown addressing mode!");
+    return F->second;
   }
 
   const CodeGenIntrinsic &getIntrinsic(Record *R) const {
@@ -1045,19 +1048,22 @@ public:
   }
 
   const DAGDefaultOperand &getDefaultOperand(Record *R) const {
-    assert(DefaultOperands.count(R) &&"Isn't an analyzed default operand!");
-    return DefaultOperands.find(R)->second;
+    auto F = DefaultOperands.find(R);
+    assert(F != DefaultOperands.end() &&"Isn't an analyzed default operand!");
+    return F->second;
   }
 
   // Pattern Fragment information.
   TreePattern *getPatternFragment(Record *R) const {
-    assert(PatternFragments.count(R) && "Invalid pattern fragment request!");
-    return PatternFragments.find(R)->second.get();
+    auto F = PatternFragments.find(R);
+    assert(F != PatternFragments.end() && "Invalid pattern fragment request!");
+    return F->second.get();
   }
   TreePattern *getPatternFragmentIfRead(Record *R) const {
-    if (!PatternFragments.count(R))
+    auto F = PatternFragments.find(R);
+    if (F == PatternFragments.end())
       return nullptr;
-    return PatternFragments.find(R)->second.get();
+    return F->second.get();
   }
 
   typedef std::map<Record *, std::unique_ptr<TreePattern>,
@@ -1079,8 +1085,9 @@ public:
       DAGInstMap &DAGInsts);
 
   const DAGInstruction &getInstruction(Record *R) const {
-    assert(Instructions.count(R) && "Unknown instruction!");
-    return Instructions.find(R)->second;
+    auto F = Instructions.find(R);
+    assert(F != Instructions.end() && "Unknown instruction!");
+    return F->second;
   }
 
   Record *get_intrinsic_void_sdnode() const {
