@@ -7708,12 +7708,21 @@ Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
   return Builder.CreateICmpNE(Bitset, llvm::ConstantInt::get(Int32Ty, 0));
 }
 
+Value *CodeGenFunction::EmitX86CpuInit() {
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
+                                                    /*Variadic*/ false);
+  llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy, "__cpu_indicator_init");
+  return Builder.CreateCall(Func);
+}
+
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   if (BuiltinID == X86::BI__builtin_cpu_is)
     return EmitX86CpuIs(E);
   if (BuiltinID == X86::BI__builtin_cpu_supports)
     return EmitX86CpuSupports(E);
+  if (BuiltinID == X86::BI__builtin_cpu_init)
+    return EmitX86CpuInit();
 
   SmallVector<Value*, 4> Ops;
 
@@ -7765,13 +7774,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   switch (BuiltinID) {
   default: return nullptr;
-  case X86::BI__builtin_cpu_init: {
-    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
-                                                      /*Variadic*/false);
-    llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy,
-                                                     "__cpu_indicator_init");
-    return Builder.CreateCall(Func);
-  }
   case X86::BI_mm_prefetch: {
     Value *Address = Ops[0];
     Value *RW = ConstantInt::get(Int32Ty, 0);

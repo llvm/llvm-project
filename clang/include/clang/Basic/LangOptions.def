@@ -176,7 +176,8 @@ BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __w
 
 BENIGN_LANGOPT(AccessControl     , 1, 1, "C++ access control")
 LANGOPT(CharIsSigned      , 1, 1, "signed char")
-LANGOPT(ShortWChar        , 1, 0, "unsigned short wchar_t")
+LANGOPT(WCharSize         , 4, 0, "width of wchar_t")
+LANGOPT(WCharIsSigned        , 1, 0, "signed or unsigned wchar_t")
 ENUM_LANGOPT(MSPointerToMemberRepresentationMethod, PragmaMSPointersToMembersKind, 2, PPTMK_BestCase, "member-pointer representation method")
 ENUM_LANGOPT(DefaultCallingConv, DefaultCallingConvention, 3, DCC_None, "default calling convention")
 

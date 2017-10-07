@@ -813,7 +813,7 @@ bool Sema::isAnyFunctionDecl() {
 }
 
 bool Sema::isFunctionOrMethodVariadic() {
-  if (!isAnyFunctionDecl() && !isObjCMethodDecl() && !isFunctionTemplateDecl())
+  if (!isFunctionDecl() || !ThisDeclInfo->CurrentDecl)
     return false;
   if (const FunctionDecl *FD =
         dyn_cast<FunctionDecl>(ThisDeclInfo->CurrentDecl))
@@ -824,6 +824,14 @@ bool Sema::isFunctionOrMethodVariadic() {
   if (const ObjCMethodDecl *MD =
         dyn_cast<ObjCMethodDecl>(ThisDeclInfo->CurrentDecl))
     return MD->isVariadic();
+  if (const TypedefNameDecl *TD =
+          dyn_cast<TypedefNameDecl>(ThisDeclInfo->CurrentDecl)) {
+    QualType Type = TD->getUnderlyingType();
+    if (Type->isFunctionPointerType() || Type->isBlockPointerType())
+      Type = Type->getPointeeType();
+    if (const auto *FT = Type->getAs<FunctionProtoType>())
+      return FT->isVariadic();
+  }
   return false;
 }
 

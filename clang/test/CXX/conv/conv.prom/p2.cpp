@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++0x -triple x86_64-pc-linux-gnu -ffreestanding %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++0x -triple x86_64-pc-linux-gnu -ffreestanding -fshort-wchar %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++0x -triple x86_64-pc-linux-gnu -ffreestanding -fwchar-type=short -fno-signed-wchar %s
 // expected-no-diagnostics
 
 #include <stdint.h>
