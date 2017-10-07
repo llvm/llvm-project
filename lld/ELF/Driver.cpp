@@ -790,18 +790,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
         readDynamicList(*Buffer);
 
     for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
-      Config->VersionScriptGlobals.push_back(
+      Config->DynamicList.push_back(
           {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
-
-    // Dynamic lists are a simplified linker script that doesn't need the
-    // "global:" and implicitly ends with a "local:*". Set the variables
-    // needed to simulate that.
-    if (Args.hasArg(OPT_dynamic_list) ||
-        Args.hasArg(OPT_export_dynamic_symbol)) {
-      Config->ExportDynamic = true;
-      if (!Config->Shared)
-        Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-    }
   }
 
   if (auto *Arg = Args.getLastArg(OPT_version_script))

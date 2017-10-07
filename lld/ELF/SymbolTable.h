@@ -47,9 +47,6 @@ public:
   DefinedRegular *addAbsolute(StringRef Name,
                               uint8_t Visibility = llvm::ELF::STV_HIDDEN,
                               uint8_t Binding = llvm::ELF::STB_GLOBAL);
-  template <class ELFT>
-  DefinedRegular *addIgnored(StringRef Name,
-                             uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
   template <class ELFT> Symbol *addUndefined(StringRef Name);
   template <class ELFT>
@@ -143,6 +140,9 @@ private:
 
   // For -defsym or -wrap.
   std::vector<SymbolRenaming> Defsyms;
+
+  // For -wrap.
+  std::vector<std::pair<Symbol *, Symbol *>> WrapSymbols;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;

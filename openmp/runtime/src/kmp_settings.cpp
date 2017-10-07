@@ -4114,14 +4114,13 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
                                       void *data) {
   // Value example: 1s,5c@3,2T
   // Which means "use 1 socket, 5 cores with offset 3, 2 threads per core"
-  static int parsed = 0;
+  kmp_setting_t **rivals = (kmp_setting_t **)data;
   if (strcmp(name, "KMP_PLACE_THREADS") == 0) {
     KMP_INFORM(EnvVarDeprecated, name, "KMP_HW_SUBSET");
-    if (parsed == 1) {
-      return; // already parsed KMP_HW_SUBSET
-    }
   }
-  parsed = 1;
+  if (__kmp_stg_check_rivals(name, value, rivals)) {
+    return;
+  }
 
   char *components[MAX_T_LEVEL];
   char const *digits = "0123456789";
@@ -4729,6 +4728,24 @@ static void __kmp_stg_init(void) {
 
       kmp_device_thread_limit->data = CCAST(kmp_setting_t **, rivals);
       kmp_all_threads->data = CCAST(kmp_setting_t **, rivals);
+    }
+
+    { // Initialize KMP_HW_SUBSET and KMP_PLACE_THREADS
+      // 1st priority
+      kmp_setting_t *kmp_hw_subset = __kmp_stg_find("KMP_HW_SUBSET");
+      // 2nd priority
+      kmp_setting_t *kmp_place_threads = __kmp_stg_find("KMP_PLACE_THREADS");
+
+      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      static kmp_setting_t *volatile rivals[3];
+      int i = 0;
+
+      rivals[i++] = kmp_hw_subset;
+      rivals[i++] = kmp_place_threads;
+      rivals[i++] = NULL;
+
+      kmp_hw_subset->data = CCAST(kmp_setting_t **, rivals);
+      kmp_place_threads->data = CCAST(kmp_setting_t **, rivals);
     }
 
 #if KMP_AFFINITY_SUPPORTED
