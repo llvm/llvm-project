@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
 # RUN: | not llvm-dwarfdump --verify --debug-info - \
 # RUN: | FileCheck %s
-# CHECK: error: Compilation unit without unit DIE.
+# CHECK: error: Compilation unit without DIE.
 
         .section        __DWARF,__debug_info,regular,debug
 .long 8  # CU length

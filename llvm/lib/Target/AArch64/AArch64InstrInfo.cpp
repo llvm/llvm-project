@@ -4646,13 +4646,24 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
                              FrameID);
 }
 
-bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
-  // If MF has a red zone, then we ought not to outline from it, since outlined
-  // functions can modify/read from the stack.
-  // If MF's address is taken, then we don't want to outline from it either
-  // since we don't really know what the user is doing with it.
-  return MF.getFunction()->hasFnAttribute(Attribute::NoRedZone) &&
-         !MF.getFunction()->hasAddressTaken();
+bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
+                                           bool OutlineFromLinkOnceODRs) const {
+  const Function *F = MF.getFunction();
+
+  // If F uses a redzone, then don't outline from it because it might mess up
+  // the stack.
+  if (!F->hasFnAttribute(Attribute::NoRedZone))
+    return false;
+
+  // If anyone is using the address of this function, don't outline from it.
+  if (F->hasAddressTaken())
+    return false;
+
+  // Can F be deduplicated by the linker? If it can, don't outline from it.
+  if (!OutlineFromLinkOnceODRs && F->hasLinkOnceODRLinkage())
+    return false;
+  
+  return true;
 }
 
 AArch64GenInstrInfo::MachineOutlinerInstrType

@@ -1,9 +1,0 @@
-RUN: llc -filetype=obj %p/../Inputs/swift-dwarf-loc.ll -mtriple x86_64-apple-darwin -o %T/swift-dwarf-loc.o
-RUN: ld -dylib %T/swift-dwarf-loc.o -arch x86_64 -lSystem -macosx_version_min 10.9.0 -o %T/swift-dwarf-loc
-RUN: llvm-dsymutil %T/swift-dwarf-loc -no-output -verbose | FileCheck %s
-
-This test checks that dsymutil generates a valid dwarf location for a symbol with no flags set.
-
-CHECK: __var,
-CHECK-NOT: __var,{{.*}}binAddr: 0x0000000000000000
-CHECK-NOT: __var{{.*}} => 0000000000000000

@@ -56,6 +56,7 @@ public:
 
   // Get an integer value of the integer token.
   uint32_t intValue() const;
+  bool isLongInt() const;
 
   StringRef value() const;
   Kind kind() const;

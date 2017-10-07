@@ -28,7 +28,7 @@ using namespace llvm::support;
 namespace llvm {
 namespace rc {
 
-// Class that employs RAII to save the current serializator object state
+// Class that employs RAII to save the current FileWriter object state
 // and revert to it as soon as we leave the scope. This is useful if resources
 // declare their own resource-local statements.
 class ContextKeeper {
@@ -79,6 +79,12 @@ static Error checkSignedNumberFits(uint32_t Number, Twine FieldName,
   return Error::success();
 }
 
+static Error checkRCInt(RCInt Number, Twine FieldName) {
+  if (Number.isLong())
+    return Error::success();
+  return checkNumberFits<uint16_t>(Number, FieldName);
+}
+
 static Error checkIntOrString(IntOrString Value, Twine FieldName) {
   if (!Value.isInt())
     return Error::success();
@@ -116,32 +122,196 @@ enum class NullHandlingMethod {
   CutAtDoubleNull // Terminate string on '\0\0'; strip final '\0'.
 };
 
-// Parses an identifier or string and returns a processed version of it.
-// For now, it only strips the string boundaries, but TODO:
+// Parses an identifier or string and returns a processed version of it:
+//   * String the string boundary quotes.
 //   * Squash "" to a single ".
 //   * Replace the escape sequences with their processed version.
 // For identifiers, this is no-op.
 static Error processString(StringRef Str, NullHandlingMethod NullHandler,
                            bool &IsLongString, SmallVectorImpl<UTF16> &Result) {
-  assert(NullHandler == NullHandlingMethod::CutAtNull);
-
   bool IsString = stripQuotes(Str, IsLongString);
-  convertUTF8ToUTF16String(Str, Result);
+  SmallVector<UTF16, 128> Chars;
+  convertUTF8ToUTF16String(Str, Chars);
 
   if (!IsString) {
     // It's an identifier if it's not a string. Make all characters uppercase.
-    for (UTF16 &Ch : Result) {
+    for (UTF16 &Ch : Chars) {
       assert(Ch <= 0x7F && "We didn't allow identifiers to be non-ASCII");
       Ch = toupper(Ch);
     }
+    Result.swap(Chars);
     return Error::success();
   }
+  Result.reserve(Chars.size());
+  size_t Pos = 0;
 
-  // We don't process the string contents. Only cut at '\0'.
+  auto AddRes = [&Result, NullHandler, IsLongString](UTF16 Char) -> Error {
+    if (!IsLongString) {
+      if (NullHandler == NullHandlingMethod::UserResource) {
+        // Narrow strings in user-defined resources are *not* output in
+        // UTF-16 format.
+        if (Char > 0xFF)
+          return createError("Non-8-bit codepoint (" + Twine(Char) +
+                             ") can't occur in a user-defined narrow string");
 
-  for (size_t Pos = 0; Pos < Result.size(); ++Pos)
-    if (Result[Pos] == '\0')
-      Result.resize(Pos);
+      } else {
+        // In case of narrow non-user strings, Windows RC converts
+        // [0x80, 0xFF] chars according to the current codepage.
+        // There is no 'codepage' concept settled in every supported platform,
+        // so we should reject such inputs.
+        if (Char > 0x7F && Char <= 0xFF)
+          return createError("Non-ASCII 8-bit codepoint (" + Twine(Char) +
+                             ") can't "
+                             "occur in a non-Unicode string");
+      }
+    }
+
+    // Make sure to write little-endian strings, regardless of the host
+    // byte-order.
+    Result.push_back(endian::byte_swap(Char, little));
+    return Error::success();
+  };
+
+  while (Pos < Chars.size()) {
+    UTF16 CurChar = Chars[Pos];
+    ++Pos;
+
+    // Strip double "".
+    if (CurChar == '"') {
+      if (Pos == Chars.size() || Chars[Pos] != '"')
+        return createError("Expected \"\"");
+      ++Pos;
+      RETURN_IF_ERROR(AddRes('"'));
+      continue;
+    }
+
+    if (CurChar == '\\') {
+      UTF16 TypeChar = Chars[Pos];
+      ++Pos;
+
+      if (TypeChar == 'x' || TypeChar == 'X') {
+        // Read a hex number. Max number of characters to read differs between
+        // narrow and wide strings.
+        UTF16 ReadInt = 0;
+        size_t RemainingChars = IsLongString ? 4 : 2;
+        // We don't want to read non-ASCII hex digits. std:: functions past
+        // 0xFF invoke UB.
+        //
+        // FIXME: actually, Microsoft version probably doesn't check this
+        // condition and uses their Unicode version of 'isxdigit'. However,
+        // there are some hex-digit Unicode character outside of ASCII, and
+        // some of these are actually accepted by rc.exe, the notable example
+        // being fullwidth forms (U+FF10..U+FF19 etc.) These can be written
+        // instead of ASCII digits in \x... escape sequence and get accepted.
+        // However, the resulting hexcodes seem totally unpredictable.
+        // We think it's infeasible to try to reproduce this behavior, nor to
+        // put effort in order to detect it.
+        while (RemainingChars && Pos < Chars.size() && Chars[Pos] < 0x80) {
+          if (!isxdigit(Chars[Pos]))
+            break;
+          char Digit = tolower(Chars[Pos]);
+          ++Pos;
+
+          ReadInt <<= 4;
+          if (isdigit(Digit))
+            ReadInt |= Digit - '0';
+          else
+            ReadInt |= Digit - 'a' + 10;
+
+          --RemainingChars;
+        }
+
+        RETURN_IF_ERROR(AddRes(ReadInt));
+        continue;
+      }
+
+      if (TypeChar >= '0' && TypeChar < '8') {
+        // Read an octal number. Note that we've already read the first digit.
+        UTF16 ReadInt = TypeChar - '0';
+        size_t RemainingChars = IsLongString ? 6 : 2;
+
+        while (RemainingChars && Pos < Chars.size() && Chars[Pos] >= '0' &&
+               Chars[Pos] < '8') {
+          ReadInt <<= 3;
+          ReadInt |= Chars[Pos] - '0';
+          --RemainingChars;
+          ++Pos;
+        }
+
+        RETURN_IF_ERROR(AddRes(ReadInt));
+
+        continue;
+      }
+
+      switch (TypeChar) {
+      case 'A':
+      case 'a':
+        // Windows '\a' translates into '\b' (Backspace).
+        RETURN_IF_ERROR(AddRes('\b'));
+        break;
+
+      case 'n': // Somehow, RC doesn't recognize '\N' and '\R'.
+        RETURN_IF_ERROR(AddRes('\n'));
+        break;
+
+      case 'r':
+        RETURN_IF_ERROR(AddRes('\r'));
+        break;
+
+      case 'T':
+      case 't':
+        RETURN_IF_ERROR(AddRes('\t'));
+        break;
+
+      case '\\':
+        RETURN_IF_ERROR(AddRes('\\'));
+        break;
+
+      case '"':
+        // RC accepts \" only if another " comes afterwards; then, \"" means
+        // a single ".
+        if (Pos == Chars.size() || Chars[Pos] != '"')
+          return createError("Expected \\\"\"");
+        ++Pos;
+        RETURN_IF_ERROR(AddRes('"'));
+        break;
+
+      default:
+        // If TypeChar means nothing, \ is should be output to stdout with
+        // following char. However, rc.exe consumes these characters when
+        // dealing with wide strings.
+        if (!IsLongString) {
+          RETURN_IF_ERROR(AddRes('\\'));
+          RETURN_IF_ERROR(AddRes(TypeChar));
+        }
+        break;
+      }
+
+      continue;
+    }
+
+    // If nothing interesting happens, just output the character.
+    RETURN_IF_ERROR(AddRes(CurChar));
+  }
+
+  switch (NullHandler) {
+  case NullHandlingMethod::CutAtNull:
+    for (size_t Pos = 0; Pos < Result.size(); ++Pos)
+      if (Result[Pos] == '\0')
+        Result.resize(Pos);
+    break;
+
+  case NullHandlingMethod::CutAtDoubleNull:
+    for (size_t Pos = 0; Pos + 1 < Result.size(); ++Pos)
+      if (Result[Pos] == '\0' && Result[Pos + 1] == '\0')
+        Result.resize(Pos);
+    if (Result.size() > 0 && Result.back() == '\0')
+      Result.pop_back();
+    break;
+
+  case NullHandlingMethod::UserResource:
+    break;
+  }
 
   return Error::success();
 }
@@ -175,6 +345,13 @@ Error ResourceFileWriter::writeIntOrString(const IntOrString &Value) {
   writeInt<uint16_t>(0xFFFF);
   writeInt<uint16_t>(Value.getInt());
   return Error::success();
+}
+
+void ResourceFileWriter::writeRCInt(RCInt Value) {
+  if (Value.isLong())
+    writeInt<uint32_t>(Value);
+  else
+    writeInt<uint16_t>(Value);
 }
 
 Error ResourceFileWriter::appendFile(StringRef Filename) {
@@ -220,8 +397,21 @@ Error ResourceFileWriter::visitAcceleratorsResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeAcceleratorsBody);
 }
 
+Error ResourceFileWriter::visitCursorResource(const RCResource *Res) {
+  return handleError(visitIconOrCursorResource(Res), Res);
+}
+
 Error ResourceFileWriter::visitDialogResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeDialogBody);
+}
+
+Error ResourceFileWriter::visitIconResource(const RCResource *Res) {
+  return handleError(visitIconOrCursorResource(Res), Res);
+}
+
+Error ResourceFileWriter::visitCaptionStmt(const CaptionStmt *Stmt) {
+  ObjectData.Caption = Stmt->Value;
+  return Error::success();
 }
 
 Error ResourceFileWriter::visitHTMLResource(const RCResource *Res) {
@@ -232,9 +422,56 @@ Error ResourceFileWriter::visitMenuResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeMenuBody);
 }
 
+Error ResourceFileWriter::visitStringTableResource(const RCResource *Base) {
+  const auto *Res = cast<StringTableResource>(Base);
+
+  ContextKeeper RAII(this);
+  RETURN_IF_ERROR(Res->applyStmts(this));
+
+  for (auto &String : Res->Table) {
+    RETURN_IF_ERROR(checkNumberFits<uint16_t>(String.first, "String ID"));
+    uint16_t BundleID = String.first >> 4;
+    StringTableInfo::BundleKey Key(BundleID, ObjectData.LanguageInfo);
+    auto &BundleData = StringTableData.BundleData;
+    auto Iter = BundleData.find(Key);
+
+    if (Iter == BundleData.end()) {
+      // Need to create a bundle.
+      StringTableData.BundleList.push_back(Key);
+      auto EmplaceResult =
+          BundleData.emplace(Key, StringTableInfo::Bundle(ObjectData));
+      assert(EmplaceResult.second && "Could not create a bundle");
+      Iter = EmplaceResult.first;
+    }
+
+    RETURN_IF_ERROR(
+        insertStringIntoBundle(Iter->second, String.first, String.second));
+  }
+
+  return Error::success();
+}
+
+Error ResourceFileWriter::visitUserDefinedResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeUserDefinedBody);
+}
+
+Error ResourceFileWriter::visitVersionInfoResource(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeVersionInfoBody);
+}
+
 Error ResourceFileWriter::visitCharacteristicsStmt(
     const CharacteristicsStmt *Stmt) {
   ObjectData.Characteristics = Stmt->Value;
+  return Error::success();
+}
+
+Error ResourceFileWriter::visitFontStmt(const FontStmt *Stmt) {
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Size, "Font size"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Weight, "Font weight"));
+  RETURN_IF_ERROR(checkNumberFits<uint8_t>(Stmt->Charset, "Font charset"));
+  ObjectInfo::FontInfo Font{Stmt->Size, Stmt->Name, Stmt->Weight, Stmt->Italic,
+                            Stmt->Charset};
+  ObjectData.Font.emplace(Font);
   return Error::success();
 }
 
@@ -242,6 +479,11 @@ Error ResourceFileWriter::visitLanguageStmt(const LanguageResource *Stmt) {
   RETURN_IF_ERROR(checkNumberFits(Stmt->Lang, 10, "Primary language ID"));
   RETURN_IF_ERROR(checkNumberFits(Stmt->SubLang, 6, "Sublanguage ID"));
   ObjectData.LanguageInfo = Stmt->Lang | (Stmt->SubLang << 10);
+  return Error::success();
+}
+
+Error ResourceFileWriter::visitStyleStmt(const StyleStmt *Stmt) {
+  ObjectData.Style = Stmt->Value;
   return Error::success();
 }
 
@@ -402,6 +644,260 @@ Error ResourceFileWriter::writeAcceleratorsBody(const RCResource *Base) {
   return Error::success();
 }
 
+// --- CursorResource and IconResource helpers. --- //
+
+// ICONRESDIR structure. Describes a single icon in resouce group.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648016.aspx
+struct IconResDir {
+  uint8_t Width;
+  uint8_t Height;
+  uint8_t ColorCount;
+  uint8_t Reserved;
+};
+
+// CURSORDIR structure. Describes a single cursor in resource group.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648011(v=vs.85).aspx
+struct CursorDir {
+  ulittle16_t Width;
+  ulittle16_t Height;
+};
+
+// RESDIRENTRY structure, stripped from the last item. Stripping made
+// for compatibility with RESDIR.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648026(v=vs.85).aspx
+struct ResourceDirEntryStart {
+  union {
+    CursorDir Cursor; // Used in CURSOR resources.
+    IconResDir Icon;  // Used in .ico and .cur files, and ICON resources.
+  };
+  ulittle16_t Planes;   // HotspotX (.cur files but not CURSOR resource).
+  ulittle16_t BitCount; // HotspotY (.cur files but not CURSOR resource).
+  ulittle32_t Size;
+  // ulittle32_t ImageOffset;  // Offset to image data (ICONDIRENTRY only).
+  // ulittle16_t IconID;       // Resource icon ID (RESDIR only).
+};
+
+// BITMAPINFOHEADER structure. Describes basic information about the bitmap
+// being read.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/dd183376(v=vs.85).aspx
+struct BitmapInfoHeader {
+  ulittle32_t Size;
+  ulittle32_t Width;
+  ulittle32_t Height;
+  ulittle16_t Planes;
+  ulittle16_t BitCount;
+  ulittle32_t Compression;
+  ulittle32_t SizeImage;
+  ulittle32_t XPelsPerMeter;
+  ulittle32_t YPelsPerMeter;
+  ulittle32_t ClrUsed;
+  ulittle32_t ClrImportant;
+};
+
+// Group icon directory header. Called ICONDIR in .ico/.cur files and
+// NEWHEADER in .res files.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648023(v=vs.85).aspx
+struct GroupIconDir {
+  ulittle16_t Reserved; // Always 0.
+  ulittle16_t ResType;  // 1 for icons, 2 for cursors.
+  ulittle16_t ResCount; // Number of items.
+};
+
+enum class IconCursorGroupType { Icon, Cursor };
+
+class SingleIconCursorResource : public RCResource {
+public:
+  IconCursorGroupType Type;
+  const ResourceDirEntryStart &Header;
+  ArrayRef<uint8_t> Image;
+
+  SingleIconCursorResource(IconCursorGroupType ResourceType,
+                           const ResourceDirEntryStart &HeaderEntry,
+                           ArrayRef<uint8_t> ImageData)
+      : Type(ResourceType), Header(HeaderEntry), Image(ImageData) {}
+
+  Twine getResourceTypeName() const override { return "Icon/cursor image"; }
+  IntOrString getResourceType() const override {
+    return Type == IconCursorGroupType::Icon ? RkSingleIcon : RkSingleCursor;
+  }
+  uint16_t getMemoryFlags() const override {
+    return MfDiscardable | MfMoveable;
+  }
+  ResourceKind getKind() const override { return RkSingleCursorOrIconRes; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkSingleCursorOrIconRes;
+  }
+};
+
+class IconCursorGroupResource : public RCResource {
+public:
+  IconCursorGroupType Type;
+  GroupIconDir Header;
+  std::vector<ResourceDirEntryStart> ItemEntries;
+
+  IconCursorGroupResource(IconCursorGroupType ResourceType,
+                          const GroupIconDir &HeaderData,
+                          std::vector<ResourceDirEntryStart> &&Entries)
+      : Type(ResourceType), Header(HeaderData),
+        ItemEntries(std::move(Entries)) {}
+
+  Twine getResourceTypeName() const override { return "Icon/cursor group"; }
+  IntOrString getResourceType() const override {
+    return Type == IconCursorGroupType::Icon ? RkIconGroup : RkCursorGroup;
+  }
+  ResourceKind getKind() const override { return RkCursorOrIconGroupRes; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkCursorOrIconGroupRes;
+  }
+};
+
+Error ResourceFileWriter::writeSingleIconOrCursorBody(const RCResource *Base) {
+  auto *Res = cast<SingleIconCursorResource>(Base);
+  if (Res->Type == IconCursorGroupType::Cursor) {
+    // In case of cursors, two WORDS are appended to the beginning
+    // of the resource: HotspotX (Planes in RESDIRENTRY),
+    // and HotspotY (BitCount).
+    //
+    // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648026.aspx
+    //  (Remarks section).
+    writeObject(Res->Header.Planes);
+    writeObject(Res->Header.BitCount);
+  }
+
+  writeObject(Res->Image);
+  return Error::success();
+}
+
+Error ResourceFileWriter::writeIconOrCursorGroupBody(const RCResource *Base) {
+  auto *Res = cast<IconCursorGroupResource>(Base);
+  writeObject(Res->Header);
+  for (auto Item : Res->ItemEntries) {
+    writeObject(Item);
+    writeInt(IconCursorID++);
+  }
+  return Error::success();
+}
+
+Error ResourceFileWriter::visitSingleIconOrCursor(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeSingleIconOrCursorBody);
+}
+
+Error ResourceFileWriter::visitIconOrCursorGroup(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeIconOrCursorGroupBody);
+}
+
+Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
+  IconCursorGroupType Type;
+  StringRef FileStr;
+  IntOrString ResName = Base->ResName;
+
+  if (auto *IconRes = dyn_cast<IconResource>(Base)) {
+    FileStr = IconRes->IconLoc;
+    Type = IconCursorGroupType::Icon;
+  } else {
+    auto *CursorRes = dyn_cast<CursorResource>(Base);
+    FileStr = CursorRes->CursorLoc;
+    Type = IconCursorGroupType::Cursor;
+  }
+
+  bool IsLong;
+  stripQuotes(FileStr, IsLong);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> File =
+      MemoryBuffer::getFile(FileStr, -1, false);
+
+  if (!File)
+    return make_error<StringError>(
+        "Error opening " +
+            Twine(Type == IconCursorGroupType::Icon ? "icon" : "cursor") +
+            " '" + FileStr + "': " + File.getError().message(),
+        File.getError());
+
+  BinaryStreamReader Reader((*File)->getBuffer(), support::little);
+
+  // Read the file headers.
+  //   - At the beginning, ICONDIR/NEWHEADER header.
+  //   - Then, a number of RESDIR headers follow. These contain offsets
+  //       to data.
+  const GroupIconDir *Header;
+
+  RETURN_IF_ERROR(Reader.readObject(Header));
+  if (Header->Reserved != 0)
+    return createError("Incorrect icon/cursor Reserved field; should be 0.");
+  uint16_t NeededType = Type == IconCursorGroupType::Icon ? 1 : 2;
+  if (Header->ResType != NeededType)
+    return createError("Incorrect icon/cursor ResType field; should be " +
+                       Twine(NeededType) + ".");
+
+  uint16_t NumItems = Header->ResCount;
+
+  // Read single ico/cur headers.
+  std::vector<ResourceDirEntryStart> ItemEntries;
+  ItemEntries.reserve(NumItems);
+  std::vector<uint32_t> ItemOffsets(NumItems);
+  for (size_t ID = 0; ID < NumItems; ++ID) {
+    const ResourceDirEntryStart *Object;
+    RETURN_IF_ERROR(Reader.readObject(Object));
+    ItemEntries.push_back(*Object);
+    RETURN_IF_ERROR(Reader.readInteger(ItemOffsets[ID]));
+  }
+
+  // Now write each icon/cursors one by one. At first, all the contents
+  // without ICO/CUR header. This is described by SingleIconCursorResource.
+  for (size_t ID = 0; ID < NumItems; ++ID) {
+    // Load the fragment of file.
+    Reader.setOffset(ItemOffsets[ID]);
+    ArrayRef<uint8_t> Image;
+    RETURN_IF_ERROR(Reader.readArray(Image, ItemEntries[ID].Size));
+    SingleIconCursorResource SingleRes(Type, ItemEntries[ID], Image);
+    SingleRes.setName(IconCursorID + ID);
+    RETURN_IF_ERROR(visitSingleIconOrCursor(&SingleRes));
+  }
+
+  // Now, write all the headers concatenated into a separate resource.
+  for (size_t ID = 0; ID < NumItems; ++ID) {
+    if (Type == IconCursorGroupType::Icon) {
+      // rc.exe seems to always set NumPlanes to 1. No idea why it happens.
+      ItemEntries[ID].Planes = 1;
+      continue;
+    }
+
+    // We need to rewrite the cursor headers.
+    const auto &OldHeader = ItemEntries[ID];
+    ResourceDirEntryStart NewHeader;
+    NewHeader.Cursor.Width = OldHeader.Icon.Width;
+    // Each cursor in fact stores two bitmaps, one under another.
+    // Height provided in cursor definition describes the height of the
+    // cursor, whereas the value existing in resource definition describes
+    // the height of the bitmap. Therefore, we need to double this height.
+    NewHeader.Cursor.Height = OldHeader.Icon.Height * 2;
+
+    // Now, we actually need to read the bitmap header to find
+    // the number of planes and the number of bits per pixel.
+    Reader.setOffset(ItemOffsets[ID]);
+    const BitmapInfoHeader *BMPHeader;
+    RETURN_IF_ERROR(Reader.readObject(BMPHeader));
+    NewHeader.Planes = BMPHeader->Planes;
+    NewHeader.BitCount = BMPHeader->BitCount;
+
+    // Two WORDs were written at the beginning of the resource (hotspot
+    // location). This is reflected in Size field.
+    NewHeader.Size = OldHeader.Size + 2 * sizeof(uint16_t);
+
+    ItemEntries[ID] = NewHeader;
+  }
+
+  IconCursorGroupResource HeaderRes(Type, *Header, std::move(ItemEntries));
+  HeaderRes.setName(ResName);
+  RETURN_IF_ERROR(visitIconOrCursorGroup(&HeaderRes));
+
+  return Error::success();
+}
+
 // --- DialogResource helpers. --- //
 
 Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
@@ -474,10 +970,36 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   auto *Res = cast<DialogResource>(Base);
 
   // Default style: WS_POPUP | WS_BORDER | WS_SYSMENU.
-  const uint32_t UsedStyle = 0x80880000;
+  const uint32_t DefaultStyle = 0x80880000;
+  const uint32_t StyleFontFlag = 0x40;
+  const uint32_t StyleCaptionFlag = 0x00C00000;
+
+  uint32_t UsedStyle = ObjectData.Style.getValueOr(DefaultStyle);
+  if (ObjectData.Font)
+    UsedStyle |= StyleFontFlag;
+  else
+    UsedStyle &= ~StyleFontFlag;
+
+  // Actually, in case of empty (but existent) caption, the examined field
+  // is equal to "\"\"". That's why empty captions are still noticed.
+  if (ObjectData.Caption != "")
+    UsedStyle |= StyleCaptionFlag;
+
+  const uint16_t DialogExMagic = 0xFFFF;
 
   // Write DIALOG(EX) header prefix. These are pretty different.
   if (!Res->IsExtended) {
+    // We cannot let the higher word of DefaultStyle be equal to 0xFFFF.
+    // In such a case, whole object (in .res file) is equivalent to a
+    // DIALOGEX. It might lead to access violation/segmentation fault in
+    // resource readers. For example,
+    //   1 DIALOG 0, 0, 0, 65432
+    //   STYLE 0xFFFF0001 {}
+    // would be compiled to a DIALOGEX with 65432 controls.
+    if ((UsedStyle >> 16) == DialogExMagic)
+      return createError("16 higher bits of DIALOG resource style cannot be"
+                         " equal to 0xFFFF");
+
     struct {
       ulittle32_t Style;
       ulittle32_t ExtStyle;
@@ -486,8 +1008,6 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
 
     writeObject(Prefix);
   } else {
-    const uint16_t DialogExMagic = 0xFFFF;
-
     struct {
       ulittle16_t Version;
       ulittle16_t Magic;
@@ -529,8 +1049,21 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   // Window CLASS field. Not kept here.
   writeInt<uint16_t>(0);
 
-  // Window title. There is no title for now, so all we output is '\0'.
-  writeInt<uint16_t>(0);
+  // Window title or a single word equal to 0.
+  RETURN_IF_ERROR(writeCString(ObjectData.Caption));
+
+  // If there *is* a window font declared, output its data.
+  auto &Font = ObjectData.Font;
+  if (Font) {
+    writeInt<uint16_t>(Font->Size);
+    // Additional description occurs only in DIALOGEX.
+    if (Res->IsExtended) {
+      writeInt<uint16_t>(Font->Weight);
+      writeInt<uint8_t>(Font->IsItalic);
+      writeInt<uint8_t>(Font->Charset);
+    }
+    RETURN_IF_ERROR(writeCString(Font->Typeface));
+  }
 
   auto handleCtlError = [&](Error &&Err, const Control &Ctl) -> Error {
     if (!Err)
@@ -601,6 +1134,285 @@ Error ResourceFileWriter::writeMenuBody(const RCResource *Base) {
   writeObject<uint32_t>(0);
 
   return writeMenuDefinitionList(cast<MenuResource>(Base)->Elements);
+}
+
+// --- StringTableResource helpers. --- //
+
+class BundleResource : public RCResource {
+public:
+  using BundleType = ResourceFileWriter::StringTableInfo::Bundle;
+  BundleType Bundle;
+
+  BundleResource(const BundleType &StrBundle) : Bundle(StrBundle) {}
+  IntOrString getResourceType() const override { return 6; }
+
+  ResourceKind getKind() const override { return RkStringTableBundle; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkStringTableBundle;
+  }
+};
+
+Error ResourceFileWriter::visitStringTableBundle(const RCResource *Res) {
+  return writeResource(Res, &ResourceFileWriter::writeStringTableBundleBody);
+}
+
+Error ResourceFileWriter::insertStringIntoBundle(
+    StringTableInfo::Bundle &Bundle, uint16_t StringID, StringRef String) {
+  uint16_t StringLoc = StringID & 15;
+  if (Bundle.Data[StringLoc])
+    return createError("Multiple STRINGTABLE strings located under ID " +
+                       Twine(StringID));
+  Bundle.Data[StringLoc] = String;
+  return Error::success();
+}
+
+Error ResourceFileWriter::writeStringTableBundleBody(const RCResource *Base) {
+  auto *Res = cast<BundleResource>(Base);
+  for (size_t ID = 0; ID < Res->Bundle.Data.size(); ++ID) {
+    // The string format is a tiny bit different here. We
+    // first output the size of the string, and then the string itself
+    // (which is not null-terminated).
+    bool IsLongString;
+    SmallVector<UTF16, 128> Data;
+    RETURN_IF_ERROR(processString(Res->Bundle.Data[ID].getValueOr(StringRef()),
+                                  NullHandlingMethod::CutAtDoubleNull,
+                                  IsLongString, Data));
+    if (AppendNull && Res->Bundle.Data[ID])
+      Data.push_back('\0');
+    RETURN_IF_ERROR(
+        checkNumberFits<uint16_t>(Data.size(), "STRINGTABLE string size"));
+    writeInt<uint16_t>(Data.size());
+    for (auto Char : Data)
+      writeInt(Char);
+  }
+  return Error::success();
+}
+
+Error ResourceFileWriter::dumpAllStringTables() {
+  for (auto Key : StringTableData.BundleList) {
+    auto Iter = StringTableData.BundleData.find(Key);
+    assert(Iter != StringTableData.BundleData.end());
+
+    // For a moment, revert the context info to moment of bundle declaration.
+    ContextKeeper RAII(this);
+    ObjectData = Iter->second.DeclTimeInfo;
+
+    BundleResource Res(Iter->second);
+    // Bundle #(k+1) contains keys [16k, 16k + 15].
+    Res.setName(Key.first + 1);
+    RETURN_IF_ERROR(visitStringTableBundle(&Res));
+  }
+  return Error::success();
+}
+
+// --- UserDefinedResource helpers. --- //
+
+Error ResourceFileWriter::writeUserDefinedBody(const RCResource *Base) {
+  auto *Res = cast<UserDefinedResource>(Base);
+
+  if (Res->IsFileResource)
+    return appendFile(Res->FileLoc);
+
+  for (auto &Elem : Res->Contents) {
+    if (Elem.isInt()) {
+      RETURN_IF_ERROR(
+          checkRCInt(Elem.getInt(), "Number in user-defined resource"));
+      writeRCInt(Elem.getInt());
+      continue;
+    }
+
+    SmallVector<UTF16, 128> ProcessedString;
+    bool IsLongString;
+    RETURN_IF_ERROR(processString(Elem.getString(),
+                                  NullHandlingMethod::UserResource,
+                                  IsLongString, ProcessedString));
+
+    for (auto Ch : ProcessedString) {
+      if (IsLongString) {
+        writeInt(Ch);
+        continue;
+      }
+
+      RETURN_IF_ERROR(checkNumberFits<uint8_t>(
+          Ch, "Character in narrow string in user-defined resoutce"));
+      writeInt<uint8_t>(Ch);
+    }
+  }
+
+  return Error::success();
+}
+
+// --- VersionInfoResourceResource helpers. --- //
+
+Error ResourceFileWriter::writeVersionInfoBlock(const VersionInfoBlock &Blk) {
+  // Output the header if the block has name.
+  bool OutputHeader = Blk.Name != "";
+  uint64_t LengthLoc;
+
+  if (OutputHeader) {
+    LengthLoc = writeObject<uint16_t>(0);
+    writeObject<uint16_t>(0);
+    writeObject<uint16_t>(true);
+    RETURN_IF_ERROR(writeCString(Blk.Name));
+    padStream(sizeof(uint32_t));
+  }
+
+  for (const std::unique_ptr<VersionInfoStmt> &Item : Blk.Stmts) {
+    VersionInfoStmt *ItemPtr = Item.get();
+
+    if (auto *BlockPtr = dyn_cast<VersionInfoBlock>(ItemPtr)) {
+      RETURN_IF_ERROR(writeVersionInfoBlock(*BlockPtr));
+      continue;
+    }
+
+    auto *ValuePtr = cast<VersionInfoValue>(ItemPtr);
+    RETURN_IF_ERROR(writeVersionInfoValue(*ValuePtr));
+  }
+
+  if (OutputHeader) {
+    uint64_t CurLoc = tell();
+    writeObjectAt(ulittle16_t(CurLoc - LengthLoc), LengthLoc);
+  }
+
+  padStream(sizeof(uint32_t));
+  return Error::success();
+}
+
+Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
+  // rc has a peculiar algorithm to output VERSIONINFO VALUEs. Each VALUE
+  // is a mapping from the key (string) to the value (a sequence of ints or
+  // a sequence of strings).
+  //
+  // If integers are to be written: width of each integer written depends on
+  // whether it's been declared 'long' (it's DWORD then) or not (it's WORD).
+  // ValueLength defined in structure referenced below is then the total
+  // number of bytes taken by these integers.
+  //
+  // If strings are to be written: characters are always WORDs.
+  // Moreover, '\0' character is written after the last string, and between
+  // every two strings separated by comma (if strings are not comma-separated,
+  // they're simply concatenated). ValueLength is equal to the number of WORDs
+  // written (that is, half of the bytes written).
+  //
+  // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms646994.aspx
+  bool HasStrings = false, HasInts = false;
+  for (auto &Item : Val.Values)
+    (Item.isInt() ? HasInts : HasStrings) = true;
+
+  assert((HasStrings || HasInts) && "VALUE must have at least one argument");
+  if (HasStrings && HasInts)
+    return createError(Twine("VALUE ") + Val.Key +
+                       " cannot contain both strings and integers");
+
+  auto LengthLoc = writeObject<uint16_t>(0);
+  auto ValLengthLoc = writeObject<uint16_t>(0);
+  writeObject<uint16_t>(HasStrings);
+  RETURN_IF_ERROR(writeCString(Val.Key));
+  padStream(sizeof(uint32_t));
+
+  auto DataLoc = tell();
+  for (size_t Id = 0; Id < Val.Values.size(); ++Id) {
+    auto &Item = Val.Values[Id];
+    if (Item.isInt()) {
+      auto Value = Item.getInt();
+      RETURN_IF_ERROR(checkRCInt(Value, "VERSIONINFO integer value"));
+      writeRCInt(Value);
+      continue;
+    }
+
+    bool WriteTerminator =
+        Id == Val.Values.size() - 1 || Val.HasPrecedingComma[Id + 1];
+    RETURN_IF_ERROR(writeCString(Item.getString(), WriteTerminator));
+  }
+
+  auto CurLoc = tell();
+  auto ValueLength = CurLoc - DataLoc;
+  if (HasStrings) {
+    assert(ValueLength % 2 == 0);
+    ValueLength /= 2;
+  }
+  writeObjectAt(ulittle16_t(CurLoc - LengthLoc), LengthLoc);
+  writeObjectAt(ulittle16_t(ValueLength), ValLengthLoc);
+  padStream(sizeof(uint32_t));
+  return Error::success();
+}
+
+template <typename Ty>
+static Ty getWithDefault(const StringMap<Ty> &Map, StringRef Key,
+                         const Ty &Default) {
+  auto Iter = Map.find(Key);
+  if (Iter != Map.end())
+    return Iter->getValue();
+  return Default;
+}
+
+Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {
+  auto *Res = cast<VersionInfoResource>(Base);
+
+  const auto &FixedData = Res->FixedData;
+
+  struct /* VS_FIXEDFILEINFO */ {
+    ulittle32_t Signature = ulittle32_t(0xFEEF04BD);
+    ulittle32_t StructVersion = ulittle32_t(0x10000);
+    // It's weird to have most-significant DWORD first on the little-endian
+    // machines, but let it be this way.
+    ulittle32_t FileVersionMS;
+    ulittle32_t FileVersionLS;
+    ulittle32_t ProductVersionMS;
+    ulittle32_t ProductVersionLS;
+    ulittle32_t FileFlagsMask;
+    ulittle32_t FileFlags;
+    ulittle32_t FileOS;
+    ulittle32_t FileType;
+    ulittle32_t FileSubtype;
+    // MS implementation seems to always set these fields to 0.
+    ulittle32_t FileDateMS = ulittle32_t(0);
+    ulittle32_t FileDateLS = ulittle32_t(0);
+  } FixedInfo;
+
+  // First, VS_VERSIONINFO.
+  auto LengthLoc = writeInt<uint16_t>(0);
+  writeInt<uint16_t>(sizeof(FixedInfo));
+  writeInt<uint16_t>(0);
+  cantFail(writeCString("VS_VERSION_INFO"));
+  padStream(sizeof(uint32_t));
+
+  using VersionInfoFixed = VersionInfoResource::VersionInfoFixed;
+  auto GetField = [&](VersionInfoFixed::VersionInfoFixedType Type) {
+    static const SmallVector<uint32_t, 4> DefaultOut{0, 0, 0, 0};
+    if (!FixedData.IsTypePresent[(int)Type])
+      return DefaultOut;
+    return FixedData.FixedInfo[(int)Type];
+  };
+
+  auto FileVer = GetField(VersionInfoFixed::FtFileVersion);
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
+      *std::max_element(FileVer.begin(), FileVer.end()), "FILEVERSION fields"));
+  FixedInfo.FileVersionMS = (FileVer[0] << 16) | FileVer[1];
+  FixedInfo.FileVersionLS = (FileVer[2] << 16) | FileVer[3];
+
+  auto ProdVer = GetField(VersionInfoFixed::FtProductVersion);
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
+      *std::max_element(ProdVer.begin(), ProdVer.end()),
+      "PRODUCTVERSION fields"));
+  FixedInfo.ProductVersionMS = (ProdVer[0] << 16) | ProdVer[1];
+  FixedInfo.ProductVersionLS = (ProdVer[2] << 16) | ProdVer[3];
+
+  FixedInfo.FileFlagsMask = GetField(VersionInfoFixed::FtFileFlagsMask)[0];
+  FixedInfo.FileFlags = GetField(VersionInfoFixed::FtFileFlags)[0];
+  FixedInfo.FileOS = GetField(VersionInfoFixed::FtFileOS)[0];
+  FixedInfo.FileType = GetField(VersionInfoFixed::FtFileType)[0];
+  FixedInfo.FileSubtype = GetField(VersionInfoFixed::FtFileSubtype)[0];
+
+  writeObject(FixedInfo);
+  padStream(sizeof(uint32_t));
+
+  RETURN_IF_ERROR(writeVersionInfoBlock(Res->MainBlock));
+
+  // FIXME: check overflow?
+  writeObjectAt(ulittle16_t(tell() - LengthLoc), LengthLoc);
+
+  return Error::success();
 }
 
 } // namespace rc

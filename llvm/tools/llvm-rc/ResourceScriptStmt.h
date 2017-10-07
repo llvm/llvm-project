@@ -22,17 +22,62 @@
 namespace llvm {
 namespace rc {
 
+// Integer wrapper that also holds information whether the user declared
+// the integer to be long (by appending L to the end of the integer) or not.
+// It allows to be implicitly cast from and to uint32_t in order
+// to be compatible with the parts of code that don't care about the integers
+// being marked long.
+class RCInt {
+  uint32_t Val;
+  bool Long;
+
+public:
+  RCInt(const RCToken &Token)
+      : Val(Token.intValue()), Long(Token.isLongInt()) {}
+  RCInt(uint32_t Value) : Val(Value), Long(false) {}
+  RCInt(uint32_t Value, bool IsLong) : Val(Value), Long(IsLong) {}
+  operator uint32_t() const { return Val; }
+  bool isLong() const { return Long; }
+
+  RCInt &operator+=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val + Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt &operator-=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val - Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt &operator|=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val | Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt &operator&=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val & Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt operator-() const { return {-Val, Long}; }
+  RCInt operator~() const { return {~Val, Long}; }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const RCInt &Int) {
+    return OS << Int.Val << (Int.Long ? "L" : "");
+  }
+};
+
 // A class holding a name - either an integer or a reference to the string.
 class IntOrString {
 private:
   union Data {
-    uint32_t Int;
+    RCInt Int;
     StringRef String;
-    Data(uint32_t Value) : Int(Value) {}
+    Data(RCInt Value) : Int(Value) {}
     Data(const StringRef Value) : String(Value) {}
     Data(const RCToken &Token) {
       if (Token.kind() == RCToken::Kind::Int)
-        Int = Token.intValue();
+        Int = RCInt(Token);
       else
         String = Token.value();
     }
@@ -40,8 +85,9 @@ private:
   bool IsInt;
 
 public:
-  IntOrString() : IntOrString(0) {}
+  IntOrString() : IntOrString(RCInt(0)) {}
   IntOrString(uint32_t Value) : Data(Value), IsInt(1) {}
+  IntOrString(RCInt Value) : Data(Value), IsInt(1) {}
   IntOrString(StringRef Value) : Data(Value), IsInt(0) {}
   IntOrString(const RCToken &Token)
       : Data(Token), IsInt(Token.kind() == RCToken::Kind::Int) {}
@@ -52,7 +98,7 @@ public:
 
   bool isInt() const { return IsInt; }
 
-  uint32_t getInt() const {
+  RCInt getInt() const {
     assert(IsInt);
     return Data.Int;
   }
@@ -74,9 +120,14 @@ enum ResourceKind {
   // (TYPE in RESOURCEHEADER structure). The numeric value assigned to each
   // kind is equal to this type ID.
   RkNull = 0,
+  RkSingleCursor = 1,
+  RkSingleIcon = 3,
   RkMenu = 4,
   RkDialog = 5,
+  RkStringTableBundle = 6,
   RkAccelerators = 9,
+  RkCursorGroup = 12,
+  RkIconGroup = 14,
   RkVersionInfo = 16,
   RkHTML = 23,
 
@@ -88,7 +139,10 @@ enum ResourceKind {
   RkBase,
   RkCursor,
   RkIcon,
-  RkUser
+  RkStringTable,
+  RkUser,
+  RkSingleCursorOrIconRes,
+  RkCursorOrIconGroupRes,
 };
 
 // Non-zero memory flags.
@@ -255,22 +309,38 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380920(v=vs.85).aspx
 class CursorResource : public RCResource {
+public:
   StringRef CursorLoc;
 
-public:
   CursorResource(StringRef Location) : CursorLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  Twine getResourceTypeName() const override { return "CURSOR"; }
+  Error visit(Visitor *V) const override {
+    return V->visitCursorResource(this);
+  }
+  ResourceKind getKind() const override { return RkCursor; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkCursor;
+  }
 };
 
 // ICON resource. Represents a single ".ico" file containing a group of icons.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381018(v=vs.85).aspx
 class IconResource : public RCResource {
+public:
   StringRef IconLoc;
 
-public:
   IconResource(StringRef Location) : IconLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  Twine getResourceTypeName() const override { return "ICON"; }
+  Error visit(Visitor *V) const override { return V->visitIconResource(this); }
+  ResourceKind getKind() const override { return RkIcon; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkIcon;
+  }
 };
 
 // HTML resource. Represents a local webpage that is to be embedded into the
@@ -420,14 +490,18 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381050(v=vs.85).aspx
 class StringTableResource : public OptStatementsRCResource {
+public:
   std::vector<std::pair<uint32_t, StringRef>> Table;
 
-public:
   using OptStatementsRCResource::OptStatementsRCResource;
   void addString(uint32_t ID, StringRef String) {
     Table.emplace_back(ID, String);
   }
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "STRINGTABLE"; }
+  Error visit(Visitor *V) const override {
+    return V->visitStringTableResource(this);
+  }
 };
 
 // -- DIALOG(EX) resource and its helper classes --
@@ -517,18 +591,29 @@ public:
 //   * a link to the file, e.g. NAME TYPE "filename",
 //   * or contains a list of integers and strings, e.g. NAME TYPE {1, "a", 2}.
 class UserDefinedResource : public RCResource {
+public:
   IntOrString Type;
   StringRef FileLoc;
   std::vector<IntOrString> Contents;
   bool IsFileResource;
 
-public:
   UserDefinedResource(IntOrString ResourceType, StringRef FileLocation)
       : Type(ResourceType), FileLoc(FileLocation), IsFileResource(true) {}
   UserDefinedResource(IntOrString ResourceType, std::vector<IntOrString> &&Data)
       : Type(ResourceType), Contents(std::move(Data)), IsFileResource(false) {}
 
   raw_ostream &log(raw_ostream &) const override;
+  IntOrString getResourceType() const override { return Type; }
+  Twine getResourceTypeName() const override { return Type; }
+  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+
+  Error visit(Visitor *V) const override {
+    return V->visitUserDefinedResource(this);
+  }
+  ResourceKind getKind() const override { return RkUser; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkUser;
+  }
 };
 
 // -- VERSIONINFO resource and its helper classes --
@@ -548,8 +633,15 @@ public:
 // A single VERSIONINFO statement;
 class VersionInfoStmt {
 public:
+  enum StmtKind { StBase = 0, StBlock = 1, StValue = 2 };
+
   virtual raw_ostream &log(raw_ostream &OS) const { return OS << "VI stmt\n"; }
   virtual ~VersionInfoStmt() {}
+
+  virtual StmtKind getKind() const { return StBase; }
+  static bool classof(const VersionInfoStmt *S) {
+    return S->getKind() == StBase;
+  }
 };
 
 // BLOCK definition; also the main VERSIONINFO declaration is considered a
@@ -557,25 +649,38 @@ public:
 // The correct top-level blocks are "VarFileInfo" and "StringFileInfo". We don't
 // care about them at the parsing phase.
 class VersionInfoBlock : public VersionInfoStmt {
+public:
   std::vector<std::unique_ptr<VersionInfoStmt>> Stmts;
   StringRef Name;
 
-public:
   VersionInfoBlock(StringRef BlockName) : Name(BlockName) {}
   void addStmt(std::unique_ptr<VersionInfoStmt> Stmt) {
     Stmts.push_back(std::move(Stmt));
   }
   raw_ostream &log(raw_ostream &) const override;
+
+  StmtKind getKind() const override { return StBlock; }
+  static bool classof(const VersionInfoStmt *S) {
+    return S->getKind() == StBlock;
+  }
 };
 
 class VersionInfoValue : public VersionInfoStmt {
+public:
   StringRef Key;
   std::vector<IntOrString> Values;
+  std::vector<bool> HasPrecedingComma;
 
-public:
-  VersionInfoValue(StringRef InfoKey, std::vector<IntOrString> &&Vals)
-      : Key(InfoKey), Values(std::move(Vals)) {}
+  VersionInfoValue(StringRef InfoKey, std::vector<IntOrString> &&Vals,
+                   std::vector<bool> &&CommasBeforeVals)
+      : Key(InfoKey), Values(std::move(Vals)),
+        HasPrecedingComma(std::move(CommasBeforeVals)) {}
   raw_ostream &log(raw_ostream &) const override;
+
+  StmtKind getKind() const override { return StValue; }
+  static bool classof(const VersionInfoStmt *S) {
+    return S->getKind() == StValue;
+  }
 };
 
 class VersionInfoResource : public RCResource {
@@ -619,16 +724,24 @@ public:
     raw_ostream &log(raw_ostream &) const;
   };
 
-private:
   VersionInfoBlock MainBlock;
   VersionInfoFixed FixedData;
 
-public:
   VersionInfoResource(VersionInfoBlock &&TopLevelBlock,
                       VersionInfoFixed &&FixedInfo)
       : MainBlock(std::move(TopLevelBlock)), FixedData(std::move(FixedInfo)) {}
 
   raw_ostream &log(raw_ostream &) const override;
+  IntOrString getResourceType() const override { return RkVersionInfo; }
+  uint16_t getMemoryFlags() const override { return MfMoveable | MfPure; }
+  Twine getResourceTypeName() const override { return "VERSIONINFO"; }
+  Error visit(Visitor *V) const override {
+    return V->visitVersionInfoResource(this);
+  }
+  ResourceKind getKind() const override { return RkVersionInfo; }
+  static bool classof(const RCResource *Res) {
+    return Res->getKind() == RkVersionInfo;
+  }
 };
 
 // CHARACTERISTICS optional statement.
@@ -665,11 +778,13 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380778(v=vs.85).aspx
 class CaptionStmt : public OptionalStmt {
+public:
   StringRef Value;
 
-public:
   CaptionStmt(StringRef Caption) : Value(Caption) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "CAPTION"; }
+  Error visit(Visitor *V) const override { return V->visitCaptionStmt(this); }
 };
 
 // FONT optional statement.
@@ -679,24 +794,31 @@ public:
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381013(v=vs.85).aspx
 class FontStmt : public OptionalStmt {
-  uint32_t Size;
-  StringRef Typeface;
-
 public:
-  FontStmt(uint32_t FontSize, StringRef FontName)
-      : Size(FontSize), Typeface(FontName) {}
+  uint32_t Size, Weight, Charset;
+  StringRef Name;
+  bool Italic;
+
+  FontStmt(uint32_t FontSize, StringRef FontName, uint32_t FontWeight,
+           bool FontItalic, uint32_t FontCharset)
+      : Size(FontSize), Weight(FontWeight), Charset(FontCharset),
+        Name(FontName), Italic(FontItalic) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "FONT"; }
+  Error visit(Visitor *V) const override { return V->visitFontStmt(this); }
 };
 
 // STYLE optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381051(v=vs.85).aspx
 class StyleStmt : public OptionalStmt {
+public:
   uint32_t Value;
 
-public:
   StyleStmt(uint32_t Style) : Value(Style) {}
   raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "STYLE"; }
+  Error visit(Visitor *V) const override { return V->visitStyleStmt(this); }
 };
 
 } // namespace rc

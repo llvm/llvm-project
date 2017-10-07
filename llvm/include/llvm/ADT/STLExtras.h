@@ -902,6 +902,13 @@ auto partition(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
   return std::partition(std::begin(Range), std::end(Range), P);
 }
 
+/// Provide wrappers to std::lower_bound which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename ForwardIt>
+auto lower_bound(R &&Range, ForwardIt I) -> decltype(std::begin(Range)) {
+  return std::lower_bound(std::begin(Range), std::end(Range), I);
+}
+
 /// \brief Given a range of type R, iterate the entire range and return a
 /// SmallVector with elements of the vector.  This is useful, for example,
 /// when you want to iterate a range and then sort the results.

@@ -482,9 +482,7 @@ void MachODebugMapParser::loadMainBinarySymbols(
     // are the only ones that need to be queried because the address
     // of common data won't be described in the debug map. All other
     // addresses should be fetched for the debug map.
-    uint8_t SymType =
-        MainBinary.getSymbolTableEntry(Sym.getRawDataRefImpl()).n_type;
-    if (!(SymType & (MachO::N_EXT | MachO::N_PEXT)))
+    if (!(Sym.getFlags() & SymbolRef::SF_Global))
       continue;
     Expected<section_iterator> SectionOrErr = Sym.getSection();
     if (!SectionOrErr) {

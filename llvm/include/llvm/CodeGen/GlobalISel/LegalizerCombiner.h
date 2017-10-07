@@ -41,9 +41,7 @@ public:
       Builder.setInstr(MI);
       // We get a copy/trunc/extend depending on the sizes
       Builder.buildAnyExtOrTrunc(DstReg, SrcReg);
-      MI.eraseFromParent();
-      if (MRI.use_empty(DefMI->getOperand(0).getReg()))
-        DeadInsts.push_back(DefMI);
+      markInstAndDefDead(MI, *DefMI, DeadInsts);
       return true;
     }
     return false;
@@ -68,9 +66,7 @@ public:
       // We get a copy/trunc/extend depending on the sizes
       auto SrcCopyOrTrunc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc);
       Builder.buildAnd(DstReg, SrcCopyOrTrunc, MaskCstMIB);
-      MI.eraseFromParent();
-      if (MRI.use_empty(DefMI->getOperand(0).getReg()))
-        DeadInsts.push_back(DefMI);
+      markInstAndDefDead(MI, *DefMI, DeadInsts);
       return true;
     }
     return false;
@@ -97,9 +93,7 @@ public:
       auto ShlMIB = Builder.buildInstr(TargetOpcode::G_SHL, DstTy,
                                        SrcCopyExtOrTrunc, SizeDiffMIB);
       Builder.buildInstr(TargetOpcode::G_ASHR, DstReg, ShlMIB, SizeDiffMIB);
-      MI.eraseFromParent();
-      if (MRI.use_empty(DefMI->getOperand(0).getReg()))
-        DeadInsts.push_back(DefMI);
+      markInstAndDefDead(MI, *DefMI, DeadInsts);
       return true;
     }
     return false;
@@ -175,17 +169,14 @@ public:
                            MergeI->getOperand(Idx + 1).getReg());
     }
 
-    MI.eraseFromParent();
-    if (MRI.use_empty(MergeI->getOperand(0).getReg()))
-      DeadInsts.push_back(MergeI);
+    markInstAndDefDead(MI, *MergeI, DeadInsts);
     return true;
   }
 
   /// Try to combine away MI.
   /// Returns true if it combined away the MI.
-  /// Caller should not rely in MI existing as it may be deleted.
   /// Adds instructions that are dead as a result of the combine
-  // into DeadInsts
+  /// into DeadInsts, which can include MI.
   bool tryCombineInstruction(MachineInstr &MI,
                              SmallVectorImpl<MachineInstr *> &DeadInsts) {
     switch (MI.getOpcode()) {
@@ -200,6 +191,16 @@ public:
     case TargetOpcode::G_UNMERGE_VALUES:
       return tryCombineMerges(MI, DeadInsts);
     }
+  }
+
+private:
+  /// Mark MI as dead. If a def of one of MI's operands, DefMI, would also be
+  /// dead due to MI being killed, then mark DefMI as dead too.
+  void markInstAndDefDead(MachineInstr &MI, MachineInstr &DefMI,
+                          SmallVectorImpl<MachineInstr *> &DeadInsts) {
+    DeadInsts.push_back(&MI);
+    if (MRI.hasOneUse(DefMI.getOperand(0).getReg()))
+      DeadInsts.push_back(&DefMI);
   }
 };
 
