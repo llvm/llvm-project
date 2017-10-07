@@ -84,10 +84,6 @@ public:
 
   void addSection(InputSection *S);
 
-  // Used for implementation of --compress-debug-sections option.
-  std::vector<uint8_t> ZDebugHeader;
-  llvm::SmallVector<char, 1> CompressedData;
-
   // Location in the output buffer.
   uint8_t *Loc = nullptr;
 
@@ -108,11 +104,17 @@ public:
   template <class ELFT> void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void maybeCompress();
-  uint32_t getFiller();
 
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
+
+private:
+  // Used for implementation of --compress-debug-sections option.
+  std::vector<uint8_t> ZDebugHeader;
+  llvm::SmallVector<char, 1> CompressedData;
+
+  uint32_t getFiller();
 };
 
 int getPriority(StringRef S);
@@ -140,6 +142,7 @@ struct SectionKey {
 };
 } // namespace elf
 } // namespace lld
+
 namespace llvm {
 template <> struct DenseMapInfo<lld::elf::SectionKey> {
   static lld::elf::SectionKey getEmptyKey();
@@ -149,9 +152,9 @@ template <> struct DenseMapInfo<lld::elf::SectionKey> {
                       const lld::elf::SectionKey &RHS);
 };
 } // namespace llvm
+
 namespace lld {
 namespace elf {
-
 // This class knows how to create an output section for a given
 // input section. Output section type is determined by various
 // factors, including input section's sh_flags, sh_type and
@@ -161,8 +164,8 @@ public:
   OutputSectionFactory();
   ~OutputSectionFactory();
 
-  void addInputSec(InputSectionBase *IS, StringRef OutsecName,
-                   OutputSection *OS = nullptr);
+  OutputSection *addInputSec(InputSectionBase *IS, StringRef OutsecName);
+  void addInputSec(InputSectionBase *IS, OutputSection *OS);
 
 private:
   llvm::SmallDenseMap<SectionKey, OutputSection *> Map;

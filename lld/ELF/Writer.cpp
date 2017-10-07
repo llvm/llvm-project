@@ -876,13 +876,15 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  std::vector<BaseCommand *> Old = Script->Opt.Commands;
-  Script->Opt.Commands.clear();
+  std::vector<OutputSection *> Vec;
   for (InputSectionBase *IS : InputSections)
     if (IS)
-      Factory.addInputSec(IS, getOutputSectionName(IS->Name));
-  Script->Opt.Commands.insert(Script->Opt.Commands.end(), Old.begin(),
-                              Old.end());
+      if (OutputSection *Sec =
+              Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
+        Vec.push_back(Sec);
+
+  Script->Opt.Commands.insert(Script->Opt.Commands.begin(), Vec.begin(),
+                              Vec.end());
 
   Script->fabricateDefaultCommands();
   sortBySymbolsOrder();
@@ -1911,16 +1913,14 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
-  parallelForEach(OutputSections, [&](OutputSection *Sec) {
+  for (OutputSection *Sec : OutputSections)
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
-  });
 
-  parallelForEach(OutputSections, [&](OutputSection *Sec) {
+  for (OutputSection *Sec : OutputSections)
     if (Sec != Out::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
         Sec->Type != SHT_RELA)
       Sec->writeTo<ELFT>(Buf + Sec->Offset);
-  });
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.
