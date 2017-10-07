@@ -40,6 +40,15 @@ foreach(arch ${UBSAN_TEST_ARCH})
   endif()
 endforeach()
 
+if(APPLE)
+  foreach(arch ${UBSAN_TEST_ARCH})
+    set(UBSAN_TEST_TARGET_ARCH ${arch})
+    get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
+    append("-lc++abi" UBSAN_TEST_TARGET_CFLAGS)
+    add_ubsan_testsuite("StandaloneStatic" ubsan ${arch})
+  endforeach()
+endif()
+
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
