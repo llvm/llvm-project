@@ -47,7 +47,7 @@ class PointerIntPair {
   intptr_t Value;
 
 public:
-  PointerIntPair() : Value(0) {}
+  constexpr PointerIntPair() : Value(0) {}
   PointerIntPair(PointerTy PtrVal, IntType IntVal) {
     setPointerAndInt(PtrVal, IntVal);
   }

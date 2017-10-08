@@ -55,6 +55,8 @@ matrix:
 
 script:
   - $PYTHON ./configure.py --with-llvm-config=$LLVM_CONFIG --with-cxx-compiler=$CXX && make -j4
-  - for f in $CHECK_FILES; do
-        ./check_external_calls.sh built_libs/$f;
-    done
+  - ret=0;
+    for f in $CHECK_FILES; do
+        ./check_external_calls.sh built_libs/$f || ret=1;
+    done;
+    test $ret -eq 0

@@ -535,7 +535,6 @@ TEST_F(BinaryStreamTest, StreamReaderEnum) {
 
     BinaryStreamReader Reader(*Stream.Input);
 
-    ArrayRef<MyEnum> Array;
     FixedStreamArray<MyEnum> FSA;
 
     for (size_t I = 0; I < Enums.size(); ++I) {

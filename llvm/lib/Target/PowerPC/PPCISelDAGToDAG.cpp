@@ -579,8 +579,6 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
 
     unsigned MB, ME;
     if (isRunOfOnes(InsertMask, MB, ME)) {
-      SDValue Tmp1, Tmp2;
-
       if ((Op1Opc == ISD::SHL || Op1Opc == ISD::SRL) &&
           isInt32Immediate(Op1.getOperand(1), Value)) {
         Op1 = Op1.getOperand(0);
