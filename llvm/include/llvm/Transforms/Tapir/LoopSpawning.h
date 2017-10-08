@@ -25,11 +25,13 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Tapir/TapirTypes.h"
 
 namespace llvm {
 
 /// The LoopSpawning Pass.
 struct LoopSpawningPass : public PassInfoMixin<LoopSpawningPass> {
+  tapir::TapirTarget* tapirTarget;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }

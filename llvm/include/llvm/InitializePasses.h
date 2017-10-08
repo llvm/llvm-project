@@ -259,7 +259,7 @@ void initializeLowerWidenableConditionLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokeLegacyPassPass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);
-void initializeLowerTapirToCilkPass(PassRegistry&);
+void initializeLowerTapirToTargetPass(PassRegistry&);
 void initializeLowerTypeTestsPass(PassRegistry&);
 void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry&);

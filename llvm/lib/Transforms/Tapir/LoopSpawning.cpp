@@ -47,6 +47,8 @@
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Tapir.h"
 #include "llvm/Transforms/Tapir/CilkABI.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
+#include "llvm/Transforms/Tapir/TapirUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -57,6 +59,7 @@
 using std::make_pair;
 
 using namespace llvm;
+using namespace llvm::tapir;
 
 #define LS_NAME "loop-spawning"
 #define DEBUG_TYPE LS_NAME
@@ -66,6 +69,9 @@ STATISTIC(LoopsConvertedToDAC,
           "Number of Tapir loops converted to divide-and-conquer iteration spawning");
 STATISTIC(LoopsConvertedToCilkABI,
           "Number of Tapir loops converted to use the Cilk ABI for loops");
+
+cl::opt<bool> cilkTarget("cilk-target", cl::init(false), cl::Hidden,
+                       cl::desc("For allowing loop spawning to be cilk abi if none given"));
 
 namespace {
 // Forward declarations.
@@ -393,12 +399,12 @@ public:
   //     : OrigLoop(OrigLoop), SE(SE), LI(LI), DT(DT),
   //       TLI(TLI), TTI(TTI), ORE(ORE)
   // {}
-
+  TapirTarget* tapirTarget;
   DACLoopSpawning(Loop *OrigLoop, ScalarEvolution &SE,
                   LoopInfo *LI, DominatorTree *DT,
                   AssumptionCache *AC,
-                  OptimizationRemarkEmitter &ORE)
-      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE)
+                  OptimizationRemarkEmitter &ORE, TapirTarget* tapirTarget)
+      : LoopOutline(OrigLoop, SE, LI, DT, AC, ORE), tapirTarget(tapirTarget)
   {}
 
   bool processLoop();
@@ -474,13 +480,15 @@ struct LoopSpawningImpl {
   //     : F(F), GetLI(GetLI), LI(nullptr), GetSE(GetSE), GetDT(GetDT),
   //       ORE(ORE)
   // {}
+  TapirTarget* tapirTarget;
   LoopSpawningImpl(Function &F,
                    LoopInfo &LI,
                    ScalarEvolution &SE,
                    DominatorTree &DT,
                    AssumptionCache &AC,
-                   OptimizationRemarkEmitter &ORE)
-      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE) {}
+                   OptimizationRemarkEmitter &ORE,
+                   TapirTarget* tapirTarget)
+      : F(F), LI(LI), SE(SE), DT(DT), AC(AC), ORE(ORE), tapirTarget(tapirTarget) {}
 
   bool run();
 
@@ -624,7 +632,7 @@ Value* DACLoopSpawning::computeGrainsize(Value *Limit) {
   IRBuilder<> Builder(Preheader->getTerminator());
 
   // Get 8 * workers
-  Value *Workers8 = Builder.CreateIntCast(cilk::GetOrCreateWorker8(*Preheader->getParent()),
+  Value *Workers8 = Builder.CreateIntCast(tapirTarget->GetOrCreateWorker8(*Preheader->getParent()),
                                           Limit->getType(), false);
   // Compute ceil(limit / 8 * workers) = (limit + 8 * workers - 1) / (8 * workers)
   Value *SmallLoopVal =
@@ -857,6 +865,10 @@ static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
 /// Top-level call to convert loop to spawn its iterations in a
 /// divide-and-conquer fashion.
 bool DACLoopSpawning::processLoop() {
+  if (!tapirTarget) {
+    return false;
+  }
+
   Loop *L = OrigLoop;
 
   BasicBlock *Header = L->getHeader();
@@ -2192,7 +2204,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
     {
       DebugLoc DLoc = L->getStartLoc();
       BasicBlock *Header = L->getHeader();
-      DACLoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE);
+      DACLoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE, tapirTarget);
       // CilkABILoopSpawning DLS(L, SE, &LI, &DT, &AC, ORE);
       // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
       if (DLS.processLoop()) {
@@ -2278,7 +2290,7 @@ PreservedAnalyses LoopSpawningPass::run(Function &F,
     AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   // OptimizationRemarkEmitter ORE(F);
 
-  bool Changed = LoopSpawningImpl(F, LI, SE, DT, AC, ORE).run();
+  bool Changed = LoopSpawningImpl(F, LI, SE, DT, AC, ORE, tapirTarget).run();
 
   AM.invalidate<ScalarEvolutionAnalysis>(F);
 
@@ -2291,9 +2303,14 @@ namespace {
 struct LoopSpawning : public FunctionPass {
   /// Pass identification, replacement for typeid
   static char ID;
-
-  explicit LoopSpawning() : FunctionPass(ID) {
-    initializeLoopSpawningPass(*PassRegistry::getPassRegistry());
+  TapirTarget* tapirTarget;
+  explicit LoopSpawning(TapirTarget* tapirTarget = nullptr) : FunctionPass(ID),
+    tapirTarget(tapirTarget) {
+      if (!this->tapirTarget && cilkTarget) {
+        this->tapirTarget = new tapir::CilkABI();
+      }
+      assert(this->tapirTarget);
+      initializeLoopSpawningPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override {
@@ -2320,57 +2337,9 @@ struct LoopSpawning : public FunctionPass {
     auto &ORE =
       getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     // OptimizationRemarkEmitter ORE(F);
-    return LoopSpawningImpl(F, LI, SE, DT, AC, ORE).run();
+
+    return LoopSpawningImpl(F, LI, SE, DT, AC, ORE, tapirTarget).run();
   }
-
-  // bool runOnModule(Module &M) override {
-  //   if (skipModule(M))
-  //     return false;
-
-  //   // Find functions that detach for processing.
-  //   SmallVector<Function *, 4> WorkList;
-  //   for (Function &F : M)
-  //     for (BasicBlock &BB : F)
-  //       if (isa<DetachInst>(BB.getTerminator()))
-  //         WorkList.push_back(&F);
-
-  //   if (WorkList.empty())
-  //     return false;
-
-  //   auto GetLI = [this](Function &F) -> LoopInfo & {
-  //     return getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-  //   };
-  //   auto GetSE = [this](Function &F) -> ScalarEvolution & {
-  //     return getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
-  //   };
-  //   auto GetDT = [this](Function &F) -> DominatorTree & {
-  //     return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  //   };
-
-  //   bool Changed = false;
-  //   while (!WorkList.empty()) {
-  //     // Process the next function.
-  //     Function *F = WorkList.back();
-  //     // auto *LI = &getAnalysis<LoopInfoWrapperPass>(*F).getLoopInfo();
-  //     // auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>(*F).getSE();
-  //     // auto *DT = &getAnalysis<DominatorTreeWrapperPass>(*F).getDomTree();
-  //     // auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
-  //     // auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  //     // auto *TLI = TLIP ? &TLIP->getTLI() : nullptr;
-  //     // auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-  //     // auto *AA = &getAnalysis<AAResultsWrapperPass>(*F).getAAResults();
-  //     // auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
-  //     auto &ORE =
-  //       getAnalysis<OptimizationRemarkEmitterWrapperPass>(*F).getORE();
-  //     // OptimizationRemarkEmitter ORE(F);
-  //     // LoopSpawningImpl Impl(*F, GetLI, GetSE, GetDT, *TTI, TLI, *AA, *AC, ORE);
-  //     LoopSpawningImpl Impl(*F, GetLI, GetSE, GetDT, ORE);
-  //     Changed |= Impl.run();
-
-  //     WorkList.pop_back();
-  //   }
-  //   return Changed;
-  // }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
@@ -2407,7 +2376,7 @@ INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LoopSpawning, LS_NAME, ls_name, false, false)
 
 namespace llvm {
-Pass *createLoopSpawningPass() {
-  return new LoopSpawning();
+Pass *createLoopSpawningPass(TapirTarget* target) {
+  return new LoopSpawning(target);
 }
 }

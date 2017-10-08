@@ -15,6 +15,8 @@
 #ifndef LLVM_TRANSFORMS_TAPIR_H
 #define LLVM_TRANSFORMS_TAPIR_H
 
+#include "llvm/Transforms/Tapir/TapirUtils.h"
+
 namespace llvm {
 class Pass;
 class ModulePass;
@@ -24,7 +26,7 @@ class FunctionPass;
 //
 // LoopSpawning - Create a loop spawning pass.
 //
-Pass *createLoopSpawningPass();
+Pass *createLoopSpawningPass(tapir::TapirTarget*);
 
 //===----------------------------------------------------------------------===//
 //
@@ -60,8 +62,7 @@ FunctionPass *createSpawnUnswitchPass();
 //
 // PromoteDetachToCilk
 //
-ModulePass *createLowerTapirToCilkPass(bool DisablePostOpts = false,
-                                       bool Instrument = false);
+ModulePass *createLowerTapirToTargetPass(tapir::TapirTarget*);
 
 } // End llvm namespace
 
