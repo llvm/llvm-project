@@ -368,7 +368,8 @@ let Predicates = [HasAVX512, NoVLX] in {
 // where we explicitly insert zeros.
 class veczeroupper<ValueType vt, RegisterClass RC> :
   PatLeaf<(vt RC:$src), [{
-    return N->getOpcode() == X86ISD::VPMADDWD;
+    return N->getOpcode() == X86ISD::VPMADDWD ||
+           N->getOpcode() == X86ISD::PSADBW;
   }]>;
 
 def zeroupperv2f64 : veczeroupper<v2f64, VR128>;

@@ -30465,29 +30465,6 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
     return BitcastAndCombineShuffle(Opcode, Op.getOperand(0), Op.getOperand(1),
                                     Op.getOperand(2));
   }
-  case ISD::INSERT_SUBVECTOR: {
-    unsigned EltSize = EltVT.getSizeInBits();
-    if (EltSize != 32 && EltSize != 64)
-      return false;
-    MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
-    // Only change element size, not type.
-    if (EltVT.isInteger() != OpEltVT.isInteger())
-      return false;
-    uint64_t Imm = Op.getConstantOperandVal(2);
-    Imm = (Imm * OpEltVT.getSizeInBits()) / EltSize;
-    SDValue Op0 = DAG.getBitcast(VT, Op.getOperand(0));
-    DCI.AddToWorklist(Op0.getNode());
-    // Op1 needs to be bitcasted to a smaller vector with the same element type.
-    SDValue Op1 = Op.getOperand(1);
-    MVT Op1VT = MVT::getVectorVT(EltVT,
-                            Op1.getSimpleValueType().getSizeInBits() / EltSize);
-    Op1 = DAG.getBitcast(Op1VT, Op1);
-    DCI.AddToWorklist(Op1.getNode());
-    DCI.CombineTo(OrigOp.getNode(),
-                  DAG.getNode(Opcode, DL, VT, Op0, Op1,
-                              DAG.getIntPtrConstant(Imm, DL)));
-    return true;
-  }
   case X86ISD::SUBV_BROADCAST: {
     unsigned EltSize = EltVT.getSizeInBits();
     if (EltSize != 32 && EltSize != 64)
@@ -36112,9 +36089,8 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   SDValue Vec = N->getOperand(0);
   SDValue SubVec = N->getOperand(1);
-  SDValue Idx = N->getOperand(2);
 
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned IdxVal = N->getConstantOperandVal(2);
   MVT SubVecVT = SubVec.getSimpleValueType();
 
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
@@ -36130,6 +36106,20 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec,
                          SubVec.getOperand(1),
                          DAG.getIntPtrConstant(IdxVal + Idx2Val, dl));
+    }
+
+    // If we're inserting a bitcast into zeros, rewrite the insert and move the
+    // bitcast to the other side. This helps with detecting zero extending
+    // during isel.
+    // TODO: Is this useful for other indices than 0?
+    if (SubVec.getOpcode() == ISD::BITCAST && IdxVal == 0) {
+      MVT CastVT = SubVec.getOperand(0).getSimpleValueType();
+      unsigned NumElems = OpVT.getSizeInBits() / CastVT.getScalarSizeInBits();
+      MVT NewVT = MVT::getVectorVT(CastVT.getVectorElementType(), NumElems);
+      SDValue Insert = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NewVT,
+                                   DAG.getBitcast(NewVT, Vec),
+                                   SubVec.getOperand(0), N->getOperand(2));
+      return DAG.getBitcast(OpVT, Insert);
     }
   }
 
@@ -36220,7 +36210,8 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
         Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, DAG.getUNDEF(OpVT),
                           SubVec2, Vec.getOperand(2));
         DCI.AddToWorklist(Vec.getNode());
-        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec, SubVec, Idx);
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Vec, SubVec,
+                           N->getOperand(2));
 
       }
     }
