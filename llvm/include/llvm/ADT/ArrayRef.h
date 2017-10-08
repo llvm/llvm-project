@@ -294,7 +294,7 @@ namespace llvm {
     using reverse_iterator = std::reverse_iterator<iterator>;
 
     /// Construct an empty MutableArrayRef.
-    /*implicit*/ MutableArrayRef() : ArrayRef<T>() {}
+    /*implicit*/ MutableArrayRef() = default;
 
     /// Construct an empty MutableArrayRef from None.
     /*implicit*/ MutableArrayRef(NoneType) : ArrayRef<T>() {}

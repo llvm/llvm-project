@@ -492,12 +492,10 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; VL_BW_DQ-LABEL: shuf8i1__9_6_1_10_3_7_7_1:
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
-; VL_BW_DQ-NEXT:    movb $51, %al
-; VL_BW_DQ-NEXT:    kmovd %eax, %k1
-; VL_BW_DQ-NEXT:    vpmovm2q %k1, %zmm0
-; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm1
-; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [9,6,1,0,3,7,7,1]
-; VL_BW_DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
+; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [9,6,1,0,3,7,7,1]
+; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [18446744073709551615,18446744073709551615,0,0,18446744073709551615,18446744073709551615,0,0]
+; VL_BW_DQ-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
 ; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>

@@ -162,8 +162,6 @@ public:
     FastMask = (1 << FastWidth) - 1
   };
 
-  Qualifiers() : Mask(0) {}
-
   /// Returns the common set of qualifiers while removing them from
   /// the given sets.
   static Qualifiers removeCommonQualifiers(Qualifiers &L, Qualifiers &R) {
@@ -539,7 +537,7 @@ private:
 
   // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
   //           |C R V|U|GCAttr|Lifetime|AddressSpace|
-  uint32_t Mask;
+  uint32_t Mask = 0;
 
   static const uint32_t UMask = 0x8;
   static const uint32_t UShift = 3;
@@ -634,7 +632,7 @@ class QualType {
 
   friend class QualifierCollector;
 public:
-  QualType() {}
+  QualType() = default;
 
   QualType(const Type *Ptr, unsigned Quals)
     : Value(Ptr, Quals) {}
