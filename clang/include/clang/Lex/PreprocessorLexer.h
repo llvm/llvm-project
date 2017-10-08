@@ -77,7 +77,7 @@ protected:
   PreprocessorLexer(Preprocessor *pp, FileID fid);
 
   PreprocessorLexer()
-    : PP(nullptr), InitialNumSLocEntries(0),
+    : PP(nullptr), FID(), InitialNumSLocEntries(0),
       ParsingPreprocessorDirective(false),
       ParsingFilename(false),
       LexingRawMode(false) {}
