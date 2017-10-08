@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+sse4.2 | FileCheck %s --check-prefix=SSE --check-prefix=SSE42
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+xop | FileCheck %s --check-prefix=XOP
 
 define void @v3i64(<2 x i64> %a, <2 x i64> %b, <3 x i64>* %p) nounwind {
 ; SSE2-LABEL: v3i64:
@@ -36,6 +37,13 @@ define void @v3i64(<2 x i64> %a, <2 x i64> %b, <3 x i64>* %p) nounwind {
 ; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v3i64:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; XOP-NEXT:    vpextrq $1, %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovdqa %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <2 x i64> %a, <2 x i64> %b, <3 x i32> <i32 0, i32 2, i32 1>
   store <3 x i64> %r, <3 x i64>* %p
   ret void
@@ -64,6 +72,13 @@ define void @v3f64(<2 x double> %a, <2 x double> %b, <3 x double>* %p) nounwind 
 ; AVX2-NEXT:    vmovapd %xmm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v3f64:
+; XOP:       # BB#0:
+; XOP-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; XOP-NEXT:    vmovhpd %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovapd %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <2 x double> %a, <2 x double> %b, <3 x i32> <i32 0, i32 2, i32 1>
   store <3 x double> %r, <3 x double>* %p
   ret void
@@ -102,6 +117,14 @@ define void @v3i32(<2 x i32> %a, <2 x i32> %b, <3 x i32>* %p) nounwind {
 ; AVX2-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v3i32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
+; XOP-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; XOP-NEXT:    vmovq %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <2 x i32> %a, <2 x i32> %b, <3 x i32> <i32 0, i32 2, i32 1>
   store <3 x i32> %r, <3 x i32>* %p
   ret void
@@ -141,6 +164,13 @@ define void @v5i16(<4 x i16> %a, <4 x i16> %b, <5 x i16>* %p) nounwind {
 ; AVX-NEXT:    vpextrw $6, %xmm0, 8(%rdi)
 ; AVX-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: v5i16:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm0[0,1],xmm1[4,5],xmm0[4,5],xmm1[8,9],xmm0[12,13],xmm1[4,5],xmm0[14,15],xmm1[6,7]
+; XOP-NEXT:    vpextrw $6, %xmm0, 8(%rdi)
+; XOP-NEXT:    vmovq %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x i16> %a, <4 x i16> %b, <5 x i32> <i32 0, i32 5, i32 1, i32 6, i32 3>
   store <5 x i16> %r, <5 x i16>* %p
   ret void
@@ -183,6 +213,14 @@ define void @v5i32(<4 x i32> %a, <4 x i32> %b, <5 x i32>* %p) nounwind {
 ; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v5i32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1],xmm1[1,2]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,1,3]
+; XOP-NEXT:    vpextrd $3, %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovaps %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <5 x i32> <i32 0, i32 5, i32 1, i32 6, i32 3>
   store <5 x i32> %r, <5 x i32>* %p
   ret void
@@ -225,6 +263,14 @@ define void @v5f32(<4 x float> %a, <4 x float> %b, <5 x float>* %p) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v5f32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1],xmm1[1,2]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,1,3]
+; XOP-NEXT:    vextractps $3, %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovaps %xmm1, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x float> %a, <4 x float> %b, <5 x i32> <i32 0, i32 5, i32 1, i32 6, i32 3>
   store <5 x float> %r, <5 x float>* %p
   ret void
@@ -273,6 +319,14 @@ define void @v7i8(<4 x i8> %a, <4 x i8> %b, <7 x i8>* %p) nounwind {
 ; AVX-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: v7i8:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm1[8],xmm0[12],xmm1[8],xmm0[4],xmm1[12,0,14,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpextrb $0, %xmm1, 6(%rdi)
+; XOP-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
+; XOP-NEXT:    vmovd %xmm0, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x i8> %a, <4 x i8> %b, <7 x i32> <i32 0, i32 6, i32 3, i32 6, i32 1, i32 7, i32 4>
   store <7 x i8> %r, <7 x i8>* %p
   ret void
@@ -315,6 +369,14 @@ define void @v7i16(<4 x i16> %a, <4 x i16> %b, <7 x i16>* %p) nounwind {
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: v7i16:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,1],xmm1[8,9],xmm0[12,13],xmm1[8,9],xmm0[4,5],xmm1[12,13,0,1,14,15]
+; XOP-NEXT:    vpextrw $0, %xmm1, 12(%rdi)
+; XOP-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; XOP-NEXT:    vmovq %xmm0, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x i16> %a, <4 x i16> %b, <7 x i32> <i32 0, i32 6, i32 3, i32 6, i32 1, i32 7, i32 4>
   store <7 x i16> %r, <7 x i16>* %p
   ret void
@@ -369,6 +431,17 @@ define void @v7i32(<4 x i32> %a, <4 x i32> %b, <7 x i32>* %p) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v7i32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vblendps {{.*#+}} xmm2 = xmm0[0,1],xmm1[2],xmm0[3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,3,2]
+; XOP-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,0,3]
+; XOP-NEXT:    vmovss %xmm1, 24(%rdi)
+; XOP-NEXT:    vmovlps %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovaps %xmm2, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <7 x i32> <i32 0, i32 6, i32 3, i32 6, i32 1, i32 7, i32 4>
   store <7 x i32> %r, <7 x i32>* %p
   ret void
@@ -414,6 +487,15 @@ define void @v12i8(<8 x i8> %a, <8 x i8> %b, <12 x i8>* %p) nounwind {
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: v12i8:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,xmm1[0],zero,zero,xmm1[2],zero,zero,xmm1[4],zero,zero,xmm1[6,u,u,u,u]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8],zero,xmm0[2,10],zero,xmm0[4,12],zero,xmm0[6,14],zero,xmm0[u,u,u,u]
+; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; XOP-NEXT:    vmovq %xmm0, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <8 x i8> %a, <8 x i8> %b, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
   store <12 x i8> %r, <12 x i8>* %p
   ret void
@@ -480,6 +562,14 @@ define void @v12i16(<8 x i16> %a, <8 x i16> %b, <12 x i16>* %p) nounwind {
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovq %xmm2, 16(%rdi)
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v12i16:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpperm {{.*#+}} xmm2 = xmm0[0,1,8,9],xmm1[0,1],xmm0[2,3,10,11],xmm1[2,3],xmm0[4,5,12,13]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[4,5],xmm0[6,7,14,15],xmm1[6,7],xmm0[8,9,10,11,12,13,14,15]
+; XOP-NEXT:    vmovq %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovdqa %xmm2, (%rdi)
+; XOP-NEXT:    retq
   %r = shufflevector <8 x i16> %a, <8 x i16> %b, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
   store <12 x i16> %r, <12 x i16>* %p
   ret void
@@ -561,6 +651,22 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm2, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: v12i32:
+; XOP:       # BB#0:
+; XOP-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,0,1]
+; XOP-NEXT:    vpermil2ps {{.*#+}} ymm2 = ymm0[0],ymm2[0],ymm0[u,1,5,u],ymm2[6],ymm0[6]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm3 = xmm1[0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm3
+; XOP-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2],ymm2[3,4],ymm3[5],ymm2[6,7]
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm3[3,3]
+; XOP-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,1]
+; XOP-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; XOP-NEXT:    vmovapd %xmm0, 32(%rdi)
+; XOP-NEXT:    vmovaps %ymm2, (%rdi)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %r = shufflevector <8 x i32> %a, <8 x i32> %b, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
   store <12 x i32> %r, <12 x i32>* %p
   ret void
@@ -622,6 +728,14 @@ define void @pr29025(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <12 x i8> *%p) nounw
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: pr29025:
+; XOP:       # BB#0:
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,4,8,12],xmm1[0,4,8,12],xmm0[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,4],xmm2[0],xmm0[1,5],xmm2[4],xmm0[2,6],xmm2[8],xmm0[3,7],xmm2[12],xmm0[u,u,u,u]
+; XOP-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; XOP-NEXT:    vmovq %xmm0, (%rdi)
+; XOP-NEXT:    retq
   %s1 = shufflevector <4 x i8> %a, <4 x i8> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s2 = shufflevector <4 x i8> %c, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %r = shufflevector <8 x i8> %s1, <8 x i8> %s2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
@@ -732,6 +846,24 @@ define void @interleave_24i8_out(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rcx)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i8_out:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovdqu (%rdi), %xmm0
+; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm1[2,5,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = xmm0[0,3,6,9,12,15],zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; XOP-NEXT:    vmovq %xmm2, (%rsi)
+; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,xmm1[0,3,6,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = xmm0[1,4,7,10,13],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; XOP-NEXT:    vmovq %xmm2, (%rdx)
+; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,xmm1[1,4,7,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,5,8,11,14],zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vmovq %xmm0, (%rcx)
+; XOP-NEXT:    retq
   %wide.vec = load <24 x i8>, <24 x i8>* %p, align 4
   %s1 = shufflevector <24 x i8> %wide.vec, <24 x i8> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
   %s2 = shufflevector <24 x i8> %wide.vec, <24 x i8> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
@@ -820,6 +952,22 @@ define void @interleave_24i8_in(<24 x i8>* %p, <8 x i8>* %q1, <8 x i8>* %q2, <8 
 ; AVX-NEXT:    vmovq %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovdqu %xmm2, (%rdi)
 ; AVX-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i8_in:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; XOP-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[0,8],zero,xmm0[1,9],zero,xmm0[2,10],zero,xmm0[3,11],zero,xmm0[4,12],zero,xmm0[5]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm1[0],zero,zero,xmm1[1],zero,zero,xmm1[2],zero,zero,xmm1[3],zero,zero,xmm1[4],zero
+; XOP-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[13],zero,xmm0[6,14],zero,xmm0[7,15],zero,xmm0[u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpshufb {{.*#+}} xmm1 = zero,xmm1[5],zero,zero,xmm1[6],zero,zero,xmm1[7,u,u,u,u,u,u,u,u]
+; XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vmovq %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovdqu %xmm2, (%rdi)
+; XOP-NEXT:    retq
   %s1 = load <8 x i8>, <8 x i8>* %q1, align 4
   %s2 = load <8 x i8>, <8 x i8>* %q2, align 4
   %s3 = load <8 x i8>, <8 x i8>* %q3, align 4
@@ -959,6 +1107,23 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rcx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i16_out:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovdqu 32(%rdi), %xmm0
+; XOP-NEXT:    vmovdqu (%rdi), %ymm1
+; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; XOP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0],xmm2[1],xmm1[2,3],xmm2[4],xmm1[5,6],xmm2[7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15],xmm0[4,5,10,11]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm4 = xmm1[0,1],xmm2[2],xmm1[3,4],xmm2[5],xmm1[6,7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11],xmm0[0,1,6,7,12,13]
+; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[4,5,10,11],xmm2[0,1,6,7,12,13,14,15,0,1,2,3]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6,7,8,9],xmm0[2,3,8,9,14,15]
+; XOP-NEXT:    vmovdqu %xmm3, (%rsi)
+; XOP-NEXT:    vmovdqu %xmm4, (%rdx)
+; XOP-NEXT:    vmovdqu %xmm0, (%rcx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %wide.vec = load <24 x i16>, <24 x i16>* %p, align 4
   %s1 = shufflevector <24 x i16> %wide.vec, <24 x i16> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
   %s2 = shufflevector <24 x i16> %wide.vec, <24 x i16> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
@@ -1081,6 +1246,25 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; AVX2-NEXT:    vmovdqu %ymm3, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i16_in:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovdqu (%rsi), %xmm0
+; XOP-NEXT:    vmovdqu (%rdx), %xmm1
+; XOP-NEXT:    vmovdqu (%rcx), %xmm2
+; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm0[4,5,6,7],xmm1[6,7],xmm0[6,7,8,9],xmm1[8,9],xmm0[8,9,10,11]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,2,2]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0],xmm3[1,2],xmm4[3],xmm3[4,5],xmm4[6],xmm3[7]
+; XOP-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm2[0,1],xmm4[4,5,6,7],xmm2[2,3],xmm4[8,9,10,11]
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[10,11],xmm0[12,13,12,13],xmm1[12,13,12,13],xmm0[14,15],xmm1[14,15],xmm0[14,15]
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
+; XOP-NEXT:    vmovdqu %xmm0, 32(%rdi)
+; XOP-NEXT:    vmovups %ymm3, (%rdi)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %s1 = load <8 x i16>, <8 x i16>* %q1, align 4
   %s2 = load <8 x i16>, <8 x i16>* %q2, align 4
   %s3 = load <8 x i16>, <8 x i16>* %q3, align 4
@@ -1244,6 +1428,46 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; AVX2-NEXT:    vmovups %ymm0, (%rcx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i32_out:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovups (%rdi), %ymm0
+; XOP-NEXT:    vmovups 32(%rdi), %ymm1
+; XOP-NEXT:    vmovups 64(%rdi), %ymm2
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; XOP-NEXT:    vinsertps {{.*#+}} xmm4 = zero,zero,xmm2[2],xmm3[1]
+; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; XOP-NEXT:    vblendps {{.*#+}} ymm5 = ymm0[0],ymm1[1],ymm0[2,3],ymm1[4],ymm0[5,6],ymm1[7]
+; XOP-NEXT:    vextractf128 $1, %ymm5, %xmm6
+; XOP-NEXT:    vblendps {{.*#+}} xmm5 = xmm5[0,1],xmm6[2],xmm5[3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm5 = xmm5[0,3,2,1]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm6 = xmm6[0,3,2,3]
+; XOP-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
+; XOP-NEXT:    vblendpd {{.*#+}} ymm4 = ymm5[0,1,2],ymm4[3]
+; XOP-NEXT:    vblendps {{.*#+}} xmm5 = xmm2[0,1],xmm3[2],xmm2[3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm5 = xmm5[0,0,3,2]
+; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm5
+; XOP-NEXT:    vblendps {{.*#+}} ymm6 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
+; XOP-NEXT:    vextractf128 $1, %ymm6, %xmm7
+; XOP-NEXT:    vblendps {{.*#+}} xmm6 = xmm7[0],xmm6[1,2],xmm7[3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm6 = xmm6[1,0,3,2]
+; XOP-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm7[1,1,3,3]
+; XOP-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
+; XOP-NEXT:    vblendps {{.*#+}} ymm5 = ymm6[0,1,2,3,4],ymm5[5,6,7]
+; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0,3]
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; XOP-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; XOP-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,0,3]
+; XOP-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5,6,7]
+; XOP-NEXT:    vmovupd %ymm4, (%rsi)
+; XOP-NEXT:    vmovups %ymm5, (%rdx)
+; XOP-NEXT:    vmovups %ymm0, (%rcx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %wide.vec = load <24 x i32>, <24 x i32>* %p, align 4
   %s1 = shufflevector <24 x i32> %wide.vec, <24 x i32> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
   %s2 = shufflevector <24 x i32> %wide.vec, <24 x i32> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
@@ -1406,6 +1630,38 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-NEXT:    vmovups %ymm3, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: interleave_24i32_in:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovups (%rsi), %ymm0
+; XOP-NEXT:    vmovups (%rdx), %ymm1
+; XOP-NEXT:    vmovupd (%rcx), %ymm2
+; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,0],xmm1[2,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm3[0,2]
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[0,0],xmm0[0,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm0[2,1]
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = xmm2[0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm4
+; XOP-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; XOP-NEXT:    vshufps {{.*#+}} xmm6 = xmm5[3,0],xmm4[3,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[2,1],xmm6[0,2]
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[1,0],xmm5[1,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm5[2,2]
+; XOP-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
+; XOP-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm0[1,1,3,3]
+; XOP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[2,3,2,3]
+; XOP-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2],ymm4[3,4],ymm5[5],ymm4[6,7]
+; XOP-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm2[2],ymm0[3],ymm2[2,3],ymm0[4],ymm2[5,4],ymm0[5]
+; XOP-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
+; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
+; XOP-NEXT:    vmovups %ymm0, 32(%rdi)
+; XOP-NEXT:    vmovupd %ymm4, 64(%rdi)
+; XOP-NEXT:    vmovups %ymm3, (%rdi)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %s1 = load <8 x i32>, <8 x i32>* %q1, align 4
   %s2 = load <8 x i32>, <8 x i32>* %q2, align 4
   %s3 = load <8 x i32>, <8 x i32>* %q3, align 4
@@ -1453,6 +1709,16 @@ define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
 ; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; XOP-LABEL: wrongorder:
+; XOP:       # BB#0:
+; XOP-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; XOP-NEXT:    vmovaps %ymm1, 32(%rdi)
+; XOP-NEXT:    vmovaps %ymm1, (%rdi)
+; XOP-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
   %shuffle = shufflevector <4 x double> %A, <4 x double> %A, <8 x i32> zeroinitializer
   store <8 x double> %shuffle, <8 x double>* %P, align 64
   %m2 = load <8 x double>, <8 x double>* %P, align 64

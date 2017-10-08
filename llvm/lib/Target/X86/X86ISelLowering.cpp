@@ -18028,8 +18028,13 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
     return SDValue();
 
   MVT ExtVT = VT;
-  if (!VT.is512BitVector() && !Subtarget.hasVLX())
+  if (!VT.is512BitVector() && !Subtarget.hasVLX()) {
     ExtVT = MVT::getVectorVT(MVT::getIntegerVT(512/NumElts), NumElts);
+  } else if (VTElt == MVT::i16 || VTElt == MVT::i8) {
+    // If we don't have BWI support we need to extend 8/16-bit to 32-bit.
+    // Otherwise we end up with vselects we can't handle.
+    ExtVT = MVT::getVectorVT(MVT::i32, NumElts);
+  }
 
   SDValue V;
   if (Subtarget.hasDQI()) {
