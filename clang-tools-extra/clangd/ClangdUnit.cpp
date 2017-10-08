@@ -616,7 +616,7 @@ public:
     // Right now the overloaded candidates seem to be provided in a "best fit"
     // order, so I'm not too worried about this.
     SigHelp.activeSignature = 0;
-    assert(CurrentArg <= std::numeric_limits<int>::max() &&
+    assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
            "too many arguments");
     SigHelp.activeParameter = static_cast<int>(CurrentArg);
     for (unsigned I = 0; I < NumCandidates; ++I) {

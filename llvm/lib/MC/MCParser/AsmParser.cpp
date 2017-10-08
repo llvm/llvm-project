@@ -3617,7 +3617,6 @@ bool AsmParser::parseDirectiveCVInlineSiteId() {
 /// optional items are .loc sub-directives.
 bool AsmParser::parseDirectiveCVLoc() {
   SMLoc DirectiveLoc = getTok().getLoc();
-  SMLoc Loc;
   int64_t FunctionId, FileNumber;
   if (parseCVFunctionId(FunctionId, ".cv_loc") ||
       parseCVFileId(FileNumber, ".cv_loc"))

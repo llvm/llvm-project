@@ -54,12 +54,23 @@ public:
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
-  unsigned Live : 1;     // for garbage collection
-  unsigned Assigned : 1; // for linker script
+  unsigned Live : 1;
 
-  uint32_t Alignment;
+  // True if this section has already been placed to a linker script
+  // output section. This is needed because, in a linker script, you
+  // can refer to the same section more than once. For example, in
+  // the following linker script,
+  //
+  //   .foo : { *(.text) }
+  //   .bar : { *(.text) }
+  //
+  // .foo takes all .text sections, and .bar becomes empty. To achieve
+  // this, we need to memorize whether a section has been placed or
+  // not for each input section.
+  unsigned Assigned : 1;
 
   // These corresponds to the fields in Elf_Shdr.
+  uint32_t Alignment;
   uint64_t Flags;
   uint64_t Entsize;
   uint32_t Type;
@@ -106,8 +117,6 @@ public:
                     /*Type*/ 0,
                     /*Info*/ 0, /*Link*/ 0),
         Repl(this) {
-    Live = false;
-    Assigned = false;
     NumRelocations = 0;
     AreRelocsRela = false;
   }

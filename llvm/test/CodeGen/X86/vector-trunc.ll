@@ -394,12 +394,10 @@ define <8 x i16> @trunc8i32_8i16_ashr(<8 x i32> %a) {
 ;
 ; AVX1-LABEL: trunc8i32_8i16_ashr:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vpsrad $16, %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpsrad $16, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrad $16, %xmm0, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm0, %xmm1, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

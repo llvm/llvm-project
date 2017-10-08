@@ -62,7 +62,7 @@ class CallSiteBase {
 protected:
   PointerIntPair<InstrTy*, 1, bool> I;
 
-  CallSiteBase() : I(nullptr, false) {}
+  CallSiteBase() = default;
   CallSiteBase(CallTy *CI) : I(CI, true) { assert(CI); }
   CallSiteBase(InvokeTy *II) : I(II, false) { assert(II); }
   explicit CallSiteBase(ValTy *II) { *this = get(II); }
