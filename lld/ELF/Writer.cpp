@@ -117,7 +117,7 @@ StringRef elf::getOutputSectionName(StringRef Name) {
 
 static bool needsInterpSection() {
   return !SharedFiles.empty() && !Config->DynamicLinker.empty() &&
-         !Script->ignoreInterpSection();
+         Script->needsInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }

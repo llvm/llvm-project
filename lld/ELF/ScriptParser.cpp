@@ -56,7 +56,6 @@ public:
 
 private:
   void addFile(StringRef Path);
-  OutputSection *checkSection(OutputSection *Cmd, StringRef Loccation);
 
   void readAsNeeded();
   void readEntry();
@@ -389,25 +388,26 @@ void ScriptParser::readOutputFormat() {
 
 void ScriptParser::readPhdrs() {
   expect("{");
-  while (!ErrorCount && !consume("}")) {
-    Script->Opt.PhdrsCommands.push_back(
-        {next(), PT_NULL, false, false, UINT_MAX, nullptr});
 
-    PhdrsCommand &PhdrCmd = Script->Opt.PhdrsCommands.back();
-    PhdrCmd.Type = readPhdrType();
+  while (!ErrorCount && !consume("}")) {
+    PhdrsCommand Cmd;
+    Cmd.Name = next();
+    Cmd.Type = readPhdrType();
 
     while (!ErrorCount && !consume(";")) {
       if (consume("FILEHDR"))
-        PhdrCmd.HasFilehdr = true;
+        Cmd.HasFilehdr = true;
       else if (consume("PHDRS"))
-        PhdrCmd.HasPhdrs = true;
+        Cmd.HasPhdrs = true;
       else if (consume("AT"))
-        PhdrCmd.LMAExpr = readParenExpr();
+        Cmd.LMAExpr = readParenExpr();
       else if (consume("FLAGS"))
-        PhdrCmd.Flags = readParenExpr()().getValue();
+        Cmd.Flags = readParenExpr()().getValue();
       else
         setError("unexpected header attribute: " + next());
     }
+
+    Script->Opt.PhdrsCommands.push_back(Cmd);
   }
 }
 
@@ -908,11 +908,9 @@ StringRef ScriptParser::readParenLiteral() {
   return Tok;
 }
 
-OutputSection *ScriptParser::checkSection(OutputSection *Cmd,
-                                          StringRef Location) {
+static void checkIfExists(OutputSection *Cmd, StringRef Location) {
   if (Cmd->Location.empty() && Script->ErrorOnMissingSection)
     error(Location + ": undefined section " + Cmd->Name);
-  return Cmd;
 }
 
 Expr ScriptParser::readPrimary() {
@@ -949,7 +947,8 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
     return [=]() -> ExprValue {
-      return {checkSection(Cmd, Location), 0, Location};
+      checkIfExists(Cmd, Location);
+      return {Cmd, 0, Location};
     };
   }
   if (Tok == "ALIGN") {
@@ -971,7 +970,10 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
     OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
-    return [=] { return checkSection(Cmd, Location)->Alignment; };
+    return [=] {
+      checkIfExists(Cmd, Location);
+      return Cmd->Alignment;
+    };
   }
   if (Tok == "ASSERT")
     return readAssertExpr();
@@ -1007,7 +1009,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "DEFINED") {
     StringRef Name = readParenLiteral();
-    return [=] { return Script->isDefined(Name) ? 1 : 0; };
+    return [=] { return Symtab->find(Name) ? 1 : 0; };
   }
   if (Tok == "LENGTH") {
     StringRef Name = readParenLiteral();
@@ -1018,7 +1020,10 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
     OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
-    return [=] { return checkSection(Cmd, Location)->getLMA(); };
+    return [=] {
+      checkIfExists(Cmd, Location);
+      return Cmd->getLMA();
+    };
   }
   if (Tok == "ORIGIN") {
     StringRef Name = readParenLiteral();

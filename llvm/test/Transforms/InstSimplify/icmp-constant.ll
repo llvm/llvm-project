@@ -571,3 +571,61 @@ define <2 x i1> @add_nsw_pos_const5_splat_vec(<2 x i32> %x) {
   ret <2 x i1> %cmp
 }
 
+; PR34838 - https://bugs.llvm.org/show_bug.cgi?id=34838
+; The shift is known to create poison, so we can simplify the cmp.
+
+define i1 @ne_shl_by_constant_produces_poison(i8 %x) {
+; CHECK-LABEL: @ne_shl_by_constant_produces_poison(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 %x to i16
+; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[ZX]], 32767
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[ZX]], [[XOR]]
+; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i16 [[SUB]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[POISON]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %zx = zext i8 %x to i16      ; zx  = 0x00xx
+  %xor = xor i16 %zx, 32767    ; xor = 0x7fyy
+  %sub = sub nsw i16 %zx, %xor ; sub = 0x80zz  (the top bit is known one)
+  %poison = shl nsw i16 %sub, 2    ; oops! this shl can't be nsw; that's POISON
+  %cmp = icmp ne i16 %poison, 1
+  ret i1 %cmp
+}
+
+define i1 @eq_shl_by_constant_produces_poison(i8 %x) {
+; CHECK-LABEL: @eq_shl_by_constant_produces_poison(
+; CHECK-NEXT:    [[CLEAR_HIGH_BIT:%.*]] = and i8 %x, 127
+; CHECK-NEXT:    [[SET_NEXT_HIGH_BITS:%.*]] = or i8 [[CLEAR_HIGH_BIT]], 112
+; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i8 [[SET_NEXT_HIGH_BITS]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[POISON]], 15
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %clear_high_bit = and i8 %x, 127                 ; 0x7f
+  %set_next_high_bits = or i8 %clear_high_bit, 112 ; 0x70
+  %poison = shl nsw i8 %set_next_high_bits, 3
+  %cmp = icmp eq i8 %poison, 15
+  ret i1 %cmp
+}
+
+; Shift-by-variable that produces poison is more complicated but still possible.
+; We guarantee that the shift will change the sign of the shifted value (and
+; therefore produce poison) by limiting its range from 1 to 3.
+
+define i1 @eq_shl_by_variable_produces_poison(i8 %x) {
+; CHECK-LABEL: @eq_shl_by_variable_produces_poison(
+; CHECK-NEXT:    [[CLEAR_HIGH_BIT:%.*]] = and i8 %x, 127
+; CHECK-NEXT:    [[SET_NEXT_HIGH_BITS:%.*]] = or i8 [[CLEAR_HIGH_BIT]], 112
+; CHECK-NEXT:    [[NOTUNDEF_SHIFTAMT:%.*]] = and i8 %x, 3
+; CHECK-NEXT:    [[NONZERO_SHIFTAMT:%.*]] = or i8 [[NOTUNDEF_SHIFTAMT]], 1
+; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i8 [[SET_NEXT_HIGH_BITS]], [[NONZERO_SHIFTAMT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[POISON]], 15
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %clear_high_bit = and i8 %x, 127                 ; 0x7f
+  %set_next_high_bits = or i8 %clear_high_bit, 112 ; 0x70
+  %notundef_shiftamt = and i8 %x, 3
+  %nonzero_shiftamt = or i8 %notundef_shiftamt, 1
+  %poison = shl nsw i8 %set_next_high_bits, %nonzero_shiftamt
+  %cmp = icmp eq i8 %poison, 15
+  ret i1 %cmp
+}
+

@@ -615,6 +615,139 @@ defm : vinsert_for_size_lowering<"VINSERTI64x4Z", v16i16x_info, v32i16_info,
 defm : vinsert_for_size_lowering<"VINSERTI64x4Z", v32i8x_info, v64i8_info,
               vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 
+
+multiclass vinsert_for_mask_cast<string InstrStr, X86VectorVTInfo From,
+                                 X86VectorVTInfo To, X86VectorVTInfo Cast,
+                                 PatFrag vinsert_insert,
+                                 SDNodeXForm INSERT_get_vinsert_imm,
+                                 list<Predicate> p> {
+let Predicates = p in {
+  def : Pat<(Cast.VT
+             (vselect Cast.KRCWM:$mask,
+                      (bitconvert
+                       (vinsert_insert:$ins (To.VT To.RC:$src1),
+                                            (From.VT From.RC:$src2),
+                                            (iPTR imm))),
+                      Cast.RC:$src0)),
+            (!cast<Instruction>(InstrStr#"rrk")
+             Cast.RC:$src0, Cast.KRCWM:$mask, To.RC:$src1, From.RC:$src2,
+             (INSERT_get_vinsert_imm To.RC:$ins))>;
+  def : Pat<(Cast.VT
+             (vselect Cast.KRCWM:$mask,
+                      (bitconvert
+                       (vinsert_insert:$ins (To.VT To.RC:$src1),
+                                            (From.VT
+                                             (bitconvert
+                                              (From.LdFrag addr:$src2))),
+                                            (iPTR imm))),
+                      Cast.RC:$src0)),
+            (!cast<Instruction>(InstrStr#"rmk")
+             Cast.RC:$src0, Cast.KRCWM:$mask, To.RC:$src1, addr:$src2,
+             (INSERT_get_vinsert_imm To.RC:$ins))>;
+
+  def : Pat<(Cast.VT
+             (vselect Cast.KRCWM:$mask,
+                      (bitconvert
+                       (vinsert_insert:$ins (To.VT To.RC:$src1),
+                                            (From.VT From.RC:$src2),
+                                            (iPTR imm))),
+                      Cast.ImmAllZerosV)),
+            (!cast<Instruction>(InstrStr#"rrkz")
+             Cast.KRCWM:$mask, To.RC:$src1, From.RC:$src2,
+             (INSERT_get_vinsert_imm To.RC:$ins))>;
+  def : Pat<(Cast.VT
+             (vselect Cast.KRCWM:$mask,
+                      (bitconvert
+                       (vinsert_insert:$ins (To.VT To.RC:$src1),
+                                            (From.VT
+                                             (bitconvert
+                                              (From.LdFrag addr:$src2))),
+                                            (iPTR imm))),
+                      Cast.ImmAllZerosV)),
+            (!cast<Instruction>(InstrStr#"rmkz")
+             Cast.KRCWM:$mask, To.RC:$src1, addr:$src2,
+             (INSERT_get_vinsert_imm To.RC:$ins))>;
+}
+}
+
+defm : vinsert_for_mask_cast<"VINSERTF32x4Z256", v2f64x_info, v4f64x_info,
+                             v8f32x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x2Z256", v4f32x_info, v8f32x_info,
+                             v4f64x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI, HasVLX]>;
+
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z256", v2i64x_info, v4i64x_info,
+                             v8i32x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z256", v8i16x_info, v16i16x_info,
+                             v8i32x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z256", v16i8x_info, v32i8x_info,
+                             v8i32x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x2Z256", v4i32x_info, v8i32x_info,
+                             v4i64x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI, HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x2Z256", v8i16x_info, v16i16x_info,
+                             v4i64x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI, HasVLX]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x2Z256", v16i8x_info, v32i8x_info,
+                             v4i64x_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI, HasVLX]>;
+
+defm : vinsert_for_mask_cast<"VINSERTF32x4Z", v2f64x_info, v8f64_info,
+                             v16f32_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x2Z", v4f32x_info, v16f32_info,
+                             v8f64_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI]>;
+
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z", v2i64x_info, v8i64_info,
+                             v16i32_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z", v8i16x_info, v32i16_info,
+                             v16i32_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x4Z", v16i8x_info, v64i8_info,
+                             v16i32_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x2Z", v4i32x_info, v16i32_info,
+                             v8i64_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x2Z", v8i16x_info, v32i16_info,
+                             v8i64_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x2Z", v16i8x_info, v64i8_info,
+                             v8i64_info, vinsert128_insert,
+                             INSERT_get_vinsert128_imm, [HasDQI]>;
+
+defm : vinsert_for_mask_cast<"VINSERTF32x8Z", v4f64x_info, v8f64_info,
+                             v16f32_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTF64x4Z", v8f32x_info, v16f32_info,
+                             v8f64_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasAVX512]>;
+
+defm : vinsert_for_mask_cast<"VINSERTI32x8Z", v4i64x_info, v8i64_info,
+                             v16i32_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x8Z", v16i16x_info, v32i16_info,
+                             v16i32_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTI32x8Z", v32i8x_info, v64i8_info,
+                             v16i32_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasDQI]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x4Z", v8i32x_info, v16i32_info,
+                             v8i64_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x4Z", v16i16x_info, v32i16_info,
+                             v8i64_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasAVX512]>;
+defm : vinsert_for_mask_cast<"VINSERTI64x4Z", v32i8x_info, v64i8_info,
+                             v8i64_info, vinsert256_insert,
+                             INSERT_get_vinsert256_imm, [HasAVX512]>;
+
 // vinsertps - insert f32 to XMM
 let ExeDomain = SSEPackedSingle in {
 def VINSERTPSZrr : AVX512AIi8<0x21, MRMSrcReg, (outs VR128X:$dst),
@@ -6347,9 +6480,11 @@ multiclass avx512_cvt_fp_scalar_ss2sd<bits<8> opc, string OpcodeStr,
   }
 }
 defm VCVTSD2SS : avx512_cvt_fp_scalar_sd2ss<0x5A, "vcvtsd2ss",
-                                         X86froundRnd, f64x_info, f32x_info>;
+                                         X86froundRnd, f64x_info, f32x_info>,
+                                         NotMemoryFoldable;
 defm VCVTSS2SD : avx512_cvt_fp_scalar_ss2sd<0x5A, "vcvtss2sd",
-                                          X86fpextRnd,f32x_info, f64x_info >;
+                                          X86fpextRnd,f32x_info, f64x_info >,
+                                          NotMemoryFoldable;
 
 def : Pat<(f64 (fpextend FR32X:$src)),
           (VCVTSS2SDZrr (COPY_TO_REGCLASS FR32X:$src, FR64X), FR32X:$src)>,
@@ -7141,13 +7276,13 @@ multiclass avx512_fp14_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 defm VRCP14SS   : avx512_fp14_s<0x4D, "vrcp14ss", X86frcp14s, f32x_info>,
-                  EVEX_CD8<32, CD8VT1>, T8PD;
+                  EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRCP14SD   : avx512_fp14_s<0x4D, "vrcp14sd", X86frcp14s, f64x_info>,
-                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD;
+                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRSQRT14SS   : avx512_fp14_s<0x4F, "vrsqrt14ss", X86frsqrt14s, f32x_info>,
-                  EVEX_CD8<32, CD8VT1>, T8PD;
+                  EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRSQRT14SD   : avx512_fp14_s<0x4F, "vrsqrt14sd", X86frsqrt14s, f64x_info>,
-                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD;
+                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
 
 /// avx512_fp14_p rcp14ps, rcp14pd, rsqrt14ps, rsqrt14pd
 multiclass avx512_fp14_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -7407,9 +7542,11 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr> {
   defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", f32x_info, "SS", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS;
+                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS,
+                        NotMemoryFoldable;
   defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", f64x_info, "SD", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W;
+                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
+                        NotMemoryFoldable;
 }
 
 defm VSQRT   : avx512_sqrt_packed_all<0x51, "vsqrt", fsqrt>,
