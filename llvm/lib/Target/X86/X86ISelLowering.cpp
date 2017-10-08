@@ -7026,6 +7026,18 @@ X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getTargetConstant(1, dl, VT);
 
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+      // Split the pieces.
+      SDValue Lower =
+          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(0, 32));
+      SDValue Upper =
+          DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(32, 32));
+      // We have to manually lower both halves so getNode doesn't try to
+      // reassemble the build_vector.
+      Lower = LowerBUILD_VECTORvXi1(Lower, DAG);
+      Upper = LowerBUILD_VECTORvXi1(Upper, DAG);
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lower, Upper);
+    }
     SDValue Imm = ConvertI1VectorToInteger(Op, DAG);
     if (Imm.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, Imm);
