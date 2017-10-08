@@ -28,7 +28,6 @@ define void @foo() {
 ; X86-NEXT:    cmovnel %ecx, %edx
 ; X86-NEXT:    cmovnel %eax, %ecx
 ; X86-NEXT:    andl $-2, %edx
-; X86-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-NEXT:    addl $7, %edx
 ; X86-NEXT:    adcxl %eax, %ecx
 ; X86-NEXT:    pushl %ecx

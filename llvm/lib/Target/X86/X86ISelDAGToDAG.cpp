@@ -371,8 +371,7 @@ namespace {
       assert((VecWidth == 128 || VecWidth == 256) && "Unexpected vector width");
       uint64_t Index = N->getConstantOperandVal(1);
       MVT VecVT = N->getOperand(0).getSimpleValueType();
-      unsigned NumElemsPerChunk = VecWidth / VecVT.getScalarSizeInBits();
-      return getI8Imm(Index / NumElemsPerChunk, DL);
+      return getI8Imm((Index * VecVT.getScalarSizeInBits()) / VecWidth, DL);
     }
 
     SDValue getInsertVINSERTImmediate(SDNode *N, unsigned VecWidth,
@@ -380,8 +379,7 @@ namespace {
       assert((VecWidth == 128 || VecWidth == 256) && "Unexpected vector width");
       uint64_t Index = N->getConstantOperandVal(2);
       MVT VecVT = N->getSimpleValueType(0);
-      unsigned NumElemsPerChunk = VecWidth / VecVT.getScalarSizeInBits();
-      return getI8Imm(Index / NumElemsPerChunk, DL);
+      return getI8Imm((Index * VecVT.getScalarSizeInBits()) / VecWidth, DL);
     }
 
     /// Return an SDNode that returns the value of the global base register.
