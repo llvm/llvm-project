@@ -106,8 +106,6 @@ public:
                     /*Type*/ 0,
                     /*Info*/ 0, /*Link*/ 0),
         Repl(this) {
-    Live = false;
-    Assigned = false;
     NumRelocations = 0;
     AreRelocsRela = false;
   }
