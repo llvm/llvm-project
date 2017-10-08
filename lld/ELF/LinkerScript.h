@@ -166,11 +166,11 @@ struct BytesDataCommand : BaseCommand {
 
 struct PhdrsCommand {
   StringRef Name;
-  unsigned Type;
-  bool HasFilehdr;
-  bool HasPhdrs;
-  unsigned Flags;
-  Expr LMAExpr;
+  unsigned Type = llvm::ELF::PT_NULL;
+  bool HasFilehdr = false;
+  bool HasPhdrs = false;
+  llvm::Optional<unsigned> Flags;
+  Expr LMAExpr = nullptr;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -217,7 +217,6 @@ class LinkerScript final {
   std::vector<InputSectionBase *> createInputSectionList(OutputSection &Cmd);
 
   std::vector<size_t> getPhdrIndices(OutputSection *Sec);
-  size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
   MemoryRegion *findMemoryRegion(OutputSection *Sec);
 
@@ -241,7 +240,6 @@ public:
   void discard(ArrayRef<InputSectionBase *> V);
 
   ExprValue getSymbolValue(const Twine &Loc, StringRef S);
-  bool isDefined(StringRef S);
 
   void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);
@@ -250,7 +248,7 @@ public:
   void adjustSectionsAfterSorting();
 
   std::vector<PhdrEntry *> createPhdrs();
-  bool ignoreInterpSection();
+  bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSection *Sec);
