@@ -231,6 +231,9 @@ class FoldGenData<string _RegisterForm> {
     string FoldGenRegForm = _RegisterForm;
 }
 
+// Mark the instruction as "illegal to memory fold/unfold"
+class NotMemoryFoldable { bit isMemoryFoldable = 0; }
+
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr,
               InstrItinClass itin,
@@ -313,6 +316,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   // Used in the memory folding generation (TableGen backend) to point to an alternative
   // instruction to replace the current one in case it got picked during generation.
   string FoldGenRegForm = ?;
+
+  bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
 
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;

@@ -6480,9 +6480,11 @@ multiclass avx512_cvt_fp_scalar_ss2sd<bits<8> opc, string OpcodeStr,
   }
 }
 defm VCVTSD2SS : avx512_cvt_fp_scalar_sd2ss<0x5A, "vcvtsd2ss",
-                                         X86froundRnd, f64x_info, f32x_info>;
+                                         X86froundRnd, f64x_info, f32x_info>,
+                                         NotMemoryFoldable;
 defm VCVTSS2SD : avx512_cvt_fp_scalar_ss2sd<0x5A, "vcvtss2sd",
-                                          X86fpextRnd,f32x_info, f64x_info >;
+                                          X86fpextRnd,f32x_info, f64x_info >,
+                                          NotMemoryFoldable;
 
 def : Pat<(f64 (fpextend FR32X:$src)),
           (VCVTSS2SDZrr (COPY_TO_REGCLASS FR32X:$src, FR64X), FR32X:$src)>,
@@ -7274,13 +7276,13 @@ multiclass avx512_fp14_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 defm VRCP14SS   : avx512_fp14_s<0x4D, "vrcp14ss", X86frcp14s, f32x_info>,
-                  EVEX_CD8<32, CD8VT1>, T8PD;
+                  EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRCP14SD   : avx512_fp14_s<0x4D, "vrcp14sd", X86frcp14s, f64x_info>,
-                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD;
+                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRSQRT14SS   : avx512_fp14_s<0x4F, "vrsqrt14ss", X86frsqrt14s, f32x_info>,
-                  EVEX_CD8<32, CD8VT1>, T8PD;
+                  EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
 defm VRSQRT14SD   : avx512_fp14_s<0x4F, "vrsqrt14sd", X86frsqrt14s, f64x_info>,
-                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD;
+                  VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
 
 /// avx512_fp14_p rcp14ps, rcp14pd, rsqrt14ps, rsqrt14pd
 multiclass avx512_fp14_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -7540,9 +7542,11 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr> {
   defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", f32x_info, "SS", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS;
+                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS,
+                        NotMemoryFoldable;
   defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", f64x_info, "SD", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W;
+                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
+                        NotMemoryFoldable;
 }
 
 defm VSQRT   : avx512_sqrt_packed_all<0x51, "vsqrt", fsqrt>,
