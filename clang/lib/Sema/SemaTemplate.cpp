@@ -6167,7 +6167,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     //     -- an integral constant-expression of integral or enumeration
     //        type; or
     //     -- the name of a non-type template-parameter; or
-    SourceLocation NonConstantLoc;
     llvm::APSInt Value;
     if (!ArgType->isIntegralOrEnumerationType()) {
       Diag(Arg->getLocStart(),

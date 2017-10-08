@@ -15362,7 +15362,6 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
     if (Enum->isDependentType() || Val->isTypeDependent())
       EltTy = Context.DependentTy;
     else {
-      SourceLocation ExpLoc;
       if (getLangOpts().CPlusPlus11 && Enum->isFixed() &&
           !getLangOpts().MSVCCompat) {
         // C++11 [dcl.enum]p5: If the underlying type is fixed, [...] the
