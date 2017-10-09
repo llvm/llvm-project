@@ -363,7 +363,7 @@ void BuildIdSection::computeHash(
 BssSection::BssSection(StringRef Name, uint64_t Size, uint32_t Alignment)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Name) {
   if (OutputSection *Sec = getParent())
-    Sec->updateAlignment(Alignment);
+    Sec->Alignment = std::max(Sec->Alignment, Alignment);
   this->Size = Size;
 }
 
@@ -494,8 +494,10 @@ template <class ELFT>
 void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   auto *Sec = cast<EhInputSection>(C);
   Sec->Parent = this;
-  updateAlignment(Sec->Alignment);
+
+  Alignment = std::max(Alignment, Sec->Alignment);
   Sections.push_back(Sec);
+
   for (auto *DS : Sec->DependentSections)
     DependentSections.push_back(DS);
 

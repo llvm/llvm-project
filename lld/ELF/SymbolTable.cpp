@@ -136,16 +136,6 @@ DefinedRegular *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
   return cast<DefinedRegular>(Sym->body());
 }
 
-// Add Name as an "ignored" symbol. An ignored symbol is a regular
-// linker-synthesized defined symbol, but is only defined if needed.
-template <class ELFT>
-DefinedRegular *SymbolTable::addIgnored(StringRef Name, uint8_t Visibility) {
-  SymbolBody *S = find(Name);
-  if (!S || S->isInCurrentDSO())
-    return nullptr;
-  return addAbsolute<ELFT>(Name, Visibility);
-}
-
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
@@ -870,11 +860,6 @@ template DefinedRegular *SymbolTable::addAbsolute<ELF64LE>(StringRef, uint8_t,
                                                            uint8_t);
 template DefinedRegular *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
                                                            uint8_t);
-
-template DefinedRegular *SymbolTable::addIgnored<ELF32LE>(StringRef, uint8_t);
-template DefinedRegular *SymbolTable::addIgnored<ELF32BE>(StringRef, uint8_t);
-template DefinedRegular *SymbolTable::addIgnored<ELF64LE>(StringRef, uint8_t);
-template DefinedRegular *SymbolTable::addIgnored<ELF64BE>(StringRef, uint8_t);
 
 template Symbol *
 SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile *,
