@@ -99,27 +99,6 @@ extern __attribute__((const)) float __llvm_canonicalize_f32(float) __asm("llvm.c
 extern __attribute__((const)) double __llvm_canonicalize_f64(double) __asm("llvm.canonicalize.f64");
 
 // Intrinsics requiring wrapping
-extern bool __llvm_sadd_with_overflow_i16(short, short, __private short*);
-extern bool __llvm_uadd_with_overflow_i16(ushort, ushort, __private ushort*);
-extern bool __llvm_sadd_with_overflow_i32(int, int, __private int*);
-extern bool __llvm_uadd_with_overflow_i32(uint, uint, __private uint*);
-extern bool __llvm_sadd_with_overflow_i64(long, long, __private long*);
-extern bool __llvm_uadd_with_overflow_i64(ulong, ulong, __private ulong*);
-
-extern bool __llvm_ssub_with_overflow_i16(short, short, __private short*);
-extern bool __llvm_usub_with_overflow_i16(ushort, ushort, __private ushort*);
-extern bool __llvm_ssub_with_overflow_i32(int, int, __private int*);
-extern bool __llvm_usub_with_overflow_i32(uint, uint, __private uint*);
-extern bool __llvm_ssub_with_overflow_i64(long, long, __private long*);
-extern bool __llvm_usub_with_overflow_i64(ulong, ulong, __private ulong*);
-
-extern bool __llvm_smul_with_overflow_i16(short, short, __private short*);
-extern bool __llvm_umul_with_overflow_i16(ushort, ushort, __private ushort*);
-extern bool __llvm_smul_with_overflow_i32(int, int, __private int*);
-extern bool __llvm_umul_with_overflow_i32(uint, uint, __private uint*);
-extern bool __llvm_smul_with_overflow_i64(long, long, __private long*);
-extern bool __llvm_umul_with_overflow_i64(ulong, ulong, __private ulong*);
-
 extern __attribute__((const)) uchar __llvm_ctlz_i8(uchar);
 extern __attribute__((const)) ushort __llvm_ctlz_i16(ushort);
 extern __attribute__((const)) uint __llvm_ctlz_i32(uint);
