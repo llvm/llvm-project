@@ -264,9 +264,4 @@
 #include <clc/image/image_defines.h>
 #include <clc/image/image.h>
 
-/* libclc internal defintions */
-#ifdef __CLC_INTERNAL
-#include <math/clc_nextafter.h>
-#endif
-
 #pragma OPENCL EXTENSION all : disable

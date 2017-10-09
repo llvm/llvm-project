@@ -56,11 +56,6 @@ public:
 
   uint32_t getPhdrFlags() const;
 
-  void updateAlignment(uint32_t Val) {
-    if (Val > Alignment)
-      Alignment = Val;
-  }
-
   // Pointer to the PT_LOAD segment, which this section resides in. This field
   // is used to correctly compute file offset of a section. When two sections
   // share the same load segment, difference between their file offsets should
@@ -82,7 +77,7 @@ public:
   uint64_t Addr = 0;
   uint32_t ShName = 0;
 
-  void addSection(InputSection *S);
+  void addSection(InputSection *IS);
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;
@@ -165,7 +160,6 @@ public:
   ~OutputSectionFactory();
 
   OutputSection *addInputSec(InputSectionBase *IS, StringRef OutsecName);
-  void addInputSec(InputSectionBase *IS, OutputSection *OS);
 
 private:
   llvm::SmallDenseMap<SectionKey, OutputSection *> Map;
