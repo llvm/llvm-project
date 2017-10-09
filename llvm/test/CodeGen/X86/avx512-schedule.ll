@@ -5232,8 +5232,7 @@ define <16 x float> @mov_test40(i8 * %addr, <16 x float> %old, <16 x float> %mas
 ; CHECK-LABEL: mov_test40:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordps %zmm2, %zmm1, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqps %zmm2, %zmm1, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqps %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps (%rdi), %zmm0 {%k1} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
@@ -5247,8 +5246,7 @@ define <16 x float> @mov_test41(i8 * %addr, <16 x float> %old, <16 x float> %mas
 ; CHECK-LABEL: mov_test41:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordps %zmm2, %zmm1, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqps %zmm2, %zmm1, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqps %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovups (%rdi), %zmm0 {%k1} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
@@ -5262,8 +5260,7 @@ define <16 x float> @mov_test42(i8 * %addr, <16 x float> %mask1) {
 ; CHECK-LABEL: mov_test42:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordps %zmm1, %zmm0, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqps %zmm1, %zmm0, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqps %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps (%rdi), %zmm0 {%k1} {z} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
@@ -5277,8 +5274,7 @@ define <16 x float> @mov_test43(i8 * %addr, <16 x float> %mask1) {
 ; CHECK-LABEL: mov_test43:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordps %zmm1, %zmm0, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqps %zmm1, %zmm0, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqps %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
@@ -5292,8 +5288,7 @@ define <8 x double> @mov_test44(i8 * %addr, <8 x double> %old, <8 x double> %mas
 ; CHECK-LABEL: mov_test44:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqpd %zmm2, %zmm1, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd (%rdi), %zmm0 {%k1} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer
@@ -5307,8 +5302,7 @@ define <8 x double> @mov_test45(i8 * %addr, <8 x double> %old, <8 x double> %mas
 ; CHECK-LABEL: mov_test45:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqpd %zmm2, %zmm1, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovupd (%rdi), %zmm0 {%k1} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer
@@ -5322,8 +5316,7 @@ define <8 x double> @mov_test46(i8 * %addr, <8 x double> %mask1) {
 ; CHECK-LABEL: mov_test46:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqpd %zmm1, %zmm0, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd (%rdi), %zmm0 {%k1} {z} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer
@@ -5337,8 +5330,7 @@ define <8 x double> @mov_test47(i8 * %addr, <8 x double> %mask1) {
 ; CHECK-LABEL: mov_test47:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
-; CHECK-NEXT:    vcmpordpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
-; CHECK-NEXT:    vcmpneqpd %zmm1, %zmm0, %k1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vcmpneq_oqpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z} # sched: [8:0.50]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer

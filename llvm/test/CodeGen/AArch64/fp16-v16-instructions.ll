@@ -11,7 +11,7 @@ define <16 x half> @sitofp_i32(<16 x i32> %a) #0 {
 ; CHECK-DAG: fcvtn v1.4h, [[S2]]
 ; CHECK-DAG: v[[R1:[0-9]+]].4h, [[S1]]
 ; CHECK-DAG: v[[R3:[0-9]+]].4h, [[S3]]
-; CHECK-DAg: ins v0.d[1], v[[R1]].d[0]
+; CHECK-DAG: ins v0.d[1], v[[R1]].d[0]
 ; CHECK-DAG: ins v1.d[1], v[[R3]].d[0]
 
   %1 = sitofp <16 x i32> %a to <16 x half>
@@ -62,7 +62,7 @@ define <16 x half> @uitofp_i32(<16 x i32> %a) #0 {
 ; CHECK-DAG: fcvtn v1.4h, [[S2]]
 ; CHECK-DAG: v[[R1:[0-9]+]].4h, [[S1]]
 ; CHECK-DAG: v[[R3:[0-9]+]].4h, [[S3]]
-; CHECK-DAg: ins v0.d[1], v[[R1]].d[0]
+; CHECK-DAG: ins v0.d[1], v[[R1]].d[0]
 ; CHECK-DAG: ins v1.d[1], v[[R3]].d[0]
 
   %1 = uitofp <16 x i32> %a to <16 x half>

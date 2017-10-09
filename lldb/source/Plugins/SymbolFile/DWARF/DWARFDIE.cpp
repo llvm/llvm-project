@@ -392,17 +392,11 @@ lldb::ModuleSP DWARFDIE::GetContainingDWOModule() const {
 }
 
 bool DWARFDIE::HasChildren() const {
-  if (m_die)
-    return m_die->HasChildren();
-  else
-    return false;
+  return m_die && m_die->HasChildren();
 }
 
 bool DWARFDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
-  if (IsValid())
-    return GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
-  else
-    return false;
+  return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
 }
 
 size_t DWARFDIE::GetAttributes(DWARFAttributes &attributes,
@@ -464,5 +458,5 @@ bool operator==(const DWARFDIE &lhs, const DWARFDIE &rhs) {
 }
 
 bool operator!=(const DWARFDIE &lhs, const DWARFDIE &rhs) {
-  return lhs.GetDIE() != rhs.GetDIE() || lhs.GetCU() != rhs.GetCU();
+  return !(lhs == rhs);
 }

@@ -277,8 +277,7 @@ define <8 x float> @test_256_25(i8 * %addr, <8 x float> %old, <8 x float> %mask1
 ; CHECK-LABEL: test_256_25:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
-; CHECK-NEXT:    vcmpordps %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf1,0x74,0x28,0xc2,0xca,0x07]
-; CHECK-NEXT:    vcmpneqps %ymm2, %ymm1, %k1 {%k1} ## encoding: [0x62,0xf1,0x74,0x29,0xc2,0xca,0x04]
+; CHECK-NEXT:    vcmpneq_oqps %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf1,0x74,0x28,0xc2,0xca,0x0c]
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x float> %mask1, zeroinitializer
@@ -292,8 +291,7 @@ define <8 x float> @test_256_26(i8 * %addr, <8 x float> %old, <8 x float> %mask1
 ; CHECK-LABEL: test_256_26:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
-; CHECK-NEXT:    vcmpordps %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf1,0x74,0x28,0xc2,0xca,0x07]
-; CHECK-NEXT:    vcmpneqps %ymm2, %ymm1, %k1 {%k1} ## encoding: [0x62,0xf1,0x74,0x29,0xc2,0xca,0x04]
+; CHECK-NEXT:    vcmpneq_oqps %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf1,0x74,0x28,0xc2,0xca,0x0c]
 ; CHECK-NEXT:    vmovups (%rdi), %ymm0 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x float> %mask1, zeroinitializer
@@ -307,8 +305,7 @@ define <8 x float> @test_256_27(i8 * %addr, <8 x float> %mask1) {
 ; CHECK-LABEL: test_256_27:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xef,0xc9]
-; CHECK-NEXT:    vcmpordps %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc9,0x07]
-; CHECK-NEXT:    vcmpneqps %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0xc2,0xc9,0x04]
+; CHECK-NEXT:    vcmpneq_oqps %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc9,0x0c]
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xa9,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x float> %mask1, zeroinitializer
@@ -322,8 +319,7 @@ define <8 x float> @test_256_28(i8 * %addr, <8 x float> %mask1) {
 ; CHECK-LABEL: test_256_28:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xef,0xc9]
-; CHECK-NEXT:    vcmpordps %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc9,0x07]
-; CHECK-NEXT:    vcmpneqps %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0xc2,0xc9,0x04]
+; CHECK-NEXT:    vcmpneq_oqps %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc9,0x0c]
 ; CHECK-NEXT:    vmovups (%rdi), %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xa9,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x float> %mask1, zeroinitializer
