@@ -458,5 +458,5 @@ bool operator==(const DWARFDIE &lhs, const DWARFDIE &rhs) {
 }
 
 bool operator!=(const DWARFDIE &lhs, const DWARFDIE &rhs) {
-  return lhs.GetDIE() != rhs.GetDIE() || lhs.GetCU() != rhs.GetCU();
+  return !(lhs == rhs);
 }
