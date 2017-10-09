@@ -66,7 +66,7 @@ update_mbox(const __global amd_signal_t *sig)
     if (mb) {
         uint id = sig->event_id;
         atomic_store_explicit(mb, id, memory_order_release, memory_scope_all_svm_devices);
-        __llvm_amdgcn_s_sendmsg(1 | (0 << 4), __llvm_amdgcn_readfirstlane(id) & 0xff);
+        __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __llvm_amdgcn_readfirstlane(id) & 0xff);
     }
 }
  

@@ -24,10 +24,10 @@ work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
     if (flags) {
         atomic_work_item_fence(flags, memory_order_release, scope);
-        __llvm_amdgcn_s_barrier();
+        __builtin_amdgcn_s_barrier();
         atomic_work_item_fence(flags, memory_order_acquire, scope);
     } else {
-        __llvm_amdgcn_s_barrier();
+        __builtin_amdgcn_s_barrier();
     }
 }
 

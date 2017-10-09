@@ -120,19 +120,19 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
         slid = 63 - (int)clz(smask);
         t = __llvm_amdgcn_ds_bpermute(slid << 2, sum);
         sum += slid < 0 ? 0 : t;
-        __llvm_amdgcn_wave_barrier();
+        __builtin_amdgcn_wave_barrier();
 
         size_t idx = 0;
         if (l == 63 - (int)clz(__llvm_amdgcn_read_exec())) {
             idx = reserve(pidx, lim, (size_t)sum);
         }
-        __llvm_amdgcn_wave_barrier();
+        __builtin_amdgcn_wave_barrier();
 
         // Broadcast
         uint k = 63u - (uint)clz(__llvm_amdgcn_read_exec());
         idx = ((size_t)__llvm_amdgcn_readlane((uint)(idx >> 32), k) << 32) |
               (size_t)__llvm_amdgcn_readlane((uint)idx, k);
-        __llvm_amdgcn_wave_barrier();
+        __builtin_amdgcn_wave_barrier();
 
         rid = idx + (size_t)(sum - (uint)n);
         rid = idx != ~(size_t)0 ? rid : idx;

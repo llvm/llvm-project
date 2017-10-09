@@ -13,18 +13,18 @@ amp_get_global_id(int dim)
 
   switch(dim) {
   case 0:
-    l = __llvm_amdgcn_workitem_id_x();
-    g = __llvm_amdgcn_workgroup_id_x();
+    l = __builtin_amdgcn_workitem_id_x();
+    g = __builtin_amdgcn_workgroup_id_x();
     s = p->workgroup_size_x;
     break;
   case 1:
-    l = __llvm_amdgcn_workitem_id_y();
-    g = __llvm_amdgcn_workgroup_id_y();
+    l = __builtin_amdgcn_workitem_id_y();
+    g = __builtin_amdgcn_workgroup_id_y();
     s = p->workgroup_size_y;
     break;
   case 2:
-    l = __llvm_amdgcn_workitem_id_z();
-    g = __llvm_amdgcn_workgroup_id_z();
+    l = __builtin_amdgcn_workitem_id_z();
+    g = __builtin_amdgcn_workgroup_id_z();
     s = p->workgroup_size_z;
     break;
   default:
@@ -59,11 +59,11 @@ amp_get_local_id(int dim)
 {
     switch(dim) {
     case 0:
-        return __llvm_amdgcn_workitem_id_x();
+        return __builtin_amdgcn_workitem_id_x();
     case 1:
-        return __llvm_amdgcn_workitem_id_y();
+        return __builtin_amdgcn_workitem_id_y();
     case 2:
-        return __llvm_amdgcn_workitem_id_z();
+        return __builtin_amdgcn_workitem_id_z();
     default:
         return 0;
     }
@@ -102,11 +102,11 @@ amp_get_group_id(int dim)
 {
     switch(dim) {
     case 0:
-        return __llvm_amdgcn_workgroup_id_x();
+        return __builtin_amdgcn_workgroup_id_x();
     case 1:
-        return __llvm_amdgcn_workgroup_id_y();
+        return __builtin_amdgcn_workgroup_id_y();
     case 2:
-        return __llvm_amdgcn_workgroup_id_z();
+        return __builtin_amdgcn_workgroup_id_z();
     default:
         return 0;
     }
@@ -159,10 +159,10 @@ hc_work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
     if (flags) {
         atomic_work_item_fence(flags, memory_order_release, scope);
-        __llvm_amdgcn_s_barrier();
+        __builtin_amdgcn_s_barrier();
         atomic_work_item_fence(flags, memory_order_acquire, scope);
     } else {
-        __llvm_amdgcn_s_barrier();
+        __builtin_amdgcn_s_barrier();
     }
 }
 

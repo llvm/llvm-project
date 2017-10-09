@@ -34,18 +34,18 @@ __ockl_get_global_id(uint dim)
 
     switch(dim) {
     case 0:
-        l = __llvm_amdgcn_workitem_id_x();
-        g = __llvm_amdgcn_workgroup_id_x();
+        l = __builtin_amdgcn_workitem_id_x();
+        g = __builtin_amdgcn_workgroup_id_x();
         s = p->workgroup_size_x;
         break;
     case 1:
-        l = __llvm_amdgcn_workitem_id_y();
-        g = __llvm_amdgcn_workgroup_id_y();
+        l = __builtin_amdgcn_workitem_id_y();
+        g = __builtin_amdgcn_workgroup_id_y();
         s = p->workgroup_size_y;
         break;
     case 2:
-        l = __llvm_amdgcn_workitem_id_z();
-        g = __llvm_amdgcn_workgroup_id_z();
+        l = __builtin_amdgcn_workitem_id_z();
+        g = __builtin_amdgcn_workgroup_id_z();
         s = p->workgroup_size_z;
         break;
     default:
@@ -63,11 +63,11 @@ __ockl_get_local_id(uint dim)
 {
     switch(dim) {
     case 0:
-        return __llvm_amdgcn_workitem_id_x();
+        return __builtin_amdgcn_workitem_id_x();
     case 1:
-        return __llvm_amdgcn_workitem_id_y();
+        return __builtin_amdgcn_workitem_id_y();
     case 2:
-        return __llvm_amdgcn_workitem_id_z();
+        return __builtin_amdgcn_workitem_id_z();
     default:
         return 0;
     }
@@ -78,11 +78,11 @@ __ockl_get_group_id(uint dim)
 {
     switch(dim) {
     case 0:
-        return __llvm_amdgcn_workgroup_id_x();
+        return __builtin_amdgcn_workgroup_id_x();
     case 1:
-        return __llvm_amdgcn_workgroup_id_y();
+        return __builtin_amdgcn_workgroup_id_y();
     case 2:
-        return __llvm_amdgcn_workgroup_id_z();
+        return __builtin_amdgcn_workgroup_id_z();
     default:
         return 0;
     }
@@ -114,17 +114,17 @@ __ockl_get_local_size(uint dim)
 
     switch(dim) {
     case 0:
-        g = __llvm_amdgcn_workgroup_id_x();
+        g = __builtin_amdgcn_workgroup_id_x();
         n = p->grid_size_x;
         d = p->workgroup_size_x;
         break;
     case 1:
-        g = __llvm_amdgcn_workgroup_id_y();
+        g = __builtin_amdgcn_workgroup_id_y();
         n = p->grid_size_y;
         d = p->workgroup_size_y;
         break;
     case 2:
-        g = __llvm_amdgcn_workgroup_id_z();
+        g = __builtin_amdgcn_workgroup_id_z();
         n = p->grid_size_z;
         d = p->workgroup_size_z;
         break;
@@ -202,17 +202,17 @@ __ockl_get_global_linear_id(void)
     switch (p->setup) {
     case 1:
         {
-            uint l0 = __llvm_amdgcn_workitem_id_x();
-            uint g0 = __llvm_amdgcn_workgroup_id_x();
+            uint l0 = __builtin_amdgcn_workitem_id_x();
+            uint g0 = __builtin_amdgcn_workgroup_id_x();
             uint s0 = p->workgroup_size_x;
             return g0*s0 + l0;
         }
     case 2:
         {
-            uint l0 = __llvm_amdgcn_workitem_id_x();
-            uint l1 = __llvm_amdgcn_workitem_id_y();
-            uint g0 = __llvm_amdgcn_workgroup_id_x();
-            uint g1 = __llvm_amdgcn_workgroup_id_y();
+            uint l0 = __builtin_amdgcn_workitem_id_x();
+            uint l1 = __builtin_amdgcn_workitem_id_y();
+            uint g0 = __builtin_amdgcn_workgroup_id_x();
+            uint g1 = __builtin_amdgcn_workgroup_id_y();
             uint s0 = p->workgroup_size_x;
             uint s1 = p->workgroup_size_y;
             uint n0 = p->grid_size_x;
@@ -222,12 +222,12 @@ __ockl_get_global_linear_id(void)
         }
     case 3:
         {
-            uint l0 = __llvm_amdgcn_workitem_id_x();
-            uint l1 = __llvm_amdgcn_workitem_id_y();
-            uint l2 = __llvm_amdgcn_workitem_id_z();
-            uint g0 = __llvm_amdgcn_workgroup_id_x();
-            uint g1 = __llvm_amdgcn_workgroup_id_y();
-            uint g2 = __llvm_amdgcn_workgroup_id_z();
+            uint l0 = __builtin_amdgcn_workitem_id_x();
+            uint l1 = __builtin_amdgcn_workitem_id_y();
+            uint l2 = __builtin_amdgcn_workitem_id_z();
+            uint g0 = __builtin_amdgcn_workgroup_id_x();
+            uint g1 = __builtin_amdgcn_workgroup_id_y();
+            uint g2 = __builtin_amdgcn_workgroup_id_z();
             uint s0 = p->workgroup_size_x;
             uint s1 = p->workgroup_size_y;
             uint s2 = p->workgroup_size_z;
@@ -247,7 +247,7 @@ ATTR size_t
 __ockl_get_local_linear_id(void)
 {
     __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
-    return (__llvm_amdgcn_workitem_id_z()*p->workgroup_size_y +
-            __llvm_amdgcn_workitem_id_y()) * p->workgroup_size_x + __llvm_amdgcn_workitem_id_x();
+    return (__builtin_amdgcn_workitem_id_z()*p->workgroup_size_y +
+            __builtin_amdgcn_workitem_id_y()) * p->workgroup_size_x + __builtin_amdgcn_workitem_id_x();
 }
 
