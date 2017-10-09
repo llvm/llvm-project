@@ -231,3 +231,12 @@ void test_non_std_call_once() {
   int x = call_once();
   clang_analyzer_eval(x == 5); // expected-warning{{TRUE}}
 }
+
+namespace std {
+template <typename d, typename e>
+void call_once(d, e);
+}
+void g();
+void test_no_segfault_on_different_impl() {
+  std::call_once(g, false); // no-warning
+}
