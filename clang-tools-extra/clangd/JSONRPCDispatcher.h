@@ -24,9 +24,8 @@ namespace clangd {
 /// them.
 class JSONOutput : public Logger {
 public:
-  JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-             llvm::raw_ostream *InputMirror = nullptr)
-      : Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
+  JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
+      : Outs(Outs), Logs(Logs) {}
 
   /// Emit a JSONRPC message.
   void writeMessage(const Twine &Message);
@@ -34,15 +33,9 @@ public:
   /// Write to the logging stream.
   void log(const Twine &Message) override;
 
-  /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is
-  /// null.
-  /// Unlike other methods of JSONOutput, mirrorInput is not thread-safe.
-  void mirrorInput(const Twine &Message);
-
 private:
   llvm::raw_ostream &Outs;
   llvm::raw_ostream &Logs;
-  llvm::raw_ostream *InputMirror;
 
   std::mutex StreamMutex;
 };
