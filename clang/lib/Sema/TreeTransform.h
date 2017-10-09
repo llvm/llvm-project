@@ -4199,7 +4199,6 @@ TreeTransform<Derived>::TransformTypeWithDeducedTST(TypeSourceInfo *DI) {
   TypeLoc TL = DI->getTypeLoc();
   TLB.reserve(TL.getFullDataSize());
 
-  Qualifiers Quals;
   auto QTL = TL.getAs<QualifiedTypeLoc>();
   if (QTL)
     TL = QTL.getUnqualifiedLoc();

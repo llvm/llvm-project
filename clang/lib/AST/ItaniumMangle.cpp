@@ -3625,7 +3625,6 @@ recurse:
     if (const Expr *Base = PDE->getBase())
       mangleMemberExprBase(Base, PDE->isArrow());
     NestedNameSpecifier *Qualifier = PDE->getQualifier();
-    QualType ScopeType;
     if (TypeSourceInfo *ScopeInfo = PDE->getScopeTypeInfo()) {
       if (Qualifier) {
         mangleUnresolvedPrefix(Qualifier,
