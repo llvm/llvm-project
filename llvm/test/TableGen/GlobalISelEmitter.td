@@ -239,10 +239,31 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
             [(set GPR32:$dst, (add GPR32:$src1, GPR32:$src2))]>;
 
+//===- Test a simple pattern with ValueType operands. ----------------------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 3*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ADD,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] src1
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:    // MIs[0] src2
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::ADD,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label 3: @[[LABEL]]
+
+def : Pat<(add i32:$src1, i32:$src2),
+          (ADD i32:$src1, i32:$src2)>;
+
 //===- Test a simple pattern with an intrinsic. ---------------------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 3*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 4*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC,
 // CHECK-NEXT:    // MIs[0] dst
@@ -261,14 +282,14 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 3: @[[LABEL]]
+// CHECK-NEXT:  // Label 4: @[[LABEL]]
 
 def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
             [(set GPR32:$dst, (int_mytarget_nop GPR32:$src1))]>;
 
 //===- Test a nested instruction match. -----------------------------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 4*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 5*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -301,10 +322,10 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 4: @[[LABEL]]
+// CHECK-NEXT:  // Label 5: @[[LABEL]]
 
 // We also get a second rule by commutativity.
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 5*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 6*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2,
@@ -337,7 +358,7 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 5: @[[LABEL]]
+// CHECK-NEXT:  // Label 6: @[[LABEL]]
 
 def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
                [(set GPR32:$dst,
@@ -346,7 +367,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 
 //===- Test another simple pattern with regclass operands. ----------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 6*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 7*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA_HasB_HasC,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
@@ -367,7 +388,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 6: @[[LABEL]]
+// CHECK-NEXT:  // Label 7: @[[LABEL]]
 
 def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
              [(set GPR32:$dst, (mul GPR32:$src1, GPR32:$src2))]>,
@@ -375,7 +396,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 
 //===- Test a more complex multi-instruction match. -----------------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 7*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 8*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -420,7 +441,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 7: @[[LABEL]]
+// CHECK-NEXT:  // Label 8: @[[LABEL]]
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -430,7 +451,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 //===- Test a pattern with ComplexPattern operands. -----------------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 8*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 9*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SUB,
 // CHECK-NEXT:    // MIs[0] dst
@@ -450,7 +471,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 8: @[[LABEL]]
+// CHECK-NEXT:  // Label 9: @[[LABEL]]
 
 def INSN1 : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
 def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
@@ -458,7 +479,7 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 //===- Test a simple pattern with a default operand. ----------------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 9*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 10*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -478,7 +499,7 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 9: @[[LABEL]]
+// CHECK-NEXT:  // Label 10: @[[LABEL]]
 
 // The -2 is just to distinguish it from the 'not' case below.
 def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
@@ -487,7 +508,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 //===- Test a simple pattern with a default register operand. -------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 10*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 11*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -507,7 +528,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 10: @[[LABEL]]
+// CHECK-NEXT:  // Label 11: @[[LABEL]]
 
 // The -3 is just to distinguish it from the 'not' case below and the other default op case above.
 def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
@@ -516,7 +537,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 //===- Test a simple pattern with a multiple default operands. ------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 11*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 12*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -537,7 +558,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 11: @[[LABEL]]
+// CHECK-NEXT:  // Label 12: @[[LABEL]]
 
 // The -4 is just to distinguish it from the other 'not' cases.
 def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
@@ -546,7 +567,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 //===- Test a simple pattern with multiple operands with defaults. --------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 12*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 13*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -568,7 +589,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 12: @[[LABEL]]
+// CHECK-NEXT:  // Label 13: @[[LABEL]]
 
 // The -5 is just to distinguish it from the other cases.
 def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1),
@@ -579,7 +600,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // This must precede the 3-register variants because constant immediates have
 // priority over register banks.
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 13*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 14*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -599,7 +620,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 13: @[[LABEL]]
+// CHECK-NEXT:  // Label 14: @[[LABEL]]
 
 def ORN : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2), []>;
 def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
@@ -607,7 +628,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 //===- Test a COPY_TO_REGCLASS --------------------------------------------===//
 //
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 14*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 15*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BITCAST,
 // CHECK-NEXT:    // MIs[0] dst
@@ -620,14 +641,14 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/1,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 14: @[[LABEL]]
+// CHECK-NEXT:  // Label 15: @[[LABEL]]
 
 def : Pat<(i32 (bitconvert FPR32:$src1)),
           (COPY_TO_REGCLASS FPR32:$src1, GPR32)>;
 
 //===- Test a simple pattern with just a specific leaf immediate. ---------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 15*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 16*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -641,13 +662,13 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 15: @[[LABEL]]
+// CHECK-NEXT:  // Label 16: @[[LABEL]]
 
 def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 
 //===- Test a simple pattern with a leaf immediate and a predicate. -------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 16*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 17*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    GIM_CheckImmPredicate, /*MI*/0, /*Predicate*/GIPFP_Predicate_simm8,
@@ -663,14 +684,14 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 16: @[[LABEL]]
+// CHECK-NEXT:  // Label 17: @[[LABEL]]
 
 def simm8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$imm)]>;
 
 //===- Test a simple pattern with just a leaf immediate. ------------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 17*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 18*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -685,13 +706,13 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 17: @[[LABEL]]
+// CHECK-NEXT:  // Label 18: @[[LABEL]]
 
 def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)]>;
 
 //===- Test a pattern with an MBB operand. --------------------------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 18*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 19*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
@@ -700,7 +721,7 @@ def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 18: @[[LABEL]]
+// CHECK-NEXT:  // Label 19: @[[LABEL]]
 
 def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
