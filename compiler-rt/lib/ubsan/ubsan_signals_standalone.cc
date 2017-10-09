@@ -24,6 +24,9 @@
 
 namespace __ubsan {
 
+#if SANITIZER_FUCHSIA
+void InitializeDeadlySignals() {}
+#else
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
   GetStackTraceWithPcBpAndContext(stack, kStackTraceMax, sig.pc, sig.bp,
@@ -44,6 +47,7 @@ void InitializeDeadlySignals() {
   InitializeSignalInterceptors();
   InstallDeadlySignalHandlers(&UBsanOnDeadlySignal);
 }
+#endif
 
 } // namespace __ubsan
 
