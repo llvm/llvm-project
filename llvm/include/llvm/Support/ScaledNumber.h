@@ -504,13 +504,13 @@ private:
   static_assert(Width <= 64, "invalid integer width for digits");
 
 private:
-  DigitsType Digits;
-  int16_t Scale;
+  DigitsType Digits = 0;
+  int16_t Scale = 0;
 
 public:
-  ScaledNumber() : Digits(0), Scale(0) {}
+  ScaledNumber() = default;
 
-  ScaledNumber(DigitsType Digits, int16_t Scale)
+  constexpr ScaledNumber(DigitsType Digits, int16_t Scale)
       : Digits(Digits), Scale(Scale) {}
 
 private:

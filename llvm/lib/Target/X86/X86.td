@@ -640,8 +640,7 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeatureCLWB
 ]>;
 
-// FIXME: define SKX model
-class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeClientModel,
+class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  SKXFeatures.Value, [
     ProcIntelSKX
   ]>;

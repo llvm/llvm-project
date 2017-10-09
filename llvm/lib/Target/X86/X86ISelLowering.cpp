@@ -1143,7 +1143,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i8,  Legal);
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i16, Legal);
-      setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8,  Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i8,   Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i16,  Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i32,  Legal);
@@ -5350,6 +5349,13 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   if (Op.isUndef()) {
     APInt UndefSrcElts = APInt::getAllOnesValue(NumElts);
     SmallVector<APInt, 64> SrcEltBits(NumElts, APInt(EltSizeInBits, 0));
+    return CastBitData(UndefSrcElts, SrcEltBits);
+  }
+
+  // Extract scalar constant bits.
+  if (auto *Cst = dyn_cast<ConstantSDNode>(Op)) {
+    APInt UndefSrcElts = APInt::getNullValue(1);
+    SmallVector<APInt, 64> SrcEltBits(1, Cst->getAPIntValue());
     return CastBitData(UndefSrcElts, SrcEltBits);
   }
 
@@ -9889,10 +9895,7 @@ static SDValue lowerVectorShuffleAsElementInsertion(
     V1Mask[V2Index] = -1;
     if (!isNoopShuffleMask(V1Mask))
       return SDValue();
-    // This is essentially a special case blend operation, but if we have
-    // general purpose blend operations, they are always faster. Bail and let
-    // the rest of the lowering handle these as blends.
-    if (Subtarget.hasSSE41())
+    if (!VT.is128BitVector())
       return SDValue();
 
     // Otherwise, use MOVSD or MOVSS.
@@ -17028,8 +17031,8 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
 
 /// Turns an ISD::CondCode into a value suitable for SSE floating-point mask
 /// CMPs.
-static int translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
-                              SDValue &Op1) {
+static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
+                                   SDValue &Op1) {
   unsigned SSECC;
   bool Swap = false;
 
@@ -17062,8 +17065,8 @@ static int translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGT: SSECC = 6; break;
   case ISD::SETO:   SSECC = 7; break;
-  case ISD::SETUEQ:
-  case ISD::SETONE: SSECC = 8; break;
+  case ISD::SETUEQ: SSECC = 8; break;
+  case ISD::SETONE: SSECC = 12; break;
   }
   if (Swap)
     std::swap(Op0, Op1);
@@ -17243,11 +17246,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
     // In the two cases not handled by SSE compare predicates (SETUEQ/SETONE),
     // emit two comparisons and a logic op to tie them together.
-    // TODO: This can be avoided if Intel (and only Intel as of 2016) AVX is
-    // available.
     SDValue Cmp;
     unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1);
-    if (SSECC == 8) {
+    if (SSECC >= 8 && !Subtarget.hasAVX()) {
       // LLVM predicate is SETUEQ or SETONE.
       unsigned CC0, CC1;
       unsigned CombineOpc;
@@ -17685,17 +17686,17 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
        (Subtarget.hasSSE1() && VT == MVT::f32)) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
-    int SSECC = translateX86FSETCC(
+    unsigned SSECC = translateX86FSETCC(
         cast<CondCodeSDNode>(Cond.getOperand(2))->get(), CondOp0, CondOp1);
 
-    if (SSECC != 8) {
-      if (Subtarget.hasAVX512()) {
-        SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CondOp0,
-                                  CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
-        assert(!VT.isVector() && "Not a scalar type?");
-        return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
-      }
+    if (Subtarget.hasAVX512()) {
+      SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CondOp0,
+                                CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
+      assert(!VT.isVector() && "Not a scalar type?");
+      return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
+    }
 
+    if (SSECC < 8 || Subtarget.hasAVX()) {
       SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, VT, CondOp0, CondOp1,
                                 DAG.getConstant(SSECC, DL, MVT::i8));
 
@@ -28345,18 +28346,15 @@ static SDValue combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
 /// would simplify under the threshold for PSHUFB formation because of
 /// combine-ordering. To fix this, we should do the redundant instruction
 /// combining in this recursive walk.
-static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
-                                          int SrcOpIndex, SDValue Root,
-                                          ArrayRef<int> RootMask,
-                                          ArrayRef<const SDNode*> SrcNodes,
-                                          int Depth, bool HasVariableMask,
-                                          SelectionDAG &DAG,
-                                          TargetLowering::DAGCombinerInfo &DCI,
-                                          const X86Subtarget &Subtarget) {
+static SDValue combineX86ShufflesRecursively(
+    ArrayRef<SDValue> SrcOps, int SrcOpIndex, SDValue Root,
+    ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, int Depth,
+    bool HasVariableMask, SelectionDAG &DAG,
+    TargetLowering::DAGCombinerInfo &DCI, const X86Subtarget &Subtarget) {
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
   if (Depth > 8)
-    return false;
+    return SDValue();
 
   // Directly rip through bitcasts to find the underlying operand.
   SDValue Op = SrcOps[SrcOpIndex];
@@ -28364,7 +28362,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
 
   MVT VT = Op.getSimpleValueType();
   if (!VT.isVector())
-    return false; // Bail if we hit a non-vector.
+    return SDValue(); // Bail if we hit a non-vector.
 
   assert(Root.getSimpleValueType().isVector() &&
          "Shuffles operate on vector types!");
@@ -28375,7 +28373,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
   if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG))
-    return false;
+    return SDValue();
 
   assert(OpInputs.size() <= 2 && "Too many shuffle inputs");
   SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
@@ -28484,18 +28482,15 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   }
 
   // Handle the all undef/zero cases early.
-  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; })) {
-    DCI.CombineTo(Root.getNode(), DAG.getUNDEF(Root.getValueType()));
-    return true;
-  }
-  if (all_of(Mask, [](int Idx) { return Idx < 0; })) {
-    // TODO - should we handle the mixed zero/undef case as well? Just returning
-    // a zero mask will lose information on undef elements possibly reducing
-    // future combine possibilities.
-    DCI.CombineTo(Root.getNode(), getZeroVector(Root.getSimpleValueType(),
-                                                Subtarget, DAG, SDLoc(Root)));
-    return true;
-  }
+  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
+    return DAG.getUNDEF(Root.getValueType());
+
+  // TODO - should we handle the mixed zero/undef case as well? Just returning
+  // a zero mask will lose information on undef elements possibly reducing
+  // future combine possibilities.
+  if (all_of(Mask, [](int Idx) { return Idx < 0; }))
+    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG,
+                         SDLoc(Root));
 
   // Remove unused shuffle source ops.
   resolveTargetShuffleInputsAndMask(Ops, Mask);
@@ -28514,21 +28509,19 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   for (int i = 0, e = Ops.size(); i < e; ++i)
     if (Ops[i].getNode()->hasOneUse() ||
         SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
-      if (combineX86ShufflesRecursively(Ops, i, Root, Mask, CombinedNodes,
-                                        Depth + 1, HasVariableMask, DAG, DCI,
-                                        Subtarget))
-        return true;
+      if (SDValue Res = combineX86ShufflesRecursively(
+              Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
+              DAG, DCI, Subtarget))
+        return Res;
 
   // Attempt to constant fold all of the constant source ops.
   if (SDValue Cst = combineX86ShufflesConstants(
-          Ops, Mask, Root, HasVariableMask, DAG, DCI, Subtarget)) {
-    DCI.CombineTo(Root.getNode(), Cst);
-    return true;
-  }
+          Ops, Mask, Root, HasVariableMask, DAG, DCI, Subtarget))
+    return Cst;
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() > 2)
-    return false;
+    return SDValue();
 
   // Minor canonicalization of the accumulated shuffle mask to make it easier
   // to match below. All this does is detect masks with sequential pairs of
@@ -28548,12 +28541,8 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   }
 
   // Finally, try to combine into a single shuffle instruction.
-  if (SDValue Res = combineX86ShuffleChain(
-          Ops, Root, Mask, Depth, HasVariableMask, DAG, DCI, Subtarget)) {
-    DCI.CombineTo(Root.getNode(), Res, /*AddTo*/ true);
-    return true;
-  }
-  return false;
+  return combineX86ShuffleChain(Ops, Root, Mask, Depth, HasVariableMask, DAG,
+                                DCI, Subtarget);
 }
 
 /// \brief Get the PSHUF-style mask from PSHUF node.
@@ -29380,10 +29369,12 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // specific PSHUF instruction sequences into their minimal form so that we
     // can evaluate how many specialized shuffle instructions are involved in
     // a particular chain.
-    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                      /*HasVarMask*/ false, DAG, DCI,
-                                      Subtarget))
-      return SDValue(); // This routine will use CombineTo to replace N.
+    if (SDValue Res = combineX86ShufflesRecursively(
+            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+      DCI.CombineTo(N, Res);
+      return SDValue();
+    }
   }
 
   return SDValue();
@@ -32059,8 +32050,13 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine as shuffle.
   SDValue Op(N, 0);
-  combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                /*HasVarMask*/ false, DAG, DCI, Subtarget);
+  if (SDValue Res = combineX86ShufflesRecursively(
+          {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+          /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+    DCI.CombineTo(N, Res);
+    return SDValue();
+  }
+
   return SDValue();
 }
 
@@ -32116,10 +32112,12 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   // We can decode 'whole byte' logical bit shifts as shuffles.
   if (LogicalShift && (ShiftVal.getZExtValue() % 8) == 0) {
     SDValue Op(N, 0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                      /*HasVarMask*/ false, DAG, DCI,
-                                      Subtarget))
-      return SDValue(); // This routine will use CombineTo to replace N.
+    if (SDValue Res = combineX86ShufflesRecursively(
+            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+      DCI.CombineTo(N, Res);
+      return SDValue();
+    }
   }
 
   // Constant Folding.
@@ -32155,8 +32153,13 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);
-  combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                /*HasVarMask*/ false, DAG, DCI, Subtarget);
+  if (SDValue Res = combineX86ShufflesRecursively(
+          {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+          /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+    DCI.CombineTo(N, Res);
+    return SDValue();
+  }
+
   return SDValue();
 }
 
@@ -32456,10 +32459,12 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask AND with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                      /*HasVarMask*/ false, DAG, DCI,
-                                      Subtarget))
-      return SDValue(); // This routine will use CombineTo to replace N.
+    if (SDValue Res = combineX86ShufflesRecursively(
+            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+      DCI.CombineTo(N, Res);
+      return SDValue();
+    }
   }
 
   return SDValue();
@@ -34623,10 +34628,12 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask ANDNP with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                      /*HasVarMask*/ false, DAG, DCI,
-                                      Subtarget))
-      return SDValue(); // This routine will use CombineTo to replace N.
+    if (SDValue Res = combineX86ShufflesRecursively(
+            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+            /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
+      DCI.CombineTo(N, Res);
+      return SDValue();
+    }
   }
 
   return SDValue();
