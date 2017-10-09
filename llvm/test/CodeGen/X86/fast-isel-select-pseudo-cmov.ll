@@ -18,12 +18,8 @@ define float @select_fcmp_one_f32(float %a, float %b, float %c, float %d) {
 ;
 ; AVX-LABEL: select_fcmp_one_f32:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-NEXT:    jne LBB0_2
-; AVX-NEXT:  ## BB#1:
-; AVX-NEXT:    vmovaps %xmm3, %xmm2
-; AVX-NEXT:  LBB0_2:
-; AVX-NEXT:    vmovaps %xmm2, %xmm0
+; AVX-NEXT:    vcmpneq_oqss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX-NEXT:    retq
   %1 = fcmp one float %a, %b
   %2 = select i1 %1, float %c, float %d
@@ -43,12 +39,8 @@ define double @select_fcmp_one_f64(double %a, double %b, double %c, double %d) {
 ;
 ; AVX-LABEL: select_fcmp_one_f64:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-NEXT:    jne LBB1_2
-; AVX-NEXT:  ## BB#1:
-; AVX-NEXT:    vmovaps %xmm3, %xmm2
-; AVX-NEXT:  LBB1_2:
-; AVX-NEXT:    vmovaps %xmm2, %xmm0
+; AVX-NEXT:    vcmpneq_oqsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX-NEXT:    retq
   %1 = fcmp one double %a, %b
   %2 = select i1 %1, double %c, double %d
