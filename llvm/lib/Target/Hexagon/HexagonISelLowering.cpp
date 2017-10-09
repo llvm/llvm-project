@@ -978,7 +978,6 @@ bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                        SelectionDAG &DAG) const
 {
   EVT VT;
-  SDValue Ptr;
 
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT  = LD->getMemoryVT();

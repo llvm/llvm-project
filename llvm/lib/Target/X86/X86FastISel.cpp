@@ -210,8 +210,8 @@ getX86SSEConditionCode(CmpInst::Predicate Predicate) {
   case CmpInst::FCMP_ULT: NeedSwap = true; LLVM_FALLTHROUGH;
   case CmpInst::FCMP_UGT: CC = 6;          break;
   case CmpInst::FCMP_ORD: CC = 7;          break;
-  case CmpInst::FCMP_UEQ:
-  case CmpInst::FCMP_ONE: CC = 8;          break;
+  case CmpInst::FCMP_UEQ: CC = 8;          break;
+  case CmpInst::FCMP_ONE: CC = 12;         break;
   }
 
   return std::make_pair(CC, NeedSwap);
@@ -2178,7 +2178,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   unsigned CC;
   bool NeedSwap;
   std::tie(CC, NeedSwap) = getX86SSEConditionCode(Predicate);
-  if (CC > 7)
+  if (CC > 7 && !Subtarget->hasAVX())
     return false;
 
   if (NeedSwap)

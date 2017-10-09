@@ -830,16 +830,16 @@ void CodeGenSchedModels::collectProcItins() {
 void CodeGenSchedModels::collectProcItinRW() {
   RecVec ItinRWDefs = Records.getAllDerivedDefinitions("ItinRW");
   std::sort(ItinRWDefs.begin(), ItinRWDefs.end(), LessRecord());
-  for (RecIter II = ItinRWDefs.begin(), IE = ItinRWDefs.end(); II != IE; ++II) {
-    if (!(*II)->getValueInit("SchedModel")->isComplete())
-      PrintFatalError((*II)->getLoc(), "SchedModel is undefined");
-    Record *ModelDef = (*II)->getValueAsDef("SchedModel");
+  for (Record *RWDef  : make_range(ItinRWDefs.begin(), ItinRWDefs.end())) {
+    if (!RWDef->getValueInit("SchedModel")->isComplete())
+      PrintFatalError(RWDef->getLoc(), "SchedModel is undefined");
+    Record *ModelDef = RWDef->getValueAsDef("SchedModel");
     ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
     if (I == ProcModelMap.end()) {
-      PrintFatalError((*II)->getLoc(), "Undefined SchedMachineModel "
+      PrintFatalError(RWDef->getLoc(), "Undefined SchedMachineModel "
                     + ModelDef->getName());
     }
-    ProcModels[I->second].ItinRWDefs.push_back(*II);
+    ProcModels[I->second].ItinRWDefs.push_back(RWDef);
   }
 }
 
@@ -1080,8 +1080,8 @@ void PredTransitions::getIntersectingVariants(
     }
     // Push each variant. Assign TransVecIdx later.
     const RecVec VarDefs = SchedRW.TheDef->getValueAsListOfDefs("Variants");
-    for (RecIter RI = VarDefs.begin(), RE = VarDefs.end(); RI != RE; ++RI)
-      Variants.push_back(TransVariant(*RI, SchedRW.Index, VarProcIdx, 0));
+    for (Record *VarDef : VarDefs)
+      Variants.push_back(TransVariant(VarDef, SchedRW.Index, VarProcIdx, 0));
     if (VarProcIdx == 0)
       GenericRW = true;
   }
@@ -1110,12 +1110,11 @@ void PredTransitions::getIntersectingVariants(
     if (AliasProcIdx == 0)
       GenericRW = true;
   }
-  for (unsigned VIdx = 0, VEnd = Variants.size(); VIdx != VEnd; ++VIdx) {
-    TransVariant &Variant = Variants[VIdx];
+  for (TransVariant &Variant : Variants) {
     // Don't expand variants if the processor models don't intersect.
     // A zero processor index means any processor.
     SmallVectorImpl<unsigned> &ProcIndices = TransVec[TransIdx].ProcIndices;
-    if (ProcIndices[0] && Variants[VIdx].ProcIdx) {
+    if (ProcIndices[0] && Variant.ProcIdx) {
       unsigned Cnt = std::count(ProcIndices.begin(), ProcIndices.end(),
                                 Variant.ProcIdx);
       if (!Cnt)

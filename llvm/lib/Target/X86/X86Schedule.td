@@ -667,4 +667,6 @@ include "X86ScheduleSLM.td"
 include "X86ScheduleZnver1.td"
 include "X86ScheduleBtVer2.td"
 include "X86SchedSkylakeClient.td"
+include "X86SchedSkylakeServer.td"
+
 

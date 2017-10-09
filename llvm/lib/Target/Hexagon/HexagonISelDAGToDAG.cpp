@@ -1319,7 +1319,6 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
 
   if (N.getValueType() != MVT::i64)
     return false;
-  EVT SrcVT;
   unsigned Opc = N.getOpcode();
   switch (Opc) {
     case ISD::SIGN_EXTEND:

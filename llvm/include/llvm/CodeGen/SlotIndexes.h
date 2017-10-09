@@ -139,7 +139,7 @@ class raw_ostream;
     };
 
     /// Construct an invalid index.
-    SlotIndex() : lie(nullptr, 0) {}
+    SlotIndex() = default;
 
     // Construct a new slot index from the given one, and set the slot.
     SlotIndex(const SlotIndex &li, Slot s) : lie(li.listEntry(), unsigned(s)) {
