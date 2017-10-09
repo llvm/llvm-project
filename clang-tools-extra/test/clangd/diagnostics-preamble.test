@@ -1,0 +1,15 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 206
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"#ifndef FOO\n#define FOO\nint a;\n#else\nint a = b;#endif\n\n\n"}}}
+# CHECK: {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///main.cpp","diagnostics":[]}}
+
+Content-Length: 58
+
+{"jsonrpc":"2.0","id":2,"method":"shutdown","params":null}
