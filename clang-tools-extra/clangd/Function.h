@@ -46,7 +46,7 @@ public:
 
   Ret operator()(Args... As) {
     assert(CallablePtr);
-    CallablePtr->Call(std::forward<Args>(As)...);
+    return CallablePtr->Call(std::forward<Args>(As)...);
   }
 
 private:
