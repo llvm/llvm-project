@@ -8028,8 +8028,8 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
   // output register, mark it as legal and catch the pattern in instruction
   // selection to avoid emitting extra insturctions (for zeroing upper bits).
   if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op)) {
-    SDValue ZeroC = DAG.getConstant(0, dl, MVT::i64);
-    SDValue AllZeros = DAG.getSplatBuildVector(ResVT, dl, ZeroC);
+    SDValue ZeroC = DAG.getIntPtrConstant(0, dl);
+    SDValue AllZeros = getZeroVector(ResVT, Subtarget, DAG, dl);
     return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, AllZeros, Promoted,
                        ZeroC);
   }

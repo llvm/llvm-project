@@ -26,7 +26,7 @@
 ; CHECK: DW_AT_name {{.*}} "testA"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]}
 ; CHECK: 0x[[STRUCT]]: DW_TAG_structure_type
 ; CHECK-NEXT:   DW_AT_name {{.*}} "SA"
 

@@ -495,6 +495,18 @@ def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
     XSNMSUBMSP
 )>;
 
+// 7 cycle Restricted DP operation and one 2 cycle ALU operation.
+//  The DP is restricted so we need a full 5 dispatches.
+def : InstRW<[P9_DPOpAndALUOp_9C, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    FMULo,
+    FMADDo,
+    FMSUBo,
+    FNMADDo,
+    FNMSUBo
+)>;
+
 // 7 cycle DP operation. One DP unit, one EXEC pipeline and two dispatch units.
 def : InstRW<[P9_DP_7C, IP_EXEC_1C, DISP_1C, DISP_1C],
       (instrs
@@ -823,6 +835,8 @@ def : InstRW<[P9_DIV_40C_8, IP_EXECO_1C, IP_EXECE_1C,
 def : InstRW<[P9_IntDivAndALUOp_26C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
+    DIVDo,
+    DIVDUo,
     DIVWEo,
     DIVWEUo
 )>;
@@ -872,6 +886,13 @@ def : InstRW<[P9_DP_33C_8, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
     FDIV
 )>;
 
+// 33 Cycle DP Instruction Restricted and Cracked with 2 Cycle ALU.
+def : InstRW<[P9_DPOpAndALUOp_35C_8, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    FDIVo
+)>;
+
 // 33 Cycle DP Instruction. Takes one slice and 2 dispatches.
 def : InstRW<[P9_DP_33C_8, IP_EXEC_1C, DISP_1C, DISP_1C],
       (instrs
@@ -882,6 +903,13 @@ def : InstRW<[P9_DP_33C_8, IP_EXEC_1C, DISP_1C, DISP_1C],
 def : InstRW<[P9_DP_22C_5, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
     FDIVS
+)>;
+
+// 22 Cycle DP Instruction Restricted and Cracked with 2 Cycle ALU.
+def : InstRW<[P9_DPOpAndALUOp_24C_5, IP_EXEC_1C, IP_EXEC_1C,
+              DISP_1C, DISP_1C, DISP_1C, DISP_1C, DISP_1C],
+      (instrs
+    FDIVSo
 )>;
 
 // 22 Cycle DP Instruction. Takes one slice and 2 dispatches.

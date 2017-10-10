@@ -1590,12 +1590,12 @@ std::error_code ImportedSymbolRef::getOrdinal(uint16_t &Result) const {
   return std::error_code();
 }
 
-ErrorOr<std::unique_ptr<COFFObjectFile>>
+Expected<std::unique_ptr<COFFObjectFile>>
 ObjectFile::createCOFFObjectFile(MemoryBufferRef Object) {
   std::error_code EC;
   std::unique_ptr<COFFObjectFile> Ret(new COFFObjectFile(Object, EC));
   if (EC)
-    return EC;
+    return errorCodeToError(EC);
   return std::move(Ret);
 }
 

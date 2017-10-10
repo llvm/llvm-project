@@ -80,7 +80,8 @@ class LLVMConfig(object):
 
         if target_triple:
             if re.match(r'^x86_64.*-apple', target_triple):
-                if 'address' in sanitizers:
+                host_cxx = getattr(config, 'host_cxx', None)
+                if 'address' in sanitizers and self.get_clang_has_lsan(host_cxx, target_triple):
                     self.with_environment(
                         'ASAN_OPTIONS', 'detect_leaks=1', append_path=True)
             if re.match(r'^x86_64.*-linux', target_triple):
@@ -199,6 +200,33 @@ class LLVMConfig(object):
             clang_dir = clang_dir.replace('\\', '/')
         # Ensure the result is an ascii string, across Python2.5+ - Python3.
         return clang_dir
+
+    # On macOS, LSan is only supported on clang versions 5 and higher
+    def get_clang_has_lsan(self, clang, triple):
+        if not clang:
+            self.lit_config.warning(
+                "config.host_cxx is unset but test suite is configured to use sanitizers.")
+            return False
+
+        clang_binary = clang.split()[0]
+        version_string, _ = self.get_process_output([clang_binary, '--version'])
+        if not 'clang' in version_string:
+            self.lit_config.warning(
+                "compiler '%s' does not appear to be clang, " % clang_binary +
+                "but test suite is configured to use sanitizers.")
+            return False
+
+        if re.match(r'.*-linux', triple):
+            return True
+
+        if re.match(r'^x86_64.*-apple', triple):
+            version_number = int(re.search(r'version ([0-9]+)\.', version_string).group(1))
+            if 'Apple LLVM' in version_string:
+                return version_number >= 9
+            else:
+                return version_number >= 5
+
+        return False
 
     def make_itanium_abi_triple(self, triple):
         m = re.match(r'(\w+)-(\w+)-(\w+)', triple)

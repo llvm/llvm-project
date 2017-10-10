@@ -1099,8 +1099,8 @@ void PredTransitions::getIntersectingVariants(
 
     if (AliasRW.HasVariants) {
       const RecVec VarDefs = AliasRW.TheDef->getValueAsListOfDefs("Variants");
-      for (RecIter RI = VarDefs.begin(), RE = VarDefs.end(); RI != RE; ++RI)
-        Variants.push_back(TransVariant(*RI, AliasRW.Index, AliasProcIdx, 0));
+      for (Record *VD : VarDefs)
+        Variants.push_back(TransVariant(VD, AliasRW.Index, AliasProcIdx, 0));
     }
     if (AliasRW.IsSequence) {
       Variants.push_back(

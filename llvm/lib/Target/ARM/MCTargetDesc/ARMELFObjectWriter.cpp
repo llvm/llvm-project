@@ -14,6 +14,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -235,9 +236,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   }
 }
 
-MCObjectWriter *llvm::createARMELFObjectWriter(raw_pwrite_stream &OS,
-                                               uint8_t OSABI,
-                                               bool IsLittleEndian) {
+std::unique_ptr<MCObjectWriter>
+llvm::createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
+                               bool IsLittleEndian) {
   return createELFObjectWriter(llvm::make_unique<ARMELFObjectWriter>(OSABI), OS,
                                IsLittleEndian);
 }

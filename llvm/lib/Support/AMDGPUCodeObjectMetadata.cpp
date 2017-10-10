@@ -96,6 +96,8 @@ struct MappingTraits<Kernel::Attrs::Metadata> {
                     MD.mWorkGroupSizeHint, std::vector<uint32_t>());
     YIO.mapOptional(Kernel::Attrs::Key::VecTypeHint,
                     MD.mVecTypeHint, std::string());
+    YIO.mapOptional(Kernel::Attrs::Key::RuntimeHandle, MD.mRuntimeHandle,
+                    std::string());
   }
 };
 

@@ -315,11 +315,12 @@ bool Decl::isLexicallyWithinFunctionOrMethod() const {
 }
 
 bool Decl::isInAnonymousNamespace() const {
-  for (const DeclContext *DC = getDeclContext(); DC; DC = DC->getParent()) {
+  const DeclContext *DC = getDeclContext();
+  do {
     if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC))
       if (ND->isAnonymousNamespace())
         return true;
-  }
+  } while ((DC = DC->getParent()));
 
   return false;
 }

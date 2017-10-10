@@ -790,7 +790,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // Check for name conflicts.
     DeclarationNameInfo NameInfo(B.Name, B.NameLoc);
     LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                          ForVisibleRedeclaration);
+                          ForRedeclaration);
     LookupName(Previous, S,
                /*CreateBuiltins*/DC->getRedeclContext()->isTranslationUnit());
 
@@ -822,8 +822,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // is unnamed.
   DeclarationNameInfo NameInfo((IdentifierInfo *)nullptr,
                                Decomp.getLSquareLoc());
-  LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        ForVisibleRedeclaration);
+  LookupResult Previous(*this, NameInfo, LookupOrdinaryName, ForRedeclaration);
 
   // Build the variable that holds the non-decomposed object.
   bool AddToScope = true;
@@ -8466,8 +8465,7 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
     // Since namespace names are unique in their scope, and we don't
     // look through using directives, just look for any ordinary names
     // as if by qualified name lookup.
-    LookupResult R(*this, II, IdentLoc, LookupOrdinaryName,
-                   ForExternalRedeclaration);
+    LookupResult R(*this, II, IdentLoc, LookupOrdinaryName, ForRedeclaration);
     LookupQualifiedName(R, CurContext->getRedeclContext());
     NamedDecl *PrevDecl =
         R.isSingleResult() ? R.getRepresentativeDecl() : nullptr;
@@ -9404,7 +9402,7 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
 
   // Do the redeclaration lookup in the current scope.
   LookupResult Previous(*this, UsingName, LookupUsingDeclName,
-                        ForVisibleRedeclaration);
+                        ForRedeclaration);
   Previous.setHideTags(false);
   if (S) {
     LookupName(Previous, S);
@@ -9984,10 +9982,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
                                              TInfo->getTypeLoc().getBeginLoc());
   }
 
-  LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        TemplateParamLists.size()
-                            ? forRedeclarationInCurContext()
-                            : ForVisibleRedeclaration);
+  LookupResult Previous(*this, NameInfo, LookupOrdinaryName, ForRedeclaration);
   LookupName(Previous, S);
 
   // Warn about shadowing the name of a template parameter.
@@ -10090,10 +10085,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
 
     if (Invalid)
       NewDecl->setInvalidDecl();
-    else if (OldDecl) {
+    else if (OldDecl)
       NewDecl->setPreviousDecl(OldDecl);
-      CheckRedeclarationModuleOwnership(NewDecl, OldDecl);
-    }
 
     NewND = NewDecl;
   } else {
@@ -10134,7 +10127,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Check if we have a previous declaration with the same name.
   LookupResult PrevR(*this, Alias, AliasLoc, LookupOrdinaryName,
-                     ForVisibleRedeclaration);
+                     ForRedeclaration);
   LookupName(PrevR, S);
 
   // Check we're not shadowing a template parameter.
@@ -10347,8 +10340,7 @@ void Sema::CheckImplicitSpecialMemberDeclaration(Scope *S, FunctionDecl *FD) {
   // implicit special members with this name.
   DeclarationName Name = FD->getDeclName();
   LookupResult R(*this, Name, SourceLocation(), LookupOrdinaryName,
-                 FD->isExternallyDeclarable() ? ForExternalRedeclaration
-                                              : ForVisibleRedeclaration);
+                 ForRedeclaration);
   for (auto *D : FD->getParent()->lookup(Name))
     if (auto *Acceptable = R.getAcceptableDecl(D))
       R.addDecl(Acceptable);
@@ -13232,7 +13224,7 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
   IdentifierInfo *II = D.getIdentifier();
   if (NamedDecl *PrevDecl = LookupSingleName(S, II, D.getIdentifierLoc(),
                                              LookupOrdinaryName,
-                                             ForVisibleRedeclaration)) {
+                                             ForRedeclaration)) {
     // The scope should be freshly made just for us. There is just no way
     // it contains any previous declaration, except for function parameters in
     // a function-try-block's catch statement.
@@ -13681,7 +13673,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   DeclContext *DC;
   Scope *DCScope = S;
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        ForExternalRedeclaration);
+                        ForRedeclaration);
 
   // There are five cases here.
   //   - There's no scope specifier and we're in a local class. Only look
@@ -14955,8 +14947,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
 
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;
-  LookupResult Previous(*this, II, Loc, LookupMemberName,
-                        ForVisibleRedeclaration);
+  LookupResult Previous(*this, II, Loc, LookupMemberName, ForRedeclaration);
   LookupName(Previous, S);
   switch (Previous.getResultKind()) {
   case LookupResult::Found:

@@ -40,6 +40,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
+  AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUOpenCLImageTypeLoweringPass.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPURegAsmNames.inc.cpp

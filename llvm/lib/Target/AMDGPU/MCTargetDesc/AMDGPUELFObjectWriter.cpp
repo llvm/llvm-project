@@ -12,6 +12,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,10 +82,10 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   llvm_unreachable("unhandled relocation type");
 }
 
-MCObjectWriter *llvm::createAMDGPUELFObjectWriter(bool Is64Bit,
-                                                  uint8_t OSABI,
-                                                  bool HasRelocationAddend,
-                                                  raw_pwrite_stream &OS) {
+std::unique_ptr<MCObjectWriter>
+llvm::createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
+                                  bool HasRelocationAddend,
+                                  raw_pwrite_stream &OS) {
   auto MOTW = llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
                                                        HasRelocationAddend);
   return createELFObjectWriter(std::move(MOTW), OS, true);

@@ -1317,8 +1317,11 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // TODO: Translate debug sections to the output.
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 llvm::createWasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS) {
-  return new WasmObjectWriter(std::move(MOTW), OS);
+  // FIXME: Can't use make_unique<WasmObjectWriter>(...) as WasmObjectWriter's
+  //        destructor is private. Is that necessary?
+  return std::unique_ptr<MCObjectWriter>(
+      new WasmObjectWriter(std::move(MOTW), OS));
 }

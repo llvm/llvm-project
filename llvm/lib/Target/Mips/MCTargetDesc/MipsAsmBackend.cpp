@@ -210,7 +210,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   return Value;
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 MipsAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   return createMipsELFObjectWriter(OS, TheTriple, IsN32);
 }

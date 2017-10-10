@@ -259,29 +259,32 @@ std::error_code create_hard_link(const Twine &to, const Twine &from) {
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   SmallVector<wchar_t, 128> path_utf16;
 
-  file_status ST;
-  if (std::error_code EC = status(path, ST)) {
-    if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
-      return EC;
-    return std::error_code();
-  }
-
   if (std::error_code ec = widenPath(path, path_utf16))
     return ec;
 
-  if (ST.type() == file_type::directory_file) {
-    if (!::RemoveDirectoryW(c_str(path_utf16))) {
-      std::error_code EC = mapWindowsError(::GetLastError());
-      if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
-        return EC;
-    }
-    return std::error_code();
-  }
-  if (!::DeleteFileW(c_str(path_utf16))) {
+  // We don't know whether this is a file or a directory, and remove() can
+  // accept both. The usual way to delete a file or directory is to use one of
+  // the DeleteFile or RemoveDirectory functions, but that requires you to know
+  // which one it is. We could stat() the file to determine that, but that would
+  // cost us additional system calls, which can be slow in a directory
+  // containing a large number of files. So instead we call CreateFile directly.
+  // The important part is the FILE_FLAG_DELETE_ON_CLOSE flag, which causes the
+  // file to be deleted once it is closed. We also use the flags
+  // FILE_FLAG_BACKUP_SEMANTICS (which allows us to open directories), and
+  // FILE_FLAG_OPEN_REPARSE_POINT (don't follow symlinks).
+  ScopedFileHandle h(::CreateFileW(
+      c_str(path_utf16), DELETE,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS |
+          FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_DELETE_ON_CLOSE,
+      NULL));
+  if (!h) {
     std::error_code EC = mapWindowsError(::GetLastError());
     if (EC != errc::no_such_file_or_directory || !IgnoreNonExisting)
       return EC;
   }
+
   return std::error_code();
 }
 

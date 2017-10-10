@@ -23,7 +23,6 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
@@ -322,10 +321,10 @@ public:
     return v->isObject();
   }
 
-  static ErrorOr<std::unique_ptr<COFFObjectFile>>
+  static Expected<std::unique_ptr<COFFObjectFile>>
   createCOFFObjectFile(MemoryBufferRef Object);
 
-  static ErrorOr<std::unique_ptr<ObjectFile>>
+  static Expected<std::unique_ptr<ObjectFile>>
   createELFObjectFile(MemoryBufferRef Object);
 
   static Expected<std::unique_ptr<MachOObjectFile>>

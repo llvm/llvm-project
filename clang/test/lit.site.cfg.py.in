@@ -14,6 +14,7 @@ config.clang_src_dir = "@CLANG_SOURCE_DIR@"
 config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
+config.host_cxx = "@CMAKE_CXX_COMPILER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @HAVE_LIBZ@
 config.clang_arcmt = @CLANG_ENABLE_ARCMT@
