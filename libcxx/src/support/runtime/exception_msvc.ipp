@@ -14,12 +14,35 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <eh.h>
-#include <corecrt_terminate.h>
+
+#if !defined(_ACRTIMP)
+#define _ACRTIMP __declspec(dllimport)
+#endif
+
+#if !defined(_VCRTIMP)
+#define _VCRTIMP __declspec(dllimport)
+#endif
+
+#if !defined(__CRTDECL)
+#define __CRTDECL __cdecl
+#endif
+
+extern "C" {
+typedef void (__CRTDECL* terminate_handler)();
+_ACRTIMP terminate_handler __cdecl set_terminate(
+    terminate_handler _NewTerminateHandler) throw();
+_ACRTIMP terminate_handler __cdecl _get_terminate();
+
+typedef void (__CRTDECL* unexpected_handler)();
+_VCRTIMP unexpected_handler __cdecl set_unexpected(
+    unexpected_handler _NewUnexpectedHandler) throw();
+_VCRTIMP unexpected_handler __cdecl _get_unexpected();
+
+_VCRTIMP int __cdecl __uncaught_exceptions();
+}
 
 namespace std {
 
-// libcxxrt provides implementations of these functions itself.
 unexpected_handler
 set_unexpected(unexpected_handler func) _NOEXCEPT {
   return ::set_unexpected(func);
@@ -113,5 +136,55 @@ bad_typeid::what() const _NOEXCEPT
 {
   return "std::bad_typeid";
 }
+
+#if defined(_LIBCPP_NO_VCRUNTIME)
+exception::~exception() _NOEXCEPT
+{
+}
+
+const char* exception::what() const _NOEXCEPT
+{
+  return "std::exception";
+}
+
+
+bad_exception::~bad_exception() _NOEXCEPT
+{
+}
+
+const char* bad_exception::what() const _NOEXCEPT
+{
+  return "std::bad_exception";
+}
+
+
+bad_alloc::bad_alloc() _NOEXCEPT
+{
+}
+
+bad_alloc::~bad_alloc() _NOEXCEPT
+{
+}
+
+const char*
+bad_alloc::what() const _NOEXCEPT
+{
+    return "std::bad_alloc";
+}
+
+bad_array_new_length::bad_array_new_length() _NOEXCEPT
+{
+}
+
+bad_array_new_length::~bad_array_new_length() _NOEXCEPT
+{
+}
+
+const char*
+bad_array_new_length::what() const _NOEXCEPT
+{
+    return "bad_array_new_length";
+}
+#endif // _LIBCPP_NO_VCRUNTIME
 
 } // namespace std

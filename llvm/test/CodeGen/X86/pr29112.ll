@@ -9,7 +9,6 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-LABEL: bar:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $88, %rsp
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm1

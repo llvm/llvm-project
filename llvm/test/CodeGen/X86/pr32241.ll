@@ -5,12 +5,9 @@ define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $24, %esp
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Lcfi2:
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    movw $10959, {{[0-9]+}}(%esp) # imm = 0x2ACF

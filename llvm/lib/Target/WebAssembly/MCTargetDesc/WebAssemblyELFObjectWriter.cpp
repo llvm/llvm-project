@@ -61,7 +61,6 @@ unsigned WebAssemblyELFObjectWriter::getRelocType(MCContext &Ctx,
 MCObjectWriter *llvm::createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
                                                        bool Is64Bit,
                                                        uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW =
-      new WebAssemblyELFObjectWriter(Is64Bit, OSABI);
-  return createELFObjectWriter(MOTW, OS, /*IsLittleEndian=*/true);
+  auto MOTW = llvm::make_unique<WebAssemblyELFObjectWriter>(Is64Bit, OSABI);
+  return createELFObjectWriter(std::move(MOTW), OS, /*IsLittleEndian=*/true);
 }

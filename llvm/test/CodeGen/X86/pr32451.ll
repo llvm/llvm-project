@@ -10,12 +10,9 @@ define i8** @japi1_convert_690(i8**, i8***, i32) {
 ; CHECK-LABEL: japi1_convert_690:
 ; CHECK:       # BB#0: # %top
 ; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:  .Lcfi2:
 ; CHECK-NEXT:    .cfi_offset %ebx, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill

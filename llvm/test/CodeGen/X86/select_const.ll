@@ -62,8 +62,8 @@ define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 define i32 @select_1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_1_or_0_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -95,9 +95,8 @@ define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -129,7 +128,7 @@ define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 define i32 @select_neg1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movsbl %dil, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -161,9 +160,8 @@ define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 define i32 @select_Cplus1_C_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_Cplus1_C_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    addl $41, %eax
+; CHECK-NEXT:    movl $41, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 42, i32 41
   ret i32 %sel
@@ -195,10 +193,9 @@ define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %ecx
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel

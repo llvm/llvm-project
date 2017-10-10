@@ -799,12 +799,9 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; KNL-LABEL: test_insertelement_v32i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi0:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi2:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $32, %rsp
@@ -1286,12 +1283,9 @@ define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v4i64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi3:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi4:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi5:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1307,12 +1301,9 @@ define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v4i64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi0:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi1:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi2:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1332,12 +1323,9 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v8i64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi6:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi7:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi8:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1353,12 +1341,9 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v8i64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi3:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi4:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi5:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1390,12 +1375,9 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 ; KNL-LABEL: test_extractelement_variable_v4f64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi9:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi10:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi11:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1411,12 +1393,9 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 ; SKX-LABEL: test_extractelement_variable_v4f64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi6:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi7:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi8:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1436,12 +1415,9 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; KNL-LABEL: test_extractelement_variable_v8f64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi12:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi13:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi14:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1457,12 +1433,9 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; SKX-LABEL: test_extractelement_variable_v8f64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi9:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi10:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi11:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1494,12 +1467,9 @@ define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v8i32:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi15:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi16:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi17:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1515,12 +1485,9 @@ define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v8i32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi12:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi13:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi14:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1540,12 +1507,9 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v16i32:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi18:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi19:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi20:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1561,12 +1525,9 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v16i32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi15:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi16:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi17:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1598,12 +1559,9 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v8f32:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi21:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi22:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi23:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1619,12 +1577,9 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v8f32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi18:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi19:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi20:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1644,12 +1599,9 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; KNL-LABEL: test_extractelement_variable_v16f32:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi24:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi25:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi26:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1665,12 +1617,9 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; SKX-LABEL: test_extractelement_variable_v16f32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi21:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi22:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi23:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1702,12 +1651,9 @@ define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v16i16:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi27:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi28:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi29:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1723,12 +1669,9 @@ define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v16i16:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi24:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi25:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi26:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1748,12 +1691,9 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v32i16:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi30:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi31:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi32:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1770,12 +1710,9 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v32i16:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi27:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi28:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi29:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1808,12 +1745,9 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v32i8:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi33:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi34:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi35:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1830,12 +1764,9 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v32i8:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi30:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi31:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi32:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-32, %rsp
 ; SKX-NEXT:    subq $64, %rsp
@@ -1857,12 +1788,9 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v64i8:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi36:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi37:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi38:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1880,12 +1808,9 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; SKX-LABEL: test_extractelement_variable_v64i8:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi33:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi34:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi35:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -1907,12 +1832,9 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; KNL-LABEL: test_extractelement_variable_v64i8_indexi8:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi39:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi40:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi41:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -1931,12 +1853,9 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; SKX-LABEL: test_extractelement_variable_v64i8_indexi8:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi36:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi37:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi38:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -2020,12 +1939,9 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; KNL-LABEL: test_extractelement_varible_v8i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi42:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi43:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi44:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -2046,12 +1962,9 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; SKX-LABEL: test_extractelement_varible_v8i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi39:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi40:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi41:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -2076,12 +1989,9 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; KNL-LABEL: test_extractelement_varible_v16i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi45:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi46:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi47:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
@@ -2100,12 +2010,9 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; SKX-LABEL: test_extractelement_varible_v16i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi42:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi43:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi44:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
@@ -2130,12 +2037,9 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; KNL-LABEL: test_extractelement_varible_v32i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi48:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi49:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi50:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -2157,12 +2061,9 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; SKX-LABEL: test_extractelement_varible_v32i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi45:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi46:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi47:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp

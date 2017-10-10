@@ -16,7 +16,6 @@ define i64 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    movabsq $-4294967041, %rcx # imm = 0xFFFFFFFF000000FF

@@ -18,9 +18,7 @@ entry:
 ; CHECK-FP-NEXT: .cfi_startproc
 ; CHECK-FP-NEXT: :
 ; CHECK-FP-NEXT: pushq %rbp
-; CHECK-FP-NEXT: :
 ; CHECK-FP-NEXT: .cfi_def_cfa_offset 16
-; CHECK-FP-NEXT: :
 ; CHECK-FP-NEXT: .cfi_offset %rbp, -16
 ; CHECK-FP-NEXT: movq %rsp, %rbp
 ; CHECK-FP-NEXT: .cfi_endproc
@@ -38,9 +36,7 @@ entry:
 ; LINUX-FP-NEXT: .cfi_startproc
 ; LINUX-FP-NEXT: {{^}}#
 ; LINUX-FP-NEXT: pushq %rbp
-; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT:  .cfi_def_cfa_offset 16
-; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT: .cfi_offset %rbp, -16
 ; LINUX-FP-NEXT: movq        %rsp, %rbp
 ; LINUX-FP-NEXT:{{^}}.L{{.*}}:{{$}}

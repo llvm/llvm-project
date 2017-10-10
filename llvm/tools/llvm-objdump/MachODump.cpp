@@ -206,9 +206,8 @@ typedef DiceTable::iterator dice_table_iterator;
 namespace {
 struct ScopedXarFile {
   xar_t xar;
-  ScopedXarFile(const char *filename, int32_t flags) {
-    xar = xar_open(filename, flags);
-  }
+  ScopedXarFile(const char *filename, int32_t flags)
+      : xar(xar_open(filename, flags)) {}
   ~ScopedXarFile() {
     if (xar)
       xar_close(xar);
@@ -220,7 +219,7 @@ struct ScopedXarFile {
 
 struct ScopedXarIter {
   xar_iter_t iter;
-  ScopedXarIter() { iter = xar_iter_new(); }
+  ScopedXarIter() : iter(xar_iter_new()) {}
   ~ScopedXarIter() {
     if (iter)
       xar_iter_free(iter);

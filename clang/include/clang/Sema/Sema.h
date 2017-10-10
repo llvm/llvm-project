@@ -285,15 +285,21 @@ class Sema {
 
   bool isVisibleSlow(const NamedDecl *D);
 
+  /// Determine whether two declarations should be linked together, given that
+  /// the old declaration might not be visible and the new declaration might
+  /// not have external linkage.
   bool shouldLinkPossiblyHiddenDecl(const NamedDecl *Old,
                                     const NamedDecl *New) {
-    // We are about to link these. It is now safe to compute the linkage of
-    // the new decl. If the new decl has external linkage, we will
-    // link it with the hidden decl (which also has external linkage) and
-    // it will keep having external linkage. If it has internal linkage, we
-    // will not link it. Since it has no previous decls, it will remain
-    // with internal linkage.
-    return isVisible(Old) || New->isExternallyVisible();
+    if (isVisible(Old))
+     return true;
+    // See comment in below overload for why it's safe to compute the linkage
+    // of the new declaration here.
+    if (New->isExternallyDeclarable()) {
+      assert(Old->isExternallyDeclarable() &&
+             "should not have found a non-externally-declarable previous decl");
+      return true;
+    }
+    return false;
   }
   bool shouldLinkPossiblyHiddenDecl(LookupResult &Old, const NamedDecl *New);
 
@@ -3035,9 +3041,24 @@ public:
     /// purpose of redeclaring the name.
     NotForRedeclaration = 0,
     /// \brief The lookup results will be used for redeclaration of a name,
-    /// if an entity by that name already exists.
-    ForRedeclaration
+    /// if an entity by that name already exists and is visible.
+    ForVisibleRedeclaration,
+    /// \brief The lookup results will be used for redeclaration of a name
+    /// with external linkage; non-visible lookup results with external linkage
+    /// may also be found.
+    ForExternalRedeclaration
   };
+
+  RedeclarationKind forRedeclarationInCurContext() {
+    // A declaration with an owning module for linkage can never link against
+    // anything that is not visible. We don't need to check linkage here; if
+    // the context has internal linkage, redeclaration lookup won't find things
+    // from other TUs, and we can't safely compute linkage yet in general.
+    if (cast<Decl>(CurContext)
+            ->getOwningModuleForLinkage(/*IgnoreLinkage*/true))
+      return ForVisibleRedeclaration;
+    return ForExternalRedeclaration;
+  }
 
   /// \brief The possible outcomes of name lookup for a literal operator.
   enum LiteralOperatorLookupResult {
@@ -3265,6 +3286,8 @@ public:
 
   void FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
                             bool ConsiderLinkage, bool AllowInlineNamespace);
+
+  bool CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old);
 
   void DiagnoseAmbiguousLookup(LookupResult &Result);
   //@}

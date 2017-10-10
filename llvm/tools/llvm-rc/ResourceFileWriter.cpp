@@ -166,9 +166,7 @@ static Error processString(StringRef Str, NullHandlingMethod NullHandler,
       }
     }
 
-    // Make sure to write little-endian strings, regardless of the host
-    // byte-order.
-    Result.push_back(endian::byte_swap(Char, little));
+    Result.push_back(Char);
     return Error::success();
   };
 
@@ -380,7 +378,7 @@ void ResourceFileWriter::padStream(uint64_t Length) {
     writeInt<uint8_t>(0);
 }
 
-Error ResourceFileWriter::handleError(Error &&Err, const RCResource *Res) {
+Error ResourceFileWriter::handleError(Error Err, const RCResource *Res) {
   if (Err)
     return joinErrors(createError("Error in " + Res->getResourceTypeName() +
                                   " statement (ID " + Twine(Res->ResName) +
@@ -1131,7 +1129,7 @@ Error ResourceFileWriter::writeMenuDefinitionList(
 Error ResourceFileWriter::writeMenuBody(const RCResource *Base) {
   // At first, MENUHEADER structure. In fact, these are two WORDs equal to 0.
   // Ref: msdn.microsoft.com/en-us/library/windows/desktop/ms648018.aspx
-  writeObject<uint32_t>(0);
+  writeInt<uint32_t>(0);
 
   return writeMenuDefinitionList(cast<MenuResource>(Base)->Elements);
 }
@@ -1250,9 +1248,9 @@ Error ResourceFileWriter::writeVersionInfoBlock(const VersionInfoBlock &Blk) {
   uint64_t LengthLoc;
 
   if (OutputHeader) {
-    LengthLoc = writeObject<uint16_t>(0);
-    writeObject<uint16_t>(0);
-    writeObject<uint16_t>(true);
+    LengthLoc = writeInt<uint16_t>(0);
+    writeInt<uint16_t>(0);
+    writeInt<uint16_t>(1); // true
     RETURN_IF_ERROR(writeCString(Blk.Name));
     padStream(sizeof(uint32_t));
   }
@@ -1304,9 +1302,9 @@ Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
     return createError(Twine("VALUE ") + Val.Key +
                        " cannot contain both strings and integers");
 
-  auto LengthLoc = writeObject<uint16_t>(0);
-  auto ValLengthLoc = writeObject<uint16_t>(0);
-  writeObject<uint16_t>(HasStrings);
+  auto LengthLoc = writeInt<uint16_t>(0);
+  auto ValLengthLoc = writeInt<uint16_t>(0);
+  writeInt<uint16_t>(HasStrings);
   RETURN_IF_ERROR(writeCString(Val.Key));
   padStream(sizeof(uint32_t));
 

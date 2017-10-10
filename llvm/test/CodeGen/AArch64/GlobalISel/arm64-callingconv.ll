@@ -70,8 +70,10 @@ define [1 x double] @args_arr([1 x double] %d0) {
 ; CHECK: %w0 = COPY [[ANSWER]]
 ; CHECK: %d0 = COPY [[D_ONE]]
 ; CHECK: %x1 = COPY [[TWELVE]]
-; CHECK: %w2 = COPY [[THREE]](s8)
-; CHECK: %w3 = COPY [[ONE]](s16)
+; CHECK: [[THREE_TMP:%[0-9]+]](s32) = G_ANYEXT [[THREE]]
+; CHECK: %w2 = COPY [[THREE_TMP]](s32)
+; CHECK: [[ONE_TMP:%[0-9]+]](s32) = G_ANYEXT [[ONE]]
+; CHECK: %w3 = COPY [[ONE_TMP]](s32)
 ; CHECK: %w4 = COPY [[FOUR]](s32)
 ; CHECK: %s1 = COPY [[F_ONE]](s32)
 ; CHECK: %d2 = COPY [[TWO]](s64)

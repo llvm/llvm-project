@@ -92,8 +92,8 @@ namespace llvm {
 
 MCObjectWriter *createARMWinCOFFObjectWriter(raw_pwrite_stream &OS,
                                              bool Is64Bit) {
-  MCWinCOFFObjectTargetWriter *MOTW = new ARMWinCOFFObjectWriter(Is64Bit);
-  return createWinCOFFObjectWriter(MOTW, OS);
+  auto MOTW = llvm::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
+  return createWinCOFFObjectWriter(std::move(MOTW), OS);
 }
 
 } // end namespace llvm
