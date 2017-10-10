@@ -1831,6 +1831,7 @@ std::vector<std::vector<uint32_t>> GdbIndexSection::createCuVectors() {
 }
 
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
+  // Gather debug info to create a .gdb_index section.
   std::vector<InputSection *> Sections = getDebugInfoSections();
   std::vector<GdbIndexChunk> Chunks(Sections.size());
 
@@ -1844,6 +1845,14 @@ template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
     Chunks[I].NamesAndTypes = readPubNamesAndTypes(Dwarf);
   });
 
+  // .debug_gnu_pub{names,types} are useless in executables.
+  // They are present in input object files solely for creating
+  // a .gdb_index. So we can remove it from the output.
+  for (InputSectionBase *S : InputSections)
+    if (S->Name == ".debug_gnu_pubnames" || S->Name == ".debug_gnu_pubtypes")
+      S->Live = false;
+
+  // Create a .gdb_index and returns it.
   return make<GdbIndexSection>(std::move(Chunks));
 }
 

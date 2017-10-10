@@ -1106,8 +1106,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.
-  if (Config->GcSections)
-    markLive<ELFT>();
+  markLive<ELFT>();
   decompressAndMergeSections();
   if (Config->ICF)
     doIcf<ELFT>();

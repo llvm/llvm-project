@@ -186,7 +186,7 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT> void elf::markLive() {
+template <class ELFT> static void doGcSections() {
   SmallVector<InputSection *, 256> Q;
   CNamedSections.clear();
 
@@ -259,6 +259,42 @@ template <class ELFT> void elf::markLive() {
   // Mark all reachable sections.
   while (!Q.empty())
     forEachSuccessor<ELFT>(*Q.pop_back_val(), Enqueue);
+}
+
+// Before calling this function, Live bits are off for all
+// input sections. This function make some or all of them on
+// so that they are emitted to the output file.
+template <class ELFT> void elf::markLive() {
+  // If -gc-sections is missing, no sections are removed.
+  if (!Config->GcSections) {
+    for (InputSectionBase *Sec : InputSections)
+      Sec->Live = true;
+    return;
+  }
+
+  // The -gc-sections option works only for SHF_ALLOC sections
+  // (sections that are memory-mapped at runtime). So we can
+  // unconditionally make non-SHF_ALLOC sections alive.
+  //
+  // Non SHF_ALLOC sections are not removed even if they are
+  // unreachable through relocations because reachability is not
+  // a good signal whether they are garbage or not (e.g. there is
+  // usually no section referring to a .comment section, but we
+  // want to keep it.)
+  //
+  // Note on SHF_REL{,A}: Such sections reach here only when -r
+  // or -emit-reloc were given. And they are subject of garbage
+  // collection because, if we remove a text section, we also
+  // remove its relocation section.
+  for (InputSectionBase *Sec : InputSections) {
+    bool IsAlloc = (Sec->Flags & SHF_ALLOC);
+    bool IsRel = (Sec->Type == SHT_REL || Sec->Type == SHT_RELA);
+    if (!IsAlloc && !IsRel)
+      Sec->Live = true;
+  }
+
+  // Follow the graph to mark all live sections.
+  doGcSections<ELFT>();
 }
 
 template void elf::markLive<ELF32LE>();
