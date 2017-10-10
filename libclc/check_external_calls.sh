@@ -24,9 +24,10 @@ TMP_FILE=$(mktemp)
 
 # Check for calls. Calls to llvm intrinsics are OK
 $DIS < $FILE | grep ' call ' | grep -v '@llvm' > "$TMP_FILE"
+COUNT=$(wc -l < "$TMP_FILE")
 
-if [ $(wc -l < "$TMP_FILE") -ne "0" ]; then
-	echo "ERROR: unresolved calls detected"
+if [ "$COUNT" -ne "0" ]; then
+	echo "ERROR: $COUNT unresolved calls detected in $FILE"
 	cat $TMP_FILE
 	ret=1
 else

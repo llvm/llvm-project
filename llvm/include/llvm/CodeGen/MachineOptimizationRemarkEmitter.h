@@ -16,7 +16,7 @@
 #ifndef LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 #define LLVM_CODEGEN_MACHINEOPTIMIZATIONREMARKEMITTER_H
 
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {

@@ -689,7 +689,7 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
                                         StringRef Annot,
                                         const MCSubtargetInfo &STI) {
   unsigned Opcode = MI->getOpcode();
-  StringRef Layout, Mnemonic;
+  StringRef Layout;
 
   bool IsTbx;
   if (isTblTbxInstruction(MI->getOpcode(), Layout, IsTbx)) {

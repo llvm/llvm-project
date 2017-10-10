@@ -27,6 +27,8 @@
 
 // REQUIRES: stable-runtime, cxxabi
 // UNSUPPORTED: win32
+// Suppressions file not pushed to the device.
+// UNSUPPORTED: android
 #include <new>
 #include <assert.h>
 #include <stdio.h>

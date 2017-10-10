@@ -16,7 +16,7 @@
 
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include <cassert>
 #include <climits>
 

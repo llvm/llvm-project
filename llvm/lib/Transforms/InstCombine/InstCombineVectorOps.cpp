@@ -986,15 +986,13 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
   // Mask.size() does not need to be equal to the number of vector elements.
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
-  if (isa<UndefValue>(V)) {
-    return UndefValue::get(VectorType::get(V->getType()->getScalarType(),
-                                           Mask.size()));
-  }
-  if (isa<ConstantAggregateZero>(V)) {
-    return ConstantAggregateZero::get(
-               VectorType::get(V->getType()->getScalarType(),
-                               Mask.size()));
-  }
+  Type *EltTy = V->getType()->getScalarType();
+  if (isa<UndefValue>(V))
+    return UndefValue::get(VectorType::get(EltTy, Mask.size()));
+
+  if (isa<ConstantAggregateZero>(V))
+    return ConstantAggregateZero::get(VectorType::get(EltTy, Mask.size()));
+
   if (Constant *C = dyn_cast<Constant>(V)) {
     SmallVector<Constant *, 16> MaskValues;
     for (int i = 0, e = Mask.size(); i != e; ++i) {

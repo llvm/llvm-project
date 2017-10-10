@@ -343,13 +343,26 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
-    assert(VA.getValVT().getSizeInBits() <= 64 && "Unsupported value size");
-    assert(VA.getLocVT().getSizeInBits() <= 64 && "Unsupported location size");
+    auto ValSize = VA.getValVT().getSizeInBits();
+    auto LocSize = VA.getLocVT().getSizeInBits();
 
-    // The necessary extensions are handled on the other side of the ABI
-    // boundary.
+    assert(ValSize <= 64 && "Unsupported value size");
+    assert(LocSize <= 64 && "Unsupported location size");
+
     markPhysRegUsed(PhysReg);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    if (ValSize == LocSize) {
+      MIRBuilder.buildCopy(ValVReg, PhysReg);
+    } else {
+      assert(ValSize < LocSize && "Extensions not supported");
+
+      // We cannot create a truncating copy, nor a trunc of a physical register.
+      // Therefore, we need to copy the content of the physical register into a
+      // virtual one and then truncate that.
+      auto PhysRegToVReg =
+          MRI.createGenericVirtualRegister(LLT::scalar(LocSize));
+      MIRBuilder.buildCopy(PhysRegToVReg, PhysReg);
+      MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
+    }
   }
 
   unsigned assignCustomValue(const ARMCallLowering::ArgInfo &Arg,

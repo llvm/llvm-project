@@ -1,4 +1,4 @@
-//===- OptimizationDiagnosticInfo.h - Optimization Diagnostic ---*- C++ -*-===//
+//===- OptimizationRemarkEmitter.h - Optimization Diagnostic ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

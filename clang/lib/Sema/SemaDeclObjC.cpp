@@ -943,8 +943,9 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
   assert(ClassName && "Missing class identifier");
 
   // Check for another declaration kind with the same name.
-  NamedDecl *PrevDecl = LookupSingleName(TUScope, ClassName, ClassLoc,
-                                         LookupOrdinaryName, ForRedeclaration);
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, ClassName, ClassLoc, LookupOrdinaryName,
+                       forRedeclarationInCurContext());
 
   if (PrevDecl && !isa<ObjCInterfaceDecl>(PrevDecl)) {
     Diag(ClassLoc, diag::err_redefinition_different_kind) << ClassName;
@@ -1095,16 +1096,18 @@ Decl *Sema::ActOnCompatibilityAlias(SourceLocation AtLoc,
                                     IdentifierInfo *ClassName,
                                     SourceLocation ClassLocation) {
   // Look for previous declaration of alias name
-  NamedDecl *ADecl = LookupSingleName(TUScope, AliasName, AliasLocation,
-                                      LookupOrdinaryName, ForRedeclaration);
+  NamedDecl *ADecl =
+      LookupSingleName(TUScope, AliasName, AliasLocation, LookupOrdinaryName,
+                       forRedeclarationInCurContext());
   if (ADecl) {
     Diag(AliasLocation, diag::err_conflicting_aliasing_type) << AliasName;
     Diag(ADecl->getLocation(), diag::note_previous_declaration);
     return nullptr;
   }
   // Check for class declaration
-  NamedDecl *CDeclU = LookupSingleName(TUScope, ClassName, ClassLocation,
-                                       LookupOrdinaryName, ForRedeclaration);
+  NamedDecl *CDeclU =
+      LookupSingleName(TUScope, ClassName, ClassLocation, LookupOrdinaryName,
+                       forRedeclarationInCurContext());
   if (const TypedefNameDecl *TDecl =
         dyn_cast_or_null<TypedefNameDecl>(CDeclU)) {
     QualType T = TDecl->getUnderlyingType();
@@ -1112,7 +1115,8 @@ Decl *Sema::ActOnCompatibilityAlias(SourceLocation AtLoc,
       if (NamedDecl *IDecl = T->getAs<ObjCObjectType>()->getInterface()) {
         ClassName = IDecl->getIdentifier();
         CDeclU = LookupSingleName(TUScope, ClassName, ClassLocation,
-                                  LookupOrdinaryName, ForRedeclaration);
+                                  LookupOrdinaryName,
+                                  forRedeclarationInCurContext());
       }
     }
   }
@@ -1174,7 +1178,7 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
   // FIXME: Deal with AttrList.
   assert(ProtocolName && "Missing protocol identifier");
   ObjCProtocolDecl *PrevDecl = LookupProtocol(ProtocolName, ProtocolLoc,
-                                              ForRedeclaration);
+                                              forRedeclarationInCurContext());
   ObjCProtocolDecl *PDecl = nullptr;
   if (ObjCProtocolDecl *Def = PrevDecl? PrevDecl->getDefinition() : nullptr) {
     // If we already have a definition, complain.
@@ -1730,7 +1734,7 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
   for (const IdentifierLocPair &IdentPair : IdentList) {
     IdentifierInfo *Ident = IdentPair.first;
     ObjCProtocolDecl *PrevDecl = LookupProtocol(Ident, IdentPair.second,
-                                                ForRedeclaration);
+                                                forRedeclarationInCurContext());
     ObjCProtocolDecl *PDecl
       = ObjCProtocolDecl::Create(Context, CurContext, Ident, 
                                  IdentPair.second, AtProtocolLoc,
@@ -1921,7 +1925,7 @@ Decl *Sema::ActOnStartClassImplementation(
   // Check for another declaration kind with the same name.
   NamedDecl *PrevDecl
     = LookupSingleName(TUScope, ClassName, ClassLoc, LookupOrdinaryName,
-                       ForRedeclaration);
+                       forRedeclarationInCurContext());
   if (PrevDecl && !isa<ObjCInterfaceDecl>(PrevDecl)) {
     Diag(ClassLoc, diag::err_redefinition_different_kind) << ClassName;
     Diag(PrevDecl->getLocation(), diag::note_previous_definition);
@@ -2997,7 +3001,7 @@ Sema::ActOnForwardClassDeclaration(SourceLocation AtClassLoc,
     // Check for another declaration kind with the same name.
     NamedDecl *PrevDecl
       = LookupSingleName(TUScope, IdentList[i], IdentLocs[i], 
-                         LookupOrdinaryName, ForRedeclaration);
+                         LookupOrdinaryName, forRedeclarationInCurContext());
     if (PrevDecl && !isa<ObjCInterfaceDecl>(PrevDecl)) {
       // GCC apparently allows the following idiom:
       //
@@ -4443,7 +4447,7 @@ Decl *Sema::ActOnMethodDeclaration(
     }
 
     LookupResult R(*this, ArgInfo[i].Name, ArgInfo[i].NameLoc, 
-                   LookupOrdinaryName, ForRedeclaration);
+                   LookupOrdinaryName, forRedeclarationInCurContext());
     LookupName(R, S);
     if (R.isSingleResult()) {
       NamedDecl *PrevDecl = R.getFoundDecl();

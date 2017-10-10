@@ -65,7 +65,7 @@ template <typename TagT, typename... MemberTs> class PointerSumType {
   typedef detail::PointerSumTypeHelper<TagT, MemberTs...> HelperT;
 
 public:
-  PointerSumType() : Value(0) {}
+  constexpr PointerSumType() : Value(0) {}
 
   /// A typed constructor for a specific tagged member of the sum type.
   template <TagT N>

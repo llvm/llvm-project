@@ -270,20 +270,24 @@ public:
   void EmitCFIWindowSave() override;
   void EmitCFIReturnColumn(int64_t Register) override;
 
-  void EmitWinCFIStartProc(const MCSymbol *Symbol) override;
-  void EmitWinCFIEndProc() override;
-  void EmitWinCFIStartChained() override;
-  void EmitWinCFIEndChained() override;
-  void EmitWinCFIPushReg(unsigned Register) override;
-  void EmitWinCFISetFrame(unsigned Register, unsigned Offset) override;
-  void EmitWinCFIAllocStack(unsigned Size) override;
-  void EmitWinCFISaveReg(unsigned Register, unsigned Offset) override;
-  void EmitWinCFISaveXMM(unsigned Register, unsigned Offset) override;
-  void EmitWinCFIPushFrame(bool Code) override;
-  void EmitWinCFIEndProlog() override;
+  void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
+  void EmitWinCFIEndProc(SMLoc Loc) override;
+  void EmitWinCFIStartChained(SMLoc Loc) override;
+  void EmitWinCFIEndChained(SMLoc Loc) override;
+  void EmitWinCFIPushReg(unsigned Register, SMLoc Loc) override;
+  void EmitWinCFISetFrame(unsigned Register, unsigned Offset,
+                          SMLoc Loc) override;
+  void EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
+  void EmitWinCFISaveReg(unsigned Register, unsigned Offset,
+                         SMLoc Loc) override;
+  void EmitWinCFISaveXMM(unsigned Register, unsigned Offset,
+                         SMLoc Loc) override;
+  void EmitWinCFIPushFrame(bool Code, SMLoc Loc) override;
+  void EmitWinCFIEndProlog(SMLoc Loc) override;
 
-  void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except) override;
-  void EmitWinEHHandlerData() override;
+  void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
+                        SMLoc Loc) override;
+  void EmitWinEHHandlerData(SMLoc Loc) override;
 
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                        bool PrintSchedInfo) override;
@@ -1425,38 +1429,38 @@ void MCAsmStreamer::EmitCFIReturnColumn(int64_t Register) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol) {
-  MCStreamer::EmitWinCFIStartProc(Symbol);
+void MCAsmStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::EmitWinCFIStartProc(Symbol, Loc);
 
   OS << ".seh_proc ";
   Symbol->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndProc() {
-  MCStreamer::EmitWinCFIEndProc();
+void MCAsmStreamer::EmitWinCFIEndProc(SMLoc Loc) {
+  MCStreamer::EmitWinCFIEndProc(Loc);
 
   OS << "\t.seh_endproc";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIStartChained() {
-  MCStreamer::EmitWinCFIStartChained();
+void MCAsmStreamer::EmitWinCFIStartChained(SMLoc Loc) {
+  MCStreamer::EmitWinCFIStartChained(Loc);
 
   OS << "\t.seh_startchained";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndChained() {
-  MCStreamer::EmitWinCFIEndChained();
+void MCAsmStreamer::EmitWinCFIEndChained(SMLoc Loc) {
+  MCStreamer::EmitWinCFIEndChained(Loc);
 
   OS << "\t.seh_endchained";
   EmitEOL();
 }
 
 void MCAsmStreamer::EmitWinEHHandler(const MCSymbol *Sym, bool Unwind,
-                                      bool Except) {
-  MCStreamer::EmitWinEHHandler(Sym, Unwind, Except);
+                                     bool Except, SMLoc Loc) {
+  MCStreamer::EmitWinEHHandler(Sym, Unwind, Except, Loc);
 
   OS << "\t.seh_handler ";
   Sym->print(OS, MAI);
@@ -1467,8 +1471,8 @@ void MCAsmStreamer::EmitWinEHHandler(const MCSymbol *Sym, bool Unwind,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinEHHandlerData() {
-  MCStreamer::EmitWinEHHandlerData();
+void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
+  MCStreamer::EmitWinEHHandlerData(Loc);
 
   // Switch sections. Don't call SwitchSection directly, because that will
   // cause the section switch to be visible in the emitted assembly.
@@ -1483,43 +1487,46 @@ void MCAsmStreamer::EmitWinEHHandlerData() {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIPushReg(unsigned Register) {
-  MCStreamer::EmitWinCFIPushReg(Register);
+void MCAsmStreamer::EmitWinCFIPushReg(unsigned Register, SMLoc Loc) {
+  MCStreamer::EmitWinCFIPushReg(Register, Loc);
 
   OS << "\t.seh_pushreg " << Register;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISetFrame(unsigned Register, unsigned Offset) {
-  MCStreamer::EmitWinCFISetFrame(Register, Offset);
+void MCAsmStreamer::EmitWinCFISetFrame(unsigned Register, unsigned Offset,
+                                       SMLoc Loc) {
+  MCStreamer::EmitWinCFISetFrame(Register, Offset, Loc);
 
   OS << "\t.seh_setframe " << Register << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIAllocStack(unsigned Size) {
-  MCStreamer::EmitWinCFIAllocStack(Size);
+void MCAsmStreamer::EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
+  MCStreamer::EmitWinCFIAllocStack(Size, Loc);
 
   OS << "\t.seh_stackalloc " << Size;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveReg(unsigned Register, unsigned Offset) {
-  MCStreamer::EmitWinCFISaveReg(Register, Offset);
+void MCAsmStreamer::EmitWinCFISaveReg(unsigned Register, unsigned Offset,
+                                      SMLoc Loc) {
+  MCStreamer::EmitWinCFISaveReg(Register, Offset, Loc);
 
   OS << "\t.seh_savereg " << Register << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveXMM(unsigned Register, unsigned Offset) {
-  MCStreamer::EmitWinCFISaveXMM(Register, Offset);
+void MCAsmStreamer::EmitWinCFISaveXMM(unsigned Register, unsigned Offset,
+                                      SMLoc Loc) {
+  MCStreamer::EmitWinCFISaveXMM(Register, Offset, Loc);
 
   OS << "\t.seh_savexmm " << Register << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIPushFrame(bool Code) {
-  MCStreamer::EmitWinCFIPushFrame(Code);
+void MCAsmStreamer::EmitWinCFIPushFrame(bool Code, SMLoc Loc) {
+  MCStreamer::EmitWinCFIPushFrame(Code, Loc);
 
   OS << "\t.seh_pushframe";
   if (Code)
@@ -1527,8 +1534,8 @@ void MCAsmStreamer::EmitWinCFIPushFrame(bool Code) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndProlog() {
-  MCStreamer::EmitWinCFIEndProlog();
+void MCAsmStreamer::EmitWinCFIEndProlog(SMLoc Loc) {
+  MCStreamer::EmitWinCFIEndProlog(Loc);
 
   OS << "\t.seh_endprologue";
   EmitEOL();

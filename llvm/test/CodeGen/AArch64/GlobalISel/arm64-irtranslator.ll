@@ -971,7 +971,8 @@ define void @test_insertvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
 }
 
 ; CHECK-LABEL: name: test_select
-; CHECK: [[TST:%[0-9]+]](s1) = COPY %w0
+; CHECK: [[TST_C:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[TST:%[0-9]+]](s1) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w2
 ; CHECK: [[RES:%[0-9]+]](s32) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
@@ -982,7 +983,8 @@ define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
 }
 
 ; CHECK-LABEL: name: test_select_ptr
-; CHECK: [[TST:%[0-9]+]](s1) = COPY %w0
+; CHECK: [[TST_C:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[TST:%[0-9]+]](s1) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]](p0) = COPY %x1
 ; CHECK: [[RHS:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[RES:%[0-9]+]](p0) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
@@ -993,7 +995,8 @@ define i8* @test_select_ptr(i1 %tst, i8* %lhs, i8* %rhs) {
 }
 
 ; CHECK-LABEL: name: test_select_vec
-; CHECK: [[TST:%[0-9]+]](s1) = COPY %w0
+; CHECK: [[TST_C:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[TST:%[0-9]+]](s1) = G_TRUNC [[TST_C]]
 ; CHECK: [[LHS:%[0-9]+]](<4 x s32>) = COPY %q0
 ; CHECK: [[RHS:%[0-9]+]](<4 x s32>) = COPY %q1
 ; CHECK: [[RES:%[0-9]+]](<4 x s32>) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
@@ -1176,10 +1179,12 @@ declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i32 %align, i1 %volatile)
 define void @test_memset(i8* %dst, i8 %val, i64 %size) {
 ; CHECK-LABEL: name: test_memset
 ; CHECK: [[DST:%[0-9]+]](p0) = COPY %x0
-; CHECK: [[SRC:%[0-9]+]](s8) = COPY %w1
+; CHECK: [[SRC_C:%[0-9]+]](s32) = COPY %w1
+; CHECK: [[SRC:%[0-9]+]](s8) = G_TRUNC [[SRC_C]]
 ; CHECK: [[SIZE:%[0-9]+]](s64) = COPY %x2
 ; CHECK: %x0 = COPY [[DST]]
-; CHECK: %w1 = COPY [[SRC]]
+; CHECK: [[SRC_TMP:%[0-9]+]](s32) = G_ANYEXT [[SRC]]
+; CHECK: %w1 = COPY [[SRC_TMP]]
 ; CHECK: %x2 = COPY [[SIZE]]
 ; CHECK: BL $memset, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %w1, implicit %x2
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i32 1, i1 0)

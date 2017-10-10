@@ -4801,6 +4801,9 @@ def err_thread_non_thread : Error<
 def err_thread_thread_different_kind : Error<
   "thread-local declaration of %0 with %select{static|dynamic}1 initialization "
   "follows declaration with %select{dynamic|static}1 initialization">;
+def err_mismatched_owning_module : Error<
+  "declaration of %0 in %select{the global module|module %2}1 follows "
+  "declaration in %select{the global module|module %4}3">;
 def err_redefinition_different_type : Error<
   "redefinition of %0 with a different type%diff{: $ vs $|}1,2">;
 def err_redefinition_different_kind : Error<

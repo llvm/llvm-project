@@ -934,12 +934,9 @@ define <64 x i8> @test16(i64 %x) {
 ; KNL-LABEL: test16:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi0:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi2:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1004,12 +1001,9 @@ define <64 x i8> @test16(i64 %x) {
 ; AVX512DQ-LABEL: test16:
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:  Lcfi0:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
-; AVX512DQ-NEXT:  Lcfi1:
 ; AVX512DQ-NEXT:    .cfi_offset %rbp, -16
 ; AVX512DQ-NEXT:    movq %rsp, %rbp
-; AVX512DQ-NEXT:  Lcfi2:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512DQ-NEXT:    andq $-32, %rsp
 ; AVX512DQ-NEXT:    subq $64, %rsp
@@ -1050,12 +1044,9 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; KNL-LABEL: test17:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi3:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi4:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi5:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1124,12 +1115,9 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; AVX512DQ-LABEL: test17:
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:  Lcfi3:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
-; AVX512DQ-NEXT:  Lcfi4:
 ; AVX512DQ-NEXT:    .cfi_offset %rbp, -16
 ; AVX512DQ-NEXT:    movq %rsp, %rbp
-; AVX512DQ-NEXT:  Lcfi5:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512DQ-NEXT:    andq $-32, %rsp
 ; AVX512DQ-NEXT:    subq $64, %rsp
@@ -1835,12 +1823,9 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-LABEL: ktest_2:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi6:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Lcfi7:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Lcfi8:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $32, %rsp
@@ -2186,12 +2171,9 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; AVX512DQ-LABEL: ktest_2:
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:  Lcfi6:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
-; AVX512DQ-NEXT:  Lcfi7:
 ; AVX512DQ-NEXT:    .cfi_offset %rbp, -16
 ; AVX512DQ-NEXT:    movq %rsp, %rbp
-; AVX512DQ-NEXT:  Lcfi8:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512DQ-NEXT:    andq $-32, %rsp
 ; AVX512DQ-NEXT:    subq $32, %rsp
@@ -2959,34 +2941,22 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-LABEL: store_64i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Lcfi9:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    pushq %r15
-; KNL-NEXT:  Lcfi10:
 ; KNL-NEXT:    .cfi_def_cfa_offset 24
 ; KNL-NEXT:    pushq %r14
-; KNL-NEXT:  Lcfi11:
 ; KNL-NEXT:    .cfi_def_cfa_offset 32
 ; KNL-NEXT:    pushq %r13
-; KNL-NEXT:  Lcfi12:
 ; KNL-NEXT:    .cfi_def_cfa_offset 40
 ; KNL-NEXT:    pushq %r12
-; KNL-NEXT:  Lcfi13:
 ; KNL-NEXT:    .cfi_def_cfa_offset 48
 ; KNL-NEXT:    pushq %rbx
-; KNL-NEXT:  Lcfi14:
 ; KNL-NEXT:    .cfi_def_cfa_offset 56
-; KNL-NEXT:  Lcfi15:
 ; KNL-NEXT:    .cfi_offset %rbx, -56
-; KNL-NEXT:  Lcfi16:
 ; KNL-NEXT:    .cfi_offset %r12, -48
-; KNL-NEXT:  Lcfi17:
 ; KNL-NEXT:    .cfi_offset %r13, -40
-; KNL-NEXT:  Lcfi18:
 ; KNL-NEXT:    .cfi_offset %r14, -32
-; KNL-NEXT:  Lcfi19:
 ; KNL-NEXT:    .cfi_offset %r15, -24
-; KNL-NEXT:  Lcfi20:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -3296,34 +3266,22 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-LABEL: store_64i1:
 ; AVX512DQ:       ## BB#0:
 ; AVX512DQ-NEXT:    pushq %rbp
-; AVX512DQ-NEXT:  Lcfi9:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512DQ-NEXT:    pushq %r15
-; AVX512DQ-NEXT:  Lcfi10:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 24
 ; AVX512DQ-NEXT:    pushq %r14
-; AVX512DQ-NEXT:  Lcfi11:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 32
 ; AVX512DQ-NEXT:    pushq %r13
-; AVX512DQ-NEXT:  Lcfi12:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 40
 ; AVX512DQ-NEXT:    pushq %r12
-; AVX512DQ-NEXT:  Lcfi13:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 48
 ; AVX512DQ-NEXT:    pushq %rbx
-; AVX512DQ-NEXT:  Lcfi14:
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 56
-; AVX512DQ-NEXT:  Lcfi15:
 ; AVX512DQ-NEXT:    .cfi_offset %rbx, -56
-; AVX512DQ-NEXT:  Lcfi16:
 ; AVX512DQ-NEXT:    .cfi_offset %r12, -48
-; AVX512DQ-NEXT:  Lcfi17:
 ; AVX512DQ-NEXT:    .cfi_offset %r13, -40
-; AVX512DQ-NEXT:  Lcfi18:
 ; AVX512DQ-NEXT:    .cfi_offset %r14, -32
-; AVX512DQ-NEXT:  Lcfi19:
 ; AVX512DQ-NEXT:    .cfi_offset %r15, -24
-; AVX512DQ-NEXT:  Lcfi20:
 ; AVX512DQ-NEXT:    .cfi_offset %rbp, -16
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512DQ-NEXT:    vpslld $31, %zmm0, %zmm0

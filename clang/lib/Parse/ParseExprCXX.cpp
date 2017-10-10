@@ -1354,7 +1354,6 @@ ExprResult Parser::ParseCXXCasts() {
   if (ExpectAndConsume(tok::greater))
     return ExprError(Diag(LAngleBracketLoc, diag::note_matching) << tok::less);
 
-  SourceLocation LParenLoc, RParenLoc;
   BalancedDelimiterTracker T(*this, tok::l_paren);
 
   if (T.expectAndConsume(diag::err_expected_lparen_after, CastName))

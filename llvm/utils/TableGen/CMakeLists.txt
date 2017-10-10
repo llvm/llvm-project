@@ -38,6 +38,7 @@ add_tablegen(llvm-tblgen LLVM
   Types.cpp
   X86DisassemblerTables.cpp
   X86EVEX2VEXTablesEmitter.cpp
+  X86FoldTablesEmitter.cpp
   X86ModRMFilters.cpp
   X86RecognizableInstr.cpp
   CTagsEmitter.cpp

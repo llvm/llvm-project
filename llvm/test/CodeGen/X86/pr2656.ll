@@ -53,7 +53,6 @@ define double @PR22371(double %x) {
 ; CHECK-LABEL: PR22371:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    andps LCPI1_0, %xmm0

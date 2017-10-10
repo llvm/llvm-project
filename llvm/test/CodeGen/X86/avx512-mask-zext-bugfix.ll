@@ -18,7 +18,6 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %f
 ; CHECK-LABEL: test_xmm:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    movl $2, %esi
 ; CHECK-NEXT:    movl $8, %eax

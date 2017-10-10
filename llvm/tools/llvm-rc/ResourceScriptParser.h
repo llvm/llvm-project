@@ -36,7 +36,7 @@ public:
   // Class describing a single failure of parser.
   class ParserError : public ErrorInfo<ParserError> {
   public:
-    ParserError(Twine Expected, const LocIter CurLoc, const LocIter End);
+    ParserError(const Twine &Expected, const LocIter CurLoc, const LocIter End);
 
     void log(raw_ostream &OS) const override { OS << CurMessage; }
     std::error_code convertToErrorCode() const override {
@@ -51,8 +51,7 @@ public:
     LocIter ErrorLoc, FileEnd;
   };
 
-  RCParser(const std::vector<RCToken> &TokenList);
-  RCParser(std::vector<RCToken> &&TokenList);
+  RCParser(std::vector<RCToken> TokenList);
 
   // Reads and returns a single resource definition, or error message if any
   // occurred.
@@ -172,7 +171,7 @@ private:
   // the token that couldn't be parsed. If the flag is on, this complains about
   // the correctly read token that makes no sense (that is, the current parser
   // state is beyond the erroneous token.)
-  Error getExpectedError(const Twine Message, bool IsAlreadyRead = false);
+  Error getExpectedError(const Twine &Message, bool IsAlreadyRead = false);
 
   std::vector<RCToken> Tokens;
   LocIter CurLoc;

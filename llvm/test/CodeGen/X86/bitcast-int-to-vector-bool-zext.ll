@@ -238,34 +238,22 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 ; AVX512-LABEL: ext_i16_16i8:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:  .Lcfi0:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    pushq %r15
-; AVX512-NEXT:  .Lcfi1:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; AVX512-NEXT:    pushq %r14
-; AVX512-NEXT:  .Lcfi2:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; AVX512-NEXT:    pushq %r13
-; AVX512-NEXT:  .Lcfi3:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; AVX512-NEXT:    pushq %r12
-; AVX512-NEXT:  .Lcfi4:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 48
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:  .Lcfi5:
 ; AVX512-NEXT:    .cfi_def_cfa_offset 56
-; AVX512-NEXT:  .Lcfi6:
 ; AVX512-NEXT:    .cfi_offset %rbx, -56
-; AVX512-NEXT:  .Lcfi7:
 ; AVX512-NEXT:    .cfi_offset %r12, -48
-; AVX512-NEXT:  .Lcfi8:
 ; AVX512-NEXT:    .cfi_offset %r13, -40
-; AVX512-NEXT:  .Lcfi9:
 ; AVX512-NEXT:    .cfi_offset %r14, -32
-; AVX512-NEXT:  .Lcfi10:
 ; AVX512-NEXT:    .cfi_offset %r15, -24
-; AVX512-NEXT:  .Lcfi11:
 ; AVX512-NEXT:    .cfi_offset %rbp, -16
 ; AVX512-NEXT:    kmovd %edi, %k0
 ; AVX512-NEXT:    kshiftlw $14, %k0, %k1

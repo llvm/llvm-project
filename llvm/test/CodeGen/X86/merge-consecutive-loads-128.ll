@@ -56,14 +56,10 @@ define <2 x i64> @merge_2i64_i64_12(i64* %ptr) nounwind uwtable noinline ssp {
 ; X32-SSE1-LABEL: merge_2i64_i64_12:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi0:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi1:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi2:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi3:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -377,9 +373,7 @@ define <4 x i32> @merge_4i32_i32_23u5(i32* %ptr) nounwind uwtable noinline ssp {
 ; X32-SSE1-LABEL: merge_4i32_i32_23u5:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi4:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X32-SSE1-NEXT:  .Lcfi5:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -425,14 +419,10 @@ define <4 x i32> @merge_4i32_i32_23u5_inc2(i32* %ptr) nounwind uwtable noinline 
 ; X32-SSE1-LABEL: merge_4i32_i32_23u5_inc2:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi6:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi7:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi8:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi9:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -484,14 +474,10 @@ define <4 x i32> @merge_4i32_i32_23u5_inc3(i32* %ptr) nounwind uwtable noinline 
 ; X32-SSE1-LABEL: merge_4i32_i32_23u5_inc3:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi10:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi11:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi12:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi13:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -647,14 +633,10 @@ define <4 x i32> @merge_4i32_i32_45zz_inc4(i32* %ptr) nounwind uwtable noinline 
 ; X32-SSE1-LABEL: merge_4i32_i32_45zz_inc4:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi14:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi15:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi16:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi17:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -703,14 +685,10 @@ define <4 x i32> @merge_4i32_i32_45zz_inc5(i32* %ptr) nounwind uwtable noinline 
 ; X32-SSE1-LABEL: merge_4i32_i32_45zz_inc5:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi18:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi19:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi20:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi21:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -757,14 +735,10 @@ define <8 x i16> @merge_8i16_i16_23u567u9(i16* %ptr) nounwind uwtable noinline s
 ; X32-SSE1-LABEL: merge_8i16_i16_23u567u9:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi22:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi23:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi24:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi25:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -897,24 +871,16 @@ define <16 x i8> @merge_16i8_i8_01u3456789ABCDuF(i8* %ptr) nounwind uwtable noin
 ; X32-SSE1-LABEL: merge_16i8_i8_01u3456789ABCDuF:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %ebp
-; X32-SSE1-NEXT:  .Lcfi26:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %ebx
-; X32-SSE1-NEXT:  .Lcfi27:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi28:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi29:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 20
-; X32-SSE1-NEXT:  .Lcfi30:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -20
-; X32-SSE1-NEXT:  .Lcfi31:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -16
-; X32-SSE1-NEXT:  .Lcfi32:
 ; X32-SSE1-NEXT:    .cfi_offset %ebx, -12
-; X32-SSE1-NEXT:  .Lcfi33:
 ; X32-SSE1-NEXT:    .cfi_offset %ebp, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1147,14 +1113,10 @@ define <2 x i64> @merge_2i64_i64_12_volatile(i64* %ptr) nounwind uwtable noinlin
 ; X32-SSE1-LABEL: merge_2i64_i64_12_volatile:
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    pushl %edi
-; X32-SSE1-NEXT:  .Lcfi34:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X32-SSE1-NEXT:    pushl %esi
-; X32-SSE1-NEXT:  .Lcfi35:
 ; X32-SSE1-NEXT:    .cfi_def_cfa_offset 12
-; X32-SSE1-NEXT:  .Lcfi36:
 ; X32-SSE1-NEXT:    .cfi_offset %esi, -12
-; X32-SSE1-NEXT:  .Lcfi37:
 ; X32-SSE1-NEXT:    .cfi_offset %edi, -8
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx

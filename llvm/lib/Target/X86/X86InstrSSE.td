@@ -1509,14 +1509,14 @@ def VCVTSD2SSrr  : VSDI<0x5A, MRMSrcReg, (outs FR32:$dst),
                        (ins FR32:$src1, FR64:$src2),
                       "cvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}", [],
                       IIC_SSE_CVT_Scalar_RR>, VEX_4V, VEX_LIG,
-                      Sched<[WriteCvtF2F]>, VEX_WIG;
+                      Sched<[WriteCvtF2F]>, VEX_WIG, NotMemoryFoldable;
 let mayLoad = 1 in
 def VCVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst),
                        (ins FR32:$src1, f64mem:$src2),
                       "vcvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [], IIC_SSE_CVT_Scalar_RM>,
                       XD, Requires<[HasAVX, OptForSize]>, VEX_4V, VEX_LIG,
-                      Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG;
+                      Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG, NotMemoryFoldable;
 }
 
 def : Pat<(f32 (fpround FR64:$src)),
@@ -1576,14 +1576,14 @@ def VCVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [], IIC_SSE_CVT_Scalar_RR>,
                     XS, Requires<[HasAVX]>, VEX_4V, VEX_LIG,
-                    Sched<[WriteCvtF2F]>, VEX_WIG;
+                    Sched<[WriteCvtF2F]>, VEX_WIG, NotMemoryFoldable;
 let mayLoad = 1 in
 def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
                     (ins FR64:$src1, f32mem:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [], IIC_SSE_CVT_Scalar_RM>,
                     XS, VEX_4V, VEX_LIG, Requires<[HasAVX, OptForSize]>,
-                    Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG;
+                    Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG, NotMemoryFoldable;
 }
 
 def : Pat<(f64 (fpextend FR32:$src)),
@@ -2911,22 +2911,6 @@ multiclass scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
       (!cast<I>(OpcPrefix#SSrr_Int) v4f32:$dst, v4f32:$src)>;
   }
 
-  // With SSE 4.1, blendi is preferred to movsd, so match that too.
-  let Predicates = [UseSSE41] in {
-    // extracted scalar math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
-          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
-          FR32:$src))), (i8 1))),
-      (!cast<I>(OpcPrefix#SSrr_Int) v4f32:$dst,
-          (COPY_TO_REGCLASS FR32:$src, VR128))>;
-
-    // vector math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst),
-          (Op (v4f32 VR128:$dst), (v4f32 VR128:$src)), (i8 1))),
-      (!cast<I>(OpcPrefix#SSrr_Int)v4f32:$dst, v4f32:$src)>;
-
-  }
-
   // Repeat everything for AVX.
   let Predicates = [UseAVX] in {
     // extracted scalar math op with insert via movss
@@ -2936,21 +2920,9 @@ multiclass scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
       (!cast<I>("V"#OpcPrefix#SSrr_Int) v4f32:$dst,
           (COPY_TO_REGCLASS FR32:$src, VR128))>;
 
-    // extracted scalar math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
-          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
-          FR32:$src))), (i8 1))),
-      (!cast<I>("V"#OpcPrefix#SSrr_Int) v4f32:$dst,
-          (COPY_TO_REGCLASS FR32:$src, VR128))>;
-
     // vector math op with insert via movss
     def : Pat<(v4f32 (X86Movss (v4f32 VR128:$dst),
           (Op (v4f32 VR128:$dst), (v4f32 VR128:$src)))),
-      (!cast<I>("V"#OpcPrefix#SSrr_Int) v4f32:$dst, v4f32:$src)>;
-
-    // vector math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst),
-          (Op (v4f32 VR128:$dst), (v4f32 VR128:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SSrr_Int) v4f32:$dst, v4f32:$src)>;
   }
 }
@@ -2975,21 +2947,6 @@ multiclass scalar_math_f64_patterns<SDNode Op, string OpcPrefix> {
       (!cast<I>(OpcPrefix#SDrr_Int) v2f64:$dst, v2f64:$src)>;
   }
 
-  // With SSE 4.1, blendi is preferred to movsd, so match those too.
-  let Predicates = [UseSSE41] in {
-    // extracted scalar math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst), (v2f64 (scalar_to_vector
-          (Op (f64 (extractelt (v2f64 VR128:$dst), (iPTR 0))),
-          FR64:$src))), (i8 1))),
-      (!cast<I>(OpcPrefix#SDrr_Int) v2f64:$dst,
-          (COPY_TO_REGCLASS FR64:$src, VR128))>;
-
-    // vector math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst),
-          (Op (v2f64 VR128:$dst), (v2f64 VR128:$src)), (i8 1))),
-      (!cast<I>(OpcPrefix#SDrr_Int) v2f64:$dst, v2f64:$src)>;
-  }
-
   // Repeat everything for AVX.
   let Predicates = [UseAVX] in {
     // extracted scalar math op with insert via movsd
@@ -2999,21 +2956,9 @@ multiclass scalar_math_f64_patterns<SDNode Op, string OpcPrefix> {
       (!cast<I>("V"#OpcPrefix#SDrr_Int) v2f64:$dst,
           (COPY_TO_REGCLASS FR64:$src, VR128))>;
 
-    // extracted scalar math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst), (v2f64 (scalar_to_vector
-          (Op (f64 (extractelt (v2f64 VR128:$dst), (iPTR 0))),
-          FR64:$src))), (i8 1))),
-      (!cast<I>("V"#OpcPrefix#SDrr_Int) v2f64:$dst,
-          (COPY_TO_REGCLASS FR64:$src, VR128))>;
-
     // vector math op with insert via movsd
     def : Pat<(v2f64 (X86Movsd (v2f64 VR128:$dst),
           (Op (v2f64 VR128:$dst), (v2f64 VR128:$src)))),
-      (!cast<I>("V"#OpcPrefix#SDrr_Int) v2f64:$dst, v2f64:$src)>;
-
-    // vector math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst),
-          (Op (v2f64 VR128:$dst), (v2f64 VR128:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SDrr_Int) v2f64:$dst, v2f64:$src)>;
   }
 }
@@ -3258,7 +3203,8 @@ multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
   defm V#NAME#SS  : avx_fp_unop_s<opc, "v"#OpcodeStr##ss, FR32, v4f32, f32,
                       f32mem,
                       !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
-                      SSEPackedSingle, itins, "SS">, XS, VEX_4V, VEX_LIG, VEX_WIG;
+                      SSEPackedSingle, itins, "SS">, XS, VEX_4V, VEX_LIG, VEX_WIG,
+                      NotMemoryFoldable;
 }
 
 multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -3270,7 +3216,7 @@ multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                          f64mem,
                          !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
                          OpNode, SSEPackedDouble, itins, "SD">,
-                         XD, VEX_4V, VEX_LIG, VEX_WIG;
+                         XD, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable;
 }
 
 // Square root.
@@ -3300,18 +3246,9 @@ multiclass scalar_unary_math_patterns<Intrinsic Intr, string OpcPrefix,
               (!cast<I>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 
-  // With SSE 4.1, blendi is preferred to movs*, so match that too.
-  let Predicates = [UseSSE41] in {
-    def : Pat<(VT (X86Blendi VT:$dst, (Intr VT:$src), (i8 1))),
-              (!cast<I>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
-  }
-
   // Repeat for AVX versions of the instructions.
   let Predicates = [HasAVX] in {
     def : Pat<(VT (Move VT:$dst, (Intr VT:$src))),
-              (!cast<I>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
-
-    def : Pat<(VT (X86Blendi VT:$dst, (Intr VT:$src), (i8 1))),
               (!cast<I>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 }

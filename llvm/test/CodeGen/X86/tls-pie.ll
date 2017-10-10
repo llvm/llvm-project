@@ -52,11 +52,9 @@ define i32 @f3() {
 ; X86-LABEL: f3:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    calll .L2$pb
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:  .L2$pb:
 ; X86-NEXT:    popl %eax
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
 ; X86-NEXT:  .Ltmp0:
 ; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L2$pb), %eax
@@ -84,11 +82,9 @@ define i32* @f4() {
 ; X86-LABEL: f4:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    calll .L3$pb
-; X86-NEXT:  .Lcfi2:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:  .L3$pb:
 ; X86-NEXT:    popl %ecx
-; X86-NEXT:  .Lcfi3:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -4
 ; X86-NEXT:  .Ltmp1:
 ; X86-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp1-.L3$pb), %ecx

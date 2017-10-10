@@ -372,7 +372,7 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
   RenameInfo.ReplaceIfExists = ReplaceIfExists;
   RenameInfo.RootDirectory = 0;
   RenameInfo.FileNameLength = ToWide.size();
-  std::copy(ToWide.begin(), ToWide.end(), RenameInfo.FileName);
+  std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
   if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
                                   RenameInfoBuf.size()))

@@ -775,7 +775,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       if (!LHSi)
         LibCallOp.LHS.second = llvm::Constant::getNullValue(LHSr->getType());
 
-      StringRef LibCallName;
       switch (LHSr->getType()->getTypeID()) {
       default:
         llvm_unreachable("Unsupported floating point type!");

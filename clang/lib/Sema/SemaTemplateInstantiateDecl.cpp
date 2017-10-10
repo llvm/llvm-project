@@ -1195,7 +1195,8 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     // Look for a previous declaration of the template in the owning
     // context.
     LookupResult R(SemaRef, Pattern->getDeclName(), Pattern->getLocation(),
-                   Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+                   Sema::LookupOrdinaryName,
+                   SemaRef.forRedeclarationInCurContext());
     SemaRef.LookupQualifiedName(R, DC);
 
     if (R.isSingleResult()) {
@@ -1685,7 +1686,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
       Params[P]->setOwningFunction(Function);
   Function->setParams(Params);
 
-  SourceLocation InstantiateAtPOI;
   if (TemplateParams) {
     // Our resulting instantiation is actually a function template, since we
     // are substituting only the outer template parameters. For example, given
@@ -1736,7 +1736,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
       SemaRef, Function->getDeclName(), SourceLocation(),
       D->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                              : Sema::LookupOrdinaryName,
-      Sema::ForRedeclaration);
+      D->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+                             : SemaRef.forRedeclarationInCurContext());
 
   if (DependentFunctionTemplateSpecializationInfo *Info
         = D->getDependentSpecializationInfo()) {
@@ -2054,7 +2055,7 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
     Method->setInvalidDecl();
 
   LookupResult Previous(SemaRef, NameInfo, Sema::LookupOrdinaryName,
-                        Sema::ForRedeclaration);
+                        Sema::ForExternalRedeclaration);
 
   if (!FunctionTemplate || TemplateParams || isFriend) {
     SemaRef.LookupQualifiedName(Previous, Record);
@@ -2493,7 +2494,7 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   bool CheckRedeclaration = Owner->isRecord();
 
   LookupResult Prev(SemaRef, NameInfo, Sema::LookupUsingDeclName,
-                    Sema::ForRedeclaration);
+                    Sema::ForVisibleRedeclaration);
 
   UsingDecl *NewUD = UsingDecl::Create(SemaRef.Context, Owner,
                                        D->getUsingLoc(),
@@ -2712,7 +2713,7 @@ Decl *TemplateDeclInstantiator::VisitClassScopeFunctionSpecializationDecl(
     return nullptr;
 
   LookupResult Previous(SemaRef, NewFD->getNameInfo(), Sema::LookupOrdinaryName,
-                        Sema::ForRedeclaration);
+                        Sema::ForExternalRedeclaration);
 
   TemplateArgumentListInfo TemplateArgs;
   TemplateArgumentListInfo *TemplateArgsPtr = nullptr;
@@ -4075,7 +4076,8 @@ void Sema::BuildVariableInstantiation(
       *this, NewVar->getDeclName(), NewVar->getLocation(),
       NewVar->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                                   : Sema::LookupOrdinaryName,
-      Sema::ForRedeclaration);
+      NewVar->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+                                  : forRedeclarationInCurContext());
 
   if (NewVar->isLocalExternDecl() && OldVar->getPreviousDecl() &&
       (!OldVar->getPreviousDecl()->getDeclContext()->isDependentContext() ||
@@ -4433,7 +4435,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
 
       // Merge the definition with the declaration.
       LookupResult R(*this, Var->getDeclName(), Var->getLocation(),
-                     LookupOrdinaryName, ForRedeclaration);
+                     LookupOrdinaryName, forRedeclarationInCurContext());
       R.addDecl(OldVar);
       MergeVarDecl(Var, R);
 

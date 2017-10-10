@@ -10,7 +10,6 @@ define void @foo(i32 %a) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shrl $23, %edi
 ; CHECK-NEXT:    btl $8, %edi

@@ -10,9 +10,7 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LABEL: val_compare_and_swap:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi1:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rcx, %r9
 ; CHECK-NEXT:    movq %rsi, %rax
@@ -30,9 +28,7 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_nand:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi3:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -62,9 +58,7 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_or:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi4:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi5:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -92,9 +86,7 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_add:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi6:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi7:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -122,9 +114,7 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_sub:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi8:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi9:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -152,9 +142,7 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_min:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi10:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi11:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -185,9 +173,7 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_max:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi12:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi13:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -218,9 +204,7 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_umin:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi14:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi15:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -251,9 +235,7 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-LABEL: fetch_and_umax:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi16:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi17:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -284,9 +266,7 @@ define i128 @atomic_load_seq_cst(i128* %p) {
 ; CHECK-LABEL: atomic_load_seq_cst:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi18:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi19:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -303,9 +283,7 @@ define i128 @atomic_load_relaxed(i128* %p) {
 ; CHECK-LABEL: atomic_load_relaxed:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi20:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi21:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -322,9 +300,7 @@ define void @atomic_store_seq_cst(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_seq_cst:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi22:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi23:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -346,9 +322,7 @@ define void @atomic_store_release(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_release:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi24:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi25:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -370,9 +344,7 @@ define void @atomic_store_relaxed(i128* %p, i128 %in) {
 ; CHECK-LABEL: atomic_store_relaxed:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi26:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Lcfi27:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rsi, %rbx
