@@ -226,12 +226,12 @@ public:
       ActionWrapper(TUCallbackType Callback) : Callback(Callback) {}
 
       std::unique_ptr<ASTConsumer> newASTConsumer() {
-        return llvm::make_unique<ToolASTConsumer>(std::move(Callback));
+        return llvm::make_unique<ToolASTConsumer>(Callback);
       }
     };
 
     ClangTool Tool(DB, Sources);
-    ActionWrapper ToolAction(std::move(Callback));
+    ActionWrapper ToolAction(Callback);
     std::unique_ptr<tooling::FrontendActionFactory> Factory =
         tooling::newFrontendActionFactory(&ToolAction);
     return Tool.run(Factory.get());

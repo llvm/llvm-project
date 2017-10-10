@@ -394,9 +394,10 @@ bool PPCMIPeephole::simplifyCode(void) {
           for (unsigned i = 1; i < DefPhiMI->getNumOperands(); i += 2) {
             MachineInstr *LiMI =
                 getVRegDefOrNull(&DefPhiMI->getOperand(i), MRI);
-            if (!LiMI || !MRI->hasOneNonDBGUse(LiMI->getOperand(0).getReg()) ||
-                !MDT->dominates(DefDomMI, LiMI) ||
-                (LiMI->getOpcode() != PPC::LI && LiMI->getOpcode() != PPC::LI8))
+            if (!LiMI ||
+                (LiMI->getOpcode() != PPC::LI && LiMI->getOpcode() != PPC::LI8)
+                || !MRI->hasOneNonDBGUse(LiMI->getOperand(0).getReg()) ||
+                !MDT->dominates(DefDomMI, LiMI))
               return false;
           }
 

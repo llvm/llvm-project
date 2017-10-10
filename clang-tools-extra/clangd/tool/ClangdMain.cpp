@@ -9,10 +9,12 @@
 
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
+#include "Path.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -43,10 +45,16 @@ static llvm::cl::opt<bool> RunSynchronously(
     llvm::cl::desc("Parse on main thread. If set, -j is ignored"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
-static llvm::cl::opt<std::string>
+static llvm::cl::opt<Path>
     ResourceDir("resource-dir",
                 llvm::cl::desc("Directory for system clang headers"),
                 llvm::cl::init(""), llvm::cl::Hidden);
+
+static llvm::cl::opt<Path> InputMirrorFile(
+    "input-mirror-file",
+    llvm::cl::desc(
+        "Mirror all LSP input to the specified file. Useful for debugging."),
+    llvm::cl::init(""), llvm::cl::Hidden);
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
@@ -63,9 +71,21 @@ int main(int argc, char *argv[]) {
     WorkerThreadsCount = 0;
 
   /// Validate command line arguments.
+  llvm::Optional<llvm::raw_fd_ostream> InputMirrorStream;
+  if (!InputMirrorFile.empty()) {
+    std::error_code EC;
+    InputMirrorStream.emplace(InputMirrorFile, /*ref*/ EC, llvm::sys::fs::F_RW);
+    if (EC) {
+      InputMirrorStream.reset();
+      llvm::errs() << "Error while opening an input mirror file: "
+                   << EC.message();
+    }
+  }
+
   llvm::raw_ostream &Outs = llvm::outs();
   llvm::raw_ostream &Logs = llvm::errs();
-  JSONOutput Out(Outs, Logs);
+  JSONOutput Out(Outs, Logs,
+                 InputMirrorStream ? InputMirrorStream.getPointer() : nullptr);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.

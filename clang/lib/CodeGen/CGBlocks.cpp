@@ -986,9 +986,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       // FIXME: Pass a specific location for the expr init so that the store is
       // attributed to a reasonable location - otherwise it may be attributed to
       // locations of subexpressions in the initialization.
-      LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
       EmitExprAsInit(&l2r, &BlockFieldPseudoVar,
-                     MakeAddrLValue(blockField, type, BaseInfo),
+                     MakeAddrLValue(blockField, type, AlignmentSource::Decl),
                      /*captured by init*/ false);
     }
 

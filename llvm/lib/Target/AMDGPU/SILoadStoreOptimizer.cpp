@@ -69,7 +69,7 @@ using namespace llvm;
 namespace {
 
 class SILoadStoreOptimizer : public MachineFunctionPass {
-  using CombineInfo = struct {
+  struct CombineInfo {
     MachineBasicBlock::iterator I;
     MachineBasicBlock::iterator Paired;
     unsigned EltSize;

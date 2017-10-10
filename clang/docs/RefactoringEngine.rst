@@ -41,7 +41,7 @@ outline of a ``local-rename`` action:
   public:
     StringRef getCommand() const override { return "local-rename"; }
 
-   StringRef getDescription() const override {
+    StringRef getDescription() const override {
       return "Finds and renames symbols in code with no indexer support";
     }
 
@@ -143,7 +143,7 @@ list of action rules using the following code:
   Rules.push_back(
     createRefactoringActionRule<DeleteSelectedRange>(
           SourceRangeSelectionRequirement())
-  )
+  );
 
 The ``createRefactoringActionRule`` function takes in a list of refactoring
 action rule requirement values. These values describe the initiation
