@@ -10,6 +10,8 @@
 #ifndef LLVM_MC_MCWINCOFFOBJECTWRITER_H
 #define LLVM_MC_MCWINCOFFOBJECTWRITER_H
 
+#include <memory>
+
 namespace llvm {
 
 class MCAsmBackend;

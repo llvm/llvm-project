@@ -1235,24 +1235,30 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
                                              SDValue &SOffset,
                                              SDValue &ImmOffset) const {
   SDLoc DL(Constant);
+  const uint32_t Align = 4;
+  const uint32_t MaxImm = alignDown(4095, Align);
   uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
   uint32_t Overflow = 0;
 
-  if (Imm >= 4096) {
-    if (Imm <= 4095 + 64) {
-      // Use an SOffset inline constant for 1..64
-      Overflow = Imm - 4095;
-      Imm = 4095;
+  if (Imm > MaxImm) {
+    if (Imm <= MaxImm + 64) {
+      // Use an SOffset inline constant for 4..64
+      Overflow = Imm - MaxImm;
+      Imm = MaxImm;
     } else {
       // Try to keep the same value in SOffset for adjacent loads, so that
       // the corresponding register contents can be re-used.
       //
-      // Load values with all low-bits set into SOffset, so that a larger
-      // range of values can be covered using s_movk_i32
-      uint32_t High = (Imm + 1) & ~4095;
-      uint32_t Low = (Imm + 1) & 4095;
+      // Load values with all low-bits (except for alignment bits) set into
+      // SOffset, so that a larger range of values can be covered using
+      // s_movk_i32.
+      //
+      // Atomic operations fail to work correctly when individual address
+      // components are unaligned, even if their sum is aligned.
+      uint32_t High = (Imm + Align) & ~4095;
+      uint32_t Low = (Imm + Align) & 4095;
       Imm = Low;
-      Overflow = High - 1;
+      Overflow = High - Align;
     }
   }
 

@@ -28,9 +28,9 @@ vsdot.s8 q0, q1, d4[2]
 vudot.u8 q0, q1, d16[0]
 vsdot.s8 q0, q1, d16[0]
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: operand must be a register in range [d0, d15]
 // CHECK-ERROR: vudot.u8 q0, q1, d16[0]
 // CHECK-ERROR:                     ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: operand must be a register in range [d0, d15]
 // CHECK-ERROR: vsdot.s8 q0, q1, d16[0]
 // CHECK-ERROR:                     ^

@@ -908,13 +908,12 @@ static uint64_t getMaxPageSize(opt::InputArgList &Args) {
 }
 
 // Parses -image-base option.
-static uint64_t getImageBase(opt::InputArgList &Args) {
-  // Use default if no -image-base option is given.
-  // Because we are using "Target" here, this function
-  // has to be called after the variable is initialized.
+static Optional<uint64_t> getImageBase(opt::InputArgList &Args) {
+  // Because we are using "Config->MaxPageSize" here, this function has to be
+  // called after the variable is initialized.
   auto *Arg = Args.getLastArg(OPT_image_base);
   if (!Arg)
-    return Config->Pic ? 0 : Target->DefaultImageBase;
+    return None;
 
   StringRef S = Arg->getValue();
   uint64_t V;

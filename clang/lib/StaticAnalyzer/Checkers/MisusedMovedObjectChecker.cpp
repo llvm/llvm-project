@@ -56,6 +56,8 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
+  void printState(raw_ostream &Out, ProgramStateRef State,
+                  const char *NL, const char *Sep) const override;
 
 private:
   class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
@@ -414,7 +416,14 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
     return;
 
   if (isStateResetMethod(MethodDecl)) {
-    State = State->remove<TrackedRegionMap>(ThisRegion);
+    // A state reset method resets the whole object, not only sub-object
+    // of a parent class in which it is defined.
+    const MemRegion *WholeObjectRegion = ThisRegion;
+    while (const CXXBaseObjectRegion *BR =
+               dyn_cast<CXXBaseObjectRegion>(WholeObjectRegion))
+      WholeObjectRegion = BR->getSuperRegion();
+
+    State = State->remove<TrackedRegionMap>(WholeObjectRegion);
     C.addTransition(State);
     return;
   }
@@ -476,6 +485,25 @@ ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
   return State;
 }
 
+void MisusedMovedObjectChecker::printState(raw_ostream &Out,
+                                           ProgramStateRef State,
+                                           const char *NL,
+                                           const char *Sep) const {
+
+  TrackedRegionMapTy RS = State->get<TrackedRegionMap>();
+
+  if (!RS.isEmpty()) {
+    Out << Sep << "Moved-from objects :" << NL;
+    for (auto I: RS) {
+      I.first->dumpToStream(Out);
+      if (I.second.isMoved())
+        Out << ": moved";
+      else
+        Out << ": moved and reported";
+      Out << NL;
+    }
+  }
+}
 void ento::registerMisusedMovedObjectChecker(CheckerManager &mgr) {
   mgr.registerChecker<MisusedMovedObjectChecker>();
 }

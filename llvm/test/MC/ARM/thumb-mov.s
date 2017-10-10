@@ -13,9 +13,11 @@
         movs pc, r0
         movs r0, pc
         movs pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
+// CHECK-NEXT: movs r0, pc
+// CHECK: note: invalid operand for instruction
 // CHECK-NEXT: movs r0, pc
 // CHECK: error: invalid instruction
 // CHECK-NEXT: movs pc, pc
@@ -24,9 +26,11 @@
         mov.w pc, r0
         mov.w r0, pc
         mov.w pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: mov.w pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
+// CHECK-NEXT: mov.w r0, pc
+// CHECK: note: invalid operand for instruction
 // CHECK-NEXT: mov.w r0, pc
 // CHECK: error: invalid instruction
 // CHECK-NEXT: mov.w pc, pc
@@ -35,9 +39,11 @@
         movs.w pc, r0
         movs.w r0, pc
         movs.w pc, pc
-// CHECK: error: invalid operand for instruction
+// CHECK: error: operand must be a register in range [r0, r14]
 // CHECK-NEXT: movs.w pc, r0
-// CHECK: error: invalid operand for instruction
+// CHECK: note: operand must be a register in range [r0, r14]
+// CHECK-NEXT: movs.w r0, pc
+// CHECK: note: invalid operand for instruction
 // CHECK-NEXT: movs.w r0, pc
 // CHECK: error: invalid instruction
 // CHECK-NEXT: movs.w pc, pc

@@ -3,7 +3,7 @@
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0 glc
-;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
+;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, v1, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
@@ -14,7 +14,7 @@
 ;CHECK: buffer_atomic_swap v0, v2, s[0:3], 0 offen offset:42 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
 ;SICI: buffer_atomic_swap v0, v1, s[0:3], 0 offen glc
-;VI: buffer_atomic_swap v0, off, s[0:3], [[SOFS]] offset:1 glc
+;VI: buffer_atomic_swap v0, off, s[0:3], [[SOFS]] offset:4 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0{{$}}
 define amdgpu_ps float @test1(<4 x i32> inreg %rsrc, i32 %data, i32 %vindex, i32 %voffset) {
@@ -71,24 +71,24 @@ main_body:
 ;CHECK-LABEL: {{^}}test3:
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 0 glc
 ;CHECK: s_waitcnt vmcnt(0)
-;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
+;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v2, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v[2:3], s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen offset:42 glc
+;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen offset:44 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
 ;SICI: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 offen glc
-;VI: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[SOFS]] offset:1 glc
+;VI: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[SOFS]] offset:4 glc
 define amdgpu_ps float @test3(<4 x i32> inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) {
 main_body:
   %o1 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %data, i32 %cmp, <4 x i32> %rsrc, i32 0, i32 0, i1 0)
   %o2 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o1, i32 %cmp, <4 x i32> %rsrc, i32 %vindex, i32 0, i1 0)
   %o3 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o2, i32 %cmp, <4 x i32> %rsrc, i32 0, i32 %voffset, i1 0)
   %o4 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o3, i32 %cmp, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i1 0)
-  %ofs.5 = add i32 %voffset, 42
+  %ofs.5 = add i32 %voffset, 44
   %o5 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o4, i32 %cmp, <4 x i32> %rsrc, i32 0, i32 %ofs.5, i1 0)
   %o6 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o5, i32 %cmp, <4 x i32> %rsrc, i32 0, i32 8192, i1 0)
 

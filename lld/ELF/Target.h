@@ -64,11 +64,7 @@ public:
   unsigned PageSize = 4096;
   unsigned DefaultMaxPageSize = 4096;
 
-  // On FreeBSD x86_64 the first page cannot be mmaped.
-  // On Linux that is controled by vm.mmap_min_addr. At least on some x86_64
-  // installs that is 65536, so the first 15 pages cannot be used.
-  // Given that, the smallest value that can be used in here is 0x10000.
-  uint64_t DefaultImageBase = 0x10000;
+  uint64_t getImageBase();
 
   // Offset of _GLOBAL_OFFSET_TABLE_ from base of .got section. Use -1 for
   // end of .got
@@ -108,6 +104,13 @@ public:
   virtual void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
+
+protected:
+  // On FreeBSD x86_64 the first page cannot be mmaped.
+  // On Linux that is controled by vm.mmap_min_addr. At least on some x86_64
+  // installs that is 65536, so the first 15 pages cannot be used.
+  // Given that, the smallest value that can be used in here is 0x10000.
+  uint64_t DefaultImageBase = 0x10000;
 };
 
 TargetInfo *getAArch64TargetInfo();

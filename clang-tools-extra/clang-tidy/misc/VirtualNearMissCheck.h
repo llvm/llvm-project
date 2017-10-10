@@ -11,7 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_VIRTUAL_NEAR_MISS_H
 
 #include "../ClangTidy.h"
-#include <map>
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 namespace tidy {
@@ -47,12 +47,12 @@ private:
 
   /// Key: the unique ID of a method.
   /// Value: whether the method is possible to be overridden.
-  std::map<const CXXMethodDecl *, bool> PossibleMap;
+  llvm::DenseMap<const CXXMethodDecl *, bool> PossibleMap;
 
   /// Key: <unique ID of base method, name of derived class>
   /// Value: whether the base method is overridden by some method in the derived
   /// class.
-  std::map<std::pair<const CXXMethodDecl *, const CXXRecordDecl *>, bool>
+  llvm::DenseMap<std::pair<const CXXMethodDecl *, const CXXRecordDecl *>, bool>
       OverriddenMap;
 
   const unsigned EditDistanceThreshold = 1;
