@@ -22,7 +22,8 @@ public:
                    bool IsLittle)
       : ARMAsmBackend(T, TT, IsLittle), OSABI(OSABI) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createARMELFObjectWriter(OS, OSABI, isLittle());
   }
 };

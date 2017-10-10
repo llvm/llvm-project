@@ -5728,7 +5728,8 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
 
       // Preserve the property that the imaginary root file describes the
       // current state.
-      auto &T = Diag.DiagStatesByLoc.Files[FileID()].StateTransitions;
+      FileID NullFile;
+      auto &T = Diag.DiagStatesByLoc.Files[NullFile].StateTransitions;
       if (T.empty())
         T.push_back({CurState, 0});
       else

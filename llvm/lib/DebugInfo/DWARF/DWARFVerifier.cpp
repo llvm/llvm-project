@@ -262,6 +262,8 @@ bool DWARFVerifier::handleDebugInfo() {
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
+  DWARFUnitSection<DWARFTypeUnit> TUSection{};
+  DWARFUnitSection<DWARFCompileUnit> CUSection{};
   while (hasDIE) {
     OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
@@ -274,7 +276,6 @@ bool DWARFVerifier::handleDebugInfo() {
       switch (UnitType) {
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
-        DWARFUnitSection<DWARFTypeUnit> TUSection{};
         Unit.reset(new DWARFTypeUnit(
             DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
@@ -290,7 +291,6 @@ bool DWARFVerifier::handleDebugInfo() {
       // UnitType = 0 means that we are
       // verifying a compile unit in DWARF v4.
       case 0: {
-        DWARFUnitSection<DWARFCompileUnit> CUSection{};
         Unit.reset(new DWARFCompileUnit(
             DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),

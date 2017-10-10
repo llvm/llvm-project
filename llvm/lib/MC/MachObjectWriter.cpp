@@ -994,8 +994,9 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
   }
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 llvm::createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return new MachObjectWriter(std::move(MOTW), OS, IsLittleEndian);
+  return llvm::make_unique<MachObjectWriter>(std::move(MOTW), OS,
+                                             IsLittleEndian);
 }

@@ -270,7 +270,7 @@ public:
 /// \param MOTW - The target specific Mach-O writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 createMachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS, bool IsLittleEndian);
 

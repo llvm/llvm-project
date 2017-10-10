@@ -1387,8 +1387,9 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
                                                                 InSet, IsPCRel);
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                             raw_pwrite_stream &OS, bool IsLittleEndian) {
-  return new ELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
+  return llvm::make_unique<ELFObjectWriter>(std::move(MOTW), OS,
+                                            IsLittleEndian);
 }

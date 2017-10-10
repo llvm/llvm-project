@@ -413,8 +413,9 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
 
   assert(Contents.Draft && "Draft must have contents");
-  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
-      Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
+  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
+      DeferredRebuild =
+          Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
   std::promise<void> DonePromise;
   std::future<void> DoneFuture = DonePromise.get_future();
 
@@ -423,7 +424,7 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
   VFSTag Tag = TaggedFS.Tag;
   auto ReparseAndPublishDiags =
       [this, FileStr, Version,
-       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
+       Tag](UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
                 DeferredRebuild,
             std::promise<void> DonePromise) -> void {
     FulfillPromiseGuard Guard(DonePromise);
@@ -432,7 +433,7 @@ std::future<void> ClangdServer::scheduleReparseAndDiags(
     if (CurrentVersion != Version)
       return; // This request is outdated
 
-    auto Diags = DeferredRebuild.get();
+    auto Diags = DeferredRebuild();
     if (!Diags)
       return; // A new reparse was requested before this one completed.
 
@@ -467,11 +468,11 @@ ClangdServer::scheduleCancelRebuild(std::shared_ptr<CppFile> Resources) {
     return DoneFuture;
   }
 
-  std::future<void> DeferredCancel = Resources->deferCancelRebuild();
+  UniqueFunction<void()> DeferredCancel = Resources->deferCancelRebuild();
   auto CancelReparses = [Resources](std::promise<void> DonePromise,
-                                    std::future<void> DeferredCancel) {
+                                    UniqueFunction<void()> DeferredCancel) {
     FulfillPromiseGuard Guard(DonePromise);
-    DeferredCancel.get();
+    DeferredCancel();
   };
   WorkScheduler.addToFront(std::move(CancelReparses), std::move(DonePromise),
                            std::move(DeferredCancel));

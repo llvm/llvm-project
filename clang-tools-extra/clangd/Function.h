@@ -14,6 +14,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
 
+#include "llvm/ADT/STLExtras.h"
+#include <cassert>
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -46,7 +49,7 @@ public:
 
   Ret operator()(Args... As) {
     assert(CallablePtr);
-    CallablePtr->Call(std::forward<Args>(As)...);
+    return CallablePtr->Call(std::forward<Args>(As)...);
   }
 
 private:

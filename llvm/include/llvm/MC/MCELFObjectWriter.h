@@ -137,7 +137,7 @@ public:
 /// \param MOTW - The target specific ELF writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS, bool IsLittleEndian);
 
