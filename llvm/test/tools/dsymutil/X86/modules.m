@@ -61,7 +61,7 @@ struct PruneMeNot;
 // CHECK-NOT:               DW_TAG
 // CHECK: 0x0[[BARTD:.*]]: DW_TAG_typedef
 // CHECK-NOT:                 DW_TAG
-// CHECK:                     DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]])
+// CHECK:                     DW_AT_type [DW_FORM_ref_addr] (0x{{0*}}[[BAR]]
 // CHECK:                   DW_TAG_structure_type
 // CHECK-NEXT:                DW_AT_name{{.*}}"S"
 // CHECK-NOT:                 DW_TAG
@@ -116,7 +116,7 @@ Bar odr_violation = { 42 };
 // CHECK:       DW_AT_type {{.*}}{0x{{0*}}[[PTR:.*]]}
 //
 // CHECK: 0x{{0*}}[[PTR]]: DW_TAG_pointer_type
-// CHECK-NEXT   DW_AT_type [DW_FORM_ref_addr] {0x{{0*}}[[INTERFACE]])
+// CHECK-NEXT   DW_AT_type [DW_FORM_ref_addr] {0x{{0*}}[[INTERFACE]]
 extern int odr_violation;
 
 @import Foo;
@@ -134,9 +134,9 @@ int main(int argc, char **argv) {
 // CHECK:   DW_AT_name {{.*}}"odr_violation.c"
 // CHECK: DW_TAG_variable
 // CHECK:   DW_AT_name {{.*}}"odr_violation"
-// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR2:.*]]})
+// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR2:.*]]}
 // CHECK: 0x{{0*}}[[BAR2]]: DW_TAG_typedef
-// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR3:.*]]})
+// CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR3:.*]]}
 // CHECK:   DW_AT_name {{.*}}"Bar"
 // CHECK: 0x{{0*}}[[BAR3]]: DW_TAG_structure_type
 // CHECK-NEXT:   DW_AT_name {{.*}}"Bar"

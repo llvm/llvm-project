@@ -18,5 +18,7 @@
 @ CHECK:         cbnz r2, #1
 @ CHECK: error: branch target out of range
 @ CHECK:         beq #1
-@ CHECK: error: invalid operand for instruction
-@ CHECK:         blx #2
+@ CHECK: invalid operand for instruction
+@ CHECK-NEXT:         blx #2
+@ CHECK: operand must be a register in range [r0, r15]
+@ CHECK-NEXT:         blx #2

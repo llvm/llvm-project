@@ -15566,6 +15566,9 @@ static SDValue combineShuffleToVectorExtend(ShuffleVectorSDNode *SVN,
   // Attempt to match a '*_extend_vector_inreg' shuffle, we just search for
   // power-of-2 extensions as they are the most likely.
   for (unsigned Scale = 2; Scale < NumElts; Scale *= 2) {
+    // Check for non power of 2 vector sizes
+    if (NumElts % Scale != 0)
+      continue;
     if (!isAnyExtend(Scale))
       continue;
 

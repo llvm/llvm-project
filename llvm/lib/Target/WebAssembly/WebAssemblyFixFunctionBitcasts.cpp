@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -68,10 +69,19 @@ static void FindUses(Value *V, Function &F,
     if (BitCastOperator *BC = dyn_cast<BitCastOperator>(U.getUser()))
       FindUses(BC, F, Uses, ConstantBCs);
     else if (U.get()->getType() != F.getType()) {
+      CallSite CS(U.getUser());
+      if (!CS)
+        // Skip uses that aren't immediately called
+        continue;
+      Value *Callee = CS.getCalledValue();
+      if (Callee != V)
+        // Skip calls where the function isn't the callee
+        continue;
       if (isa<Constant>(U.get())) {
         // Only add constant bitcasts to the list once; they get RAUW'd
         auto c = ConstantBCs.insert(cast<Constant>(U.get()));
-        if (!c.second) continue;
+        if (!c.second)
+          continue;
       }
       Uses.push_back(std::make_pair(&U, &F));
     }

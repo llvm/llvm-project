@@ -258,9 +258,9 @@ bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
 
   // We check whether rdtscp support is enabled. According to the x86_64 manual,
   // level should be set at 0x80000001, and we should have a look at bit 27 in
-  // EDX. That's 0x8000000 (or 1u << 26).
+  // EDX. That's 0x8000000 (or 1u << 27).
   __get_cpuid(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  if (!(EDX & (1u << 26))) {
+  if (!(EDX & (1u << 27))) {
     Report("Missing rdtscp support.\n");
     return false;
   }

@@ -15,27 +15,27 @@
 ; CHECK:      DW_AT_name {{.*}}"FuncVar0"
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE:[a-f0-9]+]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar1"
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar2"
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT:      DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[LOCAL:[a-f0-9]+]]})
+; CHECK-NEXT:      DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[LOCAL:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar3"
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[PRIVATE:[a-f0-9]+]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[PRIVATE:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar4"
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]}
 
 ; CHECK:      0x[[NONE]]: DW_TAG_pointer_type
 ; CHECK-NEXT:               DW_AT_type

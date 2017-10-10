@@ -169,16 +169,28 @@ let AdditionalPredicates = [InMicroMips] in {
     def RECIP_S_MM : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd,
                                     II_RECIP_S>,
                      ROUND_W_FM_MM<0b0, 0b01001000>;
-    def RECIP_D_MM : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd,
-                                    II_RECIP_D>,
-                     ROUND_W_FM_MM<0b1, 0b01001000>;
+    def RECIP_D32_MM : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd,
+                                      II_RECIP_D>,
+                     ROUND_W_FM_MM<0b1, 0b01001000>, FGR_32 {
+      let BaseOpcode = "RECIP_D32";
+    }
+    let DecoderNamespace = "MicroMipsFP64" in
+      def RECIP_D64_MM : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd,
+                                        II_RECIP_D>,
+                       ROUND_W_FM_MM<0b1, 0b01001000>, FGR_64;
     def RSQRT_S_MM : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd,
                                     II_RECIP_S>,
                      ROUND_W_FM_MM<0b0, 0b00001000>;
-    def RSQRT_D_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
+    def RSQRT_D32_MM : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd,
                                     II_RECIP_D>,
-                     ROUND_W_FM_MM<0b1, 0b00001000>;
-  }
+                     ROUND_W_FM_MM<0b1, 0b00001000>, FGR_32 {
+      let BaseOpcode = "RSQRT_D32";
+    }
+    let DecoderNamespace = "MicroMipsFP64" in
+      def RSQRT_D64_MM : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd,
+                                        II_RECIP_D>,
+                         ROUND_W_FM_MM<0b1, 0b00001000>, FGR_64;
+   }
   let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
     def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, II_LDC1, load>,
                   LW_FM_MM<0x2f>, FGR_32 {

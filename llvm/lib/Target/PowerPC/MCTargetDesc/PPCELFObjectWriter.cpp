@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -416,10 +417,9 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-MCObjectWriter *llvm::createPPCELFObjectWriter(raw_pwrite_stream &OS,
-                                               bool Is64Bit,
-                                               bool IsLittleEndian,
-                                               uint8_t OSABI) {
+std::unique_ptr<MCObjectWriter>
+llvm::createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
+                               bool IsLittleEndian, uint8_t OSABI) {
   auto MOTW = llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
   return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
 }

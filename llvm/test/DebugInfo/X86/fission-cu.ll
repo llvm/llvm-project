@@ -75,7 +75,7 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8]  (0x1f1f859683d49324)
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_name [DW_FORM_GNU_str_index]     ( indexed (00000003) string = "a")
-; CHECK: DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[TYPE:0x[0-9a-f]*]]})
+; CHECK: DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[TYPE:0x[0-9a-f]*]]}
 ; CHECK: DW_AT_external [DW_FORM_flag_present]   (true)
 ; CHECK: DW_AT_decl_file [DW_FORM_data1] (0x01)
 ; CHECK: DW_AT_decl_line [DW_FORM_data1] (1)
