@@ -6,7 +6,7 @@
   add sp, r0, #4
 // CHECK: error: invalid instruction, any one of the following would fix this:
 // CHECK: note: instruction requires: thumb2
-// CHECK: note: invalid operand for instruction
+// CHECK: note: operand must be a register sp
 // CHECK-NEXT: {{^  add sp, r0, #4}}
 // CHECK-NEXT: {{^          \^}}
 // CHECK: note: too many operands for instruction

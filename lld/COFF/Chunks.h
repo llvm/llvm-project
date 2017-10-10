@@ -186,8 +186,10 @@ public:
     return SectionName == ".debug" || SectionName.startswith(".debug$");
   }
 
-  // True if this is a DWARF debug info chunk.
-  bool isDWARF() const { return SectionName.startswith(".debug_"); }
+  // True if this is a DWARF debug info or exception handling chunk.
+  bool isDWARF() const {
+    return SectionName.startswith(".debug_") || SectionName == ".eh_frame";
+  }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {

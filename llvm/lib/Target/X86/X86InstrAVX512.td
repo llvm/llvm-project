@@ -1998,6 +1998,24 @@ defm VPCMPGTQ : avx512_icmp_packed_rmb_vl<0x37, "vpcmpgtq", X86pcmpgtm,
                       avx512vl_i64_info, HasAVX512>,
                 T8PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
+// Transforms to swizzle an immediate to help matching memory operand in first
+// operand.
+def CommutePCMPCC : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue() & 0x7;
+  switch (Imm) {
+  default: llvm_unreachable("Unreachable!");
+  case 0x01: Imm = 0x06; break; // LT  -> NLE
+  case 0x02: Imm = 0x05; break; // LE  -> NLT
+  case 0x05: Imm = 0x02; break; // NLT -> LE
+  case 0x06: Imm = 0x01; break; // NLE -> LT
+  case 0x00: // EQ
+  case 0x03: // FALSE
+  case 0x04: // NE
+  case 0x07: // TRUE
+    break;
+  }
+  return getI8Imm(Imm, SDLoc(N));
+}]>;
 
 multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
                           X86VectorVTInfo _> {
@@ -2069,6 +2087,17 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
                           "$dst {${mask}}, $src1, $src2, $cc}"),
                [], IIC_SSE_ALU_F32P_RM>, EVEX_4V, EVEX_K;
   }
+
+  def : Pat<(OpNode (bitconvert (_.LdFrag addr:$src2)),
+                    (_.VT _.RC:$src1), imm:$cc),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmi") _.RC:$src1, addr:$src2,
+                                                      (CommutePCMPCC imm:$cc))>;
+
+  def : Pat<(and _.KRCWM:$mask, (OpNode (bitconvert (_.LdFrag addr:$src2)),
+                                        (_.VT _.RC:$src1), imm:$cc)),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmik") _.KRCWM:$mask,
+                                                       _.RC:$src1, addr:$src2,
+                                                       (CommutePCMPCC imm:$cc))>;
 }
 
 multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, SDNode OpNode,
@@ -2113,6 +2142,18 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, SDNode OpNode,
                   "$dst {${mask}}, $src1, ${src2}", _.BroadcastStr, ", $cc}"),
                [], IIC_SSE_ALU_F32P_RM>, EVEX_4V, EVEX_K, EVEX_B;
   }
+
+  def : Pat<(OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src2)),
+                    (_.VT _.RC:$src1), imm:$cc),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmib") _.RC:$src1, addr:$src2,
+                                                       (CommutePCMPCC imm:$cc))>;
+
+  def : Pat<(and _.KRCWM:$mask, (OpNode (X86VBroadcast
+                                         (_.ScalarLdFrag addr:$src2)),
+                                        (_.VT _.RC:$src1), imm:$cc)),
+            (!cast<Instruction>(NAME#_.ZSuffix#"rmibk") _.KRCWM:$mask,
+                                                       _.RC:$src1, addr:$src2,
+                                                       (CommutePCMPCC imm:$cc))>;
 }
 
 multiclass avx512_icmp_cc_vl<bits<8> opc, string Suffix, SDNode OpNode,

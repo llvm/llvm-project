@@ -37,6 +37,14 @@ void JSONOutput::log(const Twine &Message) {
   Logs.flush();
 }
 
+void JSONOutput::mirrorInput(const Twine &Message) {
+  if (!InputMirror)
+    return;
+
+  *InputMirror << Message;
+  InputMirror->flush();
+}
+
 void Handler::handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) {
   Output.log("Method ignored.\n");
   // Return that this method is unsupported.
@@ -147,6 +155,14 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         continue;
       }
 
+      Out.mirrorInput(Line);
+      // Mirror '\n' that gets consumed by std::getline, but is not included in
+      // the resulting Line.
+      // Note that '\r' is part of Line, so we don't need to mirror it
+      // separately.
+      if (!In.eof())
+        Out.mirrorInput("\n");
+
       llvm::StringRef LineRef(Line);
 
       // We allow YAML-style comments in headers. Technically this isn't part
@@ -163,9 +179,8 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       if (LineRef.consume_front("Content-Length: ")) {
         if (ContentLength != 0) {
           Out.log("Warning: Duplicate Content-Length header received. "
-                  "The previous value for this message ("
-                  + std::to_string(ContentLength)
-                  + ") was ignored.\n");
+                  "The previous value for this message (" +
+                  std::to_string(ContentLength) + ") was ignored.\n");
         }
 
         llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
@@ -185,15 +200,13 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       // parser.
       std::vector<char> JSON(ContentLength + 1, '\0');
       In.read(JSON.data(), ContentLength);
+      Out.mirrorInput(StringRef(JSON.data(), In.gcount()));
 
       // If the stream is aborted before we read ContentLength bytes, In
       // will have eofbit and failbit set.
       if (!In) {
-        Out.log("Input was aborted. Read only "
-                + std::to_string(In.gcount())
-                + " bytes of expected "
-                + std::to_string(ContentLength)
-                + ".\n");
+        Out.log("Input was aborted. Read only " + std::to_string(In.gcount()) +
+                " bytes of expected " + std::to_string(ContentLength) + ".\n");
         break;
       }
 
@@ -209,8 +222,8 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       if (IsDone)
         break;
     } else {
-      Out.log( "Warning: Missing Content-Length header, or message has zero "
-               "length.\n" );
+      Out.log("Warning: Missing Content-Length header, or message has zero "
+              "length.\n");
     }
   }
 }

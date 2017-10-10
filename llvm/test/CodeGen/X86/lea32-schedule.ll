@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge   | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=knl         | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2      | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1      | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
@@ -46,6 +46,12 @@ define i32 @test_lea_offset(i32) {
 ; HASWELL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; HASWELL-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_offset:
 ; BTVER2:       # BB#0:
@@ -98,6 +104,12 @@ define i32 @test_lea_offset_big(i32) {
 ; HASWELL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; HASWELL-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_offset_big:
 ; BTVER2:       # BB#0:
@@ -156,6 +168,13 @@ define i32 @test_lea_add(i32, i32) {
 ; HASWELL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add:
 ; BTVER2:       # BB#0:
@@ -218,6 +237,14 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $16, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $16, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_offset:
 ; BTVER2:       # BB#0:
@@ -285,6 +312,15 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_add_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $-4096, %eax # imm = 0xF000
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_add_offset_big:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
@@ -340,6 +376,12 @@ define i32 @test_lea_mul(i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_mul:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_mul:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
@@ -394,6 +436,13 @@ define i32 @test_lea_mul_offset(i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $-32, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_mul_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $-32, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul_offset:
 ; BTVER2:       # BB#0:
@@ -454,6 +503,14 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_mul_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $10000, %eax # imm = 0x2710
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_mul_offset_big:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
@@ -511,6 +568,13 @@ define i32 @test_lea_add_scale(i32, i32) {
 ; HASWELL-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale:
 ; BTVER2:       # BB#0:
@@ -574,6 +638,14 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $96, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $96, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset:
 ; BTVER2:       # BB#0:
@@ -641,6 +713,15 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; HASWELL-NEXT:    addl $-1200, %eax # imm = 0xFB50
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; SKYLAKE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKYLAKE-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addl $-1200, %eax # imm = 0xFB50
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset_big:
 ; BTVER2:       # BB#0:
