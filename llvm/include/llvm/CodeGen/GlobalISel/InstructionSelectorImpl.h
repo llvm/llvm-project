@@ -310,9 +310,8 @@ bool InstructionSelector::executeMatchTable(
       int64_t NewOpcode = MatchTable[CurrentIdx++];
       assert((size_t)NewInsnID == OutMIs.size() &&
              "Expected to store MIs in order");
-      OutMIs.push_back(
-          MachineInstrBuilder(*State.MIs[OldInsnID]->getParent()->getParent(),
-                              State.MIs[OldInsnID]));
+      OutMIs.push_back(MachineInstrBuilder(*State.MIs[OldInsnID]->getMF(),
+                                           State.MIs[OldInsnID]));
       OutMIs[NewInsnID]->setDesc(TII.get(NewOpcode));
       DEBUG(dbgs() << CurrentIdx << ": GIR_MutateOpcode(OutMIs[" << NewInsnID
                    << "], MIs[" << OldInsnID << "], " << NewOpcode << ")\n");
