@@ -265,8 +265,8 @@ private:
 } // namespace
 
 void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
-                                     JSONOutput &Out,
-                                     ProtocolCallbacks &Callbacks) {
+                                      JSONOutput &Out,
+                                      ProtocolCallbacks &Callbacks) {
   Dispatcher.registerHandler(
       "initialize", llvm::make_unique<InitializeHandler>(Out, Callbacks));
   Dispatcher.registerHandler(
