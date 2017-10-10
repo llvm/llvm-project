@@ -660,7 +660,7 @@ MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   bool IsN64 = TT.isArch64Bit() && !IsN32;
   bool HasRelocationAddend = TT.isArch64Bit();
-  auto *MOTW = new MipsELFObjectWriter(OSABI, HasRelocationAddend, IsN64,
-                                       TT.isLittleEndian());
-  return createELFObjectWriter(MOTW, OS, TT.isLittleEndian());
+  auto MOTW = llvm::make_unique<MipsELFObjectWriter>(
+      OSABI, HasRelocationAddend, IsN64, TT.isLittleEndian());
+  return createELFObjectWriter(std::move(MOTW), OS, TT.isLittleEndian());
 }

@@ -585,8 +585,7 @@ void CodeGenSchedModels::collectSchedClasses() {
     }
     // If ProcIndices contains zero, the class applies to all processors.
     if (!std::count(ProcIndices.begin(), ProcIndices.end(), 0)) {
-      for (const CodeGenProcModel &PM :
-           make_range(ProcModels.begin(), ProcModels.end())) {
+      for (const CodeGenProcModel &PM : ProcModels) {
         if (!std::count(ProcIndices.begin(), ProcIndices.end(), PM.Index))
           dbgs() << "No machine model for " << Inst->TheDef->getName()
                  << " on processor " << PM.ModelName << '\n';
@@ -830,7 +829,7 @@ void CodeGenSchedModels::collectProcItins() {
 void CodeGenSchedModels::collectProcItinRW() {
   RecVec ItinRWDefs = Records.getAllDerivedDefinitions("ItinRW");
   std::sort(ItinRWDefs.begin(), ItinRWDefs.end(), LessRecord());
-  for (Record *RWDef  : make_range(ItinRWDefs.begin(), ItinRWDefs.end())) {
+  for (Record *RWDef  : ItinRWDefs) {
     if (!RWDef->getValueInit("SchedModel")->isComplete())
       PrintFatalError(RWDef->getLoc(), "SchedModel is undefined");
     Record *ModelDef = RWDef->getValueAsDef("SchedModel");
@@ -995,7 +994,7 @@ private:
 // conditions implicitly negate any prior condition.
 bool PredTransitions::mutuallyExclusive(Record *PredDef,
                                         ArrayRef<PredCheck> Term) {
-  for (const PredCheck &PC: make_range(Term.begin(), Term.end())) {
+  for (const PredCheck &PC: Term) {
     if (PC.Predicate == PredDef)
       return false;
 
@@ -1015,7 +1014,7 @@ static bool hasAliasedVariants(const CodeGenSchedRW &RW,
   if (RW.HasVariants)
     return true;
 
-  for (Record *Alias : make_range(RW.Aliases.begin(), RW.Aliases.end())) {
+  for (Record *Alias : RW.Aliases) {
     const CodeGenSchedRW &AliasRW =
       SchedModels.getSchedRW(Alias->getValueAsDef("AliasRW"));
     if (AliasRW.HasVariants)
@@ -1503,7 +1502,7 @@ void CodeGenSchedModels::collectProcResources() {
   // Add ProcResGroups that are defined within this processor model, which may
   // not be directly referenced but may directly specify a buffer size.
   RecVec ProcResGroups = Records.getAllDerivedDefinitions("ProcResGroup");
-  for (Record *PRG : make_range(ProcResGroups.begin(), ProcResGroups.end())) {
+  for (Record *PRG : ProcResGroups) {
     if (!PRG->getValueInit("SchedModel")->isComplete())
       continue;
     CodeGenProcModel &PM = getProcModel(PRG->getValueAsDef("SchedModel"));

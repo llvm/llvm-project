@@ -18,6 +18,8 @@ TOKEN(Invalid)      // Invalid token. Should not occur in a valid script.
 TOKEN(Int)          // Integer (decimal, octal or hexadecimal).
 TOKEN(String)       // String value.
 TOKEN(Identifier)   // Script identifier (resource name or type).
+TOKEN(LineComment)  // Beginning of single-line comment.
+TOKEN(StartComment) // Beginning of multi-line comment.
 
 // Short tokens. They usually consist of exactly one character.
 // The definitions are of the form SHORT_TOKEN(TokenName, TokenChar).

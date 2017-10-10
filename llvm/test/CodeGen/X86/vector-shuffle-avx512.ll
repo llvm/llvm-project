@@ -608,12 +608,9 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; KNL32-LABEL: test_mm512_mask_blend_epi8:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    pushl %ebp
-; KNL32-NEXT:  .Lcfi0:
 ; KNL32-NEXT:    .cfi_def_cfa_offset 8
-; KNL32-NEXT:  .Lcfi1:
 ; KNL32-NEXT:    .cfi_offset %ebp, -8
 ; KNL32-NEXT:    movl %esp, %ebp
-; KNL32-NEXT:  .Lcfi2:
 ; KNL32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL32-NEXT:    andl $-32, %esp
 ; KNL32-NEXT:    subl $32, %esp
@@ -652,12 +649,9 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ; KNL32-LABEL: test_mm512_mask_blend_epi16:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    pushl %ebp
-; KNL32-NEXT:  .Lcfi3:
 ; KNL32-NEXT:    .cfi_def_cfa_offset 8
-; KNL32-NEXT:  .Lcfi4:
 ; KNL32-NEXT:    .cfi_offset %ebp, -8
 ; KNL32-NEXT:    movl %esp, %ebp
-; KNL32-NEXT:  .Lcfi5:
 ; KNL32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL32-NEXT:    andl $-32, %esp
 ; KNL32-NEXT:    subl $32, %esp

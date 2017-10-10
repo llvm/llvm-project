@@ -85,7 +85,7 @@ MCObjectWriter *llvm::createAMDGPUELFObjectWriter(bool Is64Bit,
                                                   uint8_t OSABI,
                                                   bool HasRelocationAddend,
                                                   raw_pwrite_stream &OS) {
-  MCELFObjectTargetWriter *MOTW =
-      new AMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
-  return createELFObjectWriter(MOTW, OS, true);
+  auto MOTW = llvm::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
+                                                       HasRelocationAddend);
+  return createELFObjectWriter(std::move(MOTW), OS, true);
 }

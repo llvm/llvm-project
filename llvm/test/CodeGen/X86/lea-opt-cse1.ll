@@ -19,9 +19,7 @@ define void @test_func(%struct.SA* nocapture %ctx, i32 %n) local_unnamed_addr {
 ; X86-LABEL: test_func:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx

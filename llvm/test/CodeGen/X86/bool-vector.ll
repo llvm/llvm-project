@@ -79,9 +79,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-LABEL: PR15215_good:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  .Lcfi1:
 ; X32-NEXT:    .cfi_offset %esi, -8
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
@@ -100,9 +98,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-SSE2-LABEL: PR15215_good:
 ; X32-SSE2:       # BB#0: # %entry
 ; X32-SSE2-NEXT:    pushl %esi
-; X32-SSE2-NEXT:  .Lcfi0:
 ; X32-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X32-SSE2-NEXT:  .Lcfi1:
 ; X32-SSE2-NEXT:    .cfi_offset %esi, -8
 ; X32-SSE2-NEXT:    movd %xmm0, %eax
 ; X32-SSE2-NEXT:    andl $1, %eax
@@ -124,9 +120,7 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X32-AVX2-LABEL: PR15215_good:
 ; X32-AVX2:       # BB#0: # %entry
 ; X32-AVX2-NEXT:    pushl %esi
-; X32-AVX2-NEXT:  .Lcfi0:
 ; X32-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X32-AVX2-NEXT:  .Lcfi1:
 ; X32-AVX2-NEXT:    .cfi_offset %esi, -8
 ; X32-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X32-AVX2-NEXT:    andl $1, %eax

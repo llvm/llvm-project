@@ -37,23 +37,17 @@ define void @foo() {
 ; 6860-LABEL: foo:
 ; 6860:       # BB#0: # %bb
 ; 6860-NEXT:    pushl %ebp
-; 6860-NEXT:  .Lcfi0:
 ; 6860-NEXT:    .cfi_def_cfa_offset 8
-; 6860-NEXT:  .Lcfi1:
 ; 6860-NEXT:    .cfi_offset %ebp, -8
 ; 6860-NEXT:    movl %esp, %ebp
-; 6860-NEXT:  .Lcfi2:
 ; 6860-NEXT:    .cfi_def_cfa_register %ebp
 ; 6860-NEXT:    pushl %ebx
 ; 6860-NEXT:    pushl %edi
 ; 6860-NEXT:    pushl %esi
 ; 6860-NEXT:    andl $-8, %esp
 ; 6860-NEXT:    subl $32, %esp
-; 6860-NEXT:  .Lcfi3:
 ; 6860-NEXT:    .cfi_offset %esi, -20
-; 6860-NEXT:  .Lcfi4:
 ; 6860-NEXT:    .cfi_offset %edi, -16
-; 6860-NEXT:  .Lcfi5:
 ; 6860-NEXT:    .cfi_offset %ebx, -12
 ; 6860-NEXT:    # implicit-def: %EAX
 ; 6860-NEXT:    movw var_22, %cx
@@ -109,12 +103,9 @@ define void @foo() {
 ; 686-LABEL: foo:
 ; 686:       # BB#0: # %bb
 ; 686-NEXT:    pushl %ebp
-; 686-NEXT:  .Lcfi0:
 ; 686-NEXT:    .cfi_def_cfa_offset 8
-; 686-NEXT:  .Lcfi1:
 ; 686-NEXT:    .cfi_offset %ebp, -8
 ; 686-NEXT:    movl %esp, %ebp
-; 686-NEXT:  .Lcfi2:
 ; 686-NEXT:    .cfi_def_cfa_register %ebp
 ; 686-NEXT:    andl $-8, %esp
 ; 686-NEXT:    subl $8, %esp

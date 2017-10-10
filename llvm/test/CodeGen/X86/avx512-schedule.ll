@@ -7176,7 +7176,6 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: broadcast_ss_spill:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $24, %rsp # sched: [1:0.25]
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]
@@ -7198,7 +7197,6 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; CHECK-LABEL: broadcast_sd_spill:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $24, %rsp # sched: [1:0.25]
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
 ; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]

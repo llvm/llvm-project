@@ -7,12 +7,9 @@ define zeroext i8 @test_extractelement_varible_v64i1(<64 x i8> %a, <64 x i8> %b,
 ; SKX-LABEL: test_extractelement_varible_v64i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    pushq %rbp
-; SKX-NEXT:  Lcfi0:
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:  Lcfi1:
 ; SKX-NEXT:    .cfi_offset %rbp, -16
 ; SKX-NEXT:    movq %rsp, %rbp
-; SKX-NEXT:  Lcfi2:
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp

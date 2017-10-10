@@ -88,6 +88,6 @@ bool LanaiELFObjectWriter::needsRelocateWithSymbol(const MCSymbol & /*SD*/,
 
 MCObjectWriter *llvm::createLanaiELFObjectWriter(raw_pwrite_stream &OS,
                                                  uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW = new LanaiELFObjectWriter(OSABI);
-  return createELFObjectWriter(MOTW, OS, /*IsLittleEndian=*/false);
+  return createELFObjectWriter(llvm::make_unique<LanaiELFObjectWriter>(OSABI),
+                               OS, /*IsLittleEndian=*/false);
 }

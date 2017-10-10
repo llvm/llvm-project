@@ -77,9 +77,7 @@ define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X86-LABEL: foo1_mult_basic_blocks:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -131,9 +129,7 @@ define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_a
 ; X86-LABEL: foo1_mult_basic_blocks_illegal_scale:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi2:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi3:
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi

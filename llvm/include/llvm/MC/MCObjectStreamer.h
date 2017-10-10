@@ -34,7 +34,7 @@ class raw_pwrite_stream;
 /// to that file format or custom semantics expected by the object writer
 /// implementation.
 class MCObjectStreamer : public MCStreamer {
-  MCAssembler *Assembler;
+  std::unique_ptr<MCAssembler> Assembler;
   MCSection::iterator CurInsertionPoint;
   bool EmitEHFrame;
   bool EmitDebugFrame;
@@ -43,6 +43,7 @@ class MCObjectStreamer : public MCStreamer {
   virtual void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
   void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  MCSymbol *EmitCFILabel() override;
 
 protected:
   MCObjectStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
