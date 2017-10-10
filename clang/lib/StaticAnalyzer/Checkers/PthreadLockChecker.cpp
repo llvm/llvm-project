@@ -81,6 +81,8 @@ class PthreadLockChecker
 public:
   void checkPostStmt(const CallExpr *CE, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
+  void printState(raw_ostream &Out, ProgramStateRef State,
+                  const char *NL, const char *Sep) const override;
 
   void AcquireLock(CheckerContext &C, const CallExpr *CE, SVal lock,
                    bool isTryLock, enum LockingSemantics semantics) const;
@@ -182,6 +184,39 @@ ProgramStateRef PthreadLockChecker::resolvePossiblyDestroyedMutex(
   // now resolved.
   state = state->remove<DestroyRetVal>(lockR);
   return state;
+}
+
+void PthreadLockChecker::printState(raw_ostream &Out, ProgramStateRef State,
+                                    const char *NL, const char *Sep) const {
+  LockMapTy LM = State->get<LockMap>();
+  if (!LM.isEmpty()) {
+    Out << Sep << "Mutex states:" << NL;
+    for (auto I : LM) {
+      I.first->dumpToStream(Out);
+      if (I.second.isLocked())
+        Out << ": locked";
+      else if (I.second.isUnlocked())
+        Out << ": unlocked";
+      else if (I.second.isDestroyed())
+        Out << ": destroyed";
+      else if (I.second.isUntouchedAndPossiblyDestroyed())
+        Out << ": not tracked, possibly destroyed";
+      else if (I.second.isUnlockedAndPossiblyDestroyed())
+        Out << ": unlocked, possibly destroyed";
+      Out << NL;
+    }
+  }
+
+  LockSetTy LS = State->get<LockSet>();
+  if (!LS.isEmpty()) {
+    Out << Sep << "Mutex lock order:" << NL;
+    for (auto I: LS) {
+      I->dumpToStream(Out);
+      Out << NL;
+    }
+  }
+
+  // TODO: Dump destroyed mutex symbols?
 }
 
 void PthreadLockChecker::AcquireLock(CheckerContext &C, const CallExpr *CE,
