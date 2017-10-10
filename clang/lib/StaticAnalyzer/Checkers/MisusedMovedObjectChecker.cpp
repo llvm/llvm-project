@@ -56,6 +56,8 @@ public:
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
+  void printState(raw_ostream &Out, ProgramStateRef State,
+                  const char *NL, const char *Sep) const override;
 
 private:
   class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
@@ -476,6 +478,25 @@ ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
   return State;
 }
 
+void MisusedMovedObjectChecker::printState(raw_ostream &Out,
+                                           ProgramStateRef State,
+                                           const char *NL,
+                                           const char *Sep) const {
+
+  TrackedRegionMapTy RS = State->get<TrackedRegionMap>();
+
+  if (!RS.isEmpty()) {
+    Out << Sep << "Moved-from objects :" << NL;
+    for (auto I: RS) {
+      I.first->dumpToStream(Out);
+      if (I.second.isMoved())
+        Out << ": moved";
+      else
+        Out << ": moved and reported";
+      Out << NL;
+    }
+  }
+}
 void ento::registerMisusedMovedObjectChecker(CheckerManager &mgr) {
   mgr.registerChecker<MisusedMovedObjectChecker>();
 }
