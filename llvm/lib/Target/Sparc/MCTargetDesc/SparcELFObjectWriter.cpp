@@ -135,6 +135,6 @@ MCObjectWriter *llvm::createSparcELFObjectWriter(raw_pwrite_stream &OS,
                                                  bool Is64Bit,
                                                  bool IsLittleEndian,
                                                  uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW = new SparcELFObjectWriter(Is64Bit, OSABI);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+  auto MOTW = llvm::make_unique<SparcELFObjectWriter>(Is64Bit, OSABI);
+  return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
 }

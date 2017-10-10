@@ -88,7 +88,7 @@ public:
   } StringTableData;
 
 private:
-  Error handleError(Error &&Err, const RCResource *Res);
+  Error handleError(Error Err, const RCResource *Res);
 
   Error
   writeResource(const RCResource *Res,

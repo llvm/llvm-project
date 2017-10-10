@@ -69,7 +69,6 @@ define void @full_test() {
 ; X32-LABEL: full_test:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    subl $60, %esp
-; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 64
 ; X32-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X32-NEXT:    cvttps2dq %xmm2, %xmm0

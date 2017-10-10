@@ -1685,12 +1685,9 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; KNL_32-LABEL: test_gather_16i64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Lcfi0:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Lcfi1:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Lcfi2:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1722,12 +1719,9 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; SKX_32-LABEL: test_gather_16i64:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    pushl %ebp
-; SKX_32-NEXT:  .Lcfi1:
 ; SKX_32-NEXT:    .cfi_def_cfa_offset 8
-; SKX_32-NEXT:  .Lcfi2:
 ; SKX_32-NEXT:    .cfi_offset %ebp, -8
 ; SKX_32-NEXT:    movl %esp, %ebp
-; SKX_32-NEXT:  .Lcfi3:
 ; SKX_32-NEXT:    .cfi_def_cfa_register %ebp
 ; SKX_32-NEXT:    andl $-64, %esp
 ; SKX_32-NEXT:    subl $64, %esp
@@ -1808,12 +1802,9 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; KNL_32-LABEL: test_gather_16f64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Lcfi3:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Lcfi4:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Lcfi5:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1845,12 +1836,9 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; SKX_32-LABEL: test_gather_16f64:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    pushl %ebp
-; SKX_32-NEXT:  .Lcfi4:
 ; SKX_32-NEXT:    .cfi_def_cfa_offset 8
-; SKX_32-NEXT:  .Lcfi5:
 ; SKX_32-NEXT:    .cfi_offset %ebp, -8
 ; SKX_32-NEXT:    movl %esp, %ebp
-; SKX_32-NEXT:  .Lcfi6:
 ; SKX_32-NEXT:    .cfi_def_cfa_register %ebp
 ; SKX_32-NEXT:    andl $-64, %esp
 ; SKX_32-NEXT:    subl $64, %esp
@@ -1930,12 +1918,9 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; KNL_32-LABEL: test_scatter_16i64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Lcfi6:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Lcfi7:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Lcfi8:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1966,12 +1951,9 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; SKX_32-LABEL: test_scatter_16i64:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    pushl %ebp
-; SKX_32-NEXT:  .Lcfi7:
 ; SKX_32-NEXT:    .cfi_def_cfa_offset 8
-; SKX_32-NEXT:  .Lcfi8:
 ; SKX_32-NEXT:    .cfi_offset %ebp, -8
 ; SKX_32-NEXT:    movl %esp, %ebp
-; SKX_32-NEXT:  .Lcfi9:
 ; SKX_32-NEXT:    .cfi_def_cfa_register %ebp
 ; SKX_32-NEXT:    andl $-64, %esp
 ; SKX_32-NEXT:    subl $64, %esp
@@ -2052,12 +2034,9 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; KNL_32-LABEL: test_scatter_16f64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Lcfi9:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Lcfi10:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Lcfi11:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -2088,12 +2067,9 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; SKX_32-LABEL: test_scatter_16f64:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    pushl %ebp
-; SKX_32-NEXT:  .Lcfi10:
 ; SKX_32-NEXT:    .cfi_def_cfa_offset 8
-; SKX_32-NEXT:  .Lcfi11:
 ; SKX_32-NEXT:    .cfi_offset %ebp, -8
 ; SKX_32-NEXT:    movl %esp, %ebp
-; SKX_32-NEXT:  .Lcfi12:
 ; SKX_32-NEXT:    .cfi_def_cfa_register %ebp
 ; SKX_32-NEXT:    andl $-64, %esp
 ; SKX_32-NEXT:    subl $64, %esp
@@ -2132,12 +2108,9 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; KNL_32-LABEL: test_pr28312:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Lcfi12:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Lcfi13:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Lcfi14:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-32, %esp
 ; KNL_32-NEXT:    subl $32, %esp
@@ -2168,12 +2141,9 @@ define <4 x i64> @test_pr28312(<4 x i64*> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i6
 ; SKX_32-LABEL: test_pr28312:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    pushl %ebp
-; SKX_32-NEXT:  .Lcfi13:
 ; SKX_32-NEXT:    .cfi_def_cfa_offset 8
-; SKX_32-NEXT:  .Lcfi14:
 ; SKX_32-NEXT:    .cfi_offset %ebp, -8
 ; SKX_32-NEXT:    movl %esp, %ebp
-; SKX_32-NEXT:  .Lcfi15:
 ; SKX_32-NEXT:    .cfi_def_cfa_register %ebp
 ; SKX_32-NEXT:    andl $-32, %esp
 ; SKX_32-NEXT:    subl $32, %esp

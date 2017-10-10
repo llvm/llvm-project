@@ -207,9 +207,7 @@ define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    bl memcmp

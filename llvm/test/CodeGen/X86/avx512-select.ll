@@ -106,12 +106,9 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 ; X86-LABEL: select04:
 ; X86:       # BB#0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:  .Lcfi2:
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp

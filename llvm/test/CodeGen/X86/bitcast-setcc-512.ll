@@ -52,12 +52,9 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; AVX512F-LABEL: v32i16:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:  .Lcfi0:
 ; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:  .Lcfi1:
 ; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:  .Lcfi2:
 ; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $32, %rsp
@@ -560,12 +557,9 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; AVX1-LABEL: v64i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:  .Lcfi0:
 ; AVX1-NEXT:    .cfi_def_cfa_offset 16
-; AVX1-NEXT:  .Lcfi1:
 ; AVX1-NEXT:    .cfi_offset %rbp, -16
 ; AVX1-NEXT:    movq %rsp, %rbp
-; AVX1-NEXT:  .Lcfi2:
 ; AVX1-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $64, %rsp
@@ -781,12 +775,9 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; AVX2-LABEL: v64i8:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:  .Lcfi0:
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:  .Lcfi1:
 ; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:  .Lcfi2:
 ; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
@@ -998,12 +989,9 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; AVX512F-LABEL: v64i8:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:  .Lcfi3:
 ; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:  .Lcfi4:
 ; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:  .Lcfi5:
 ; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $64, %rsp

@@ -121,6 +121,17 @@ private:
 
   bool canStartString() const;
 
+  // Check if tokenizer can start reading a single line comment (e.g. a comment
+  // that begins with '//')
+  bool canStartLineComment() const;
+
+  // Check if tokenizer can start or finish reading a block comment (e.g. a
+  // comment that begins with '/*' and ends with '*/')
+  bool canStartBlockComment() const;
+
+  // Throw away all remaining characters on the current line.
+  void skipCurrentLine();
+
   bool streamEof() const;
 
   // Classify the token that is about to be read from the current position.
@@ -133,6 +144,14 @@ private:
   StringRef Data;
   size_t DataLength, Pos;
 };
+
+void Tokenizer::skipCurrentLine() {
+  Pos = Data.find_first_of("\r\n", Pos);
+  Pos = Data.find_first_not_of("\r\n", Pos);
+
+  if (Pos == StringRef::npos)
+    Pos = DataLength;
+}
 
 Expected<std::vector<RCToken>> Tokenizer::run() {
   Pos = 0;
@@ -153,6 +172,10 @@ Expected<std::vector<RCToken>> Tokenizer::run() {
     const size_t TokenStart = Pos;
     if (Error TokenError = consumeToken(TokenKind))
       return std::move(TokenError);
+
+    // Comments are just deleted, don't bother saving them.
+    if (TokenKind == Kind::LineComment || TokenKind == Kind::StartComment)
+      continue;
 
     RCToken Token(TokenKind, Data.take_front(Pos).drop_front(TokenStart));
     if (TokenKind == Kind::Identifier) {
@@ -195,6 +218,21 @@ Error Tokenizer::consumeToken(const Kind TokenKind) {
     advance();
     return Error::success();
 
+  case Kind::LineComment:
+    advance(2);
+    skipCurrentLine();
+    return Error::success();
+
+  case Kind::StartComment: {
+    advance(2);
+    auto EndPos = Data.find("*/", Pos);
+    if (EndPos == StringRef::npos)
+      return getStringError(
+          "Unclosed multi-line comment beginning at position " + Twine(Pos));
+    advance(EndPos - Pos);
+    advance(2);
+    return Error::success();
+  }
   case Kind::Identifier:
     while (!streamEof() && canContinueIdentifier())
       advance();
@@ -259,6 +297,16 @@ bool Tokenizer::canStartInt() const {
   return std::isdigit(Data[Pos]);
 }
 
+bool Tokenizer::canStartBlockComment() const {
+  assert(!streamEof());
+  return Data.drop_front(Pos).startswith("/*");
+}
+
+bool Tokenizer::canStartLineComment() const {
+  assert(!streamEof());
+  return Data.drop_front(Pos).startswith("//");
+}
+
 bool Tokenizer::canContinueInt() const {
   assert(!streamEof());
   return std::isalnum(Data[Pos]);
@@ -271,6 +319,11 @@ bool Tokenizer::canStartString() const {
 bool Tokenizer::streamEof() const { return Pos == DataLength; }
 
 Kind Tokenizer::classifyCurrentToken() const {
+  if (canStartBlockComment())
+    return Kind::StartComment;
+  if (canStartLineComment())
+    return Kind::LineComment;
+
   if (canStartInt())
     return Kind::Int;
   if (canStartString())

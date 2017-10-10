@@ -61,7 +61,8 @@ define void @test_multiple_args(i64 %in) {
 ; CHECK-LABEL: name: test_struct_formal
 ; CHECK: [[DBL:%[0-9]+]](s64) = COPY %d0
 ; CHECK: [[I64:%[0-9]+]](s64) = COPY %x0
-; CHECK: [[I8:%[0-9]+]](s8) = COPY %w1
+; CHECK: [[I8_C:%[0-9]+]](s32) = COPY %w1
+; CHECK: [[I8:%[0-9]+]](s8) = G_TRUNC [[I8_C]]
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 
 ; CHECK: [[UNDEF:%[0-9]+]](s192) = G_IMPLICIT_DEF
@@ -126,7 +127,8 @@ define i64 @test_arr_call([4 x i64]* %addr) {
 
 ; CHECK-LABEL: name: test_abi_exts_call
 ; CHECK: [[VAL:%[0-9]+]](s8) = G_LOAD
-; CHECK: %w0 = COPY [[VAL]]
+; CHECK: [[VAL_TMP:%[0-9]+]](s32) = G_ANYEXT [[VAL]]
+; CHECK: %w0 = COPY [[VAL_TMP]]
 ; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0
 ; CHECK: [[SVAL:%[0-9]+]](s32) = G_SEXT [[VAL]](s8)
 ; CHECK: %w0 = COPY [[SVAL]](s32)

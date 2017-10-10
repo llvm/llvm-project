@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge   | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=knl         | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2      | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1      | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
@@ -42,6 +42,14 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_ctpop_i16:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    popcntw (%rsi), %cx # sched: [3:1.00]
+; SKYLAKE-NEXT:    popcntw %di, %ax # sched: [3:1.00]
+; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i16:
 ; BTVER2:       # BB#0:
@@ -95,6 +103,13 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_ctpop_i32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    popcntl (%rsi), %ecx # sched: [3:1.00]
+; SKYLAKE-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
+; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_ctpop_i32:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
@@ -144,6 +159,13 @@ define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ; HASWELL-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_ctpop_i64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    popcntq (%rsi), %rcx # sched: [3:1.00]
+; SKYLAKE-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
+; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i64:
 ; BTVER2:       # BB#0:

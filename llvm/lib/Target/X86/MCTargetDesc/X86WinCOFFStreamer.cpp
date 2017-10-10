@@ -21,13 +21,13 @@ public:
                      raw_pwrite_stream &OS)
       : MCWinCOFFStreamer(C, AB, *CE, OS) {}
 
-  void EmitWinEHHandlerData() override;
+  void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
   void FinishImpl() override;
 };
 
-void X86WinCOFFStreamer::EmitWinEHHandlerData() {
-  MCStreamer::EmitWinEHHandlerData();
+void X86WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
+  MCStreamer::EmitWinEHHandlerData(Loc);
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section!

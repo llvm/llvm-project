@@ -10,7 +10,6 @@ define void @func(<4 x float> %vx) {
 ; CHECK-LABEL: func:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pextrq $1, %xmm0, %rdx
