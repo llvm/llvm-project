@@ -1609,39 +1609,11 @@ bool Sema::isVisibleSlow(const NamedDecl *D) {
 }
 
 bool Sema::shouldLinkPossiblyHiddenDecl(LookupResult &R, const NamedDecl *New) {
-  // FIXME: If there are both visible and hidden declarations, we need to take
-  // into account whether redeclaration is possible. Example:
-  // 
-  // Non-imported module:
-  //   int f(T);        // #1
-  // Some TU:
-  //   static int f(U); // #2, not a redeclaration of #1
-  //   int f(T);        // #3, finds both, should link with #1 if T != U, but
-  //                    // with #2 if T == U; neither should be ambiguous.
   for (auto *D : R) {
     if (isVisible(D))
       return true;
-    assert(D->isExternallyDeclarable() &&
-           "should not have hidden, non-externally-declarable result here");
   }
-
-  // This function is called once "New" is essentially complete, but before a
-  // previous declaration is attached. We can't query the linkage of "New" in
-  // general, because attaching the previous declaration can change the
-  // linkage of New to match the previous declaration.
-  //
-  // However, because we've just determined that there is no *visible* prior
-  // declaration, we can compute the linkage here. There are two possibilities:
-  //
-  //  * This is not a redeclaration; it's safe to compute the linkage now.
-  //
-  //  * This is a redeclaration of a prior declaration that is externally
-  //    redeclarable. In that case, the linkage of the declaration is not
-  //    changed by attaching the prior declaration, because both are externally
-  //    declarable (and thus ExternalLinkage or VisibleNoLinkage).
-  //
-  // FIXME: This is subtle and fragile.
-  return New->isExternallyDeclarable();
+  return New->isExternallyVisible();
 }
 
 /// \brief Retrieve the visible declaration corresponding to D, if any.

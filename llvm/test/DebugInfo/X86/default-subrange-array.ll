@@ -18,7 +18,7 @@ source_filename = "test/DebugInfo/X86/default-subrange-array.ll"
 ; CHECK:       DW_TAG_class_type
 ; CHECK:         DW_TAG_member
 ; CHECK-NEXT:      DW_AT_name {{.*}} "x"
-; CHECK-NEXT:      DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ARRAY:0x[0-9a-f]+]]})
+; CHECK-NEXT:      DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ARRAY:0x[0-9a-f]+]]}
 
 ; CHECK: [[ARRAY]]: DW_TAG_array_type
 ; CHECK-NEXT:         DW_AT_type

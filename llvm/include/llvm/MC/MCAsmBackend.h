@@ -46,7 +46,8 @@ public:
 
   /// Create a new MCObjectWriter instance for use by the assembler backend to
   /// emit the final object file.
-  virtual MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const = 0;
+  virtual std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const = 0;
 
   /// \name Target Fixup Interfaces
   /// @{

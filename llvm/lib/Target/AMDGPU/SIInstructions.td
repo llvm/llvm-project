@@ -204,11 +204,13 @@ def SI_MASK_BRANCH : VPseudoInstSI <
 
 let isTerminator = 1 in {
 
+let OtherPredicates = [EnableLateCFGStructurize] in {
  def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
   (outs),
   (ins SReg_64:$vcc, brtarget:$target),
   [(brcond i1:$vcc, bb:$target)]> {
     let Size = 12;
+}
 }
 
 def SI_IF: CFPseudoInstSI <

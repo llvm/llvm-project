@@ -37,7 +37,8 @@ public:
                  StringRef CPU, bool N32)
       : TheTriple(TT), IsLittle(TT.isLittleEndian()), IsN32(N32) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

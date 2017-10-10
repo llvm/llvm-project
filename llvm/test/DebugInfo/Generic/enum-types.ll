@@ -12,7 +12,7 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_AT_MIPS_linkage_name {{.*}} "_Z4topA2EA"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM]]})
+; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM]]}
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_subprogram

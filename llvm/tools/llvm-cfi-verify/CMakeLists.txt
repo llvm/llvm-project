@@ -13,4 +13,5 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-cfi-verify
   llvm-cfi-verify.cpp
+  FileAnalysis.cpp
   )

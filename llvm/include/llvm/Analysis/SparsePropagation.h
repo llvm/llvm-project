@@ -128,19 +128,17 @@ public:
 
   void Print(Function &F, raw_ostream &OS) const;
 
-  /// getLatticeState - Return the LatticeVal object that corresponds to the
-  /// value.  If an value is not in the map, it is returned as untracked,
-  /// unlike the getValueState method.
-  LatticeVal getLatticeState(Value *V) const {
+  /// getExistingValueState - Return the LatticeVal object corresponding to the
+  /// given value from the ValueState map. If the value is not in the map,
+  /// UntrackedVal is returned, unlike the getValueState method.
+  LatticeVal getExistingValueState(Value *V) const {
     auto I = ValueState.find(V);
     return I != ValueState.end() ? I->second : LatticeFunc->getUntrackedVal();
   }
 
-  /// getValueState - Return the LatticeVal object that corresponds to the
-  /// value, initializing the value's state if it hasn't been entered into the
-  /// map yet.   This function is necessary because not all values should start
-  /// out in the underdefined state... Arguments should be overdefined, and
-  /// constants should be marked as constants.
+  /// getValueState - Return the LatticeVal object corresponding to the given
+  /// value from the ValueState map. If the value is not in the map, its state
+  /// is initialized.
   LatticeVal getValueState(Value *V);
 
   /// isEdgeFeasible - Return true if the control flow edge from the 'From'
@@ -283,7 +281,7 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
     if (AggressiveUndef)
       BCValue = getValueState(BI->getCondition());
     else
-      BCValue = getLatticeState(BI->getCondition());
+      BCValue = getExistingValueState(BI->getCondition());
 
     if (BCValue == LatticeFunc->getOverdefinedVal() ||
         BCValue == LatticeFunc->getUntrackedVal()) {
@@ -325,7 +323,7 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
   if (AggressiveUndef)
     SCValue = getValueState(SI.getCondition());
   else
-    SCValue = getLatticeState(SI.getCondition());
+    SCValue = getExistingValueState(SI.getCondition());
 
   if (SCValue == LatticeFunc->getOverdefinedVal() ||
       SCValue == LatticeFunc->getUntrackedVal()) {
@@ -487,7 +485,7 @@ void SparseSolver<LatticeVal>::Print(Function &F, raw_ostream &OS) const {
     else
       OS << "; anon bb\n";
     for (auto &I : BB) {
-      LatticeFunc->PrintValue(getLatticeState(&I), OS);
+      LatticeFunc->PrintValue(getExistingValueState(&I), OS);
       OS << I << "\n";
     }
 

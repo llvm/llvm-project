@@ -432,7 +432,8 @@ public:
                           const MCRegisterInfo &MRI)
       : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64MachObjectWriter(OS, MachO::CPU_TYPE_ARM64,
                                          MachO::CPU_SUBTYPE_ARM64_ALL);
   }
@@ -582,7 +583,8 @@ public:
       : AArch64AsmBackend(T, TT, IsLittleEndian), OSABI(OSABI),
         IsILP32(IsILP32) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
   }
 };
@@ -595,7 +597,8 @@ public:
   COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
       : AArch64AsmBackend(T, TheTriple, /*IsLittleEndian*/ true) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createAArch64WinCOFFObjectWriter(OS);
   }
 };

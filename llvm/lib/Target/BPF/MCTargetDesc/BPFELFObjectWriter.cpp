@@ -11,6 +11,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
@@ -52,8 +53,9 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   }
 }
 
-MCObjectWriter *llvm::createBPFELFObjectWriter(raw_pwrite_stream &OS,
-                                               uint8_t OSABI, bool IsLittleEndian) {
+std::unique_ptr<MCObjectWriter>
+llvm::createBPFELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
+                               bool IsLittleEndian) {
   return createELFObjectWriter(llvm::make_unique<BPFELFObjectWriter>(OSABI), OS,
                                IsLittleEndian);
 }

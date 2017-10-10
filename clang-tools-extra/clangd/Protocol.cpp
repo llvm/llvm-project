@@ -182,7 +182,8 @@ std::string Location::unparse(const Location &P) {
 }
 
 llvm::Optional<TextDocumentItem>
-TextDocumentItem::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+TextDocumentItem::parse(llvm::yaml::MappingNode *Params,
+                        clangd::Logger &Logger) {
   TextDocumentItem Result;
   for (auto &NextKeyValue : *Params) {
     auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
@@ -552,7 +553,8 @@ TextDocumentContentChangeEvent::parse(llvm::yaml::MappingNode *Params,
 }
 
 llvm::Optional<FormattingOptions>
-FormattingOptions::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+FormattingOptions::parse(llvm::yaml::MappingNode *Params,
+                         clangd::Logger &Logger) {
   FormattingOptions Result;
   for (auto &NextKeyValue : *Params) {
     auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
@@ -767,7 +769,8 @@ llvm::Optional<Diagnostic> Diagnostic::parse(llvm::yaml::MappingNode *Params,
 }
 
 llvm::Optional<CodeActionContext>
-CodeActionContext::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+CodeActionContext::parse(llvm::yaml::MappingNode *Params,
+                         clangd::Logger &Logger) {
   CodeActionContext Result;
   for (auto &NextKeyValue : *Params) {
     auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
@@ -800,7 +803,8 @@ CodeActionContext::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger
 }
 
 llvm::Optional<CodeActionParams>
-CodeActionParams::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+CodeActionParams::parse(llvm::yaml::MappingNode *Params,
+                        clangd::Logger &Logger) {
   CodeActionParams Result;
   for (auto &NextKeyValue : *Params) {
     auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());

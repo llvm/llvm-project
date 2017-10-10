@@ -244,6 +244,10 @@ void MetadataStreamer::emitKernelAttrs(const Function &Func) {
         cast<ValueAsMetadata>(Node->getOperand(0))->getType(),
         mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue());
   }
+  if (Func.hasFnAttribute("runtime-handle")) {
+    Attrs.mRuntimeHandle =
+        Func.getFnAttribute("runtime-handle").getValueAsString().str();
+  }
 }
 
 void MetadataStreamer::emitKernelArgs(const Function &Func) {

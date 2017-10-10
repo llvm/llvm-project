@@ -22,7 +22,7 @@ def P9Model : SchedMachineModel {
   // Try to make sure we have at least 10 dispatch groups in a loop.
   let LoopMicroOpBufferSize = 60;
 
-  let CompleteModel = 0;
+  let CompleteModel = 1;
 
   let UnsupportedFeatures = [HasQPX];
 
@@ -301,6 +301,9 @@ let SchedModel = P9Model in {
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;
   def P9_StoreAndALUOp_4C : WriteSequence<[P9_LS_1C, P9_ALU_3C]>;
   def P9_ALUOpAndALUOp_4C : WriteSequence<[P9_ALU_2C, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_9C : WriteSequence<[P9_DP_7C, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_24C_5 : WriteSequence<[P9_DP_22C_5, P9_ALU_2C]>;
+  def P9_DPOpAndALUOp_35C_8 : WriteSequence<[P9_DP_33C_8, P9_ALU_2C]>;
 
   // ***************** Defining Itinerary Class Resources *****************
 

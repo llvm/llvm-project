@@ -125,7 +125,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
-    return errorOrToExpected(createELFObjectFile(Object));
+    return createELFObjectFile(Object);
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:
@@ -141,7 +141,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::coff_object:
   case file_magic::coff_import_library:
   case file_magic::pecoff_executable:
-    return errorOrToExpected(createCOFFObjectFile(Object));
+    return createCOFFObjectFile(Object);
   case file_magic::wasm_object:
     return createWasmObjectFile(Object);
   }

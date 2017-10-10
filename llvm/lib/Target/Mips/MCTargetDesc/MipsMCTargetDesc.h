@@ -16,6 +16,8 @@
 
 #include "llvm/Support/DataTypes.h"
 
+#include <memory>
+
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
@@ -47,8 +49,8 @@ MCAsmBackend *createMipsAsmBackend(const Target &T, const MCRegisterInfo &MRI,
                                    const Triple &TT, StringRef CPU,
                                    const MCTargetOptions &Options);
 
-MCObjectWriter *createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                          const Triple &TT, bool IsN32);
+std::unique_ptr<MCObjectWriter>
+createMipsELFObjectWriter(raw_pwrite_stream &OS, const Triple &TT, bool IsN32);
 
 namespace MIPS_MC {
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);

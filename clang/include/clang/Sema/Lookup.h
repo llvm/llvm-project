@@ -139,7 +139,6 @@ public:
       LookupKind(LookupKind),
       IDNS(0),
       Redecl(Redecl != Sema::NotForRedeclaration),
-      ExternalRedecl(Redecl == Sema::ForExternalRedeclaration),
       HideTags(true),
       Diagnose(Redecl == Sema::NotForRedeclaration),
       AllowHidden(false),
@@ -162,7 +161,6 @@ public:
       LookupKind(LookupKind),
       IDNS(0),
       Redecl(Redecl != Sema::NotForRedeclaration),
-      ExternalRedecl(Redecl == Sema::ForExternalRedeclaration),
       HideTags(true),
       Diagnose(Redecl == Sema::NotForRedeclaration),
       AllowHidden(false),
@@ -183,7 +181,6 @@ public:
       LookupKind(Other.LookupKind),
       IDNS(Other.IDNS),
       Redecl(Other.Redecl),
-      ExternalRedecl(Other.ExternalRedecl),
       HideTags(Other.HideTags),
       Diagnose(false),
       AllowHidden(Other.AllowHidden),
@@ -204,9 +201,7 @@ public:
         SemaPtr(std::move(Other.SemaPtr)), NameInfo(std::move(Other.NameInfo)),
         NameContextRange(std::move(Other.NameContextRange)),
         LookupKind(std::move(Other.LookupKind)), IDNS(std::move(Other.IDNS)),
-        Redecl(std::move(Other.Redecl)),
-        ExternalRedecl(std::move(Other.ExternalRedecl)),
-        HideTags(std::move(Other.HideTags)),
+        Redecl(std::move(Other.Redecl)), HideTags(std::move(Other.HideTags)),
         Diagnose(std::move(Other.Diagnose)),
         AllowHidden(std::move(Other.AllowHidden)),
         Shadowed(std::move(Other.Shadowed)) {
@@ -226,7 +221,6 @@ public:
     LookupKind = std::move(Other.LookupKind);
     IDNS = std::move(Other.IDNS);
     Redecl = std::move(Other.Redecl);
-    ExternalRedecl = std::move(Other.ExternalRedecl);
     HideTags = std::move(Other.HideTags);
     Diagnose = std::move(Other.Diagnose);
     AllowHidden = std::move(Other.AllowHidden);
@@ -271,17 +265,6 @@ public:
     return Redecl;
   }
 
-  /// True if this lookup is just looking for an existing declaration to link
-  /// against a declaration with external linkage.
-  bool isForExternalRedeclaration() const {
-    return ExternalRedecl;
-  }
-
-  Sema::RedeclarationKind redeclarationKind() const {
-    return ExternalRedecl ? Sema::ForExternalRedeclaration :
-           Redecl ? Sema::ForVisibleRedeclaration : Sema::NotForRedeclaration;
-  }
-
   /// \brief Specify whether hidden declarations are visible, e.g.,
   /// for recovery reasons.
   void setAllowHidden(bool AH) {
@@ -292,7 +275,7 @@ public:
   /// declarations, such as those in modules that have not yet been imported.
   bool isHiddenDeclarationVisible(NamedDecl *ND) const {
     return AllowHidden ||
-           (isForExternalRedeclaration() && ND->isExternallyDeclarable());
+           (isForRedeclaration() && ND->hasExternalFormalLinkage());
   }
 
   /// Sets whether tag declarations should be hidden by non-tag
@@ -573,8 +556,7 @@ public:
 
   /// \brief Change this lookup's redeclaration kind.
   void setRedeclarationKind(Sema::RedeclarationKind RK) {
-    Redecl = (RK != Sema::NotForRedeclaration);
-    ExternalRedecl = (RK == Sema::ForExternalRedeclaration);
+    Redecl = RK;
     configure();
   }
 
@@ -737,7 +719,6 @@ private:
   unsigned IDNS; // set by configure()
 
   bool Redecl;
-  bool ExternalRedecl;
 
   /// \brief True if tag declarations should be hidden if non-tags
   ///   are present
