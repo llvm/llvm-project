@@ -589,6 +589,8 @@ uint64_t EhFrameSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
 
 template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
+
+  // Write CIE and FDE records.
   for (CieRecord *Rec : CieRecords) {
     size_t CieOffset = Rec->Cie->OutputOff;
     writeCieFde<ELFT>(Buf + CieOffset, Rec->Cie->data());
@@ -603,6 +605,9 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
     }
   }
 
+  // Apply relocations. .eh_frame section contents are not contiguous
+  // in the output buffer, but relocateAlloc() still works because
+  // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *S : Sections)
     S->relocateAlloc(Buf, nullptr);
 
