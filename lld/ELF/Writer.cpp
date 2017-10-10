@@ -799,15 +799,6 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   ElfSym::GlobalOffsetTable = addOptionalRegular<ELFT>(
       "_GLOBAL_OFFSET_TABLE_", GotSection, Target->GotBaseSymOff);
 
-  // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
-  // static linking the linker is required to optimize away any references to
-  // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
-  // to avoid the undefined symbol error.
-  if (!InX::DynSymTab)
-    if (SymbolBody *S = Symtab->find("__tls_get_addr"))
-      if (!S->isInCurrentDSO())
-        Symtab->addAbsolute<ELFT>(S->getName(), STV_HIDDEN);
-
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
   // differs from the behavior implemented by GNU linker which only define
@@ -1031,9 +1022,11 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
         Sec->SortRank < CurSec->SortRank)
       break;
   }
-  auto J = std::find_if(
-      llvm::make_reverse_iterator(I), llvm::make_reverse_iterator(B),
-      [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); });
+  auto J = std::find_if(llvm::make_reverse_iterator(I),
+                        llvm::make_reverse_iterator(B), [](BaseCommand *Cmd) {
+                          auto *OS = dyn_cast<OutputSection>(Cmd);
+                          return OS && OS->Live;
+                        });
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put

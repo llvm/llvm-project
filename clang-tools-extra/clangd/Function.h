@@ -14,6 +14,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FUNCTION_H
 
+#include "llvm/ADT/STLExtras.h"
+#include <cassert>
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -46,7 +49,7 @@ public:
 
   Ret operator()(Args... As) {
     assert(CallablePtr);
-    CallablePtr->Call(std::forward<Args>(As)...);
+    return CallablePtr->Call(std::forward<Args>(As)...);
   }
 
 private:
@@ -106,8 +109,8 @@ private:
 public:
   template <class... RestArgs>
   auto operator()(RestArgs &&... Rest)
-      -> decltype(CallImpl(llvm::index_sequence_for<Args...>(),
-                           std::forward<RestArgs>(Rest)...)) {
+      -> decltype(this->CallImpl(llvm::index_sequence_for<Args...>(),
+                                 std::forward<RestArgs>(Rest)...)) {
 
 #ifndef NDEBUG
     assert(!WasCalled && "Can only call result of BindWithForward once.");

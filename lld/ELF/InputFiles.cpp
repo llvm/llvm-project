@@ -1014,7 +1014,7 @@ template <class ELFT> std::vector<StringRef> LazyObjFile::getElfSymbols() {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::SymRange Elf_Sym_Range;
 
-  const ELFFile<ELFT> Obj(this->MB.getBuffer());
+  ELFFile<ELFT> Obj = check(ELFFile<ELFT>::create(this->MB.getBuffer()));
   ArrayRef<Elf_Shdr> Sections = check(Obj.sections(), toString(this));
   for (const Elf_Shdr &Sec : Sections) {
     if (Sec.sh_type != SHT_SYMTAB)

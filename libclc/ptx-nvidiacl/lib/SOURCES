@@ -1,3 +1,4 @@
+mem_fence/fence.cl
 synchronization/barrier.cl
 workitem/get_global_id.cl
 workitem/get_group_id.cl

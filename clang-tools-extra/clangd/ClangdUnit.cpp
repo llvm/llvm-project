@@ -1121,9 +1121,9 @@ CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
   ASTFuture = ASTPromise.get_future();
 }
 
-void CppFile::cancelRebuild() { deferCancelRebuild().get(); }
+void CppFile::cancelRebuild() { deferCancelRebuild()(); }
 
-std::future<void> CppFile::deferCancelRebuild() {
+UniqueFunction<void()> CppFile::deferCancelRebuild() {
   std::unique_lock<std::mutex> Lock(Mutex);
   // Cancel an ongoing rebuild, if any, and wait for it to finish.
   unsigned RequestRebuildCounter = ++this->RebuildCounter;
@@ -1143,7 +1143,7 @@ std::future<void> CppFile::deferCancelRebuild() {
   RebuildCond.notify_all();
 
   std::shared_ptr<CppFile> That = shared_from_this();
-  return std::async(std::launch::deferred, [That, RequestRebuildCounter]() {
+  return [That, RequestRebuildCounter]() {
     std::unique_lock<std::mutex> Lock(That->Mutex);
     CppFile *This = &*That;
     This->RebuildCond.wait(Lock, [This, RequestRebuildCounter]() {
@@ -1158,16 +1158,16 @@ std::future<void> CppFile::deferCancelRebuild() {
     // Set empty results for Promises.
     That->PreamblePromise.set_value(nullptr);
     That->ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
-  });
+  };
 }
 
 llvm::Optional<std::vector<DiagWithFixIts>>
 CppFile::rebuild(StringRef NewContents,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  return deferRebuild(NewContents, std::move(VFS)).get();
+  return deferRebuild(NewContents, std::move(VFS))();
 }
 
-std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
+UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
 CppFile::deferRebuild(StringRef NewContents,
                       IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   std::shared_ptr<const PreambleData> OldPreamble;
@@ -1315,7 +1315,7 @@ CppFile::deferRebuild(StringRef NewContents,
     return Diagnostics;
   };
 
-  return std::async(std::launch::deferred, FinishRebuild, NewContents.str());
+  return BindWithForward(FinishRebuild, NewContents.str());
 }
 
 std::shared_future<std::shared_ptr<const PreambleData>>
