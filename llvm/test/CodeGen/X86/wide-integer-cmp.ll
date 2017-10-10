@@ -91,9 +91,7 @@ define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_wide:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx

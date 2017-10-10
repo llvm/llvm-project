@@ -18,24 +18,16 @@ define void @foo() local_unnamed_addr {
 ; X86-LABEL: foo:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:  .Lcfi0:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:  .Lcfi1:
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:  .Lcfi2:
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi3:
 ; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:  .Lcfi4:
 ; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:  .Lcfi5:
 ; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:  .Lcfi6:
 ; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:  .Lcfi7:
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl obj, %edx
 ; X86-NEXT:    movsbl var_27, %eax

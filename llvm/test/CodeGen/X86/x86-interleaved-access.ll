@@ -1689,7 +1689,6 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-LABEL: interleaved_store_vf64_i8_stride4:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    subq $24, %rsp
-; AVX1-NEXT:  .Lcfi0:
 ; AVX1-NEXT:    .cfi_def_cfa_offset 32
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm8 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; AVX1-NEXT:    vmovdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill

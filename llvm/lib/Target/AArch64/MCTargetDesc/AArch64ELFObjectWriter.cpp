@@ -432,7 +432,7 @@ MCObjectWriter *llvm::createAArch64ELFObjectWriter(raw_pwrite_stream &OS,
                                                    uint8_t OSABI,
                                                    bool IsLittleEndian,
                                                    bool IsILP32) {
-  MCELFObjectTargetWriter *MOTW =
-      new AArch64ELFObjectWriter(OSABI, IsLittleEndian, IsILP32);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+  auto MOTW =
+      llvm::make_unique<AArch64ELFObjectWriter>(OSABI, IsLittleEndian, IsILP32);
+  return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
 }

@@ -97,8 +97,8 @@ bool AArch64WinCOFFObjectWriter::recordRelocation(const MCFixup &Fixup) const {
 namespace llvm {
 
 MCObjectWriter *createAArch64WinCOFFObjectWriter(raw_pwrite_stream &OS) {
-  MCWinCOFFObjectTargetWriter *MOTW = new AArch64WinCOFFObjectWriter();
-  return createWinCOFFObjectWriter(MOTW, OS);
+  auto MOTW = llvm::make_unique<AArch64WinCOFFObjectWriter>();
+  return createWinCOFFObjectWriter(std::move(MOTW), OS);
 }
 
 } // end namespace llvm

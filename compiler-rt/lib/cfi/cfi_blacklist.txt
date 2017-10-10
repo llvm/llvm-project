@@ -1,3 +1,4 @@
+[cfi-unrelated-cast]
 # std::get_temporary_buffer, likewise (libstdc++, libc++).
 fun:_ZSt20get_temporary_buffer*
 fun:_ZNSt3__120get_temporary_buffer*

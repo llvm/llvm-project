@@ -339,6 +339,12 @@ public:
     return clang::isExternallyVisible(getLinkageInternal());
   }
 
+  /// Determine whether this declaration can be redeclared in a
+  /// different translation unit.
+  bool isExternallyDeclarable() const {
+    return isExternallyVisible() && !getOwningModuleForLinkage();
+  }
+
   /// \brief Determines the visibility of this entity.
   Visibility getVisibility() const {
     return getLinkageAndVisibility().getVisibility();
@@ -378,10 +384,6 @@ public:
   bool hasLinkageBeenComputed() const {
     return hasCachedLinkage();
   }
-
-  /// Get the module that owns this declaration for linkage purposes.
-  /// There only ever is such a module under the C++ Modules TS.
-  Module *getOwningModuleForLinkage() const;
 
   /// \brief Looks through UsingDecls and ObjCCompatibleAliasDecls for
   /// the underlying named decl.

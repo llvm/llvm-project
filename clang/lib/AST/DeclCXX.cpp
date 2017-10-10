@@ -100,7 +100,7 @@ CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
 CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
                                      DeclContext *DC, SourceLocation StartLoc,
                                      SourceLocation IdLoc, IdentifierInfo *Id,
-                                     CXXRecordDecl* PrevDecl,
+                                     CXXRecordDecl *PrevDecl,
                                      bool DelayTypeCreation) {
   CXXRecordDecl *R = new (C, DC) CXXRecordDecl(CXXRecord, TK, C, DC, StartLoc,
                                                IdLoc, Id, PrevDecl);

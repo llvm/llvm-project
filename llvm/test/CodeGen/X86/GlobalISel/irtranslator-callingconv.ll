@@ -18,12 +18,18 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
 ; X64-NEXT: isImmutable: true,
 
 ; X64: liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d
-; X64:      [[ARG1:%[0-9]+]](s8) = COPY %edi
-; X64-NEXT: %{{[0-9]+}}(s8) = COPY %esi
-; X64-NEXT: %{{[0-9]+}}(s8) = COPY %edx
-; X64-NEXT: %{{[0-9]+}}(s8) = COPY %ecx
-; X64-NEXT: %{{[0-9]+}}(s8) = COPY %r8d
-; X64-NEXT: %{{[0-9]+}}(s8) = COPY %r9d
+; X64:      [[ARG1_TMP:%[0-9]+]](s32) = COPY %edi
+; X64:      [[ARG1:%[0-9]+]](s8) = G_TRUNC [[ARG1_TMP]](s32)
+; X64-NEXT: %{{[0-9]+}}(s32) = COPY %esi
+; X64-NEXT: %{{[0-9]+}}(s8) = G_TRUNC %{{[0-9]+}}(s32)
+; X64-NEXT: %{{[0-9]+}}(s32) = COPY %edx
+; X64-NEXT: %{{[0-9]+}}(s8) = G_TRUNC %{{[0-9]+}}(s32)
+; X64-NEXT: %{{[0-9]+}}(s32) = COPY %ecx
+; X64-NEXT: %{{[0-9]+}}(s8) = G_TRUNC %{{[0-9]+}}(s32)
+; X64-NEXT: %{{[0-9]+}}(s32) = COPY %r8d
+; X64-NEXT: %{{[0-9]+}}(s8) = G_TRUNC %{{[0-9]+}}(s32)
+; X64-NEXT: %{{[0-9]+}}(s32) = COPY %r9d
+; X64-NEXT: %{{[0-9]+}}(s8) = G_TRUNC %{{[0-9]+}}(s32)
 ; X64-NEXT: [[ARG7_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
 ; X64-NEXT: [[ARG7:%[0-9]+]](s8) = G_LOAD [[ARG7_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK0]], align 0)
 ; X64-NEXT: [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
@@ -651,23 +657,24 @@ define void @test_abi_exts_call(i8* %addr) {
 ; X32-NEXT:  %3(p0) = COPY %esp
 ; X32-NEXT:  %4(s32) = G_CONSTANT i32 0
 ; X32-NEXT:  %5(p0) = G_GEP %3, %4(s32)
-; X32-NEXT:  G_STORE %2(s8), %5(p0) :: (store 4 into stack, align 0)
+; X32-NEXT:  %6(s32) = G_ANYEXT %2(s8)
+; X32-NEXT:  G_STORE %6(s32), %5(p0) :: (store 4 into stack, align 0)
 ; X32-NEXT:  CALLpcrel32 @take_char, csr_32, implicit %esp
 ; X32-NEXT:  ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
 ; X32-NEXT:  ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
-; X32-NEXT:  %6(p0) = COPY %esp
-; X32-NEXT:  %7(s32) = G_CONSTANT i32 0
-; X32-NEXT:  %8(p0) = G_GEP %6, %7(s32)
-; X32-NEXT:  %9(s32) = G_SEXT %2(s8)
-; X32-NEXT:  G_STORE %9(s32), %8(p0) :: (store 4 into stack, align 0)
+; X32-NEXT:  %7(p0) = COPY %esp
+; X32-NEXT:  %8(s32) = G_CONSTANT i32 0
+; X32-NEXT:  %9(p0) = G_GEP %7, %8(s32)
+; X32-NEXT:  %10(s32) = G_SEXT %2(s8)
+; X32-NEXT:  G_STORE %10(s32), %9(p0) :: (store 4 into stack, align 0)
 ; X32-NEXT:  CALLpcrel32 @take_char, csr_32, implicit %esp
 ; X32-NEXT:  ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
 ; X32-NEXT:  ADJCALLSTACKDOWN32 4, 0, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
-; X32-NEXT:  %10(p0) = COPY %esp
-; X32-NEXT:  %11(s32) = G_CONSTANT i32 0
-; X32-NEXT:  %12(p0) = G_GEP %10, %11(s32)
-; X32-NEXT:  %13(s32) = G_ZEXT %2(s8)
-; X32-NEXT:  G_STORE %13(s32), %12(p0) :: (store 4 into stack, align 0)
+; X32-NEXT:  %11(p0) = COPY %esp
+; X32-NEXT:  %12(s32) = G_CONSTANT i32 0
+; X32-NEXT:  %13(p0) = G_GEP %11, %12(s32)
+; X32-NEXT:  %14(s32) = G_ZEXT %2(s8)
+; X32-NEXT:  G_STORE %14(s32), %13(p0) :: (store 4 into stack, align 0)
 ; X32-NEXT:  CALLpcrel32 @take_char, csr_32, implicit %esp
 ; X32-NEXT:  ADJCALLSTACKUP32 4, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
 ; X32-NEXT:  RET 0
@@ -675,17 +682,18 @@ define void @test_abi_exts_call(i8* %addr) {
 ; X64:       %0(p0) = COPY %rdi
 ; X64-NEXT:  %1(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
 ; X64-NEXT:  ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
-; X64-NEXT:  %edi = COPY %1(s8)
-; X64-NEXT:  CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %edi
-; X64-NEXT:  ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
-; X64-NEXT:  ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
-; X64-NEXT:  %2(s32) = G_SEXT %1(s8)
+; X64-NEXT:  %2(s32) = G_ANYEXT %1(s8)
 ; X64-NEXT:  %edi = COPY %2(s32)
 ; X64-NEXT:  CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %edi
 ; X64-NEXT:  ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
 ; X64-NEXT:  ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
-; X64-NEXT:  %3(s32) = G_ZEXT %1(s8)
+; X64-NEXT:  %3(s32) = G_SEXT %1(s8)
 ; X64-NEXT:  %edi = COPY %3(s32)
+; X64-NEXT:  CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %edi
+; X64-NEXT:  ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:  ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:  %4(s32) = G_ZEXT %1(s8)
+; X64-NEXT:  %edi = COPY %4(s32)
 ; X64-NEXT:  CALL64pcrel32 @take_char, csr_64, implicit %rsp, implicit %edi
 ; X64-NEXT:  ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
 ; X64-NEXT:  RET 0

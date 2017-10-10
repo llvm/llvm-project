@@ -162,9 +162,10 @@ class ELFObjectWriter : public MCObjectWriter {
                              bool ZLibStyle, unsigned Alignment);
 
 public:
-  ELFObjectWriter(MCELFObjectTargetWriter *MOTW, raw_pwrite_stream &OS,
-                  bool IsLittleEndian)
-      : MCObjectWriter(OS, IsLittleEndian), TargetObjectWriter(MOTW) {}
+  ELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                  raw_pwrite_stream &OS, bool IsLittleEndian)
+      : MCObjectWriter(OS, IsLittleEndian),
+        TargetObjectWriter(std::move(MOTW)) {}
 
   ~ELFObjectWriter() override = default;
 
@@ -1386,8 +1387,8 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
                                                                 InSet, IsPCRel);
 }
 
-MCObjectWriter *llvm::createELFObjectWriter(MCELFObjectTargetWriter *MOTW,
-                                            raw_pwrite_stream &OS,
-                                            bool IsLittleEndian) {
-  return new ELFObjectWriter(MOTW, OS, IsLittleEndian);
+MCObjectWriter *
+llvm::createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                            raw_pwrite_stream &OS, bool IsLittleEndian) {
+  return new ELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
 }

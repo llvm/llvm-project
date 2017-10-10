@@ -234,6 +234,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   FrontendOpts.OutputFile = PreamblePCHFile->getFilePath();
   PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
   PreprocessorOpts.PrecompiledPreambleBytes.second = false;
+  // Inform preprocessor to record conditional stack when building the preamble.
+  PreprocessorOpts.GeneratePreamble = true;
 
   // Create the compiler instance to use for building the precompiled preamble.
   std::unique_ptr<CompilerInstance> Clang(

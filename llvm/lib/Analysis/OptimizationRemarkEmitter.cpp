@@ -1,4 +1,4 @@
-//===- OptimizationDiagnosticInfo.cpp - Optimization Diagnostic -*- C++ -*-===//
+//===- OptimizationRemarkEmitter.cpp - Optimization Diagnostic --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,7 +12,7 @@
 // used to compute the "hotness" of the diagnostic message.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"

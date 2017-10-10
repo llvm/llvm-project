@@ -28,7 +28,7 @@
 namespace llvm {
 namespace rc {
 
-RCParser::ParserError::ParserError(const Twine Expected, const LocIter CurLoc,
+RCParser::ParserError::ParserError(const Twine &Expected, const LocIter CurLoc,
                                    const LocIter End)
     : ErrorLoc(CurLoc), FileEnd(End) {
   CurMessage = "Error parsing file: expected " + Expected.str() + ", got " +
@@ -37,10 +37,7 @@ RCParser::ParserError::ParserError(const Twine Expected, const LocIter CurLoc,
 
 char RCParser::ParserError::ID = 0;
 
-RCParser::RCParser(const std::vector<RCToken> &TokenList)
-    : Tokens(TokenList), CurLoc(Tokens.begin()), End(Tokens.end()) {}
-
-RCParser::RCParser(std::vector<RCToken> &&TokenList)
+RCParser::RCParser(std::vector<RCToken> TokenList)
     : Tokens(std::move(TokenList)), CurLoc(Tokens.begin()), End(Tokens.end()) {}
 
 bool RCParser::isEof() const { return CurLoc == End; }
@@ -706,7 +703,7 @@ RCParser::ParseOptionType RCParser::parseStyleStmt() {
   return llvm::make_unique<StyleStmt>(*Arg);
 }
 
-Error RCParser::getExpectedError(const Twine Message, bool IsAlreadyRead) {
+Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {
   return make_error<ParserError>(
       Message, IsAlreadyRead ? std::prev(CurLoc) : CurLoc, End);
 }

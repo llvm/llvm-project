@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "ClangdUnit.h"
+#include "Function.h"
 #include "Protocol.h"
 
 #include <condition_variable>
@@ -132,9 +133,8 @@ public:
 
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_front(std::async(std::launch::deferred,
-                                         std::forward<Func>(F),
-                                         std::forward<Args>(As)...));
+      RequestQueue.push_front(
+          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
     }
     RequestCV.notify_one();
   }
@@ -149,9 +149,8 @@ public:
 
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_back(std::async(std::launch::deferred,
-                                        std::forward<Func>(F),
-                                        std::forward<Args>(As)...));
+      RequestQueue.push_back(
+          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
     }
     RequestCV.notify_one();
   }
@@ -167,7 +166,7 @@ private:
   bool Done = false;
   /// A queue of requests. Elements of this vector are async computations (i.e.
   /// results of calling std::async(std::launch::deferred, ...)).
-  std::deque<std::future<void>> RequestQueue;
+  std::deque<UniqueFunction<void()>> RequestQueue;
   /// Condition variable to wake up worker threads.
   std::condition_variable RequestCV;
 };

@@ -21,7 +21,6 @@ define i32 @test_1(i32 %a, i32 %b, i32 %tValue, i32 %fValue) {
 ; X32-LABEL: test_1:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)

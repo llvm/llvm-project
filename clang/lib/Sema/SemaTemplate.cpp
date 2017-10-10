@@ -778,7 +778,7 @@ static void maybeDiagnoseTemplateParameterShadow(Sema &SemaRef, Scope *S,
                                                  SourceLocation Loc,
                                                  IdentifierInfo *Name) {
   NamedDecl *PrevDecl = SemaRef.LookupSingleName(
-      S, Name, Loc, Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+      S, Name, Loc, Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
   if (PrevDecl && PrevDecl->isTemplateParameter())
     SemaRef.DiagnoseTemplateParameterShadow(Loc, PrevDecl);
 }
@@ -1133,7 +1133,7 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
   LookupResult Previous(*this, Name, NameLoc,
                         (SS.isEmpty() && TUK == TUK_Friend)
                           ? LookupTagName : LookupOrdinaryName,
-                        ForRedeclaration);
+                        forRedeclarationInCurContext());
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
     if (!SemanticContext) {
@@ -1192,8 +1192,8 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   // If there is a previous declaration with the same name, check
   // whether this is a valid redeclaration.
-  ClassTemplateDecl *PrevClassTemplate
-    = dyn_cast_or_null<ClassTemplateDecl>(PrevDecl);
+  ClassTemplateDecl *PrevClassTemplate =
+      dyn_cast_or_null<ClassTemplateDecl>(PrevDecl);
 
   // We may have found the injected-class-name of a class template,
   // class template partial specialization, or class template specialization.
@@ -1483,6 +1483,9 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
     Friend->setAccess(AS_public);
     CurContext->addDecl(Friend);
   }
+
+  if (PrevClassTemplate)
+    CheckRedeclarationModuleOwnership(NewTemplate, PrevClassTemplate);
 
   if (Invalid) {
     NewTemplate->setInvalidDecl();
@@ -3677,7 +3680,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     // Check that this isn't a redefinition of this specialization,
     // merging with previous declarations.
     LookupResult PrevSpec(*this, GetNameForDeclarator(D), LookupOrdinaryName,
-                          ForRedeclaration);
+                          forRedeclarationInCurContext());
     PrevSpec.addDecl(PrevDecl);
     D.setRedeclaration(CheckVariableDeclaration(Specialization, PrevSpec));
   } else if (Specialization->isStaticDataMember() &&

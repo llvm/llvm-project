@@ -8,9 +8,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-LABEL: test_mm512_mask_set1_epi8:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  .Lcfi1:
 ; X32-NEXT:    .cfi_offset %ebx, -8
 ; X32-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -740,9 +738,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-LABEL: test_mm512_maskz_set1_epi8:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:  .Lcfi2:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  .Lcfi3:
 ; X32-NEXT:    .cfi_offset %ebx, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %ecx

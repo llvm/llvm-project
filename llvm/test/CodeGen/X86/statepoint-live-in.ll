@@ -10,7 +10,6 @@ define void @test1(i32 %a) gc "statepoint-example" {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp0:
@@ -26,17 +25,12 @@ define void @test2(i32 %a, i32 %b) gc "statepoint-example" {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:  Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi3:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  Lcfi4:
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:  Lcfi5:
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
@@ -60,7 +54,6 @@ define void @test3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-LABEL: test3:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi6:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp3:
@@ -80,7 +73,6 @@ define void @test4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-LABEL: test4:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi7:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp4:
@@ -99,7 +91,6 @@ define  i32 addrspace(1)* @test5(i32 %a, i32 addrspace(1)* %p) gc "statepoint-ex
 ; CHECK-LABEL: test5:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Lcfi8:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rsi, (%rsp)
 ; CHECK-NEXT:    callq _bar
@@ -118,12 +109,9 @@ define void @test6(i32 %a) gc "statepoint-example" {
 ; CHECK-LABEL: test6:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:  Lcfi9:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:  Lcfi10:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  Lcfi11:
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%rsp)

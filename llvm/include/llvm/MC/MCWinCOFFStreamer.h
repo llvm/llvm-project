@@ -61,7 +61,7 @@ public:
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
   void EmitIdent(StringRef IdentString) override;
-  void EmitWinEHHandlerData() override;
+  void EmitWinEHHandlerData(SMLoc Loc) override;
   void FinishImpl() override;
 
   /// \}

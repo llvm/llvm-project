@@ -117,7 +117,7 @@ class X86FoldTablesEmitter {
       if (E.CannotUnfold)
         OS << "TB_NO_REVERSE | ";
       if (E.IsAligned)
-        OS << "TB_ALIGN_" + std::to_string(E.Alignment) + " | ";
+        OS << "TB_ALIGN_" << E.Alignment << " | ";
 
       OS << "0 },\n";
 
