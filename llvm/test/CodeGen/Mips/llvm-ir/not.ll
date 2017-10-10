@@ -135,7 +135,10 @@ define signext i1 @nor_i1(i1 signext %a, i1 signext %b) {
 entry:
 ; ALL-LABEL: nor_i1:
 
-  ; ALL:          nor     $2, $5, $4
+  ; GP32:         nor     $2, $5, $4
+  ; GP64:         or      $1, $5, $4
+  ; MM32:         nor     $2, $5, $4
+  ; MM64:         or      $1, $5, $4
 
   %or = or i1 %b, %a
   %r = xor i1 %or, -1
@@ -146,7 +149,10 @@ define signext i8 @nor_i8(i8 signext %a, i8 signext %b) {
 entry:
 ; ALL-LABEL: nor_i8:
 
-  ; ALL:          nor     $2, $5, $4
+  ; GP32:         nor     $2, $5, $4
+  ; GP64:         or      $1, $5, $4
+  ; MM32:         nor     $2, $5, $4
+  ; MM64:         or      $1, $5, $4
 
   %or = or i8 %b, %a
   %r = xor i8 %or, -1
@@ -157,7 +163,10 @@ define signext i16 @nor_i16(i16 signext %a, i16 signext %b) {
 entry:
 ; ALL-LABEL: nor_i16:
 
-  ; ALL:          nor     $2, $5, $4
+  ; GP32:         nor     $2, $5, $4
+  ; GP64:         or      $1, $5, $4
+  ; MM32:         nor     $2, $5, $4
+  ; MM64:         or      $1, $5, $4
 
   %or = or i16 %b, %a
   %r = xor i16 %or, -1

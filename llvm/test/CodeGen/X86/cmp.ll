@@ -238,7 +238,6 @@ define i32 @test12() ssp uwtable {
 ; CHECK-LABEL: test12:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushq %rax # encoding: [0x50]
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq test12b # encoding: [0xe8,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: test12b-4, kind: FK_PCRel_4

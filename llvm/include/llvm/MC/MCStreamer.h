@@ -173,7 +173,6 @@ class MCStreamer {
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
   void EnsureValidDwarfFrame();
 
-  MCSymbol *EmitCFILabel();
   MCSymbol *EmitCFICommon();
 
   /// Similar to DwarfFrameInfos, but for SEH unwind info. Chained frames may
@@ -202,6 +201,10 @@ protected:
 
   virtual void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void EmitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
+
+  /// When emitting an object file, create and emit a real label. When emitting
+  /// textual assembly, this should do nothing to avoid polluting our output.
+  virtual MCSymbol *EmitCFILabel();
 
   WinEH::FrameInfo *getCurrentWinFrameInfo() {
     return CurrentWinFrameInfo;

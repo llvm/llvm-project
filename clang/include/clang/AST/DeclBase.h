@@ -738,6 +738,13 @@ public:
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
 
+  /// Get the module that owns this declaration for linkage purposes.
+  /// There only ever is such a module under the C++ Modules TS.
+  ///
+  /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
+  /// all declarations in a global module fragment are unowned.
+  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+
   /// \brief Determine whether this declaration might be hidden from name
   /// lookup. Note that the declaration might be visible even if this returns
   /// \c false, if the owning module is visible within the query context.

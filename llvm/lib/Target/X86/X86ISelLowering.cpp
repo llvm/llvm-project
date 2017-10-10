@@ -1143,7 +1143,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i8,  Legal);
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i16, Legal);
-      setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8,  Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i8,   Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i16,  Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i32,  Legal);
@@ -17032,8 +17031,8 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
 
 /// Turns an ISD::CondCode into a value suitable for SSE floating-point mask
 /// CMPs.
-static int translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
-                              SDValue &Op1) {
+static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
+                                   SDValue &Op1) {
   unsigned SSECC;
   bool Swap = false;
 
@@ -17066,8 +17065,8 @@ static int translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGT: SSECC = 6; break;
   case ISD::SETO:   SSECC = 7; break;
-  case ISD::SETUEQ:
-  case ISD::SETONE: SSECC = 8; break;
+  case ISD::SETUEQ: SSECC = 8; break;
+  case ISD::SETONE: SSECC = 12; break;
   }
   if (Swap)
     std::swap(Op0, Op1);
@@ -17247,11 +17246,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
     // In the two cases not handled by SSE compare predicates (SETUEQ/SETONE),
     // emit two comparisons and a logic op to tie them together.
-    // TODO: This can be avoided if Intel (and only Intel as of 2016) AVX is
-    // available.
     SDValue Cmp;
     unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1);
-    if (SSECC == 8) {
+    if (SSECC >= 8 && !Subtarget.hasAVX()) {
       // LLVM predicate is SETUEQ or SETONE.
       unsigned CC0, CC1;
       unsigned CombineOpc;
@@ -17689,17 +17686,17 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
        (Subtarget.hasSSE1() && VT == MVT::f32)) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
-    int SSECC = translateX86FSETCC(
+    unsigned SSECC = translateX86FSETCC(
         cast<CondCodeSDNode>(Cond.getOperand(2))->get(), CondOp0, CondOp1);
 
-    if (SSECC != 8) {
-      if (Subtarget.hasAVX512()) {
-        SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CondOp0,
-                                  CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
-        assert(!VT.isVector() && "Not a scalar type?");
-        return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
-      }
+    if (Subtarget.hasAVX512()) {
+      SDValue Cmp = DAG.getNode(X86ISD::FSETCCM, DL, MVT::v1i1, CondOp0,
+                                CondOp1, DAG.getConstant(SSECC, DL, MVT::i8));
+      assert(!VT.isVector() && "Not a scalar type?");
+      return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
+    }
 
+    if (SSECC < 8 || Subtarget.hasAVX()) {
       SDValue Cmp = DAG.getNode(X86ISD::FSETCC, DL, VT, CondOp0, CondOp1,
                                 DAG.getConstant(SSECC, DL, MVT::i8));
 
@@ -35904,6 +35901,89 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   return combineAddOrSubToADCOrSBB(N, DAG);
 }
 
+static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // PSUBUS is supported, starting from SSE2, but special preprocessing
+  // for v8i32 requires umin, which appears in SSE41.
+  if (!(Subtarget.hasSSE2() && (VT == MVT::v16i8 || VT == MVT::v8i16)) &&
+      !(Subtarget.hasSSE41() && (VT == MVT::v8i32)) &&
+      !(Subtarget.hasAVX2() && (VT == MVT::v32i8 || VT == MVT::v16i16)) &&
+      !(Subtarget.hasAVX512() && Subtarget.hasBWI() &&
+        (VT == MVT::v64i8 || VT == MVT::v32i16 || VT == MVT::v16i32 ||
+         VT == MVT::v8i64)))
+    return SDValue();
+
+  SDValue SubusLHS, SubusRHS;
+  // Try to find umax(a,b) - b or a - umin(a,b) patterns
+  // they may be converted to subus(a,b).
+  // TODO: Need to add IR cannonicialization for this code.
+  if (Op0.getOpcode() == ISD::UMAX) {
+    SubusRHS = Op1;
+    SDValue MaxLHS = Op0.getOperand(0);
+    SDValue MaxRHS = Op0.getOperand(1);
+    if (DAG.isEqualTo(MaxLHS, Op1))
+      SubusLHS = MaxRHS;
+    else if (DAG.isEqualTo(MaxRHS, Op1))
+      SubusLHS = MaxLHS;
+    else
+      return SDValue();
+  } else if (Op1.getOpcode() == ISD::UMIN) {
+    SubusLHS = Op0;
+    SDValue MinLHS = Op1.getOperand(0);
+    SDValue MinRHS = Op1.getOperand(1);
+    if (DAG.isEqualTo(MinLHS, Op0))
+      SubusRHS = MinRHS;
+    else if (DAG.isEqualTo(MinRHS, Op0))
+      SubusRHS = MinLHS;
+    else
+      return SDValue();
+  } else
+    return SDValue();
+
+  // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
+  // special preprocessing in some cases.
+  if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
+    return DAG.getNode(X86ISD::SUBUS, SDLoc(N), VT, SubusLHS, SubusRHS);
+
+  // Special preprocessing case can be only applied
+  // if the value was zero extended from 16 bit,
+  // so we require first 16 bits to be zeros for 32 bit
+  // values, or first 48 bits for 64 bit values.
+  KnownBits Known;
+  DAG.computeKnownBits(SubusLHS, Known);
+  unsigned NumZeros = Known.countMinLeadingZeros();
+  if ((VT == MVT::v8i64 && NumZeros < 48) || NumZeros < 16)
+    return SDValue();
+
+  EVT ExtType = SubusLHS.getValueType();
+  EVT ShrinkedType;
+  if (VT == MVT::v8i32 || VT == MVT::v8i64)
+    ShrinkedType = MVT::v8i16;
+  else
+    ShrinkedType = NumZeros >= 24 ? MVT::v16i8 : MVT::v16i16;
+
+  // If SubusLHS is zeroextended - truncate SubusRHS to it's
+  // size SubusRHS = umin(0xFFF.., SubusRHS).
+  SDValue SaturationConst =
+      DAG.getConstant(APInt::getLowBitsSet(ExtType.getScalarSizeInBits(),
+                                           ShrinkedType.getScalarSizeInBits()),
+                      SDLoc(SubusLHS), ExtType);
+  SDValue UMin = DAG.getNode(ISD::UMIN, SDLoc(SubusLHS), ExtType, SubusRHS,
+                             SaturationConst);
+  SDValue NewSubusLHS =
+      DAG.getZExtOrTrunc(SubusLHS, SDLoc(SubusLHS), ShrinkedType);
+  SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
+  SDValue Psubus = DAG.getNode(X86ISD::SUBUS, SDLoc(N), ShrinkedType,
+                               NewSubusLHS, NewSubusRHS);
+  // Zero extend the result, it may be used somewhere as 32 bit,
+  // if not zext and following trunc will shrink.
+  return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);
+}
+
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
@@ -35935,6 +36015,10 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::HSUB, SDLoc(N), VT, Op0, Op1);
 
   if (SDValue V = combineIncDecVector(N, DAG))
+    return V;
+
+  // Try to create PSUBUS if SUB's argument is max/min
+  if (SDValue V = combineSubToSubus(N, DAG, Subtarget))
     return V;
 
   return combineAddOrSubToADCOrSBB(N, DAG);

@@ -6,7 +6,6 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _256_broadcast_ss_spill:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
@@ -25,7 +24,6 @@ define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _128_broadcast_ss_spill:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
@@ -45,7 +43,6 @@ define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-LABEL: _256_broadcast_sd_spill:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:  .Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill

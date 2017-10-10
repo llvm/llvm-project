@@ -515,6 +515,7 @@ static bool isSingleLineLanguageLinkage(const Decl &D) {
 }
 
 static bool isExportedFromModuleIntefaceUnit(const NamedDecl *D) {
+  // FIXME: Handle isModulePrivate.
   switch (D->getModuleOwnershipKind()) {
   case Decl::ModuleOwnershipKind::Unowned:
   case Decl::ModuleOwnershipKind::ModulePrivate:
@@ -546,7 +547,8 @@ static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   //     declaration has module linkage.
   if (auto *M = D->getOwningModule())
     if (M->Kind == Module::ModuleInterfaceUnit)
-      if (!isExportedFromModuleIntefaceUnit(D))
+      if (!isExportedFromModuleIntefaceUnit(
+              cast<NamedDecl>(D->getCanonicalDecl())))
         return LinkageInfo(ModuleLinkage, DefaultVisibility, false);
 
   return LinkageInfo::external();
@@ -1393,7 +1395,7 @@ LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
                                             : NamedDecl::VisibilityForValue));
 }
 
-Module *NamedDecl::getOwningModuleForLinkage() const {
+Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
   Module *M = getOwningModule();
   if (!M)
     return nullptr;
@@ -1411,7 +1413,17 @@ Module *NamedDecl::getOwningModuleForLinkage() const {
     // for linkage purposes. But internal linkage declarations in the global
     // module fragment of a particular module are owned by that module for
     // linkage purposes.
-    return hasExternalFormalLinkage() ? nullptr : M->Parent;
+    if (IgnoreLinkage)
+      return nullptr;
+    bool InternalLinkage;
+    if (auto *ND = dyn_cast<NamedDecl>(this))
+      InternalLinkage = !ND->hasExternalFormalLinkage();
+    else {
+      auto *NSD = dyn_cast<NamespaceDecl>(this);
+      InternalLinkage = (NSD && NSD->isAnonymousNamespace()) ||
+                        isInAnonymousNamespace();
+    }
+    return InternalLinkage ? M->Parent : nullptr;
   }
 
   llvm_unreachable("unknown module kind");

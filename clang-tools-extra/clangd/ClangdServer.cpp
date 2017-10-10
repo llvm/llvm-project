@@ -99,7 +99,7 @@ ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
   for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
     Workers.push_back(std::thread([this]() {
       while (true) {
-        std::future<void> Request;
+        UniqueFunction<void()> Request;
 
         // Pick request from the queue
         {
@@ -120,7 +120,7 @@ ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
           RequestQueue.pop_front();
         } // unlock Mutex
 
-        Request.get();
+        Request();
       }
     }));
   }

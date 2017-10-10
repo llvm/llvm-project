@@ -328,7 +328,7 @@ namespace {
     SDValue visitSIGN_EXTEND(SDNode *N);
     SDValue visitZERO_EXTEND(SDNode *N);
     SDValue visitANY_EXTEND(SDNode *N);
-    SDValue visitAssertZext(SDNode *N);
+    SDValue visitAssertExt(SDNode *N);
     SDValue visitSIGN_EXTEND_INREG(SDNode *N);
     SDValue visitSIGN_EXTEND_VECTOR_INREG(SDNode *N);
     SDValue visitZERO_EXTEND_VECTOR_INREG(SDNode *N);
@@ -1553,7 +1553,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SIGN_EXTEND:        return visitSIGN_EXTEND(N);
   case ISD::ZERO_EXTEND:        return visitZERO_EXTEND(N);
   case ISD::ANY_EXTEND:         return visitANY_EXTEND(N);
-  case ISD::AssertZext:         return visitAssertZext(N);
+  case ISD::AssertSext:
+  case ISD::AssertZext:         return visitAssertExt(N);
   case ISD::SIGN_EXTEND_INREG:  return visitSIGN_EXTEND_INREG(N);
   case ISD::SIGN_EXTEND_VECTOR_INREG: return visitSIGN_EXTEND_VECTOR_INREG(N);
   case ISD::ZERO_EXTEND_VECTOR_INREG: return visitZERO_EXTEND_VECTOR_INREG(N);
@@ -7978,20 +7979,19 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   return SDValue();
 }
 
-// TODO: These transforms should work with AssertSext too.
-// Change the function name, comments, opcode references, and caller.
-SDValue DAGCombiner::visitAssertZext(SDNode *N) {
+SDValue DAGCombiner::visitAssertExt(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT AssertVT = cast<VTSDNode>(N1)->getVT();
 
-  // fold (assertzext (assertzext x, vt), vt) -> (assertzext x, vt)
-  if (N0.getOpcode() == ISD::AssertZext &&
+  // fold (assert?ext (assert?ext x, vt), vt) -> (assert?ext x, vt)
+  if (N0.getOpcode() == Opcode &&
       AssertVT == cast<VTSDNode>(N0.getOperand(1))->getVT())
     return N0;
 
   if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse() &&
-      N0.getOperand(0).getOpcode() == ISD::AssertZext) {
+      N0.getOperand(0).getOpcode() == Opcode) {
     // We have an assert, truncate, assert sandwich. Make one stronger assert
     // by asserting on the smallest asserted type to the larger source type.
     // This eliminates the later assert:
@@ -8000,13 +8000,13 @@ SDValue DAGCombiner::visitAssertZext(SDNode *N) {
     SDValue BigA = N0.getOperand(0);
     EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
     assert(BigA_AssertVT.bitsLE(N0.getValueType()) &&
-           "Asserting zero/sign-extended bits from a type larger than the "
+           "Asserting zero/sign-extended bits to a type larger than the "
            "truncated destination does not provide information");
 
     SDLoc DL(N);
     EVT MinAssertVT = AssertVT.bitsLT(BigA_AssertVT) ? AssertVT : BigA_AssertVT;
     SDValue MinAssertVTVal = DAG.getValueType(MinAssertVT);
-    SDValue NewAssert = DAG.getNode(ISD::AssertZext, DL, BigA.getValueType(),
+    SDValue NewAssert = DAG.getNode(Opcode, DL, BigA.getValueType(),
                                     BigA.getOperand(0), MinAssertVTVal);
     return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewAssert);
   }

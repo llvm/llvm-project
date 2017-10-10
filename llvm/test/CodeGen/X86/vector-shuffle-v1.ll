@@ -604,12 +604,9 @@ define i64 @shuf64i1_zero(i64 %a) {
 ; AVX512F-LABEL: shuf64i1_zero:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:  .Lcfi0:
 ; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:  .Lcfi1:
 ; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:  .Lcfi2:
 ; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $96, %rsp
@@ -639,12 +636,9 @@ define i64 @shuf64i1_zero(i64 %a) {
 ; AVX512VL-LABEL: shuf64i1_zero:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:  .Lcfi0:
 ; AVX512VL-NEXT:    .cfi_def_cfa_offset 16
-; AVX512VL-NEXT:  .Lcfi1:
 ; AVX512VL-NEXT:    .cfi_offset %rbp, -16
 ; AVX512VL-NEXT:    movq %rsp, %rbp
-; AVX512VL-NEXT:  .Lcfi2:
 ; AVX512VL-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512VL-NEXT:    andq $-32, %rsp
 ; AVX512VL-NEXT:    subq $96, %rsp

@@ -26,12 +26,9 @@ define i64 @test47(i64 %arg)  {
 ; I32-LABEL: test47:
 ; I32:       # BB#0:
 ; I32-NEXT:    pushl %ebp
-; I32-NEXT:  .Lcfi0:
 ; I32-NEXT:    .cfi_def_cfa_offset 8
-; I32-NEXT:  .Lcfi1:
 ; I32-NEXT:    .cfi_offset %ebp, -8
 ; I32-NEXT:    movl %esp, %ebp
-; I32-NEXT:  .Lcfi2:
 ; I32-NEXT:    .cfi_def_cfa_register %ebp
 ; I32-NEXT:    andl $-8, %esp
 ; I32-NEXT:    subl $16, %esp
@@ -81,12 +78,9 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; I32-LABEL: test49:
 ; I32:       # BB#0:
 ; I32-NEXT:    pushl %ebp
-; I32-NEXT:  .Lcfi3:
 ; I32-NEXT:    .cfi_def_cfa_offset 8
-; I32-NEXT:  .Lcfi4:
 ; I32-NEXT:    .cfi_offset %ebp, -8
 ; I32-NEXT:    movl %esp, %ebp
-; I32-NEXT:  .Lcfi5:
 ; I32-NEXT:    .cfi_def_cfa_register %ebp
 ; I32-NEXT:    andl $-8, %esp
 ; I32-NEXT:    subl $8, %esp

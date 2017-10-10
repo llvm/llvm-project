@@ -355,13 +355,13 @@ void MCStreamer::EmitCFIEndProc() {
 void MCStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   // Put a dummy non-null value in Frame.End to mark that this frame has been
   // closed.
-  Frame.End = (MCSymbol *) 1;
+  Frame.End = (MCSymbol *)1;
 }
 
 MCSymbol *MCStreamer::EmitCFILabel() {
-  MCSymbol *Label = getContext().createTempSymbol("cfi", true);
-  EmitLabel(Label);
-  return Label;
+  // Return a dummy non-null value so that label fields appear filled in when
+  // generating textual assembly.
+  return (MCSymbol *)1;
 }
 
 MCSymbol *MCStreamer::EmitCFICommon() {
@@ -734,6 +734,8 @@ void MCStreamer::EmitWindowsUnwindTables() {
 
 void MCStreamer::Finish() {
   if (!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End)
+    report_fatal_error("Unfinished frame!");
+  if (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)
     report_fatal_error("Unfinished frame!");
 
   MCTargetStreamer *TS = getTargetStreamer();

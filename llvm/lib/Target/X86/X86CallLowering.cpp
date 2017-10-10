@@ -226,6 +226,28 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+                        CCValAssign &VA) override {
+    markPhysRegUsed(PhysReg);
+    switch (VA.getLocInfo()) {
+    default:
+      MIRBuilder.buildCopy(ValVReg, PhysReg);
+      break;
+    case CCValAssign::LocInfo::SExt:
+    case CCValAssign::LocInfo::ZExt:
+    case CCValAssign::LocInfo::AExt: {
+      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
+      MIRBuilder.buildTrunc(ValVReg, Copy);
+      break;
+    }
+    }
+  }
+
+  /// How the physical register gets marked varies between formal
+  /// parameters (it's a basic-block live-in), and a call instruction
+  /// (it's an implicit-def of the BL).
+  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+
 protected:
   const DataLayout &DL;
 };
@@ -235,10 +257,8 @@ struct FormalArgHandler : public IncomingValueHandler {
                    CCAssignFn *AssignFn)
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn) {}
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
-                        CCValAssign &VA) override {
+  void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
 };
 
@@ -247,10 +267,8 @@ struct CallReturnHandler : public IncomingValueHandler {
                     CCAssignFn *AssignFn, MachineInstrBuilder &MIB)
       : IncomingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
-                        CCValAssign &VA) override {
+  void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
 
 protected:

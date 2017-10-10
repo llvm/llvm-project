@@ -8,23 +8,17 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-LABEL: test:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    pushl %ebp
-; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:  .Lcfi1:
 ; X32-NEXT:    .cfi_offset %ebp, -8
 ; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:  .Lcfi2:
 ; X32-NEXT:    .cfi_def_cfa_register %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $168, %esp
-; X32-NEXT:  .Lcfi3:
 ; X32-NEXT:    .cfi_offset %esi, -20
-; X32-NEXT:  .Lcfi4:
 ; X32-NEXT:    .cfi_offset %edi, -16
-; X32-NEXT:  .Lcfi5:
 ; X32-NEXT:    .cfi_offset %ebx, -12
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    movl 16(%eax), %ecx
@@ -198,19 +192,13 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X64-LABEL: test:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    pushq %r15
-; X64-NEXT:  .Lcfi0:
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %r14
-; X64-NEXT:  .Lcfi1:
 ; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:  .Lcfi2:
 ; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:  .Lcfi3:
 ; X64-NEXT:    .cfi_offset %rbx, -32
-; X64-NEXT:  .Lcfi4:
 ; X64-NEXT:    .cfi_offset %r14, -24
-; X64-NEXT:  .Lcfi5:
 ; X64-NEXT:    .cfi_offset %r15, -16
 ; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    movq (%rdi), %r11
