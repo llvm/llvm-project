@@ -106,8 +106,8 @@ private:
 public:
   template <class... RestArgs>
   auto operator()(RestArgs &&... Rest)
-      -> decltype(CallImpl(llvm::index_sequence_for<Args...>(),
-                           std::forward<RestArgs>(Rest)...)) {
+      -> decltype(this->CallImpl(llvm::index_sequence_for<Args...>(),
+                                 std::forward<RestArgs>(Rest)...)) {
 
 #ifndef NDEBUG
     assert(!WasCalled && "Can only call result of BindWithForward once.");

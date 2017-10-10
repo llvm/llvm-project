@@ -1698,7 +1698,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
   PPOpts.RemappedFilesKeepOriginalName = RemappedFilesKeepOriginalName;
   PPOpts.AllowPCHWithCompilerErrors = AllowPCHWithCompilerErrors;
-  PPOpts.GeneratePreamble = PrecompilePreambleAfterNParses != 0;
   PPOpts.SingleFileParseMode = SingleFileParse;
   
   // Override the resources path.

@@ -412,14 +412,12 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       // dynamic initialization or a cleanup and we can just return the address
       // of the temporary.
       if (Var->hasInitializer())
-        return MakeAddrLValue(Object, M->getType(),
-                              LValueBaseInfo(AlignmentSource::Decl, false));
+        return MakeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
 
       Var->setInitializer(CGM.EmitNullConstant(E->getType()));
     }
     LValue RefTempDst = MakeAddrLValue(Object, M->getType(),
-                                       LValueBaseInfo(AlignmentSource::Decl,
-                                                      false));
+                                       AlignmentSource::Decl);
 
     switch (getEvaluationKind(E->getType())) {
     default: llvm_unreachable("expected scalar or aggregate expression");
@@ -506,8 +504,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       break;
 
     case SubobjectAdjustment::FieldAdjustment: {
-      LValue LV = MakeAddrLValue(Object, E->getType(),
-                                 LValueBaseInfo(AlignmentSource::Decl, false));
+      LValue LV = MakeAddrLValue(Object, E->getType(), AlignmentSource::Decl);
       LV = EmitLValueForField(LV, Adjustment.Field);
       assert(LV.isSimple() &&
              "materialized temporary field is not a simple lvalue");
@@ -524,8 +521,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
     }
   }
 
-  return MakeAddrLValue(Object, M->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+  return MakeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
 }
 
 RValue
@@ -2148,8 +2144,7 @@ static LValue EmitThreadPrivateVarDeclLValue(
     llvm::Type *RealVarTy, SourceLocation Loc) {
   Addr = CGF.CGM.getOpenMPRuntime().getAddrOfThreadPrivate(CGF, VD, Addr, Loc);
   Addr = CGF.Builder.CreateElementBitCast(Addr, RealVarTy);
-  LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-  return CGF.MakeAddrLValue(Addr, T, BaseInfo);
+  return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
 }
 
 Address CodeGenFunction::EmitLoadOfReference(Address Addr,
@@ -2206,8 +2201,7 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   if (auto RefTy = VD->getType()->getAs<ReferenceType>()) {
     LV = CGF.EmitLoadOfReferenceLValue(Addr, RefTy);
   } else {
-    LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-    LV = CGF.MakeAddrLValue(Addr, T, BaseInfo);
+    LV = CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);
   }
   setObjCGCLValueClass(CGF.getContext(), E, LV);
   return LV;
@@ -2241,8 +2235,8 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
                                      const Expr *E, const FunctionDecl *FD) {
   llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, FD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
-  LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-  return CGF.MakeAddrLValue(V, E->getType(), Alignment, BaseInfo);
+  return CGF.MakeAddrLValue(V, E->getType(), Alignment,
+                            AlignmentSource::Decl);
 }
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
@@ -2313,8 +2307,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       // Should we be using the alignment of the constant pointer we emitted?
       CharUnits Alignment = getNaturalTypeAlignment(E->getType(), nullptr,
                                                     /*pointee*/ true);
-      LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-      return MakeAddrLValue(Address(Val, Alignment), T, BaseInfo);
+      return MakeAddrLValue(Address(Val, Alignment), T, AlignmentSource::Decl);
     }
 
     // Check for captured variables.
@@ -2340,8 +2333,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
       assert(isa<BlockDecl>(CurCodeDecl));
       Address addr = GetAddrOfBlockDecl(VD, VD->hasAttr<BlocksAttr>());
-      LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-      return MakeAddrLValue(addr, T, BaseInfo);
+      return MakeAddrLValue(addr, T, AlignmentSource::Decl);
     }
   }
 
@@ -2355,8 +2347,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   if (ND->hasAttr<WeakRefAttr>()) {
     const auto *VD = cast<ValueDecl>(ND);
     ConstantAddress Aliasee = CGM.GetWeakRefReference(VD);
-    return MakeAddrLValue(Aliasee, T,
-                          LValueBaseInfo(AlignmentSource::Decl, false));
+    return MakeAddrLValue(Aliasee, T, AlignmentSource::Decl);
   }
 
   if (const auto *VD = dyn_cast<VarDecl>(ND)) {
@@ -2402,8 +2393,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (auto RefTy = VD->getType()->getAs<ReferenceType>()) {
       LV = EmitLoadOfReferenceLValue(addr, RefTy);
     } else {
-      LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-      LV = MakeAddrLValue(addr, T, BaseInfo);
+      LV = MakeAddrLValue(addr, T, AlignmentSource::Decl);
     }
 
     bool isLocalStorage = VD->hasLocalStorage();
@@ -2502,14 +2492,12 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
 
 LValue CodeGenFunction::EmitStringLiteralLValue(const StringLiteral *E) {
   return MakeAddrLValue(CGM.GetAddrOfConstantStringFromLiteral(E),
-                        E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+                        E->getType(), AlignmentSource::Decl);
 }
 
 LValue CodeGenFunction::EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E) {
   return MakeAddrLValue(CGM.GetAddrOfConstantStringFromObjCEncode(E),
-                        E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+                        E->getType(), AlignmentSource::Decl);
 }
 
 LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
@@ -2521,7 +2509,6 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   StringRef NameItems[] = {
       PredefinedExpr::getIdentTypeName(E->getIdentType()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
-  LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
   if (auto *BD = dyn_cast<BlockDecl>(CurCodeDecl)) {
     std::string Name = SL->getString();
     if (!Name.empty()) {
@@ -2530,14 +2517,14 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
       if (Discriminator)
         Name += "_" + Twine(Discriminator + 1).str();
       auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
-      return MakeAddrLValue(C, E->getType(), BaseInfo);
+      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     } else {
       auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
-      return MakeAddrLValue(C, E->getType(), BaseInfo);
+      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     }
   }
   auto C = CGM.GetAddrOfConstantStringFromLiteral(SL, GVName);
-  return MakeAddrLValue(C, E->getType(), BaseInfo);
+  return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
 }
 
 /// Emit a type description suitable for use by a runtime sanitizer library. The
@@ -3538,7 +3525,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     Address VecMem = CreateMemTemp(E->getBase()->getType());
     Builder.CreateStore(Vec, VecMem);
     Base = MakeAddrLValue(VecMem, E->getBase()->getType(),
-                          LValueBaseInfo(AlignmentSource::Decl, false));
+                          AlignmentSource::Decl);
   }
 
   QualType type =
@@ -3814,10 +3801,9 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
 }
 
 LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
-  LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
   if (E->isFileScope()) {
     ConstantAddress GlobalPtr = CGM.GetAddrOfConstantCompoundLiteral(E);
-    return MakeAddrLValue(GlobalPtr, E->getType(), BaseInfo);
+    return MakeAddrLValue(GlobalPtr, E->getType(), AlignmentSource::Decl);
   }
   if (E->getType()->isVariablyModifiedType())
     // make sure to emit the VLA size.
@@ -3825,7 +3811,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
 
   Address DeclPtr = CreateMemTemp(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
-  LValue Result = MakeAddrLValue(DeclPtr, E->getType(), BaseInfo);
+  LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
   EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
                    /*Init*/ true);
@@ -4263,7 +4249,7 @@ LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E) {
 
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
-                          LValueBaseInfo(AlignmentSource::Decl, false));
+                          AlignmentSource::Decl);
 
   assert(E->getCallReturnType(getContext())->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "
@@ -4282,8 +4268,7 @@ LValue CodeGenFunction::EmitCXXConstructLValue(const CXXConstructExpr *E) {
          && "binding l-value to type which needs a temporary");
   AggValueSlot Slot = CreateAggTemp(E->getType());
   EmitCXXConstructExpr(E, Slot);
-  return MakeAddrLValue(Slot.getAddress(), E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+  return MakeAddrLValue(Slot.getAddress(), E->getType(), AlignmentSource::Decl);
 }
 
 LValue
@@ -4298,7 +4283,7 @@ Address CodeGenFunction::EmitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
 LValue CodeGenFunction::EmitCXXUuidofLValue(const CXXUuidofExpr *E) {
   return MakeAddrLValue(EmitCXXUuidofExpr(E), E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+                        AlignmentSource::Decl);
 }
 
 LValue
@@ -4307,16 +4292,14 @@ CodeGenFunction::EmitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *E) {
   Slot.setExternallyDestructed();
   EmitAggExpr(E->getSubExpr(), Slot);
   EmitCXXTemporary(E->getTemporary(), E->getType(), Slot.getAddress());
-  return MakeAddrLValue(Slot.getAddress(), E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+  return MakeAddrLValue(Slot.getAddress(), E->getType(), AlignmentSource::Decl);
 }
 
 LValue
 CodeGenFunction::EmitLambdaLValue(const LambdaExpr *E) {
   AggValueSlot Slot = CreateAggTemp(E->getType(), "temp.lvalue");
   EmitLambdaExpr(E, Slot);
-  return MakeAddrLValue(Slot.getAddress(), E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+  return MakeAddrLValue(Slot.getAddress(), E->getType(), AlignmentSource::Decl);
 }
 
 LValue CodeGenFunction::EmitObjCMessageExprLValue(const ObjCMessageExpr *E) {
@@ -4324,7 +4307,7 @@ LValue CodeGenFunction::EmitObjCMessageExprLValue(const ObjCMessageExpr *E) {
 
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
-                          LValueBaseInfo(AlignmentSource::Decl, false));
+                          AlignmentSource::Decl);
 
   assert(E->getMethodDecl()->getReturnType()->isReferenceType() &&
          "Can't have a scalar return unless the return type is a "
@@ -4336,8 +4319,7 @@ LValue CodeGenFunction::EmitObjCMessageExprLValue(const ObjCMessageExpr *E) {
 LValue CodeGenFunction::EmitObjCSelectorLValue(const ObjCSelectorExpr *E) {
   Address V =
     CGM.getObjCRuntime().GetAddrOfSelector(*this, E->getSelector());
-  return MakeAddrLValue(V, E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+  return MakeAddrLValue(V, E->getType(), AlignmentSource::Decl);
 }
 
 llvm::Value *CodeGenFunction::EmitIvarOffset(const ObjCInterfaceDecl *Interface,
@@ -4381,7 +4363,7 @@ LValue CodeGenFunction::EmitStmtExprLValue(const StmtExpr *E) {
   // Can only get l-value for message expression returning aggregate type
   RValue RV = EmitAnyExprToTemp(E);
   return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
-                        LValueBaseInfo(AlignmentSource::Decl, false));
+                        AlignmentSource::Decl);
 }
 
 RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee,
@@ -4584,8 +4566,7 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
 RValue CodeGenFunction::convertTempToRValue(Address addr,
                                             QualType type,
                                             SourceLocation loc) {
-  LValue lvalue = MakeAddrLValue(addr, type,
-                                 LValueBaseInfo(AlignmentSource::Decl, false));
+  LValue lvalue = MakeAddrLValue(addr, type, AlignmentSource::Decl);
   switch (getEvaluationKind(type)) {
   case TEK_Complex:
     return RValue::getComplex(EmitLoadOfComplex(lvalue, loc));
@@ -4640,9 +4621,8 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
       if (ov == resultExpr && ov->isRValue() && !forLValue &&
           CodeGenFunction::hasAggregateEvaluationKind(ov->getType())) {
         CGF.EmitAggExpr(ov->getSourceExpr(), slot);
-        LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
         LValue LV = CGF.MakeAddrLValue(slot.getAddress(), ov->getType(),
-                                       BaseInfo);
+                                       AlignmentSource::Decl);
         opaqueData = OVMA::bind(CGF, ov, LV);
         result.RV = slot.asRValue();
 

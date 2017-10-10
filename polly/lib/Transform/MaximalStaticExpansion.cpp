@@ -19,7 +19,7 @@
 #include "polly/Support/GICHelper.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Pass.h"
 #include "isl/isl-noexceptions.h"
 #include "isl/union_map.h"
