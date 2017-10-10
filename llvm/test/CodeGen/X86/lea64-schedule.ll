@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge   | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=knl         | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2      | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1      | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
@@ -41,6 +41,11 @@ define i64 @test_lea_offset(i64) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    leaq -24(%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq -24(%rdi), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_offset:
 ; BTVER2:       # BB#0:
@@ -87,6 +92,11 @@ define i64 @test_lea_offset_big(i64) {
 ; HASWELL-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_offset_big:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.50]
@@ -132,6 +142,11 @@ define i64 @test_lea_add(i64, i64) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add:
 ; BTVER2:       # BB#0:
@@ -180,6 +195,12 @@ define i64 @test_lea_add_offset(i64, i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $16, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $16, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_offset:
 ; BTVER2:       # BB#0:
@@ -233,6 +254,13 @@ define i64 @test_lea_add_offset_big(i64, i64) {
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_add_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $-4096, %rax # imm = 0xF000
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_add_offset_big:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [1:0.50]
@@ -278,6 +306,11 @@ define i64 @test_lea_mul(i64) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_mul:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul:
 ; BTVER2:       # BB#0:
@@ -326,6 +359,12 @@ define i64 @test_lea_mul_offset(i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $-32, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_mul_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $-32, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul_offset:
 ; BTVER2:       # BB#0:
@@ -379,6 +418,13 @@ define i64 @test_lea_mul_offset_big(i64) {
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; SKYLAKE-LABEL: test_lea_mul_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $10000, %rax # imm = 0x2710
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+;
 ; BTVER2-LABEL: test_lea_mul_offset_big:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [1:0.50]
@@ -424,6 +470,11 @@ define i64 @test_lea_add_scale(i64, i64) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale:
 ; BTVER2:       # BB#0:
@@ -473,6 +524,12 @@ define i64 @test_lea_add_scale_offset(i64, i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rsi,4), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $96, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale_offset:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi,4), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $96, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset:
 ; BTVER2:       # BB#0:
@@ -526,6 +583,13 @@ define i64 @test_lea_add_scale_offset_big(i64, i64) {
 ; HASWELL-NEXT:    addq $-1200, %rax # imm = 0xFB50
 ; HASWELL-NEXT:    # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; SKYLAKE-LABEL: test_lea_add_scale_offset_big:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    leaq (%rdi,%rsi,8), %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    addq $-1200, %rax # imm = 0xFB50
+; SKYLAKE-NEXT:    # sched: [1:0.25]
+; SKYLAKE-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset_big:
 ; BTVER2:       # BB#0:

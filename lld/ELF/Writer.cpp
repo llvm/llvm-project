@@ -1031,9 +1031,11 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
         Sec->SortRank < CurSec->SortRank)
       break;
   }
-  auto J = std::find_if(
-      llvm::make_reverse_iterator(I), llvm::make_reverse_iterator(B),
-      [](BaseCommand *Cmd) { return isa<OutputSection>(Cmd); });
+  auto J = std::find_if(llvm::make_reverse_iterator(I),
+                        llvm::make_reverse_iterator(B), [](BaseCommand *Cmd) {
+                          auto *OS = dyn_cast<OutputSection>(Cmd);
+                          return OS && OS->Live;
+                        });
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put

@@ -734,7 +734,10 @@ private:
                             BoundNodesTreeBuilder *Builder) {
     const Type *const CanonicalType =
       ActiveASTContext->getCanonicalType(TypeNode);
-    for (const TypedefNameDecl *Alias : TypeAliases.lookup(CanonicalType)) {
+    auto Aliases = TypeAliases.find(CanonicalType);
+    if (Aliases == TypeAliases.end())
+      return false;
+    for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {
         *Builder = std::move(Result);

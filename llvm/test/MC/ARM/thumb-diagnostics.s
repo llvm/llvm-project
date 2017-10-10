@@ -27,11 +27,20 @@
 @ CHECK-ERRORS:         add r2, r3
 @ CHECK-ERRORS:         ^
 @ CHECK-ERRORS: note: instruction variant requires Thumb2
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: operand must be a register sp
 @ CHECK-ERRORS-V5: error: instruction variant requires ARMv6 or later
 @ CHECK-ERRORS-V5:         mov r2, r3
 @ CHECK-ERRORS-V5:         ^
 
+@ Immediates where registers were expected
+        adds #0, r1, r2
+        adds r0, #1, r2
+@ CHECK-ERRORS: error: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS:         adds #0, r1, r2
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS:         adds r0, #1, r2
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS: note: too many operands for instruction
 
 @ Out of range immediates for ASR instruction.
         asrs r2, r3, #33
@@ -237,17 +246,17 @@
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         add sp, #-1
 @ CHECK-ERRORS:                 ^
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 @ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         add sp, #3
 @ CHECK-ERRORS:                 ^
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 @ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS:         add sp, sp, #512
 @ CHECK-ERRORS:                     ^
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 @ CHECK-ERRORS: note: instruction requires: thumb2
 @ CHECK-ERRORS: error: instruction requires: thumb2
 @ CHECK-ERRORS:         add r2, sp, #1024

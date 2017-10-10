@@ -617,3 +617,11 @@ void subRegionMoveTest() {
     a.b.foo();           // no-warning
   }
 }
+
+class C: public A {};
+void resetSuperClass() {
+  C c;
+  C c1 = std::move(c);
+  c.clear();
+  C c2 = c; // no-warning
+}

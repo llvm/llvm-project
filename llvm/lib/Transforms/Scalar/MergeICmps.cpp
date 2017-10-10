@@ -28,6 +28,8 @@
 #include <vector>
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -41,8 +43,6 @@ namespace {
 
 #define DEBUG_TYPE "mergeicmps"
 
-#define MERGEICMPS_DOT_ON
-
 // A BCE atom.
 struct BCEAtom {
   BCEAtom() : GEP(nullptr), LoadI(nullptr), Offset() {}
@@ -50,7 +50,21 @@ struct BCEAtom {
   const Value *Base() const { return GEP ? GEP->getPointerOperand() : nullptr; }
 
   bool operator<(const BCEAtom &O) const {
-    return Base() == O.Base() ? Offset.slt(O.Offset) : Base() < O.Base();
+    assert(Base() && "invalid atom");
+    assert(O.Base() && "invalid atom");
+    // Just ordering by (Base(), Offset) is sufficient. However because this
+    // means that the ordering will depend on the addresses of the base
+    // values, which are not reproducible from run to run. To guarantee
+    // stability, we use the names of the values if they exist; we sort by:
+    // (Base.getName(), Base(), Offset).
+    const int NameCmp = Base()->getName().compare(O.Base()->getName());
+    if (NameCmp == 0) {
+      if (Base() == O.Base()) {
+        return Offset.slt(O.Offset);
+      }
+      return Base() < O.Base();
+    }
+    return NameCmp < 0;
   }
 
   GetElementPtrInst *GEP;
@@ -99,7 +113,9 @@ BCEAtom visitICmpLoadOperand(Value *const Val) {
 
 // A basic block with a comparison between two BCE atoms.
 // Note: the terminology is misleading: the comparison is symmetric, so there
-// is no real {l/r}hs. To break the symmetry, we use the smallest atom as Lhs.
+// is no real {l/r}hs. What we want though is to have the same base on the
+// left (resp. right), so that we can detect consecutive loads. To ensure this
+// we put the smallest atom on the left.
 class BCECmpBlock {
  public:
   BCECmpBlock() {}
@@ -430,10 +446,9 @@ void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
 
     IRBuilder<> Builder(BB);
     const auto &DL = Phi.getModule()->getDataLayout();
-    Value *const MemCmpCall =
-        emitMemCmp(FirstComparison.Lhs().GEP, FirstComparison.Rhs().GEP,
-                   ConstantInt::get(DL.getIntPtrType(Context), TotalSize),
-                   Builder, DL, TLI);
+    Value *const MemCmpCall = emitMemCmp(
+        FirstComparison.Lhs().GEP, FirstComparison.Rhs().GEP, ConstantInt::get(DL.getIntPtrType(Context), TotalSize),
+        Builder, DL, TLI);
     Value *const MemCmpIsZero = Builder.CreateICmpEQ(
         MemCmpCall, ConstantInt::get(Type::getInt32Ty(Context), 0));
 
@@ -589,21 +604,29 @@ class MergeICmps : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (skipFunction(F)) return false;
     const auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-    auto PA = runImpl(F, &TLI);
+    const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto PA = runImpl(F, &TLI, &TTI);
     return !PA.areAllPreserved();
   }
 
  private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
-  PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI);
+  PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
+                            const TargetTransformInfo *TTI);
 };
 
-PreservedAnalyses MergeICmps::runImpl(Function &F,
-                                      const TargetLibraryInfo *TLI) {
+PreservedAnalyses MergeICmps::runImpl(Function &F, const TargetLibraryInfo *TLI,
+                                      const TargetTransformInfo *TTI) {
   DEBUG(dbgs() << "MergeICmpsPass: " << F.getName() << "\n");
+
+  // We only try merging comparisons if the target wants to expand memcmp later.
+  // The rationale is to avoid turning small chains into memcmp calls.
+  unsigned MaxLoadSize;
+  if (!TTI->enableMemCmpExpansion(MaxLoadSize)) return PreservedAnalyses::all();
 
   bool MadeChange = false;
 
@@ -623,6 +646,7 @@ char MergeICmps::ID = 0;
 INITIALIZE_PASS_BEGIN(MergeICmps, "mergeicmps",
                       "Merge contiguous icmps into a memcmp", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(MergeICmps, "mergeicmps",
                     "Merge contiguous icmps into a memcmp", false, false)
 

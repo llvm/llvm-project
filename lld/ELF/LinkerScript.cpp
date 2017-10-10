@@ -365,7 +365,6 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   // script parser.
   CurAddressState = State.get();
   CurAddressState->OutSec = Aether;
-  Dot = 0;
 
   for (size_t I = 0; I < Opt.Commands.size(); ++I) {
     // Handle symbol assignments outside of any output section.
@@ -438,7 +437,7 @@ void LinkerScript::fabricateDefaultCommands() {
     StartAddr = std::min(StartAddr, KV.second);
 
   auto Expr = [=] {
-    return std::min(StartAddr, Config->ImageBase + elf::getHeaderSize());
+    return std::min(StartAddr, Target->getImageBase() + elf::getHeaderSize());
   };
   Opt.Commands.insert(Opt.Commands.begin(),
                       make<SymbolAssignment>(".", Expr, ""));
@@ -780,9 +779,11 @@ LinkerScript::AddressState::AddressState(const ScriptConfiguration &Opt) {
   }
 }
 
+// Assign addresses as instructed by linker script SECTIONS sub-commands.
 void LinkerScript::assignAddresses() {
-  // Assign addresses as instructed by linker script SECTIONS sub-commands.
-  Dot = 0;
+  // By default linker scripts use an initial value of 0 for '.', but prefer
+  // -image-base if set.
+  Dot = Config->ImageBase ? *Config->ImageBase : 0;
   auto State = make_unique<AddressState>(Opt);
   // CurAddressState captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just

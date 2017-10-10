@@ -704,12 +704,12 @@ public:
   /// Map of AsmOperandClass records to their class information.
   std::map<Record*, ClassInfo*> AsmOperandClasses;
 
+  /// Map of RegisterClass records to their class information.
+  std::map<Record*, ClassInfo*> RegisterClassClasses;
+
 private:
   /// Map of token to class information which has already been constructed.
   std::map<std::string, ClassInfo*> TokenClasses;
-
-  /// Map of RegisterClass records to their class information.
-  std::map<Record*, ClassInfo*> RegisterClassClasses;
 
 private:
   /// getTokenClass - Lookup or create the class for the given token.
@@ -1281,6 +1281,19 @@ buildRegisterClasses(SmallPtrSetImpl<Record*> &SingletonRegisters) {
       CI->ValueName = RC.getName();
     } else
       CI->ValueName = CI->ValueName + "," + RC.getName();
+
+    Init *DiagnosticType = Def->getValueInit("DiagnosticType");
+    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
+      CI->DiagnosticType = SI->getValue();
+
+    Init *DiagnosticString = Def->getValueInit("DiagnosticString");
+    if (StringInit *SI = dyn_cast<StringInit>(DiagnosticString))
+      CI->DiagnosticString = SI->getValue();
+
+    // If we have a diagnostic string but the diagnostic type is not specified
+    // explicitly, create an anonymous diagnostic type.
+    if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
+      CI->DiagnosticType = RC.getName();
 
     RegisterClassClasses.insert(std::make_pair(Def, CI));
   }
@@ -2178,7 +2191,18 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
   OS << "enum MatchClassKind {\n";
   OS << "  InvalidMatchClass = 0,\n";
   OS << "  OptionalMatchClass = 1,\n";
+  ClassInfo::ClassInfoKind LastKind = ClassInfo::Token;
+  StringRef LastName = "OptionalMatchClass";
   for (const auto &CI : Infos) {
+    if (LastKind == ClassInfo::Token && CI.Kind != ClassInfo::Token) {
+      OS << "  MCK_LAST_TOKEN = " << LastName << ",\n";
+    } else if (LastKind < ClassInfo::UserClass0 &&
+               CI.Kind >= ClassInfo::UserClass0) {
+      OS << "  MCK_LAST_REGISTER = " << LastName << ",\n";
+    }
+    LastKind = (ClassInfo::ClassInfoKind)CI.Kind;
+    LastName = CI.Name;
+
     OS << "  " << CI.Name << ", // ";
     if (CI.Kind == ClassInfo::Token) {
       OS << "'" << CI.ValueName << "'\n";
@@ -2229,6 +2253,26 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info, raw_ostream &
   OS << "}\n\n";
 }
 
+static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
+  OS << "static unsigned getDiagKindFromRegisterClass(MatchClassKind "
+        "RegisterClass) {\n";
+  OS << "  switch (RegisterClass) {\n";
+
+  for (const auto &CI: Info.Classes) {
+    if (CI.isRegisterClass() && !CI.DiagnosticType.empty()) {
+      OS << "  case " << CI.Name << ":\n";
+      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
+         << CI.DiagnosticType << ";\n";
+    }
+  }
+
+  OS << "  default:\n";
+  OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
+
+  OS << "  }\n";
+  OS << "}\n\n";
+}
+
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(AsmMatcherInfo &Info,
                                      raw_ostream &OS) {
@@ -2243,7 +2287,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info,
 
   // Check for Token operands first.
   // FIXME: Use a more specific diagnostic type.
-  OS << "  if (Operand.isToken())\n";
+  OS << "  if (Operand.isToken() && Kind <= MCK_LAST_TOKEN)\n";
   OS << "    return isSubclass(matchTokenString(Operand.getToken()), Kind) ?\n"
      << "             MCTargetAsmParser::Match_Success :\n"
      << "             MCTargetAsmParser::Match_InvalidOperand;\n\n";
@@ -2279,8 +2323,12 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info,
        << "; break;\n";
   OS << "    }\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
-     << "MCTargetAsmParser::Match_Success :\n                             "
-     << "         MCTargetAsmParser::Match_InvalidOperand;\n  }\n\n";
+     << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
+     << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";
+
+  // Expected operand is a register, but actual is not.
+  OS << "  if (Kind > MCK_LAST_TOKEN && Kind <= MCK_LAST_REGISTER)\n";
+  OS << "    return getDiagKindFromRegisterClass(Kind);\n\n";
 
   // Generic fallthrough match failure case for operands that don't have
   // specialized diagnostic types.
@@ -2426,6 +2474,10 @@ static void emitOperandDiagnosticTypes(AsmMatcherInfo &Info, raw_ostream &OS) {
   // Get the set of diagnostic types from all of the operand classes.
   std::set<StringRef> Types;
   for (const auto &OpClassEntry : Info.AsmOperandClasses) {
+    if (!OpClassEntry.second->DiagnosticType.empty())
+      Types.insert(OpClassEntry.second->DiagnosticType);
+  }
+  for (const auto &OpClassEntry : Info.RegisterClassClasses) {
     if (!OpClassEntry.second->DiagnosticType.empty())
       Types.insert(OpClassEntry.second->DiagnosticType);
   }
@@ -2959,6 +3011,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // match failure in diagnostics.
   emitOperandMatchErrorDiagStrings(Info, OS);
 
+  // Emit a function to map register classes to operand match failure codes.
+  emitRegisterMatchErrorFunc(Info, OS);
+
   // Emit the routine to match token strings to their match class.
   emitMatchTokenString(Target, Info.Classes, OS);
 
@@ -3226,12 +3281,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      }\n";
   OS << "      // If the generic handler indicates an invalid operand\n";
   OS << "      // failure, check for a special case.\n";
-  OS << "      if (Diag == Match_InvalidOperand) {\n";
-  OS << "        Diag = validateTargetOperandClass(Actual, Formal);\n";
-  OS << "        if (Diag == Match_Success) {\n";
+  OS << "      if (Diag != Match_Success) {\n";
+  OS << "        unsigned TargetDiag = validateTargetOperandClass(Actual, Formal);\n";
+  OS << "        if (TargetDiag == Match_Success) {\n";
   OS << "          ++ActualIdx;\n";
   OS << "          continue;\n";
   OS << "        }\n";
+  OS << "        // If the target matcher returned a specific error code use\n";
+  OS << "        // that, else use the one from the generic matcher.\n";
+  OS << "        if (TargetDiag != Match_InvalidOperand)\n";
+  OS << "          Diag = TargetDiag;\n";
   OS << "      }\n";
   OS << "      // If current formal operand wasn't matched and it is optional\n"
      << "      // then try to match next formal operand\n";

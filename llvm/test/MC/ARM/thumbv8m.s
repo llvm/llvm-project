@@ -238,42 +238,42 @@ bxns r0, r1
 // UNDEF: error: too many operands for instruction
 // UNDEF:     blxns r0, #0
 blxns r0, #0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     blxns label
 blxns label
 // UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, r2
 tt r0, r1, r2
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, [r1]
 tt r0, [r1]
 // UNDEF: error: too many operands for instruction
 // UNDEF:     tt r0, r1, #4
 tt r0, r1, #4
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, #4
 tt r0, #4
 
 // Unpredictable operands
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     blxns pc
 blxns pc
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r12] or r14
 // UNDEF:     tt sp, r0
 tt sp, r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r12] or r14
 // UNDEF:     tt pc, r0
 tt pc, r0
-// UNDEF: error: invalid operand for instruction
+// UNDEF: error: operand must be a register in range [r0, r14]
 // UNDEF:     tt r0, pc
 tt r0, pc
 
 // UNDEF-BASELINE: error: invalid instruction
-// UNDEF-MAINLINE: error: invalid operand for instruction
+// UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlldm pc
 vlldm pc
 
 // UNDEF-BASELINE: error: invalid instruction
-// UNDEF-MAINLINE: error: invalid operand for instruction
+// UNDEF-MAINLINE: error: operand must be a register in range [r0, r14]
 // UNDEF:     vlstm pc
 vlstm pc

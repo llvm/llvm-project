@@ -685,7 +685,8 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {
-      error(this->getLocation<ELFT>(Offset) + ": has non-ABS reloc");
+      error(this->getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
+            toString(Type) + " against symbol '" + toString(Sym) + "'");
       return;
     }
 

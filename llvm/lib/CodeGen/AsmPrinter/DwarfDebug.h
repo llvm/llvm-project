@@ -138,30 +138,7 @@ public:
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
   bool hasFrameIndexExprs() const { return !FrameIndexExprs.empty(); }
-
-  void addMMIEntry(const DbgVariable &V) {
-    assert(DebugLocListIndex == ~0U && !MInsn && "not an MMI entry");
-    assert(V.DebugLocListIndex == ~0U && !V.MInsn && "not an MMI entry");
-    assert(V.Var == Var && "conflicting variable");
-    assert(V.IA == IA && "conflicting inlined-at location");
-
-    assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-    assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
-
-    if (FrameIndexExprs.size()) {
-      auto *Expr = FrameIndexExprs.back().Expr;
-      // Get rid of duplicate non-fragment entries. More than one non-fragment
-      // dbg.declare makes no sense so ignore all but the first.
-      if (!Expr || !Expr->isFragment())
-        return;
-    }
-    FrameIndexExprs.append(V.FrameIndexExprs.begin(), V.FrameIndexExprs.end());
-    assert(llvm::all_of(FrameIndexExprs,
-                        [](FrameIndexExpr &FIE) {
-                          return FIE.Expr && FIE.Expr->isFragment();
-                        }) &&
-           "conflicting locations for variable");
-  }
+  void addMMIEntry(const DbgVariable &V);
 
   // Translate tag to proper Dwarf tag.
   dwarf::Tag getTag() const {

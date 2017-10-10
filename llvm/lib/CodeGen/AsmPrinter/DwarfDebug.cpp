@@ -220,7 +220,32 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
               return A.Expr->getFragmentInfo()->OffsetInBits <
                      B.Expr->getFragmentInfo()->OffsetInBits;
             });
+
   return FrameIndexExprs;
+}
+
+void DbgVariable::addMMIEntry(const DbgVariable &V) {
+  assert(DebugLocListIndex == ~0U && !MInsn && "not an MMI entry");
+  assert(V.DebugLocListIndex == ~0U && !V.MInsn && "not an MMI entry");
+  assert(V.Var == Var && "conflicting variable");
+  assert(V.IA == IA && "conflicting inlined-at location");
+
+  assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
+  assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
+
+  for (const auto &FIE : V.FrameIndexExprs)
+    // Ignore duplicate entries.
+    if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
+          return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
+        }))
+      FrameIndexExprs.push_back(FIE);
+
+  assert((FrameIndexExprs.size() == 1 ||
+          llvm::all_of(FrameIndexExprs,
+                       [](FrameIndexExpr &FIE) {
+                         return FIE.Expr && FIE.Expr->isFragment();
+                       })) &&
+         "conflicting locations for variable");
 }
 
 static const DwarfAccelTable::Atom TypeAtoms[] = {
