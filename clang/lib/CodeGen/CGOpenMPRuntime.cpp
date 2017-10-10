@@ -1131,7 +1131,7 @@ LValue CGOpenMPTaskOutlinedRegionInfo::getThreadIDVariableLValue(
     CodeGenFunction &CGF) {
   return CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(getThreadIDVariable()),
                             getThreadIDVariable()->getType(),
-                            LValueBaseInfo(AlignmentSource::Decl, false));
+                            AlignmentSource::Decl);
 }
 
 CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
