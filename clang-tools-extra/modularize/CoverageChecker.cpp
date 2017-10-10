@@ -242,14 +242,15 @@ bool CoverageChecker::collectUmbrellaHeaders(StringRef UmbrellaDirName) {
     Directory = ".";
   // Walk the directory.
   std::error_code EC;
-  sys::fs::file_status Status;
   for (sys::fs::directory_iterator I(Directory.str(), EC), E; I != E;
     I.increment(EC)) {
     if (EC)
       return false;
     std::string File(I->path());
-    I->status(Status);
-    sys::fs::file_type Type = Status.type();
+    llvm::ErrorOr<sys::fs::basic_file_status> Status = I->status();
+    if (!Status)
+      return false;
+    sys::fs::file_type Type = Status->type();
     // If the file is a directory, ignore the name and recurse.
     if (Type == sys::fs::file_type::directory_file) {
       if (!collectUmbrellaHeaders(File))
@@ -363,7 +364,6 @@ bool CoverageChecker::collectFileSystemHeaders(StringRef IncludePath) {
 
   // Recursively walk the directory tree.
   std::error_code EC;
-  sys::fs::file_status Status;
   int Count = 0;
   for (sys::fs::recursive_directory_iterator I(Directory.str(), EC), E; I != E;
     I.increment(EC)) {
@@ -371,8 +371,10 @@ bool CoverageChecker::collectFileSystemHeaders(StringRef IncludePath) {
       return false;
     //std::string file(I->path());
     StringRef file(I->path());
-    I->status(Status);
-    sys::fs::file_type type = Status.type();
+    llvm::ErrorOr<sys::fs::basic_file_status> Status = I->status();
+    if (!Status)
+      return false;
+    sys::fs::file_type type = Status->type();
     // If the file is a directory, ignore the name (but still recurses).
     if (type == sys::fs::file_type::directory_file)
       continue;
