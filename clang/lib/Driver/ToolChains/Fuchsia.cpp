@@ -14,6 +14,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 
@@ -68,22 +69,21 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else
     CmdArgs.push_back("--build-id");
 
-  if (!Args.hasArg(options::OPT_static))
-    CmdArgs.push_back("--eh-frame-hdr");
+  CmdArgs.push_back("--eh-frame-hdr");
 
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-Bstatic");
   else if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("-shared");
 
-  if (!Args.hasArg(options::OPT_static)) {
-    if (Args.hasArg(options::OPT_rdynamic))
-      CmdArgs.push_back("-export-dynamic");
-
-    if (!Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back(Args.MakeArgString(D.DyldPrefix + "ld.so.1"));
-    }
+  if (!Args.hasArg(options::OPT_shared)) {
+    std::string Dyld = D.DyldPrefix;
+    if (ToolChain.getSanitizerArgs().needsAsanRt() &&
+        ToolChain.getSanitizerArgs().needsSharedAsanRt())
+      Dyld += "asan/";
+    Dyld += "ld.so.1";
+    CmdArgs.push_back("-dynamic-linker");
+    CmdArgs.push_back(Args.MakeArgString(Dyld));
   }
 
   CmdArgs.push_back("-o");
@@ -99,6 +99,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_u);
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+
+  addSanitizerRuntimes(ToolChain, Args, CmdArgs);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -277,5 +279,6 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
 SanitizerMask Fuchsia::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::SafeStack;
+  Res |= SanitizerKind::Address;
   return Res;
 }
