@@ -82,20 +82,22 @@ StringRef IRObjectFile::getTargetTriple() const {
   return Mods[0]->getTargetTriple();
 }
 
-ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
+Expected<MemoryBufferRef>
+IRObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
   for (const SectionRef &Sec : Obj.sections()) {
     if (Sec.isBitcode()) {
       StringRef SecContents;
       if (std::error_code EC = Sec.getContents(SecContents))
-        return EC;
+        return errorCodeToError(EC);
       return MemoryBufferRef(SecContents, Obj.getFileName());
     }
   }
 
-  return object_error::bitcode_section_not_found;
+  return errorCodeToError(object_error::bitcode_section_not_found);
 }
 
-ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
+Expected<MemoryBufferRef>
+IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
   file_magic Type = identify_magic(Object.getBuffer());
   switch (Type) {
   case file_magic::bitcode:
@@ -106,19 +108,19 @@ ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Ob
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Object, Type);
     if (!ObjFile)
-      return errorToErrorCode(ObjFile.takeError());
+      return ObjFile.takeError();
     return findBitcodeInObject(*ObjFile->get());
   }
   default:
-    return object_error::invalid_file_type;
+    return errorCodeToError(object_error::invalid_file_type);
   }
 }
 
 Expected<std::unique_ptr<IRObjectFile>>
 IRObjectFile::create(MemoryBufferRef Object, LLVMContext &Context) {
-  ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
+  Expected<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
-    return errorCodeToError(BCOrErr.getError());
+    return BCOrErr.takeError();
 
   Expected<std::vector<BitcodeModule>> BMsOrErr =
       getBitcodeModuleList(*BCOrErr);
@@ -142,10 +144,10 @@ IRObjectFile::create(MemoryBufferRef Object, LLVMContext &Context) {
 
 Expected<IRSymtabFile> object::readIRSymtab(MemoryBufferRef MBRef) {
   IRSymtabFile F;
-  ErrorOr<MemoryBufferRef> BCOrErr =
+  Expected<MemoryBufferRef> BCOrErr =
       IRObjectFile::findBitcodeInMemBuffer(MBRef);
   if (!BCOrErr)
-    return errorCodeToError(BCOrErr.getError());
+    return BCOrErr.takeError();
 
   Expected<BitcodeFileContents> BFCOrErr = getBitcodeFileContents(*BCOrErr);
   if (!BFCOrErr)

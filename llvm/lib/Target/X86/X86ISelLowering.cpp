@@ -8026,7 +8026,7 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
   // If this node promotes - by concatenating zeroes - the type of the result
   // of a node with instruction that zeroes all upper (irrelevant) bits of the
   // output register, mark it as legal and catch the pattern in instruction
-  // selection to avoid emitting extra insturctions (for zeroing upper bits).
+  // selection to avoid emitting extra instructions (for zeroing upper bits).
   if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op)) {
     SDValue ZeroC = DAG.getIntPtrConstant(0, dl);
     SDValue AllZeros = getZeroVector(ResVT, Subtarget, DAG, dl);
@@ -16064,14 +16064,6 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
 
-  if (VT == MVT::i1) {
-    assert((InVT.isInteger() && (InVT.getSizeInBits() <= 64)) &&
-           "Invalid scalar TRUNCATE operation");
-    if (InVT.getSizeInBits() >= 32)
-      return SDValue();
-    In = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, In);
-    return DAG.getNode(ISD::TRUNCATE, DL, VT, In);
-  }
   assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
          "Invalid TRUNCATE operation");
 
@@ -35220,6 +35212,11 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   EVT OpVT = X.getValueType();
   unsigned OpSize = OpVT.getSizeInBits();
   if (!OpVT.isScalarInteger() || OpSize < 128 || isNullConstant(Y))
+    return SDValue();
+
+  // Bail out if we know that this is not really just an oversized integer.
+  if (peekThroughBitcasts(X).getValueType() == MVT::f128 ||
+      peekThroughBitcasts(Y).getValueType() == MVT::f128)
     return SDValue();
 
   // TODO: Use PXOR + PTEST for SSE4.1 or later?

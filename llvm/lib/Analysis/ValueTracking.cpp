@@ -777,13 +777,15 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   if (Known.Zero.intersects(Known.One)) {
     Known.resetAll();
 
-    if (Q.ORE) {
-      auto *CxtI = const_cast<Instruction *>(Q.CxtI);
-      OptimizationRemarkAnalysis ORA("value-tracking", "BadAssumption", CxtI);
-      Q.ORE->emit(ORA << "Detected conflicting code assumptions. Program may "
-                         "have undefined behavior, or compiler may have "
-                         "internal error.");
-    }
+    if (Q.ORE)
+      Q.ORE->emit([&]() {
+        auto *CxtI = const_cast<Instruction *>(Q.CxtI);
+        return OptimizationRemarkAnalysis("value-tracking", "BadAssumption",
+                                          CxtI)
+               << "Detected conflicting code assumptions. Program may "
+                  "have undefined behavior, or compiler may have "
+                  "internal error.";
+      });
   }
 }
 

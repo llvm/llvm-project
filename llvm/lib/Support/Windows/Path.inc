@@ -413,6 +413,17 @@ std::error_code rename(const Twine &From, const Twine &To) {
   // a true error, so stop trying.
   for (unsigned Retry = 0; Retry != 200; ++Retry) {
     auto EC = rename_internal(FromHandle, To, true);
+
+    if (EC ==
+        std::error_code(ERROR_CALL_NOT_IMPLEMENTED, std::system_category())) {
+      // Wine doesn't support SetFileInformationByHandle in rename_internal.
+      // Fall back to MoveFileEx.
+      if (::MoveFileExW(WideFrom.begin(), WideTo.begin(),
+                        MOVEFILE_REPLACE_EXISTING))
+        return std::error_code();
+      return mapWindowsError(GetLastError());
+    }
+
     if (!EC || EC != errc::permission_denied)
       return EC;
 

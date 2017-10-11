@@ -415,7 +415,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   bool IncrementalUpdate = false;
   auto BlockIter = MBB->begin();
-  auto LastUpdate = BlockIter;
+  decltype(BlockIter) LastUpdate;
   // Check if the block is in a loop.
   const MachineLoop *ML = MLI->getLoopFor(MBB);
   if (!MinInstr)
@@ -503,9 +503,11 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
                                     InstrIdxForVirtReg, P,
                                     !IncrementalUpdate) &&
             preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs)) {
-          if (MBB->size() > inc_threshold)
+          if (MBB->size() > inc_threshold) {
             // Use incremental depth updates for basic blocks above treshold
             IncrementalUpdate = true;
+            LastUpdate = BlockIter;
+          }
 
           insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
                                    RegUnits, IncrementalUpdate);

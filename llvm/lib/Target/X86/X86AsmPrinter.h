@@ -30,6 +30,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   StackMaps SM;
   FaultMaps FM;
   std::unique_ptr<MCCodeEmitter> CodeEmitter;
+  bool EmitFPOData = false;
 
   // This utility class tracks the length of a stackmap instruction's 'shadow'.
   // It is used by the X86AsmPrinter to ensure that the stackmap shadow
@@ -99,6 +100,9 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   // function.
   void EmitXRayTable();
 
+  // Choose between emitting .seh_ directives and .cv_fpo_ directives.
+  void EmitSEHInstruction(const MachineInstr *MI);
+
 public:
   explicit X86AsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
@@ -137,6 +141,8 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
+  void EmitFunctionBodyStart() override;
+  void EmitFunctionBodyEnd() override;
 };
 
 } // end namespace llvm

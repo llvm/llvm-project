@@ -842,11 +842,14 @@ static bool computeUnrollCount(
       }
       if (UP.Count < 2) {
         if (PragmaEnableUnroll)
-          ORE->emit(
-              OptimizationRemarkMissed(DEBUG_TYPE, "UnrollAsDirectedTooLarge",
-                                       L->getStartLoc(), L->getHeader())
-              << "Unable to unroll loop as directed by unroll(enable) pragma "
-                 "because unrolled size is too large.");
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE,
+                                            "UnrollAsDirectedTooLarge",
+                                            L->getStartLoc(), L->getHeader())
+                   << "Unable to unroll loop as directed by unroll(enable) "
+                      "pragma "
+                      "because unrolled size is too large.";
+          });
         UP.Count = 0;
       }
     } else {
@@ -856,22 +859,27 @@ static bool computeUnrollCount(
       UP.Count = UP.MaxCount;
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
         UP.Count != TripCount)
-      ORE->emit(
-          OptimizationRemarkMissed(DEBUG_TYPE, "FullUnrollAsDirectedTooLarge",
-                                   L->getStartLoc(), L->getHeader())
-          << "Unable to fully unroll loop as directed by unroll pragma because "
-             "unrolled size is too large.");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE,
+                                        "FullUnrollAsDirectedTooLarge",
+                                        L->getStartLoc(), L->getHeader())
+               << "Unable to fully unroll loop as directed by unroll pragma "
+                  "because "
+                  "unrolled size is too large.";
+      });
     return ExplicitUnroll;
   }
   assert(TripCount == 0 &&
          "All cases when TripCount is constant should be covered here.");
   if (PragmaFullUnroll)
-    ORE->emit(
-        OptimizationRemarkMissed(DEBUG_TYPE,
-                                 "CantFullUnrollAsDirectedRuntimeTripCount",
-                                 L->getStartLoc(), L->getHeader())
-        << "Unable to fully unroll loop as directed by unroll(full) pragma "
-           "because loop has a runtime trip count.");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(
+                 DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
+                 L->getStartLoc(), L->getHeader())
+             << "Unable to fully unroll loop as directed by unroll(full) "
+                "pragma "
+                "because loop has a runtime trip count.";
+    });
 
   // 6th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
@@ -922,17 +930,19 @@ static bool computeUnrollCount(
                  << OrigCount << " to " << UP.Count << ".\n");
     using namespace ore;
     if (PragmaCount > 0 && !UP.AllowRemainder)
-      ORE->emit(
-          OptimizationRemarkMissed(DEBUG_TYPE,
-                                   "DifferentUnrollCountFromDirected",
-                                   L->getStartLoc(), L->getHeader())
-          << "Unable to unroll loop the number of times directed by "
-             "unroll_count pragma because remainder loop is restricted "
-             "(that could architecture specific or because the loop "
-             "contains a convergent instruction) and so must have an unroll "
-             "count that divides the loop trip multiple of "
-          << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
-          << NV("UnrollCount", UP.Count) << " time(s).");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE,
+                                        "DifferentUnrollCountFromDirected",
+                                        L->getStartLoc(), L->getHeader())
+               << "Unable to unroll loop the number of times directed by "
+                  "unroll_count pragma because remainder loop is restricted "
+                  "(that could architecture specific or because the loop "
+                  "contains a convergent instruction) and so must have an "
+                  "unroll "
+                  "count that divides the loop trip multiple of "
+               << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
+               << NV("UnrollCount", UP.Count) << " time(s).";
+      });
   }
 
   if (UP.Count > UP.MaxCount)

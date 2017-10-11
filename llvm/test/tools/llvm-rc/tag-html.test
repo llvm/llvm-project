@@ -33,9 +33,3 @@
 ; HTML-NEXT:   0020: 202D2D3E 0A3C696D 67207372 633D226B  | -->.<img src="k|
 ; HTML-NEXT:   0030: 69747465 6E732E62 6D70223E 0A        |ittens.bmp">.|
 ; HTML-NEXT: )
-
-
-; RUN: not llvm-rc /FO %t/tag-html-wrong.res %p/Inputs/tag-html-wrong.rc 2>&1 | FileCheck %s --check-prefix NOFILE
-
-; NOFILE: llvm-rc: Error in HTML statement (ID 1):
-; NOFILE-NEXT: Error opening file 'some-really-nonexistent-file.html':

@@ -80,9 +80,15 @@ public:
   /// This function searches for an existing file in the list of directories
   /// in a PATH like environment variable, and returns the first file found,
   /// according to the order of the entries in the PATH like environment
-  /// variable.
-  static Optional<std::string> FindInEnvPath(const std::string& EnvName,
-                                             const std::string& FileName);
+  /// variable.  If an ignore list is specified, then any folder which is in
+  /// the PATH like environment variable but is also in IgnoreList is not
+  /// considered.
+  static Optional<std::string> FindInEnvPath(StringRef EnvName,
+                                             StringRef FileName,
+                                             ArrayRef<std::string> IgnoreList);
+
+  static Optional<std::string> FindInEnvPath(StringRef EnvName,
+                                             StringRef FileName);
 
   /// This function returns a SmallVector containing the arguments passed from
   /// the operating system to the program.  This function expects to be handed

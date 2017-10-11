@@ -2907,7 +2907,7 @@ public:
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs = Args.size();
+      NumFixedArgs = ArgsList.size();
       Args = std::move(ArgsList);
 
       DAG.getTargetLoweringInfo().markLibCallAttributes(
@@ -2920,7 +2920,7 @@ public:
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs = Args.size();
+      NumFixedArgs = ArgsList.size();
       Args = std::move(ArgsList);
       return *this;
     }
