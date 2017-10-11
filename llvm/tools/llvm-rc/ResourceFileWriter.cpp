@@ -1232,7 +1232,7 @@ Error ResourceFileWriter::writeUserDefinedBody(const RCResource *Base) {
       }
 
       RETURN_IF_ERROR(checkNumberFits<uint8_t>(
-          Ch, "Character in narrow string in user-defined resoutce"));
+          Ch, "Character in narrow string in user-defined resource"));
       writeInt<uint8_t>(Ch);
     }
   }

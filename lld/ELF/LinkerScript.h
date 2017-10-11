@@ -75,8 +75,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  AssertKind,   // ASSERT(expr)
-  BytesDataKind // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  AssertKind, // ASSERT(expr)
+  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
 struct BaseCommand {
@@ -165,11 +165,11 @@ struct AssertCommand : BaseCommand {
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
-struct BytesDataCommand : BaseCommand {
-  BytesDataCommand(Expr E, unsigned Size)
-      : BaseCommand(BytesDataKind), Expression(E), Size(Size) {}
+struct ByteCommand : BaseCommand {
+  ByteCommand(Expr E, unsigned Size)
+      : BaseCommand(ByteKind), Expression(E), Size(Size) {}
 
-  static bool classof(const BaseCommand *C) { return C->Kind == BytesDataKind; }
+  static bool classof(const BaseCommand *C) { return C->Kind == ByteKind; }
 
   Expr Expression;
   unsigned Offset;
@@ -216,7 +216,6 @@ class LinkerScript final {
   void switchTo(OutputSection *Sec);
   uint64_t advance(uint64_t Size, unsigned Align);
   void output(InputSection *Sec);
-  void process(BaseCommand &Base);
 
   std::unique_ptr<AddressState> Ctx;
   OutputSection *Aether;
@@ -231,7 +230,7 @@ public:
   uint64_t getDot() { return Dot; }
   void discard(ArrayRef<InputSection *> V);
 
-  ExprValue getSymbolValue(const Twine &Loc, StringRef S);
+  ExprValue getSymbolValue(StringRef Name, const Twine &Loc);
 
   void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);

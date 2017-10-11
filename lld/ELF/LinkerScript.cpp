@@ -237,6 +237,41 @@ static void sortSections(MutableArrayRef<InputSection *> Vec,
     std::stable_sort(Vec.begin(), Vec.end(), getComparator(K));
 }
 
+// Sort sections as instructed by SORT-family commands and --sort-section
+// option. Because SORT-family commands can be nested at most two depth
+// (e.g. SORT_BY_NAME(SORT_BY_ALIGNMENT(.text.*))) and because the command
+// line option is respected even if a SORT command is given, the exact
+// behavior we have here is a bit complicated. Here are the rules.
+//
+// 1. If two SORT commands are given, --sort-section is ignored.
+// 2. If one SORT command is given, and if it is not SORT_NONE,
+//    --sort-section is handled as an inner SORT command.
+// 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
+// 4. If no SORT command is given, sort according to --sort-section.
+// 5. If no SORT commands are given and --sort-section is not specified,
+//    apply sorting provided by --symbol-ordering-file if any exist.
+static void sortInputSections(
+    MutableArrayRef<InputSection *> Vec, const SectionPattern &Pat,
+    const DenseMap<SectionBase *, int> &Order) {
+  if (Pat.SortOuter == SortSectionPolicy::None)
+    return;
+
+  if (Pat.SortOuter == SortSectionPolicy::Default &&
+      Config->SortSection == SortSectionPolicy::Default) {
+    // If -symbol-ordering-file was given, sort accordingly.
+    // Usually, Order is empty.
+    if (!Order.empty())
+      sortByOrder(Vec, [&](InputSectionBase *S) { return Order.lookup(S); });
+    return;
+  }
+
+  if (Pat.SortInner == SortSectionPolicy::Default)
+    sortSections(Vec, Config->SortSection);
+  else
+    sortSections(Vec, Pat.SortInner);
+  sortSections(Vec, Pat.SortOuter);
+}
+
 // Compute and remember which sections the InputSectionDescription matches.
 std::vector<InputSection *>
 LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
@@ -275,38 +310,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       Sec->Assigned = true;
     }
 
-    // Sort sections as instructed by SORT-family commands and --sort-section
-    // option. Because SORT-family commands can be nested at most two depth
-    // (e.g. SORT_BY_NAME(SORT_BY_ALIGNMENT(.text.*))) and because the command
-    // line option is respected even if a SORT command is given, the exact
-    // behavior we have here is a bit complicated. Here are the rules.
-    //
-    // 1. If two SORT commands are given, --sort-section is ignored.
-    // 2. If one SORT command is given, and if it is not SORT_NONE,
-    //    --sort-section is handled as an inner SORT command.
-    // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
-    // 4. If no SORT command is given, sort according to --sort-section.
-    // 5. If no SORT commands are given and --sort-section is not specified,
-    //    apply sorting provided by --symbol-ordering-file if any exist.
-    auto Vec = MutableArrayRef<InputSection *>(Ret).slice(SizeBefore);
-
-    if (Pat.SortOuter == SortSectionPolicy::Default &&
-        Config->SortSection == SortSectionPolicy::Default) {
-
-      // If -symbol-ordering-file was given, sort accordingly.
-      // Usually, Order is empty.
-      if (!Order.empty())
-        sortByOrder(Vec, [&](InputSectionBase *S) { return Order.lookup(S); });
-      continue;
-    }
-
-    if (Pat.SortOuter != SortSectionPolicy::None) {
-      if (Pat.SortInner == SortSectionPolicy::Default)
-        sortSections(Vec, Config->SortSection);
-      else
-        sortSections(Vec, Pat.SortInner);
-      sortSections(Vec, Pat.SortOuter);
-    }
+    sortInputSections(MutableArrayRef<InputSection *>(Ret).slice(SizeBefore),
+                      Pat, Order);
   }
   return Ret;
 }
@@ -422,6 +427,8 @@ void LinkerScript::processSectionCommands(OutputSectionFactory &Factory) {
   }
 }
 
+// If no SECTIONS command was given, we create simple SectionCommands
+// as if a minimum SECTIONS command were given. This function does that.
 void LinkerScript::fabricateDefaultCommands() {
   // Define start address
   uint64_t StartAddr = UINT64_MAX;
@@ -525,47 +532,6 @@ void LinkerScript::switchTo(OutputSection *Sec) {
     Ctx->OutSec->LMAOffset = Ctx->LMAOffset();
 }
 
-void LinkerScript::process(BaseCommand &Base) {
-  // This handles the assignments to symbol or to the dot.
-  if (auto *Cmd = dyn_cast<SymbolAssignment>(&Base)) {
-    assignSymbol(Cmd, true);
-    return;
-  }
-
-  // Handle BYTE(), SHORT(), LONG(), or QUAD().
-  if (auto *Cmd = dyn_cast<BytesDataCommand>(&Base)) {
-    Cmd->Offset = Dot - Ctx->OutSec->Addr;
-    Dot += Cmd->Size;
-    Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
-    return;
-  }
-
-  // Handle ASSERT().
-  if (auto *Cmd = dyn_cast<AssertCommand>(&Base)) {
-    Cmd->Expression();
-    return;
-  }
-
-  // Handle a single input section description command.
-  // It calculates and assigns the offsets for each section and also
-  // updates the output section size.
-  auto &Cmd = cast<InputSectionDescription>(Base);
-  for (InputSection *Sec : Cmd.Sections) {
-    // We tentatively added all synthetic sections at the beginning and removed
-    // empty ones afterwards (because there is no way to know whether they were
-    // going be empty or not other than actually running linker scripts.)
-    // We need to ignore remains of empty sections.
-    if (auto *S = dyn_cast<SyntheticSection>(Sec))
-      if (S->empty())
-        continue;
-
-    if (!Sec->Live)
-      continue;
-    assert(Ctx->OutSec == Sec->getParent());
-    output(Sec);
-  }
-}
-
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned. Otherwise, a nullptr is returned.
@@ -623,8 +589,49 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   if (Ctx->OutSec->Flags & SHF_COMPRESSED)
     return;
 
-  for (BaseCommand *C : Sec->SectionCommands)
-    process(*C);
+  // We visited SectionsCommands from processSectionCommands to
+  // layout sections. Now, we visit SectionsCommands again to fix
+  // section offsets.
+  for (BaseCommand *Base : Sec->SectionCommands) {
+    // This handles the assignments to symbol or to the dot.
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
+      assignSymbol(Cmd, true);
+      continue;
+    }
+
+    // Handle BYTE(), SHORT(), LONG(), or QUAD().
+    if (auto *Cmd = dyn_cast<ByteCommand>(Base)) {
+      Cmd->Offset = Dot - Ctx->OutSec->Addr;
+      Dot += Cmd->Size;
+      Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
+      continue;
+    }
+
+    // Handle ASSERT().
+    if (auto *Cmd = dyn_cast<AssertCommand>(Base)) {
+      Cmd->Expression();
+      continue;
+    }
+
+    // Handle a single input section description command.
+    // It calculates and assigns the offsets for each section and also
+    // updates the output section size.
+    auto *Cmd = cast<InputSectionDescription>(Base);
+    for (InputSection *Sec : Cmd->Sections) {
+      // We tentatively added all synthetic sections at the beginning and
+      // removed empty ones afterwards (because there is no way to know
+      // whether they were going be empty or not other than actually running
+      // linker scripts.) We need to ignore remains of empty sections.
+      if (auto *S = dyn_cast<SyntheticSection>(Sec))
+        if (S->empty())
+          continue;
+
+      if (!Sec->Live)
+        continue;
+      assert(Ctx->OutSec == Sec->getParent());
+      output(Sec);
+    }
+  }
 }
 
 void LinkerScript::removeEmptyCommands() {
@@ -650,9 +657,25 @@ static bool isAllSectionDescription(const OutputSection &Cmd) {
 
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
-  // corresponding output section. The bfd linker seems to only create them if
-  // '.' is assigned to, but creating these section should not have any bad
-  // consequeces and gives us a section to put the symbol in.
+  // corresponding output section. The issue is what to do with linker script
+  // like ".foo : { symbol = 42; }". One option would be to convert it to
+  // "symbol = 42;". That is, move the symbol out of the empty section
+  // description. That seems to be what bfd does for this simple case. The
+  // problem is that this is not completely general. bfd will give up and
+  // create a dummy section too if there is a ". = . + 1" inside the section
+  // for example.
+  // Given that we want to create the section, we have to worry what impact
+  // it will have on the link. For example, if we just create a section with
+  // 0 for flags, it would change which PT_LOADs are created.
+  // We could remember that that particular section is dummy and ignore it in
+  // other parts of the linker, but unfortunately there are quite a few places
+  // that would need to change:
+  //   * The program header creation.
+  //   * The orphan section placement.
+  //   * The address assignment.
+  // The other option is to pick flags that minimize the impact the section
+  // will have on the rest of the linker. That is why we copy the flags from
+  // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t Flags = SHF_ALLOC;
 
   for (BaseCommand *Cmd : SectionCommands) {
@@ -660,7 +683,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (!Sec)
       continue;
     if (Sec->Live) {
-      Flags = Sec->Flags;
+      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
       continue;
     }
 
@@ -850,20 +873,18 @@ bool LinkerScript::needsInterpSection() {
   return false;
 }
 
-ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
-  if (S == ".") {
+ExprValue LinkerScript::getSymbolValue(StringRef Name, const Twine &Loc) {
+  if (Name == ".") {
     if (Ctx)
       return {Ctx->OutSec, false, Dot - Ctx->OutSec->Addr, Loc};
     error(Loc + ": unable to get location counter value");
     return 0;
   }
-  if (SymbolBody *B = Symtab->find(S)) {
-    if (auto *D = dyn_cast<DefinedRegular>(B))
-      return {D->Section, false, D->Value, Loc};
-    if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {C->Section, false, 0, Loc};
-  }
-  error(Loc + ": symbol not found: " + S);
+
+  if (auto *Sym = dyn_cast_or_null<DefinedRegular>(Symtab->find(Name)))
+    return {Sym->Section, false, Sym->Value, Loc};
+
+  error(Loc + ": symbol not found: " + Name);
   return 0;
 }
 

@@ -28,6 +28,7 @@ namespace {
 struct BPFOperand;
 
 class BPFAsmParser : public MCTargetAsmParser {
+
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool PreMatchCheck(OperandVector &Operands);
@@ -68,7 +69,7 @@ public:
 
   BPFAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI) {
+      : MCTargetAsmParser(Options, STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 };

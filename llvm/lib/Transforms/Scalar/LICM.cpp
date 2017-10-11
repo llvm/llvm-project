@@ -577,10 +577,13 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
                               LoopSafetyInfo *SafetyInfo,
                               OptimizationRemarkEmitter *ORE) {
+  // SafetyInfo is nullptr if we are checking for sinking from preheader to
+  // loop body.
+  const bool SinkingToLoopBody = !SafetyInfo;
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())
-      return false; // Don't hoist volatile/atomic loads!
+      return false; // Don't sink/hoist volatile or ordered atomic loads!
 
     // Loads from constant memory are always safe to move, even if they end up
     // in the same alias set as something that ends up being modified.
@@ -588,6 +591,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       return true;
     if (LI->getMetadata(LLVMContext::MD_invariant_load))
       return true;
+
+    if (LI->isAtomic() && SinkingToLoopBody)
+      return false; // Don't sink unordered atomic loads to loop body.
 
     // This checks for an invariant.start dominating the load.
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
@@ -664,9 +670,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       !isa<InsertValueInst>(I))
     return false;
 
-  // SafetyInfo is nullptr if we are checking for sinking from preheader to
-  // loop body. It will be always safe as there is no speculative execution.
-  if (!SafetyInfo)
+  // If we are checking for sinking from preheader to loop body it will be
+  // always safe as there is no speculative execution.
+  if (SinkingToLoopBody)
     return true;
 
   // TODO: Plumb the context instruction through to make hoisting and sinking

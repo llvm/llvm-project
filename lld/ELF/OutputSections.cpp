@@ -393,7 +393,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   if (Filler)
     fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
 
-  parallelForEachN(0, Sections.size(), [=](size_t I) {
+  parallelForEachN(0, Sections.size(), [&](size_t I) {
     InputSection *IS = Sections[I];
     IS->writeTo<ELFT>(Buf);
 
@@ -412,7 +412,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
   for (BaseCommand *Base : SectionCommands)
-    if (auto *Data = dyn_cast<BytesDataCommand>(Base))
+    if (auto *Data = dyn_cast<ByteCommand>(Base))
       writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
 

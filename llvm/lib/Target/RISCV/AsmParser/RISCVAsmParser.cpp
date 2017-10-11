@@ -30,6 +30,7 @@ namespace {
 struct RISCVOperand;
 
 class RISCVAsmParser : public MCTargetAsmParser {
+
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
@@ -72,7 +73,7 @@ public:
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI) {
+      : MCTargetAsmParser(Options, STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 };

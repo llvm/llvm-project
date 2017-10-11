@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -278,7 +279,8 @@ public:
   };
 
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI);
+  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI,
+                    const MCInstrInfo &MII);
 
   /// Create a copy of STI and return a non-const reference to it.
   MCSubtargetInfo &copySTI();
@@ -298,6 +300,8 @@ protected: // Can only create subclasses.
 
   /// Current STI.
   const MCSubtargetInfo *STI;
+
+  const MCInstrInfo &MII;
 
 public:
   MCTargetAsmParser(const MCTargetAsmParser &) = delete;

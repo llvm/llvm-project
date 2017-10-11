@@ -425,7 +425,7 @@ public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                    const MCInstrInfo &MII,
                    const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti), Parser(parser) {
+    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Alias the .word directive to .short.

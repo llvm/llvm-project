@@ -74,7 +74,7 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
-  BytesDataCommand *readBytesDataCommand(StringRef Tok);
+  ByteCommand *readByteCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
   void readSectionAddressType(OutputSection *Cmd);
@@ -670,7 +670,7 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       // Empty commands are allowed. Do nothing here.
     } else if (SymbolAssignment *Assign = readProvideOrAssignment(Tok)) {
       Cmd->SectionCommands.push_back(Assign);
-    } else if (BytesDataCommand *Data = readBytesDataCommand(Tok)) {
+    } else if (ByteCommand *Data = readByteCommand(Tok)) {
       Cmd->SectionCommands.push_back(Data);
     } else if (Tok == "ASSERT") {
       Cmd->SectionCommands.push_back(readAssert());
@@ -756,7 +756,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E = readExpr();
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
-    E = [=] { return add(Script->getSymbolValue(Loc, Name), E()); };
+    E = [=] { return add(Script->getSymbolValue(Name, Loc), E()); };
   }
   return make<SymbolAssignment>(Name, E, getCurrentLocation());
 }
@@ -888,7 +888,7 @@ static Optional<uint64_t> parseInt(StringRef Tok) {
   return Val;
 }
 
-BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
+ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
   int Size = StringSwitch<int>(Tok)
                  .Case("BYTE", 1)
                  .Case("SHORT", 2)
@@ -897,8 +897,7 @@ BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
                  .Default(-1);
   if (Size == -1)
     return nullptr;
-
-  return make<BytesDataCommand>(readParenExpr(), Size);
+  return make<ByteCommand>(readParenExpr(), Size);
 }
 
 StringRef ScriptParser::readParenLiteral() {
@@ -1052,7 +1051,7 @@ Expr ScriptParser::readPrimary() {
 
   // Tok is the dot.
   if (Tok == ".")
-    return [=] { return Script->getSymbolValue(Location, Tok); };
+    return [=] { return Script->getSymbolValue(Tok, Location); };
 
   // Tok is a literal number.
   if (Optional<uint64_t> Val = parseInt(Tok))
@@ -1062,7 +1061,7 @@ Expr ScriptParser::readPrimary() {
   if (!isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
   Script->ReferencedSymbols.push_back(Tok);
-  return [=] { return Script->getSymbolValue(Location, Tok); };
+  return [=] { return Script->getSymbolValue(Tok, Location); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {

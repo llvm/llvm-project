@@ -807,7 +807,6 @@ public:
 };
 
 class AMDGPUAsmParser : public MCTargetAsmParser {
-  const MCInstrInfo &MII;
   MCAsmParser &Parser;
 
   unsigned ForcedEncodingSize = 0;
@@ -855,7 +854,7 @@ public:
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
                const MCInstrInfo &MII,
                const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI), MII(MII), Parser(_Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(_Parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     if (getFeatureBits().none()) {
