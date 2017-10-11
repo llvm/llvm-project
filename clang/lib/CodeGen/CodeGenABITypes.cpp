@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/CodeGenABITypes.h"
+#include "CGRecordLayout.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
@@ -79,4 +80,10 @@ CodeGen::convertFreeFunctionType(CodeGenModule &CGM, const FunctionDecl *FD) {
 llvm::Type *
 CodeGen::convertTypeForMemory(CodeGenModule &CGM, QualType T) {
   return CGM.getTypes().ConvertTypeForMem(T);
+}
+
+unsigned CodeGen::getLLVMFieldNumber(CodeGenModule &CGM,
+                                     const RecordDecl *RD,
+                                     const FieldDecl *FD) {
+  return CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(FD);
 }

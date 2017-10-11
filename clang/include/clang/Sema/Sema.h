@@ -1558,7 +1558,8 @@ private:
                                TypeDiagnoser *Diagnoser);
 
   struct ModuleScope {
-    clang::Module *Module;
+    clang::Module *Module = nullptr;
+    bool ModuleInterface = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
@@ -2078,9 +2079,9 @@ public:
                               SourceLocation SemiLoc);
 
   enum class ModuleDeclKind {
-    Module,         ///< 'module X;'
+    Interface,      ///< 'export module X;'
+    Implementation, ///< 'module X;'
     Partition,      ///< 'module partition X;'
-    Implementation, ///< 'module implementation X;'
   };
 
   /// The parser has processed a module-declaration that begins the definition
