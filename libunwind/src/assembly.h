@@ -26,6 +26,14 @@
 
 #if defined(__APPLE__)
 #define HIDDEN_DIRECTIVE .private_extern
+#elif defined(_WIN32)
+// In the COFF object file format, there's no attributes for a global,
+// non-static symbol to make it somehow hidden. So on windows, we don't
+// want to set this at all. To avoid conditionals in
+// DEFINE_LIBUNWIND_PRIVATE_FUNCTION below, make it .globl (which it already
+// is, defined in the same DEFINE_LIBUNWIND_PRIVATE_FUNCTION macro; the
+// duplicate .globl directives are harmless).
+#define HIDDEN_DIRECTIVE .globl
 #else
 #define HIDDEN_DIRECTIVE .hidden
 #endif

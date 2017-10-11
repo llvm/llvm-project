@@ -4351,6 +4351,9 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::ObjCTypeParam:
     break;
+
+  case clang::Type::DependentAddressSpace:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5161,6 +5164,9 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     break;
   case clang::Type::ObjCTypeParam:
     break;
+
+  case clang::Type::DependentAddressSpace:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5310,6 +5316,9 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Decayed:
     break;
   case clang::Type::ObjCTypeParam:
+    break;
+
+  case clang::Type::DependentAddressSpace:
     break;
   }
   // We don't know hot to display this type...

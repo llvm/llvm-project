@@ -859,8 +859,13 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     // symbols here means that we report undefined symbols only when
     // they have relocations pointing to them. We don't care about
     // undefined symbols that are in dead-stripped sections.
-    if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
+    if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak()) {
       reportUndefined<ELFT>(Body, Sec, Rel.r_offset);
+
+      // If we report an undefined, and we have an error, go on.
+      if (ErrorCount)
+        continue;
+    }
 
     RelExpr Expr = Target->getRelExpr(Type, Body, *Sec.File,
                                       Sec.Data.begin() + Rel.r_offset);
