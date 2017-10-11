@@ -31,14 +31,14 @@ add_lld_library(lldCOFF
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
-  LTO
   LibDriver
-  Object
+  LTO
   MC
   MCDisassembler
-  Target
+  Object
   Option
   Support
+  Target
   WindowsManifest
 
   LINK_LIBS

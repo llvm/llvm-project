@@ -57,10 +57,10 @@ add_lld_library(lldELF
   IPO
   Linker
   LTO
+  MC
   Object
   Option
   Passes
-  MC
   Support
   Target
   TransformUtils

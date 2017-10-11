@@ -14,8 +14,8 @@ add_lld_library(lldDriver
     Support
 
   LINK_LIBS
-    lldMachO
     lldCore
+    lldMachO
     lldReaderWriter
     lldYAML
   )
