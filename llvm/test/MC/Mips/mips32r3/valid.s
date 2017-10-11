@@ -197,7 +197,7 @@ a:
                                        # CHECK-NEXT: .set  mips32r2
                                        # CHECK-NEXT: rdhwr $sp, $11
                                        # CHECK-NEXT: .set  pop          # encoding: [0x7c,0x1d,0x58,0x3b]
-        recip.d   $f19,$f6             # CHECK: recip.d $f19, $f6       # encoding: [0x46,0x20,0x34,0xd5]
+        recip.d   $f14,$f6             # CHECK: recip.d $f14, $f6       # encoding: [0x46,0x20,0x33,0x95]
         recip.s   $f3,$f30             # CHECK: recip.s $f3, $f30       # encoding: [0x46,0x00,0xf0,0xd5]
         rotr      $1,15                # CHECK: rotr $1, $1, 15         # encoding: [0x00,0x21,0x0b,0xc2]
         rotr      $1,$14,15            # CHECK: rotr $1, $14, 15        # encoding: [0x00,0x2e,0x0b,0xc2]

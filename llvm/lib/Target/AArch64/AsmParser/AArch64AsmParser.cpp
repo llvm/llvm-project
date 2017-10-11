@@ -139,7 +139,7 @@ public:
 
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI) {
+    : MCTargetAsmParser(Options, STI, MII) {
     IsILP32 = Options.getABIName() == "ilp32";
     MCAsmParserExtension::Initialize(Parser);
     MCStreamer &S = getParser().getStreamer();

@@ -597,9 +597,9 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   Writer->addRelocation(RelSymbol, Fragment->getParent(), MRE);
 }
 
-MCObjectWriter *llvm::createX86MachObjectWriter(raw_pwrite_stream &OS,
-                                                bool Is64Bit, uint32_t CPUType,
-                                                uint32_t CPUSubtype) {
+std::unique_ptr<MCObjectWriter>
+llvm::createX86MachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
+                                uint32_t CPUType, uint32_t CPUSubtype) {
   return createMachObjectWriter(
       llvm::make_unique<X86MachObjectWriter>(Is64Bit, CPUType, CPUSubtype), OS,
       /*IsLittleEndian=*/true);

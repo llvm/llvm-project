@@ -17,10 +17,12 @@ define void @test_inline(i64* (i32*)*, i32* %x) !dbg !6 {
   store i64* (i32*)* %0, i64* (i32*)** %2
   %3 = load i64* (i32*)*, i64* (i32*)** %2
 ; CHECK: icmp {{.*}} @foo_inline2
+; CHECK: br {{.*}} !prof ![[BR1:[0-9]+]]
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
 ; CHECK: icmp {{.*}} @foo_inline1
+; CHECK: br {{.*}} !prof ![[BR2:[0-9]+]]
 ; CHECK: if.true.direct_targ1:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect2:
@@ -178,6 +180,8 @@ define void @test_direct() !dbg !22 {
 !4 = !DILocation(line: 4, scope: !3)
 !5 = !DILocation(line: 6, scope: !3)
 ; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 3457, i64 9191153033785521275, i64 2059, i64 -1069303473483922844, i64 1398}
+; CHECK: ![[BR1]] = !{!"branch_weights", i32 4000, i32 4000}
+; CHECK: ![[BR2]] = !{!"branch_weights", i32 3000, i32 1000}
 ; CHECK: ![[VP]] = !{!"VP", i32 0, i64 1000, i64 -6391416044382067764, i64 1000}
 !6 = distinct !DISubprogram(name: "test_inline", scope: !1, file: !1, line: 6, unit: !0)
 !7 = !DILocation(line: 7, scope: !6)

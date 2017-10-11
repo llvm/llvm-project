@@ -591,8 +591,8 @@ int main(int argc, char **argv) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU,
                                                       MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
-        TheTriple, Ctx, *MAB, *OS, CE, *STI, MCOptions.MCRelaxAll,
-        MCOptions.MCIncrementalLinkerCompatible,
+        TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *OS, CE, *STI,
+        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
     if (NoExecStack)
       Str->InitSections(true);

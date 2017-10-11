@@ -32,21 +32,21 @@
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "virt<bar>")
 ; Make sure we correctly handle type of a template_type being a type identifier.
 ; CHECK: DW_TAG_template_type_parameter
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
 ; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "T")
 ; Make sure we correctly handle derived-from of a typedef being a type identifier.
 ; CHECK: DW_TAG_typedef
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
 ; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz2")
 ; Make sure we correctly handle derived-from of a pointer type being a type identifier.
 ; CHECK: DW_TAG_pointer_type
-; CHECK: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE]]})
+; CHECK: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE]]}
 ; CHECK: DW_TAG_typedef
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
 ; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz")
 ; Make sure we correctly handle derived-from of an array type being a type identifier.
 ; CHECK: DW_TAG_array_type
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
 ; IR generated from clang -g with the following source:
 ; struct C {
 ;   virtual void foo();

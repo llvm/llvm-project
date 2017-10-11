@@ -1,4 +1,4 @@
-//===- PartialInlining.h - Inline parts of functions --------------------===//
+//===- PartialInlining.h - Inline parts of functions ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,15 +15,18 @@
 #ifndef LLVM_TRANSFORMS_IPO_PARTIALINLINING_H
 #define LLVM_TRANSFORMS_IPO_PARTIALINLINING_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Module;
 
 /// Pass to remove unused function declarations.
 class PartialInlinerPass : public PassInfoMixin<PartialInlinerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-}
+
+} // end namespace llvm
+
 #endif // LLVM_TRANSFORMS_IPO_PARTIALINLINING_H

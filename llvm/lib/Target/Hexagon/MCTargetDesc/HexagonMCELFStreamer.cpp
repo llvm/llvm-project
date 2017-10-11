@@ -18,6 +18,7 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -42,6 +43,21 @@ static cl::opt<unsigned> GPSize
    cl::desc("Global Pointer Addressing Size.  The default size is 8."),
    cl::Prefix,
    cl::init(8));
+
+HexagonMCELFStreamer::HexagonMCELFStreamer(MCContext &Context,
+                                           std::unique_ptr<MCAsmBackend> TAB,
+                                           raw_pwrite_stream &OS,
+                                           MCCodeEmitter *Emitter)
+    : MCELFStreamer(Context, std::move(TAB), OS, Emitter),
+      MCII(createHexagonMCInstrInfo()) {}
+
+HexagonMCELFStreamer::HexagonMCELFStreamer(MCContext &Context,
+                                           std::unique_ptr<MCAsmBackend> TAB,
+                                           raw_pwrite_stream &OS,
+                                           MCCodeEmitter *Emitter,
+                                           MCAssembler *Assembler)
+    : MCELFStreamer(Context, std::move(TAB), OS, Emitter),
+      MCII(createHexagonMCInstrInfo()) {}
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
                                            const MCSubtargetInfo &STI, bool) {
@@ -149,10 +165,10 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
 
 
 namespace llvm {
-  MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
-                                       MCAsmBackend &MAB,
-                                       raw_pwrite_stream &OS, MCCodeEmitter *CE) {
-    return new HexagonMCELFStreamer(Context, MAB, OS, CE);
+MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> MAB,
+                                     raw_pwrite_stream &OS, MCCodeEmitter *CE) {
+  return new HexagonMCELFStreamer(Context, std::move(MAB), OS, CE);
   }
 
 } // end namespace llvm

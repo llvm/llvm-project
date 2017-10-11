@@ -440,9 +440,9 @@ class ARMELFStreamer : public MCELFStreamer {
 public:
   friend class ARMTargetELFStreamer;
 
-  ARMELFStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
-                 MCCodeEmitter *Emitter, bool IsThumb)
-      : MCELFStreamer(Context, TAB, OS, Emitter), IsThumb(IsThumb) {
+  ARMELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                 raw_pwrite_stream &OS, MCCodeEmitter *Emitter, bool IsThumb)
+      : MCELFStreamer(Context, std::move(TAB), OS, Emitter), IsThumb(IsThumb) {
     EHReset();
   }
 
@@ -1485,19 +1485,21 @@ MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
   return new ARMTargetStreamer(S);
 }
 
-MCELFStreamer *createARMELFStreamer(MCContext &Context, MCAsmBackend &TAB,
+MCELFStreamer *createARMELFStreamer(MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> TAB,
                                     raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll,
                                     bool IsThumb) {
-    ARMELFStreamer *S = new ARMELFStreamer(Context, TAB, OS, Emitter, IsThumb);
-    // FIXME: This should eventually end up somewhere else where more
-    // intelligent flag decisions can be made. For now we are just maintaining
-    // the status quo for ARM and setting EF_ARM_EABI_VER5 as the default.
-    S->getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
+  ARMELFStreamer *S =
+      new ARMELFStreamer(Context, std::move(TAB), OS, Emitter, IsThumb);
+  // FIXME: This should eventually end up somewhere else where more
+  // intelligent flag decisions can be made. For now we are just maintaining
+  // the status quo for ARM and setting EF_ARM_EABI_VER5 as the default.
+  S->getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 
-    if (RelaxAll)
-      S->getAssembler().setRelaxAll(true);
-    return S;
+  if (RelaxAll)
+    S->getAssembler().setRelaxAll(true);
+  return S;
 }
 
 } // end namespace llvm

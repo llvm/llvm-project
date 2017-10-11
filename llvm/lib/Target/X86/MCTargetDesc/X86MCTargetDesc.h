@@ -81,21 +81,26 @@ MCAsmBackend *createX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
 /// PE/COFF format object files.
 ///
 /// Takes ownership of \p AB and \p CE.
-MCStreamer *createX86WinCOFFStreamer(MCContext &C, MCAsmBackend &AB,
+MCStreamer *createX86WinCOFFStreamer(MCContext &C,
+                                     std::unique_ptr<MCAsmBackend> &&AB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE,
-                                     bool RelaxAll, bool IncrementalLinkerCompatible);
+                                     bool RelaxAll,
+                                     bool IncrementalLinkerCompatible);
 
 /// Construct an X86 Mach-O object writer.
-MCObjectWriter *createX86MachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                          uint32_t CPUType,
-                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectWriter> createX86MachObjectWriter(raw_pwrite_stream &OS,
+                                                          bool Is64Bit,
+                                                          uint32_t CPUType,
+                                                          uint32_t CPUSubtype);
 
 /// Construct an X86 ELF object writer.
-MCObjectWriter *createX86ELFObjectWriter(raw_pwrite_stream &OS, bool IsELF64,
-                                         uint8_t OSABI, uint16_t EMachine);
+std::unique_ptr<MCObjectWriter> createX86ELFObjectWriter(raw_pwrite_stream &OS,
+                                                         bool IsELF64,
+                                                         uint8_t OSABI,
+                                                         uint16_t EMachine);
 /// Construct an X86 Win COFF object writer.
-MCObjectWriter *createX86WinCOFFObjectWriter(raw_pwrite_stream &OS,
-                                             bool Is64Bit);
+std::unique_ptr<MCObjectWriter>
+createX86WinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit);
 
 /// Returns the sub or super register of a specific X86 register.
 /// e.g. getX86SubSuperRegister(X86::EAX, 16) returns X86::AX.

@@ -24,7 +24,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_name {{.*}} "a.cpp"
 ; CHECK:   DW_TAG_subprogram
-; CHECK:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[INT:.*]])
+; CHECK:     DW_AT_type [DW_FORM_ref_addr] (0x00000000[[INT:[a-f0-9]+]]
 ; CHECK:     0x[[INLINED:[0-9a-f]*]]:{{.*}}DW_TAG_inlined_subroutine
 ; CHECK:       DW_AT_abstract_origin {{.*}}[[ABS_FUNC:........]] "_Z4funci"
 ; CHECK:       DW_TAG_formal_parameter

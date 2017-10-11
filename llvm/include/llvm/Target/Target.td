@@ -269,6 +269,21 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // useful as it is sometimes beneficial to assign registers to highly
   // constrained classes first. The value has to be in the range [0,63].
   int AllocationPriority = 0;
+
+  // The diagnostic type to present when referencing this operand in a match
+  // failure error message. If this is empty, the default Match_InvalidOperand
+  // diagnostic type will be used. If this is "<name>", a Match_<name> enum
+  // value will be generated and used for this operand type. The target
+  // assembly parser is responsible for converting this into a user-facing
+  // diagnostic message.
+  string DiagnosticType = "";
+
+  // A diagnostic message to emit when an invalid value is provided for this
+  // register class when it is being used an an assembly operand. If this is
+  // non-empty, an anonymous diagnostic type enum value will be generated, and
+  // the assembly matcher will provide a function to map from diagnostic types
+  // to message strings.
+  string DiagnosticString = "";
 }
 
 // The memberList in a RegisterClass is a dag of set operations. TableGen

@@ -930,6 +930,16 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 
                                                   Corresponds to the OpenCL
                                                   ``vec_type_hint`` attribute.
+
+     "RuntimeHandle"     string                   The external symbol name
+                                                  associated with a kernel.
+                                                  OpenCL runtime allocates a
+                                                  global buffer for the symbol
+                                                  and saves the kernel's address
+                                                  to it, which is used for
+                                                  device side enqueueing. Only
+                                                  available for device side
+                                                  enqueued kernels.
      =================== ============== ========= ==============================
 
 ..

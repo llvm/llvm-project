@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -655,8 +656,9 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                                const Triple &TT, bool IsN32) {
+std::unique_ptr<MCObjectWriter>
+llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS, const Triple &TT,
+                                bool IsN32) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   bool IsN64 = TT.isArch64Bit() && !IsN32;
   bool HasRelocationAddend = TT.isArch64Bit();

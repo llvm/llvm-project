@@ -657,9 +657,25 @@ static bool isAllSectionDescription(const OutputSection &Cmd) {
 
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
-  // corresponding output section. The bfd linker seems to only create them if
-  // '.' is assigned to, but creating these section should not have any bad
-  // consequeces and gives us a section to put the symbol in.
+  // corresponding output section. The issue is what to do with linker script
+  // like ".foo : { symbol = 42; }". One option would be to convert it to
+  // "symbol = 42;". That is, move the symbol out of the empty section
+  // description. That seems to be what bfd does for this simple case. The
+  // problem is that this is not completely general. bfd will give up and
+  // create a dummy section too if there is a ". = . + 1" inside the section
+  // for example.
+  // Given that we want to create the section, we have to worry what impact
+  // it will have on the link. For example, if we just create a section with
+  // 0 for flags, it would change which PT_LOADs are created.
+  // We could remember that that particular section is dummy and ignore it in
+  // other parts of the linker, but unfortunately there are quite a few places
+  // that would need to change:
+  //   * The program header creation.
+  //   * The orphan section placement.
+  //   * The address assignment.
+  // The other option is to pick flags that minimize the impact the section
+  // will have on the rest of the linker. That is why we copy the flags from
+  // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t Flags = SHF_ALLOC;
 
   for (BaseCommand *Cmd : SectionCommands) {
@@ -667,7 +683,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (!Sec)
       continue;
     if (Sec->Live) {
-      Flags = Sec->Flags;
+      Flags = Sec->Flags & (SHF_ALLOC | SHF_WRITE | SHF_EXECINSTR);
       continue;
     }
 

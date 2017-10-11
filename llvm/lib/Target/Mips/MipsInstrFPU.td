@@ -369,12 +369,24 @@ defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>;
 let AdditionalPredicates = [NotInMicroMips] in {
   def RECIP_S : MMRel, ABSS_FT<"recip.s", FGR32Opnd, FGR32Opnd, II_RECIP_S>,
                 ABSS_FM<0b010101, 0x10>, INSN_MIPS4_32R2;
-  def RECIP_D : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd, II_RECIP_D>,
-                ABSS_FM<0b010101, 0x11>, INSN_MIPS4_32R2;
+  def RECIP_D32 : MMRel, ABSS_FT<"recip.d", AFGR64Opnd, AFGR64Opnd, II_RECIP_D>,
+                  ABSS_FM<0b010101, 0x11>, INSN_MIPS4_32R2, FGR_32 {
+    let BaseOpcode = "RECIP_D32";
+  }
+  let DecoderNamespace = "MipsFP64" in
+    def RECIP_D64 : MMRel, ABSS_FT<"recip.d", FGR64Opnd, FGR64Opnd,
+                                   II_RECIP_D>, ABSS_FM<0b010101, 0x11>,
+                    INSN_MIPS4_32R2, FGR_64;
   def RSQRT_S : MMRel, ABSS_FT<"rsqrt.s", FGR32Opnd, FGR32Opnd, II_RSQRT_S>,
                 ABSS_FM<0b010110, 0x10>, INSN_MIPS4_32R2;
-  def RSQRT_D : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd, II_RSQRT_D>,
-                ABSS_FM<0b010110, 0x11>, INSN_MIPS4_32R2;
+  def RSQRT_D32 : MMRel, ABSS_FT<"rsqrt.d", AFGR64Opnd, AFGR64Opnd, II_RSQRT_D>,
+                  ABSS_FM<0b010110, 0x11>, INSN_MIPS4_32R2, FGR_32 {
+    let BaseOpcode = "RSQRT_D32";
+  }
+  let DecoderNamespace = "MipsFP64" in
+    def RSQRT_D64 : MMRel, ABSS_FT<"rsqrt.d", FGR64Opnd, FGR64Opnd,
+                                   II_RSQRT_D>, ABSS_FM<0b010110, 0x11>,
+                    INSN_MIPS4_32R2, FGR_64;
 }
 let DecoderNamespace = "MipsFP64" in {
   let AdditionalPredicates = [NotInMicroMips] in {

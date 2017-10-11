@@ -23,9 +23,8 @@ class MCInst;
 
 class MCELFStreamer : public MCObjectStreamer {
 public:
-  MCELFStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
-                MCCodeEmitter *Emitter)
-      : MCObjectStreamer(Context, TAB, OS, Emitter) {}
+  MCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                raw_pwrite_stream &OS, MCCodeEmitter *Emitter);
 
   ~MCELFStreamer() override = default;
 
@@ -90,7 +89,8 @@ private:
   SmallVector<MCDataFragment *, 4> BundleGroups;
 };
 
-MCELFStreamer *createARMELFStreamer(MCContext &Context, MCAsmBackend &TAB,
+MCELFStreamer *createARMELFStreamer(MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> TAB,
                                     raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll,
                                     bool IsThumb);

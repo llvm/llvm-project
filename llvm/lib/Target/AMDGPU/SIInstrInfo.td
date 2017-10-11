@@ -232,16 +232,6 @@ def si_setcc_uniform : PatFrag <
   return true;
 }]>;
 
-def si_uniform_br : PatFrag <
-  (ops node:$cond, node:$bb), (brcond node:$cond, node:$bb), [{
-  return isUniformBr(N);
-}]>;
-
-def si_uniform_br_scc : PatFrag <
-  (ops node:$cond, node:$bb), (si_uniform_br node:$cond, node:$bb), [{
-  return isCBranchSCC(N);
-}]>;
-
 def lshr_rev : PatFrag <
   (ops node:$src1, node:$src0),
   (srl $src0, $src1)

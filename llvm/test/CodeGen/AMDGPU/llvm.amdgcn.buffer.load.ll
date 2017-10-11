@@ -18,18 +18,18 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs:
-;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:42
+;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:40
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs(<4 x i32> inreg) {
 main_body:
-  %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 42, i1 0, i1 0)
+  %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 40, i1 0, i1 0)
   ret <4 x float> %data
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_large:
 ;SICI: buffer_load_dwordx4 v[0:3], {{v[0-9]+}}, s[0:3], 0 offen
-;VI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x1fff
-;VI: buffer_load_dwordx4 v[0:3], off, s[0:3], [[OFFSET]] offset:1
+;VI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x1ffc
+;VI: buffer_load_dwordx4 v[0:3], off, s[0:3], [[OFFSET]] offset:4
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:
@@ -56,11 +56,11 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_ofs_imm:
-;CHECK: buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:58
+;CHECK: buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:60
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_ofs_imm(<4 x i32> inreg, i32) {
 main_body:
-  %ofs = add i32 %1, 58
+  %ofs = add i32 %1, 60
   %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 %ofs, i1 0, i1 0)
   ret <4 x float> %data
 }

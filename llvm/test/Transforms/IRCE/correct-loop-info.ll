@@ -21,7 +21,7 @@ define void @baz() personality i32* ()* @ham {
 ; CHECK:       innerheader.preloop.preheader:
 ; CHECK-NEXT:    br label [[INNERHEADER_PRELOOP:%.*]]
 ; CHECK:       mainloop:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[INNERHEADER_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       innerheader.preheader:
 ; CHECK-NEXT:    br label [[INNERHEADER:%.*]]
@@ -31,11 +31,11 @@ define void @baz() personality i32* ()* @ham {
 ; CHECK-NEXT:    to label [[BB5:%.*]] unwind label %outer_exiting.loopexit.split-lp.loopexit.split-lp
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP6]] = add i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 1
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[EXIT3_LOOPEXIT5:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[TMP6]], 84
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP6]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[INNERHEADER]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[TMP6_LCSSA:%.*]] = phi i32 [ [[TMP6]], [[BB8]] ]
@@ -90,7 +90,7 @@ define void @baz() personality i32* ()* @ham {
 ; CHECK-NEXT:    to label [[BB5_PRELOOP:%.*]] unwind label [[OUTER_EXITING_LOOPEXIT:%.*]]
 ; CHECK:       bb5.preloop:
 ; CHECK-NEXT:    [[TMP6_PRELOOP]] = add i32 [[TMP4_PRELOOP]], 1
-; CHECK-NEXT:    [[TMP7_PRELOOP:%.*]] = icmp ult i32 [[TMP6_PRELOOP]], 0
+; CHECK-NEXT:    [[TMP7_PRELOOP:%.*]] = icmp ult i32 [[TMP6_PRELOOP]], 1
 ; CHECK-NEXT:    br i1 [[TMP7_PRELOOP]], label [[BB8_PRELOOP]], label [[EXIT3_LOOPEXIT:%.*]]
 ; CHECK:       bb8.preloop:
 ; CHECK-NEXT:    [[TMP9_PRELOOP:%.*]] = icmp slt i32 [[TMP6_PRELOOP]], 84
@@ -112,7 +112,7 @@ define void @baz() personality i32* ()* @ham {
 ; CHECK-NEXT:    to label [[BB5_POSTLOOP:%.*]] unwind label %outer_exiting.loopexit.split-lp.loopexit
 ; CHECK:       bb5.postloop:
 ; CHECK-NEXT:    [[TMP6_POSTLOOP]] = add i32 [[TMP4_POSTLOOP]], 1
-; CHECK-NEXT:    [[TMP7_POSTLOOP:%.*]] = icmp ult i32 [[TMP6_POSTLOOP]], 0
+; CHECK-NEXT:    [[TMP7_POSTLOOP:%.*]] = icmp ult i32 [[TMP6_POSTLOOP]], 1
 ; CHECK-NEXT:    br i1 [[TMP7_POSTLOOP]], label [[BB8_POSTLOOP]], label [[EXIT3_LOOPEXIT4:%.*]]
 ; CHECK:       bb8.postloop:
 ; CHECK-NEXT:    [[TMP9_POSTLOOP:%.*]] = icmp slt i32 [[TMP6_POSTLOOP]], 84
@@ -135,7 +135,7 @@ innerheader:                                              ; preds = %bb8, %bb2
 
 bb5:                                              ; preds = %innerheader
   %tmp6 = add i32 %tmp4, 1
-  %tmp7 = icmp ult i32 %tmp6, 0
+  %tmp7 = icmp ult i32 %tmp6, 1
   br i1 %tmp7, label %bb8, label %exit3
 
 bb8:                                              ; preds = %bb5

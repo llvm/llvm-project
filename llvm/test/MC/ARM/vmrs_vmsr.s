@@ -123,53 +123,53 @@
         vmsr  fpscr, sp
         vmsr  fpscr, pc
 
-// ERROR-V7A-ARM: invalid operand for instruction
+// ERROR-V7A-ARM: operand must be a register in range [r0, r14]
 // CHECK-V7A-ARM: vmsr  fpscr, r0             @ encoding: [0x10,0x0a,0xe1,0xee]
 // CHECK-V7A-ARM: vmsr  fpexc, r1             @ encoding: [0x10,0x1a,0xe8,0xee]
 // CHECK-V7A-ARM: vmsr  fpsid, r2             @ encoding: [0x10,0x2a,0xe0,0xee]
 // CHECK-V7A-ARM: vmsr  fpscr, r10            @ encoding: [0x10,0xaa,0xe1,0xee]
 // CHECK-V7A-ARM: vmsr  fpscr, sp             @ encoding: [0x10,0xda,0xe1,0xee]
-// ERROR-V7A-ARM: invalid operand for instruction
+// ERROR-V7A-ARM: operand must be a register in range [r0, r14]
 
-// ERROR-V7A-THUMB: invalid operand for instruction
+// ERROR-V7A-THUMB: operand must be a register in range [r0, r14]
 // CHECK-V7A-THUMB: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
 // CHECK-V7A-THUMB: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
 // CHECK-V7A-THUMB: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
 // CHECK-V7A-THUMB: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
 // ERROR-V7A-THUMB: invalid operand for instruction
-// ERROR-V7A-THUMB: invalid operand for instruction
+// ERROR-V7A-THUMB: operand must be a register in range [r0, r14]
 
-// ERROR-V7M: invalid operand for instruction
+// ERROR-V7M: operand must be a register in range [r0, r14]
 // CHECK-V7M: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
 // CHECK-V7M: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
 // CHECK-V7M: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
 // CHECK-V7M: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
 // ERROR-V7M: invalid operand for instruction
-// ERROR-V7M: invalid operand for instruction
+// ERROR-V7M: operand must be a register in range [r0, r14]
 
-// ERROR-V8A-ARM: invalid operand for instruction
+// ERROR-V8A-ARM: operand must be a register in range [r0, r14]
 // CHECK-V8A-ARM: vmsr  fpscr, r0             @ encoding: [0x10,0x0a,0xe1,0xee]
 // CHECK-V8A-ARM: vmsr  fpexc, r1             @ encoding: [0x10,0x1a,0xe8,0xee]
 // CHECK-V8A-ARM: vmsr  fpsid, r2             @ encoding: [0x10,0x2a,0xe0,0xee]
 // CHECK-V8A-ARM: vmsr  fpscr, r10            @ encoding: [0x10,0xaa,0xe1,0xee]
 // CHECK-V8A-ARM: vmsr  fpscr, sp             @ encoding: [0x10,0xda,0xe1,0xee]
-// ERROR-V8A-ARM: invalid operand for instruction
+// ERROR-V8A-ARM: operand must be a register in range [r0, r14]
 
-// ERROR-V8A-THUMB: invalid operand for instruction
+// ERROR-V8A-THUMB: operand must be a register in range [r0, r14]
 // CHECK-V8A-THUMB: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
 // CHECK-V8A-THUMB: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
 // CHECK-V8A-THUMB: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
 // CHECK-V8A-THUMB: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
 // CHECK-V8A-THUMB: vmsr  fpscr, sp             @ encoding: [0xe1,0xee,0x10,0xda]
-// ERROR-V8A-THUMB: invalid operand for instruction
+// ERROR-V8A-THUMB: operand must be a register in range [r0, r14]
 
-// ERROR-V8M: invalid operand for instruction
+// ERROR-V8M: operand must be a register in range [r0, r14]
 // CHECK-V8M: vmsr  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
 // CHECK-V8M: vmsr  fpexc, r1             @ encoding: [0xe8,0xee,0x10,0x1a]
 // CHECK-V8M: vmsr  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
 // CHECK-V8M: vmsr  fpscr, r10            @ encoding: [0xe1,0xee,0x10,0xaa]
 // ERROR-V8M: invalid operand for instruction
-// ERROR-V8M: invalid operand for instruction
+// ERROR-V8M: operand must be a register in range [r0, r14]
 
 // ERROR-NOVFP: invalid instruction
 // ERROR-NOVFP: instruction requires: VFP2

@@ -124,6 +124,64 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   }
 }
 
+/// Dump the name encoded in the type tag.
+static void dumpTypeTagName(raw_ostream &OS, dwarf::Tag T) {
+  StringRef TagStr = TagString(T);
+  if (!TagStr.startswith("DW_TAG_") || !TagStr.endswith("_type"))
+    return;
+  OS << TagStr.substr(7, TagStr.size() - 12) << " ";
+}
+
+/// Recursively dump the DIE type name when applicable.
+static void dumpTypeName(raw_ostream &OS, const DWARFDie &Die) {
+  DWARFDie D = Die.getAttributeValueAsReferencedDie(DW_AT_type);
+
+  if (!D.isValid())
+    return;
+
+  if (const char *Name = D.getName(DINameKind::LinkageName)) {
+    OS << Name;
+    return;
+  }
+
+  // FIXME: We should have pretty printers per language. Currently we print
+  // everything as if it was C++ and fall back to the TAG type name.
+  const dwarf::Tag T = D.getTag();
+  switch (T) {
+  case DW_TAG_array_type:
+  case DW_TAG_pointer_type:
+  case DW_TAG_ptr_to_member_type:
+  case DW_TAG_reference_type:
+  case DW_TAG_rvalue_reference_type:
+    break;
+  default:
+    dumpTypeTagName(OS, T);
+  }
+
+  // Follow the DW_AT_type if possible.
+  dumpTypeName(OS, D);
+
+  switch (T) {
+  case DW_TAG_array_type:
+    OS << "[]";
+    break;
+  case DW_TAG_pointer_type:
+    OS << '*';
+    break;
+  case DW_TAG_ptr_to_member_type:
+    OS << '*';
+    break;
+  case DW_TAG_reference_type:
+    OS << '&';
+    break;
+  case DW_TAG_rvalue_reference_type:
+    OS << "&&";
+    break;
+  default:
+    break;
+  }
+}
+
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                           uint32_t *OffsetPtr, dwarf::Attribute Attr,
                           dwarf::Form Form, unsigned Indent,
@@ -188,6 +246,10 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     if (const char *Name = Die.getAttributeValueAsReferencedDie(Attr).getName(
             DINameKind::LinkageName))
       OS << " \"" << Name << '\"';
+  } else if (Attr == DW_AT_type) {
+    OS << " \"";
+    dumpTypeName(OS, Die);
+    OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {
     if (Optional<uint64_t> OptVal = formValue.getAsUnsignedConstant())
       dumpApplePropertyAttribute(OS, *OptVal);
@@ -250,10 +312,8 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
-  auto SpecRef = toReference(find(Attr));
-  if (SpecRef) {
-    auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef);
-    if (SpecUnit)
+  if (auto SpecRef = toReference(find(Attr))) {
+    if (auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef))
       return SpecUnit->getDIEForOffset(*SpecRef);
   }
   return DWARFDie();

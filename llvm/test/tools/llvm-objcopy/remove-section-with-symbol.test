@@ -1,0 +1,54 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -R .test %t %t2
+# RUN: llvm-readobj -file-headers -symbols %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .test2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+Symbols:
+  Global:
+    - Name:     test
+      Type:     STT_FUNC
+      Section:  .test
+      Value:    0x1000
+      Size:     4
+    - Name:     test2
+      Type:     STT_FUNC
+      Section:  .test2
+      Value:    0x1000
+      Size:     4
+
+# The sections counted here should be .test, .symtab, .strtab, and .shstrtab.
+# The 5th section is the null section.
+#CHECK: SectionHeaderCount: 5
+
+#CHECK: Symbols [
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name:
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: test2
+#CHECK-NEXT:    Value: 0x1000
+#CHECK-NEXT:    Size: 4
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .test2
+#CHECK-NEXT:  }
+#CHECK-NEXT:]
