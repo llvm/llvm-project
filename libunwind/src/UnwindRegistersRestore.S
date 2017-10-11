@@ -18,6 +18,10 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_x866jumptoEv)
 #
 # void libunwind::Registers_x86::jumpto()
 #
+#if defined(_WIN32)
+# On windows, the 'this' pointer is passed in ecx instead of on the stack
+  movl   %ecx, %eax
+#else
 # On entry:
 #  +                       +
 #  +-----------------------+
@@ -27,6 +31,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_x866jumptoEv)
 #  +-----------------------+   <-- SP
 #  +                       +
   movl   4(%esp), %eax
+#endif
   # set up eax and ret on new stack location
   movl  28(%eax), %edx # edx holds new stack pointer
   subl  $8,%edx
