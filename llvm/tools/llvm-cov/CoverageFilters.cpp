@@ -32,7 +32,7 @@ bool NameRegexCoverageFilter::matches(
 bool NameWhitelistCoverageFilter::matches(
     const coverage::CoverageMapping &,
     const coverage::FunctionRecord &Function) {
-  return Whitelist.inSection("whitelist_fun", Function.Name);
+  return Whitelist.inSection("llvmcov", "whitelist_fun", Function.Name);
 }
 
 bool RegionCoverageFilter::matches(const coverage::CoverageMapping &CM,
