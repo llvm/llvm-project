@@ -1089,6 +1089,11 @@ static bool IsDeviceSupport(const char *path) {
         if (strstr(DeviceSupport, "Symbols"))
           return true;
 
+  // Don't look in the simulator runtime frameworks either.  They either 
+  // duplicate what the SDK has, or for older simulators conflict with them.
+  if (path && strstr(path, ".simruntime/Contents/Resources/"))
+    return true;
+
   return false;
 }
 }

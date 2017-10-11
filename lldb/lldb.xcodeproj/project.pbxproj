@@ -1373,6 +1373,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				49753FB41BEAB2BB00019E45 /* lldb.1 in CopyFiles */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2728,6 +2729,8 @@
 		4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftASTContext.cpp; path = source/Symbol/SwiftASTContext.cpp; sourceTree = "<group>"; };
 		4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = SwiftLanguageRuntime.cpp; path = source/Target/SwiftLanguageRuntime.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		4C848E0F18D28C7300EC6DD0 /* SwiftLanguageRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftLanguageRuntime.h; path = include/lldb/Target/SwiftLanguageRuntime.h; sourceTree = "<group>"; };
+		4C7D48281F509CCD005314B4 /* BreakpointName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointName.cpp; path = source/Breakpoint/BreakpointName.cpp; sourceTree = "<group>"; };
+		4C7D482B1F509CF5005314B4 /* BreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointName.h; path = include/lldb/Breakpoint/BreakpointName.h; sourceTree = "<group>"; };
 		4C88BC291BA3722B00AA0964 /* Expression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Expression.cpp; path = source/Expression/Expression.cpp; sourceTree = "<group>"; };
 		4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangFunctionCaller.cpp; path = ExpressionParser/Clang/ClangFunctionCaller.cpp; sourceTree = "<group>"; };
 		4C98D3DB118FB96F00E575D0 /* IRExecutionUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRExecutionUnit.cpp; path = source/Expression/IRExecutionUnit.cpp; sourceTree = "<group>"; };
