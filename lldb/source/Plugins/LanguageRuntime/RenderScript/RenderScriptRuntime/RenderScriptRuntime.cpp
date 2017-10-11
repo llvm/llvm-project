@@ -3615,13 +3615,15 @@ RenderScriptRuntime::CreateKernelBreakpoint(const ConstString &name) {
   }
 
   BreakpointResolverSP resolver_sp(new RSBreakpointResolver(nullptr, name));
-  BreakpointSP bp = GetProcess()->GetTarget().CreateBreakpoint(
+  Target &target = GetProcess()->GetTarget();
+  BreakpointSP bp = target.CreateBreakpoint(
       m_filtersp, resolver_sp, false, false, false);
 
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
   Status err;
-  if (!bp->AddName("RenderScriptKernel", err))
+  target.AddNameToBreakpoint(bp, "RenderScriptKernel", err);
+  if (err.Fail() && log)
     if (log)
       log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
                   err.AsCString());
@@ -3643,14 +3645,15 @@ RenderScriptRuntime::CreateReductionBreakpoint(const ConstString &name,
 
   BreakpointResolverSP resolver_sp(new RSReduceBreakpointResolver(
       nullptr, name, &m_rsmodules, kernel_types));
-  BreakpointSP bp = GetProcess()->GetTarget().CreateBreakpoint(
+  Target &target = GetProcess()->GetTarget();
+  BreakpointSP bp = target.CreateBreakpoint(
       m_filtersp, resolver_sp, false, false, false);
 
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
   Status err;
-  if (!bp->AddName("RenderScriptReduction", err))
-    if (log)
+  target.AddNameToBreakpoint(bp, "RenderScriptReduction", err);
+  if (err.Fail() && log)
       log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
                   err.AsCString());
 
@@ -3885,15 +3888,16 @@ RenderScriptRuntime::CreateScriptGroupBreakpoint(const ConstString &name,
 
   BreakpointResolverSP resolver_sp(new RSScriptGroupBreakpointResolver(
       nullptr, name, m_scriptGroups, stop_on_all));
-  BreakpointSP bp = GetProcess()->GetTarget().CreateBreakpoint(
+  Target &target = GetProcess()->GetTarget();
+  BreakpointSP bp = target.CreateBreakpoint(
       m_filtersp, resolver_sp, false, false, false);
   // Give RS breakpoints a specific name, so the user can manipulate them as a
   // group.
   Status err;
-  if (!bp->AddName(name.AsCString(), err))
-    if (log)
-      log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
-                  err.AsCString());
+  target.AddNameToBreakpoint(bp, name.GetCString(), err);
+  if (err.Fail() && log)
+    log->Printf("%s - error setting break name, '%s'.", __FUNCTION__,
+                err.AsCString());
   // ask the breakpoint to resolve itself
   bp->ResolveBreakpoint();
   return bp;

@@ -18,6 +18,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Baton.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
@@ -32,7 +33,23 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 
 class BreakpointOptions {
+friend class BreakpointLocation;
+friend class BreakpointName;
+friend class lldb_private::BreakpointOptionGroup;
+friend class Breakpoint;
+
 public:
+  enum OptionKind {
+    eCallback     = 1 << 0,
+    eEnabled      = 1 << 1,
+    eOneShot      = 1 << 2,
+    eIgnoreCount  = 1 << 3,
+    eThreadSpec   = 1 << 4,
+    eCondition    = 1 << 5,
+    eAutoContinue = 1 << 6,
+    eAllOptions   = (eCallback | eEnabled | eOneShot | eIgnoreCount | eThreadSpec
+                     | eCondition | eAutoContinue)
+  };
   struct CommandData {
     CommandData()
         : user_source(), script_source(),
@@ -87,14 +104,6 @@ public:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
-  //------------------------------------------------------------------
-  /// Default constructor.  The breakpoint is enabled, and has no condition,
-  /// callback, ignore count, etc...
-  //------------------------------------------------------------------
-  BreakpointOptions();
-  BreakpointOptions(const BreakpointOptions &rhs);
-
-  static BreakpointOptions *CopyOptionsNoCallback(BreakpointOptions &rhs);
 
   //------------------------------------------------------------------
   /// This constructor allows you to specify all the breakpoint options
@@ -112,7 +121,15 @@ public:
   ///
   //------------------------------------------------------------------
   BreakpointOptions(const char *condition, bool enabled = true,
-                    int32_t ignore = 0, bool one_shot = false);
+                    int32_t ignore = 0, bool one_shot = false,
+                    bool auto_continue = false);
+
+  //------------------------------------------------------------------
+  /// Breakpoints make options with all flags set.  Locations and Names make options
+  /// with no flags set.
+  //------------------------------------------------------------------
+  BreakpointOptions(bool all_flags_set);
+  BreakpointOptions(const BreakpointOptions &rhs);
 
   virtual ~BreakpointOptions();
 
@@ -129,6 +146,11 @@ public:
   // Operators
   //------------------------------------------------------------------
   const BreakpointOptions &operator=(const BreakpointOptions &rhs);
+  
+  //------------------------------------------------------------------
+  /// Copy over only the options set in the incoming BreakpointOptions.
+  //------------------------------------------------------------------
+  void CopyOverSetOptions(const BreakpointOptions &rhs);
 
   //------------------------------------------------------------------
   // Callbacks
@@ -290,7 +312,25 @@ public:
   //------------------------------------------------------------------
   /// If \a enable is \b true, enable the breakpoint, if \b false disable it.
   //------------------------------------------------------------------
-  void SetEnabled(bool enabled) { m_enabled = enabled; }
+  void SetEnabled(bool enabled) { 
+    m_enabled = enabled;
+    m_set_flags.Set(eEnabled);
+  }
+
+  //------------------------------------------------------------------
+  /// Check the auto-continue state.
+  /// @return
+  ///     \b true if the breakpoint is set to auto-continue, \b false otherwise.
+  //------------------------------------------------------------------
+  bool IsAutoContinue() const { return m_auto_continue; }
+
+  //------------------------------------------------------------------
+  /// Set the auto-continue state.
+  //------------------------------------------------------------------
+  void SetAutoContinue(bool auto_continue) { 
+    m_auto_continue = auto_continue;
+    m_set_flags.Set(eAutoContinue);
+  }
 
   //------------------------------------------------------------------
   /// Check the One-shot state.
@@ -302,7 +342,10 @@ public:
   //------------------------------------------------------------------
   /// If \a enable is \b true, enable the breakpoint, if \b false disable it.
   //------------------------------------------------------------------
-  void SetOneShot(bool one_shot) { m_one_shot = one_shot; }
+  void SetOneShot(bool one_shot) { 
+    m_one_shot = one_shot; 
+    m_set_flags.Set(eOneShot); 
+  }
 
   //------------------------------------------------------------------
   /// Set the breakpoint to ignore the next \a count breakpoint hits.
@@ -310,7 +353,10 @@ public:
   ///    The number of breakpoint hits to ignore.
   //------------------------------------------------------------------
 
-  void SetIgnoreCount(uint32_t n) { m_ignore_count = n; }
+  void SetIgnoreCount(uint32_t n) { 
+    m_ignore_count = n; 
+    m_set_flags.Set(eIgnoreCount);
+  }
 
   //------------------------------------------------------------------
   /// Return the current Ignore Count.
@@ -360,16 +406,28 @@ public:
   ///     The breakpoint will take ownership of pointer held by this object.
   //------------------------------------------------------------------
   void SetCommandDataCallback(std::unique_ptr<CommandData> &cmd_data);
-
+  
+  void Clear();
+  
+  bool AnySet() const {
+    return m_set_flags.AnySet(eAllOptions);
+  }
+  
 protected:
-  //------------------------------------------------------------------
+//------------------------------------------------------------------
   // Classes that inherit from BreakpointOptions can see and modify these
   //------------------------------------------------------------------
+  bool IsOptionSet(OptionKind kind)
+  {
+    return m_set_flags.Test(kind);
+  }
+
   enum class OptionNames {
     ConditionText = 0,
     IgnoreCount,
     EnabledState,
     OneShotState,
+    AutoContinue,
     LastOptionName
   };
   static const char *g_option_names[(size_t)OptionNames::LastOptionName];
@@ -400,6 +458,9 @@ private:
   std::string m_condition_text; // The condition to test.
   size_t m_condition_text_hash; // Its hash, so that locations know when the
                                 // condition is updated.
+  bool m_auto_continue;         // If set, auto-continue from breakpoint.
+  Flags m_set_flags;            // Which options are set at this level.  Drawn
+                                // from BreakpointOptions::SetOptionsFlags.
 };
 
 } // namespace lldb_private
