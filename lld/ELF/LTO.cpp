@@ -130,7 +130,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
   DenseSet<StringRef> ScriptSymbols;
-  for (BaseCommand *Base : Script->Opt.Commands)
+  for (BaseCommand *Base : Script->Commands)
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
       ScriptSymbols.insert(Cmd->Name);
 

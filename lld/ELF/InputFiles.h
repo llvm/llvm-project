@@ -128,7 +128,7 @@ public:
   }
 
   llvm::object::ELFFile<ELFT> getObj() const {
-    return llvm::object::ELFFile<ELFT>(MB.getBuffer());
+    return check(llvm::object::ELFFile<ELFT>::create(MB.getBuffer()));
   }
 
   StringRef getStringTable() const { return StringTable; }

@@ -3,7 +3,7 @@
 // REQUIRES: has_sancovcc,stable-runtime
 // UNSUPPORTED: ubsan,i386-darwin
 // XFAIL: tsan,powerpc64,s390x,mips
-// XFAIL: android && i386-target-arch && asan
+// XFAIL: android && asan
 
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR

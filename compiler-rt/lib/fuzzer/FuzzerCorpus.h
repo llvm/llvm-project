@@ -36,6 +36,7 @@ struct InputInfo {
   bool MayDeleteFile = false;
   bool Reduced = false;
   Vector<uint32_t> UniqFeatureSet;
+  float FeatureFrequencyScore = 1.0;
 };
 
 class InputCorpus {
@@ -44,6 +45,7 @@ class InputCorpus {
   InputCorpus(const std::string &OutputCorpus) : OutputCorpus(OutputCorpus) {
     memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
     memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
+    memset(FeatureFrequency, 0, sizeof(FeatureFrequency));
   }
   ~InputCorpus() {
     for (auto II : Inputs)
@@ -134,6 +136,7 @@ class InputCorpus {
     Hashes.insert(Sha1ToString(II->Sha1));
     II->U = U;
     II->Reduced = true;
+    UpdateCorpusDistribution();
   }
 
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
@@ -145,8 +148,6 @@ class InputCorpus {
   };
 
   // Returns an index of random unit from the corpus to mutate.
-  // Hypothesis: units added to the corpus last are more likely to be
-  // interesting. This function gives more weight to the more recent units.
   size_t ChooseUnitIdxToMutate(Random &Rand) {
     size_t Idx = static_cast<size_t>(CorpusDistribution(Rand));
     assert(Idx < Inputs.size());
@@ -212,14 +213,21 @@ class InputCorpus {
     return false;
   }
 
+  void UpdateFeatureFrequency(size_t Idx) {
+    FeatureFrequency[Idx % kFeatureSetSize]++;
+  }
+  float GetFeatureFrequency(size_t Idx) const {
+    return FeatureFrequency[Idx % kFeatureSetSize];
+  }
+  void UpdateFeatureFrequencyScore(InputInfo *II) {
+    II->FeatureFrequencyScore = 0.00000001;
+    for (auto Idx : II->UniqFeatureSet)
+      II->FeatureFrequencyScore +=
+          1. / (GetFeatureFrequency(Idx) * GetFeatureFrequency(Idx) + 1.);
+  }
+
   size_t NumFeatures() const { return NumAddedFeatures; }
   size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
-
-  void ResetFeatureSet() {
-    assert(Inputs.empty());
-    memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
-    memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
-  }
 
 private:
 
@@ -243,6 +251,10 @@ private:
 
   // Updates the probability distribution for the units in the corpus.
   // Must be called whenever the corpus or unit weights are changed.
+  //
+  // Hypothesis: units added to the corpus last are more interesting.
+  //
+  // Hypothesis: inputs with infrequent features are more interesting.
   void UpdateCorpusDistribution() {
     size_t N = Inputs.size();
     assert(N);
@@ -250,7 +262,8 @@ private:
     Weights.resize(N);
     std::iota(Intervals.begin(), Intervals.end(), 0);
     for (size_t i = 0; i < N; i++)
-      Weights[i] = Inputs[i]->NumFeatures * (i + 1);
+      Weights[i] =
+          Inputs[i]->NumFeatures * (i + 1) * Inputs[i]->FeatureFrequencyScore;
     CorpusDistribution = std::piecewise_constant_distribution<double>(
         Intervals.begin(), Intervals.end(), Weights.begin());
   }
@@ -266,6 +279,7 @@ private:
   size_t NumUpdatedFeatures = 0;
   uint32_t InputSizesPerFeature[kFeatureSetSize];
   uint32_t SmallestElementPerFeature[kFeatureSetSize];
+  float FeatureFrequency[kFeatureSetSize];
 
   std::string OutputCorpus;
 };

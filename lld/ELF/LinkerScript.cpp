@@ -79,25 +79,6 @@ uint64_t ExprValue::getSectionOffset() const {
   return getValue() - getSecAddr();
 }
 
-static SymbolBody *addRegular(SymbolAssignment *Cmd) {
-  Symbol *Sym;
-  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
-                                              /*CanOmitFromDynSym*/ false,
-                                              /*File*/ nullptr);
-  Sym->Binding = STB_GLOBAL;
-  ExprValue Value = Cmd->Expression();
-  SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
-
-  // We want to set symbol values early if we can. This allows us to use symbols
-  // as variables in linker scripts. Doing so allows us to write expressions
-  // like this: `alignment = 16; . = ALIGN(., alignment)`
-  uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
-  replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
-                              Visibility, STT_NOTYPE, SymValue, 0, Sec);
-  return Sym->body();
-}
-
 OutputSection *LinkerScript::createOutputSection(StringRef Name,
                                                  StringRef Location) {
   OutputSection *&SecRef = NameToOutputSection[Name];
@@ -127,34 +108,14 @@ void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
     error(Loc + ": unable to move location counter backward for: " +
           CurAddressState->OutSec->Name);
   Dot = Val;
+
   // Update to location counter means update to section size.
   if (InSec)
     CurAddressState->OutSec->Size = Dot - CurAddressState->OutSec->Addr;
 }
 
-// Sets value of a symbol. Two kinds of symbols are processed: synthetic
-// symbols, whose value is an offset from beginning of section and regular
-// symbols whose value is absolute.
-void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
-  if (Cmd->Name == ".") {
-    setDot(Cmd->Expression, Cmd->Location, InSec);
-    return;
-  }
-
-  if (!Cmd->Sym)
-    return;
-
-  auto *Sym = cast<DefinedRegular>(Cmd->Sym);
-  ExprValue V = Cmd->Expression();
-  if (V.isAbsolute()) {
-    Sym->Value = V.getValue();
-    Sym->Section = nullptr;
-  } else {
-    Sym->Section = V.Sec;
-    Sym->Value = V.getSectionOffset();
-  }
-}
-
+// This function is called from processCommands, while we are
+// fixing the output section layout.
 void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Name == ".")
     return;
@@ -165,7 +126,54 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Provide && (!B || B->isDefined()))
     return;
 
-  Cmd->Sym = addRegular(Cmd);
+  // Define a symbol.
+  Symbol *Sym;
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                                              /*CanOmitFromDynSym*/ false,
+                                              /*File*/ nullptr);
+  Sym->Binding = STB_GLOBAL;
+  ExprValue Value = Cmd->Expression();
+  SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
+
+  // When this function is called, section addresses have not been
+  // fixed yet. So, we may or may not know the value of the RHS
+  // expression.
+  //
+  // For example, if an expression is `x = 42`, we know x is always 42.
+  // However, if an expression is `x = .`, there's no way to know its
+  // value at the moment.
+  //
+  // We want to set symbol values early if we can. This allows us to
+  // use symbols as variables in linker scripts. Doing so allows us to
+  // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
+  uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
+
+  replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
+                              Visibility, STT_NOTYPE, SymValue, 0, Sec);
+  Cmd->Sym = cast<DefinedRegular>(Sym->body());
+}
+
+// This function is called from assignAddresses, while we are
+// fixing the output section addresses. This function is supposed
+// to set the final value for a given symbol assignment.
+void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
+  if (Cmd->Name == ".") {
+    setDot(Cmd->Expression, Cmd->Location, InSec);
+    return;
+  }
+
+  if (!Cmd->Sym)
+    return;
+
+  ExprValue V = Cmd->Expression();
+  if (V.isAbsolute()) {
+    Cmd->Sym->Section = nullptr;
+    Cmd->Sym->Value = V.getValue();
+  } else {
+    Cmd->Sym->Section = V.Sec;
+    Cmd->Sym->Value = V.getSectionOffset();
+  }
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -193,13 +201,12 @@ static std::string filename(InputFile *File) {
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *S) {
-  for (InputSectionDescription *ID : Opt.KeptSections) {
-    std::string Filename = filename(S->File);
+  std::string Filename = filename(S->File);
+  for (InputSectionDescription *ID : KeptSections)
     if (ID->FilePat.match(Filename))
       for (SectionPattern &P : ID->SectionPatterns)
         if (P.SectionPat.match(S->Name))
           return true;
-  }
   return false;
 }
 
@@ -358,23 +365,23 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   // which will map to whatever the first actual section is.
   Aether = make<OutputSection>("", 0, SHF_ALLOC);
   Aether->SectionIndex = 1;
-  auto State = make_unique<AddressState>(Opt);
+  auto State = make_unique<AddressState>();
+
   // CurAddressState captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
   // script parser.
   CurAddressState = State.get();
   CurAddressState->OutSec = Aether;
-  Dot = 0;
 
-  for (size_t I = 0; I < Opt.Commands.size(); ++I) {
+  for (size_t I = 0; I < Commands.size(); ++I) {
     // Handle symbol assignments outside of any output section.
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(Opt.Commands[I])) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Commands[I])) {
       addSymbol(Cmd);
       continue;
     }
 
-    if (auto *Sec = dyn_cast<OutputSection>(Opt.Commands[I])) {
+    if (auto *Sec = dyn_cast<OutputSection>(Commands[I])) {
       std::vector<InputSectionBase *> V = createInputSectionList(*Sec);
 
       // The output section name `/DISCARD/' is special.
@@ -394,7 +401,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       if (!matchConstraints(V, Sec->Constraint)) {
         for (InputSectionBase *S : V)
           S->Assigned = false;
-        Opt.Commands.erase(Opt.Commands.begin() + I);
+        Commands.erase(Commands.begin() + I);
         --I;
         continue;
       }
@@ -438,10 +445,9 @@ void LinkerScript::fabricateDefaultCommands() {
     StartAddr = std::min(StartAddr, KV.second);
 
   auto Expr = [=] {
-    return std::min(StartAddr, Config->ImageBase + elf::getHeaderSize());
+    return std::min(StartAddr, Target->getImageBase() + elf::getHeaderSize());
   };
-  Opt.Commands.insert(Opt.Commands.begin(),
-                      make<SymbolAssignment>(".", Expr, ""));
+  Commands.insert(Commands.begin(), make<SymbolAssignment>(".", Expr, ""));
 }
 
 static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,
@@ -455,7 +461,7 @@ static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
-  unsigned End = Opt.Commands.size();
+  unsigned End = Commands.size();
 
   for (InputSectionBase *S : InputSections) {
     if (!S->Live || S->Parent)
@@ -464,14 +470,14 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
     StringRef Name = getOutputSectionName(S->Name);
     log(toString(S) + " is being placed in '" + Name + "'");
 
-    if (OutputSection *Sec = findByName(
-            makeArrayRef(Opt.Commands).slice(0, End), Name)) {
+    if (OutputSection *Sec =
+            findByName(makeArrayRef(Commands).slice(0, End), Name)) {
       Sec->addSection(cast<InputSection>(S));
       continue;
     }
 
     if (OutputSection *OS = Factory.addInputSec(S, Name))
-      Script->Opt.Commands.push_back(OS);
+      Script->Commands.push_back(OS);
     assert(S->getOutputSection()->SectionIndex == INT_MAX);
   }
 }
@@ -580,8 +586,8 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *Sec) {
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!Sec->MemoryRegionName.empty()) {
-    auto It = Opt.MemoryRegions.find(Sec->MemoryRegionName);
-    if (It != Opt.MemoryRegions.end())
+    auto It = MemoryRegions.find(Sec->MemoryRegionName);
+    if (It != MemoryRegions.end())
       return It->second;
     error("memory region '" + Sec->MemoryRegionName + "' not declared");
     return nullptr;
@@ -590,11 +596,11 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *Sec) {
   // If at least one memory region is defined, all sections must
   // belong to some memory region. Otherwise, we don't need to do
   // anything for memory regions.
-  if (Opt.MemoryRegions.empty())
+  if (MemoryRegions.empty())
     return nullptr;
 
   // See if a region can be found by matching section flags.
-  for (auto &Pair : Opt.MemoryRegions) {
+  for (auto &Pair : MemoryRegions) {
     MemoryRegion *M = Pair.second;
     if ((M->Flags & Sec->Flags) && (M->NegFlags & Sec->Flags) == 0)
       return M;
@@ -641,7 +647,7 @@ void LinkerScript::removeEmptyCommands() {
   // clutter the output.
   // We instead remove trivially empty sections. The bfd linker seems even
   // more aggressive at removing them.
-  llvm::erase_if(Opt.Commands, [&](BaseCommand *Base) {
+  llvm::erase_if(Commands, [&](BaseCommand *Base) {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       return !Sec->Live;
     return false;
@@ -662,7 +668,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // consequeces and gives us a section to put the symbol in.
   uint64_t Flags = SHF_ALLOC;
 
-  for (BaseCommand * Cmd : Opt.Commands) {
+  for (BaseCommand *Cmd : Commands) {
     auto *Sec = dyn_cast<OutputSection>(Cmd);
     if (!Sec)
       continue;
@@ -681,7 +687,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
 void LinkerScript::adjustSectionsAfterSorting() {
   // Try and find an appropriate memory region to assign offsets in.
-  for (BaseCommand *Base : Opt.Commands) {
+  for (BaseCommand *Base : Commands) {
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
       if (!Sec->Live)
         continue;
@@ -701,14 +707,14 @@ void LinkerScript::adjustSectionsAfterSorting() {
   // SECTIONS { .aaa : { *(.aaa) } }
   std::vector<StringRef> DefPhdrs;
   auto FirstPtLoad =
-      std::find_if(Opt.PhdrsCommands.begin(), Opt.PhdrsCommands.end(),
+      std::find_if(PhdrsCommands.begin(), PhdrsCommands.end(),
                    [](const PhdrsCommand &Cmd) { return Cmd.Type == PT_LOAD; });
-  if (FirstPtLoad != Opt.PhdrsCommands.end())
+  if (FirstPtLoad != PhdrsCommands.end())
     DefPhdrs.push_back(FirstPtLoad->Name);
 
   // Walk the commands and propagate the program headers to commands that don't
   // explicitly specify them.
-  for (BaseCommand *Base : Opt.Commands) {
+  for (BaseCommand *Base : Commands) {
     auto *Sec = dyn_cast<OutputSection>(Base);
     if (!Sec)
       continue;
@@ -757,7 +763,7 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
   uint64_t HeaderSize = getHeaderSize();
   // When linker script with SECTIONS is being used, don't output headers
   // unless there's a space for them.
-  uint64_t Base = Opt.HasSections ? alignDown(Min, Config->MaxPageSize) : 0;
+  uint64_t Base = HasSectionsCommand ? alignDown(Min, Config->MaxPageSize) : 0;
   if (HeaderSize <= Min - Base || Script->hasPhdrsCommands()) {
     Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
@@ -773,17 +779,20 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
                  [](const PhdrEntry *E) { return E->p_type == PT_PHDR; });
 }
 
-LinkerScript::AddressState::AddressState(const ScriptConfiguration &Opt) {
-  for (auto &MRI : Opt.MemoryRegions) {
+LinkerScript::AddressState::AddressState() {
+  for (auto &MRI : Script->MemoryRegions) {
     const MemoryRegion *MR = MRI.second;
     MemRegionOffset[MR] = MR->Origin;
   }
 }
 
+// Assign addresses as instructed by linker script SECTIONS sub-commands.
 void LinkerScript::assignAddresses() {
-  // Assign addresses as instructed by linker script SECTIONS sub-commands.
-  Dot = 0;
-  auto State = make_unique<AddressState>(Opt);
+  // By default linker scripts use an initial value of 0 for '.', but prefer
+  // -image-base if set.
+  Dot = Config->ImageBase ? *Config->ImageBase : 0;
+  auto State = make_unique<AddressState>();
+
   // CurAddressState captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
@@ -792,7 +801,7 @@ void LinkerScript::assignAddresses() {
   ErrorOnMissingSection = true;
   switchTo(Aether);
 
-  for (BaseCommand *Base : Opt.Commands) {
+  for (BaseCommand *Base : Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
       assignSymbol(Cmd, false);
       continue;
@@ -814,7 +823,7 @@ std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
-  for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
+  for (const PhdrsCommand &Cmd : PhdrsCommands) {
     PhdrEntry *Phdr = make<PhdrEntry>(Cmd.Type, Cmd.Flags ? *Cmd.Flags : PF_R);
 
     if (Cmd.HasFilehdr)
@@ -834,7 +843,7 @@ std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
     // Assign headers specified by linker script
     for (size_t Id : getPhdrIndices(Sec)) {
       Ret[Id]->add(Sec);
-      if (!Opt.PhdrsCommands[Id].Flags.hasValue())
+      if (!PhdrsCommands[Id].Flags.hasValue())
         Ret[Id]->p_flags |= Sec->getPhdrFlags();
     }
   }
@@ -847,9 +856,9 @@ std::vector<PhdrEntry *> LinkerScript::createPhdrs() {
 // no PT_INTERP is there, there's no place to emit an
 // .interp, so we don't do that in that case.
 bool LinkerScript::needsInterpSection() {
-  if (Opt.PhdrsCommands.empty())
+  if (PhdrsCommands.empty())
     return true;
-  for (PhdrsCommand &Cmd : Opt.PhdrsCommands)
+  for (PhdrsCommand &Cmd : PhdrsCommands)
     if (Cmd.Type == PT_INTERP)
       return true;
   return false;
@@ -858,16 +867,16 @@ bool LinkerScript::needsInterpSection() {
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".") {
     if (CurAddressState)
-      return {CurAddressState->OutSec, Dot - CurAddressState->OutSec->Addr,
-              Loc};
+      return {CurAddressState->OutSec, false,
+              Dot - CurAddressState->OutSec->Addr, Loc};
     error(Loc + ": unable to get location counter value");
     return 0;
   }
   if (SymbolBody *B = Symtab->find(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
-      return {D->Section, D->Value, Loc};
+      return {D->Section, false, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {C->Section, 0, Loc};
+      return {C->Section, false, 0, Loc};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
@@ -888,7 +897,7 @@ std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *Cmd) {
   std::vector<size_t> Ret;
 
   for (StringRef S : Cmd->Phdrs) {
-    if (Optional<size_t> Idx = getPhdrIndex(Opt.PhdrsCommands, S))
+    if (Optional<size_t> Idx = getPhdrIndex(PhdrsCommands, S))
       Ret.push_back(*Idx);
     else if (S != "NONE")
       error(Cmd->Location + ": section header '" + S +

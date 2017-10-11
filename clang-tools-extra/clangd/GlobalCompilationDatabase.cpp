@@ -40,7 +40,7 @@ tooling::CompileCommand getDefaultCompileCommand(PathRef File) {
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(
         clangd::Logger &Logger, llvm::Optional<Path> CompileCommandsDir)
-        : Logger(Logger), CompileCommandsDir(std::move(CompileCommandsDir)) {}
+    : Logger(Logger), CompileCommandsDir(std::move(CompileCommandsDir)) {}
 
 std::vector<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommands(PathRef File) {

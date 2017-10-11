@@ -161,4 +161,3 @@ shared/vload.cl
 shared/vstore.cl
 workitem/get_global_id.cl
 workitem/get_global_size.cl
-image/get_image_dim.cl
