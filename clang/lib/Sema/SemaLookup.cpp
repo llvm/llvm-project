@@ -88,13 +88,15 @@ namespace {
   /// A collection of using directives, as used by C++ unqualified
   /// lookup.
   class UnqualUsingDirectiveSet {
+    Sema &SemaRef;
+
     typedef SmallVector<UnqualUsingEntry, 8> ListTy;
 
     ListTy list;
     llvm::SmallPtrSet<DeclContext*, 8> visited;
 
   public:
-    UnqualUsingDirectiveSet() {}
+    UnqualUsingDirectiveSet(Sema &SemaRef) : SemaRef(SemaRef) {}
 
     void visitScopeChain(Scope *S, Scope *InnermostFileScope) {
       // C++ [namespace.udir]p1:
@@ -113,7 +115,8 @@ namespace {
           visit(Ctx, Ctx);
         } else if (!Ctx || Ctx->isFunctionOrMethod()) {
           for (auto *I : S->using_directives())
-            visit(I, InnermostFileDC);
+            if (SemaRef.isVisible(I))
+              visit(I, InnermostFileDC);
         }
       }
     }
@@ -152,7 +155,7 @@ namespace {
       while (true) {
         for (auto UD : DC->using_directives()) {
           DeclContext *NS = UD->getNominatedNamespace();
-          if (visited.insert(NS).second) {
+          if (visited.insert(NS).second && SemaRef.isVisible(UD)) {
             addUsingDirective(UD, EffectiveDC);
             queue.push_back(NS);
           }
@@ -1085,7 +1088,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   //   }
   // }
   //
-  UnqualUsingDirectiveSet UDirs;
+  UnqualUsingDirectiveSet UDirs(*this);
   bool VisitedUsingDirectives = false;
   bool LeftStartingScope = false;
   DeclContext *OutsideOfTemplateParamDC = nullptr;
@@ -1868,22 +1871,19 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
                                                  DeclContext *StartDC) {
   assert(StartDC->isFileContext() && "start context is not a file context");
 
-  DeclContext::udir_range UsingDirectives = StartDC->using_directives();
-  if (UsingDirectives.begin() == UsingDirectives.end()) return false;
+  // We have not yet looked into these namespaces, much less added
+  // their "using-children" to the queue.
+  SmallVector<NamespaceDecl*, 8> Queue;
 
   // We have at least added all these contexts to the queue.
   llvm::SmallPtrSet<DeclContext*, 8> Visited;
   Visited.insert(StartDC);
 
-  // We have not yet looked into these namespaces, much less added
-  // their "using-children" to the queue.
-  SmallVector<NamespaceDecl*, 8> Queue;
-
   // We have already looked into the initial namespace; seed the queue
   // with its using-children.
-  for (auto *I : UsingDirectives) {
+  for (auto *I : StartDC->using_directives()) {
     NamespaceDecl *ND = I->getNominatedNamespace()->getOriginalNamespace();
-    if (Visited.insert(ND).second)
+    if (Visited.insert(ND).second && S.isVisible(I))
       Queue.push_back(ND);
   }
 
@@ -1931,7 +1931,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 
     for (auto I : ND->using_directives()) {
       NamespaceDecl *Nom = I->getNominatedNamespace();
-      if (Visited.insert(Nom).second)
+      if (Visited.insert(Nom).second && S.isVisible(I))
         Queue.push_back(Nom);
     }
   }
@@ -3349,16 +3349,24 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
           continue;
       }
 
-      if (isa<UsingShadowDecl>(D))
-        D = cast<UsingShadowDecl>(D)->getTargetDecl();
+      auto *Underlying = D;
+      if (auto *USD = dyn_cast<UsingShadowDecl>(D))
+        Underlying = USD->getTargetDecl();
 
-      if (!isa<FunctionDecl>(D) && !isa<FunctionTemplateDecl>(D))
+      if (!isa<FunctionDecl>(Underlying) &&
+          !isa<FunctionTemplateDecl>(Underlying))
         continue;
 
-      if (!isVisible(D) && !(D = findAcceptableDecl(*this, D)))
-        continue;
+      if (!isVisible(D)) {
+        D = findAcceptableDecl(*this, D);
+        if (!D)
+          continue;
+        if (auto *USD = dyn_cast<UsingShadowDecl>(D))
+          Underlying = USD->getTargetDecl();
+      }
 
-      Result.insert(D);
+      // FIXME: Preserve D as the FoundDecl.
+      Result.insert(Underlying);
     }
   }
 }
@@ -3540,6 +3548,8 @@ static void LookupVisibleDecls(DeclContext *Ctx, LookupResult &Result,
   if (QualifiedNameLookup) {
     ShadowContextRAII Shadow(Visited);
     for (auto I : Ctx->using_directives()) {
+      if (!Result.getSema().isVisible(I))
+        continue;
       LookupVisibleDecls(I->getNominatedNamespace(), Result,
                          QualifiedNameLookup, InBaseClass, Consumer, Visited,
                          IncludeDependentBases);
@@ -3746,7 +3756,7 @@ void Sema::LookupVisibleDecls(Scope *S, LookupNameKind Kind,
   // Determine the set of using directives available during
   // unqualified name lookup.
   Scope *Initial = S;
-  UnqualUsingDirectiveSet UDirs;
+  UnqualUsingDirectiveSet UDirs(*this);
   if (getLangOpts().CPlusPlus) {
     // Find the first namespace or translation-unit scope.
     while (S && !isNamespaceOrTranslationUnitScope(S))

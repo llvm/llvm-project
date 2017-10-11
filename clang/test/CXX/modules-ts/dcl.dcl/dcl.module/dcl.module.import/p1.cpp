@@ -9,12 +9,15 @@
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %t/a.b.cppm -o %t/a.b.pcm
 //
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
-// RUN:            -DMODULE_NAME=z
+// RUN:            -DMODULE_NAME=z -DINTERFACE
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
 // RUN:            -DMODULE_NAME=a.b
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %s \
 // RUN:            -DMODULE_X -DMODULE_NAME=x
 
+#ifdef INTERFACE
+export
+#endif
 module MODULE_NAME;
 
 int use_1 = a;

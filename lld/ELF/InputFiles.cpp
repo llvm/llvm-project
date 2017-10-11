@@ -344,7 +344,7 @@ void ObjFile<ELFT>::initializeSections(
         fatal(toString(this) + ": invalid sh_link index: " +
               Twine(Sec.sh_link));
       this->Sections[Sec.sh_link]->DependentSections.push_back(
-          this->Sections[I]);
+          cast<InputSection>(this->Sections[I]));
     }
   }
 }

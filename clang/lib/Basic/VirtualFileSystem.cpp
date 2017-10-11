@@ -244,7 +244,7 @@ public:
   RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
     if (!EC && Iter != llvm::sys::fs::directory_iterator()) {
       llvm::sys::fs::file_status S;
-      EC = Iter->status(S);
+      EC = llvm::sys::fs::status(Iter->path(), S, true);
       CurrentEntry = Status::copyWithNewName(S, Iter->path());
     }
   }
@@ -258,7 +258,7 @@ public:
       CurrentEntry = Status();
     } else {
       llvm::sys::fs::file_status S;
-      EC = Iter->status(S);
+      EC = llvm::sys::fs::status(Iter->path(), S, true);
       CurrentEntry = Status::copyWithNewName(S, Iter->path());
     }
     return EC;

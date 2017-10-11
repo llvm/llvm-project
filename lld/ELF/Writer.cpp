@@ -163,7 +163,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Create output sections.
   if (Script->HasSectionsCommand) {
     // If linker script contains SECTIONS commands, let it create sections.
-    Script->processCommands(Factory);
+    Script->processSectionCommands(Factory);
 
     // Linker scripts may have left some input sections unassigned.
     // Assign such sections using the default rule.
@@ -173,7 +173,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // output sections by default rules. We still need to give the
     // linker script a chance to run, because it might contain
     // non-SECTIONS commands such as ASSERT.
-    Script->processCommands(Factory);
+    Script->processSectionCommands(Factory);
     createSections();
   }
 
@@ -466,16 +466,16 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
 template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   // Create one STT_SECTION symbol for each output section we might
   // have a relocation with.
-  for (BaseCommand *Base : Script->Commands) {
+  for (BaseCommand *Base : Script->SectionCommands) {
     auto *Sec = dyn_cast<OutputSection>(Base);
     if (!Sec)
       continue;
-    auto I = llvm::find_if(Sec->Commands, [](BaseCommand *Base) {
+    auto I = llvm::find_if(Sec->SectionCommands, [](BaseCommand *Base) {
       if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
         return !ISD->Sections.empty();
       return false;
     });
-    if (I == Sec->Commands.end())
+    if (I == Sec->SectionCommands.end())
       continue;
     InputSection *IS = cast<InputSectionDescription>(*I)->Sections[0];
     if (isa<SyntheticSection>(IS) || IS->Type == SHT_REL ||
@@ -849,7 +849,7 @@ static void sortBySymbolsOrder() {
 
   // Sort sections by priority.
   DenseMap<SectionBase *, int> SectionOrder = buildSectionOrder();
-  for (BaseCommand *Base : Script->Commands)
+  for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
 }
@@ -876,7 +876,8 @@ template <class ELFT> void Writer<ELFT>::createSections() {
               Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
         Vec.push_back(Sec);
 
-  Script->Commands.insert(Script->Commands.begin(), Vec.begin(), Vec.end());
+  Script->SectionCommands.insert(Script->SectionCommands.begin(), Vec.begin(),
+                                 Vec.end());
 
   Script->fabricateDefaultCommands();
   sortBySymbolsOrder();
@@ -1051,15 +1052,15 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   if (Config->Relocatable)
     return;
 
-  for (BaseCommand *Base : Script->Commands)
+  for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       Sec->SortRank = getSectionRank(Sec);
 
   if (!Script->HasSectionsCommand) {
     // We know that all the OutputSections are contiguous in
     // this case.
-    auto E = Script->Commands.end();
-    auto I = Script->Commands.begin();
+    auto E = Script->SectionCommands.end();
+    auto I = Script->SectionCommands.begin();
     auto IsSection = [](BaseCommand *Base) { return isa<OutputSection>(Base); };
     I = std::find_if(I, E, IsSection);
     E = std::find_if(llvm::make_reverse_iterator(E),
@@ -1108,8 +1109,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   // after another commands. For the details, look at shouldSkip
   // function.
 
-  auto I = Script->Commands.begin();
-  auto E = Script->Commands.end();
+  auto I = Script->SectionCommands.begin();
+  auto E = Script->SectionCommands.end();
   auto NonScriptI = std::find_if(I, E, [](BaseCommand *Base) {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       return Sec->Live && Sec->SectionIndex == INT_MAX;
@@ -1178,8 +1179,9 @@ static void removeUnusedSyntheticSections() {
     if (!SS->empty() || !OS)
       continue;
 
-    std::vector<BaseCommand *>::iterator Empty = OS->Commands.end();
-    for (auto I = OS->Commands.begin(), E = OS->Commands.end(); I != E; ++I) {
+    std::vector<BaseCommand *>::iterator Empty = OS->SectionCommands.end();
+    for (auto I = OS->SectionCommands.begin(), E = OS->SectionCommands.end();
+         I != E; ++I) {
       BaseCommand *B = *I;
       if (auto *ISD = dyn_cast<InputSectionDescription>(B)) {
         llvm::erase_if(ISD->Sections,
@@ -1188,12 +1190,12 @@ static void removeUnusedSyntheticSections() {
           Empty = I;
       }
     }
-    if (Empty != OS->Commands.end())
-      OS->Commands.erase(Empty);
+    if (Empty != OS->SectionCommands.end())
+      OS->SectionCommands.erase(Empty);
 
     // If there are no other sections in the output section, remove it from the
     // output.
-    if (OS->Commands.empty())
+    if (OS->SectionCommands.empty())
       OS->Live = false;
   }
 }
@@ -1240,7 +1242,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // addresses of each section by section name. Add such symbols.
   if (!Config->Relocatable) {
     addStartEndSymbols();
-    for (BaseCommand *Base : Script->Commands)
+    for (BaseCommand *Base : Script->SectionCommands)
       if (auto *Sec = dyn_cast<OutputSection>(Base))
         addStartStopSymbols(Sec);
   }
@@ -1304,7 +1306,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Now that we have the final list, create a list of all the
   // OutputSections for convenience.
-  for (BaseCommand *Base : Script->Commands)
+  for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       OutputSections.push_back(Sec);
 
@@ -1440,7 +1442,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
 }
 
 template <class ELFT> OutputSection *Writer<ELFT>::findSection(StringRef Name) {
-  for (BaseCommand *Base : Script->Commands)
+  for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       if (Sec->Name == Name)
         return Sec;

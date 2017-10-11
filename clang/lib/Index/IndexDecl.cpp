@@ -666,7 +666,6 @@ public:
   }
 
   bool VisitTemplateDecl(const TemplateDecl *D) {
-    // FIXME: Template parameters.
 
     // Index the default values for the template parameters.
     const NamedDecl *Parent = D->getTemplatedDecl();
@@ -683,7 +682,7 @@ public:
         } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
           if (TTPD->hasDefaultArgument())
             handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,
-                                      /*DC=*/nullptr);
+                                      TP->getLexicalDeclContext());
         }
       }
     }

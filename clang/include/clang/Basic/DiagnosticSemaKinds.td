@@ -9084,6 +9084,14 @@ def err_module_redefinition : Error<
   "redefinition of module '%0'">;
 def note_prev_module_definition : Note<"previously defined here">;
 def note_prev_module_definition_from_ast_file : Note<"module loaded from '%0'">;
+def err_module_not_defined : Error<
+  "definition of module '%0' is not available; use -fmodule-file= to specify "
+  "path to precompiled module interface">;
+def err_module_redeclaration : Error<
+  "translation unit contains multiple module declarations">;
+def note_prev_module_declaration : Note<"previous module declaration is here">;
+def err_module_declaration_missing : Error<
+  "missing 'export module' declaration in module interface unit">;
 def err_module_private_specialization : Error<
   "%select{template|partial|member}0 specialization cannot be "
   "declared __module_private__">;

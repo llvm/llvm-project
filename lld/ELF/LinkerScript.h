@@ -75,8 +75,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  AssertKind,   // ASSERT(expr)
-  BytesDataKind // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  AssertKind, // ASSERT(expr)
+  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
 };
 
 struct BaseCommand {
@@ -89,7 +89,9 @@ struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E, std::string Loc)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
 
-  static bool classof(const BaseCommand *C);
+  static bool classof(const BaseCommand *C) {
+    return C->Kind == AssignmentKind;
+  }
 
   // The LHS of an expression. Name is either a symbol name or ".".
   StringRef Name;
@@ -140,7 +142,9 @@ struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
 
-  static bool classof(const BaseCommand *C);
+  static bool classof(const BaseCommand *C) {
+    return C->Kind == InputSectionKind;
+  }
 
   StringMatcher FilePat;
 
@@ -155,17 +159,17 @@ struct InputSectionDescription : BaseCommand {
 struct AssertCommand : BaseCommand {
   AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
 
-  static bool classof(const BaseCommand *C);
+  static bool classof(const BaseCommand *C) { return C->Kind == AssertKind; }
 
   Expr Expression;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
-struct BytesDataCommand : BaseCommand {
-  BytesDataCommand(Expr E, unsigned Size)
-      : BaseCommand(BytesDataKind), Expression(E), Size(Size) {}
+struct ByteCommand : BaseCommand {
+  ByteCommand(Expr E, unsigned Size)
+      : BaseCommand(ByteKind), Expression(E), Size(Size) {}
 
-  static bool classof(const BaseCommand *C);
+  static bool classof(const BaseCommand *C) { return C->Kind == ByteKind; }
 
   Expr Expression;
   unsigned Offset;
@@ -182,7 +186,7 @@ struct PhdrsCommand {
 };
 
 class LinkerScript final {
-  // Temporary state used in processCommands() and assignAddresses()
+  // Temporary state used in processSectionCommands() and assignAddresses()
   // that must be reinitialized for each call to the above functions, and must
   // not be used outside of the scope of a call to the above functions.
   struct AddressState {
@@ -196,13 +200,14 @@ class LinkerScript final {
 
   llvm::DenseMap<StringRef, OutputSection *> NameToOutputSection;
 
+  void addSymbol(SymbolAssignment *Cmd);
   void assignSymbol(SymbolAssignment *Cmd, bool InSec);
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
   std::vector<InputSection *>
   computeInputSections(const InputSectionDescription *);
 
-  std::vector<InputSectionBase *> createInputSectionList(OutputSection &Cmd);
+  std::vector<InputSection *> createInputSectionList(OutputSection &Cmd);
 
   std::vector<size_t> getPhdrIndices(OutputSection *Sec);
 
@@ -211,23 +216,21 @@ class LinkerScript final {
   void switchTo(OutputSection *Sec);
   uint64_t advance(uint64_t Size, unsigned Align);
   void output(InputSection *Sec);
-  void process(BaseCommand &Base);
 
-  AddressState *CurAddressState = nullptr;
+  std::unique_ptr<AddressState> Ctx;
   OutputSection *Aether;
 
   uint64_t Dot;
 
 public:
-  bool ErrorOnMissingSection = false;
   OutputSection *createOutputSection(StringRef Name, StringRef Location);
   OutputSection *getOrCreateOutputSection(StringRef Name);
 
   bool hasPhdrsCommands() { return !PhdrsCommands.empty(); }
   uint64_t getDot() { return Dot; }
-  void discard(ArrayRef<InputSectionBase *> V);
+  void discard(ArrayRef<InputSection *> V);
 
-  ExprValue getSymbolValue(const Twine &Loc, StringRef S);
+  ExprValue getSymbolValue(StringRef Name, const Twine &Loc);
 
   void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);
@@ -242,16 +245,16 @@ public:
   void assignOffsets(OutputSection *Sec);
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
-  void addSymbol(SymbolAssignment *Cmd);
-  void processCommands(OutputSectionFactory &Factory);
+  void processSectionCommands(OutputSectionFactory &Factory);
 
   // SECTIONS command list.
-  std::vector<BaseCommand *> Commands;
+  std::vector<BaseCommand *> SectionCommands;
 
   // PHDRS command list.
   std::vector<PhdrsCommand> PhdrsCommands;
 
   bool HasSectionsCommand = false;
+  bool ErrorOnMissingSection = false;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

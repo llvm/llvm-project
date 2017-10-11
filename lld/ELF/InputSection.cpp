@@ -196,10 +196,7 @@ OutputSection *SectionBase::getOutputSection() {
 // Uncompress section contents if required. Note that this function
 // is called from parallelForEach, so it must be thread-safe.
 void InputSectionBase::maybeUncompress() {
-  if (UncompressBuf)
-    return;
-
-  if (!Decompressor::isCompressedELFSection(Flags, Name))
+  if (UncompressBuf || !Decompressor::isCompressedELFSection(Flags, Name))
     return;
 
   Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
