@@ -473,7 +473,7 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti),
+    : MCTargetAsmParser(Options, sti, MII),
         ABI(MipsABIInfo::computeTargetABI(Triple(sti.getTargetTriple()),
                                           sti.getCPU(), Options)) {
     MCAsmParserExtension::Initialize(parser);

@@ -223,10 +223,19 @@ private:
 
   void InitMarkers() const;
 
-public:
-  HSACodeObject(MemoryBufferRef Buffer, std::error_code &EC)
-    : object::ELF64LEObjectFile(Buffer, EC) {
+  HSACodeObject(object::ELF64LEObjectFile &&Obj)
+    : object::ELF64LEObjectFile(std::move(Obj)) {
     InitMarkers();
+  }
+
+public:
+  static Expected<std::unique_ptr<HSACodeObject>>
+  create(MemoryBufferRef Wrapper) {
+    auto Obj = object::ELF64LEObjectFile::create(Wrapper);
+    if (auto E = Obj.takeError())
+      return std::move(E);
+    std::unique_ptr<HSACodeObject> Ret(new HSACodeObject(std::move(*Obj)));
+    return std::move(Ret);
   }
 
   typedef const_varsize_item_iterator<ELFNote> note_iterator;

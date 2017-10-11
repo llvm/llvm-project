@@ -56,10 +56,11 @@ cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
 cl::opt<std::string>
     OutputFormat("O", cl::desc("set output format to one of the following:"
                                "\n\tbinary"));
-// TODO: make this a cl::list to support removing multiple sections
-cl::opt<std::string> ToRemove("remove-section",
-                              cl::desc("Remove a specific section"));
-cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"), cl::aliasopt(ToRemove));
+
+cl::list<std::string> ToRemove("remove-section",
+                               cl::desc("Remove a specific section"));
+cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
+                    cl::aliasopt(ToRemove));
 
 void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::unique_ptr<FileOutputBuffer> Buffer;
@@ -71,8 +72,10 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   else
     Obj = llvm::make_unique<ELFObject<ELF64LE>>(ObjFile);
   if (!ToRemove.empty()) {
-    Obj->removeSections(
-        [&](const SectionBase &Sec) { return ToRemove == Sec.Name; });
+    Obj->removeSections([&](const SectionBase &Sec) {
+      return std::find(std::begin(ToRemove), std::end(ToRemove), Sec.Name) !=
+             std::end(ToRemove);
+    });
   }
   Obj->finalize();
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =

@@ -289,11 +289,14 @@ bool SectionWithStrTab::classof(const SectionBase *S) {
 }
 
 void SectionWithStrTab::initialize(SectionTableRef SecTable) {
-  setStrTab(SecTable.getSectionOfType<StringTableSection>(
-      Link,
-      "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
-      "Link field value " + Twine(Link) + " in section " + Name +
-          " is not a string table"));
+  auto StrTab = SecTable.getSection(Link,
+                                    "Link field value " + Twine(Link) +
+                                        " in section " + Name + " is invalid");
+  if (StrTab->Type != SHT_STRTAB) {
+    error("Link field value " + Twine(Link) + " in section " + Name +
+          " is not a string table");
+  }
+  setStrTab(StrTab);
 }
 
 void SectionWithStrTab::finalize() { this->Link = StrTab->Index; }
@@ -535,15 +538,6 @@ SectionTableRef Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
         initRelocations(RelSec, SymbolTable,
                         unwrapOrError(ElfFile.relas(Shdr)));
     }
-
-    if (auto Sec = dyn_cast<SectionWithStrTab>(Section.get())) {
-      Sec->setStrTab(SecTable.getSectionOfType<StringTableSection>(
-          Sec->Link,
-          "Link field value " + Twine(Sec->Link) + " in section " + Sec->Name +
-              " is invalid",
-          "Link field value " + Twine(Sec->Link) + " in section " + Sec->Name +
-              " is not a string table"));
-    }
   }
 
   return SecTable;
@@ -621,7 +615,7 @@ void Object<ELFT>::writeSectionHeaders(FileOutputBuffer &Out) const {
 template <class ELFT>
 void Object<ELFT>::writeSectionData(FileOutputBuffer &Out) const {
   for (auto &Section : Sections)
-    Section->writeSection(Out);
+      Section->writeSection(Out);
 }
 
 template <class ELFT>

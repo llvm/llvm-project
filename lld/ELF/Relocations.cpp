@@ -1024,7 +1024,7 @@ void ThunkCreator::mergeThunks() {
 }
 
 static uint32_t findEndOfFirstNonExec(OutputSection &Cmd) {
-  for (BaseCommand *Base : Cmd.Commands)
+  for (BaseCommand *Base : Cmd.SectionCommands)
     if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
       for (auto *IS : ISD->Sections)
         if ((IS->Flags & SHF_EXECINSTR) == 0)
@@ -1052,7 +1052,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
   // InputSection (IS) that we need to precede is in.
   OutputSection *TOS = IS->getParent();
   std::vector<InputSection *> *Range = nullptr;
-  for (BaseCommand *BC : TOS->Commands)
+  for (BaseCommand *BC : TOS->SectionCommands)
     if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
       InputSection *first = ISD->Sections.front();
       InputSection *last = ISD->Sections.back();
@@ -1100,7 +1100,7 @@ void ThunkCreator::forEachExecInputSection(
   for (OutputSection *OS : OutputSections) {
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *BC : OS->Commands)
+    for (BaseCommand *BC : OS->SectionCommands)
       if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
         CurTS = nullptr;
         for (InputSection *IS : ISD->Sections)

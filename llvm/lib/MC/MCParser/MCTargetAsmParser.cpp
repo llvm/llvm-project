@@ -13,8 +13,9 @@
 using namespace llvm;
 
 MCTargetAsmParser::MCTargetAsmParser(MCTargetOptions const &MCOptions,
-                                     const MCSubtargetInfo &STI)
-  : MCOptions(MCOptions), STI(&STI) {}
+                                     const MCSubtargetInfo &STI,
+                                     const MCInstrInfo &MII)
+    : MCOptions(MCOptions), STI(&STI), MII(MII) {}
 
 MCTargetAsmParser::~MCTargetAsmParser() = default;
 

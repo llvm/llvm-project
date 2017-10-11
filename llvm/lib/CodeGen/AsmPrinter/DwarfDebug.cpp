@@ -1148,7 +1148,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
   assert(CurMI);
 
-  const auto *SP = MI->getParent()->getParent()->getFunction()->getSubprogram();
+  const auto *SP = MI->getMF()->getFunction()->getSubprogram();
   if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 

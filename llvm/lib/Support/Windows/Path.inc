@@ -168,14 +168,14 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
   return SpaceInfo;
 }
 
-TimePoint<> file_status::getLastAccessedTime() const {
+TimePoint<> basic_file_status::getLastAccessedTime() const {
   FILETIME Time;
   Time.dwLowDateTime = LastAccessedTimeLow;
   Time.dwHighDateTime = LastAccessedTimeHigh;
   return toTimePoint(Time);
 }
 
-TimePoint<> file_status::getLastModificationTime() const {
+TimePoint<> basic_file_status::getLastModificationTime() const {
   FILETIME Time;
   Time.dwLowDateTime = LastWriteTimeLow;
   Time.dwHighDateTime = LastWriteTimeHigh;
@@ -569,6 +569,15 @@ static bool isReservedName(StringRef path) {
   return false;
 }
 
+static file_type file_type_from_attrs(DWORD Attrs) {
+  return (Attrs & FILE_ATTRIBUTE_DIRECTORY) ? file_type::directory_file
+                                            : file_type::regular_file;
+}
+
+static perms perms_from_attrs(DWORD Attrs) {
+  return (Attrs & FILE_ATTRIBUTE_READONLY) ? (all_read | all_exe) : all_all;
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (FileHandle == INVALID_HANDLE_VALUE)
     goto handle_status_error;
@@ -597,22 +606,14 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (!::GetFileInformationByHandle(FileHandle, &Info))
     goto handle_status_error;
 
-  {
-    file_type Type = (Info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                         ? file_type::directory_file
-                         : file_type::regular_file;
-    perms Permissions = (Info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
-                            ? (all_read | all_exe)
-                            : all_all;
-    Result = file_status(
-        Type, Permissions, Info.nNumberOfLinks,
-        Info.ftLastAccessTime.dwHighDateTime,
-        Info.ftLastAccessTime.dwLowDateTime,
-        Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
-        Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
-        Info.nFileIndexHigh, Info.nFileIndexLow);
-    return std::error_code();
-  }
+  Result = file_status(
+      file_type_from_attrs(Info.dwFileAttributes),
+      perms_from_attrs(Info.dwFileAttributes), Info.nNumberOfLinks,
+      Info.ftLastAccessTime.dwHighDateTime, Info.ftLastAccessTime.dwLowDateTime,
+      Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
+      Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
+      Info.nFileIndexHigh, Info.nFileIndexLow);
+  return std::error_code();
 
 handle_status_error:
   DWORD LastError = ::GetLastError();
@@ -798,6 +799,16 @@ int mapped_file_region::alignment() {
   return SysInfo.dwAllocationGranularity;
 }
 
+static basic_file_status status_from_find_data(WIN32_FIND_DATAW *FindData) {
+  return basic_file_status(file_type_from_attrs(FindData->dwFileAttributes),
+                           perms_from_attrs(FindData->dwFileAttributes),
+                           FindData->ftLastAccessTime.dwHighDateTime,
+                           FindData->ftLastAccessTime.dwLowDateTime,
+                           FindData->ftLastWriteTime.dwHighDateTime,
+                           FindData->ftLastWriteTime.dwLowDateTime,
+                           FindData->nFileSizeHigh, FindData->nFileSizeLow);
+}
+
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
@@ -818,7 +829,9 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
 
   //  Get the first directory entry.
   WIN32_FIND_DATAW FirstFind;
-  ScopedFindHandle FindHandle(::FindFirstFileW(c_str(path_utf16), &FirstFind));
+  ScopedFindHandle FindHandle(::FindFirstFileExW(
+      c_str(path_utf16), FindExInfoBasic, &FirstFind, FindExSearchNameMatch,
+      NULL, FIND_FIRST_EX_LARGE_FETCH));
   if (!FindHandle)
     return mapWindowsError(::GetLastError());
 
@@ -845,7 +858,8 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
   it.IterationHandle = intptr_t(FindHandle.take());
   SmallString<128> directory_entry_path(path);
   path::append(directory_entry_path, directory_entry_name_utf8);
-  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks);
+  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks,
+                                    status_from_find_data(&FirstFind));
 
   return std::error_code();
 }
@@ -881,8 +895,13 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
                       directory_entry_path_utf8))
     return ec;
 
-  it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8));
+  it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8),
+                                   status_from_find_data(&FindData));
   return std::error_code();
+}
+
+ErrorOr<basic_file_status> directory_entry::status() const {
+  return Status;
 }
 
 static std::error_code realPathFromHandle(HANDLE H,

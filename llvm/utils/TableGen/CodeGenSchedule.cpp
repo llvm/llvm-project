@@ -1478,25 +1478,25 @@ void CodeGenSchedModels::collectProcResources() {
   }
   // Add resources separately defined by each subtarget.
   RecVec WRDefs = Records.getAllDerivedDefinitions("WriteRes");
-  for (RecIter WRI = WRDefs.begin(), WRE = WRDefs.end(); WRI != WRE; ++WRI) {
-    Record *ModelDef = (*WRI)->getValueAsDef("SchedModel");
-    addWriteRes(*WRI, getProcModel(ModelDef).Index);
+  for (Record *WR : WRDefs) {
+    Record *ModelDef = WR->getValueAsDef("SchedModel");
+    addWriteRes(WR, getProcModel(ModelDef).Index);
   }
   RecVec SWRDefs = Records.getAllDerivedDefinitions("SchedWriteRes");
-  for (RecIter WRI = SWRDefs.begin(), WRE = SWRDefs.end(); WRI != WRE; ++WRI) {
-    Record *ModelDef = (*WRI)->getValueAsDef("SchedModel");
-    addWriteRes(*WRI, getProcModel(ModelDef).Index);
+  for (Record *SWR : SWRDefs) {
+    Record *ModelDef = SWR->getValueAsDef("SchedModel");
+    addWriteRes(SWR, getProcModel(ModelDef).Index);
   }
   RecVec RADefs = Records.getAllDerivedDefinitions("ReadAdvance");
-  for (RecIter RAI = RADefs.begin(), RAE = RADefs.end(); RAI != RAE; ++RAI) {
-    Record *ModelDef = (*RAI)->getValueAsDef("SchedModel");
-    addReadAdvance(*RAI, getProcModel(ModelDef).Index);
+  for (Record *RA : RADefs) {
+    Record *ModelDef = RA->getValueAsDef("SchedModel");
+    addReadAdvance(RA, getProcModel(ModelDef).Index);
   }
   RecVec SRADefs = Records.getAllDerivedDefinitions("SchedReadAdvance");
-  for (RecIter RAI = SRADefs.begin(), RAE = SRADefs.end(); RAI != RAE; ++RAI) {
-    if ((*RAI)->getValueInit("SchedModel")->isComplete()) {
-      Record *ModelDef = (*RAI)->getValueAsDef("SchedModel");
-      addReadAdvance(*RAI, getProcModel(ModelDef).Index);
+  for (Record *SRA : SRADefs) {
+    if (SRA->getValueInit("SchedModel")->isComplete()) {
+      Record *ModelDef = SRA->getValueAsDef("SchedModel");
+      addReadAdvance(SRA, getProcModel(ModelDef).Index);
     }
   }
   // Add ProcResGroups that are defined within this processor model, which may

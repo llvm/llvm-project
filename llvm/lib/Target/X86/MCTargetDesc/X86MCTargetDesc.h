@@ -81,9 +81,11 @@ MCAsmBackend *createX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
 /// PE/COFF format object files.
 ///
 /// Takes ownership of \p AB and \p CE.
-MCStreamer *createX86WinCOFFStreamer(MCContext &C, MCAsmBackend &AB,
+MCStreamer *createX86WinCOFFStreamer(MCContext &C,
+                                     std::unique_ptr<MCAsmBackend> &&AB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE,
-                                     bool RelaxAll, bool IncrementalLinkerCompatible);
+                                     bool RelaxAll,
+                                     bool IncrementalLinkerCompatible);
 
 /// Construct an X86 Mach-O object writer.
 std::unique_ptr<MCObjectWriter> createX86MachObjectWriter(raw_pwrite_stream &OS,

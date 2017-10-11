@@ -114,7 +114,14 @@ public:
   void writeSection(llvm::FileOutputBuffer &Out) const override;
 };
 
-// This is just a wraper around a StringTableBuilder that implements SectionBase
+// There are two types of string tables that can exist, dynamic and not dynamic.
+// In the dynamic case the string table is allocated. Changing a dynamic string
+// table would mean altering virtual addresses and thus the memory image. So
+// dynamic string tables should not have an interface to modify them or
+// reconstruct them. This type lets us reconstruct a string table. To avoid
+// this class being used for dynamic string tables (which has happened) the
+// classof method checks that the particular instance is not allocated. This
+// then agrees with the makeSection method used to construct most sections.
 class StringTableSection : public SectionBase {
 private:
   llvm::StringTableBuilder StrTabBuilder;
@@ -129,6 +136,8 @@ public:
   void finalize() override;
   void writeSection(llvm::FileOutputBuffer &Out) const override;
   static bool classof(const SectionBase *S) {
+    if (S->Flags & llvm::ELF::SHF_ALLOC)
+      return false;
     return S->Type == llvm::ELF::SHT_STRTAB;
   }
 };
@@ -259,11 +268,11 @@ public:
 
 class SectionWithStrTab : public Section {
 private:
-  StringTableSection *StrTab = nullptr;
+  const SectionBase *StrTab = nullptr;
 
 public:
   SectionWithStrTab(llvm::ArrayRef<uint8_t> Data) : Section(Data) {}
-  void setStrTab(StringTableSection *StringTable) { StrTab = StringTable; }
+  void setStrTab(const SectionBase *StringTable) { StrTab = StringTable; }
   void removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;

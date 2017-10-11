@@ -168,7 +168,6 @@ public:
 };
 
 class ARMAsmParser : public MCTargetAsmParser {
-  const MCInstrInfo &MII;
   const MCRegisterInfo *MRI;
   UnwindContext UC;
 
@@ -581,7 +580,7 @@ public:
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI), MII(MII), UC(Parser) {
+    : MCTargetAsmParser(Options, STI, MII), UC(Parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.

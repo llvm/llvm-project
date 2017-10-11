@@ -275,16 +275,18 @@ std::error_code CodeObjectDisassembler::Disassemble(MemoryBufferRef Buffer,
   using namespace object;
   
   // Create ELF 64-bit low-endian object file
-  std::error_code EC;
-  HSACodeObject CodeObject(Buffer, EC);
+  Expected<std::unique_ptr<HSACodeObject>> CodeObjectOrError =
+      HSACodeObject::create(Buffer);
+  if (Error E = CodeObjectOrError.takeError())
+    return errorToErrorCode(std::move(E));
+
+  std::unique_ptr<HSACodeObject> CodeObject = std::move(*CodeObjectOrError);
+
+  std::error_code EC = printNotes(CodeObject.get());
   if (EC)
     return EC;
 
-  EC = printNotes(&CodeObject);
-  if (EC)
-    return EC;
-
-  EC = printKernels(&CodeObject, ES);
+  EC = printKernels(CodeObject.get(), ES);
   if (EC)
     return EC;
 

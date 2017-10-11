@@ -7381,6 +7381,15 @@ let ExeDomain = SSEPackedDouble, Predicates = [HasAVX2, NoVLX] in
 def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
                                          v4f64, v2f64, WriteFShuffle256>, VEX_L;
 
+let Predicates = [HasAVX, NoVLX] in {
+  def : Pat<(v4f32 (X86VBroadcast (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
+            (VBROADCASTSSrm addr:$src)>;
+  def : Pat<(v8f32 (X86VBroadcast (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
+            (VBROADCASTSSYrm addr:$src)>;
+  def : Pat<(v4f64 (X86VBroadcast (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
+            (VBROADCASTSDYrm addr:$src)>;
+}
+
 //===----------------------------------------------------------------------===//
 // VBROADCAST*128 - Load from memory and broadcast 128-bit vector to both
 //                  halves of a 256-bit vector.
@@ -7860,6 +7869,15 @@ let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v2i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
             (VPBROADCASTQrm addr:$src)>;
   def : Pat<(v4i64 (X86VBroadcast (v4i64 (X86vzload addr:$src)))),
+            (VPBROADCASTQYrm addr:$src)>;
+
+  def : Pat<(v4i32 (X86VBroadcast (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
+            (VPBROADCASTDrm addr:$src)>;
+  def : Pat<(v8i32 (X86VBroadcast (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
+            (VPBROADCASTDYrm addr:$src)>;
+  def : Pat<(v2i64 (X86VBroadcast (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+            (VPBROADCASTQrm addr:$src)>;
+  def : Pat<(v4i64 (X86VBroadcast (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
             (VPBROADCASTQYrm addr:$src)>;
 }
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
