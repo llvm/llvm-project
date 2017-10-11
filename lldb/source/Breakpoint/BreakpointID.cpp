@@ -101,15 +101,24 @@ BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
 bool BreakpointID::StringIsBreakpointName(llvm::StringRef str, Status &error) {
   error.Clear();
   if (str.empty())
+  {
+    error.SetErrorStringWithFormat("Empty breakpoint names are not allowed");
     return false;
+  }
 
   // First character must be a letter or _
   if (!isalpha(str[0]) && str[0] != '_')
+  {
+    error.SetErrorStringWithFormat("Breakpoint names must start with a "
+                                   "character or underscore: %s",
+                                   str.str().c_str());
     return false;
+  }
 
   // Cannot contain ., -, or space.
   if (str.find_first_of(".- ") != llvm::StringRef::npos) {
-    error.SetErrorStringWithFormat("invalid breakpoint name: \"%s\"",
+    error.SetErrorStringWithFormat("Breakpoint names cannot contain "
+                                   "'.' or '-': \"%s\"",
                                    str.str().c_str());
     return false;
   }

@@ -53,7 +53,7 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        bool resolve_indirect_symbols)
     : m_being_created(true), m_hardware(hardware), m_target(target),
       m_filter_sp(filter_sp), m_resolver_sp(resolver_sp),
-      m_options_up(new BreakpointOptions()), m_locations(*this),
+      m_options_up(new BreakpointOptions(true)), m_locations(*this),
       m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_count(0) {
   m_being_created = false;
 }
@@ -210,7 +210,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       llvm::StringRef name;
       Status error;
       success = names_array->GetItemAtIndexAsString(i, name);
-      result_sp->AddName(name, error);
+      target.AddNameToBreakpoint(result_sp, name.str().c_str(), error);
     }
   }
 
@@ -348,6 +348,14 @@ void Breakpoint::SetOneShot(bool one_shot) {
   m_options_up->SetOneShot(one_shot);
 }
 
+bool Breakpoint::IsAutoContinue() const { 
+  return m_options_up->IsAutoContinue();
+}
+
+void Breakpoint::SetAutoContinue(bool auto_continue) {
+  m_options_up->SetAutoContinue(auto_continue);
+}
+
 void Breakpoint::SetThreadID(lldb::tid_t thread_id) {
   if (m_options_up->GetThreadSpec()->GetTID() == thread_id)
     return;
@@ -446,6 +454,10 @@ bool Breakpoint::InvokeCallback(StoppointCallbackContext *context,
 }
 
 BreakpointOptions *Breakpoint::GetOptions() { return m_options_up.get(); }
+
+const BreakpointOptions *Breakpoint::GetOptions() const {
+  return m_options_up.get();
+}
 
 void Breakpoint::ResolveBreakpoint() {
   if (m_resolver_sp)
@@ -833,18 +845,8 @@ size_t Breakpoint::GetNumResolvedLocations() const {
 
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
-bool Breakpoint::AddName(llvm::StringRef new_name, Status &error) {
-  if (new_name.empty())
-    return false;
-  if (!BreakpointID::StringIsBreakpointName(new_name, error)) {
-    error.SetErrorStringWithFormatv("input name \"{0}\" not a breakpoint name.",
-                                    new_name);
-    return false;
-  }
-  if (!error.Success())
-    return false;
-
-  m_name_list.insert(new_name);
+bool Breakpoint::AddName(llvm::StringRef new_name) {
+  m_name_list.insert(new_name.str().c_str());
   return true;
 }
 

@@ -24,11 +24,20 @@ class BreakpointCommandTestCase(TestBase):
         cls.RemoveTempFile("output2.txt")
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
-    def test(self):
+    def test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
         self.breakpoint_command_sequence()
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    def test_script_parameters(self):
+        """Test a sequence of breakpoint command add, list, and delete."""
+        self.build()
         self.breakpoint_command_script_parameters()
+
+    def test_commands_on_creation(self):
+        self.build()
+        self.breakpoint_commands_on_creation()
 
     def setUp(self):
         # Call super's setUp().
@@ -268,3 +277,23 @@ class BreakpointCommandTestCase(TestBase):
 
         # Now remove 'output-2.txt'
         os.remove('output-2.txt')
+
+    def breakpoint_commands_on_creation(self):
+        """Test that setting breakpoint commands when creating the breakpoint works"""
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target.IsValid(), "Created an invalid target.")
+
+        # Add a breakpoint.
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True,
+            extra_options='-C bt -C "thread list" -C continue')
+
+        bkpt = target.FindBreakpointByID(1)
+        self.assertTrue(bkpt.IsValid(), "Couldn't find breakpoint 1")
+        com_list = lldb.SBStringList()
+        bkpt.GetCommandLineCommands(com_list)
+        self.assertEqual(com_list.GetSize(), 3, "Got the wrong number of commands")
+        self.assertEqual(com_list.GetStringAtIndex(0), "bt", "First bt")
+        self.assertEqual(com_list.GetStringAtIndex(1), "thread list", "Next thread list")
+        self.assertEqual(com_list.GetStringAtIndex(2), "continue", "Last continue")
