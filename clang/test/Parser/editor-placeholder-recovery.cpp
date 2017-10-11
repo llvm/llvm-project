@@ -69,3 +69,7 @@ void Struct::method(<#Struct &x#>, noSupressionHere) { // expected-error {{unkno
   // expected-error@-2 {{editor placeholder in source file}}
 #endif
 }
+
+void handleTrigraph() {
+  <??=placeholder#> // expected-error {{expected expression}} expected-error {{expected expression}} expected-warning {{trigraph converted to '#' character}}
+}
