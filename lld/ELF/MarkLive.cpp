@@ -229,7 +229,7 @@ template <class ELFT> static void doGcSections() {
   MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)
     MarkSymbol(Symtab->find(S));
-  for (StringRef S : Script->Opt.ReferencedSymbols)
+  for (StringRef S : Script->ReferencedSymbols)
     MarkSymbol(Symtab->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this

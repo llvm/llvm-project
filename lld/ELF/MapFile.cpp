@@ -133,7 +133,7 @@ template <class ELFT> void elf::writeMapFile() {
     OS << OSec->Name << '\n';
 
     // Dump symbols for each input section.
-    for (BaseCommand *Base : OSec->Commands) {
+    for (BaseCommand *Base : OSec->SectionCommands) {
       auto *ISD = dyn_cast<InputSectionDescription>(Base);
       if (!ISD)
         continue;

@@ -169,7 +169,7 @@ public:
   InputSectionBase *Repl;
 
   // InputSections that are dependent on us (reverse dependency for GC)
-  llvm::TinyPtrVector<InputSectionBase *> DependentSections;
+  llvm::TinyPtrVector<InputSection *> DependentSections;
 
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;

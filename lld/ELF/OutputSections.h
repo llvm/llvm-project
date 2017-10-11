@@ -46,6 +46,7 @@ public:
   static bool classof(const SectionBase *S) {
     return S->kind() == SectionBase::Output;
   }
+
   static bool classof(const BaseCommand *C);
 
   uint64_t getLMA() const { return Addr + LMAOffset; }
@@ -88,7 +89,7 @@ public:
   Expr AlignExpr;
   Expr LMAExpr;
   Expr SubalignExpr;
-  std::vector<BaseCommand *> Commands;
+  std::vector<BaseCommand *> SectionCommands;
   std::vector<StringRef> Phdrs;
   llvm::Optional<uint32_t> Filler;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
