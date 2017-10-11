@@ -22,6 +22,7 @@
 
 // Coverage is not yet implemented in TSan.
 // XFAIL: ubsan-tsan
+// UNSUPPORTED: ubsan-standalone-static
 
 volatile int sink;
 int main(int argc, char **argv) {
