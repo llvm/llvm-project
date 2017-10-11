@@ -9,6 +9,7 @@
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
+// CHECK: "--hash-style=gnu"
 // CHECK: "-dynamic-linker" "ld.so.1"
 // CHECK: Scrt1.o
 // CHECK-NOT: crti.o
