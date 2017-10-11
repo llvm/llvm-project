@@ -36,6 +36,7 @@
 ; X86:      [[C1_END]]:
 ; X86-NEXT: [[COMPILE_END]]:
 ; X86-NEXT: .p2align	2
+; X86-NEXT:	.cv_fpo_data _f
 ; X86-NEXT:	.long	241  # Symbol subsection for f
 ; X86-NEXT:	.long	[[F1_END:.*]]-[[F1_START:.*]] # Subsection size
 ; X86-NEXT: [[F1_START]]:
@@ -70,11 +71,19 @@
 ; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
 ; OBJ32:      Relocations [
-; OBJ32-NEXT:   0x64 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x68 IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT:   0x7C IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x80 IMAGE_REL_I386_SECTION _f
+; OBJ32-NEXT:   0x44 IMAGE_REL_I386_DIR32NB _f
+; OBJ32-NEXT:   0x90 IMAGE_REL_I386_SECREL _f
+; OBJ32-NEXT:   0x94 IMAGE_REL_I386_SECTION _f
+; OBJ32-NEXT:   0xA8 IMAGE_REL_I386_SECREL _f
+; OBJ32-NEXT:   0xAC IMAGE_REL_I386_SECTION _f
 ; OBJ32-NEXT: ]
+; OBJ32:      Subsection [
+; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
+; OBJ32: 	Compile3Sym
+; OBJ32:      ]
+; OBJ32:      Subsection [
+; OBJ32-NEXT:   SubSectionType: FrameData (0xF5)
+; OBJ32:      ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32:        {{.*}}Proc{{.*}}Sym {

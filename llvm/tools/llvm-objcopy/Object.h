@@ -346,6 +346,7 @@ public:
   uint32_t Machine;
   uint32_t Version;
   uint32_t Flags;
+  bool WriteSectionHeaders = true;
 
   Object(const llvm::object::ELFObjectFile<ELFT> &Obj);
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);

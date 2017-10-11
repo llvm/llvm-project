@@ -281,7 +281,7 @@ unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case PPC::RESTORE_CRBIT:
   case PPC::LVX:
   case PPC::LXVD2X:
-  case PPC::LXVX:
+  case PPC::LXV:
   case PPC::QVLFDX:
   case PPC::QVLFSXs:
   case PPC::QVLFDXb:
@@ -335,7 +335,7 @@ unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case PPC::SPILL_CRBIT:
   case PPC::STVX:
   case PPC::STXVD2X:
-  case PPC::STXVX:
+  case PPC::STXV:
   case PPC::QVSTFDX:
   case PPC::QVSTFSXs:
   case PPC::QVSTFDXb:
@@ -1048,7 +1048,7 @@ PPCInstrInfo::StoreRegToStackSlot(MachineFunction &MF,
                                        FrameIdx));
     NonRI = true;
   } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
-    unsigned Op = Subtarget.hasP9Vector() ? PPC::STXVX : PPC::STXVD2X;
+    unsigned Op = Subtarget.hasP9Vector() ? PPC::STXV : PPC::STXVD2X;
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Op))
                                        .addReg(SrcReg,
                                                getKillRegState(isKill)),
@@ -1186,7 +1186,7 @@ bool PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
                                        FrameIdx));
     NonRI = true;
   } else if (PPC::VSRCRegClass.hasSubClassEq(RC)) {
-    unsigned Op = Subtarget.hasP9Vector() ? PPC::LXVX : PPC::LXVD2X;
+    unsigned Op = Subtarget.hasP9Vector() ? PPC::LXV : PPC::LXVD2X;
     NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Op), DestReg),
                                        FrameIdx));
     NonRI = true;

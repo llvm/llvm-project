@@ -1440,10 +1440,12 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (IsRecursiveCall || ExposesReturnsTwice || HasDynamicAlloca ||
         HasIndirectBr || HasFrameEscape) {
       if (ORE)
-        ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
-                                           CandidateCS.getInstruction())
-                  << NV("Callee", &F)
-                  << " has uninlinable pattern and cost is not fully computed");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
+                                          CandidateCS.getInstruction())
+                 << NV("Callee", &F)
+                 << " has uninlinable pattern and cost is not fully computed";
+        });
       return false;
     }
 
@@ -1453,12 +1455,13 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (IsCallerRecursive &&
         AllocatedSize > InlineConstants::TotalAllocaSizeRecursiveCaller) {
       if (ORE)
-        ORE->emit(
-            OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
-                                     CandidateCS.getInstruction())
-            << NV("Callee", &F)
-            << " is recursive and allocates too much stack space. Cost is "
-               "not fully computed");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
+                                          CandidateCS.getInstruction())
+                 << NV("Callee", &F)
+                 << " is recursive and allocates too much stack space. Cost is "
+                    "not fully computed";
+        });
       return false;
     }
 

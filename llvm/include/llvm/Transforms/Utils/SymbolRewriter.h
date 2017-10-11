@@ -1,4 +1,4 @@
-//===-- SymbolRewriter.h - Symbol Rewriting Pass ----------------*- C++ -*-===//
+//===- SymbolRewriter.h - Symbol Rewriting Pass -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -33,7 +33,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
 #define LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include <list>
 #include <memory>
@@ -42,6 +41,8 @@
 namespace llvm {
 
 class MemoryBuffer;
+class Module;
+class ModulePass;
 
 namespace yaml {
 
@@ -89,7 +90,7 @@ private:
   const Type Kind;
 };
 
-typedef std::list<std::unique_ptr<RewriteDescriptor>> RewriteDescriptorList;
+using RewriteDescriptorList = std::list<std::unique_ptr<RewriteDescriptor>>;
 
 class RewriteMapParser {
 public:
@@ -120,6 +121,7 @@ ModulePass *createRewriteSymbolsPass(SymbolRewriter::RewriteDescriptorList &);
 class RewriteSymbolPass : public PassInfoMixin<RewriteSymbolPass> {
 public:
   RewriteSymbolPass() { loadAndParseMapFiles(); }
+
   RewriteSymbolPass(SymbolRewriter::RewriteDescriptorList &DL) {
     Descriptors.splice(Descriptors.begin(), DL);
   }

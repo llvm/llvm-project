@@ -924,6 +924,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
 
   Notes:
   - .seh directives are emitted only for Windows 64 ABI
+  - .cv_fpo directives are emitted on win32 when emitting CodeView
   - .cfi directives are emitted for all other ABIs
   - for 32-bit code, substitute %e?? registers for %r??
 */
@@ -949,7 +950,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   bool IsWin64CC = STI.isCallingConvWin64(Fn->getCallingConv());
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-  bool NeedsWinCFI = IsWin64Prologue && Fn->needsUnwindTableEntry();
+  bool NeedsWin64CFI = IsWin64Prologue && Fn->needsUnwindTableEntry();
+  bool NeedsWinFPO = STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
+  bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI =
       !IsWin64Prologue && (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
   unsigned FramePtr = TRI->getFrameRegister(MF);
@@ -958,7 +961,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
   bool HasWinCFI = false;
-  
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -1120,6 +1123,15 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaRegister(
                                     nullptr, DwarfFramePtr));
       }
+
+      if (NeedsWinFPO) {
+        // .cv_fpo_setframe $FramePtr
+        HasWinCFI = true;
+        BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
+            .addImm(FramePtr)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
     }
   } else {
     assert(!IsFunclet && "funclets without FPs not yet implemented");
@@ -1155,8 +1167,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     if (NeedsWinCFI) {
       HasWinCFI = true;
-      BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg)).addImm(Reg).setMIFlag(
-          MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
+          .addImm(Reg)
+          .setMIFlag(MachineInstr::FrameSetup);
     }
   }
 
@@ -1295,6 +1308,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
     // If this is not a funclet, emit the CFI describing our frame pointer.
     if (NeedsWinCFI && !IsFunclet) {
+      assert(!NeedsWinFPO && "this setframe incompatible with FPO data");
       HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
           .addImm(FramePtr)
@@ -1333,6 +1347,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           Offset += SEHFrameOffset;
 
           HasWinCFI = true;
+          assert(!NeedsWinFPO && "SEH_SaveXMM incompatible with FPO data");
           BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SaveXMM))
               .addImm(Reg)
               .addImm(Offset)
@@ -1534,7 +1549,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       Is64BitILP32 ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
 
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-  bool NeedsWinCFI =
+  bool NeedsWin64CFI =
       IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
@@ -1639,7 +1654,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // into the epilogue.  To cope with that, we insert an epilogue marker here,
   // then replace it with a 'nop' if it ends up immediately after a CALL in the
   // final emitted code.
-  if (NeedsWinCFI && MF.hasWinCFI())
+  if (NeedsWin64CFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
   if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {

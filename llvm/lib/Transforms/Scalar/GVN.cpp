@@ -1276,8 +1276,10 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   if (V->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(V);
   markInstructionForDeletion(LI);
-  ORE->emit(OptimizationRemark(DEBUG_TYPE, "LoadPRE", LI)
-            << "load eliminated by PRE");
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "LoadPRE", LI)
+           << "load eliminated by PRE";
+  });
   ++NumPRELoad;
   return true;
 }
@@ -1286,10 +1288,12 @@ static void reportLoadElim(LoadInst *LI, Value *AvailableValue,
                            OptimizationRemarkEmitter *ORE) {
   using namespace ore;
 
-  ORE->emit(OptimizationRemark(DEBUG_TYPE, "LoadElim", LI)
-            << "load of type " << NV("Type", LI->getType()) << " eliminated"
-            << setExtraArgs() << " in favor of "
-            << NV("InfavorOfValue", AvailableValue));
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "LoadElim", LI)
+           << "load of type " << NV("Type", LI->getType()) << " eliminated"
+           << setExtraArgs() << " in favor of "
+           << NV("InfavorOfValue", AvailableValue);
+  });
 }
 
 /// Attempt to eliminate a load whose dependencies are

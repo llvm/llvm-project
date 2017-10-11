@@ -277,38 +277,48 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
 
     if (ICPInvokeOnly && dyn_cast<CallInst>(Inst)) {
       DEBUG(dbgs() << " Not promote: User options.\n");
-      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
-               << " Not promote: User options");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
+               << " Not promote: User options";
+      });
       break;
     }
     if (ICPCallOnly && dyn_cast<InvokeInst>(Inst)) {
       DEBUG(dbgs() << " Not promote: User option.\n");
-      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
-               << " Not promote: User options");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
+               << " Not promote: User options";
+      });
       break;
     }
     if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
       DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
-      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", Inst)
-               << " Not promote: Cutoff reached");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", Inst)
+               << " Not promote: Cutoff reached";
+      });
       break;
     }
 
     Function *TargetFunction = Symtab->getFunction(Target);
     if (TargetFunction == nullptr) {
       DEBUG(dbgs() << " Not promote: Cannot find the target\n");
-      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
-               << "Cannot promote indirect call: target not found");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
+               << "Cannot promote indirect call: target not found";
+      });
       break;
     }
 
     const char *Reason = nullptr;
     if (!isLegalToPromote(Inst, TargetFunction, &Reason)) {
       using namespace ore;
-      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", Inst)
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", Inst)
                << "Cannot promote indirect call to "
                << NV("TargetFunction", TargetFunction) << " with count of "
-               << NV("Count", Count) << ": " << Reason);
+               << NV("Count", Count) << ": " << Reason;
+      });
       break;
     }
 
@@ -604,10 +614,12 @@ Instruction *llvm::promoteIndirectCall(Instruction *Inst,
 
   using namespace ore;
   if (ORE)
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "Promoted", Inst)
-              << "Promote indirect call to " << NV("DirectCallee", DirectCallee)
-              << " with count " << NV("Count", Count) << " out of "
-              << NV("TotalCount", TotalCount));
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Promoted", Inst)
+             << "Promote indirect call to " << NV("DirectCallee", DirectCallee)
+             << " with count " << NV("Count", Count) << " out of "
+             << NV("TotalCount", TotalCount);
+    });
   return NewInst;
 }
 

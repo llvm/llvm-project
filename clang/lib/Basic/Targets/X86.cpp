@@ -1293,6 +1293,7 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
       .Case("amd", true)
       .Case("amdfam10h", true)
       .Case("amdfam15h", true)
+      .Case("amdfam17h", true)
       .Case("atom", true)
       .Case("barcelona", true)
       .Case("bdver1", true)

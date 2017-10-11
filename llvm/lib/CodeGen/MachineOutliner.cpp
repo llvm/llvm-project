@@ -939,29 +939,32 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       // Emit a remark explaining why we didn't outline this candidate.
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator> C =
           RepeatedSequenceLocs[0];
-      MachineOptimizationRemarkEmitter MORE(*(C.first->getMF()), nullptr);
-      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
-                                        C.first->getDebugLoc(),
-                                        C.first->getParent());
-      R << "Did not outline " << NV("Length", StringLen) << " instructions"
-        << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
-        << " locations."
-        << " Instructions from outlining all occurrences ("
-        << NV("OutliningCost", OF.getOutliningCost()) << ")"
-        << " >= Unoutlined instruction count ("
-        << NV("NotOutliningCost", StringLen * OF.OccurrenceCount) << ")"
-        << " (Also found at: ";
+      MachineOptimizationRemarkEmitter MORE(
+          *(C.first->getParent()->getParent()), nullptr);
+      MORE.emit([&]() {
+        MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
+                                          C.first->getDebugLoc(),
+                                          C.first->getParent());
+        R << "Did not outline " << NV("Length", StringLen) << " instructions"
+          << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
+          << " locations."
+          << " Instructions from outlining all occurrences ("
+          << NV("OutliningCost", OF.getOutliningCost()) << ")"
+          << " >= Unoutlined instruction count ("
+          << NV("NotOutliningCost", StringLen * OF.OccurrenceCount) << ")"
+          << " (Also found at: ";
 
-      // Tell the user the other places the candidate was found.
-      for (unsigned i = 1, e = RepeatedSequenceLocs.size(); i < e; i++) {
-        R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
-                RepeatedSequenceLocs[i].first->getDebugLoc());
-        if (i != e - 1)
-          R << ", ";
-      }
+        // Tell the user the other places the candidate was found.
+        for (unsigned i = 1, e = RepeatedSequenceLocs.size(); i < e; i++) {
+          R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
+                  RepeatedSequenceLocs[i].first->getDebugLoc());
+          if (i != e - 1)
+            R << ", ";
+        }
 
-      R << ")";
-      MORE.emit(R);
+        R << ")";
+        return R;
+      });
 
       // Move to the next candidate.
       continue;
