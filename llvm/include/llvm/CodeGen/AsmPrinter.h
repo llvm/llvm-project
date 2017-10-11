@@ -43,11 +43,11 @@ class DIE;
 class DIEAbbrev;
 class DwarfDebug;
 class GCMetadataPrinter;
+class GCStrategy;
 class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
-class GCStrategy;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
 class MachineFunction;
@@ -76,11 +76,9 @@ class TargetMachine;
 class AsmPrinter : public MachineFunctionPass {
 public:
   /// Target machine description.
-  ///
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  ///
   const MCAsmInfo *MAI;
 
   /// This is the context for the output file that we are streaming. This owns
@@ -103,7 +101,6 @@ public:
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
-  ///
   MCSymbol *CurrentFnSym = nullptr;
 
   /// The symbol used to represent the start of the current function for the
@@ -128,8 +125,8 @@ private:
   void *GCMetadataPrinters = nullptr; // Really a DenseMap.
 
   /// Emit comments in assembly output if this is true.
-  ///
   bool VerboseAsm;
+
   static char ID;
 
   /// If VerboseAsm is set, a pointer to the loop info for this function.
@@ -149,6 +146,7 @@ private:
           TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
           TimerGroupDescription(TimerGroupDescription) {}
   };
+
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
   SmallVector<HandlerInfo, 1> Handlers;
@@ -187,11 +185,9 @@ public:
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
-  ///
   bool isVerbose() const { return VerboseAsm; }
 
   /// Return a unique ID for the current function.
-  ///
   unsigned getFunctionNumber() const;
 
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
@@ -266,7 +262,6 @@ public:
   //===------------------------------------------------------------------===//
 
   /// Record analysis usage.
-  ///
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Set up the AsmPrinter when we are working on a new module. If your pass
@@ -311,12 +306,10 @@ public:
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
   /// which have been "spilled to memory" by the code generator.
-  ///
   virtual void EmitConstantPool();
 
   /// Print assembly representations of the jump tables used by the current
   /// function to the current output stream.
-  ///
   virtual void EmitJumpTableInfo();
 
   /// Emit the specified global variable to the .s file.
@@ -331,7 +324,6 @@ public:
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  ///
   void EmitAlignment(unsigned NumBits, const GlobalObject *GO = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
@@ -449,15 +441,12 @@ public:
   void printOffset(int64_t Offset, raw_ostream &OS) const;
 
   /// Emit a byte directive and value.
-  ///
   void EmitInt8(int Value) const;
 
   /// Emit a short directive and value.
-  ///
   void EmitInt16(int Value) const;
 
   /// Emit a long directive and value.
-  ///
   void EmitInt32(int Value) const;
 
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
@@ -632,6 +621,7 @@ private:
   void EmitModuleIdents(Module &M);
   void EmitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
+
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &C);
   /// Emit GlobalAlias or GlobalIFunc.
   void emitGlobalIndirectSymbol(Module &M,

@@ -100,26 +100,29 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
 }
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
-                                     MCAsmBackend &TAB, raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCAsmBackend> &&TAB,
+                                     raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createAArch64ELFStreamer(Ctx, TAB, OS, Emitter, RelaxAll);
+  return createAArch64ELFStreamer(Ctx, std::move(TAB), OS, Emitter, RelaxAll);
 }
 
-static MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
+static MCStreamer *createMachOStreamer(MCContext &Ctx,
+                                       std::unique_ptr<MCAsmBackend> &&TAB,
                                        raw_pwrite_stream &OS,
                                        MCCodeEmitter *Emitter, bool RelaxAll,
                                        bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
+  return createMachOStreamer(Ctx, std::move(TAB), OS, Emitter, RelaxAll,
                              DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
 }
 
-static MCStreamer *createWinCOFFStreamer(MCContext &Ctx, MCAsmBackend &TAB,
+static MCStreamer *createWinCOFFStreamer(MCContext &Ctx,
+                                         std::unique_ptr<MCAsmBackend> &&TAB,
                                          raw_pwrite_stream &OS,
                                          MCCodeEmitter *Emitter, bool RelaxAll,
                                          bool IncrementalLinkerCompatible) {
-  return createAArch64WinCOFFStreamer(Ctx, TAB, OS, Emitter, RelaxAll,
-                                      IncrementalLinkerCompatible);
+  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), OS, Emitter,
+                                      RelaxAll, IncrementalLinkerCompatible);
 }
 
 static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {

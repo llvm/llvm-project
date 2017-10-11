@@ -1362,6 +1362,11 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
     }
     markInstructionForDeletion(IntrinsicI);
     return false;
+  } else if (isa<Constant>(V)) {
+    // If it's not false, and constant, it must evaluate to true. This means our
+    // assume is assume(true), and thus, pointless, and we don't want to do
+    // anything more here.
+    return false;
   }
 
   Constant *True = ConstantInt::getTrue(V->getContext());

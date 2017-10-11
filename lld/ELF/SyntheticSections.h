@@ -805,7 +805,8 @@ private:
 template <class ELFT> void createCommonSections();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
-void decompressAndMergeSections();
+void decompressSections();
+void mergeSections();
 
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);

@@ -917,8 +917,8 @@ bool MachineLICM::IsLoopInvariantInst(MachineInstr &I) {
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
-            !(TRI->isCallerPreservedPhysReg(Reg, *I.getParent()->getParent())))
-            return false;
+            !(TRI->isCallerPreservedPhysReg(Reg, *I.getMF())))
+          return false;
         // Otherwise it's safe to move.
         continue;
       } else if (!MO.isDead()) {
@@ -1191,7 +1191,7 @@ MachineInstr *MachineLICM::ExtractHoistableLoad(MachineInstr *MI) {
                                     &LoadRegIndex);
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
-  MachineFunction &MF = *MI->getParent()->getParent();
+  MachineFunction &MF = *MI->getMF();
   const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI, MF);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
   unsigned Reg = MRI->createVirtualRegister(RC);

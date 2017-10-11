@@ -1361,8 +1361,7 @@ static void InsertUncondBranch(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB,
 /// Behaves like LiveRegUnits::StepForward() but also adds implicit uses to all
 /// values defined in MI which are also live/used by MI.
 static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
-  const TargetRegisterInfo *TRI = MI.getParent()->getParent()
-    ->getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
 
   // Before stepping forward past MI, remember which regs were live
   // before MI. This is needed to set the Undef flag only when reg is
@@ -1382,7 +1381,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
     unsigned Reg = Clobber.first;
     MachineOperand &Op = const_cast<MachineOperand&>(*Clobber.second);
     MachineInstr *OpMI = Op.getParent();
-    MachineInstrBuilder MIB(*OpMI->getParent()->getParent(), OpMI);
+    MachineInstrBuilder MIB(*OpMI->getMF(), OpMI);
     if (Op.isRegMask()) {
       // First handle regmasks.  They clobber any entries in the mask which
       // means that we need a def for those registers.

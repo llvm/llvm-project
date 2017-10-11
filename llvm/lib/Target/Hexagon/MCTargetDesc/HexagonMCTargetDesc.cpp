@@ -20,6 +20,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -224,13 +225,11 @@ createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new HexagonTargetAsmStreamer(S, OS, IsVerboseAsm, *IP);
 }
 
-static MCStreamer *createMCStreamer(Triple const &T,
-                                    MCContext &Context,
-                                    MCAsmBackend &MAB,
+static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
                                     raw_pwrite_stream &OS,
-                                    MCCodeEmitter *Emitter,
-                                    bool RelaxAll) {
-  return createHexagonELFStreamer(T, Context, MAB, OS, Emitter);
+                                    MCCodeEmitter *Emitter, bool RelaxAll) {
+  return createHexagonELFStreamer(T, Context, std::move(MAB), OS, Emitter);
 }
 
 static MCTargetStreamer *

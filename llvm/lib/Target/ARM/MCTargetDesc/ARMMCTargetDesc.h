@@ -93,7 +93,8 @@ MCAsmBackend *createThumbBEAsmBackend(const Target &T,
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
-MCStreamer *createARMWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
+MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                      raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll,
                                      bool IncrementalLinkerCompatible);

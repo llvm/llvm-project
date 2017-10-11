@@ -169,7 +169,7 @@ public:
   InputSectionBase *Repl;
 
   // InputSections that are dependent on us (reverse dependency for GC)
-  llvm::TinyPtrVector<InputSectionBase *> DependentSections;
+  llvm::TinyPtrVector<InputSection *> DependentSections;
 
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
@@ -214,7 +214,7 @@ private:
 // have to be as compact as possible, which is why we don't store the size (can
 // be found by looking at the next one) and put the hash in a side table.
 struct SectionPiece {
-  SectionPiece(size_t Off, bool Live = false)
+  SectionPiece(size_t Off, bool Live)
       : InputOff(Off), Live(Live || !Config->GcSections), OutputOff(-1) {}
 
   size_t InputOff : 8 * sizeof(ssize_t) - 1;

@@ -139,9 +139,10 @@ void OutputSection::addSection(InputSection *IS) {
 
   if (!IS->Assigned) {
     IS->Assigned = true;
-    if (Commands.empty() || !isa<InputSectionDescription>(Commands.back()))
-      Commands.push_back(make<InputSectionDescription>(""));
-    auto *ISD = cast<InputSectionDescription>(Commands.back());
+    if (SectionCommands.empty() ||
+        !isa<InputSectionDescription>(SectionCommands.back()))
+      SectionCommands.push_back(make<InputSectionDescription>(""));
+    auto *ISD = cast<InputSectionDescription>(SectionCommands.back());
     ISD->Sections.push_back(IS);
   }
 }
@@ -311,8 +312,9 @@ bool OutputSection::classof(const BaseCommand *C) {
 }
 
 void OutputSection::sort(std::function<int(InputSectionBase *S)> Order) {
-  assert(Commands.size() == 1);
-  sortByOrder(cast<InputSectionDescription>(Commands[0])->Sections, Order);
+  assert(SectionCommands.size() == 1);
+  sortByOrder(cast<InputSectionDescription>(SectionCommands[0])->Sections,
+              Order);
 }
 
 // Fill [Buf, Buf + Size) with Filler.
@@ -382,7 +384,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Write leading padding.
   std::vector<InputSection *> Sections;
-  for (BaseCommand *Cmd : Commands)
+  for (BaseCommand *Cmd : SectionCommands)
     if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
       for (InputSection *IS : ISD->Sections)
         if (IS->Live)
@@ -409,7 +411,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  for (BaseCommand *Base : Commands)
+  for (BaseCommand *Base : SectionCommands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base))
       writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
@@ -449,7 +451,7 @@ template <class ELFT> void OutputSection::finalize() {
   // but sort must consider them all at once.
   std::vector<InputSection **> ScriptSections;
   std::vector<InputSection *> Sections;
-  for (BaseCommand *Base : Commands) {
+  for (BaseCommand *Base : SectionCommands) {
     if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
       for (InputSection *&IS : ISD->Sections) {
         ScriptSections.push_back(&IS);
@@ -546,8 +548,8 @@ static bool compCtors(const InputSection *A, const InputSection *B) {
 // Unfortunately, the rules are different from the one for .{init,fini}_array.
 // Read the comment above.
 void OutputSection::sortCtorsDtors() {
-  assert(Commands.size() == 1);
-  auto *ISD = cast<InputSectionDescription>(Commands[0]);
+  assert(SectionCommands.size() == 1);
+  auto *ISD = cast<InputSectionDescription>(SectionCommands[0]);
   std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(), compCtors);
 }
 

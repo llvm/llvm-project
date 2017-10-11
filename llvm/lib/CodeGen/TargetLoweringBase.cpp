@@ -866,7 +866,7 @@ MachineBasicBlock *
 TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
                                    MachineBasicBlock *MBB) const {
   MachineInstr *MI = &InitialMI;
-  MachineFunction &MF = *MI->getParent()->getParent();
+  MachineFunction &MF = *MI->getMF();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // We're handling multiple types of operands here:
