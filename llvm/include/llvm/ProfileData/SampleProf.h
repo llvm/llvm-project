@@ -296,9 +296,32 @@ public:
   /// Return the total number of samples collected inside the function.
   uint64_t getTotalSamples() const { return TotalSamples; }
 
-  /// Return the total number of samples collected at the head of the
-  /// function.
+  /// Return the total number of branch samples that have the function as the
+  /// branch target. This should be equivalent to the sample of the first
+  /// instruction of the symbol. But as we directly get this info for raw
+  /// profile without referring to potentially inaccurate debug info, this
+  /// gives more accurate profile data and is preferred for standalone symbols.
   uint64_t getHeadSamples() const { return TotalHeadSamples; }
+
+  /// Return the sample count of the first instruction of the function.
+  /// The function can be either a standalone symbol or an inlined function.
+  uint64_t getEntrySamples() const {
+    // Use either BodySamples or CallsiteSamples which ever has the smaller
+    // lineno.
+    if (!BodySamples.empty() &&
+        (CallsiteSamples.empty() ||
+         BodySamples.begin()->first < CallsiteSamples.begin()->first))
+      return BodySamples.begin()->second.getSamples();
+    if (!CallsiteSamples.empty()) {
+      uint64_t T = 0;
+      // An indirect callsite may be promoted to several inlined direct calls.
+      // We need to get the sum of them.
+      for (const auto &N_FS : CallsiteSamples.begin()->second)
+        T += N_FS.second.getEntrySamples();
+      return T;
+    }
+    return 0;
+  }
 
   /// Return all the samples collected in the body of the function.
   const BodySampleMap &getBodySamples() const { return BodySamples; }

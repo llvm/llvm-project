@@ -96,7 +96,6 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   MCAsmParser &Parser;
   MCAssembler *Assembler;
-  MCInstrInfo const &MCII;
   MCInst MCB;
   bool InBrackets;
 
@@ -155,8 +154,8 @@ class HexagonAsmParser : public MCTargetAsmParser {
 public:
   HexagonAsmParser(const MCSubtargetInfo &_STI, MCAsmParser &_Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, _STI), Parser(_Parser),
-      MCII (MII), MCB(HexagonMCInstrInfo::createBundle()), InBrackets(false) {
+    : MCTargetAsmParser(Options, _STI, MII), Parser(_Parser),
+      MCB(HexagonMCInstrInfo::createBundle()), InBrackets(false) {
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
 
     MCAsmParserExtension::Initialize(_Parser);
@@ -462,9 +461,9 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
   MCB.setLoc(IDLoc);
   // Check the bundle for errors.
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  HexagonMCChecker Check(getContext(), MCII, getSTI(), MCB, *RI);
+  HexagonMCChecker Check(getContext(), MII, getSTI(), MCB, *RI);
 
-  bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(MCII, getSTI(),
+  bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(MII, getSTI(),
                                                         getContext(), MCB,
                                                         &Check);
 
@@ -608,7 +607,7 @@ bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                           MatchingInlineAsm))
     return true;
   HexagonMCInstrInfo::extendIfNeeded(
-      getParser().getContext(), MCII, MCB, *SubInst);
+      getParser().getContext(), MII, MCB, *SubInst);
   MCB.addOperand(MCOperand::createInst(SubInst));
   if (!InBrackets)
     return finishBundle(IDLoc, Out);

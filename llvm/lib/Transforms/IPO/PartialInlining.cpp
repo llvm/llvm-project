@@ -13,26 +13,54 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PartialInlining.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <tuple>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "partial-inlining"
@@ -44,6 +72,7 @@ STATISTIC(NumPartialInlined,
 static cl::opt<bool>
     DisablePartialInlining("disable-partial-inlining", cl::init(false),
                            cl::Hidden, cl::desc("Disable partial ininling"));
+
 // This is an option used by testing:
 static cl::opt<bool> SkipCostAnalysis("skip-partial-inlining-cost-analysis",
                                       cl::init(false), cl::ZeroOrMore,
@@ -76,9 +105,8 @@ static cl::opt<unsigned> ExtraOutliningPenalty(
 namespace {
 
 struct FunctionOutliningInfo {
-  FunctionOutliningInfo()
-      : Entries(), ReturnBlock(nullptr), NonReturnBlock(nullptr),
-        ReturnBlockPreds() {}
+  FunctionOutliningInfo() = default;
+
   // Returns the number of blocks to be inlined including all blocks
   // in Entries and one return block.
   unsigned GetNumInlinedBlocks() const { return Entries.size() + 1; }
@@ -86,10 +114,13 @@ struct FunctionOutliningInfo {
   // A set of blocks including the function entry that guard
   // the region to be outlined.
   SmallVector<BasicBlock *, 4> Entries;
+
   // The return block that is not included in the outlined region.
-  BasicBlock *ReturnBlock;
+  BasicBlock *ReturnBlock = nullptr;
+
   // The dominating block of the region to be outlined.
-  BasicBlock *NonReturnBlock;
+  BasicBlock *NonReturnBlock = nullptr;
+
   // The set of blocks in Entries that that are predecessors to ReturnBlock
   SmallVector<BasicBlock *, 4> ReturnBlockPreds;
 };
@@ -101,6 +132,7 @@ struct PartialInlinerImpl {
       Optional<function_ref<BlockFrequencyInfo &(Function &)>> GBFI,
       ProfileSummaryInfo *ProfSI)
       : GetAssumptionCache(GetAC), GetTTI(GTTI), GetBFI(GBFI), PSI(ProfSI) {}
+
   bool run(Module &M);
   Function *unswitchFunction(Function *F);
 
@@ -197,17 +229,18 @@ private:
   // - The second value is the estimated size of the new call sequence in
   //   basic block Cloner.OutliningCallBB;
   std::tuple<int, int> computeOutliningCosts(FunctionCloner &Cloner);
+
   // Compute the 'InlineCost' of block BB. InlineCost is a proxy used to
   // approximate both the size and runtime cost (Note that in the current
   // inline cost analysis, there is no clear distinction there either).
   static int computeBBInlineCost(BasicBlock *BB);
 
   std::unique_ptr<FunctionOutliningInfo> computeOutliningInfo(Function *F);
-
 };
 
 struct PartialInlinerLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
+
   PartialInlinerLegacyPass() : ModulePass(ID) {
     initializePartialInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -217,6 +250,7 @@ struct PartialInlinerLegacyPass : public ModulePass {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
+
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
@@ -240,7 +274,8 @@ struct PartialInlinerLegacyPass : public ModulePass {
     return PartialInlinerImpl(&GetAssumptionCache, &GetTTI, None, PSI).run(M);
   }
 };
-}
+
+} // end anonymous namespace
 
 std::unique_ptr<FunctionOutliningInfo>
 PartialInlinerImpl::computeOutliningInfo(Function *F) {
@@ -320,7 +355,6 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
 
     OutliningInfo->Entries.push_back(CurrEntry);
     CurrEntry = OtherSucc;
-
   } while (true);
 
   if (!CandidateFound)
@@ -414,7 +448,6 @@ static bool hasProfileData(Function *F, FunctionOutliningInfo *OI) {
 
 BranchProbability
 PartialInlinerImpl::getOutliningCallBBRelativeFreq(FunctionCloner &Cloner) {
-
   auto EntryFreq =
       Cloner.ClonedFuncBFI->getBlockFreq(&Cloner.ClonedFunc->getEntryBlock());
   auto OutliningCallFreq =
@@ -451,8 +484,8 @@ PartialInlinerImpl::getOutliningCallBBRelativeFreq(FunctionCloner &Cloner) {
 bool PartialInlinerImpl::shouldPartialInline(
     CallSite CS, FunctionCloner &Cloner, BlockFrequency WeightedOutliningRcost,
     OptimizationRemarkEmitter &ORE) {
-
   using namespace ore;
+
   if (SkipCostAnalysis)
     return true;
 
@@ -567,7 +600,6 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
 
 std::tuple<int, int>
 PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) {
-
   // Now compute the cost of the call sequence to the outlined function
   // 'OutlinedFunction' in BB 'OutliningCallBB':
   int OutliningFuncCallCost = computeBBInlineCost(Cloner.OutliningCallBB);
@@ -661,7 +693,6 @@ PartialInlinerImpl::FunctionCloner::FunctionCloner(Function *F,
 }
 
 void PartialInlinerImpl::FunctionCloner::NormalizeReturnBlock() {
-
   auto getFirstPHI = [](BasicBlock *BB) {
     BasicBlock::iterator I = BB->begin();
     PHINode *FirstPhi = nullptr;
@@ -798,7 +829,6 @@ PartialInlinerImpl::FunctionCloner::~FunctionCloner() {
 }
 
 Function *PartialInlinerImpl::unswitchFunction(Function *F) {
-
   if (F->hasAddressTaken())
     return nullptr;
 
@@ -955,6 +985,7 @@ bool PartialInlinerImpl::run(Module &M) {
 }
 
 char PartialInlinerLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(PartialInlinerLegacyPass, "partial-inliner",
                       "Partial Inliner", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

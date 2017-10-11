@@ -19,12 +19,14 @@
 
 #include "BranchFolding.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -41,6 +43,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -51,6 +54,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
@@ -82,8 +86,8 @@ TailMergeThreshold("tail-merge-threshold",
 // TODO: This should be replaced with a target query.
 static cl::opt<unsigned>
 TailMergeSize("tail-merge-size",
-          cl::desc("Min number of instructions to consider tail merging"),
-                              cl::init(3), cl::Hidden);
+              cl::desc("Min number of instructions to consider tail merging"),
+              cl::init(3), cl::Hidden);
 
 namespace {
 
@@ -107,6 +111,7 @@ namespace {
 } // end anonymous namespace
 
 char BranchFolderPass::ID = 0;
+
 char &llvm::BranchFolderPassID = BranchFolderPass::ID;
 
 INITIALIZE_PASS(BranchFolderPass, DEBUG_TYPE,
@@ -1864,7 +1869,6 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
   bool DontMoveAcrossStore = true;
   if (!PI->isSafeToMove(nullptr, DontMoveAcrossStore) || TII->isPredicated(*PI))
     return MBB->end();
-
 
   // Find out what registers are live. Note this routine is ignoring other live
   // registers which are only used by instructions in successor blocks.

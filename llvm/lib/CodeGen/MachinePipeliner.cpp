@@ -3353,7 +3353,7 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   unsigned BaseReg = MI->getOperand(BasePosLd).getReg();
 
   // Look for the Phi instruction.
-  MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Phi = MRI.getVRegDef(BaseReg);
   if (!Phi || !Phi->isPHI())
     return false;

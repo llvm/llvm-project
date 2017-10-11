@@ -1448,6 +1448,46 @@ void Sema::FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
   F.done();
 }
 
+/// We've determined that \p New is a redeclaration of \p Old. Check that they
+/// have compatible owning modules.
+bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
+  // FIXME: The Modules TS is not clear about how friend declarations are
+  // to be treated. It's not meaningful to have different owning modules for
+  // linkage in redeclarations of the same entity, so for now allow the
+  // redeclaration and change the owning modules to match.
+  if (New->getFriendObjectKind() &&
+      Old->getOwningModuleForLinkage() != New->getOwningModuleForLinkage()) {
+    New->setLocalOwningModule(Old->getOwningModule());
+    makeMergedDefinitionVisible(New);
+    return false;
+  }
+
+  Module *NewM = New->getOwningModule();
+  Module *OldM = Old->getOwningModule();
+  if (NewM == OldM)
+    return false;
+
+  // FIXME: Check proclaimed-ownership-declarations here too.
+  bool NewIsModuleInterface = NewM && NewM->Kind == Module::ModuleInterfaceUnit;
+  bool OldIsModuleInterface = OldM && OldM->Kind == Module::ModuleInterfaceUnit;
+  if (NewIsModuleInterface || OldIsModuleInterface) {
+    // C++ Modules TS [basic.def.odr] 6.2/6.7 [sic]:
+    //   if a declaration of D [...] appears in the purview of a module, all
+    //   other such declarations shall appear in the purview of the same module
+    Diag(New->getLocation(), diag::err_mismatched_owning_module)
+      << New
+      << NewIsModuleInterface
+      << (NewIsModuleInterface ? NewM->getFullModuleName() : "")
+      << OldIsModuleInterface
+      << (OldIsModuleInterface ? OldM->getFullModuleName() : "");
+    Diag(Old->getLocation(), diag::note_previous_declaration);
+    New->setInvalidDecl();
+    return true;
+  }
+
+  return false;
+}
+
 static bool isUsingDecl(NamedDecl *D) {
   return isa<UsingShadowDecl>(D) ||
          isa<UnresolvedUsingTypenameDecl>(D) ||
@@ -2962,6 +3002,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     New->dropAttr<InternalLinkageAttr>();
   }
 
+  if (CheckRedeclarationModuleOwnership(New, Old))
+    return true;
+
   if (!getLangOpts().CPlusPlus) {
     bool OldOvl = Old->hasAttr<OverloadableAttr>();
     if (OldOvl != New->hasAttr<OverloadableAttr>() && !Old->isImplicit()) {
@@ -3831,6 +3874,9 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     return New->setInvalidDecl();
   }
 
+  if (CheckRedeclarationModuleOwnership(New, Old))
+    return;
+
   // Variables with external linkage are analyzed in FinalizeDeclaratorGroup.
 
   // FIXME: The test for external storage here seems wrong? We still
@@ -4382,7 +4428,7 @@ static bool CheckAnonMemberRedeclaration(Sema &SemaRef,
                                          SourceLocation NameLoc,
                                          bool IsUnion) {
   LookupResult R(SemaRef, Name, NameLoc, Sema::LookupMemberName,
-                 Sema::ForRedeclaration);
+                 Sema::ForVisibleRedeclaration);
   if (!SemaRef.LookupName(R, S)) return false;
 
   // Pick a representative declaration.
@@ -5321,7 +5367,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     D.setInvalidType();
 
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        ForRedeclaration);
+                        forRedeclarationInCurContext());
 
   // See if this is a redefinition of a variable in the same scope.
   if (!D.getCXXScopeSpec().isSet()) {
@@ -5347,8 +5393,10 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static)
       CreateBuiltins = true;
 
-    if (IsLinkageLookup)
+    if (IsLinkageLookup) {
       Previous.clear(LookupRedeclarationWithLinkage);
+      Previous.setRedeclarationKind(ForExternalRedeclaration);
+    }
 
     LookupName(Previous, S, CreateBuiltins);
   } else { // Something like "int foo::x;"
@@ -7112,7 +7160,7 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
     return;
 
   LookupResult R(*this, D->getDeclName(), D->getLocation(),
-                 Sema::LookupOrdinaryName, Sema::ForRedeclaration);
+                 Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
   LookupName(R, S);
   if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
     CheckShadow(D, ShadowedDecl, R);
@@ -7688,7 +7736,7 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   LookupResult Prev(SemaRef, Name, NewFD->getLocation(),
                     IsLocalFriend ? Sema::LookupLocalFriendName
                                   : Sema::LookupOrdinaryName,
-                    Sema::ForRedeclaration);
+                    Sema::ForVisibleRedeclaration);
 
   NewFD->setInvalidDecl();
   if (IsLocalFriend)
@@ -11724,7 +11772,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
-                   ForRedeclaration);
+                   ForVisibleRedeclaration);
     LookupName(R, S);
     if (R.isSingleResult()) {
       NamedDecl *PrevDecl = R.getFoundDecl();
@@ -13284,7 +13332,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
   bool isStdBadAlloc = false;
   bool isStdAlignValT = false;
 
-  RedeclarationKind Redecl = ForRedeclaration;
+  RedeclarationKind Redecl = forRedeclarationInCurContext();
   if (TUK == TUK_Friend || TUK == TUK_Reference)
     Redecl = NotForRedeclaration;
 
@@ -13562,10 +13610,10 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     // type declared by an elaborated-type-specifier.  In C that is not correct
     // and we should instead merge compatible types found by lookup.
     if (getLangOpts().CPlusPlus) {
-      Previous.setRedeclarationKind(ForRedeclaration);
+      Previous.setRedeclarationKind(forRedeclarationInCurContext());
       LookupQualifiedName(Previous, SearchDC);
     } else {
-      Previous.setRedeclarationKind(ForRedeclaration);
+      Previous.setRedeclarationKind(forRedeclarationInCurContext());
       LookupName(Previous, S);
     }
   }
@@ -14063,6 +14111,9 @@ CreateNewDecl:
   if (!Invalid && SearchDC->isRecord())
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
+  if (PrevDecl)
+    CheckRedeclarationModuleOwnership(New, PrevDecl);
+
   if (TUK == TUK_Definition)
     New->startDefinition();
 
@@ -14416,7 +14467,8 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
 
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;
-  LookupResult Previous(*this, II, Loc, LookupMemberName, ForRedeclaration);
+  LookupResult Previous(*this, II, Loc, LookupMemberName,
+                        ForVisibleRedeclaration);
   LookupName(Previous, S);
   switch (Previous.getResultKind()) {
     case LookupResult::Found:
@@ -14804,7 +14856,7 @@ Decl *Sema::ActOnIvar(Scope *S,
 
   if (II) {
     NamedDecl *PrevDecl = LookupSingleName(S, II, Loc, LookupMemberName,
-                                           ForRedeclaration);
+                                           ForVisibleRedeclaration);
     if (PrevDecl && isDeclInScope(PrevDecl, EnclosingContext, S)
         && !isa<TagDecl>(PrevDecl)) {
       Diag(Loc, diag::err_duplicate_member) << II;
@@ -15525,7 +15577,7 @@ Sema::SkipBodyInfo Sema::shouldSkipAnonEnumBody(Scope *S, IdentifierInfo *II,
   // determine if we should merge the definition with an existing one and
   // skip the body.
   NamedDecl *PrevDecl = LookupSingleName(S, II, IILoc, LookupOrdinaryName,
-                                         ForRedeclaration);
+                                         forRedeclarationInCurContext());
   auto *PrevECD = dyn_cast_or_null<EnumConstantDecl>(PrevDecl);
   if (!PrevECD)
     return SkipBodyInfo();
@@ -15556,7 +15608,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Verify that there isn't already something declared with this name in this
   // scope.
   NamedDecl *PrevDecl = LookupSingleName(S, Id, IdLoc, LookupOrdinaryName,
-                                         ForRedeclaration);
+                                         ForVisibleRedeclaration);
   if (PrevDecl && PrevDecl->isTemplateParameter()) {
     // Maybe we will complain about the shadowed template parameter.
     DiagnoseTemplateParameterShadow(IdLoc, PrevDecl);
@@ -15583,8 +15635,7 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
     // enum constant will 'hide' the tag.
     assert((getLangOpts().CPlusPlus || !isa<TagDecl>(PrevDecl)) &&
            "Received TagDecl when not in C++!");
-    if (!isa<TagDecl>(PrevDecl) && isDeclInScope(PrevDecl, CurContext, S) &&
-        shouldLinkPossiblyHiddenDecl(PrevDecl, New)) {
+    if (!isa<TagDecl>(PrevDecl) && isDeclInScope(PrevDecl, CurContext, S)) {
       if (isa<EnumConstantDecl>(PrevDecl))
         Diag(IdLoc, diag::err_redefinition_of_enumerator) << Id;
       else
@@ -16117,6 +16168,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     // implementation unit. That indicates the 'export' is missing.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
       << FixItHint::CreateInsertion(ModuleLoc, "export ");
+    MDK = ModuleDeclKind::Interface;
     break;
 
   case LangOptions::CMK_ModuleMap:
@@ -16124,8 +16176,18 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     return nullptr;
   }
 
+  assert(ModuleScopes.size() == 1 && "expected to be at global module scope");
+
   // FIXME: Most of this work should be done by the preprocessor rather than
   // here, in order to support macro import.
+
+  // Only one module-declaration is permitted per source file.
+  if (ModuleScopes.back().Module->Kind == Module::ModuleInterfaceUnit) {
+    Diag(ModuleLoc, diag::err_module_redeclaration);
+    Diag(VisibleModules.getImportLoc(ModuleScopes.back().Module),
+         diag::note_prev_module_declaration);
+    return nullptr;
+  }
 
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
   // modules, the dots here are just another character that can appear in a
@@ -16136,8 +16198,6 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
       ModuleName += ".";
     ModuleName += Piece.first->getName();
   }
-
-  // FIXME: If we've already seen a module-declaration, report an error.
 
   // If a module name was explicitly specified on the command line, it must be
   // correct.
@@ -16153,10 +16213,8 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
   Module *Mod;
 
-  assert(ModuleScopes.size() == 1 && "expected to be at global module scope");
-
   switch (MDK) {
-  case ModuleDeclKind::Module: {
+  case ModuleDeclKind::Interface: {
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
     if (auto *M = Map.findModule(ModuleName)) {
@@ -16166,7 +16224,8 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
       else if (const auto *FE = M->getASTFile())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
             << FE->getName();
-      return nullptr;
+      Mod = M;
+      break;
     }
 
     // Create a Module for the module that we're defining.
@@ -16185,13 +16244,18 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
         PP.getIdentifierInfo(ModuleName), Path[0].second);
     Mod = getModuleLoader().loadModule(ModuleLoc, Path, Module::AllVisible,
                                        /*IsIncludeDirective=*/false);
-    if (!Mod)
-      return nullptr;
+    if (!Mod) {
+      Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
+      // Create an empty module interface unit for error recovery.
+      Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
+                                             ModuleScopes.front().Module);
+    }
     break;
   }
 
   // Switch from the global module to the named module.
   ModuleScopes.back().Module = Mod;
+  ModuleScopes.back().ModuleInterface = MDK != ModuleDeclKind::Implementation;
   VisibleModules.setVisible(Mod, ModuleLoc);
 
   // From now on, we have an owning module for all declarations we see.
@@ -16377,8 +16441,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   // C++ Modules TS draft:
   //   An export-declaration shall appear in the purview of a module other than
   //   the global module.
-  if (ModuleScopes.empty() ||
-      ModuleScopes.back().Module->Kind != Module::ModuleInterfaceUnit)
+  if (ModuleScopes.empty() || !ModuleScopes.back().ModuleInterface)
     Diag(ExportLoc, diag::err_export_not_in_module_interface);
 
   //   An export-declaration [...] shall not contain more than one

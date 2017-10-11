@@ -20,16 +20,18 @@
 #ifndef LLVM_TRANSFORMS_IPO_CONSTANTMERGE_H
 #define LLVM_TRANSFORMS_IPO_CONSTANTMERGE_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Module;
 
 /// A pass that merges duplicate global constants into a single constant.
 class ConstantMergePass : public PassInfoMixin<ConstantMergePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_CONSTANTMERGE_H

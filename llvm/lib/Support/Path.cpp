@@ -952,11 +952,11 @@ ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
   return Result;
 }
 
-bool exists(file_status status) {
+bool exists(const basic_file_status &status) {
   return status_known(status) && status.type() != file_type::file_not_found;
 }
 
-bool status_known(file_status s) {
+bool status_known(const basic_file_status &s) {
   return s.type() != file_type::status_error;
 }
 
@@ -967,7 +967,7 @@ file_type get_file_type(const Twine &Path, bool Follow) {
   return st.type();
 }
 
-bool is_directory(file_status status) {
+bool is_directory(const basic_file_status &status) {
   return status.type() == file_type::directory_file;
 }
 
@@ -979,7 +979,7 @@ std::error_code is_directory(const Twine &path, bool &result) {
   return std::error_code();
 }
 
-bool is_regular_file(file_status status) {
+bool is_regular_file(const basic_file_status &status) {
   return status.type() == file_type::regular_file;
 }
 
@@ -991,7 +991,7 @@ std::error_code is_regular_file(const Twine &path, bool &result) {
   return std::error_code();
 }
 
-bool is_symlink_file(file_status status) {
+bool is_symlink_file(const basic_file_status &status) {
   return status.type() == file_type::symlink_file;
 }
 
@@ -1003,7 +1003,7 @@ std::error_code is_symlink_file(const Twine &path, bool &result) {
   return std::error_code();
 }
 
-bool is_other(file_status status) {
+bool is_other(const basic_file_status &status) {
   return exists(status) &&
          !is_regular_file(status) &&
          !is_directory(status);
@@ -1017,15 +1017,12 @@ std::error_code is_other(const Twine &Path, bool &Result) {
   return std::error_code();
 }
 
-void directory_entry::replace_filename(const Twine &filename, file_status st) {
+void directory_entry::replace_filename(const Twine &filename,
+                                       basic_file_status st) {
   SmallString<128> path = path::parent_path(Path);
   path::append(path, filename);
   Path = path.str();
   Status = st;
-}
-
-std::error_code directory_entry::status(file_status &result) const {
-  return fs::status(Path, result, FollowSymlinks);
 }
 
 ErrorOr<perms> getPermissions(const Twine &Path) {

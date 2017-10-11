@@ -939,8 +939,7 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
       // Emit a remark explaining why we didn't outline this candidate.
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator> C =
           RepeatedSequenceLocs[0];
-      MachineOptimizationRemarkEmitter MORE(
-          *(C.first->getParent()->getParent()), nullptr);
+      MachineOptimizationRemarkEmitter MORE(*(C.first->getMF()), nullptr);
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
                                         C.first->getDebugLoc(),
                                         C.first->getParent());

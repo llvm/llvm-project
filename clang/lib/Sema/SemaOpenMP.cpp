@@ -11539,7 +11539,7 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareReductionDirectiveStart(
   Decls.reserve(ReductionTypes.size());
 
   LookupResult Lookup(*this, Name, SourceLocation(), LookupOMPReductionName,
-                      ForRedeclaration);
+                      forRedeclarationInCurContext());
   // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions
   // A reduction-identifier may not be re-declared in the current scope for the
   // same type or for a type that is compatible according to the base language

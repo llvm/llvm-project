@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCTargetDesc.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 
 using namespace llvm;
@@ -15,9 +16,9 @@ using namespace llvm;
 namespace {
 class ARMWinCOFFStreamer : public MCWinCOFFStreamer {
 public:
-  ARMWinCOFFStreamer(MCContext &C, MCAsmBackend &AB, MCCodeEmitter &CE,
-                     raw_pwrite_stream &OS)
-      : MCWinCOFFStreamer(C, AB, CE, OS) {}
+  ARMWinCOFFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> AB,
+                     MCCodeEmitter &CE, raw_pwrite_stream &OS)
+      : MCWinCOFFStreamer(C, std::move(AB), CE, OS) {}
 
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitThumbFunc(MCSymbol *Symbol) override;
@@ -37,10 +38,13 @@ void ARMWinCOFFStreamer::EmitThumbFunc(MCSymbol *Symbol) {
 }
 }
 
-MCStreamer *llvm::createARMWinCOFFStreamer(
-    MCContext &Context, MCAsmBackend &MAB, raw_pwrite_stream &OS,
-    MCCodeEmitter *Emitter, bool RelaxAll, bool IncrementalLinkerCompatible) {
-  auto *S = new ARMWinCOFFStreamer(Context, MAB, *Emitter, OS);
+MCStreamer *llvm::createARMWinCOFFStreamer(MCContext &Context,
+                                           std::unique_ptr<MCAsmBackend> &&MAB,
+                                           raw_pwrite_stream &OS,
+                                           MCCodeEmitter *Emitter,
+                                           bool RelaxAll,
+                                           bool IncrementalLinkerCompatible) {
+  auto *S = new ARMWinCOFFStreamer(Context, std::move(MAB), *Emitter, OS);
   S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }

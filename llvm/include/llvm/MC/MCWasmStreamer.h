@@ -26,9 +26,10 @@ class raw_ostream;
 
 class MCWasmStreamer : public MCObjectStreamer {
 public:
-  MCWasmStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
-                 MCCodeEmitter *Emitter)
-      : MCObjectStreamer(Context, TAB, OS, Emitter), SeenIdent(false) {}
+  MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                 raw_pwrite_stream &OS, MCCodeEmitter *Emitter)
+      : MCObjectStreamer(Context, std::move(TAB), OS, Emitter),
+        SeenIdent(false) {}
 
   ~MCWasmStreamer() override;
 

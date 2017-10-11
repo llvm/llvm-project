@@ -469,8 +469,6 @@ TEST_F(ClangRenameTest, RenameClassWithInlineMembers) {
   CompareSnippets(Expected, After);
 }
 
-// FIXME: no prefix qualifiers being added to the class definition and
-// constructor.
 TEST_F(ClangRenameTest, RenameClassWithNamespaceWithInlineMembers) {
   std::string Before = R"(
       namespace ns {
@@ -488,9 +486,9 @@ TEST_F(ClangRenameTest, RenameClassWithNamespaceWithInlineMembers) {
     )";
   std::string Expected = R"(
       namespace ns {
-      class ns::New {
+      class New {
        public:
-        ns::New() {}
+        New() {}
         ~New() {}
 
         New* next() { return next_; }
@@ -504,8 +502,6 @@ TEST_F(ClangRenameTest, RenameClassWithNamespaceWithInlineMembers) {
   CompareSnippets(Expected, After);
 }
 
-// FIXME: no prefix qualifiers being added to the class definition and
-// constructor.
 TEST_F(ClangRenameTest, RenameClassWithNamespaceWithOutOfInlineMembers) {
   std::string Before = R"(
       namespace ns {
@@ -527,9 +523,9 @@ TEST_F(ClangRenameTest, RenameClassWithNamespaceWithOutOfInlineMembers) {
     )";
   std::string Expected = R"(
       namespace ns {
-      class ns::New {
+      class New {
        public:
-        ns::New();
+        New();
         ~New();
 
         New* next();
@@ -538,7 +534,7 @@ TEST_F(ClangRenameTest, RenameClassWithNamespaceWithOutOfInlineMembers) {
         New* next_;
       };
 
-      New::ns::New() {}
+      New::New() {}
       New::~New() {}
       New* New::next() { return next_; }
       }  // namespace ns
@@ -547,12 +543,12 @@ TEST_F(ClangRenameTest, RenameClassWithNamespaceWithOutOfInlineMembers) {
   CompareSnippets(Expected, After);
 }
 
-// FIXME: no prefix qualifiers being added to the definition.
 TEST_F(ClangRenameTest, RenameClassInInheritedConstructor) {
   // `using Base::Base;` will generate an implicit constructor containing usage
   // of `::ns::Old` which should not be matched.
   std::string Before = R"(
       namespace ns {
+      class Old;
       class Old {
         int x;
       };
@@ -574,7 +570,8 @@ TEST_F(ClangRenameTest, RenameClassInInheritedConstructor) {
       })";
   std::string Expected = R"(
       namespace ns {
-      class ns::New {
+      class New;
+      class New {
         int x;
       };
       class Base {
@@ -615,7 +612,7 @@ TEST_F(ClangRenameTest, DontRenameReferencesInImplicitFunction) {
       )";
   std::string Expected = R"(
       namespace ns {
-      class ::new_ns::New {
+      class New {
       };
       } // namespace ns
       struct S {
@@ -632,7 +629,6 @@ TEST_F(ClangRenameTest, DontRenameReferencesInImplicitFunction) {
   CompareSnippets(Expected, After);
 }
 
-// FIXME: no prefix qualifiers being adding to the definition.
 TEST_F(ClangRenameTest, ReferencesInLambdaFunctionParameters) {
   std::string Before = R"(
       template <class T>
@@ -669,7 +665,7 @@ TEST_F(ClangRenameTest, ReferencesInLambdaFunctionParameters) {
       };
 
       namespace ns {
-      class ::new_ns::New {};
+      class New {};
       void f() {
         function<void(::new_ns::New)> func;
       }

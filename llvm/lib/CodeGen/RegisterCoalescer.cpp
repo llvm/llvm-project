@@ -363,7 +363,7 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
 
   if (TargetRegisterInfo::isPhysicalRegister(Dst)) {
     // Eliminate DstSub on a physreg.

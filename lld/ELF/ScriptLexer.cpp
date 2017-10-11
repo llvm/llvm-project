@@ -170,7 +170,7 @@ static std::vector<StringRef> tokenizeExpr(StringRef S) {
   if (S.startswith("\""))
     return {S};
 
-  // Split S with +-*/ as separators.
+  // Split S with operators as separators.
   std::vector<StringRef> Ret;
   while (!S.empty()) {
     size_t E = S.find_first_of(Ops);

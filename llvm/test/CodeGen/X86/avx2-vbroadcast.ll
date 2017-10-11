@@ -273,8 +273,7 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ;
 ; X64-AVX2-LABEL: broadcast_mem_v4i16_v16i16:
 ; X64-AVX2:       ## BB#0:
-; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X32-AVX512VL-LABEL: broadcast_mem_v4i16_v16i16:

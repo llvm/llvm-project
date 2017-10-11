@@ -93,8 +93,7 @@ public:
   /// Some constructors for easy use.
   MachineIRBuilder() = default;
   MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
-  MachineIRBuilder(MachineInstr &MI)
-      : MachineIRBuilder(*MI.getParent()->getParent()) {
+  MachineIRBuilder(MachineInstr &MI) : MachineIRBuilder(*MI.getMF()) {
     setInstr(MI);
   }
 

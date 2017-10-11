@@ -4460,7 +4460,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       FunctionType::ExtInfo EI(getCCForDeclaratorChunk(S, D, FTI, chunkIndex));
 
-      if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.CPlusPlus) {
+      if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.CPlusPlus
+                                            && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.
         T = Context.getFunctionNoProtoType(T, EI);
       } else {

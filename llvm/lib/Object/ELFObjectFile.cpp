@@ -37,6 +37,15 @@ using namespace object;
 ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
     : ObjectFile(Type, Source) {}
 
+template <class ELFT>
+static Expected<std::unique_ptr<ELFObjectFile<ELFT>>>
+createPtr(MemoryBufferRef Object) {
+  auto Ret = ELFObjectFile<ELFT>::create(Object);
+  if (Error E = Ret.takeError())
+    return std::move(E);
+  return make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
+}
+
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
   std::pair<unsigned char, unsigned char> Ident =
@@ -47,29 +56,22 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
   if (MaxAlignment < 2)
     return createError("Insufficient alignment");
 
-  std::error_code EC;
-  std::unique_ptr<ObjectFile> R;
   if (Ident.first == ELF::ELFCLASS32) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      R.reset(new ELFObjectFile<ELF32LE>(Obj, EC));
+      return createPtr<ELF32LE>(Obj);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      R.reset(new ELFObjectFile<ELF32BE>(Obj, EC));
+      return createPtr<ELF32BE>(Obj);
     else
       return createError("Invalid ELF data");
   } else if (Ident.first == ELF::ELFCLASS64) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      R.reset(new ELFObjectFile<ELF64LE>(Obj, EC));
+      return createPtr<ELF64LE>(Obj);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      R.reset(new ELFObjectFile<ELF64BE>(Obj, EC));
+      return createPtr<ELF64BE>(Obj);
     else
       return createError("Invalid ELF data");
-  } else {
-    return createError("Invalid ELF class");
   }
-
-  if (EC)
-    return errorCodeToError(EC);
-  return std::move(R);
+  return createError("Invalid ELF class");
 }
 
 SubtargetFeatures ELFObjectFileBase::getMIPSFeatures() const {

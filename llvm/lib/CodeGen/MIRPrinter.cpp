@@ -703,7 +703,7 @@ static LLT getTypeToPrint(const MachineInstr &MI, unsigned OpIdx,
 }
 
 void MIPrinter::print(const MachineInstr &MI) {
-  const auto *MF = MI.getParent()->getParent();
+  const auto *MF = MI.getMF();
   const auto &MRI = MF->getRegInfo();
   const auto &SubTarget = MF->getSubtarget();
   const auto *TRI = SubTarget.getRegisterInfo();
@@ -854,8 +854,7 @@ static const char *getTargetFlagName(const TargetInstrInfo *TII, unsigned TF) {
 void MIPrinter::printTargetFlags(const MachineOperand &Op) {
   if (!Op.getTargetFlags())
     return;
-  const auto *TII =
-      Op.getParent()->getParent()->getParent()->getSubtarget().getInstrInfo();
+  const auto *TII = Op.getParent()->getMF()->getSubtarget().getInstrInfo();
   assert(TII && "expected instruction info");
   auto Flags = TII->decomposeMachineOperandsTargetFlags(Op.getTargetFlags());
   OS << "target-flags(";
@@ -964,8 +963,8 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     break;
   case MachineOperand::MO_TargetIndex:
     OS << "target-index(";
-    if (const auto *Name = getTargetIndexName(
-            *Op.getParent()->getParent()->getParent(), Op.getIndex()))
+    if (const auto *Name =
+            getTargetIndexName(*Op.getParent()->getMF(), Op.getIndex()))
       OS << Name;
     else
       OS << "<unknown>";
@@ -1029,7 +1028,7 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     OS << "<mcsymbol " << *Op.getMCSymbol() << ">";
     break;
   case MachineOperand::MO_CFIIndex: {
-    const MachineFunction &MF = *Op.getParent()->getParent()->getParent();
+    const MachineFunction &MF = *Op.getParent()->getMF();
     print(MF.getFrameInstructions()[Op.getCFIIndex()], TRI);
     break;
   }
@@ -1038,7 +1037,7 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     if (ID < Intrinsic::num_intrinsics)
       OS << "intrinsic(@" << Intrinsic::getName(ID, None) << ')';
     else {
-      const MachineFunction &MF = *Op.getParent()->getParent()->getParent();
+      const MachineFunction &MF = *Op.getParent()->getMF();
       const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
       OS << "intrinsic(@" << TII->getName(ID) << ')';
     }
