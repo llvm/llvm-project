@@ -57,6 +57,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   NSErrorChecker.cpp
   NoReturnFunctionChecker.cpp
   NonNullParamChecker.cpp
+  NonnullStringConstantsChecker.cpp
   NullabilityChecker.cpp
   NumberObjectConversionChecker.cpp
   ObjCAtSyncChecker.cpp
