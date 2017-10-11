@@ -236,15 +236,8 @@ Value *getThreadID(Function *F, IRBuilder<> &IRBuilder) {
 }
 
 Value *getThreadID(Function *F) {
-  LoadInst *ThreadID = nullptr;
-  auto I = OpenMPThreadIDLoadMap.find(F);
-  if (I != OpenMPThreadIDLoadMap.end()) {
-    ThreadID = (LoadInst *)I->second;
-    assert(ThreadID != nullptr && "A null thread ID associated to F");
-    return ThreadID;
-  }
-
-  return nullptr;
+  IRBuilder <> fstart(F->getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
+  return getThreadID(F, fstart);
 }
 
 /// Creates a struct that contains elements corresponding to the arguments
@@ -367,9 +360,9 @@ Value* llvm::tapir::OpenMPABI::GetOrCreateWorker8(Function &F) {
 }
 
 void llvm::tapir::OpenMPABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
-  IRBuilder<> builder(&SI);
   std::vector<Value *> Args = {DefaultOpenMPLocation,
-                            getThreadID(SI.getParent()->getParent(), builder)};
+                            getThreadID(SI.getParent()->getParent())};
+  IRBuilder<> builder(&SI);
   emitRuntimeCall(
       createRuntimeFunction(OpenMPRuntimeFunction::OMPRTL__kmpc_omp_taskwait,
                             SI.getParent()->getParent()->getParent()),
@@ -533,14 +526,14 @@ Function* formatFunctionToTask(Function* extracted, CallInst* cal) {
     }
 
   	SmallVector< ReturnInst *,5> retinsts;
-    CloneFunctionInto(OutlinedFn, extracted, valmap, false, retinsts);
+    CloneFunctionInto(OutlinedFn, extracted, valmap, true, retinsts);
     IRBuilder.CreateBr(OutlinedFn->getBasicBlockList().getNextNode(*EntryBB));
 
   // We only need tied tasks for now and that's what the 1 value is for.
   auto *TaskFlags = CallerIRBuilder.getInt32(1);
   std::vector<Value *> AllocArgs = {
       DefaultOpenMPLocation,
-      getThreadID(cal->getParent()->getParent(), CallerIRBuilder),
+      getThreadID(cal->getParent()->getParent()),
       TaskFlags,
       KmpTaskTWithPrivatesTySize,
       SharedsTySize,
@@ -567,7 +560,7 @@ Function* formatFunctionToTask(Function* extracted, CallInst* cal) {
       }
 
   std::vector<Value *> TaskArgs = {DefaultOpenMPLocation,
-                                getThreadID(cal->getParent()->getParent(), CallerIRBuilder), NewTask};
+                                getThreadID(cal->getParent()->getParent()), NewTask};
   emitRuntimeCall(
       createRuntimeFunction(OpenMPRuntimeFunction::OMPRTL__kmpc_omp_task, M),
       TaskArgs, "", CallerIRBuilder);
