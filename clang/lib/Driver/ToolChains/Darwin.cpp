@@ -990,6 +990,25 @@ StringRef Darwin::getOSLibraryNameSuffix() const {
   llvm_unreachable("Unsupported platform");
 }
 
+/// Check if the link command contains a symbol export directive.
+static bool hasExportSymbolDirective(const ArgList &Args) {
+  for (Arg *A : Args) {
+    if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
+        !A->getOption().matches(options::OPT_Xlinker))
+      continue;
+    if (A->containsValue("-exported_symbols_list") ||
+        A->containsValue("-exported_symbol"))
+      return true;
+  }
+  return false;
+}
+
+/// Add an export directive for \p Symbol to the link command.
+static void addExportedSymbol(ArgStringList &CmdArgs, const char *Symbol) {
+  CmdArgs.push_back("-exported_symbol");
+  CmdArgs.push_back(Symbol);
+}
+
 void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
@@ -998,6 +1017,16 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
       Args, CmdArgs,
       (Twine("libclang_rt.profile_") + getOSLibraryNameSuffix() + ".a").str(),
       RuntimeLinkOptions(RLO_AlwaysLink | RLO_FirstLink));
+
+  // If we have a symbol export directive and we're linking in the profile
+  // runtime, automatically export symbols necessary to implement some of the
+  // runtime's functionality.
+  if (hasExportSymbolDirective(Args)) {
+    addExportedSymbol(CmdArgs, "_VPMergeHook");
+    addExportedSymbol(CmdArgs, "___llvm_profile_filename");
+    addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
+    addExportedSymbol(CmdArgs, "_lprofCurFilename");
+  }
 }
 
 void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
