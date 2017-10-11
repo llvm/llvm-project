@@ -155,7 +155,7 @@ class DFSanABIList {
   /// given category.
   bool isIn(const Function &F, StringRef Category) const {
     return isIn(*F.getParent(), Category) ||
-           SCL->inSection("fun", F.getName(), Category);
+           SCL->inSection("dataflow", "fun", F.getName(), Category);
   }
 
   /// Returns whether this global alias is listed in the given category.
@@ -167,15 +167,16 @@ class DFSanABIList {
       return true;
 
     if (isa<FunctionType>(GA.getValueType()))
-      return SCL->inSection("fun", GA.getName(), Category);
+      return SCL->inSection("dataflow", "fun", GA.getName(), Category);
 
-    return SCL->inSection("global", GA.getName(), Category) ||
-           SCL->inSection("type", GetGlobalTypeString(GA), Category);
+    return SCL->inSection("dataflow", "global", GA.getName(), Category) ||
+           SCL->inSection("dataflow", "type", GetGlobalTypeString(GA),
+                          Category);
   }
 
   /// Returns whether this module is listed in the given category.
   bool isIn(const Module &M, StringRef Category) const {
-    return SCL->inSection("src", M.getModuleIdentifier(), Category);
+    return SCL->inSection("dataflow", "src", M.getModuleIdentifier(), Category);
   }
 };
 

@@ -584,13 +584,16 @@ public:
         UserBlacklist(createUserBlacklist()) {}
 
   bool isBlacklisted(const DILineInfo &I) {
-    if (DefaultBlacklist && DefaultBlacklist->inSection("fun", I.FunctionName))
+    if (DefaultBlacklist &&
+        DefaultBlacklist->inSection("sancov", "fun", I.FunctionName))
       return true;
-    if (DefaultBlacklist && DefaultBlacklist->inSection("src", I.FileName))
+    if (DefaultBlacklist &&
+        DefaultBlacklist->inSection("sancov", "src", I.FileName))
       return true;
-    if (UserBlacklist && UserBlacklist->inSection("fun", I.FunctionName))
+    if (UserBlacklist &&
+        UserBlacklist->inSection("sancov", "fun", I.FunctionName))
       return true;
-    if (UserBlacklist && UserBlacklist->inSection("src", I.FileName))
+    if (UserBlacklist && UserBlacklist->inSection("sancov", "src", I.FileName))
       return true;
     return false;
   }

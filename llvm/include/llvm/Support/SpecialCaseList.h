@@ -8,15 +8,19 @@
 //
 // This is a utility class used to parse user-provided text files with
 // "special case lists" for code sanitizers. Such files are used to
-// define "ABI list" for DataFlowSanitizer and blacklists for another sanitizers
+// define an "ABI list" for DataFlowSanitizer and blacklists for sanitizers
 // like AddressSanitizer or UndefinedBehaviorSanitizer.
 //
-// Empty lines and lines starting with "#" are ignored. All the rest lines
-// should have the form:
-//   section:wildcard_expression[=category]
+// Empty lines and lines starting with "#" are ignored. Sections are defined
+// using a '[section_name]' header and can be used to specify sanitizers the
+// entries below it apply to. Section names are regular expressions, and
+// entries without a section header match all sections (e.g. an '[*]' header
+// is assumed.)
+// The remaining lines should have the form:
+//   prefix:wildcard_expression[=category]
 // If category is not specified, it is assumed to be empty string.
-// Definitions of "section" and "category" are sanitizer-specific. For example,
-// sanitizer blacklists support sections "src", "fun" and "global".
+// Definitions of "prefix" and "category" are sanitizer-specific. For example,
+// sanitizer blacklists support prefixes "src", "fun" and "global".
 // Wildcard expressions define, respectively, source files, functions or
 // globals which shouldn't be instrumented.
 // Examples of categories:
@@ -26,6 +30,7 @@
 //           detection for certain globals or source files.
 // Full special case list file example:
 // ---
+// [address]
 // # Blacklisted items:
 // fun:*_ZN4base6subtle*
 // global:*global_with_bad_access_or_initialization*
@@ -34,14 +39,13 @@
 // src:file_with_tricky_code.cc
 // src:ignore-global-initializers-issues.cc=init
 //
+// [dataflow]
 // # Functions with pure functional semantics:
 // fun:cos=functional
 // fun:sin=functional
 // ---
 // Note that the wild card is in fact an llvm::Regex, but * is automatically
 // replaced with .*
-// This is similar to the "ignore" feature of ThreadSanitizer.
-// http://code.google.com/p/data-race-test/wiki/ThreadSanitizerIgnores
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,6 +53,9 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Regex.h"
+#include "llvm/Support/TrigramIndex.h"
 #include <string>
 #include <vector>
 
@@ -76,26 +83,63 @@ public:
 
   /// Returns true, if special case list contains a line
   /// \code
-  ///   @Section:<E>=@Category
+  ///   @Prefix:<E>=@Category
   /// \endcode
-  /// and @Query satisfies a wildcard expression <E>.
-  bool inSection(StringRef Section, StringRef Query,
+  /// where @Query satisfies wildcard expression <E> in a given @Section.
+  bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
-private:
+protected:
+  // Implementations of the create*() functions that can also be used by derived
+  // classes.
+  bool createInternal(const std::vector<std::string> &Paths,
+                      std::string &Error);
+  bool createInternal(const MemoryBuffer *MB, std::string &Error);
+
   SpecialCaseList(SpecialCaseList const &) = delete;
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
-  struct Entry;
-  StringMap<StringMap<Entry>> Entries;
-  StringMap<StringMap<std::string>> Regexps;
+  /// Represents a set of regular expressions.  Regular expressions which are
+  /// "literal" (i.e. no regex metacharacters) are stored in Strings, while all
+  /// others are represented as a single pipe-separated regex in RegEx.  The
+  /// reason for doing so is efficiency; StringSet is much faster at matching
+  /// literal strings than Regex.
+  class Matcher {
+  public:
+    bool insert(std::string Regexp, std::string &REError);
+    void compile();
+    bool match(StringRef Query) const;
+
+  private:
+    StringSet<> Strings;
+    TrigramIndex Trigrams;
+    std::unique_ptr<Regex> RegEx;
+    std::string UncompiledRegEx;
+  };
+
+  using SectionEntries = StringMap<StringMap<Matcher>>;
+
+  struct Section {
+    Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)){};
+
+    std::unique_ptr<Matcher> SectionMatcher;
+    SectionEntries Entries;
+  };
+
+  std::vector<Section> Sections;
   bool IsCompiled;
 
   SpecialCaseList();
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
-  bool parse(const MemoryBuffer *MB, std::string &Error);
+  bool parse(const MemoryBuffer *MB, StringMap<size_t> &SectionsMap,
+             std::string &Error);
   /// compile() should be called once, after parsing all the memory buffers.
   void compile();
+
+  // Helper method for derived classes to search by Prefix, Query, and Category
+  // once they have already resolved a section entry.
+  bool inSection(const SectionEntries &Entries, StringRef Prefix,
+                 StringRef Query, StringRef Category) const;
 };
 
 }  // namespace llvm
