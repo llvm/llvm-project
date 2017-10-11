@@ -3555,7 +3555,8 @@ LexNextToken:
     } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
-    } else if (Char == '#' && lexEditorPlaceholder(Result, CurPtr)) {
+    } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
+               lexEditorPlaceholder(Result, CurPtr)) {
       return true;
     } else {
       Kind = tok::less;
