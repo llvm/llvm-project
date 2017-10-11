@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64WINCOFFSTREAMER_H
 
 #include "AArch64TargetStreamer.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 
 namespace {
@@ -33,11 +34,11 @@ public:
 
 namespace llvm {
 
-MCWinCOFFStreamer
-*createAArch64WinCOFFStreamer(MCContext &Context, MCAsmBackend &TAB,
-                              raw_pwrite_stream &OS,
-                              MCCodeEmitter *Emitter, bool RelaxAll,
-                              bool IncrementalLinkerCompatible);
+MCWinCOFFStreamer *
+createAArch64WinCOFFStreamer(MCContext &Context,
+                             std::unique_ptr<MCAsmBackend> TAB,
+                             raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
+                             bool RelaxAll, bool IncrementalLinkerCompatible);
 } // end llvm namespace
 
 #endif

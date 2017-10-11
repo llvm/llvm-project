@@ -19,6 +19,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -93,8 +94,9 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   }
 }
 
-MCObjectWriter *llvm::createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
-                                                        bool Is64Bit) {
+std::unique_ptr<MCObjectWriter>
+llvm::createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
+                                        bool Is64Bit) {
   auto MOTW = llvm::make_unique<WebAssemblyWasmObjectWriter>(Is64Bit);
   return createWasmObjectWriter(std::move(MOTW), OS);
 }

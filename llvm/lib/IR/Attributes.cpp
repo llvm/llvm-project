@@ -790,14 +790,12 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 // AttributeListImpl Definition
 //===----------------------------------------------------------------------===//
 
-/// Map from AttributeList index to the internal array index. Adding one works:
-///   FunctionIndex: ~0U -> 0
-///   ReturnIndex:    0  -> 1
-///   FirstArgIndex: 1.. -> 2..
+/// Map from AttributeList index to the internal array index. Adding one happens
+/// to work, but it relies on unsigned integer wrapping. MSVC warns about
+/// unsigned wrapping in constexpr functions, so write out the conditional. LLVM
+/// folds it to add anyway.
 static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
-  // MSVC warns about '~0U + 1' wrapping around when this is called on
-  // FunctionIndex, so cast to int first.
-  return static_cast<int>(Index) + 1;
+  return Index == AttributeList::FunctionIndex ? 0 : Index + 1;
 }
 
 AttributeListImpl::AttributeListImpl(LLVMContext &C,

@@ -57,11 +57,11 @@
 ; CHECK-DWARF: 0x[[ADDR:.*]]: DW_TAG_structure_type
 ; CHECK-DWARF: DW_TAG_compile_unit
 ; CHECK-DWARF: DW_TAG_variable
-; CHECK-DWARF: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[ADDR]])
+; CHECK-DWARF: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[ADDR]]
 
 ; CHECK-DWARF2: DW_TAG_compile_unit
 ; CHECK-DWARF2: DW_TAG_variable
-; CHECK-DWARF2: DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ADDR:.*]]})
+; CHECK-DWARF2: DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ADDR:.*]]}
 ; CHECK-DWARF2: [[ADDR]]: DW_TAG_structure_type
 
 source_filename = "test/DebugInfo/X86/ref_addr_relocation.ll"

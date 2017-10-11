@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/MachineModuleInfoImpls.cpp ---------------------------===//
+//===- llvm/CodeGen/MachineModuleInfoImpls.cpp ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSymbol.h"
+#include <cstdlib>
+#include <utility>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -25,7 +29,8 @@ void MachineModuleInfoMachO::anchor() {}
 void MachineModuleInfoELF::anchor() {}
 
 static int SortSymbolPair(const void *LHS, const void *RHS) {
-  typedef std::pair<MCSymbol*, MachineModuleInfoImpl::StubValueTy> PairTy;
+  using PairTy = std::pair<MCSymbol *, MachineModuleInfoImpl::StubValueTy>;
+
   const MCSymbol *LHSS = ((const PairTy *)LHS)->first;
   const MCSymbol *RHSS = ((const PairTy *)RHS)->first;
   return LHSS->getName().compare(RHSS->getName());
@@ -41,4 +46,3 @@ MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
   Map.clear();
   return List;
 }
-

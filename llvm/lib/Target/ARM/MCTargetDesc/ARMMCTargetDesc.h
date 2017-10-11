@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
+#include <memory>
 #include <string>
 
 namespace llvm {
@@ -92,23 +93,26 @@ MCAsmBackend *createThumbBEAsmBackend(const Target &T,
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
-MCStreamer *createARMWinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
+MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                      raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an ELF Mach-O object writer.
-MCObjectWriter *createARMELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                         bool IsLittleEndian);
+std::unique_ptr<MCObjectWriter> createARMELFObjectWriter(raw_pwrite_stream &OS,
+                                                         uint8_t OSABI,
+                                                         bool IsLittleEndian);
 
 /// Construct an ARM Mach-O object writer.
-MCObjectWriter *createARMMachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                          uint32_t CPUType,
-                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectWriter> createARMMachObjectWriter(raw_pwrite_stream &OS,
+                                                          bool Is64Bit,
+                                                          uint32_t CPUType,
+                                                          uint32_t CPUSubtype);
 
 /// Construct an ARM PE/COFF object writer.
-MCObjectWriter *createARMWinCOFFObjectWriter(raw_pwrite_stream &OS,
-                                             bool Is64Bit);
+std::unique_ptr<MCObjectWriter>
+createARMWinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit);
 
 /// Construct ARM Mach-O relocation info.
 MCRelocationInfo *createARMMachORelocationInfo(MCContext &Ctx);

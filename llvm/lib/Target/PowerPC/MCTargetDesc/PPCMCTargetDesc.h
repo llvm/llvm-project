@@ -19,6 +19,7 @@
 
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <memory>
 
 namespace llvm {
 
@@ -47,12 +48,15 @@ MCAsmBackend *createPPCAsmBackend(const Target &T, const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options);
 
 /// Construct an PPC ELF object writer.
-MCObjectWriter *createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                         bool IsLittleEndian, uint8_t OSABI);
+std::unique_ptr<MCObjectWriter> createPPCELFObjectWriter(raw_pwrite_stream &OS,
+                                                         bool Is64Bit,
+                                                         bool IsLittleEndian,
+                                                         uint8_t OSABI);
 /// Construct a PPC Mach-O object writer.
-MCObjectWriter *createPPCMachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                          uint32_t CPUType,
-                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectWriter> createPPCMachObjectWriter(raw_pwrite_stream &OS,
+                                                          bool Is64Bit,
+                                                          uint32_t CPUType,
+                                                          uint32_t CPUSubtype);
 
 /// Returns true iff Val consists of one contiguous run of 1s with any number of
 /// 0s on either side.  The 1s are allowed to wrap from LSB to MSB, so

@@ -316,7 +316,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
   // correctly append imp-use operands, and readsReg() strangely returns false
   // for predicated defs.
   unsigned Reg = DefMI->getOperand(DefOperIdx).getReg();
-  const MachineFunction &MF = *DefMI->getParent()->getParent();
+  const MachineFunction &MF = *DefMI->getMF();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!DepMI->readsRegister(Reg, TRI) && TII->isPredicated(*DepMI))
     return computeInstrLatency(DefMI);

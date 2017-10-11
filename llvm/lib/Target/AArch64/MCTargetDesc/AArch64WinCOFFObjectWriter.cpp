@@ -14,6 +14,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -96,7 +97,8 @@ bool AArch64WinCOFFObjectWriter::recordRelocation(const MCFixup &Fixup) const {
 
 namespace llvm {
 
-MCObjectWriter *createAArch64WinCOFFObjectWriter(raw_pwrite_stream &OS) {
+std::unique_ptr<MCObjectWriter>
+createAArch64WinCOFFObjectWriter(raw_pwrite_stream &OS) {
   auto MOTW = llvm::make_unique<AArch64WinCOFFObjectWriter>();
   return createWinCOFFObjectWriter(std::move(MOTW), OS);
 }

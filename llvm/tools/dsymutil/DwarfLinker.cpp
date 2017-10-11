@@ -623,8 +623,8 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   MS = TheTarget->createMCObjectStreamer(
-      TheTriple, *MC, *MAB, *OutFile, MCE, *MSTI, MCOptions.MCRelaxAll,
-      MCOptions.MCIncrementalLinkerCompatible,
+      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), *OutFile, MCE, *MSTI,
+      MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false);
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);

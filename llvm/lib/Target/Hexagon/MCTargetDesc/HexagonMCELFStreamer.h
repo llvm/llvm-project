@@ -22,17 +22,12 @@ class HexagonMCELFStreamer : public MCELFStreamer {
   std::unique_ptr<MCInstrInfo> MCII;
 
 public:
-  HexagonMCELFStreamer(MCContext &Context, MCAsmBackend &TAB,
-                       raw_pwrite_stream &OS, MCCodeEmitter *Emitter)
-      : MCELFStreamer(Context, TAB, OS, Emitter),
-        MCII(createHexagonMCInstrInfo()) {}
+  HexagonMCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                       raw_pwrite_stream &OS, MCCodeEmitter *Emitter);
 
-  HexagonMCELFStreamer(MCContext &Context,
-                       MCAsmBackend &TAB,
+  HexagonMCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                        raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
-                       MCAssembler *Assembler) :
-  MCELFStreamer(Context, TAB, OS, Emitter),
-  MCII (createHexagonMCInstrInfo()) {}
+                       MCAssembler *Assembler);
 
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                        bool) override;
@@ -45,8 +40,8 @@ public:
 };
 
 MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
-                                     MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                                     MCCodeEmitter *CE);
+                                     std::unique_ptr<MCAsmBackend> MAB,
+                                     raw_pwrite_stream &OS, MCCodeEmitter *CE);
 
 } // end namespace llvm
 

@@ -115,6 +115,8 @@ constexpr char ReqdWorkGroupSize[] = "ReqdWorkGroupSize";
 constexpr char WorkGroupSizeHint[] = "WorkGroupSizeHint";
 /// \brief Key for Kernel::Attr::Metadata::mVecTypeHint.
 constexpr char VecTypeHint[] = "VecTypeHint";
+/// \brief Key for Kernel::Attr::Metadata::mRuntimeHandle.
+constexpr char RuntimeHandle[] = "RuntimeHandle";
 } // end namespace Key
 
 /// \brief In-memory representation of kernel attributes metadata.
@@ -125,15 +127,17 @@ struct Metadata final {
   std::vector<uint32_t> mWorkGroupSizeHint = std::vector<uint32_t>();
   /// \brief 'vec_type_hint' attribute. Optional.
   std::string mVecTypeHint = std::string();
+  /// \brief External symbol created by runtime to store the kernel address
+  /// for enqueued blocks.
+  std::string mRuntimeHandle = std::string();
 
   /// \brief Default constructor.
   Metadata() = default;
 
   /// \returns True if kernel attributes metadata is empty, false otherwise.
   bool empty() const {
-    return mReqdWorkGroupSize.empty() &&
-           mWorkGroupSizeHint.empty() &&
-           mVecTypeHint.empty();
+    return mReqdWorkGroupSize.empty() && mWorkGroupSizeHint.empty() &&
+           mVecTypeHint.empty() && mRuntimeHandle.empty();
   }
 
   /// \returns True if kernel attributes metadata is not empty, false otherwise.

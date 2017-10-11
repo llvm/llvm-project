@@ -1,4 +1,4 @@
-//===-- DeadArgumentElimination.cpp - Eliminate dead arguments ------------===//
+//===- DeadArgumentElimination.cpp - Eliminate dead arguments -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,24 +20,36 @@
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/DIBuilder.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <set>
-#include <tuple>
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "deadargelim"
@@ -46,9 +58,10 @@ STATISTIC(NumArgumentsEliminated, "Number of unread args removed");
 STATISTIC(NumRetValsEliminated  , "Number of unused return values removed");
 STATISTIC(NumArgumentsReplacedWithUndef, 
           "Number of unread args replaced with undef");
+
 namespace {
+
   /// DAE - The dead argument elimination pass.
-  ///
   class DAE : public ModulePass {
   protected:
     // DAH uses this to specify a different ID.
@@ -56,6 +69,7 @@ namespace {
 
   public:
     static char ID; // Pass identification, replacement for typeid
+
     DAE() : ModulePass(ID) {
       initializeDAEPass(*PassRegistry::getPassRegistry());
     }
@@ -71,33 +85,38 @@ namespace {
 
     virtual bool ShouldHackArguments() const { return false; }
   };
-}
 
+} // end anonymous namespace
 
 char DAE::ID = 0;
+
 INITIALIZE_PASS(DAE, "deadargelim", "Dead Argument Elimination", false, false)
 
 namespace {
+
   /// DAH - DeadArgumentHacking pass - Same as dead argument elimination, but
   /// deletes arguments to functions which are external.  This is only for use
   /// by bugpoint.
   struct DAH : public DAE {
     static char ID;
+
     DAH() : DAE(ID) {}
 
     bool ShouldHackArguments() const override { return true; }
   };
-}
+
+} // end anonymous namespace
 
 char DAH::ID = 0;
+
 INITIALIZE_PASS(DAH, "deadarghaX0r", 
                 "Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)",
                 false, false)
 
 /// createDeadArgEliminationPass - This pass removes arguments from functions
 /// which are not used by the body of the function.
-///
 ModulePass *llvm::createDeadArgEliminationPass() { return new DAE(); }
+
 ModulePass *llvm::createDeadArgHackingPass() { return new DAH(); }
 
 /// DeleteDeadVarargs - If this is an function that takes a ... list, and if
@@ -140,7 +159,7 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   // the old function, but doesn't have isVarArg set.
   FunctionType *FTy = Fn.getFunctionType();
 
-  std::vector<Type*> Params(FTy->param_begin(), FTy->param_end());
+  std::vector<Type *> Params(FTy->param_begin(), FTy->param_end());
   FunctionType *NFTy = FunctionType::get(FTy->getReturnType(),
                                                 Params, false);
   unsigned NumArgs = Params.size();
@@ -155,7 +174,7 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   // Loop over all of the callers of the function, transforming the call sites
   // to pass in a smaller number of arguments into the new function.
   //
-  std::vector<Value*> Args;
+  std::vector<Value *> Args;
   for (Value::user_iterator I = Fn.user_begin(), E = Fn.user_end(); I != E; ) {
     CallSite CS(*I++);
     if (!CS)
@@ -214,7 +233,6 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   // Loop over the argument list, transferring uses of the old arguments over to
   // the new arguments, also transferring over the names as well.  While we're at
   // it, remove the dead arguments from the DeadArguments list.
-  //
   for (Function::arg_iterator I = Fn.arg_begin(), E = Fn.arg_end(),
        I2 = NF->arg_begin(); I != E; ++I, ++I2) {
     // Move the name and users over to the new version.
@@ -343,7 +361,6 @@ DeadArgumentEliminationPass::MarkIfNotLive(RetOrArg Use,
   return MaybeLive;
 }
 
-
 /// SurveyUse - This looks at a single use of an argument or return value
 /// and determines if it should be alive or not. Adds this use to MaybeLiveUses
 /// if it causes the used value to become MaybeLive.
@@ -460,7 +477,6 @@ DeadArgumentEliminationPass::SurveyUses(const Value *V,
 //
 // We consider arguments of non-internal functions to be intrinsically alive as
 // well as arguments to functions which have their "address taken".
-//
 void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
   // Functions with inalloca parameters are expecting args in a particular
   // register and memory layout.
@@ -478,11 +494,14 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
   }
 
   unsigned RetCount = NumRetVals(&F);
+
   // Assume all return values are dead
-  typedef SmallVector<Liveness, 5> RetVals;
+  using RetVals = SmallVector<Liveness, 5>;
+
   RetVals RetValLiveness(RetCount, MaybeLive);
 
-  typedef SmallVector<UseVector, 5> RetUses;
+  using RetUses = SmallVector<UseVector, 5>;
+
   // These vectors map each return value to the uses that make it MaybeLive, so
   // we can add those to the Uses map if the return value really turns out to be
   // MaybeLive. Initialized to a list of RetCount empty lists.
@@ -601,15 +620,15 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
 void DeadArgumentEliminationPass::MarkValue(const RetOrArg &RA, Liveness L,
                                             const UseVector &MaybeLiveUses) {
   switch (L) {
-    case Live: MarkLive(RA); break;
+    case Live:
+      MarkLive(RA);
+      break;
     case MaybeLive:
-    {
       // Note any uses of this value, so this return value can be
       // marked live whenever one of the uses becomes live.
       for (const auto &MaybeLiveUse : MaybeLiveUses)
         Uses.insert(std::make_pair(MaybeLiveUse, RA));
       break;
-    }
   }
 }
 
@@ -762,7 +781,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       // One return type? Just a simple value then, but only if we didn't use to
       // return a struct with that simple value before.
       NRetTy = RetTypes.front();
-    else if (RetTypes.size() == 0)
+    else if (RetTypes.empty())
       // No return types? Make it void, but only if we didn't use to return {}.
       NRetTy = Type::getVoidTy(F->getContext());
   }
@@ -808,7 +827,6 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
   // Loop over all of the callers of the function, transforming the call sites
   // to pass in a smaller number of arguments into the new function.
-  //
   std::vector<Value*> Args;
   while (!F->use_empty()) {
     CallSite CS(F->user_back());

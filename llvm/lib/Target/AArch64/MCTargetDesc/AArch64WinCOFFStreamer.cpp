@@ -17,19 +17,19 @@ class AArch64WinCOFFStreamer : public MCWinCOFFStreamer {
 public:
   friend class AArch64TargetWinCOFFStreamer;
 
-  AArch64WinCOFFStreamer(MCContext &C, MCAsmBackend &AB, MCCodeEmitter &CE,
-                        raw_pwrite_stream &OS)
-      : MCWinCOFFStreamer(C, AB, CE, OS) {}
+  AArch64WinCOFFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> AB,
+                         MCCodeEmitter &CE, raw_pwrite_stream &OS)
+      : MCWinCOFFStreamer(C, std::move(AB), CE, OS) {}
 };
 } // end anonymous namespace
 
 namespace llvm {
-MCWinCOFFStreamer
-*createAArch64WinCOFFStreamer(MCContext &Context, MCAsmBackend &MAB,
-                              raw_pwrite_stream &OS,
-                              MCCodeEmitter *Emitter, bool RelaxAll,
-                              bool IncrementalLinkerCompatible) {
-  auto *S = new AArch64WinCOFFStreamer(Context, MAB, *Emitter, OS);
+MCWinCOFFStreamer *
+createAArch64WinCOFFStreamer(MCContext &Context,
+                             std::unique_ptr<MCAsmBackend> MAB,
+                             raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
+                             bool RelaxAll, bool IncrementalLinkerCompatible) {
+  auto *S = new AArch64WinCOFFStreamer(Context, std::move(MAB), *Emitter, OS);
   S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }

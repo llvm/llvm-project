@@ -91,8 +91,7 @@ foo2:
 
         and sp, r1, #80008000
         and pc, r1, #80008000
-@ CHECK-ERRORS-V7: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid instruction
 @ CHECK-ERRORS: error: invalid instruction
 
         ssat r0, #1, r0, asr #32
@@ -105,10 +104,12 @@ foo2:
         and.w r2, r7, pc, lsr #16
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: invalid operand for instruction
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: note: operand must be a register in range [r0, r14]
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: invalid operand for instruction
-@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-V7: note: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: note: operand must be a register in range [r0, r14]
 
 
         @ PC is not valid as base of load

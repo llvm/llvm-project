@@ -1,4 +1,4 @@
-//===-- CodeGen/AsmPrinter/EHStreamer.cpp - Exception Directive Streamer --===//
+//===- CodeGen/AsmPrinter/EHStreamer.cpp - Exception Directive Streamer ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "EHStreamer.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 
 EHStreamer::EHStreamer(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
 
-EHStreamer::~EHStreamer() {}
+EHStreamer::~EHStreamer() = default;
 
 /// How many leading type ids two landing pads have in common.
 unsigned EHStreamer::sharedTypeIDs(const LandingPadInfo *L,
@@ -50,7 +62,6 @@ unsigned EHStreamer::
 computeActionsTable(const SmallVectorImpl<const LandingPadInfo*> &LandingPads,
                     SmallVectorImpl<ActionEntry> &Actions,
                     SmallVectorImpl<unsigned> &FirstActions) {
-
   // The action table follows the call-site table in the LSDA. The individual
   // records are of two types:
   //

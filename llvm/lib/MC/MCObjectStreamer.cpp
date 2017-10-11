@@ -25,18 +25,17 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-MCObjectStreamer::MCObjectStreamer(MCContext &Context, MCAsmBackend &TAB,
+MCObjectStreamer::MCObjectStreamer(MCContext &Context,
+                                   std::unique_ptr<MCAsmBackend> TAB,
                                    raw_pwrite_stream &OS,
                                    MCCodeEmitter *Emitter_)
-    : MCStreamer(Context),
-      Assembler(llvm::make_unique<MCAssembler>(Context, TAB, *Emitter_,
-                                               *TAB.createObjectWriter(OS))),
+    : MCStreamer(Context), ObjectWriter(TAB->createObjectWriter(OS)),
+      TAB(std::move(TAB)), Assembler(llvm::make_unique<MCAssembler>(
+                               Context, *this->TAB, *Emitter_, *ObjectWriter)),
       EmitEHFrame(true), EmitDebugFrame(false) {}
 
 MCObjectStreamer::~MCObjectStreamer() {
-  delete &Assembler->getBackend();
   delete &Assembler->getEmitter();
-  delete &Assembler->getWriter();
 }
 
 void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {

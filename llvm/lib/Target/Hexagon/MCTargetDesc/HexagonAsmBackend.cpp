@@ -65,7 +65,8 @@ public:
       OSABI(OSABI), CPU(CPU), MCII(T.createMCInstrInfo()),
       RelaxTarget(new MCInst *), Extender(nullptr) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
     return createHexagonELFObjectWriter(OS, OSABI, CPU);
   }
 

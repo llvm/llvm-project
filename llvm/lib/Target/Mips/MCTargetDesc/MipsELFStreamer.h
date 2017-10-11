@@ -33,13 +33,8 @@ class MipsELFStreamer : public MCELFStreamer {
   SmallVector<MCSymbol*, 4> Labels;
 
 public:
-  MipsELFStreamer(MCContext &Context, MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                  MCCodeEmitter *Emitter)
-      : MCELFStreamer(Context, MAB, OS, Emitter) {
-    RegInfoRecord = new MipsRegInfoRecord(this, Context);
-    MipsOptionRecords.push_back(
-        std::unique_ptr<MipsRegInfoRecord>(RegInfoRecord));
-  }
+  MipsELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
+                  raw_pwrite_stream &OS, MCCodeEmitter *Emitter);
 
   /// Overriding this function allows us to add arbitrary behaviour before the
   /// \p Inst is actually emitted. For example, we can inspect the operands and
@@ -69,7 +64,8 @@ public:
   void createPendingLabelRelocs();
 };
 
-MCELFStreamer *createMipsELFStreamer(MCContext &Context, MCAsmBackend &MAB,
+MCELFStreamer *createMipsELFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> MAB,
                                      raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll);
 } // end namespace llvm

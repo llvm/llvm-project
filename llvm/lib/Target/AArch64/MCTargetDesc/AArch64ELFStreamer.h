@@ -18,7 +18,8 @@
 
 namespace llvm {
 
-MCELFStreamer *createAArch64ELFStreamer(MCContext &Context, MCAsmBackend &TAB,
+MCELFStreamer *createAArch64ELFStreamer(MCContext &Context,
+                                        std::unique_ptr<MCAsmBackend> TAB,
                                         raw_pwrite_stream &OS,
                                         MCCodeEmitter *Emitter, bool RelaxAll);
 }

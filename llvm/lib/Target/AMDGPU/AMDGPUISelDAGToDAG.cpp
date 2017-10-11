@@ -18,6 +18,7 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
 #include "SIDefines.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
@@ -69,12 +70,14 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // make the right decision when generating code for different targets.
   const AMDGPUSubtarget *Subtarget;
   AMDGPUAS AMDGPUASI;
+  bool EnableLateStructurizeCFG;
 
 public:
   explicit AMDGPUDAGToDAGISel(TargetMachine *TM = nullptr,
                               CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
     : SelectionDAGISel(*TM, OptLevel) {
     AMDGPUASI = AMDGPU::getAMDGPUAS(*TM);
+    EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
   }
   ~AMDGPUDAGToDAGISel() override = default;
 
@@ -1235,24 +1238,30 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
                                              SDValue &SOffset,
                                              SDValue &ImmOffset) const {
   SDLoc DL(Constant);
+  const uint32_t Align = 4;
+  const uint32_t MaxImm = alignDown(4095, Align);
   uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
   uint32_t Overflow = 0;
 
-  if (Imm >= 4096) {
-    if (Imm <= 4095 + 64) {
-      // Use an SOffset inline constant for 1..64
-      Overflow = Imm - 4095;
-      Imm = 4095;
+  if (Imm > MaxImm) {
+    if (Imm <= MaxImm + 64) {
+      // Use an SOffset inline constant for 4..64
+      Overflow = Imm - MaxImm;
+      Imm = MaxImm;
     } else {
       // Try to keep the same value in SOffset for adjacent loads, so that
       // the corresponding register contents can be re-used.
       //
-      // Load values with all low-bits set into SOffset, so that a larger
-      // range of values can be covered using s_movk_i32
-      uint32_t High = (Imm + 1) & ~4095;
-      uint32_t Low = (Imm + 1) & 4095;
+      // Load values with all low-bits (except for alignment bits) set into
+      // SOffset, so that a larger range of values can be covered using
+      // s_movk_i32.
+      //
+      // Atomic operations fail to work correctly when individual address
+      // components are unaligned, even if their sum is aligned.
+      uint32_t High = (Imm + Align) & ~4095;
+      uint32_t Low = (Imm + Align) & 4095;
       Imm = Low;
-      Overflow = High - 1;
+      Overflow = High - Align;
     }
   }
 
@@ -1636,16 +1645,13 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     return;
   }
 
-  if (isCBranchSCC(N)) {
-    // This brcond will use S_CBRANCH_SCC*, so let tablegen handle it.
-    SelectCode(N);
-    return;
-  }
-
+  bool UseSCCBr = isCBranchSCC(N) && isUniformBr(N);
+  unsigned BrOp = UseSCCBr ? AMDGPU::S_CBRANCH_SCC1 : AMDGPU::S_CBRANCH_VCCNZ;
+  unsigned CondReg = UseSCCBr ? AMDGPU::SCC : AMDGPU::VCC;
   SDLoc SL(N);
 
-  SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, AMDGPU::VCC, Cond);
-  CurDAG->SelectNodeTo(N, AMDGPU::S_CBRANCH_VCCNZ, MVT::Other,
+  SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, CondReg, Cond);
+  CurDAG->SelectNodeTo(N, BrOp, MVT::Other,
                        N->getOperand(2), // Basic Block
                        VCC.getValue(0));
 }

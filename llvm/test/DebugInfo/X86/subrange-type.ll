@@ -3,7 +3,7 @@
 
 ; Make sure that the base type from the subrange type has a name.
 ; CHECK: DW_TAG_subrange_type
-; CHECK-NEXT: DW_AT_type [DW_FORM_ref4]     (cu + 0x{{[0-9a-f]+}} => {[[SUBTYPE:0x[0-9a-f]*]]})
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4]     (cu + 0x{{[0-9a-f]+}} => {[[SUBTYPE:0x[0-9a-f]*]]}
 ; CHECK: [[SUBTYPE]]: DW_TAG_base_type
 ; CHECK-NEXT: DW_AT_name
 

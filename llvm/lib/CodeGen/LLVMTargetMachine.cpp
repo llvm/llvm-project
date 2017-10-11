@@ -20,6 +20,7 @@
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -163,7 +164,8 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
-        T, Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+        T, Context, std::unique_ptr<MCAsmBackend>(MAB), Out, MCE, STI,
+        Options.MCOptions.MCRelaxAll,
         Options.MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     break;
@@ -238,7 +240,8 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const Triple &T = getTargetTriple();
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), Out, MCE, STI,
+      Options.MCOptions.MCRelaxAll,
       Options.MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ true));
 
