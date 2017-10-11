@@ -35,3 +35,7 @@ x:
 // Module index is always 1 for executable
 // CHECK-NEXT:  13060 01000000 00000000
 
+
+// Without any definition of __tls_get_addr we get an error
+// RUN: not ld.lld  %t.o -o %t 2>&1 | FileCheck --check-prefix=ERR %s
+// ERR: error: undefined symbol: __tls_get_addr
