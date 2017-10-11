@@ -1,4 +1,4 @@
-//===-- PrologEpilogInserter.cpp - Insert Prolog/Epilog code in function --===//
+//===- PrologEpilogInserter.cpp - Insert Prolog/Epilog code in function ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,40 +16,66 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <climits>
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "prologepilog"
 
-typedef SmallVector<MachineBasicBlock *, 4> MBBVector;
+using MBBVector = SmallVector<MachineBasicBlock *, 4>;
+
 static void spillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
                                  unsigned &MinCSFrameIndex,
                                  unsigned &MaxCXFrameIndex,
@@ -57,9 +83,11 @@ static void spillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
                                  const MBBVector &RestoreBlocks);
 
 namespace {
+
 class PEI : public MachineFunctionPass {
 public:
   static char ID;
+
   PEI() : MachineFunctionPass(ID) {
     initializePEIPass(*PassRegistry::getPassRegistry());
   }
@@ -68,7 +96,6 @@ public:
 
   /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
   /// frame indexes with appropriate references.
-  ///
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
@@ -105,9 +132,11 @@ private:
                            int &SPAdj);
   void insertPrologEpilogCode(MachineFunction &Fn);
 };
-} // namespace
+
+} // end anonymous namespace
 
 char PEI::ID = 0;
+
 char &llvm::PrologEpilogCodeInserterID = PEI::ID;
 
 static cl::opt<unsigned>
@@ -141,13 +170,11 @@ void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-
 /// StackObjSet - A set of stack object indexes
-typedef SmallSetVector<int, 8> StackObjSet;
+using StackObjSet = SmallSetVector<int, 8>;
 
 /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
 /// frame indexes with appropriate references.
-///
 bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   const Function* F = Fn.getFunction();
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
@@ -552,7 +579,6 @@ AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
 
 /// Compute which bytes of fixed and callee-save stack area are unused and keep
 /// track of them in StackBytesFree.
-///
 static inline void
 computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
                       unsigned MinCSFrameIndex, unsigned MaxCSFrameIndex,
@@ -593,7 +619,6 @@ computeFreeStackSlots(MachineFrameInfo &MFI, bool StackGrowsDown,
 
 /// Assign frame object to an unused portion of the stack in the fixed stack
 /// object range.  Return true if the allocation was successful.
-///
 static inline bool scavengeStackSlot(MachineFrameInfo &MFI, int FrameIdx,
                                      bool StackGrowsDown, unsigned MaxAlign,
                                      BitVector &StackBytesFree) {
@@ -670,7 +695,6 @@ AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
 
 /// calculateFrameObjectOffsets - Calculate actual frame offsets for all of the
 /// abstract stack objects.
-///
 void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
   StackProtector *SP = &getAnalysis<StackProtector>();
@@ -792,7 +816,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   }
 
   // Retrieve the Exception Handler registration node.
-  int EHRegNodeFrameIndex = INT_MAX;
+  int EHRegNodeFrameIndex = std::numeric_limits<int>::max();
   if (const WinEHFuncInfo *FuncInfo = Fn.getWinEHFuncInfo())
     EHRegNodeFrameIndex = FuncInfo->EHRegNodeFrameIndex;
 
@@ -870,7 +894,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   }
 
   // Allocate the EH registration node first if one is present.
-  if (EHRegNodeFrameIndex != INT_MAX)
+  if (EHRegNodeFrameIndex != std::numeric_limits<int>::max())
     AdjustStackOffset(MFI, EHRegNodeFrameIndex, StackGrowsDown, Offset,
                       MaxAlign, Skew);
 
@@ -946,7 +970,6 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 /// insertPrologEpilogCode - Scan the function for modified callee saved
 /// registers, insert spill code for these callee saved registers, then add
 /// prolog and epilog code to the function.
-///
 void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
 
@@ -986,7 +1009,6 @@ void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
 
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical
 /// register references and actual offsets.
-///
 void PEI::replaceFrameIndices(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
   if (!TFI.needsFrameIndexResolution(Fn)) return;
@@ -1036,7 +1058,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
   bool InsideCallSequence = false;
 
   for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ) {
-
     if (TII.isFrameInstr(*I)) {
       InsideCallSequence = TII.isFrameSetup(*I);
       SPAdj += TII.getSPAdjust(*I);

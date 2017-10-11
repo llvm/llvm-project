@@ -18,6 +18,7 @@
 #include "AMDGPUTargetStreamer.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "SIDefines.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -78,9 +79,11 @@ static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
-                                    MCAsmBackend &MAB, raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createAMDGPUELFStreamer(T, Context, MAB, OS, Emitter, RelaxAll);
+  return createAMDGPUELFStreamer(T, Context, std::move(MAB), OS, Emitter,
+                                 RelaxAll);
 }
 
 extern "C" void LLVMInitializeAMDGPUTargetMC() {

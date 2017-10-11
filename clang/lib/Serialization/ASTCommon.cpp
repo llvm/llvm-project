@@ -344,8 +344,8 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     return true;
   }
 
-  // Otherwise, we only care about anonymous class members / block-scope decls.
-  if (D->getDeclName() || D->getLexicalDeclContext()->isFileContext())
+  // Otherwise, we only care about anonymous class members.
+  if (D->getDeclName() || !isa<CXXRecordDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl>(D) || isa<FieldDecl>(D);
 }

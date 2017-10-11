@@ -2,7 +2,7 @@
 // RUN: %env_tool_opts=decorate_proc_maps=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%tool_name
 
 // REQUIRES: stable-runtime
-// XFAIL: android && i386-target-arch && asan
+// XFAIL: android && asan
 
 #include <errno.h>
 #include <fcntl.h>

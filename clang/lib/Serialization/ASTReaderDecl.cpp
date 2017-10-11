@@ -45,6 +45,8 @@ namespace clang {
     GlobalDeclID NamedDeclForTagDecl;
     IdentifierInfo *TypedefNameForLinkage;
 
+    bool HasPendingBody;
+
     ///\brief A flag to carry the information for a decl from the entity is
     /// used. We use it to delay the marking of the canonical decl as used until
     /// the entire declaration is deserialized and merged.
@@ -214,7 +216,8 @@ namespace clang {
         : Reader(Reader), Record(Record), Loc(Loc),
           ThisDeclID(thisDeclID), ThisDeclLoc(ThisDeclLoc),
           TypeIDForTypeDecl(0), NamedDeclForTagDecl(0),
-          TypedefNameForLinkage(nullptr), IsDeclMarkedUsed(false) {}
+          TypedefNameForLinkage(nullptr), HasPendingBody(false),
+          IsDeclMarkedUsed(false) {}
 
     template <typename T> static
     void AddLazySpecializations(T *D,
@@ -262,7 +265,9 @@ namespace clang {
     static void markIncompleteDeclChainImpl(Redeclarable<DeclT> *D);
     static void markIncompleteDeclChainImpl(...);
 
-    FunctionDecl *TryRegisterAsFunctionDefinition(FunctionDecl *FD);
+    /// \brief Determine whether this declaration has a pending body.
+    bool hasPendingBody() const { return HasPendingBody; }
+
     void ReadFunctionDefinition(FunctionDecl *FD);
     void Visit(Decl *D);
 
@@ -415,8 +420,7 @@ public:
   MergedRedeclIterator &operator++() {
     if (Current->isFirstDecl()) {
       Canonical = Current;
-      Decl *MostRecent = ASTDeclReader::getMostRecentDecl(Canonical);
-      Current = MostRecent ? cast<DeclT>(MostRecent) : nullptr;
+      Current = Current->getMostRecentDecl();
     } else
       Current = Current->getPreviousDecl();
 
@@ -447,70 +451,17 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
   return Loc.F->DeclsCursor.GetCurrentBitNo() + Loc.F->GlobalBitOffset;
 }
 
-FunctionDecl *ASTDeclReader::TryRegisterAsFunctionDefinition(FunctionDecl *D) {
-  FunctionDecl *&Definition = Reader.FunctionDefinitions[D->getCanonicalDecl()];
-
-  if (!Definition) {
-    // No imported definition, but we might have a local definition.
-    for (auto *Redecl : merged_redecls(D)) {
-      // FIXME: If an existing declaration is a definition with no body
-      // (via =delete etc), we shouldn't permit another definition here.
-      if (Redecl->Body.isValid()) {
-        Definition = Redecl;
-        break;
-      }
-    }
-  }
-
-  if (Definition) {
-    // We might have multiple update records adding definitions to the same
-    // declaration.
-    if (Definition != D) {
-      // Already have a different definition, merge this one into it.
-      Reader.MergedDeclContexts.insert(std::make_pair(D, Definition));
-      Reader.mergeDefinitionVisibility(Definition, D);
-    }
-    return Definition;
-  }
-
-  Definition = D;
-  return nullptr;
-}
-
 void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
-  // Is this definition scheduled for modular codegen? (That is, emitted to a
-  // separate object file for the module itself, rather than with module users.)
-  bool ModularCodegen = Record.readInt();
-
-  // Don't load this definition if we already have one.
-  if (auto *Definition = TryRegisterAsFunctionDefinition(FD)) {
-    if (ModularCodegen) {
-      // Request a strong definition be emitted if any merged definition does.
-      // FIXME: Do we need to ensure that Definition is handed to the AST
-      // consumer in this case?
-      Reader.DefinitionSource[Definition] |=
-          Loc.F->Kind == ModuleKind::MK_MainFile;
-    }
-    // Skip the ctor-initializers, if any.
-    if (isa<CXXConstructorDecl>(FD))
-      if (Record.readInt())
-        ReadGlobalOffset();
-    // FIXME: Optionally register the duplicate definitions somewhere so we can
-    // check for ODR violations.
-    return;
-  }
-
-  if (ModularCodegen)
+  if (Record.readInt())
     Reader.DefinitionSource[FD] = Loc.F->Kind == ModuleKind::MK_MainFile;
-
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     CD->NumCtorInitializers = Record.readInt();
     if (CD->NumCtorInitializers)
       CD->CtorInitializers = ReadGlobalOffset();
   }
-
   // Store the offset of the body so we can lazily load it later.
-  FD->setLazyBody(GetCurrentCursorOffset());
+  Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  HasPendingBody = true;
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -962,10 +913,10 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
   VisitNamedDecl(MD);
   if (Record.readInt()) {
-    // Load the body on-demand (if we don't already have a definition). Most
-    // clients won't care, because method definitions rarely show up in
-    // headers.
-    MD->setLazyBody(GetCurrentCursorOffset());
+    // Load the body on-demand. Most clients won't care, because method
+    // definitions rarely show up in headers.
+    Reader.PendingBodies[MD] = GetCurrentCursorOffset();
+    HasPendingBody = true;
     MD->setSelfDecl(ReadDeclAs<ImplicitParamDecl>());
     MD->setCmdDecl(ReadDeclAs<ImplicitParamDecl>());
   }
@@ -2616,7 +2567,7 @@ inline void ASTReader::LoadedDecl(unsigned Index, Decl *D) {
 /// This routine should return true for anything that might affect
 /// code generation, e.g., inline function definitions, Objective-C
 /// declarations with metadata, etc.
-static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D) {
+static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   // An ObjCMethodDecl is never considered as "interesting" because its
   // implementation container always is.
 
@@ -2642,7 +2593,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D) {
     return Var->isFileVarDecl() &&
            Var->isThisDeclarationADefinition() == VarDecl::Definition;
   if (FunctionDecl *Func = dyn_cast<FunctionDecl>(D))
-    return Func->doesThisDeclarationHaveABody();
+    return Func->doesThisDeclarationHaveABody() || HasBody;
 
   if (auto *ES = D->getASTContext().getExternalSource())
     if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
@@ -3707,7 +3658,8 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // AST consumer might need to know about, queue it.
   // We don't pass it to the consumer immediately because we may be in recursive
   // loading, and some declarations may still be initializing.
-  PotentiallyInterestingDecls.push_back(D);
+  PotentiallyInterestingDecls.push_back(
+      InterestingDecl(D, Reader.hasPendingBody()));
 
   return D;
 }
@@ -3730,10 +3682,10 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   EagerlyDeserializedDecls.clear();
 
   while (!PotentiallyInterestingDecls.empty()) {
-    Decl *D = PotentiallyInterestingDecls.front();
+    InterestingDecl D = PotentiallyInterestingDecls.front();
     PotentiallyInterestingDecls.pop_front();
-    if (isConsumerInterestedIn(getContext(), D))
-      PassInterestingDeclToConsumer(D);
+    if (isConsumerInterestedIn(getContext(), D.getDecl(), D.hasPendingBody()))
+      PassInterestingDeclToConsumer(D.getDecl());
   }
 }
 
@@ -3757,7 +3709,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     // to isConsumerInterestedIn because it is unsafe to call in the
     // current ASTReader state.
     bool WasInteresting =
-        Record.JustLoaded || isConsumerInterestedIn(getContext(), D);
+        Record.JustLoaded || isConsumerInterestedIn(getContext(), D, false);
     for (auto &FileAndOffset : UpdateOffsets) {
       ModuleFile *F = FileAndOffset.first;
       uint64_t Offset = FileAndOffset.second;
@@ -3776,8 +3728,10 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 
       // We might have made this declaration interesting. If so, remember that
       // we need to hand it off to the consumer.
-      if (!WasInteresting && isConsumerInterestedIn(getContext(), D)) {
-        PotentiallyInterestingDecls.push_back(D);
+      if (!WasInteresting &&
+          isConsumerInterestedIn(getContext(), D, Reader.hasPendingBody())) {
+        PotentiallyInterestingDecls.push_back(
+            InterestingDecl(D, Reader.hasPendingBody()));
         WasInteresting = true;
       }
     }
@@ -4075,6 +4029,12 @@ void ASTDeclReader::UpdateDecl(Decl *D,
 
     case UPD_CXX_ADDED_FUNCTION_DEFINITION: {
       FunctionDecl *FD = cast<FunctionDecl>(D);
+      if (Reader.PendingBodies[FD]) {
+        // FIXME: Maybe check for ODR violations.
+        // It's safe to stop now because this update record is always last.
+        return;
+      }
+
       if (Record.readInt()) {
         // Maintain AST consistency: any later redeclarations of this function
         // are inline if this one is. (We might have merged another declaration

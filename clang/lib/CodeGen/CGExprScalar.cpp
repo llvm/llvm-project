@@ -3214,6 +3214,16 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
       Value *CR6Param = Builder.getInt32(CR6);
       llvm::Function *F = CGF.CGM.getIntrinsic(ID);
       Result = Builder.CreateCall(F, {CR6Param, FirstVecArg, SecondVecArg});
+
+      // The result type of intrinsic may not be same as E->getType().
+      // If E->getType() is not BoolTy, EmitScalarConversion will do the
+      // conversion work. If E->getType() is BoolTy, EmitScalarConversion will
+      // do nothing, if ResultTy is not i1 at the same time, it will cause
+      // crash later.
+      llvm::IntegerType *ResultTy = cast<llvm::IntegerType>(Result->getType());
+      if (ResultTy->getBitWidth() > 1 &&
+          E->getType() == CGF.getContext().BoolTy)
+        Result = Builder.CreateTrunc(Result, Builder.getInt1Ty());
       return EmitScalarConversion(Result, CGF.getContext().BoolTy, E->getType(),
                                   E->getExprLoc());
     }

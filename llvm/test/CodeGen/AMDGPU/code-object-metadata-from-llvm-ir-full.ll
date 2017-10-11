@@ -14,6 +14,8 @@
 %struct.B = type { i32 addrspace(1)*}
 %opencl.clk_event_t = type opaque
 
+@__test_block_invoke_kernel_runtime_handle = external addrspace(1) externally_initialized constant i8 addrspace(1)*
+
 ; CHECK: ---
 ; CHECK:  Version: [ 1, 0 ]
 ; CHECK:  Printf:
@@ -1197,6 +1199,44 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
   ret void
 }
 
+; CHECK:      - Name:            __test_block_invoke_kernel
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Attrs:
+; CHECK-NEXT:       RuntimeHandle:       __test_block_invoke_kernel_runtime_handle
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:     - Size:          25
+; CHECK-NEXT:       Align:         1
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       ValueType:     Struct
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:       TypeName:      __block_literal
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       ValueType:     I8
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @__test_block_invoke_kernel(
+    <{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }> %arg) #1
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
+    !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
+  ret void
+}
+
+attributes #1 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
+
 !llvm.printf.fmts = !{!100, !101}
 
 !1 = !{i32 0}
@@ -1250,13 +1290,14 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
 !94 = !{!"", !"", !"", !"", !"", !"", !""}
 !100 = !{!"1:1:4:%d\5Cn"}
 !101 = !{!"2:1:8:%g\5Cn"}
+!110 = !{!"__block_literal"}
 
 ; NOTES: Displaying notes found at file offset 0x{{[0-9]+}}
 ; NOTES-NEXT: Owner    Data size    Description
 ; NOTES-NEXT: AMD      0x00000008   Unknown note type: (0x00000001)
 ; NOTES-NEXT: AMD      0x0000001b   Unknown note type: (0x00000003)
-; GFX700:     AMD      0x00008b0a   Unknown note type: (0x0000000a)
-; GFX800:     AMD      0x00008e6e   Unknown note type: (0x0000000a)
-; GFX900:     AMD      0x00008b0a   Unknown note type: (0x0000000a)
+; GFX700:     AMD      0x00008f64   Unknown note type: (0x0000000a)
+; GFX800:     AMD      0x000092e4   Unknown note type: (0x0000000a)
+; GFX900:     AMD      0x00008f64   Unknown note type: (0x0000000a)
 
 ; PARSER: AMDGPU Code Object Metadata Parser Test: PASS

@@ -1713,7 +1713,7 @@ define <4 x i32> @test_broadcasti32x2_v4i32(<4 x i32> %vec, <4 x i32> %passthru,
 ; CHECK-LABEL: test_broadcasti32x2_v4i32:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1727,7 +1727,7 @@ define <4 x i32> @test_broadcasti32x2_v4i32_z(<4 x i32> %vec, i8 %mask) {
 ; CHECK-LABEL: test_broadcasti32x2_v4i32_z:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %mask.cast = bitcast i8 %mask to <8 x i1>

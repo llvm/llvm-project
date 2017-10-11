@@ -62,10 +62,12 @@ private:
   void EmitDataRegionEnd();
 
 public:
-  MCMachOStreamer(MCContext &Context, MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                  MCCodeEmitter *Emitter, bool DWARFMustBeAtTheEnd, bool label)
-      : MCObjectStreamer(Context, MAB, OS, Emitter), LabelSections(label),
-        DWARFMustBeAtTheEnd(DWARFMustBeAtTheEnd), CreatedADWARFSection(false) {}
+  MCMachOStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
+                  raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
+                  bool DWARFMustBeAtTheEnd, bool label)
+      : MCObjectStreamer(Context, std::move(MAB), OS, Emitter),
+        LabelSections(label), DWARFMustBeAtTheEnd(DWARFMustBeAtTheEnd),
+        CreatedADWARFSection(false) {}
 
   /// state management
   void reset() override {
@@ -483,11 +485,12 @@ void MCMachOStreamer::FinishImpl() {
   this->MCObjectStreamer::FinishImpl();
 }
 
-MCStreamer *llvm::createMachOStreamer(MCContext &Context, MCAsmBackend &MAB,
+MCStreamer *llvm::createMachOStreamer(MCContext &Context,
+                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                       raw_pwrite_stream &OS, MCCodeEmitter *CE,
                                       bool RelaxAll, bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
-  MCMachOStreamer *S = new MCMachOStreamer(Context, MAB, OS, CE,
+  MCMachOStreamer *S = new MCMachOStreamer(Context, std::move(MAB), OS, CE,
                                            DWARFMustBeAtTheEnd, LabelSections);
   const Triple &TT = Context.getObjectFileInfo()->getTargetTriple();
   if (TT.isOSDarwin()) {

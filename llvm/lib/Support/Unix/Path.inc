@@ -217,11 +217,11 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   return "";
 }
 
-TimePoint<> file_status::getLastAccessedTime() const {
+TimePoint<> basic_file_status::getLastAccessedTime() const {
   return toTimePoint(fs_st_atime);
 }
 
-TimePoint<> file_status::getLastModificationTime() const {
+TimePoint<> basic_file_status::getLastModificationTime() const {
   return toTimePoint(fs_st_mtime);
 }
 
@@ -713,6 +713,13 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   return std::error_code();
 }
 
+ErrorOr<basic_file_status> directory_entry::status() const {
+  file_status s;
+  if (auto EC = fs::status(Path, s, FollowSymlinks))
+    return EC;
+  return s;
+}
+
 #if !defined(F_GETPATH)
 static bool hasProcSelfFD() {
   // If we have a /proc filesystem mounted, we can quickly establish the
@@ -809,12 +816,11 @@ static std::error_code remove_directories_impl(const T &Entry,
   directory_iterator End;
   while (Begin != End) {
     auto &Item = *Begin;
-    file_status st;
-    EC = Item.status(st);
-    if (EC && !IgnoreErrors)
-      return EC;
+    ErrorOr<basic_file_status> st = Item.status();
+    if (!st && !IgnoreErrors)
+      return st.getError();
 
-    if (is_directory(st)) {
+    if (is_directory(*st)) {
       EC = remove_directories_impl(Item, IgnoreErrors);
       if (EC && !IgnoreErrors)
         return EC;

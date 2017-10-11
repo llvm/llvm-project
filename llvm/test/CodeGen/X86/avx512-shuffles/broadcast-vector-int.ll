@@ -16,7 +16,7 @@ define <4 x i32> @test_masked_2xi32_to_4xi32_mask0(<4 x i32> %vec, <4 x i32> %de
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -29,7 +29,7 @@ define <4 x i32> @test_masked_z_2xi32_to_4xi32_mask0(<4 x i32> %vec) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
@@ -40,7 +40,7 @@ define <4 x i32> @test_masked_2xi32_to_4xi32_mask1(<4 x i32> %vec, <4 x i32> %de
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $13, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -53,7 +53,7 @@ define <4 x i32> @test_masked_z_2xi32_to_4xi32_mask1(<4 x i32> %vec) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $13, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer
@@ -64,7 +64,7 @@ define <4 x i32> @test_masked_2xi32_to_4xi32_mask2(<4 x i32> %vec, <4 x i32> %de
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $5, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -77,7 +77,7 @@ define <4 x i32> @test_masked_z_2xi32_to_4xi32_mask2(<4 x i32> %vec) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $5, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
@@ -88,7 +88,7 @@ define <4 x i32> @test_masked_2xi32_to_4xi32_mask3(<4 x i32> %vec, <4 x i32> %de
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $14, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm1 {%k1} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -101,7 +101,7 @@ define <4 x i32> @test_masked_z_2xi32_to_4xi32_mask3(<4 x i32> %vec) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb $14, %al
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,0,1]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer

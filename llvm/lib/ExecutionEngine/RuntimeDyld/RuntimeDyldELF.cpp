@@ -69,8 +69,11 @@ template <class ELFT> class DyldELFObject : public ELFObjectFile<ELFT> {
 
   typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
 
+  DyldELFObject(ELFObjectFile<ELFT> &&Obj);
+
 public:
-  DyldELFObject(MemoryBufferRef Wrapper, std::error_code &ec);
+  static Expected<std::unique_ptr<DyldELFObject>>
+  create(MemoryBufferRef Wrapper);
 
   void updateSectionAddress(const SectionRef &Sec, uint64_t Addr);
 
@@ -92,9 +95,20 @@ public:
 // actual memory.  Ultimately, the Binary parent class will take ownership of
 // this MemoryBuffer object but not the underlying memory.
 template <class ELFT>
-DyldELFObject<ELFT>::DyldELFObject(MemoryBufferRef Wrapper, std::error_code &EC)
-    : ELFObjectFile<ELFT>(Wrapper, EC) {
+DyldELFObject<ELFT>::DyldELFObject(ELFObjectFile<ELFT> &&Obj)
+    : ELFObjectFile<ELFT>(std::move(Obj)) {
   this->isDyldELFObject = true;
+}
+
+template <class ELFT>
+Expected<std::unique_ptr<DyldELFObject<ELFT>>>
+DyldELFObject<ELFT>::create(MemoryBufferRef Wrapper) {
+  auto Obj = ELFObjectFile<ELFT>::create(Wrapper);
+  if (auto E = Obj.takeError())
+    return std::move(E);
+  std::unique_ptr<DyldELFObject<ELFT>> Ret(
+      new DyldELFObject<ELFT>(std::move(*Obj)));
+  return std::move(Ret);
 }
 
 template <class ELFT>
@@ -133,16 +147,18 @@ public:
 };
 
 template <typename ELFT>
-std::unique_ptr<DyldELFObject<ELFT>>
-createRTDyldELFObject(MemoryBufferRef Buffer,
-                      const ObjectFile &SourceObject,
-                      const LoadedELFObjectInfo &L,
-                      std::error_code &ec) {
+static Expected<std::unique_ptr<DyldELFObject<ELFT>>>
+createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
+                      const LoadedELFObjectInfo &L) {
   typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
 
-  std::unique_ptr<DyldELFObject<ELFT>> Obj =
-    llvm::make_unique<DyldELFObject<ELFT>>(Buffer, ec);
+  Expected<std::unique_ptr<DyldELFObject<ELFT>>> ObjOrErr =
+      DyldELFObject<ELFT>::create(Buffer);
+  if (Error E = ObjOrErr.takeError())
+    return std::move(E);
+
+  std::unique_ptr<DyldELFObject<ELFT>> Obj = std::move(*ObjOrErr);
 
   // Iterate over all sections in the object.
   auto SI = SourceObject.section_begin();
@@ -163,41 +179,35 @@ createRTDyldELFObject(MemoryBufferRef Buffer,
     ++SI;
   }
 
-  return Obj;
+  return std::move(Obj);
 }
 
-OwningBinary<ObjectFile> createELFDebugObject(const ObjectFile &Obj,
-                                              const LoadedELFObjectInfo &L) {
+static OwningBinary<ObjectFile>
+createELFDebugObject(const ObjectFile &Obj, const LoadedELFObjectInfo &L) {
   assert(Obj.isELF() && "Not an ELF object file.");
 
   std::unique_ptr<MemoryBuffer> Buffer =
     MemoryBuffer::getMemBufferCopy(Obj.getData(), Obj.getFileName());
 
-  std::error_code ec;
-
-  std::unique_ptr<ObjectFile> DebugObj;
-  if (Obj.getBytesInAddress() == 4 && Obj.isLittleEndian()) {
-    typedef ELFType<support::little, false> ELF32LE;
-    DebugObj = createRTDyldELFObject<ELF32LE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 4 && !Obj.isLittleEndian()) {
-    typedef ELFType<support::big, false> ELF32BE;
-    DebugObj = createRTDyldELFObject<ELF32BE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 8 && !Obj.isLittleEndian()) {
-    typedef ELFType<support::big, true> ELF64BE;
-    DebugObj = createRTDyldELFObject<ELF64BE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else if (Obj.getBytesInAddress() == 8 && Obj.isLittleEndian()) {
-    typedef ELFType<support::little, true> ELF64LE;
-    DebugObj = createRTDyldELFObject<ELF64LE>(Buffer->getMemBufferRef(), Obj, L,
-                                              ec);
-  } else
+  Expected<std::unique_ptr<ObjectFile>> DebugObj(nullptr);
+  handleAllErrors(DebugObj.takeError());
+  if (Obj.getBytesInAddress() == 4 && Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF32LE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 4 && !Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF32BE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 8 && !Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF64BE>(Buffer->getMemBufferRef(), Obj, L);
+  else if (Obj.getBytesInAddress() == 8 && Obj.isLittleEndian())
+    DebugObj =
+        createRTDyldELFObject<ELF64LE>(Buffer->getMemBufferRef(), Obj, L);
+  else
     llvm_unreachable("Unexpected ELF format");
 
-  assert(!ec && "Could not construct copy ELF object file");
-
-  return OwningBinary<ObjectFile>(std::move(DebugObj), std::move(Buffer));
+  handleAllErrors(DebugObj.takeError());
+  return OwningBinary<ObjectFile>(std::move(*DebugObj), std::move(Buffer));
 }
 
 OwningBinary<ObjectFile>

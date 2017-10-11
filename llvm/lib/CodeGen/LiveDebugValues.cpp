@@ -374,7 +374,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
 void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
                                           OpenRangesSet &OpenRanges,
                                           const VarLocMap &VarLocIDs) {
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
   SparseBitVector<> KillSet;
@@ -450,7 +450,7 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
                                         VarLocMap &VarLocIDs,
                                         SpillMap &Spills) {
   unsigned Reg;
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   if (!isSpillInstruction(MI, MF, Reg))
     return;
 

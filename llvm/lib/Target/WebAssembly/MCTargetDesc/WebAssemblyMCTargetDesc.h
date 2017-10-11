@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
+#include <memory>
 
 namespace llvm {
 
@@ -39,11 +40,13 @@ MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
-MCObjectWriter *createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
-                                                 bool Is64Bit, uint8_t OSABI);
+std::unique_ptr<MCObjectWriter>
+createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
+                                 bool Is64Bit, uint8_t OSABI);
 
-MCObjectWriter *createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
-                                                  bool Is64Bit);
+std::unique_ptr<MCObjectWriter>
+createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
+                                  bool Is64Bit);
 
 namespace WebAssembly {
 enum OperandType {

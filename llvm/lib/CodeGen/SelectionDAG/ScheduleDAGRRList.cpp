@@ -1,4 +1,4 @@
-//===----- ScheduleDAGRRList.cpp - Reg pressure reduction list scheduler --===//
+//===- ScheduleDAGRRList.cpp - Reg pressure reduction list scheduler ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,23 +16,47 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScheduleDAGSDNodes.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <climits>
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
@@ -46,6 +70,7 @@ static RegisterScheduler
   burrListDAGScheduler("list-burr",
                        "Bottom-up register reduction list scheduling",
                        createBURRListDAGScheduler);
+
 static RegisterScheduler
   sourceListDAGScheduler("source",
                          "Similar to list-burr but schedules in source "
@@ -105,6 +130,7 @@ static cl::opt<unsigned> AvgIPC(
   cl::desc("Average inst/cycle whan no target itinerary exists."));
 
 namespace {
+
 //===----------------------------------------------------------------------===//
 /// ScheduleDAGRRList - The actual register reduction list scheduler
 /// implementation.  This supports both top-down and bottom-up scheduling.
@@ -112,7 +138,6 @@ namespace {
 class ScheduleDAGRRList : public ScheduleDAGSDNodes {
 private:
   /// NeedLatency - True if the scheduler will make use of latency information.
-  ///
   bool NeedLatency;
 
   /// AvailableQueue - The priority queue to use for the available SUnits.
@@ -122,13 +147,13 @@ private:
   /// been issued, but their results are not ready yet (due to the latency of
   /// the operation).  Once the operands becomes available, the instruction is
   /// added to the AvailableQueue.
-  std::vector<SUnit*> PendingQueue;
+  std::vector<SUnit *> PendingQueue;
 
   /// HazardRec - The hazard recognizer to use.
   ScheduleHazardRecognizer *HazardRec;
 
   /// CurCycle - The current scheduler state corresponds to this cycle.
-  unsigned CurCycle;
+  unsigned CurCycle = 0;
 
   /// MinAvailableCycle - Cycle of the soonest available instruction.
   unsigned MinAvailableCycle;
@@ -147,7 +172,9 @@ private:
   // Collect interferences between physical register use/defs.
   // Each interference is an SUnit and set of physical registers.
   SmallVector<SUnit*, 4> Interferences;
-  typedef DenseMap<SUnit*, SmallVector<unsigned, 4> > LRegsMapT;
+
+  using LRegsMapT = DenseMap<SUnit *, SmallVector<unsigned, 4>>;
+
   LRegsMapT LRegsMap;
 
   /// Topo - A topological ordering for SUnits which permits fast IsReachable
@@ -163,9 +190,8 @@ public:
                     SchedulingPriorityQueue *availqueue,
                     CodeGenOpt::Level OptLevel)
     : ScheduleDAGSDNodes(mf),
-      NeedLatency(needlatency), AvailableQueue(availqueue), CurCycle(0),
+      NeedLatency(needlatency), AvailableQueue(availqueue),
       Topo(SUnits, nullptr) {
-
     const TargetSubtargetInfo &STI = mf.getSubtarget();
     if (DisableSchedCycles || !NeedLatency)
       HazardRec = new ScheduleHazardRecognizer();
@@ -267,6 +293,7 @@ private:
     return !NeedLatency;
   }
 };
+
 }  // end anonymous namespace
 
 /// GetCostForDef - Looks up the register class and cost for a given definition.
@@ -325,7 +352,8 @@ void ScheduleDAGRRList::Schedule() {
 
   CurCycle = 0;
   IssueCount = 0;
-  MinAvailableCycle = DisableSchedCycles ? 0 : UINT_MAX;
+  MinAvailableCycle =
+      DisableSchedCycles ? 0 : std::numeric_limits<unsigned>::max();
   NumLiveRegs = 0;
   // Allocate slots for each physical register, plus one for a special register
   // to track the virtual resource of a calling sequence.
@@ -409,7 +437,7 @@ static bool IsChainDependent(SDNode *Outer, SDNode *Inner,
                              unsigned NestLevel,
                              const TargetInstrInfo *TII) {
   SDNode *N = Outer;
-  for (;;) {
+  while (true) {
     if (N == Inner)
       return true;
     // For a TokenFactor, examine each operand. There may be multiple ways
@@ -456,7 +484,7 @@ static bool IsChainDependent(SDNode *Outer, SDNode *Inner,
 static SDNode *
 FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
                  const TargetInstrInfo *TII) {
-  for (;;) {
+  while (true) {
     // For a TokenFactor, examine each operand. There may be multiple ways
     // to get to the CALLSEQ_BEGIN, but we need to find the path with the
     // most nesting in order to ensure that we find the corresponding match.
@@ -572,7 +600,7 @@ void ScheduleDAGRRList::ReleasePending() {
 
   // If the available queue is empty, it is safe to reset MinAvailableCycle.
   if (AvailableQueue->empty())
-    MinAvailableCycle = UINT_MAX;
+    MinAvailableCycle = std::numeric_limits<unsigned>::max();
 
   // Check to see if any of the pending instructions are ready to issue.  If
   // so, add them to the available queue.
@@ -792,7 +820,8 @@ void ScheduleDAGRRList::CapturePred(SDep *PredEdge) {
       AvailableQueue->remove(PredSU);
   }
 
-  assert(PredSU->NumSuccsLeft < UINT_MAX && "NumSuccsLeft will overflow!");
+  assert(PredSU->NumSuccsLeft < std::numeric_limits<unsigned>::max() &&
+         "NumSuccsLeft will overflow!");
   ++PredSU->NumSuccsLeft;
 }
 
@@ -898,7 +927,7 @@ void ScheduleDAGRRList::RestoreHazardCheckerBottomUp() {
   if (LookAhead == 0)
     return;
 
-  std::vector<SUnit*>::const_iterator I = (Sequence.end() - LookAhead);
+  std::vector<SUnit *>::const_iterator I = (Sequence.end() - LookAhead);
   unsigned HazardCycle = (*I)->getHeight();
   for (auto E = Sequence.end(); I != E; ++I) {
     SUnit *SU = *I;
@@ -1432,7 +1461,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
     // Try unscheduling up to the point where it's safe to schedule
     // this node.
     SUnit *BtSU = nullptr;
-    unsigned LiveCycle = UINT_MAX;
+    unsigned LiveCycle = std::numeric_limits<unsigned>::max();
     for (unsigned Reg : LRegs) {
       if (LiveRegGens[Reg]->getHeight() < LiveCycle) {
         BtSU = LiveRegGens[Reg];
@@ -1552,7 +1581,8 @@ void ScheduleDAGRRList::ListScheduleBottomUp() {
 
     while (AvailableQueue->empty() && !PendingQueue.empty()) {
       // Advance the cycle to free resources. Skip ahead to the next ready SU.
-      assert(MinAvailableCycle < UINT_MAX && "MinAvailableCycle uninitialized");
+      assert(MinAvailableCycle < std::numeric_limits<unsigned>::max() &&
+             "MinAvailableCycle uninitialized");
       AdvanceToCycle(std::max(CurCycle + 1, MinAvailableCycle));
     }
   }
@@ -1565,14 +1595,8 @@ void ScheduleDAGRRList::ListScheduleBottomUp() {
 #endif
 }
 
-//===----------------------------------------------------------------------===//
-//                RegReductionPriorityQueue Definition
-//===----------------------------------------------------------------------===//
-//
-// This is a SchedulingPriorityQueue that schedules using Sethi Ullman numbers
-// to reduce register pressure.
-//
 namespace {
+
 class RegReductionPQBase;
 
 struct queue_sort {
@@ -1583,6 +1607,7 @@ struct queue_sort {
 template<class SF>
 struct reverse_sort : public queue_sort {
   SF &SortFunc;
+
   reverse_sort(SF &sf) : SortFunc(sf) {}
 
   bool operator()(SUnit* left, SUnit* right) const {
@@ -1602,6 +1627,7 @@ struct bu_ls_rr_sort : public queue_sort {
   };
 
   RegReductionPQBase *SPQ;
+
   bu_ls_rr_sort(RegReductionPQBase *spq) : SPQ(spq) {}
 
   bool operator()(SUnit* left, SUnit* right) const;
@@ -1615,8 +1641,8 @@ struct src_ls_rr_sort : public queue_sort {
   };
 
   RegReductionPQBase *SPQ;
-  src_ls_rr_sort(RegReductionPQBase *spq)
-    : SPQ(spq) {}
+
+  src_ls_rr_sort(RegReductionPQBase *spq) : SPQ(spq) {}
 
   bool operator()(SUnit* left, SUnit* right) const;
 };
@@ -1629,8 +1655,8 @@ struct hybrid_ls_rr_sort : public queue_sort {
   };
 
   RegReductionPQBase *SPQ;
-  hybrid_ls_rr_sort(RegReductionPQBase *spq)
-    : SPQ(spq) {}
+
+  hybrid_ls_rr_sort(RegReductionPQBase *spq) : SPQ(spq) {}
 
   bool isReady(SUnit *SU, unsigned CurCycle) const;
 
@@ -1646,8 +1672,8 @@ struct ilp_ls_rr_sort : public queue_sort {
   };
 
   RegReductionPQBase *SPQ;
-  ilp_ls_rr_sort(RegReductionPQBase *spq)
-    : SPQ(spq) {}
+
+  ilp_ls_rr_sort(RegReductionPQBase *spq) : SPQ(spq) {}
 
   bool isReady(SUnit *SU, unsigned CurCycle) const;
 
@@ -1656,8 +1682,8 @@ struct ilp_ls_rr_sort : public queue_sort {
 
 class RegReductionPQBase : public SchedulingPriorityQueue {
 protected:
-  std::vector<SUnit*> Queue;
-  unsigned CurQueueId;
+  std::vector<SUnit *> Queue;
+  unsigned CurQueueId = 0;
   bool TracksRegPressure;
   bool SrcOrder;
 
@@ -1668,13 +1694,12 @@ protected:
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const TargetLowering *TLI;
-  ScheduleDAGRRList *scheduleDAG;
+  ScheduleDAGRRList *scheduleDAG = nullptr;
 
   // SethiUllmanNumbers - The SethiUllman number for each node.
   std::vector<unsigned> SethiUllmanNumbers;
 
   /// RegPressure - Tracking current reg pressure per register class.
-  ///
   std::vector<unsigned> RegPressure;
 
   /// RegLimit - Tracking the number of allocatable registers per register
@@ -1689,9 +1714,8 @@ public:
                      const TargetInstrInfo *tii,
                      const TargetRegisterInfo *tri,
                      const TargetLowering *tli)
-    : SchedulingPriorityQueue(hasReadyFilter),
-      CurQueueId(0), TracksRegPressure(tracksrp), SrcOrder(srcorder),
-      MF(mf), TII(tii), TRI(tri), TLI(tli), scheduleDAG(nullptr) {
+    : SchedulingPriorityQueue(hasReadyFilter), TracksRegPressure(tracksrp),
+      SrcOrder(srcorder), MF(mf), TII(tii), TRI(tri), TLI(tli) {
     if (TracksRegPressure) {
       unsigned NumRC = TRI->getNumRegClasses();
       RegLimit.resize(NumRC);
@@ -1742,7 +1766,7 @@ public:
   void remove(SUnit *SU) override {
     assert(!Queue.empty() && "Queue is empty!");
     assert(SU->NodeQueueId != 0 && "Not in queue!");
-    std::vector<SUnit *>::iterator I = find(Queue, SU);
+    std::vector<SUnit *>::iterator I = llvm::find(Queue, SU);
     if (I != std::prev(Queue.end()))
       std::swap(*I, Queue.back());
     Queue.pop_back();
@@ -1771,7 +1795,7 @@ protected:
 };
 
 template<class SF>
-static SUnit *popFromQueueImpl(std::vector<SUnit*> &Q, SF &Picker) {
+static SUnit *popFromQueueImpl(std::vector<SUnit *> &Q, SF &Picker) {
   std::vector<SUnit *>::iterator Best = Q.begin();
   for (auto I = std::next(Q.begin()), E = Q.end(); I != E; ++I)
     if (Picker(*Best, *I))
@@ -1784,7 +1808,7 @@ static SUnit *popFromQueueImpl(std::vector<SUnit*> &Q, SF &Picker) {
 }
 
 template<class SF>
-SUnit *popFromQueue(std::vector<SUnit*> &Q, SF &Picker, ScheduleDAG *DAG) {
+SUnit *popFromQueue(std::vector<SUnit *> &Q, SF &Picker, ScheduleDAG *DAG) {
 #ifndef NDEBUG
   if (DAG->StressSched) {
     reverse_sort<SF> RPicker(Picker);
@@ -1795,6 +1819,13 @@ SUnit *popFromQueue(std::vector<SUnit*> &Q, SF &Picker, ScheduleDAG *DAG) {
   return popFromQueueImpl(Q, Picker);
 }
 
+//===----------------------------------------------------------------------===//
+//                RegReductionPriorityQueue Definition
+//===----------------------------------------------------------------------===//
+//
+// This is a SchedulingPriorityQueue that schedules using Sethi Ullman numbers
+// to reduce register pressure.
+//
 template<class SF>
 class RegReductionPriorityQueue : public RegReductionPQBase {
   SF Picker;
@@ -1827,7 +1858,7 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump(ScheduleDAG *DAG) const override {
     // Emulate pop() without clobbering NodeQueueIds.
-    std::vector<SUnit*> DumpQueue = Queue;
+    std::vector<SUnit *> DumpQueue = Queue;
     SF DumpPicker = Picker;
     while (!DumpQueue.empty()) {
       SUnit *SU = popFromQueue(DumpQueue, DumpPicker, scheduleDAG);
@@ -1838,17 +1869,11 @@ public:
 #endif
 };
 
-typedef RegReductionPriorityQueue<bu_ls_rr_sort>
-BURegReductionPriorityQueue;
+using BURegReductionPriorityQueue = RegReductionPriorityQueue<bu_ls_rr_sort>;
+using SrcRegReductionPriorityQueue = RegReductionPriorityQueue<src_ls_rr_sort>;
+using HybridBURRPriorityQueue = RegReductionPriorityQueue<hybrid_ls_rr_sort>;
+using ILPBURRPriorityQueue = RegReductionPriorityQueue<ilp_ls_rr_sort>;
 
-typedef RegReductionPriorityQueue<src_ls_rr_sort>
-SrcRegReductionPriorityQueue;
-
-typedef RegReductionPriorityQueue<hybrid_ls_rr_sort>
-HybridBURRPriorityQueue;
-
-typedef RegReductionPriorityQueue<ilp_ls_rr_sort>
-ILPBURRPriorityQueue;
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -2867,7 +2892,6 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
 /// This results in the store being scheduled immediately
 /// after N, which shortens the U->N live range, reducing
 /// register pressure.
-///
 void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
   // Visit all the nodes in topological order, working top-down.
   for (SUnit &SU : *SUnits) {
@@ -3034,7 +3058,7 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-llvm::ScheduleDAGSDNodes *
+ScheduleDAGSDNodes *
 llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
                                  CodeGenOpt::Level OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
@@ -3048,7 +3072,7 @@ llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-llvm::ScheduleDAGSDNodes *
+ScheduleDAGSDNodes *
 llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
                                    CodeGenOpt::Level OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
@@ -3062,7 +3086,7 @@ llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-llvm::ScheduleDAGSDNodes *
+ScheduleDAGSDNodes *
 llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
                                    CodeGenOpt::Level OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
@@ -3078,7 +3102,7 @@ llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-llvm::ScheduleDAGSDNodes *
+ScheduleDAGSDNodes *
 llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
                                 CodeGenOpt::Level OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();

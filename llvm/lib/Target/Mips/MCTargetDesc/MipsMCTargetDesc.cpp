@@ -91,13 +91,15 @@ static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
-                                    MCAsmBackend &MAB, raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    raw_pwrite_stream &OS,
                                     MCCodeEmitter *Emitter, bool RelaxAll) {
   MCStreamer *S;
   if (!T.isOSNaCl())
-    S = createMipsELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
+    S = createMipsELFStreamer(Context, std::move(MAB), OS, Emitter, RelaxAll);
   else
-    S = createMipsNaClELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
+    S = createMipsNaClELFStreamer(Context, std::move(MAB), OS, Emitter,
+                                  RelaxAll);
   return S;
 }
 

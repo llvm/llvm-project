@@ -419,8 +419,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
                                                       Opts.CPU, Options);
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-        T, Ctx, *MAB, *Out, CE, *STI, Opts.RelaxAll,
-        Opts.IncrementalLinkerCompatible,
+        T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *Out, CE, *STI,
+        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     Str.get()->InitSections(Opts.NoExecStack);
   }

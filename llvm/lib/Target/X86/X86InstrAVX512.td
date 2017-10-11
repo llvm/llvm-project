@@ -1339,12 +1339,14 @@ let Predicates = [HasAVX512] in {
             (VPBROADCASTQZm addr:$src)>;
 }
 
-let Predicates = [HasVLX, HasBWI] in {
+let Predicates = [HasVLX] in {
   // 32-bit targets will fail to load a i64 directly but can use ZEXT_LOAD.
   def : Pat<(v2i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
             (VPBROADCASTQZ128m addr:$src)>;
   def : Pat<(v4i64 (X86VBroadcast (v4i64 (X86vzload addr:$src)))),
             (VPBROADCASTQZ256m addr:$src)>;
+}
+let Predicates = [HasVLX, HasBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
   // This means we'll encounter truncated i32 loads; match that here.
   def : Pat<(v8i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),

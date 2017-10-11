@@ -1,5 +1,5 @@
 ; RUN: opt -S -loop-sink < %s | FileCheck %s
-; RUN: opt -S -passes=loop-sink < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
 
 @g = global i32 0, align 4
 
@@ -275,6 +275,99 @@ define i32 @t5(i32, i32*) #0 !prof !0 {
   %t7 = add nuw nsw i32 %iv, 1
   %c7 = icmp eq i32 %t7, %p7
   br i1 %c7, label %.b1, label %.exit, !prof !3
+
+.exit:
+  ret i32 10
+}
+
+;     b1
+;    /  \
+;   b2  b3
+;    \  /
+;     b4
+; preheader: 1000
+; b2: 15
+; b3: 7
+; Do not sink unordered atomic load to b2
+; CHECK: t6
+; CHECK: .preheader:
+; CHECK:  load atomic i32, i32* @g unordered, align 4
+; CHECK: .b2:
+; CHECK-NOT: load atomic i32, i32* @g unordered, align 4
+define i32 @t6(i32, i32) #0 !prof !0 {
+  %3 = icmp eq i32 %1, 0
+  br i1 %3, label %.exit, label %.preheader
+
+.preheader:
+  %invariant = load atomic i32, i32* @g unordered, align 4
+  br label %.b1
+
+.b1:
+  %iv = phi i32 [ %t3, %.b4 ], [ 0, %.preheader ]
+  %c1 = icmp sgt i32 %iv, %0
+  br i1 %c1, label %.b2, label %.b3, !prof !1
+
+.b2:
+  %t1 = add nsw i32 %invariant, %iv
+  br label %.b4
+
+.b3:
+  %t2 = add nsw i32 %iv, 100
+  br label %.b4
+
+.b4:
+  %p1 = phi i32 [ %t2, %.b3 ], [ %t1, %.b2 ]
+  %t3 = add nuw nsw i32 %iv, 1
+  %c2 = icmp eq i32 %t3, %p1
+  br i1 %c2, label %.b1, label %.exit, !prof !3
+
+.exit:
+  ret i32 10
+}
+
+@g_const = constant i32 0, align 4
+
+;     b1
+;    /  \
+;   b2  b3
+;    \  /
+;     b4
+; preheader: 1000
+; b2: 0.5
+; b3: 999.5
+; Sink unordered atomic load to b2. It is allowed to sink into loop unordered
+; load from constant.
+; CHECK: t7
+; CHECK: .preheader:
+; CHECK-NOT:  load atomic i32, i32* @g_const unordered, align 4
+; CHECK: .b2:
+; CHECK: load atomic i32, i32* @g_const unordered, align 4
+define i32 @t7(i32, i32) #0 !prof !0 {
+  %3 = icmp eq i32 %1, 0
+  br i1 %3, label %.exit, label %.preheader
+
+.preheader:
+  %invariant = load atomic i32, i32* @g_const unordered, align 4
+  br label %.b1
+
+.b1:
+  %iv = phi i32 [ %t3, %.b4 ], [ 0, %.preheader ]
+  %c1 = icmp sgt i32 %iv, %0
+  br i1 %c1, label %.b2, label %.b3, !prof !1
+
+.b2:
+  %t1 = add nsw i32 %invariant, %iv
+  br label %.b4
+
+.b3:
+  %t2 = add nsw i32 %iv, 100
+  br label %.b4
+
+.b4:
+  %p1 = phi i32 [ %t2, %.b3 ], [ %t1, %.b2 ]
+  %t3 = add nuw nsw i32 %iv, 1
+  %c2 = icmp eq i32 %t3, %p1
+  br i1 %c2, label %.b1, label %.exit, !prof !3
 
 .exit:
   ret i32 10
