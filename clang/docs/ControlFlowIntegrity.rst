@@ -243,17 +243,25 @@ Blacklist
 
 A :doc:`SanitizerSpecialCaseList` can be used to relax CFI checks for certain
 source files, functions and types using the ``src``, ``fun`` and ``type``
-entity types.
+entity types. Specific CFI modes can be be specified using ``[section]``
+headers.
 
 .. code-block:: bash
 
-    # Suppress checking for code in a file.
+    # Suppress all CFI checking for code in a file.
     src:bad_file.cpp
     src:bad_header.h
     # Ignore all functions with names containing MyFooBar.
     fun:*MyFooBar*
     # Ignore all types in the standard library.
     type:std::*
+    # Disable only unrelated cast checks for this function
+    [cfi-unrelated-cast]
+    fun:*UnrelatedCast*
+    # Disable CFI call checks for this function without affecting cast checks
+    [cfi-vcall|cfi-nvcall|cfi-icall]
+    fun:*BadCall*
+
 
 .. _cfi-cross-dso:
 

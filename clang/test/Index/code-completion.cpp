@@ -37,6 +37,16 @@ Z::operator int() const {
   return 0;
 }
 
+template <typename T>
+struct Foo { T member; };
+
+template<typename T> using Bar = Foo<T>;
+
+void test_template_alias() {
+  // RUN: env CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:47:1 %s | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
+
+}
+
 // CHECK-MEMBER: FieldDecl:{ResultType double}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType int}{Text X::}{TypedText member}
 // CHECK-MEMBER: FieldDecl:{ResultType float}{Text Y::}{TypedText member}
@@ -88,3 +98,5 @@ Z::operator int() const {
 // CHECK-EXPR-NEXT: Class name
 // CHECK-EXPR-NEXT: Nested name specifier
 // CHECK-EXPR-NEXT: Objective-C interface
+
+// CHECK-TEMPLATE-ALIAS: AliasTemplateDecl:{TypedText Bar}{LeftAngle <}{Placeholder typename T}{RightAngle >} (50)

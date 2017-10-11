@@ -14,6 +14,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 
@@ -63,27 +64,28 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
-  if (Args.hasArg(options::OPT_r))
+  if (Args.hasArg(options::OPT_r)) {
     CmdArgs.push_back("-r");
-  else
+  } else {
     CmdArgs.push_back("--build-id");
+    CmdArgs.push_back("--hash-style=gnu");
+  }
 
-  if (!Args.hasArg(options::OPT_static))
-    CmdArgs.push_back("--eh-frame-hdr");
+  CmdArgs.push_back("--eh-frame-hdr");
 
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-Bstatic");
   else if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("-shared");
 
-  if (!Args.hasArg(options::OPT_static)) {
-    if (Args.hasArg(options::OPT_rdynamic))
-      CmdArgs.push_back("-export-dynamic");
-
-    if (!Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-dynamic-linker");
-      CmdArgs.push_back(Args.MakeArgString(D.DyldPrefix + "ld.so.1"));
-    }
+  if (!Args.hasArg(options::OPT_shared)) {
+    std::string Dyld = D.DyldPrefix;
+    if (ToolChain.getSanitizerArgs().needsAsanRt() &&
+        ToolChain.getSanitizerArgs().needsSharedRt())
+      Dyld += "asan/";
+    Dyld += "ld.so.1";
+    CmdArgs.push_back("-dynamic-linker");
+    CmdArgs.push_back(Args.MakeArgString(Dyld));
   }
 
   CmdArgs.push_back("-o");
@@ -100,6 +102,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -107,15 +111,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-Bdynamic");
 
     if (D.CCCIsCXX()) {
-      if (ToolChain.ShouldLinkCXXStdlib(Args)) {
-        bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
-                                   !Args.hasArg(options::OPT_static);
-        if (OnlyLibstdcxxStatic)
-          CmdArgs.push_back("-Bstatic");
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-        if (OnlyLibstdcxxStatic)
-          CmdArgs.push_back("-Bdynamic");
-      }
       CmdArgs.push_back("-lm");
     }
 
@@ -284,5 +281,6 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
 SanitizerMask Fuchsia::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::SafeStack;
+  Res |= SanitizerKind::Address;
   return Res;
 }
