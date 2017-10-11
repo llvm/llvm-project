@@ -396,6 +396,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
   TPC.CollectFeatures([&](size_t Feature) {
+    Corpus.UpdateFeatureFrequency(Feature);
     if (Corpus.AddFeature(Feature, Size, Options.Shrink))
       UniqFeatureSetTmp.push_back(Feature);
     if (Options.ReduceInputs && II)
@@ -565,6 +566,8 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
+  if (Options.UseFeatureFrequency)
+    Corpus.UpdateFeatureFrequencyScore(&II);
   const auto &U = II.U;
   memcpy(BaseSha1, II.Sha1, sizeof(BaseSha1));
   assert(CurrentUnitData);
