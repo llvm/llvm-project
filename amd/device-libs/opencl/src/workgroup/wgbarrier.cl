@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
-
 __attribute__((overloadable, always_inline)) void
 barrier(cl_mem_fence_flags flags)
 {
@@ -23,9 +21,17 @@ __attribute__((overloadable, always_inline)) void
 work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
     if (flags) {
-        atomic_work_item_fence(flags, memory_order_release, scope);
+        atomic_work_item_fence(flags,
+            flags == (CLK_GLOBAL_MEM_FENCE|CLK_LOCAL_MEM_FENCE) ?
+                memory_order_seq_cst : memory_order_release,
+            scope);
+
         __builtin_amdgcn_s_barrier();
-        atomic_work_item_fence(flags, memory_order_acquire, scope);
+
+        atomic_work_item_fence(flags,
+            flags == (CLK_GLOBAL_MEM_FENCE|CLK_LOCAL_MEM_FENCE) ?
+                memory_order_seq_cst : memory_order_acquire,
+            scope);
     } else {
         __builtin_amdgcn_s_barrier();
     }
