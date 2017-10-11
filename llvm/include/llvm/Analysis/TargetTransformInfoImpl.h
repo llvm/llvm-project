@@ -647,7 +647,9 @@ public:
       BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     }
     bool HasBaseReg = (BaseGV == nullptr);
-    int64_t BaseOffset = 0;
+
+    auto PtrSizeBits = DL.getPointerTypeSizeInBits(Ptr->getType());
+    APInt BaseOffset(PtrSizeBits, 0);
     int64_t Scale = 0;
 
     auto GTI = gep_type_begin(PointeeType, Operands);
@@ -667,9 +669,10 @@ public:
         BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       } else {
         int64_t ElementSize = DL.getTypeAllocSize(GTI.getIndexedType());
-        if (ConstIdx)
-          BaseOffset += ConstIdx->getSExtValue() * ElementSize;
-        else {
+        if (ConstIdx) {
+          BaseOffset +=
+              ConstIdx->getValue().sextOrTrunc(PtrSizeBits) * ElementSize;
+        } else {
           // Needs scale register.
           if (Scale != 0)
             // No addressing mode takes two scale registers.
@@ -683,8 +686,9 @@ public:
     unsigned AS =
         (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
     if (static_cast<T *>(this)->isLegalAddressingMode(
-            TargetType, const_cast<GlobalValue *>(BaseGV), BaseOffset,
-            HasBaseReg, Scale, AS))
+            TargetType, const_cast<GlobalValue *>(BaseGV),
+            static_cast<int64_t>(BaseOffset.getLimitedValue()), HasBaseReg,
+            Scale, AS))
       return TTI::TCC_Free;
     return TTI::TCC_Basic;
   }
