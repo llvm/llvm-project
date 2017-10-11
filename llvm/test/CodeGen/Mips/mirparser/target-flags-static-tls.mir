@@ -1,0 +1,236 @@
+# RUN: llc -march=mips64 -target-abi n64 -start-before=expand-isel-pseudos \
+# RUN:     -stop-after=expand-isel-pseudos -relocation-model=static  -o /dev/null %s
+
+# A simple test to show that we can parse the target specific flags: highest,
+# higher, hi, lo, tprel-lo, tprel-hi, gpoff-hi, gpoff-lo, gottprel.
+
+--- |
+  @v = global i32 0, align 4
+  @k = thread_local global i32 0, align 4
+  @j = external thread_local global i32, align 4
+  @__tls_guard = internal thread_local global i1 false, align 1
+
+  declare i32 @_Z1gi(i32 signext)
+
+  declare extern_weak void @_ZTH1j()
+
+  define i32 @_Z2k1i(i32 signext %asd) {
+  entry:
+    %call = tail call i32 @_Z1gi(i32 signext %asd)
+    %add = add nsw i32 %call, %asd
+    %0 = load i32, i32* @v, align 4
+    %add1 = add nsw i32 %add, %0
+    %.b.i.i = load i1, i1* @__tls_guard, align 1
+    br i1 %.b.i.i, label %entry._ZTW1k.exit_crit_edge, label %init.i.i
+
+  entry._ZTW1k.exit_crit_edge:
+    %.pre = load i32, i32* @k, align 4
+    br label %_ZTW1k.exit
+
+  init.i.i:
+    store i1 true, i1* @__tls_guard, align 1
+    %call.i.i.i = tail call i32 @_Z1gi(i32 signext 3)
+    store i32 %call.i.i.i, i32* @k, align 4
+    br label %_ZTW1k.exit
+
+  _ZTW1k.exit:
+    %1 = phi i32 [ %.pre, %entry._ZTW1k.exit_crit_edge ], [ %call.i.i.i, %init.i.i ]
+    %add2 = add nsw i32 %add1, %1
+    br i1 icmp ne (void ()* @_ZTH1j, void ()* null), label %2, label %_ZTW1j.exit
+
+  ; <label>:2:
+    tail call void @_ZTH1j()
+    br label %_ZTW1j.exit
+
+  _ZTW1j.exit:
+    %3 = load i32, i32* @j, align 4
+    %add3 = add nsw i32 %add2, %3
+    ret i32 %add3
+  }
+...
+---
+name:            _Z2k1i
+alignment:       3
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr64, preferred-register: '' }
+  - { id: 6, class: gpr32, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr64, preferred-register: '' }
+  - { id: 10, class: gpr64, preferred-register: '' }
+  - { id: 11, class: gpr64, preferred-register: '' }
+  - { id: 12, class: gpr64, preferred-register: '' }
+  - { id: 13, class: gpr64, preferred-register: '' }
+  - { id: 14, class: gpr32, preferred-register: '' }
+  - { id: 15, class: gpr64, preferred-register: '' }
+  - { id: 16, class: gpr64, preferred-register: '' }
+  - { id: 17, class: gpr64, preferred-register: '' }
+  - { id: 18, class: gpr64, preferred-register: '' }
+  - { id: 19, class: gpr64, preferred-register: '' }
+  - { id: 20, class: gpr32, preferred-register: '' }
+  - { id: 21, class: gpr64, preferred-register: '' }
+  - { id: 22, class: gpr64, preferred-register: '' }
+  - { id: 23, class: gpr64, preferred-register: '' }
+  - { id: 24, class: gpr64, preferred-register: '' }
+  - { id: 25, class: gpr64, preferred-register: '' }
+  - { id: 26, class: gpr32, preferred-register: '' }
+  - { id: 27, class: gpr64, preferred-register: '' }
+  - { id: 28, class: gpr64, preferred-register: '' }
+  - { id: 29, class: gpr64, preferred-register: '' }
+  - { id: 30, class: gpr64, preferred-register: '' }
+  - { id: 31, class: gpr32, preferred-register: '' }
+  - { id: 32, class: gpr64, preferred-register: '' }
+  - { id: 33, class: gpr64, preferred-register: '' }
+  - { id: 34, class: gpr64, preferred-register: '' }
+  - { id: 35, class: gpr64, preferred-register: '' }
+  - { id: 36, class: gpr64, preferred-register: '' }
+  - { id: 37, class: gpr64, preferred-register: '' }
+  - { id: 38, class: gpr64, preferred-register: '' }
+  - { id: 39, class: gpr64, preferred-register: '' }
+  - { id: 40, class: gpr64, preferred-register: '' }
+  - { id: 41, class: gpr64, preferred-register: '' }
+  - { id: 42, class: gpr64, preferred-register: '' }
+  - { id: 43, class: gpr64, preferred-register: '' }
+  - { id: 44, class: gpr64, preferred-register: '' }
+  - { id: 45, class: gpr64, preferred-register: '' }
+  - { id: 46, class: gpr64, preferred-register: '' }
+  - { id: 47, class: gpr64, preferred-register: '' }
+  - { id: 48, class: gpr32, preferred-register: '' }
+  - { id: 49, class: gpr32, preferred-register: '' }
+  - { id: 50, class: gpr64, preferred-register: '' }
+  - { id: 51, class: gpr64, preferred-register: '' }
+liveins:
+  - { reg: '%a0_64', virtual-reg: '%5' }
+  - { reg: '%t9_64', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.1.entry._ZTW1k.exit_crit_edge(0x7fe00000), %bb.2.init.i.i(0x00200000)
+    liveins: %a0_64, %t9_64
+
+    %50 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
+    %51 = DADDu %50, %t9_64
+    %43 = DADDiu %51, target-flags(mips-gpoff-lo) @_Z2k1i
+    %5 = COPY %a0_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    %6 = COPY %5.sub_32
+    %a0_64 = COPY %5
+    JAL @_Z1gi, csr_n64, implicit-def dead %ra, implicit %a0_64, implicit-def %sp, implicit-def %v0
+    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
+    %7 = COPY %v0
+    %8 = ADDu %7, killed %6
+    %9 = LUi64 target-flags(mips-highest) @v
+    %10 = DADDiu killed %9, target-flags(mips-higher) @v
+    %11 = DSLL killed %10, 16
+    %12 = DADDiu killed %11, target-flags(mips-abs-hi) @v
+    %13 = DSLL killed %12, 16
+    %14 = LW killed %13, target-flags(mips-abs-lo) @v :: (dereferenceable load 4 from @v)
+    %0 = ADDu killed %8, killed %14
+    %15 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
+    %16 = DADDiu killed %15, target-flags(mips-tprel-lo) @__tls_guard
+    %17 = RDHWR64 %hwr29
+    %v1_64 = COPY %17
+    %18 = COPY %v1_64
+    %19 = DADDu %18, killed %16
+    %20 = LBu killed %19, 0 :: (dereferenceable load 1 from @__tls_guard)
+    BEQ killed %20, %zero, %bb.2.init.i.i, implicit-def dead %at
+    J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead %at
+
+  bb.1.entry._ZTW1k.exit_crit_edge:
+    successors: %bb.3._ZTW1k.exit(0x80000000)
+
+    %32 = LUi64 target-flags(mips-tprel-hi) @k
+    %33 = DADDiu killed %32, target-flags(mips-tprel-lo) @k
+    %34 = RDHWR64 %hwr29
+    %v1_64 = COPY %34
+    %35 = COPY %v1_64
+    %36 = DADDu %35, killed %33
+    %1 = LW killed %36, 0 :: (dereferenceable load 4 from @k)
+    J %bb.3._ZTW1k.exit, implicit-def dead %at
+
+  bb.2.init.i.i:
+    successors: %bb.3._ZTW1k.exit(0x80000000)
+
+    %21 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
+    %22 = DADDiu killed %21, target-flags(mips-tprel-lo) @__tls_guard
+    %23 = RDHWR64 %hwr29
+    %v1_64 = COPY %23
+    %24 = COPY %v1_64
+    %25 = DADDu %24, killed %22
+    %26 = ADDiu %zero, 1
+    SB killed %26, killed %25, 0 :: (store 1 into @__tls_guard)
+    %27 = LUi64 target-flags(mips-tprel-hi) @k
+    %28 = DADDiu killed %27, target-flags(mips-tprel-lo) @k
+    %29 = DADDu %24, killed %28
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    %30 = DADDiu %zero_64, 3
+    %a0_64 = COPY %30
+    JAL @_Z1gi, csr_n64, implicit-def dead %ra, implicit %a0_64, implicit-def %sp, implicit-def %v0
+    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
+    %31 = COPY %v0
+    SW %31, killed %29, 0 :: (store 4 into @k)
+    %2 = COPY %31
+
+  bb.3._ZTW1k.exit:
+    successors: %bb.4(0x40000000), %bb.5._ZTW1j.exit(0x40000000)
+
+    %3 = PHI %2, %bb.2.init.i.i, %1, %bb.1.entry._ZTW1k.exit_crit_edge
+    %4 = ADDu %0, %3
+    %37 = LUi64 target-flags(mips-highest) @_ZTH1j
+    %38 = DADDiu killed %37, target-flags(mips-higher) @_ZTH1j
+    %39 = DSLL killed %38, 16
+    %40 = DADDiu killed %39, target-flags(mips-abs-hi) @_ZTH1j
+    %41 = DSLL killed %40, 16
+    %42 = DADDiu killed %41, target-flags(mips-abs-lo) @_ZTH1j
+    BEQ64 killed %42, %zero_64, %bb.5._ZTW1j.exit, implicit-def dead %at
+    J %bb.4, implicit-def dead %at
+
+  bb.4 (%ir-block.2):
+    successors: %bb.5._ZTW1j.exit(0x80000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
+    JAL @_ZTH1j, csr_n64, implicit-def dead %ra, implicit-def %sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
+
+  bb.5._ZTW1j.exit:
+    %44 = RDHWR64 %hwr29
+    %v1_64 = COPY %44
+    %45 = LD %43, target-flags(mips-gottprel) @j :: (load 8)
+    %46 = COPY %v1_64
+    %47 = DADDu %46, killed %45
+    %48 = LW killed %47, 0 :: (dereferenceable load 4 from @j)
+    %49 = ADDu %4, killed %48
+    %v0 = COPY %49
+    RetRA implicit %v0
+
+...
+

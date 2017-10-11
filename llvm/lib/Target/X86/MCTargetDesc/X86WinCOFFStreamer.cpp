@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCTargetDesc.h"
+#include "X86TargetStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
@@ -24,6 +25,7 @@ public:
 
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
+  void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) override;
   void FinishImpl() override;
 };
 
@@ -39,6 +41,12 @@ void X86WinCOFFStreamer::EmitWindowsUnwindTables() {
   if (!getNumWinFrameInfos())
     return;
   EHStreamer.Emit(*this);
+}
+
+void X86WinCOFFStreamer::EmitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) {
+  X86TargetStreamer *XTS =
+      static_cast<X86TargetStreamer *>(getTargetStreamer());
+  XTS->emitFPOData(ProcSym, Loc);
 }
 
 void X86WinCOFFStreamer::FinishImpl() {

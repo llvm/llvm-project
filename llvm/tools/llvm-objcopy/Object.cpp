@@ -575,14 +575,20 @@ void Object<ELFT>::writeHeader(FileOutputBuffer &Out) const {
   Ehdr.e_version = Version;
   Ehdr.e_entry = Entry;
   Ehdr.e_phoff = sizeof(Elf_Ehdr);
-  Ehdr.e_shoff = SHOffset;
   Ehdr.e_flags = Flags;
   Ehdr.e_ehsize = sizeof(Elf_Ehdr);
   Ehdr.e_phentsize = sizeof(Elf_Phdr);
   Ehdr.e_phnum = Segments.size();
   Ehdr.e_shentsize = sizeof(Elf_Shdr);
-  Ehdr.e_shnum = Sections.size() + 1;
-  Ehdr.e_shstrndx = SectionNames->Index;
+  if (WriteSectionHeaders) {
+    Ehdr.e_shoff = SHOffset;
+    Ehdr.e_shnum = Sections.size() + 1;
+    Ehdr.e_shstrndx = SectionNames->Index;
+  } else {
+    Ehdr.e_shoff = 0;
+    Ehdr.e_shnum = 0;
+    Ehdr.e_shstrndx = 0;
+  }
 }
 
 template <class ELFT>
@@ -626,19 +632,19 @@ void Object<ELFT>::removeSections(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
         if (ToRemove(*Sec))
           return false;
-        if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get()))
-          return !ToRemove(*RelSec->getSection());
+        if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get())) {
+          if (auto ToRelSec = RelSec->getSection())
+            return !ToRemove(*ToRelSec);
+        }
         return true;
       });
   if (SymbolTable != nullptr && ToRemove(*SymbolTable))
     SymbolTable = nullptr;
   if (ToRemove(*SectionNames)) {
-    // Right now llvm-objcopy always outputs section headers. This will not
-    // always be the case. Eventully the section header table will become
-    // optional and if no section header is output then there dosn't need to be
-    // a section header string table.
-    error("Cannot remove " + SectionNames->Name +
-          " because it is the section header string table.");
+    if (WriteSectionHeaders)
+      error("Cannot remove " + SectionNames->Name +
+            " because it is the section header string table.");
+    SectionNames = nullptr;
   }
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
@@ -732,29 +738,34 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
     }
   }
 
-  Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
+  if (this->WriteSectionHeaders) {
+    Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
+  }
   this->SHOffset = Offset;
 }
 
 template <class ELFT> size_t ELFObject<ELFT>::totalSize() const {
   // We already have the section header offset so we can calculate the total
   // size by just adding up the size of each section header.
+  auto NullSectionSize = this->WriteSectionHeaders ? sizeof(Elf_Shdr) : 0;
   return this->SHOffset + this->Sections.size() * sizeof(Elf_Shdr) +
-         sizeof(Elf_Shdr);
+         NullSectionSize;
 }
 
 template <class ELFT> void ELFObject<ELFT>::write(FileOutputBuffer &Out) const {
   this->writeHeader(Out);
   this->writeProgramHeaders(Out);
   this->writeSectionData(Out);
-  this->writeSectionHeaders(Out);
+  if (this->WriteSectionHeaders)
+    this->writeSectionHeaders(Out);
 }
 
 template <class ELFT> void ELFObject<ELFT>::finalize() {
   // Make sure we add the names of all the sections.
-  for (const auto &Section : this->Sections) {
-    this->SectionNames->addString(Section->Name);
-  }
+  if (this->SectionNames != nullptr)
+    for (const auto &Section : this->Sections) {
+      this->SectionNames->addString(Section->Name);
+    }
   // Make sure we add the names of all the symbols.
   if (this->SymbolTable != nullptr)
     this->SymbolTable->addSymbolNames();
@@ -763,14 +774,16 @@ template <class ELFT> void ELFObject<ELFT>::finalize() {
   assignOffsets();
 
   // Finalize SectionNames first so that we can assign name indexes.
-  this->SectionNames->finalize();
+  if (this->SectionNames != nullptr)
+    this->SectionNames->finalize();
   // Finally now that all offsets and indexes have been set we can finalize any
   // remaining issues.
   uint64_t Offset = this->SHOffset + sizeof(Elf_Shdr);
   for (auto &Section : this->Sections) {
     Section->HeaderOffset = Offset;
     Offset += sizeof(Elf_Shdr);
-    Section->NameIndex = this->SectionNames->findIndex(Section->Name);
+    if (this->WriteSectionHeaders)
+      Section->NameIndex = this->SectionNames->findIndex(Section->Name);
     Section->finalize();
   }
 }

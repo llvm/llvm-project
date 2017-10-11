@@ -4,7 +4,7 @@
 
 ; amdpal compute shader: check for 0x2e12 (COMPUTE_PGM_RSRC1) in pal metadata
 ; GCN-LABEL: {{^}}cs_amdpal:
-; GCN: .amdgpu_pal_metadata{{.*}}0x2e12,
+; GCN: .amd_amdgpu_pal_metadata{{.*}}0x2e12,
 define amdgpu_cs half @cs_amdpal(half %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add

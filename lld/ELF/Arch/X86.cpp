@@ -24,24 +24,24 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
-  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 
-  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+  RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
-  void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -63,7 +63,7 @@ X86::X86() {
   TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
-RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
                         const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
@@ -121,7 +121,7 @@ RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
   }
 }
 
-RelExpr X86::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
                              RelExpr Expr) const {
   switch (Expr) {
   default:
@@ -148,7 +148,7 @@ void X86::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   write32le(Buf, S.getVA());
 }
 
-uint32_t X86::getDynRel(uint32_t Type) const {
+RelType X86::getDynRel(RelType Type) const {
   if (Type == R_386_TLS_LE)
     return R_386_TLS_TPOFF;
   if (Type == R_386_TLS_LE_32)
@@ -208,7 +208,7 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
 }
 
-int64_t X86::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
+int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   switch (Type) {
   default:
     return 0;
@@ -231,7 +231,7 @@ int64_t X86::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
   }
 }
 
-void X86::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
   // being used for some 16-bit programs such as boot loaders, so
   // we want to support them.
@@ -268,7 +268,7 @@ void X86::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -283,7 +283,7 @@ void X86::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   write32le(Loc + 5, Val);
 }
 
-void X86::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -300,7 +300,7 @@ void X86::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -337,7 +337,7 @@ void X86::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   write32le(Loc, Val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   if (Type == R_386_TLS_LDO_32) {
     write32le(Loc, Val);
     return;

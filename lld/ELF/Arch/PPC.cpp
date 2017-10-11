@@ -22,13 +22,13 @@ namespace {
 class PPC final : public TargetInfo {
 public:
   PPC() { GotBaseSymOff = 0x8000; }
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
 };
 } // namespace
 
-void PPC::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_PPC_ADDR16_HA:
     write16be(Loc, (Val + 0x8000) >> 16);
@@ -48,7 +48,7 @@ void PPC::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-RelExpr PPC::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr PPC::getRelExpr(RelType Type, const SymbolBody &S,
                         const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_PPC_REL24:

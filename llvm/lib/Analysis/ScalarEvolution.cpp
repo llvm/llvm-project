@@ -4523,8 +4523,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
                : SCEVWrapPredicate::IncrementNUSW;
     const SCEVPredicate *AddRecPred = getWrapPredicate(AR, AddedFlags);
     Predicates.push_back(AddRecPred);
-  } else
-    assert(isa<SCEVConstant>(PHISCEV) && "Expected constant SCEV");
+  }
 
   // Create the Equal Predicates P2,P3:
 

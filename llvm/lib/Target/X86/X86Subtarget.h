@@ -592,13 +592,9 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isTargetWin64() const {
-    return In64BitMode && TargetTriple.isOSWindows();
-  }
+  bool isTargetWin64() const { return In64BitMode && isOSWindows(); }
 
-  bool isTargetWin32() const {
-    return !In64BitMode && (isTargetCygMing() || isTargetKnownWindowsMSVC());
-  }
+  bool isTargetWin32() const { return !In64BitMode && isOSWindows(); }
 
   bool isPICStyleGOT() const { return PICStyle == PICStyles::GOT; }
   bool isPICStyleRIPRel() const { return PICStyle == PICStyles::RIPRel; }

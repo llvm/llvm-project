@@ -37,19 +37,19 @@
 .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 // ASM: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 
-.amdgpu_code_object_metadata
+.amd_amdgpu_hsa_metadata
   Version: [ 3, 0 ]
   Kernels:
     - Name: amd_kernel_code_t_test_all
     - Name: amd_kernel_code_t_minimal
-.end_amdgpu_code_object_metadata
+.end_amd_amdgpu_hsa_metadata
 
-// ASM: .amdgpu_code_object_metadata
+// ASM: .amd_amdgpu_hsa_metadata
 // ASM:    Version: [ 3, 0 ]
 // ASM:    Kernels:
 // ASM:      - Name: amd_kernel_code_t_test_all
 // ASM:      - Name: amd_kernel_code_t_minimal
-// ASM: .end_amdgpu_code_object_metadata
+// ASM: .end_amd_amdgpu_hsa_metadata
 
 .amdgpu_hsa_kernel amd_kernel_code_t_test_all
 .amdgpu_hsa_kernel amd_kernel_code_t_minimal

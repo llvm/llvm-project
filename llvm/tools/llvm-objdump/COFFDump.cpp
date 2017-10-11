@@ -641,9 +641,9 @@ void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
 
 void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
   for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
-    ErrorOr<COFFSymbolRef> Symbol = coff->getSymbol(SI);
+    Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
     StringRef Name;
-    error(Symbol.getError());
+    error(errorToErrorCode(Symbol.takeError()));
     error(coff->getSymbolName(*Symbol, Name));
 
     outs() << "[" << format("%2d", SI) << "]"

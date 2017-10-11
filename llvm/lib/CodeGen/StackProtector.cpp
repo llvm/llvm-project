@@ -247,10 +247,12 @@ bool StackProtector::RequiresStackProtector() {
   OptimizationRemarkEmitter ORE(F);
 
   if (F->hasFnAttribute(Attribute::StackProtectReq)) {
-    ORE.emit(OptimizationRemark(DEBUG_TYPE, "StackProtectorRequested", F)
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "StackProtectorRequested", F)
              << "Stack protection applied to function "
              << ore::NV("Function", F)
-             << " due to a function attribute or command-line switch");
+             << " due to a function attribute or command-line switch";
+    });
     NeedsProtector = true;
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
   } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
@@ -264,29 +266,31 @@ bool StackProtector::RequiresStackProtector() {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         if (AI->isArrayAllocation()) {
-          OptimizationRemark Remark(DEBUG_TYPE, "StackProtectorAllocaOrArray",
-                                    &I);
-          Remark
-              << "Stack protection applied to function "
-              << ore::NV("Function", F)
-              << " due to a call to alloca or use of a variable length array";
+          auto RemarkBuilder = [&]() {
+            return OptimizationRemark(DEBUG_TYPE, "StackProtectorAllocaOrArray",
+                                      &I)
+                   << "Stack protection applied to function "
+                   << ore::NV("Function", F)
+                   << " due to a call to alloca or use of a variable length "
+                      "array";
+          };
           if (const auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
             if (CI->getLimitedValue(SSPBufferSize) >= SSPBufferSize) {
               // A call to alloca with size >= SSPBufferSize requires
               // stack protectors.
               Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
-              ORE.emit(Remark);
+              ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             } else if (Strong) {
               // Require protectors for all alloca calls in strong mode.
               Layout.insert(std::make_pair(AI, SSPLK_SmallArray));
-              ORE.emit(Remark);
+              ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             }
           } else {
             // A call to alloca with a variable size requires protectors.
             Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
-            ORE.emit(Remark);
+            ORE.emit(RemarkBuilder);
             NeedsProtector = true;
           }
           continue;
@@ -296,11 +300,13 @@ bool StackProtector::RequiresStackProtector() {
         if (ContainsProtectableArray(AI->getAllocatedType(), IsLarge, Strong)) {
           Layout.insert(std::make_pair(AI, IsLarge ? SSPLK_LargeArray
                                                    : SSPLK_SmallArray));
-          ORE.emit(OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
+          ORE.emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
                    << "Stack protection applied to function "
                    << ore::NV("Function", F)
                    << " due to a stack allocated buffer or struct containing a "
-                      "buffer");
+                      "buffer";
+          });
           NeedsProtector = true;
           continue;
         }
@@ -308,11 +314,13 @@ bool StackProtector::RequiresStackProtector() {
         if (Strong && HasAddressTaken(AI)) {
           ++NumAddrTaken;
           Layout.insert(std::make_pair(AI, SSPLK_AddrOf));
-          ORE.emit(
-              OptimizationRemark(DEBUG_TYPE, "StackProtectorAddressTaken", &I)
-              << "Stack protection applied to function "
-              << ore::NV("Function", F)
-              << " due to the address of a local variable being taken");
+          ORE.emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "StackProtectorAddressTaken",
+                                      &I)
+                   << "Stack protection applied to function "
+                   << ore::NV("Function", F)
+                   << " due to the address of a local variable being taken";
+          });
           NeedsProtector = true;
         }
       }

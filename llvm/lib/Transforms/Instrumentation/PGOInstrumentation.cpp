@@ -1510,8 +1510,10 @@ void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
     OS.flush();
     Function *F = TI->getParent()->getParent();
     OptimizationRemarkEmitter ORE(F);
-    ORE.emit(OptimizationRemark(DEBUG_TYPE, "pgo-instrumentation", TI)
-             << BrCondStr << " is true with probability : " << BranchProbStr);
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "pgo-instrumentation", TI)
+             << BrCondStr << " is true with probability : " << BranchProbStr;
+    });
   }
 }
 

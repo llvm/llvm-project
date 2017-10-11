@@ -180,14 +180,11 @@ void ObjFile::initializeSymbols() {
 
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
-    ErrorOr<COFFSymbolRef> SymOrErr = COFFObj->getSymbol(I);
-    if (!SymOrErr)
-      fatal(SymOrErr.getError(), "broken object file: " + toString(this));
-    COFFSymbolRef Sym = *SymOrErr;
+    COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())
-      AuxP = COFFObj->getSymbol(I + 1)->getRawPtr();
+      AuxP = check(COFFObj->getSymbol(I + 1)).getRawPtr();
     bool IsFirst = (LastSectionNumber != Sym.getSectionNumber());
 
     SymbolBody *Body = nullptr;

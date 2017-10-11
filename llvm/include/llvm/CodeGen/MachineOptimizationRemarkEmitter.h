@@ -164,6 +164,21 @@ public:
             .getDiagHandlerPtr()->isAnyRemarkEnabled(PassName));
   }
 
+  /// \brief Take a lambda that returns a remark which will be emitted.  Second
+  /// argument is only used to restrict this to functions.
+  template <typename T>
+  void emit(T RemarkBuilder, decltype(RemarkBuilder()) * = nullptr) {
+    // Avoid building the remark unless we know there are at least *some*
+    // remarks enabled. We can't currently check whether remarks are requested
+    // for the calling pass since that requires actually building the remark.
+
+    if (MF.getFunction()->getContext().getDiagnosticsOutputFile() ||
+        MF.getFunction()->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
+      auto R = RemarkBuilder();
+      emit(R);
+    }
+  }
+
 private:
   MachineFunction &MF;
 
