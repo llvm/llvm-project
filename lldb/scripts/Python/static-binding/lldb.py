@@ -330,6 +330,7 @@ eBreakpointEventTypeCommandChanged = _lldb.eBreakpointEventTypeCommandChanged
 eBreakpointEventTypeConditionChanged = _lldb.eBreakpointEventTypeConditionChanged
 eBreakpointEventTypeIgnoreChanged = _lldb.eBreakpointEventTypeIgnoreChanged
 eBreakpointEventTypeThreadChanged = _lldb.eBreakpointEventTypeThreadChanged
+eBreakpointEventTypeAutoContinueChanged = _lldb.eBreakpointEventTypeAutoContinueChanged
 eWatchpointEventTypeInvalidType = _lldb.eWatchpointEventTypeInvalidType
 eWatchpointEventTypeAdded = _lldb.eWatchpointEventTypeAdded
 eWatchpointEventTypeRemoved = _lldb.eWatchpointEventTypeRemoved
@@ -481,6 +482,7 @@ eArgTypeWatchpointID = _lldb.eArgTypeWatchpointID
 eArgTypeWatchpointIDRange = _lldb.eArgTypeWatchpointIDRange
 eArgTypeWatchType = _lldb.eArgTypeWatchType
 eArgRawInput = _lldb.eArgRawInput
+eArgTypeCommand = _lldb.eArgTypeCommand
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 eSymbolTypeAny = _lldb.eSymbolTypeAny
 eSymbolTypeInvalid = _lldb.eSymbolTypeInvalid
@@ -1530,6 +1532,14 @@ class SBBreakpoint(_object):
         """
         return _lldb.SBBreakpoint_GetCondition(self)
 
+    def SetAutoContinue(self, *args):
+        """SetAutoContinue(self, bool auto_continue)"""
+        return _lldb.SBBreakpoint_SetAutoContinue(self, *args)
+
+    def GetAutoContinue(self):
+        """GetAutoContinue(self) -> bool"""
+        return _lldb.SBBreakpoint_GetAutoContinue(self)
+
     def SetThreadID(self, *args):
         """SetThreadID(self, tid_t sb_thread_id)"""
         return _lldb.SBBreakpoint_SetThreadID(self, *args)
@@ -1662,6 +1672,39 @@ class SBBreakpoint(_object):
 
     if _newclass:GetNumBreakpointLocationsFromEvent = staticmethod(GetNumBreakpointLocationsFromEvent)
     __swig_getmethods__["GetNumBreakpointLocationsFromEvent"] = lambda x: GetNumBreakpointLocationsFromEvent
+    class locations_access(object):
+        '''A helper object that will lazily hand out locations for a breakpoint when supplied an index.'''
+        def __init__(self, sbbreakpoint):
+            self.sbbreakpoint = sbbreakpoint
+
+        def __len__(self):
+            if self.sbbreakpoint:
+                return int(self.sbbreakpoint.GetNumLocations())
+            return 0
+
+        def __getitem__(self, key):
+            if type(key) is int and key < len(self):
+                return self.sbbreakpoint.GetLocationAtIndex(key)
+            return None
+
+    def get_locations_access_object(self):
+        '''An accessor function that returns a locations_access() object which allows lazy location access from a lldb.SBBreakpoint object.'''
+        return self.locations_access (self)
+
+    def get_breakpoint_location_list(self):
+        '''An accessor function that returns a list() that contains all locations in a lldb.SBBreakpoint object.'''
+        locations = []
+        accessor = self.get_locations_access_object()
+        for idx in range(len(accessor)):
+            locations.append(accessor[idx])
+        return locations
+
+    __swig_getmethods__["locations"] = get_breakpoint_location_list
+    if _newclass: locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
+
+    __swig_getmethods__["location"] = get_locations_access_object
+    if _newclass: location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
+
     __swig_getmethods__["id"] = GetID
     if _newclass: id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
         
@@ -1841,6 +1884,14 @@ class SBBreakpointLocation(_object):
         """
         return _lldb.SBBreakpointLocation_GetCondition(self)
 
+    def GetAutoContinue(self):
+        """GetAutoContinue(self) -> bool"""
+        return _lldb.SBBreakpointLocation_GetAutoContinue(self)
+
+    def SetAutoContinue(self, *args):
+        """SetAutoContinue(self, bool auto_continue)"""
+        return _lldb.SBBreakpointLocation_SetAutoContinue(self, *args)
+
     def SetScriptCallbackFunction(self, *args):
         """
         SetScriptCallbackFunction(self, str callback_function_name)
@@ -1863,6 +1914,14 @@ class SBBreakpointLocation(_object):
         Returns true if the body compiles successfully, false if not.
         """
         return _lldb.SBBreakpointLocation_SetScriptCallbackBody(self, *args)
+
+    def SetCommandLineCommands(self, *args):
+        """SetCommandLineCommands(self, SBStringList commands)"""
+        return _lldb.SBBreakpointLocation_SetCommandLineCommands(self, *args)
+
+    def GetCommandLineCommands(self, *args):
+        """GetCommandLineCommands(self, SBStringList commands) -> bool"""
+        return _lldb.SBBreakpointLocation_GetCommandLineCommands(self, *args)
 
     def SetThreadID(self, *args):
         """SetThreadID(self, tid_t sb_thread_id)"""
@@ -1914,6 +1973,187 @@ class SBBreakpointLocation(_object):
 
 SBBreakpointLocation_swigregister = _lldb.SBBreakpointLocation_swigregister
 SBBreakpointLocation_swigregister(SBBreakpointLocation)
+
+class SBBreakpointName(_object):
+    """
+    Represents a breakpoint name registered in a given SBTarget.
+
+    Breakpoint names provide a way to act on groups of breakpoints.  When you add a
+    name to a group of breakpoints, you can then use the name in all the command
+    line lldb commands for that name.  You can also configure the SBBreakpointName
+    options and those options will be propagated to any SBBreakpoints currently
+    using that name.  Adding a name to a breakpoint will also apply any of the
+    set options to that breakpoint.
+
+    You can also set permissions on a breakpoint name to disable listing, deleting 
+    and disabling breakpoints.  That will disallow the given operation for breakpoints
+    except when the breakpoint is mentioned by ID.  So for instance deleting all the
+    breakpoints won't delete breakpoints so marked.
+    """
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBBreakpointName, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBBreakpointName, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """
+        __init__(self) -> SBBreakpointName
+        __init__(self, SBTarget target, str name) -> SBBreakpointName
+        __init__(self, SBBreakpoint bkpt, str name) -> SBBreakpointName
+        __init__(self, SBBreakpointName rhs) -> SBBreakpointName
+        """
+        this = _lldb.new_SBBreakpointName(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _lldb.delete_SBBreakpointName
+    __del__ = lambda self : None;
+    def __eq__(self, *args):
+        """__eq__(self, SBBreakpointName rhs) -> bool"""
+        return _lldb.SBBreakpointName___eq__(self, *args)
+
+    def __ne__(self, *args):
+        """__ne__(self, SBBreakpointName rhs) -> bool"""
+        return _lldb.SBBreakpointName___ne__(self, *args)
+
+    def __nonzero__(self): return self.IsValid()
+    def IsValid(self):
+        """IsValid(self) -> bool"""
+        return _lldb.SBBreakpointName_IsValid(self)
+
+    def GetName(self):
+        """GetName(self) -> str"""
+        return _lldb.SBBreakpointName_GetName(self)
+
+    def SetEnabled(self, *args):
+        """SetEnabled(self, bool enable)"""
+        return _lldb.SBBreakpointName_SetEnabled(self, *args)
+
+    def IsEnabled(self):
+        """IsEnabled(self) -> bool"""
+        return _lldb.SBBreakpointName_IsEnabled(self)
+
+    def SetOneShot(self, *args):
+        """SetOneShot(self, bool one_shot)"""
+        return _lldb.SBBreakpointName_SetOneShot(self, *args)
+
+    def IsOneShot(self):
+        """IsOneShot(self) -> bool"""
+        return _lldb.SBBreakpointName_IsOneShot(self)
+
+    def SetIgnoreCount(self, *args):
+        """SetIgnoreCount(self, uint32_t count)"""
+        return _lldb.SBBreakpointName_SetIgnoreCount(self, *args)
+
+    def GetIgnoreCount(self):
+        """GetIgnoreCount(self) -> uint32_t"""
+        return _lldb.SBBreakpointName_GetIgnoreCount(self)
+
+    def SetCondition(self, *args):
+        """SetCondition(self, str condition)"""
+        return _lldb.SBBreakpointName_SetCondition(self, *args)
+
+    def GetCondition(self):
+        """GetCondition(self) -> str"""
+        return _lldb.SBBreakpointName_GetCondition(self)
+
+    def SetAutoContinue(self, *args):
+        """SetAutoContinue(self, bool auto_continue)"""
+        return _lldb.SBBreakpointName_SetAutoContinue(self, *args)
+
+    def GetAutoContinue(self):
+        """GetAutoContinue(self) -> bool"""
+        return _lldb.SBBreakpointName_GetAutoContinue(self)
+
+    def SetThreadID(self, *args):
+        """SetThreadID(self, tid_t sb_thread_id)"""
+        return _lldb.SBBreakpointName_SetThreadID(self, *args)
+
+    def GetThreadID(self):
+        """GetThreadID(self) -> tid_t"""
+        return _lldb.SBBreakpointName_GetThreadID(self)
+
+    def SetThreadIndex(self, *args):
+        """SetThreadIndex(self, uint32_t index)"""
+        return _lldb.SBBreakpointName_SetThreadIndex(self, *args)
+
+    def GetThreadIndex(self):
+        """GetThreadIndex(self) -> uint32_t"""
+        return _lldb.SBBreakpointName_GetThreadIndex(self)
+
+    def SetThreadName(self, *args):
+        """SetThreadName(self, str thread_name)"""
+        return _lldb.SBBreakpointName_SetThreadName(self, *args)
+
+    def GetThreadName(self):
+        """GetThreadName(self) -> str"""
+        return _lldb.SBBreakpointName_GetThreadName(self)
+
+    def SetQueueName(self, *args):
+        """SetQueueName(self, str queue_name)"""
+        return _lldb.SBBreakpointName_SetQueueName(self, *args)
+
+    def GetQueueName(self):
+        """GetQueueName(self) -> str"""
+        return _lldb.SBBreakpointName_GetQueueName(self)
+
+    def SetScriptCallbackFunction(self, *args):
+        """SetScriptCallbackFunction(self, str callback_function_name)"""
+        return _lldb.SBBreakpointName_SetScriptCallbackFunction(self, *args)
+
+    def SetCommandLineCommands(self, *args):
+        """SetCommandLineCommands(self, SBStringList commands)"""
+        return _lldb.SBBreakpointName_SetCommandLineCommands(self, *args)
+
+    def GetCommandLineCommands(self, *args):
+        """GetCommandLineCommands(self, SBStringList commands) -> bool"""
+        return _lldb.SBBreakpointName_GetCommandLineCommands(self, *args)
+
+    def SetScriptCallbackBody(self, *args):
+        """SetScriptCallbackBody(self, str script_body_text) -> SBError"""
+        return _lldb.SBBreakpointName_SetScriptCallbackBody(self, *args)
+
+    def GetHelpString(self):
+        """GetHelpString(self) -> str"""
+        return _lldb.SBBreakpointName_GetHelpString(self)
+
+    def SetHelpString(self, *args):
+        """SetHelpString(self, str help_string)"""
+        return _lldb.SBBreakpointName_SetHelpString(self, *args)
+
+    def GetAllowList(self):
+        """GetAllowList(self) -> bool"""
+        return _lldb.SBBreakpointName_GetAllowList(self)
+
+    def SetAllowList(self, *args):
+        """SetAllowList(self, bool value)"""
+        return _lldb.SBBreakpointName_SetAllowList(self, *args)
+
+    def GetAllowDelete(self):
+        """GetAllowDelete(self) -> bool"""
+        return _lldb.SBBreakpointName_GetAllowDelete(self)
+
+    def SetAllowDelete(self, *args):
+        """SetAllowDelete(self, bool value)"""
+        return _lldb.SBBreakpointName_SetAllowDelete(self, *args)
+
+    def GetAllowDisable(self):
+        """GetAllowDisable(self) -> bool"""
+        return _lldb.SBBreakpointName_GetAllowDisable(self)
+
+    def SetAllowDisable(self, *args):
+        """SetAllowDisable(self, bool value)"""
+        return _lldb.SBBreakpointName_SetAllowDisable(self, *args)
+
+    def GetDescription(self, *args):
+        """GetDescription(self, SBStream description) -> bool"""
+        return _lldb.SBBreakpointName_GetDescription(self, *args)
+
+    def __str__(self):
+        """__str__(self) -> PyObject"""
+        return _lldb.SBBreakpointName___str__(self)
+
+SBBreakpointName_swigregister = _lldb.SBBreakpointName_swigregister
+SBBreakpointName_swigregister(SBBreakpointName)
 
 class SBBroadcaster(_object):
     """
@@ -3297,6 +3537,14 @@ class SBDebugger(_object):
         CreateTarget(self, str filename) -> SBTarget
         """
         return _lldb.SBDebugger_CreateTarget(self, *args)
+
+    def GetDummyTarget(self):
+        """
+        GetDummyTarget(self) -> SBTarget
+
+        The dummy target holds breakpoints and breakpoint names that will prime newly created targets.
+        """
+        return _lldb.SBDebugger_GetDummyTarget(self)
 
     def DeleteTarget(self, *args):
         """
@@ -9221,6 +9469,14 @@ class SBTarget(_object):
     def FindBreakpointsByName(self, *args):
         """FindBreakpointsByName(self, str name, SBBreakpointList bkpt_list) -> bool"""
         return _lldb.SBTarget_FindBreakpointsByName(self, *args)
+
+    def DeleteBreakpointName(self, *args):
+        """DeleteBreakpointName(self, str name)"""
+        return _lldb.SBTarget_DeleteBreakpointName(self, *args)
+
+    def GetBreakpointNames(self, *args):
+        """GetBreakpointNames(self, SBStringList names)"""
+        return _lldb.SBTarget_GetBreakpointNames(self, *args)
 
     def EnableAllBreakpoints(self):
         """EnableAllBreakpoints(self) -> bool"""
