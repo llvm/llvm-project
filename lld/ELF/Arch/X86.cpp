@@ -24,24 +24,24 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
-  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 
-  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+  RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
-  void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -63,7 +63,7 @@ X86::X86() {
   TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
-RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
                         const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
@@ -87,17 +87,41 @@ RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
     return R_GOT;
   case R_386_GOT32:
   case R_386_GOT32X:
-    // These relocations can be calculated in two different ways.
-    // Usual calculation is G + A - GOT what means an offset in GOT table
-    // (R_GOT_FROM_END). When instruction pointed by relocation has no base
-    // register, then relocations can be used when PIC code is disabled. In that
-    // case calculation is G + A, it resolves to an address of entry in GOT
-    // (R_GOT) and not an offset.
+    // These relocations are arguably mis-designed because their calculations
+    // depend on the instructions they are applied to. This is bad because we
+    // usually don't care about whether the target section contains valid
+    // machine instructions or not. But this is part of the documented ABI, so
+    // we had to implement as the standard requires.
     //
-    // To check that instruction has no base register we scan ModR/M byte.
-    // See "Table 2-2. 32-Bit Addressing Forms with the ModR/M Byte"
-    // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
-    //  64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
+    // x86 does not support PC-relative data access. Therefore, in order to
+    // access GOT contents, a GOT address needs to be known at link-time
+    // (which means non-PIC) or compilers have to emit code to get a GOT
+    // address at runtime (which means code is position-independent but
+    // compilers need to emit extra code for each GOT access.) This decision
+    // is made at compile-time. In the latter case, compilers emit code to
+    // load an GOT address to a register, which is usually %ebx.
+    //
+    // So, there are two ways to refer to symbol foo's GOT entry: foo@GOT or
+    // foo@GOT(%reg).
+    //
+    // foo@GOT is not usable in PIC. If we are creating a PIC output and if we
+    // find such relocation, we should report an error. foo@GOT is resolved to
+    // an *absolute* address of foo's GOT entry, because both GOT address and
+    // foo's offset are known. In other words, it's G + A.
+    //
+    // foo@GOT(%reg) needs to be resolved to a *relative* offset from a GOT to
+    // foo's GOT entry in the table, because GOT address is not known but foo's
+    // offset in the table is known. It's G + A - GOT.
+    //
+    // It's unfortunate that compilers emit the same relocation for these
+    // different use cases. In order to distinguish them, we have to read a
+    // machine instruction.
+    //
+    // The following code implements it. We assume that Loc[0] is the first
+    // byte of a displacement or an immediate field of a valid machine
+    // instruction. That means a ModRM byte is at Loc[-1]. By taking a look at
+    // the byte, we can determine whether the instruction is register-relative
+    // (i.e. it was generated for foo@GOT(%reg)) or absolute (i.e. foo@GOT).
     if ((Loc[-1] & 0xc7) != 0x5)
       return R_GOT_FROM_END;
     if (Config->Pic)
@@ -121,7 +145,7 @@ RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,
   }
 }
 
-RelExpr X86::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
                              RelExpr Expr) const {
   switch (Expr) {
   default:
@@ -148,7 +172,7 @@ void X86::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   write32le(Buf, S.getVA());
 }
 
-uint32_t X86::getDynRel(uint32_t Type) const {
+RelType X86::getDynRel(RelType Type) const {
   if (Type == R_386_TLS_LE)
     return R_386_TLS_TPOFF;
   if (Type == R_386_TLS_LE_32)
@@ -208,7 +232,7 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
 }
 
-int64_t X86::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
+int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   switch (Type) {
   default:
     return 0;
@@ -231,7 +255,7 @@ int64_t X86::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
   }
 }
 
-void X86::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
   // being used for some 16-bit programs such as boot loaders, so
   // we want to support them.
@@ -268,7 +292,7 @@ void X86::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -283,7 +307,7 @@ void X86::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   write32le(Loc + 5, Val);
 }
 
-void X86::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -300,7 +324,7 @@ void X86::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -337,7 +361,7 @@ void X86::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   write32le(Loc, Val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void X86::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   if (Type == R_386_TLS_LDO_32) {
     write32le(Loc, Val);
     return;

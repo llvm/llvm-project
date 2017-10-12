@@ -43,13 +43,13 @@ using namespace lld::elf;
 namespace {
 class AVR final : public TargetInfo {
 public:
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
-RelExpr AVR::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr AVR::getRelExpr(RelType Type, const SymbolBody &S,
                         const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_AVR_CALL:
@@ -60,7 +60,7 @@ RelExpr AVR::getRelExpr(uint32_t Type, const SymbolBody &S,
   }
 }
 
-void AVR::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void AVR::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_AVR_CALL: {
     uint16_t Hi = Val >> 17;

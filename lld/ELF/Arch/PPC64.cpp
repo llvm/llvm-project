@@ -39,11 +39,11 @@ namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -82,7 +82,7 @@ PPC64::PPC64() {
   DefaultImageBase = 0x10000000;
 }
 
-RelExpr PPC64::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr PPC64::getRelExpr(RelType Type, const SymbolBody &S,
                           const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   default:
@@ -122,7 +122,7 @@ void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32be(Buf + 28, 0x4e800420);                  // bctr
 }
 
-static std::pair<uint32_t, uint64_t> toAddr16Rel(uint32_t Type, uint64_t Val) {
+static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
   uint64_t V = Val - PPC64TocOffset;
   switch (Type) {
   case R_PPC64_TOC16:
@@ -142,7 +142,7 @@ static std::pair<uint32_t, uint64_t> toAddr16Rel(uint32_t Type, uint64_t Val) {
   }
 }
 
-void PPC64::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // For a TOC-relative relocation, proceed in terms of the corresponding
   // ADDR16 relocation type.
   std::tie(Type, Val) = toAddr16Rel(Type, Val);

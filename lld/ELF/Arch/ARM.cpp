@@ -26,11 +26,11 @@ namespace {
 class ARM final : public TargetInfo {
 public:
   ARM();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
-  bool isPicRel(uint32_t Type) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
-  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  bool isPicRel(RelType Type) const override;
+  RelType getDynRel(RelType Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -38,11 +38,10 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   void addPltSymbols(InputSectionBase *IS, uint64_t Off) const override;
   void addPltHeaderSymbols(InputSectionBase *ISD) const override;
-  bool needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
+  bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   const SymbolBody &S) const override;
-  bool inBranchRange(uint32_t RelocType, uint64_t Src,
-                     uint64_t Dst) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -65,7 +64,7 @@ ARM::ARM() {
   NeedsThunks = true;
 }
 
-RelExpr ARM::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr ARM::getRelExpr(RelType Type, const SymbolBody &S,
                         const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   default:
@@ -123,12 +122,12 @@ RelExpr ARM::getRelExpr(uint32_t Type, const SymbolBody &S,
   }
 }
 
-bool ARM::isPicRel(uint32_t Type) const {
+bool ARM::isPicRel(RelType Type) const {
   return (Type == R_ARM_TARGET1 && !Config->Target1Rel) ||
          (Type == R_ARM_ABS32);
 }
 
-uint32_t ARM::getDynRel(uint32_t Type) const {
+RelType ARM::getDynRel(RelType Type) const {
   if (Type == R_ARM_TARGET1 && !Config->Target1Rel)
     return R_ARM_ABS32;
   if (Type == R_ARM_ABS32)
@@ -189,7 +188,7 @@ void ARM::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
   addSyntheticLocal("$d", STT_NOTYPE, Off + 12, 0, IS);
 }
 
-bool ARM::needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
+bool ARM::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                      const SymbolBody &S) const {
   // If S is an undefined weak symbol in an executable we don't need a Thunk.
   // In a DSO calls to undefined symbols, including weak ones get PLT entries
@@ -199,7 +198,7 @@ bool ARM::needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
   // R_ARM_THM_CALL.
-  switch (RelocType) {
+  switch (Type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
@@ -219,11 +218,11 @@ bool ARM::needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
   return false;
 }
 
-bool ARM::inBranchRange(uint32_t RelocType, uint64_t Src, uint64_t Dst) const {
+bool ARM::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
   uint64_t Range;
   uint64_t InstrSize;
 
-  switch (RelocType) {
+  switch (Type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
@@ -262,7 +261,7 @@ bool ARM::inBranchRange(uint32_t RelocType, uint64_t Src, uint64_t Dst) const {
   return Distance <= Range;
 }
 
-void ARM::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
@@ -399,7 +398,7 @@ void ARM::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-int64_t ARM::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
+int64_t ARM::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   switch (Type) {
   default:
     return 0;
