@@ -79,6 +79,30 @@ public:
   const Instr *getPrevInstructionSequential(const Instr &InstrMeta) const;
   const Instr *getNextInstructionSequential(const Instr &InstrMeta) const;
 
+  // Returns whether this instruction is used by CFI to trap the program.
+  bool isCFITrap(const Instr &InstrMeta) const;
+
+  // Returns whether this function can fall through to the next instruction.
+  // Undefined (and bad) instructions cannot fall through, and instruction that
+  // modify the control flow can only fall through if they are conditional
+  // branches or calls.
+  bool canFallThrough(const Instr &InstrMeta) const;
+
+  // Returns the definitive next instruction. This is different from the next
+  // instruction sequentially as it will follow unconditional branches (assuming
+  // they can be resolved at compile time, i.e. not indirect). This method
+  // returns nullptr if the provided instruction does not transfer control flow
+  // to exactly one instruction that is known deterministically at compile time.
+  // Also returns nullptr if the deterministic target does not exist in this
+  // file.
+  const Instr *getDefiniteNextInstruction(const Instr &InstrMeta) const;
+
+  // Get a list of deterministic control flows that lead to the provided
+  // instruction. This list includes all static control flow cross-references as
+  // well as the previous instruction if it can fall through.
+  std::set<const Instr *>
+  getDirectControlFlowXRefs(const Instr &InstrMeta) const;
+
   // Returns whether this instruction uses a register operand.
   bool usesRegisterOperand(const Instr &InstrMeta) const;
 

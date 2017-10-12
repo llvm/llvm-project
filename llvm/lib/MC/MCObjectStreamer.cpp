@@ -28,15 +28,14 @@ using namespace llvm;
 MCObjectStreamer::MCObjectStreamer(MCContext &Context,
                                    std::unique_ptr<MCAsmBackend> TAB,
                                    raw_pwrite_stream &OS,
-                                   MCCodeEmitter *Emitter_)
+                                   std::unique_ptr<MCCodeEmitter> Emitter)
     : MCStreamer(Context), ObjectWriter(TAB->createObjectWriter(OS)),
-      TAB(std::move(TAB)), Assembler(llvm::make_unique<MCAssembler>(
-                               Context, *this->TAB, *Emitter_, *ObjectWriter)),
+      TAB(std::move(TAB)), Emitter(std::move(Emitter)),
+      Assembler(llvm::make_unique<MCAssembler>(Context, *this->TAB,
+                                               *this->Emitter, *ObjectWriter)),
       EmitEHFrame(true), EmitDebugFrame(false) {}
 
-MCObjectStreamer::~MCObjectStreamer() {
-  delete &Assembler->getEmitter();
-}
+MCObjectStreamer::~MCObjectStreamer() {}
 
 void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   if (PendingLabels.empty())
