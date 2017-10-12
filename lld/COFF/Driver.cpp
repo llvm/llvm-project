@@ -547,6 +547,63 @@ static void parseModuleDefs(StringRef Path) {
   }
 }
 
+// Get a sorted list of symbols not to automatically export
+// when exporting all global symbols for MinGW.
+static StringSet<> getExportExcludeSymbols() {
+  if (Config->Machine == I386)
+    return {
+        "__NULL_IMPORT_DESCRIPTOR",
+        "__pei386_runtime_relocator",
+        "_do_pseudo_reloc",
+       "_impure_ptr",
+        "__impure_ptr",
+        "__fmode",
+        "_environ",
+        "___dso_handle",
+        // These are the MinGW names that differ from the standard
+        // ones (lacking an extra underscore).
+        "_DllMain@12",
+        "_DllEntryPoint@12",
+        "_DllMainCRTStartup@12",
+    };
+
+  return {
+      "_NULL_IMPORT_DESCRIPTOR",
+      "_pei386_runtime_relocator",
+      "do_pseudo_reloc",
+      "impure_ptr",
+      "_impure_ptr",
+      "_fmode",
+      "environ",
+      "__dso_handle",
+      // These are the MinGW names that differ from the standard
+      // ones (lacking an extra underscore).
+      "DllMain",
+      "DllEntryPoint",
+      "DllMainCRTStartup",
+  };
+}
+
+// This is MinGW specific.
+static void writeDefFile(StringRef Name) {
+  std::error_code EC;
+  raw_fd_ostream OS(Name, EC, sys::fs::F_None);
+  if (EC)
+    fatal("cannot open " + Name + ": " + EC.message());
+
+  OS << "EXPORTS\n";
+  for (Export &E : Config->Exports) {
+    OS << "    " << E.ExportName << " "
+       << "@" << E.Ordinal;
+    if (auto *Def = dyn_cast_or_null<Defined>(E.Sym)) {
+      if (Def && Def->getChunk() &&
+          !(Def->getChunk()->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+        OS << " DATA";
+    }
+    OS << "\n";
+  }
+}
+
 // A helper function for filterBitcodeFiles.
 static bool needsRebuilding(MemoryBufferRef MB) {
   // The MSVC linker doesn't support thin archives, so if it's a thin
@@ -1197,6 +1254,25 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       return;
   }
 
+  // In MinGW, all symbols are automatically exported if no symbols
+  // are chosen to be exported.
+  if (Config->DLL && ((Config->MinGW && Config->Exports.empty()) ||
+                      Args.hasArg(OPT_export_all_symbols))) {
+    StringSet<> ExcludeSymbols = getExportExcludeSymbols();
+
+    Symtab->forEachSymbol([=](Symbol *S) {
+      auto *Def = dyn_cast<Defined>(S->body());
+      if (!Def || !Def->isLive() || !Def->getChunk())
+        return;
+      if (ExcludeSymbols.count(Def->getName()))
+        return;
+      Export E;
+      E.Name = Def->getName();
+      E.Sym = Def;
+      Config->Exports.push_back(E);
+    });
+  }
+
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file.
   if (!Config->Exports.empty() || Config->DLL) {
@@ -1204,6 +1280,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     createImportLibrary(/*AsLib=*/false);
     assignExportOrdinals();
   }
+
+  // Handle /output-def (MinGW specific).
+  if (auto *Arg = Args.getLastArg(OPT_output_def))
+    writeDefFile(Arg->getValue());
 
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {

@@ -553,17 +553,7 @@ static void errorOrWarn(const Twine &Msg) {
 
 template <class ELFT>
 static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, RelType Type,
-                          const uint8_t *Data, InputSectionBase &S,
-                          typename ELFT::uint RelOff) {
-  if (Body.isGnuIFunc()) {
-    Expr = toPlt(Expr);
-  } else if (!isPreemptible(Body, Type)) {
-    if (needsPlt(Expr))
-      Expr = fromPlt(Expr);
-    if (Expr == R_GOT_PC && !isAbsoluteValue(Body))
-      Expr = Target->adjustRelaxExpr(Type, Data, Expr);
-  }
-
+                          InputSectionBase &S, uint64_t RelOff) {
   bool IsWrite = !Config->ZText || (S.Flags & SHF_WRITE);
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
@@ -869,8 +859,27 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
 
     bool Preemptible = isPreemptible(Body, Type);
-    Expr = adjustExpr<ELFT>(Body, Expr, Type, Sec.Data.data() + Rel.r_offset,
-                            Sec, Rel.r_offset);
+
+    // Strenghten or relax a PLT access.
+    //
+    // GNU ifunc symbols must be accessed via PLT because their addresses
+    // are determined by runtime.
+    //
+    // On the other hand, if we know that a PLT entry will be resolved within
+    // the same ELF module, we can skip PLT access and directly jump to the
+    // destination function. For example, if we are linking a main exectuable,
+    // all dynamic symbols that can be resolved within the executable will
+    // actually be resolved that way at runtime, because the main exectuable
+    // is always at the beginning of a search list. We can leverage that fact.
+    if (Body.isGnuIFunc())
+      Expr = toPlt(Expr);
+    else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Body))
+      Expr =
+          Target->adjustRelaxExpr(Type, Sec.Data.data() + Rel.r_offset, Expr);
+    else if (!Preemptible)
+      Expr = fromPlt(Expr);
+
+    Expr = adjustExpr<ELFT>(Body, Expr, Type, Sec, Rel.r_offset);
     if (ErrorCount)
       continue;
 
