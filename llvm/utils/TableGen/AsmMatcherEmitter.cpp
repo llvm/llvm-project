@@ -2256,20 +2256,26 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info, raw_ostream &
 static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "static unsigned getDiagKindFromRegisterClass(MatchClassKind "
         "RegisterClass) {\n";
-  OS << "  switch (RegisterClass) {\n";
-
-  for (const auto &CI: Info.Classes) {
-    if (CI.isRegisterClass() && !CI.DiagnosticType.empty()) {
-      OS << "  case " << CI.Name << ":\n";
-      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
-         << CI.DiagnosticType << ";\n";
+  if (std::none_of(Info.Classes.begin(), Info.Classes.end(),
+                   [](const ClassInfo &CI) {
+                     return CI.isRegisterClass() && !CI.DiagnosticType.empty();
+                   })) {
+    OS << "  return MCTargetAsmParser::Match_InvalidOperand;\n";
+  } else {
+    OS << "  switch (RegisterClass) {\n";
+    for (const auto &CI: Info.Classes) {
+      if (CI.isRegisterClass() && !CI.DiagnosticType.empty()) {
+        OS << "  case " << CI.Name << ":\n";
+        OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
+           << CI.DiagnosticType << ";\n";
+      }
     }
+
+    OS << "  default:\n";
+    OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
+
+    OS << "  }\n";
   }
-
-  OS << "  default:\n";
-  OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
-
-  OS << "  }\n";
   OS << "}\n\n";
 }
 

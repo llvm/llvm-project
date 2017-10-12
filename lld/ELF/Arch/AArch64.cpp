@@ -32,7 +32,7 @@ namespace {
 class AArch64 final : public TargetInfo {
 public:
   AArch64();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
@@ -69,10 +69,8 @@ AArch64::AArch64() {
 }
 
 RelExpr AArch64::getRelExpr(RelType Type, const SymbolBody &S,
-                            const InputFile &File, const uint8_t *Loc) const {
+                            const uint8_t *Loc) const {
   switch (Type) {
-  default:
-    return R_ABS;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
@@ -104,6 +102,8 @@ RelExpr AArch64::getRelExpr(RelType Type, const SymbolBody &S,
     return R_GOT_PAGE_PC;
   case R_AARCH64_NONE:
     return R_NONE;
+  default:
+    return R_ABS;
   }
 }
 

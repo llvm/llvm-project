@@ -488,6 +488,8 @@ static uint64_t getARMStaticBase(const SymbolBody &Body) {
 static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
                                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
+  case R_INVALID:
+    return 0;
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA(A);
@@ -661,7 +663,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
-    RelExpr Expr = Target->getRelExpr(Type, Sym, *File, BufLoc);
+    RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {

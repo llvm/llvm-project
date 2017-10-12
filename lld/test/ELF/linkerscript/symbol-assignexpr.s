@@ -6,7 +6,7 @@
 # RUN:         symbol2 = symbol + 0x1234; \
 # RUN:         symbol3 = symbol2; \
 # RUN:         symbol4 = symbol + -4; \
-# RUN:         symbol5 = symbol - ~ 0xfffb; \
+# RUN:         symbol5 = symbol - ~0xfffb; \
 # RUN:         symbol6 = symbol - ~(0xfff0 + 0xb); \
 # RUN:         symbol7 = symbol - ~ 0xfffb + 4; \
 # RUN:         symbol8 = ~ 0xffff + 4; \

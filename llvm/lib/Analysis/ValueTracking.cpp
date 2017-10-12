@@ -3430,7 +3430,8 @@ static const Value *getUnderlyingObjectFromInt(const Value *V) {
 
 /// This is a wrapper around GetUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
-void llvm::getUnderlyingObjectsForCodeGen(const Value *V,
+/// It returns false if unidentified object is found in GetUnderlyingObjects.
+bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
                           SmallVectorImpl<Value *> &Objects,
                           const DataLayout &DL) {
   SmallPtrSet<const Value *, 16> Visited;
@@ -3456,11 +3457,12 @@ void llvm::getUnderlyingObjectsForCodeGen(const Value *V,
       // getUnderlyingObjectsForCodeGen also fails for safety.
       if (!isIdentifiedObject(V)) {
         Objects.clear();
-        return;
+        return false;
       }
       Objects.push_back(const_cast<Value *>(V));
     }
   } while (!Working.empty());
+  return true;
 }
 
 /// Return true if the only users of this pointer are lifetime markers.

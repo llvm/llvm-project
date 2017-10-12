@@ -34,7 +34,7 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
 void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
   std::vector<std::string> Args{ExecName};
 
-  auto NameAndArgs = ExecName.split(':');
+  auto NameAndArgs = ExecName.split('=');
   if (NameAndArgs.second.empty())
     return;
 
@@ -47,7 +47,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
       Args.push_back("-O0");
     } else if (Opt.startswith("O")) {
       Args.push_back("-" + Opt.str());
-    } else if (auto Arch = Triple::getArchTypeForLLVMName(Opt)) {
+    } else if (Triple::getArchTypeForLLVMName(Opt)) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {
       errs() << ExecName << ": Unknown option: " << Opt << ".\n";

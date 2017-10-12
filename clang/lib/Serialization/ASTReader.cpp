@@ -5425,10 +5425,12 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   llvm_unreachable("Invalid PreprocessorDetailRecordTypes");
 }
 
-/// \brief \arg SLocMapI points at a chunk of a module that contains no
-/// preprocessed entities or the entities it contains are not the ones we are
-/// looking for. Find the next module that contains entities and return the ID
+/// \brief Find the next module that contains entities and return the ID
 /// of the first entry.
+///
+/// \param SLocMapI points at a chunk of a module that contains no
+/// preprocessed entities or the entities it contains are not the ones we are
+/// looking for.
 PreprocessedEntityID ASTReader::findNextPreprocessedEntity(
                        GlobalSLocOffsetMapType::const_iterator SLocMapI) const {
   ++SLocMapI;

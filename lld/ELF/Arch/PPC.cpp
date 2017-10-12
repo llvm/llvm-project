@@ -23,10 +23,21 @@ class PPC final : public TargetInfo {
 public:
   PPC() { GotBaseSymOff = 0x8000; }
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
 };
 } // namespace
+
+RelExpr PPC::getRelExpr(RelType Type, const SymbolBody &S,
+                        const uint8_t *Loc) const {
+  switch (Type) {
+  case R_PPC_REL24:
+  case R_PPC_REL32:
+    return R_PC;
+  default:
+    return R_ABS;
+  }
+}
 
 void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
@@ -45,17 +56,6 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
-  }
-}
-
-RelExpr PPC::getRelExpr(RelType Type, const SymbolBody &S,
-                        const InputFile &File, const uint8_t *Loc) const {
-  switch (Type) {
-  case R_PPC_REL24:
-  case R_PPC_REL32:
-    return R_PC;
-  default:
-    return R_ABS;
   }
 }
 

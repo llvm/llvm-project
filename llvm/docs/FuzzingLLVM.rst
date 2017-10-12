@@ -83,7 +83,7 @@ the following command would fuzz AArch64 with :doc:`GlobalISel`:
 
 Some flags can also be specified in the binary name itself in order to support
 OSS Fuzz, which has trouble with required arguments. To do this, you can copy
-or move ``llvm-isel-fuzzer`` to ``llvm-isel-fuzzer:x-y-z``, where x, y, and z
+or move ``llvm-isel-fuzzer`` to ``llvm-isel-fuzzer=x-y-z``, where x, y, and z
 are architecture names (``aarch64``, ``x86_64``), optimization levels (``O0``,
 ``O2``), or specific keywords like ``gisel`` for enabling global instruction
 selection.
@@ -210,10 +210,17 @@ this did find issues, it didn't have a very good way to report problems in an
 actionable way. Because of this, we're moving towards using `OSS Fuzz`_ more
 instead.
 
-https://github.com/google/oss-fuzz/blob/master/projects/llvm/project.yaml
-https://bugs.chromium.org/p/oss-fuzz/issues/list?q=Proj-llvm
+You can browse the `LLVM project issue list`_ for the bugs found by
+`LLVM on OSS Fuzz`_. These are also mailed to the `llvm-bugs mailing
+list`_.
 
 .. _OSS Fuzz: https://github.com/google/oss-fuzz
+.. _LLVM project issue list:
+   https://bugs.chromium.org/p/oss-fuzz/issues/list?q=Proj-llvm
+.. _LLVM on OSS Fuzz:
+   https://github.com/google/oss-fuzz/blob/master/projects/llvm
+.. _llvm-bugs mailing list:
+   http://lists.llvm.org/cgi-bin/mailman/listinfo/llvm-bugs
 
 
 Utilities for Writing Fuzzers

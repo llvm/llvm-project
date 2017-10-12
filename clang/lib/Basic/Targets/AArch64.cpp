@@ -27,6 +27,8 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
+  {#ID, TYPE, ATTRS, nullptr, LANG, nullptr},
 #include "clang/Basic/BuiltinsAArch64.def"
 };
 
