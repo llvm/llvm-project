@@ -80,7 +80,7 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   return Msg + S.getObjMsg<ELFT>(Off);
 }
 
-static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
+static bool isPreemptible(const SymbolBody &Body, RelType Type) {
   // In case of MIPS GP-relative relocations always resolve to a definition
   // in a regular input file, ignoring the one-definition rule. So we,
   // for example, should not attempt to create a dynamic relocation even
@@ -107,7 +107,7 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // Mips has a custom MipsGotSection that handles the writing of GOT entries
 // without dynamic relocations.
 template <class ELFT>
-static unsigned handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
+static unsigned handleMipsTlsRelocation(RelType Type, SymbolBody &Body,
                                         InputSectionBase &C, uint64_t Offset,
                                         int64_t Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
@@ -149,7 +149,7 @@ static unsigned handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
 // GOT[e0] Module Index (Used to find pointer to TLS block at run-time)
 // GOT[e1] Offset of symbol in TLS block
 template <class ELFT>
-static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
+static unsigned handleARMTlsRelocation(RelType Type, SymbolBody &Body,
                                        InputSectionBase &C, uint64_t Offset,
                                        int64_t Addend, RelExpr Expr) {
   // The Dynamic TLS Module Index Relocation for a symbol defined in an
@@ -158,7 +158,7 @@ static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
   bool NeedDynId = Body.isPreemptible() || Config->Shared;
   bool NeedDynOff = Body.isPreemptible();
 
-  auto AddTlsReloc = [&](uint64_t Off, uint32_t Type, SymbolBody *Dest,
+  auto AddTlsReloc = [&](uint64_t Off, RelType Type, SymbolBody *Dest,
                          bool Dyn) {
     if (Dyn)
       In<ELFT>::RelaDyn->addReloc({Type, InX::Got, Off, false, Dest, 0});
@@ -196,7 +196,7 @@ static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
 // Returns the number of relocations processed.
 template <class ELFT>
 static unsigned
-handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
+handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
   if (!(C.Flags & SHF_ALLOC))
     return 0;
@@ -299,7 +299,7 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
   return 0;
 }
 
-static uint32_t getMipsPairType(uint32_t Type, const SymbolBody &Sym) {
+static uint32_t getMipsPairType(RelType Type, const SymbolBody &Sym) {
   switch (Type) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
@@ -361,7 +361,7 @@ static bool isRelExpr(RelExpr Expr) {
 // If this function returns false, that means we need to emit a
 // dynamic relocation so that the relocation will be fixed at load-time.
 template <class ELFT>
-static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
+static bool isStaticLinkTimeConstant(RelExpr E, RelType Type,
                                      const SymbolBody &Body,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
@@ -552,7 +552,7 @@ static void errorOrWarn(const Twine &Msg) {
 }
 
 template <class ELFT>
-static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
+static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, RelType Type,
                           const uint8_t *Data, InputSectionBase &S,
                           typename ELFT::uint RelOff) {
   if (Body.isGnuIFunc()) {
@@ -646,7 +646,7 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
 // input section.
 template <class ELFT, class RelTy>
 static int64_t computeAddend(const RelTy &Rel, const uint8_t *Buf) {
-  uint32_t Type = Rel.getType(Config->IsMips64EL);
+  RelType Type = Rel.getType(Config->IsMips64EL);
   int64_t A = RelTy::IsRela
                   ? getAddend<ELFT>(Rel)
                   : Target->getImplicitAddend(Buf + Rel.r_offset, Type);
@@ -672,7 +672,7 @@ static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
   if (RelTy::IsRela)
     return 0;
 
-  uint32_t Type = Rel.getType(Config->IsMips64EL);
+  RelType Type = Rel.getType(Config->IsMips64EL);
   uint32_t PairTy = getMipsPairType(Type, Body);
   if (PairTy == R_MIPS_NONE)
     return 0;
@@ -723,7 +723,7 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
 
 template <class RelTy>
 static std::pair<uint32_t, uint32_t>
-mergeMipsN32RelTypes(uint32_t Type, uint32_t Offset, RelTy *I, RelTy *E) {
+mergeMipsN32RelTypes(RelType Type, uint32_t Offset, RelTy *I, RelTy *E) {
   // MIPS N32 ABI treats series of successive relocations with the same offset
   // as a single relocation. The similar approach used by N64 ABI, but this ABI
   // packs all relocations into the single relocation record. Here we emulate
@@ -752,43 +752,40 @@ namespace {
 class OffsetGetter {
 public:
   explicit OffsetGetter(InputSectionBase &Sec) {
-    if (auto *Eh = dyn_cast<EhInputSection>(&Sec)) {
-      P = Eh->Pieces;
-      Size = Eh->Pieces.size();
-    }
+    if (auto *Eh = dyn_cast<EhInputSection>(&Sec))
+      Pieces = Eh->Pieces;
   }
 
   // Translates offsets in input sections to offsets in output sections.
-  // Given offset must increase monotonically. We assume that P is
+  // Given offset must increase monotonically. We assume that Piece is
   // sorted by InputOff.
   uint64_t get(uint64_t Off) {
-    if (P.empty())
+    if (Pieces.empty())
       return Off;
 
-    while (I != Size && P[I].InputOff + P[I].Size <= Off)
+    while (I != Pieces.size() && Pieces[I].InputOff + Pieces[I].Size <= Off)
       ++I;
-    if (I == Size)
+    if (I == Pieces.size())
       return Off;
 
-    // P must be contiguous, so there must be no holes in between.
-    assert(P[I].InputOff <= Off && "Relocation not in any piece");
+    // Pieces must be contiguous, so there must be no holes in between.
+    assert(Pieces[I].InputOff <= Off && "Relocation not in any piece");
 
     // Offset -1 means that the piece is dead (i.e. garbage collected).
-    if (P[I].OutputOff == -1)
+    if (Pieces[I].OutputOff == -1)
       return -1;
-    return P[I].OutputOff + Off - P[I].InputOff;
+    return Pieces[I].OutputOff + Off - Pieces[I].InputOff;
   }
 
 private:
-  ArrayRef<EhSectionPiece> P;
+  ArrayRef<EhSectionPiece> Pieces;
   size_t I = 0;
-  size_t Size;
 };
 } // namespace
 
 template <class ELFT, class GotPltSection>
 static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
-                        RelocationSection<ELFT> *Rel, uint32_t Type,
+                        RelocationSection<ELFT> *Rel, RelType Type,
                         SymbolBody &Sym, bool UseSymVA) {
   Plt->addEntry<ELFT>(Sym);
   GotPlt->addEntry(Sym);
@@ -800,8 +797,8 @@ static void addGotEntry(SymbolBody &Sym, bool Preemptible) {
   InX::Got->addEntry(Sym);
 
   uint64_t Off = Sym.getGotOffset();
-  uint32_t DynType;
   RelExpr Expr = R_ABS;
+  RelType DynType;
 
   if (Sym.isTls()) {
     DynType = Target->TlsGotRel;
@@ -841,7 +838,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   for (auto I = Rels.begin(), End = Rels.end(); I != End; ++I) {
     const RelTy &Rel = *I;
     SymbolBody &Body = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
-    uint32_t Type = Rel.getType(Config->IsMips64EL);
+    RelType Type = Rel.getType(Config->IsMips64EL);
 
     if (Config->MipsN32Abi) {
       uint32_t Processed;
@@ -1081,7 +1078,7 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
-                                                uint32_t Type) {
+                                                RelType Type) {
   auto Res = ThunkedSymbols.insert({&Body, std::vector<Thunk *>()});
   if (!Res.second) {
     // Check existing Thunks for Body to see if they can be reused
