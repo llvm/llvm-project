@@ -122,7 +122,8 @@ bool NonnullStringConstantsChecker::isStringlike(QualType Ty) const {
     return true;
 
   if (auto *T = dyn_cast<ObjCObjectPointerType>(Ty)) {
-    return T->getInterfaceDecl()->getIdentifier() == NSStringII;
+    return T->getInterfaceDecl() &&
+      T->getInterfaceDecl()->getIdentifier() == NSStringII;
   } else if (auto *T = dyn_cast<TypedefType>(Ty)) {
     return T->getDecl()->getIdentifier() == CFStringRefII;
   }
