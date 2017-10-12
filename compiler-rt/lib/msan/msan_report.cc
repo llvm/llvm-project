@@ -30,8 +30,10 @@ namespace __msan {
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() { }
+  const char *Warning()    { return Red(); }
   const char *Origin()     { return Magenta(); }
   const char *Name()   { return Green(); }
+  const char *End()    { return Default(); }
 };
 
 static void DescribeStackOrigin(const char *so, uptr pc) {
@@ -45,7 +47,7 @@ static void DescribeStackOrigin(const char *so, uptr pc) {
       "  %sUninitialized value was created by an allocation of '%s%s%s'"
       " in the stack frame of function '%s%s%s'%s\n",
       d.Origin(), d.Name(), s, d.Origin(), d.Name(), sep + 1, d.Origin(),
-      d.Default());
+      d.End());
   InternalFree(s);
 
   if (pc) {
@@ -64,7 +66,7 @@ static void DescribeOrigin(u32 id) {
     StackTrace stack;
     o = o.getNextChainedOrigin(&stack);
     Printf("  %sUninitialized value was stored to memory at%s\n", d.Origin(),
-           d.Default());
+        d.End());
     stack.Print();
   }
   if (o.isStackOrigin()) {
@@ -76,19 +78,18 @@ static void DescribeOrigin(u32 id) {
     switch (stack.tag) {
       case StackTrace::TAG_ALLOC:
         Printf("  %sUninitialized value was created by a heap allocation%s\n",
-               d.Origin(), d.Default());
+               d.Origin(), d.End());
         break;
       case StackTrace::TAG_DEALLOC:
         Printf("  %sUninitialized value was created by a heap deallocation%s\n",
-               d.Origin(), d.Default());
+               d.Origin(), d.End());
         break;
       case STACK_TRACE_TAG_POISON:
         Printf("  %sMemory was marked as uninitialized%s\n", d.Origin(),
-               d.Default());
+               d.End());
         break;
       default:
-        Printf("  %sUninitialized value was created%s\n", d.Origin(),
-               d.Default());
+        Printf("  %sUninitialized value was created%s\n", d.Origin(), d.End());
         break;
     }
     stack.Print();
@@ -103,7 +104,7 @@ void ReportUMR(StackTrace *stack, u32 origin) {
   Decorator d;
   Printf("%s", d.Warning());
   Report("WARNING: MemorySanitizer: use-of-uninitialized-value\n");
-  Printf("%s", d.Default());
+  Printf("%s", d.End());
   stack->Print();
   if (origin) {
     DescribeOrigin(origin);
@@ -143,7 +144,7 @@ void ReportAtExitStatistics() {
     Decorator d;
     Printf("%s", d.Warning());
     Printf("MemorySanitizer: %d warnings reported.\n", msan_report_count);
-    Printf("%s", d.Default());
+    Printf("%s", d.End());
   }
 }
 
@@ -202,7 +203,7 @@ void DescribeMemoryRange(const void *x, uptr size) {
   Decorator d;
   Printf("%s", d.Warning());
   Printf("Shadow map of [%p, %p), %zu bytes:\n", start, end, end - start);
-  Printf("%s", d.Default());
+  Printf("%s", d.End());
   while (s < e) {
     // Line start.
     if (pos % 16 == 0) {
@@ -264,7 +265,7 @@ void ReportUMRInsideAddressRange(const char *what, const void *start, uptr size,
   Printf("%s", d.Warning());
   Printf("%sUninitialized bytes in %s%s%s at offset %zu inside [%p, %zu)%s\n",
          d.Warning(), d.Name(), what, d.Warning(), offset, start, size,
-         d.Default());
+         d.End());
   if (__sanitizer::Verbosity())
     DescribeMemoryRange(start, size);
 }
