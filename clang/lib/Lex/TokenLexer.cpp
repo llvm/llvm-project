@@ -847,9 +847,8 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
 /// \brief Creates SLocEntries and updates the locations of macro argument
 /// tokens to their new expanded locations.
 ///
-/// \param ArgIdDefLoc the location of the macro argument id inside the macro
+/// \param ArgIdSpellLoc the location of the macro argument id inside the macro
 /// definition.
-/// \param Tokens the macro argument tokens to update.
 void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
                                             Token *begin_tokens,
                                             Token *end_tokens) {

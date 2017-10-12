@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=x86_64-- %s -o - -run-pass=simple-register-coalescing | FileCheck %s
+---
+name: f
+body: |
+  bb.0:
+    JB_1 %bb.2, undef implicit killed %eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    %0 : gr64 = IMPLICIT_DEF
+    NOOP implicit-def undef %1.sub_32bit : gr64
+    NOOP implicit-def %1.sub_16bit : gr64
+    JMP_1 %bb.3
+
+  bb.2:
+    NOOP implicit-def %0
+    %1 = COPY %0
+
+  bb.3:
+    NOOP implicit killed %0
+    NOOP implicit killed %1
+...
+
+# We should have a setting of both sub_32bit and sub_16bit. The first one
+# should be undef and not dead, and the second should not be undef.
+
+# CHECK-NOT:  dead
+# CHECK:      NOOP implicit-def undef %1.sub_32bit
+# CHECK-NOT:  undef
+# CHECK-NEXT: NOOP implicit-def %1.sub_16bit

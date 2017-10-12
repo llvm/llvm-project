@@ -121,9 +121,11 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   SchedModel.init(ST.getSchedModel(), &ST, TII);
 }
 
-/// If this machine instr has memory reference information and it can be tracked
-/// to a normal reference to a known object, return the Value for that object.
-static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
+/// If this machine instr has memory reference information and it can be
+/// tracked to a normal reference to a known object, return the Value
+/// for that object. This function returns false the memory location is
+/// unknown or may alias anything.
+static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
@@ -151,7 +153,8 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
-        getUnderlyingObjectsForCodeGen(V, Objs, DL);
+        if (!getUnderlyingObjectsForCodeGen(V, Objs, DL))
+          return false;
 
         for (Value *V : Objs) {
           assert(isIdentifiedObject(V));
@@ -163,8 +166,12 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
     return true;
   };
 
-  if (!allMMOsOkay())
+  if (!allMMOsOkay()) {
     Objects.clear();
+    return false;
+  }
+
+  return true;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -860,13 +867,13 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
 
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
-    // SU depends on. An empty vector means the memory location is
-    // unknown, and may alias anything.
+    // SU depends on.
     UnderlyingObjectsVector Objs;
-    getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
+    bool ObjsFound = getUnderlyingObjectsForInstr(&MI, MFI, Objs,
+                                                  MF.getDataLayout());
 
     if (MI.mayStore()) {
-      if (Objs.empty()) {
+      if (!ObjsFound) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, NonAliasStores);
@@ -901,7 +908,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
         addChainDependencies(SU, Stores, UnknownValue);
       }
     } else { // SU is a load.
-      if (Objs.empty()) {
+      if (!ObjsFound) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, NonAliasStores);
