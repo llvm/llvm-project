@@ -15,8 +15,6 @@
 
 #if !SCUDO_TSD_EXCLUSIVE
 
-#include <pthread.h>
-
 namespace __scudo {
 
 static pthread_once_t GlobalInitialized = PTHREAD_ONCE_INIT;
@@ -51,12 +49,15 @@ static void initOnce() {
     TSDs[i].init(/*Shared=*/true);
 }
 
+ALWAYS_INLINE void setCurrentTSD(ScudoTSD *TSD) {
+  *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+}
+
 void initThread(bool MinimalInit) {
   pthread_once(&GlobalInitialized, initOnce);
   // Initial context assignment is done in a plain round-robin fashion.
   u32 Index = atomic_fetch_add(&CurrentIndex, 1, memory_order_relaxed);
-  ScudoTSD *TSD = &TSDs[Index % NumberOfTSDs];
-  *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+  setCurrentTSD(&TSDs[Index % NumberOfTSDs]);
 }
 
 ScudoTSD *getTSDAndLockSlow() {
@@ -66,7 +67,7 @@ ScudoTSD *getTSDAndLockSlow() {
     for (u32 i = 0; i < NumberOfTSDs; i++) {
       TSD = &TSDs[i];
       if (TSD->tryLock()) {
-        *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+        setCurrentTSD(TSD);
         return TSD;
       }
     }
@@ -81,12 +82,12 @@ ScudoTSD *getTSDAndLockSlow() {
     }
     if (LIKELY(LowestPrecedence != UINT64_MAX)) {
       TSD->lock();
-      *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+      setCurrentTSD(TSD);
       return TSD;
     }
   }
   // Last resort, stick with the current one.
-  TSD = reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+  TSD = getCurrentTSD();
   TSD->lock();
   return TSD;
 }

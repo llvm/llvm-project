@@ -80,24 +80,25 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   return Msg + S.getObjMsg<ELFT>(Off);
 }
 
-static bool isPreemptible(const SymbolBody &Body, RelType Type) {
-  // In case of MIPS GP-relative relocations always resolve to a definition
-  // in a regular input file, ignoring the one-definition rule. So we,
-  // for example, should not attempt to create a dynamic relocation even
-  // if the target symbol is preemptible. There are two two MIPS GP-relative
-  // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
-  // can be against a preemptible symbol.
-  // To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
-  // relocation types occupy eight bit. In case of N64 ABI we extract first
-  // relocation from 3-in-1 packet because only the first relocation can
-  // be against a real symbol.
-  if (Config->EMachine == EM_MIPS) {
-    Type &= 0xff;
-    if (Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
-        Type == R_MICROMIPS_GPREL7_S2)
-      return false;
-  }
-  return Body.isPreemptible();
+// This is a MIPS-specific rule.
+//
+// In case of MIPS GP-relative relocations always resolve to a definition
+// in a regular input file, ignoring the one-definition rule. So we,
+// for example, should not attempt to create a dynamic relocation even
+// if the target symbol is preemptible. There are two two MIPS GP-relative
+// relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+// can be against a preemptible symbol.
+//
+// To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
+// relocation types occupy eight bit. In case of N64 ABI we extract first
+// relocation from 3-in-1 packet because only the first relocation can
+// be against a real symbol.
+static bool isMipsGprel(RelType Type) {
+  if (Config->EMachine != EM_MIPS)
+    return false;
+  Type &= 0xff;
+  return Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
+         Type == R_MICROMIPS_GPREL7_S2;
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -120,11 +121,11 @@ static unsigned handleMipsTlsRelocation(RelType Type, SymbolBody &Body,
   }
 
   if (Expr == R_MIPS_TLSGD) {
-    if (InX::MipsGot->addDynTlsEntry(Body) && Body.isPreemptible()) {
+    if (InX::MipsGot->addDynTlsEntry(Body) && Body.IsPreemptible) {
       uint64_t Off = InX::MipsGot->getGlobalDynOffset(Body);
       In<ELFT>::RelaDyn->addReloc(
           {Target->TlsModuleIndexRel, InX::MipsGot, Off, false, &Body, 0});
-      if (Body.isPreemptible())
+      if (Body.IsPreemptible)
         In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, InX::MipsGot,
                                      Off + Config->Wordsize, false, &Body, 0});
     }
@@ -155,8 +156,8 @@ static unsigned handleARMTlsRelocation(RelType Type, SymbolBody &Body,
   // The Dynamic TLS Module Index Relocation for a symbol defined in an
   // executable is always 1. If the target Symbol is not preemptible then
   // we know the offset into the TLS block at static link time.
-  bool NeedDynId = Body.isPreemptible() || Config->Shared;
-  bool NeedDynOff = Body.isPreemptible();
+  bool NeedDynId = Body.IsPreemptible || Config->Shared;
+  bool NeedDynOff = Body.IsPreemptible;
 
   auto AddTlsReloc = [&](uint64_t Off, RelType Type, SymbolBody *Dest,
                          bool Dyn) {
@@ -209,13 +210,12 @@ handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
 
-  bool IsPreemptible = isPreemptible(Body, Type);
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
       Config->Shared) {
     if (InX::Got->addDynTlsEntry(Body)) {
       uint64_t Off = InX::Got->getGlobalDynOffset(Body);
       In<ELFT>::RelaDyn->addReloc(
-          {Target->TlsDescRel, InX::Got, Off, !IsPreemptible, &Body, 0});
+          {Target->TlsDescRel, InX::Got, Off, !Body.IsPreemptible, &Body, 0});
     }
     if (Expr != R_TLSDESC_CALL)
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -255,7 +255,7 @@ handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         uint64_t OffsetOff = Off + Config->Wordsize;
-        if (IsPreemptible)
+        if (Body.IsPreemptible)
           In<ELFT>::RelaDyn->addReloc(
               {Target->TlsOffsetRel, InX::Got, OffsetOff, false, &Body, 0});
         else
@@ -268,7 +268,7 @@ handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
 
     // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
-    if (IsPreemptible) {
+    if (Body.IsPreemptible) {
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_IE), Type,
            Offset, Addend, &Body});
@@ -288,7 +288,7 @@ handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
   if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_GOT_PAGE_PC>(Expr) &&
-      !Config->Shared && !IsPreemptible) {
+      !Config->Shared && !Body.IsPreemptible) {
     C.Relocations.push_back(
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;
@@ -299,14 +299,16 @@ handleTlsRelocation(RelType Type, SymbolBody &Body, InputSectionBase &C,
   return 0;
 }
 
-static uint32_t getMipsPairType(RelType Type, const SymbolBody &Sym) {
+static RelType getMipsPairType(RelType Type, bool IsLocal) {
   switch (Type) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
-    return Sym.isLocal() ? R_MIPS_LO16 : R_MIPS_NONE;
+    // I don't know why these relocations had to be defined like this,
+    // but they are handled differently when they refer to local symbols.
+    return IsLocal ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MICROMIPS_GOT16:
-    return Sym.isLocal() ? R_MICROMIPS_LO16 : R_MIPS_NONE;
+    return IsLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
   case R_MIPS_PCHI16:
     return R_MIPS_PCLO16;
   case R_MICROMIPS_HI16:
@@ -377,7 +379,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type,
   if (E == R_GOT || E == R_PLT || E == R_TLSDESC)
     return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
-  if (isPreemptible(Body, Type))
+  if (Body.IsPreemptible)
     return false;
   if (!Config->Pic)
     return true;
@@ -631,30 +633,15 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, RelType Type,
   return Expr;
 }
 
-// Returns an addend of a given relocation. If it is RELA, an addend
-// is in a relocation itself. If it is REL, we need to read it from an
-// input section.
-template <class ELFT, class RelTy>
-static int64_t computeAddend(const RelTy &Rel, const uint8_t *Buf) {
-  RelType Type = Rel.getType(Config->IsMips64EL);
-  int64_t A = RelTy::IsRela
-                  ? getAddend<ELFT>(Rel)
-                  : Target->getImplicitAddend(Buf + Rel.r_offset, Type);
-
-  if (Config->EMachine == EM_PPC64 && Config->Pic && Type == R_PPC64_TOC)
-    A += getPPC64TocBase();
-  return A;
-}
-
 // MIPS has an odd notion of "paired" relocations to calculate addends.
 // For example, if a relocation is of R_MIPS_HI16, there must be a
 // R_MIPS_LO16 relocation after that, and an addend is calculated using
 // the two relocations.
 template <class ELFT, class RelTy>
-static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
-                                 RelExpr Expr, SymbolBody &Body,
-                                 const RelTy *End) {
-  if (Expr == R_MIPS_GOTREL && Body.isLocal())
+static int64_t computeMipsAddend(const RelTy &Rel, const RelTy *End,
+                                 InputSectionBase &Sec, RelExpr Expr,
+                                 bool IsLocal) {
+  if (Expr == R_MIPS_GOTREL && IsLocal)
     return Sec.getFile<ELFT>()->MipsGp0;
 
   // The ABI says that the paired relocation is used only for REL.
@@ -663,7 +650,7 @@ static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
     return 0;
 
   RelType Type = Rel.getType(Config->IsMips64EL);
-  uint32_t PairTy = getMipsPairType(Type, Body);
+  uint32_t PairTy = getMipsPairType(Type, IsLocal);
   if (PairTy == R_MIPS_NONE)
     return 0;
 
@@ -672,18 +659,39 @@ static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
 
   // To make things worse, paired relocations might not be contiguous in
   // the relocation table, so we need to do linear search. *sigh*
-  for (const RelTy *RI = &Rel; RI != End; ++RI) {
-    if (RI->getType(Config->IsMips64EL) != PairTy)
-      continue;
-    if (RI->getSymbol(Config->IsMips64EL) != SymIndex)
-      continue;
-
-    return Target->getImplicitAddend(Buf + RI->r_offset, PairTy);
-  }
+  for (const RelTy *RI = &Rel; RI != End; ++RI)
+    if (RI->getType(Config->IsMips64EL) == PairTy &&
+        RI->getSymbol(Config->IsMips64EL) == SymIndex)
+      return Target->getImplicitAddend(Buf + RI->r_offset, PairTy);
 
   warn("can't find matching " + toString(PairTy) + " relocation for " +
        toString(Type));
   return 0;
+}
+
+// Returns an addend of a given relocation. If it is RELA, an addend
+// is in a relocation itself. If it is REL, we need to read it from an
+// input section.
+template <class ELFT, class RelTy>
+static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
+                             InputSectionBase &Sec, RelExpr Expr,
+                             bool IsLocal) {
+  int64_t Addend;
+  RelType Type = Rel.getType(Config->IsMips64EL);
+
+  if (RelTy::IsRela) {
+    Addend = getAddend<ELFT>(Rel);
+  } else {
+    const uint8_t *Buf = Sec.Data.data();
+    Addend = Target->getImplicitAddend(Buf + Rel.r_offset, Type);
+  }
+
+  if (Config->EMachine == EM_PPC64 && Config->Pic && Type == R_PPC64_TOC)
+    Addend += getPPC64TocBase();
+  if (Config->EMachine == EM_MIPS)
+    Addend += computeMipsAddend<ELFT>(Rel, End, Sec, Expr, IsLocal);
+
+  return Addend;
 }
 
 // Report an undefined symbol if necessary.
@@ -858,7 +866,14 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
       continue;
 
-    bool Preemptible = isPreemptible(Body, Type);
+    // Handle yet another MIPS-ness.
+    if (isMipsGprel(Type)) {
+      int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Body.isLocal());
+      Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Body});
+      continue;
+    }
+
+    bool Preemptible = Body.IsPreemptible;
 
     // Strenghten or relax a PLT access.
     //
@@ -890,9 +905,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       InX::Got->HasGotOffRel = true;
 
     // Read an addend.
-    int64_t Addend = computeAddend<ELFT>(Rel, Sec.Data.data());
-    if (Config->EMachine == EM_MIPS)
-      Addend += computeMipsAddend<ELFT>(Rel, Sec, Expr, Body, End);
+    int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Body.isLocal());
 
     // Process some TLS relocations, including relaxing TLS relocations.
     // Note that this function does not handle all TLS relocations.
@@ -923,7 +936,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         InX::MipsGot->addEntry(Body, Addend, Expr);
-        if (Body.isTls() && Body.isPreemptible())
+        if (Body.isTls() && Body.IsPreemptible)
           In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, InX::MipsGot,
                                        Body.getGotOffset(), false, &Body, 0});
       } else if (!Body.isInGot()) {
@@ -931,7 +944,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       }
     }
 
-    if (!needsPlt(Expr) && !needsGot(Expr) && isPreemptible(Body, Type)) {
+    if (!needsPlt(Expr) && !needsGot(Expr) && Body.IsPreemptible) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
