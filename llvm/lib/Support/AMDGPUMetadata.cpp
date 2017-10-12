@@ -1,4 +1,4 @@
-//===--- AMDGPUCodeObjectMetadata.cpp ---------------------------*- C++ -*-===//
+//===--- AMDGPUMetadata.cpp -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,17 +8,17 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU Code Object Metadata definitions and in-memory
-/// representations.
+/// \brief AMDGPU metadata definitions and in-memory representations.
 ///
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/AMDGPUCodeObjectMetadata.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm::AMDGPU;
-using namespace llvm::AMDGPU::CodeObject;
+using namespace llvm::AMDGPU::HSAMD;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Arg::Metadata)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Metadata)
@@ -182,8 +182,8 @@ struct MappingTraits<Kernel::Metadata> {
 };
 
 template <>
-struct MappingTraits<CodeObject::Metadata> {
-  static void mapping(IO &YIO, CodeObject::Metadata &MD) {
+struct MappingTraits<HSAMD::Metadata> {
+  static void mapping(IO &YIO, HSAMD::Metadata &MD) {
     YIO.mapRequired(Key::Version, MD.mVersion);
     YIO.mapOptional(Key::Printf, MD.mPrintf, std::vector<std::string>());
     if (!MD.mKernels.empty() || !YIO.outputting())
@@ -194,25 +194,35 @@ struct MappingTraits<CodeObject::Metadata> {
 } // end namespace yaml
 
 namespace AMDGPU {
-namespace CodeObject {
+namespace HSAMD {
 
-/* static */
-std::error_code Metadata::fromYamlString(
-    std::string YamlString, Metadata &CodeObjectMetadata) {
-  yaml::Input YamlInput(YamlString);
-  YamlInput >> CodeObjectMetadata;
+std::error_code fromString(std::string String, Metadata &HSAMetadata) {
+  yaml::Input YamlInput(String);
+  YamlInput >> HSAMetadata;
   return YamlInput.error();
 }
 
-/* static */
-std::error_code Metadata::toYamlString(
-    Metadata CodeObjectMetadata, std::string &YamlString) {
-  raw_string_ostream YamlStream(YamlString);
+std::error_code toString(Metadata HSAMetadata, std::string &String) {
+  raw_string_ostream YamlStream(String);
   yaml::Output YamlOutput(YamlStream, nullptr, std::numeric_limits<int>::max());
-  YamlOutput << CodeObjectMetadata;
+  YamlOutput << HSAMetadata;
   return std::error_code();
 }
 
-} // end namespace CodeObject
+} // end namespace HSAMD
+
+namespace PALMD {
+
+std::error_code toString(const Metadata &PALMetadata, std::string &String) {
+  raw_string_ostream Stream(String);
+  for (auto I = PALMetadata.begin(), E = PALMetadata.end(); I != E; ++I) {
+    Stream << Twine(I == PALMetadata.begin() ? " 0x" : ",0x");
+    Stream << Twine::utohexstr(*I);
+  }
+  Stream.flush();
+  return std::error_code();
+}
+
+} // end namespace PALMD
 } // end namespace AMDGPU
 } // end namespace llvm

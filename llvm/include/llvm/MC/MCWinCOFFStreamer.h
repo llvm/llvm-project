@@ -28,7 +28,7 @@ class raw_pwrite_stream;
 class MCWinCOFFStreamer : public MCObjectStreamer {
 public:
   MCWinCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-                    MCCodeEmitter &CE, raw_pwrite_stream &OS);
+                    std::unique_ptr<MCCodeEmitter> CE, raw_pwrite_stream &OS);
 
   /// state management
   void reset() override {

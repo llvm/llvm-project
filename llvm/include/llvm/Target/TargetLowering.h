@@ -2756,18 +2756,6 @@ public:
     return true;
   }
 
-  // Return true if it is profitable to combine a BUILD_VECTOR to a TRUNCATE.
-  // Example of such a combine:
-  // v4i32 build_vector((extract_elt V, 0),
-  //                    (extract_elt V, 2),
-  //                    (extract_elt V, 4),
-  //                    (extract_elt V, 6))
-  //  -->
-  // v4i32 truncate (bitcast V to v4i64)
-  virtual bool isDesirableToCombineBuildVectorToTruncate() const {
-    return false;
-  }
-
   // Return true if it is profitable to combine a BUILD_VECTOR with a stride-pattern
   // to a shuffle and a truncate.
   // Example of such a combine:
@@ -2907,7 +2895,7 @@ public:
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs = Args.size();
+      NumFixedArgs = ArgsList.size();
       Args = std::move(ArgsList);
 
       DAG.getTargetLoweringInfo().markLibCallAttributes(
@@ -2920,7 +2908,7 @@ public:
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs = Args.size();
+      NumFixedArgs = ArgsList.size();
       Args = std::move(ArgsList);
       return *this;
     }

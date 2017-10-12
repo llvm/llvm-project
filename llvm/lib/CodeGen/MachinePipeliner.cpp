@@ -369,8 +369,9 @@ public:
   /// Set the Minimum Initiation Interval for this schedule attempt.
   void setMII(unsigned mii) { MII = mii; }
 
-  MachineInstr *applyInstrChange(MachineInstr *MI, SMSchedule &Schedule,
-                                 bool UpdateDAG = false);
+  void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
+
+  void fixupRegisterOverlaps(std::deque<SUnit *> &Instrs);
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
@@ -3390,9 +3391,8 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
 
 /// Apply changes to the instruction if needed. The changes are need
 /// to improve the scheduling and depend up on the final schedule.
-MachineInstr *SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
-                                                  SMSchedule &Schedule,
-                                                  bool UpdateDAG) {
+void SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
+                                         SMSchedule &Schedule) {
   SUnit *SU = getSUnit(MI);
   DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
       InstrChanges.find(SU);
@@ -3400,7 +3400,7 @@ MachineInstr *SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
     std::pair<unsigned, int64_t> RegAndOffset = It->second;
     unsigned BasePos, OffsetPos;
     if (!TII->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
-      return nullptr;
+      return;
     unsigned BaseReg = MI->getOperand(BasePos).getReg();
     MachineInstr *LoopDef = findDefInLoop(BaseReg);
     int DefStageNum = Schedule.stageScheduled(getSUnit(LoopDef));
@@ -3418,15 +3418,11 @@ MachineInstr *SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
       int64_t NewOffset =
           MI->getOperand(OffsetPos).getImm() + RegAndOffset.second * OffsetDiff;
       NewMI->getOperand(OffsetPos).setImm(NewOffset);
-      if (UpdateDAG) {
-        SU->setInstr(NewMI);
-        MISUnitMap[NewMI] = SU;
-      }
+      SU->setInstr(NewMI);
+      MISUnitMap[NewMI] = SU;
       NewMIs.insert(NewMI);
-      return NewMI;
     }
   }
-  return nullptr;
 }
 
 /// Return true for an order dependence that is loop carried potentially.
@@ -3872,6 +3868,58 @@ bool SMSchedule::isValidSchedule(SwingSchedulerDAG *SSD) {
   return true;
 }
 
+/// Attempt to fix the degenerate cases when the instruction serialization
+/// causes the register lifetimes to overlap. For example,
+///   p' = store_pi(p, b)
+///      = load p, offset
+/// In this case p and p' overlap, which means that two registers are needed.
+/// Instead, this function changes the load to use p' and updates the offset.
+void SwingSchedulerDAG::fixupRegisterOverlaps(std::deque<SUnit *> &Instrs) {
+  unsigned OverlapReg = 0;
+  unsigned NewBaseReg = 0;
+  for (SUnit *SU : Instrs) {
+    MachineInstr *MI = SU->getInstr();
+    for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
+      const MachineOperand &MO = MI->getOperand(i);
+      // Look for an instruction that uses p. The instruction occurs in the
+      // same cycle but occurs later in the serialized order.
+      if (MO.isReg() && MO.isUse() && MO.getReg() == OverlapReg) {
+        // Check that the instruction appears in the InstrChanges structure,
+        // which contains instructions that can have the offset updated.
+        DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
+          InstrChanges.find(SU);
+        if (It != InstrChanges.end()) {
+          unsigned BasePos, OffsetPos;
+          // Update the base register and adjust the offset.
+          if (TII->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos)) {
+            MachineInstr *NewMI = MF.CloneMachineInstr(MI);
+            NewMI->getOperand(BasePos).setReg(NewBaseReg);
+            int64_t NewOffset =
+                MI->getOperand(OffsetPos).getImm() - It->second.second;
+            NewMI->getOperand(OffsetPos).setImm(NewOffset);
+            SU->setInstr(NewMI);
+            MISUnitMap[NewMI] = SU;
+            NewMIs.insert(NewMI);
+          }
+        }
+        OverlapReg = 0;
+        NewBaseReg = 0;
+        break;
+      }
+      // Look for an instruction of the form p' = op(p), which uses and defines
+      // two virtual registers that get allocated to the same physical register.
+      unsigned TiedUseIdx = 0;
+      if (MI->isRegTiedToUseOperand(i, &TiedUseIdx)) {
+        // OverlapReg is p in the example above.
+        OverlapReg = MI->getOperand(TiedUseIdx).getReg();
+        // NewBaseReg is p' in the example above.
+        NewBaseReg = MI->getOperand(i).getReg();
+        break;
+      }
+    }
+  }
+}
+
 /// After the schedule has been formed, call this function to combine
 /// the instructions from the different stages/cycles.  That is, this
 /// function creates a schedule that represents a single iteration.
@@ -3932,7 +3980,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   // map. We need to use the new registers to create the correct order.
   for (int i = 0, e = SSD->SUnits.size(); i != e; ++i) {
     SUnit *SU = &SSD->SUnits[i];
-    SSD->applyInstrChange(SU->getInstr(), *this, true);
+    SSD->applyInstrChange(SU->getInstr(), *this);
   }
 
   // Reorder the instructions in each cycle to fix and improve the
@@ -3956,6 +4004,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
     // Replace the old order with the new order.
     cycleInstrs.swap(newOrderZC);
     cycleInstrs.insert(cycleInstrs.end(), newOrderI.begin(), newOrderI.end());
+    SSD->fixupRegisterOverlaps(cycleInstrs);
   }
 
   DEBUG(dump(););

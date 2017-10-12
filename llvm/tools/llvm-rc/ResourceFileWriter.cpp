@@ -17,6 +17,8 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
 using namespace llvm::support;
 
@@ -41,12 +43,13 @@ public:
   ~ContextKeeper() { FileWriter->ObjectData = SavedInfo; }
 };
 
-static Error createError(Twine Message,
+static Error createError(const Twine &Message,
                          std::errc Type = std::errc::invalid_argument) {
   return make_error<StringError>(Message, std::make_error_code(Type));
 }
 
-static Error checkNumberFits(uint32_t Number, size_t MaxBits, Twine FieldName) {
+static Error checkNumberFits(uint32_t Number, size_t MaxBits,
+                             const Twine &FieldName) {
   assert(1 <= MaxBits && MaxBits <= 32);
   if (!(Number >> MaxBits))
     return Error::success();
@@ -56,13 +59,13 @@ static Error checkNumberFits(uint32_t Number, size_t MaxBits, Twine FieldName) {
 }
 
 template <typename FitType>
-static Error checkNumberFits(uint32_t Number, Twine FieldName) {
+static Error checkNumberFits(uint32_t Number, const Twine &FieldName) {
   return checkNumberFits(Number, sizeof(FitType) * 8, FieldName);
 }
 
 // A similar function for signed integers.
 template <typename FitType>
-static Error checkSignedNumberFits(uint32_t Number, Twine FieldName,
+static Error checkSignedNumberFits(uint32_t Number, const Twine &FieldName,
                                    bool CanBeNegative) {
   int32_t SignedNum = Number;
   if (SignedNum < std::numeric_limits<FitType>::min() ||
@@ -79,13 +82,13 @@ static Error checkSignedNumberFits(uint32_t Number, Twine FieldName,
   return Error::success();
 }
 
-static Error checkRCInt(RCInt Number, Twine FieldName) {
+static Error checkRCInt(RCInt Number, const Twine &FieldName) {
   if (Number.isLong())
     return Error::success();
   return checkNumberFits<uint16_t>(Number, FieldName);
 }
 
-static Error checkIntOrString(IntOrString Value, Twine FieldName) {
+static Error checkIntOrString(IntOrString Value, const Twine &FieldName) {
   if (!Value.isInt())
     return Error::success();
   return checkNumberFits<uint16_t>(Value.getInt(), FieldName);
@@ -356,15 +359,10 @@ Error ResourceFileWriter::appendFile(StringRef Filename) {
   bool IsLong;
   stripQuotes(Filename, IsLong);
 
-  // Filename path should be relative to the current working directory.
-  // FIXME: docs say so, but reality is more complicated, script
-  // location and include paths must be taken into account.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> File =
-      MemoryBuffer::getFile(Filename, -1, false);
+  auto File = loadFile(Filename);
   if (!File)
-    return make_error<StringError>("Error opening file '" + Filename +
-                                       "': " + File.getError().message(),
-                                   File.getError());
+    return File.takeError();
+
   *FS << (*File)->getBuffer();
   return Error::success();
 }
@@ -805,15 +803,10 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
 
   bool IsLong;
   stripQuotes(FileStr, IsLong);
-  ErrorOr<std::unique_ptr<MemoryBuffer>> File =
-      MemoryBuffer::getFile(FileStr, -1, false);
+  auto File = loadFile(FileStr);
 
   if (!File)
-    return make_error<StringError>(
-        "Error opening " +
-            Twine(Type == IconCursorGroupType::Icon ? "icon" : "cursor") +
-            " '" + FileStr + "': " + File.getError().message(),
-        File.getError());
+    return File.takeError();
 
   BinaryStreamReader Reader((*File)->getBuffer(), support::little);
 
@@ -1411,6 +1404,44 @@ Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {
   writeObjectAt(ulittle16_t(tell() - LengthLoc), LengthLoc);
 
   return Error::success();
+}
+
+Expected<std::unique_ptr<MemoryBuffer>>
+ResourceFileWriter::loadFile(StringRef File) const {
+  SmallString<128> Path;
+  SmallString<128> Cwd;
+  std::unique_ptr<MemoryBuffer> Result;
+
+  // 1. The current working directory.
+  sys::fs::current_path(Cwd);
+  Path.assign(Cwd.begin(), Cwd.end());
+  sys::path::append(Path, File);
+  if (sys::fs::exists(Path))
+    return errorOrToExpected(MemoryBuffer::getFile(Path, -1, false));
+
+  // 2. The directory of the input resource file, if it is different from the
+  // current
+  //    working directory.
+  StringRef InputFileDir = sys::path::parent_path(Params.InputFilePath);
+  Path.assign(InputFileDir.begin(), InputFileDir.end());
+  sys::path::append(Path, File);
+  if (sys::fs::exists(Path))
+    return errorOrToExpected(MemoryBuffer::getFile(Path, -1, false));
+
+  // 3. All of the include directories specified on the command line.
+  for (StringRef ForceInclude : Params.Include) {
+    Path.assign(ForceInclude.begin(), ForceInclude.end());
+    sys::path::append(Path, File);
+    if (sys::fs::exists(Path))
+      return errorOrToExpected(MemoryBuffer::getFile(Path, -1, false));
+  }
+
+  if (auto Result =
+          llvm::sys::Process::FindInEnvPath("INCLUDE", File, Params.NoInclude))
+    return errorOrToExpected(MemoryBuffer::getFile(*Result, -1, false));
+
+  return make_error<StringError>("error : file not found : " + Twine(File),
+                                 inconvertibleErrorCode());
 }
 
 } // namespace rc

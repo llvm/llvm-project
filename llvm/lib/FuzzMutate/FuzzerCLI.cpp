@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FuzzMutate/FuzzerCLI.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -27,6 +27,42 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
       break;
   while (I < ArgC)
     CLArgs.push_back(ArgV[I++]);
+
+  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
+}
+
+void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
+  std::vector<std::string> Args{ExecName};
+
+  auto NameAndArgs = ExecName.split(':');
+  if (NameAndArgs.second.empty())
+    return;
+
+  SmallVector<StringRef, 4> Opts;
+  NameAndArgs.second.split(Opts, '-');
+  for (StringRef Opt : Opts) {
+    if (Opt.equals("gisel")) {
+      Args.push_back("-global-isel");
+      // For now we default GlobalISel to -O0
+      Args.push_back("-O0");
+    } else if (Opt.startswith("O")) {
+      Args.push_back("-" + Opt.str());
+    } else if (auto Arch = Triple::getArchTypeForLLVMName(Opt)) {
+      Args.push_back("-mtriple=" + Opt.str());
+    } else {
+      errs() << ExecName << ": Unknown option: " << Opt << ".\n";
+      exit(1);
+    }
+  }
+  errs() << NameAndArgs.first << ": Injected args:";
+  for (int I = 1, E = Args.size(); I < E; ++I)
+    errs() << " " << Args[I];
+  errs() << "\n";
+
+  std::vector<const char *> CLArgs;
+  CLArgs.reserve(Args.size());
+  for (std::string &S : Args)
+    CLArgs.push_back(S.c_str());
 
   cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
 }

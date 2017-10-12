@@ -496,6 +496,48 @@ void HexagonPacketizerList::useCalleesSP(MachineInstr &MI) {
   Off.setImm(Off.getImm() + FrameSize + HEXAGON_LRFP_SIZE);
 }
 
+/// Return true if we can update the offset in MI so that MI and MJ
+/// can be packetized together.
+bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
+  assert(SUI->getInstr() && SUJ->getInstr());
+  MachineInstr &MI = *SUI->getInstr();
+  MachineInstr &MJ = *SUJ->getInstr();
+
+  unsigned BPI, OPI;
+  if (!HII->getBaseAndOffsetPosition(MI, BPI, OPI))
+    return false;
+  unsigned BPJ, OPJ;
+  if (!HII->getBaseAndOffsetPosition(MJ, BPJ, OPJ))
+    return false;
+  unsigned Reg = MI.getOperand(BPI).getReg();
+  if (Reg != MJ.getOperand(BPJ).getReg())
+    return false;
+  // Make sure that the dependences do not restrict adding MI to the packet.
+  // That is, ignore anti dependences, and make sure the only data dependence
+  // involves the specific register.
+  for (const auto &PI : SUI->Preds)
+    if (PI.getKind() != SDep::Anti &&
+        (PI.getKind() != SDep::Data || PI.getReg() != Reg))
+      return false;
+  int Incr;
+  if (!HII->getIncrementValue(MJ, Incr))
+    return false;
+
+  int64_t Offset = MI.getOperand(OPI).getImm();
+  MI.getOperand(OPI).setImm(Offset + Incr);
+  ChangedOffset = Offset;
+  return true;
+}
+
+/// Undo the changed offset. This is needed if the instruction cannot be
+/// added to the current packet due to a different instruction.
+void HexagonPacketizerList::undoChangedOffset(MachineInstr &MI) {
+  unsigned BP, OP;
+  if (!HII->getBaseAndOffsetPosition(MI, BP, OP))
+    llvm_unreachable("Unable to find base and offset operands.");
+  MI.getOperand(OP).setImm(ChangedOffset);
+}
+
 enum PredicateKind {
   PK_False,
   PK_True,
@@ -980,6 +1022,7 @@ void HexagonPacketizerList::initPacketizerState() {
   GlueToNewValueJump = false;
   GlueAllocframeStore = false;
   FoundSequentialDependence = false;
+  ChangedOffset = INT64_MAX;
 }
 
 // Ignore bundling of pseudo instructions.
@@ -1295,11 +1338,9 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     if (NOp1.isReg() && I.getOperand(0).getReg() == NOp1.getReg())
       secondRegMatch = true;
 
-    for (auto T : CurrentPacketMIs) {
-      SUnit *PacketSU = MIToSUnit.find(T)->second;
-      MachineInstr &PI = *PacketSU->getInstr();
+    for (MachineInstr *PI : CurrentPacketMIs) {
       // NVJ can not be part of the dual jump - Arch Spec: section 7.8.
-      if (PI.isCall()) {
+      if (PI->isCall()) {
         Dependence = true;
         break;
       }
@@ -1311,22 +1352,22 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // 3. If the second operand of the nvj is newified, (which means
       //    first operand is also a reg), first reg is not defined in
       //    the same packet.
-      if (PI.getOpcode() == Hexagon::S2_allocframe || PI.mayStore() ||
-          HII->isLoopN(PI)) {
+      if (PI->getOpcode() == Hexagon::S2_allocframe || PI->mayStore() ||
+          HII->isLoopN(*PI)) {
         Dependence = true;
         break;
       }
       // Check #2/#3.
       const MachineOperand &OpR = secondRegMatch ? NOp0 : NOp1;
-      if (OpR.isReg() && PI.modifiesRegister(OpR.getReg(), HRI)) {
+      if (OpR.isReg() && PI->modifiesRegister(OpR.getReg(), HRI)) {
         Dependence = true;
         break;
       }
     }
 
+    GlueToNewValueJump = true;
     if (Dependence)
       return false;
-    GlueToNewValueJump = true;
   }
 
   // There no dependency between a prolog instruction and its successor.
@@ -1567,6 +1608,23 @@ bool HexagonPacketizerList::isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
     useCalleesSP(I);
     GlueAllocframeStore = false;
   }
+
+  if (ChangedOffset != INT64_MAX)
+    undoChangedOffset(I);
+
+  if (GlueToNewValueJump) {
+    // Putting I and J together would prevent the new-value jump from being
+    // packetized with the producer. In that case I and J must be separated.
+    GlueToNewValueJump = false;
+    return false;
+  }
+
+  if (ChangedOffset == INT64_MAX && updateOffset(SUI, SUJ)) {
+    FoundSequentialDependence = false;
+    Dependence = false;
+    return true;
+  }
+
   return false;
 }
 

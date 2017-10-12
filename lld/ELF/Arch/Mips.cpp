@@ -28,19 +28,19 @@ namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
-  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
-  bool isPicRel(uint32_t Type) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
+  bool isPicRel(RelType Type) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
+  bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   const SymbolBody &S) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  bool usesOnlyLowPageBits(uint32_t Type) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  bool usesOnlyLowPageBits(RelType Type) const override;
 };
 } // namespace
 
@@ -70,7 +70,7 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
 }
 
 template <class ELFT>
-RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
+RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const SymbolBody &S,
                                const InputFile &File,
                                const uint8_t *Loc) const {
   // See comment in the calculateMipsRelChain.
@@ -180,11 +180,11 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   }
 }
 
-template <class ELFT> bool MIPS<ELFT>::isPicRel(uint32_t Type) const {
+template <class ELFT> bool MIPS<ELFT>::isPicRel(RelType Type) const {
   return Type == R_MIPS_32 || Type == R_MIPS_64;
 }
 
-template <class ELFT> uint32_t MIPS<ELFT>::getDynRel(uint32_t Type) const {
+template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
   return RelativeRel;
 }
 
@@ -327,7 +327,7 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 }
 
 template <class ELFT>
-bool MIPS<ELFT>::needsThunk(RelExpr Expr, uint32_t Type, const InputFile *File,
+bool MIPS<ELFT>::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                             const SymbolBody &S) const {
   // Any MIPS PIC code function is invoked with its address in register $t9.
   // So if we have a branch instruction from non-PIC code to the PIC one
@@ -350,7 +350,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr Expr, uint32_t Type, const InputFile *File,
 }
 
 template <class ELFT>
-int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
+int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   default:
@@ -421,7 +421,7 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(uint8_t *Loc, uint32_t Type, uint64_t Val) {
+calculateMipsRelChain(uint8_t *Loc, RelType Type, uint64_t Val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -434,8 +434,8 @@ calculateMipsRelChain(uint8_t *Loc, uint32_t Type, uint64_t Val) {
   // relocations used to modify result of the first one: extend it to
   // 64-bit, extract high or low part etc. For details, see part 2.9 Relocation
   // at the https://dmz-portal.mips.com/mw/images/8/82/007-4658-001.pdf
-  uint32_t Type2 = (Type >> 8) & 0xff;
-  uint32_t Type3 = (Type >> 16) & 0xff;
+  RelType Type2 = (Type >> 8) & 0xff;
+  RelType Type3 = (Type >> 16) & 0xff;
   if (Type2 == R_MIPS_NONE && Type3 == R_MIPS_NONE)
     return std::make_pair(Type, Val);
   if (Type2 == R_MIPS_64 && Type3 == R_MIPS_NONE)
@@ -451,7 +451,7 @@ calculateMipsRelChain(uint8_t *Loc, uint32_t Type, uint64_t Val) {
 }
 
 template <class ELFT>
-void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   const endianness E = ELFT::TargetEndianness;
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
@@ -632,8 +632,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-template <class ELFT>
-bool MIPS<ELFT>::usesOnlyLowPageBits(uint32_t Type) const {
+template <class ELFT> bool MIPS<ELFT>::usesOnlyLowPageBits(RelType Type) const {
   return Type == R_MIPS_LO16 || Type == R_MIPS_GOT_OFST ||
          Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_GOT_OFST;
 }

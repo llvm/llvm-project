@@ -460,18 +460,22 @@ LoopUnrollResult llvm::UnrollLoop(
   // Report the unrolling decision.
   if (CompletelyUnroll) {
     DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
-          << " with trip count " << TripCount << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
-                                 L->getHeader())
-              << "completely unrolled loop with "
-              << NV("UnrollCount", TripCount) << " iterations");
+                 << " with trip count " << TripCount << "!\n");
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
+                                L->getHeader())
+             << "completely unrolled loop with " << NV("UnrollCount", TripCount)
+             << " iterations";
+    });
   } else if (PeelCount) {
     DEBUG(dbgs() << "PEELING loop %" << Header->getName()
                  << " with iteration count " << PeelCount << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
-                                 L->getHeader())
-              << " peeled loop by " << NV("PeelCount", PeelCount)
-              << " iterations");
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
+                                L->getHeader())
+             << " peeled loop by " << NV("PeelCount", PeelCount)
+             << " iterations";
+    });
   } else {
     auto DiagBuilder = [&]() {
       OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),

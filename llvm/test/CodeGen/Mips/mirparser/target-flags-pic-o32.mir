@@ -1,0 +1,95 @@
+# RUN: llc -march=mips -start-before=expand-isel-pseudos \
+# RUN:     -stop-after=expand-isel-pseudos -relocation-model=pic \
+# RUN:     -o /dev/null %s
+
+# A simple test to show that we can parse the target specific flags: got-call,
+# got.
+
+--- |
+  @v = global i32 0, align 4
+  @j = external global i32, align 4
+
+  define i32 @_Z2k1i(i32 signext %asd) {
+  entry:
+    %call = tail call i32 @_Z1gi(i32 signext %asd)
+    %add = add nsw i32 %call, %asd
+    %0 = load i32, i32* @v, align 4
+    %add1 = add nsw i32 %add, %0
+    %1 = load i32, i32* @j, align 4
+    %add2 = add nsw i32 %add1, %1
+    ret i32 %add2
+  }
+
+  declare i32 @_Z1gi(i32 signext)
+...
+---
+name:            _Z2k1i
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr32, preferred-register: '' }
+  - { id: 6, class: gpr32, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr32, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr32, preferred-register: '' }
+  - { id: 12, class: gpr32, preferred-register: '' }
+liveins:
+  - { reg: '%a0', virtual-reg: '%0' }
+  - { reg: '%t9', virtual-reg: '' }
+  - { reg: '%v0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: %a0, %t9, %v0
+
+    %1 = ADDu %v0, %t9
+    %0 = COPY %a0
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead %sp, implicit %sp
+    %2 = LW %1, target-flags(mips-got-call) @_Z1gi :: (load 4 from call-entry @_Z1gi)
+    %a0 = COPY %0
+    %gp = COPY %1
+    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead %ra, implicit %a0, implicit %gp, implicit-def %sp, implicit-def %v0
+    ADJCALLSTACKUP 16, 0, implicit-def dead %sp, implicit %sp
+    %3 = COPY %v0
+    %4 = ADDu %3, %0
+    %5 = LW %1, target-flags(mips-got) @v :: (load 4 from got)
+    %6 = LW killed %5, 0 :: (dereferenceable load 4 from @v)
+    %7 = ADDu killed %4, killed %6
+    %8 = LW %1, target-flags(mips-got) @j :: (load 4 from got)
+    %9 = LW killed %8, 0 :: (dereferenceable load 4 from @j)
+    %10 = ADDu killed %7, killed %9
+    %v0 = COPY %10
+    RetRA implicit %v0
+
+...
+

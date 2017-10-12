@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
-// CHECK:  .amdgpu_code_object_metadata
+// CHECK:  .amd_amdgpu_hsa_metadata
 // CHECK:    Version: [ 1, 0 ]
 // CHECK:    Printf:
 // CHECK:      - '1:1:4:%d\n'
@@ -35,8 +35,8 @@
 // CHECK:            ValueKind:     HiddenPrintfBuffer
 // CHECK:            ValueType:     I8
 // CHECK:            AddrSpaceQual: Global
-// CHECK:  .end_amdgpu_code_object_metadata
-.amdgpu_code_object_metadata
+// CHECK:  .end_amd_amdgpu_hsa_metadata
+.amd_amdgpu_hsa_metadata
   Version: [ 1, 0 ]
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
   Kernels:
@@ -67,4 +67,4 @@
           ValueKind:     HiddenPrintfBuffer
           ValueType:     I8
           AddrSpaceQual: Global
-.end_amdgpu_code_object_metadata
+.end_amd_amdgpu_hsa_metadata

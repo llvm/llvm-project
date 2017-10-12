@@ -34,7 +34,8 @@ class MipsELFStreamer : public MCELFStreamer {
 
 public:
   MipsELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-                  raw_pwrite_stream &OS, MCCodeEmitter *Emitter);
+                  raw_pwrite_stream &OS,
+                  std::unique_ptr<MCCodeEmitter> Emitter);
 
   /// Overriding this function allows us to add arbitrary behaviour before the
   /// \p Inst is actually emitted. For example, we can inspect the operands and
@@ -67,7 +68,8 @@ public:
 MCELFStreamer *createMipsELFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
                                      raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter, bool RelaxAll);
+                                     std::unique_ptr<MCCodeEmitter> Emitter,
+                                     bool RelaxAll);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSELFSTREAMER_H

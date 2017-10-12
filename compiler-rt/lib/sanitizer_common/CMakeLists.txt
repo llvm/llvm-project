@@ -58,6 +58,7 @@ set(SANITIZER_NOLIBC_SOURCES
 
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cc
+  sanitizer_allocator_checks.cc
   sancov_flags.cc
   sanitizer_coverage_fuchsia.cc
   sanitizer_coverage_libcdep_new.cc

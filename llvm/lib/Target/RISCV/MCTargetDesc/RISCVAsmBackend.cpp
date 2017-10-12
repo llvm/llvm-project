@@ -39,7 +39,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) const override;
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -182,7 +183,7 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   return;
 }
 
-MCObjectWriter *
+std::unique_ptr<MCObjectWriter>
 RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   return createRISCVELFObjectWriter(OS, OSABI, Is64Bit);
 }

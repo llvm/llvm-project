@@ -26,24 +26,20 @@ add_lld_library(lldCOFF
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
-  BitReader
   Core
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
-  LTO
   LibDriver
-  Object
+  LTO
   MC
-  MCDisassembler
-  Target
+  Object
   Option
   Support
   WindowsManifest
 
   LINK_LIBS
   lldCommon
-  lldCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS

@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstPrinter/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86TargetStreamer.h"
 #include "X86AsmInstrumentation.h"
 #include "X86AsmParserCommon.h"
 #include "X86Operand.h"
-#include "InstPrinter/X86IntelInstPrinter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -78,6 +79,13 @@ private:
     SMLoc Result = Parser.getTok().getLoc();
     Parser.Lex();
     return Result;
+  }
+
+  X86TargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<X86TargetStreamer &>(TS);
   }
 
   unsigned MatchInstruction(const OperandVector &Operands, MCInst &Inst,
@@ -838,6 +846,15 @@ private:
   bool parseDirectiveEven(SMLoc L);
   bool ParseDirectiveWord(unsigned Size, SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
+
+  /// CodeView FPO data directives.
+  bool parseDirectiveFPOProc(SMLoc L);
+  bool parseDirectiveFPOSetFrame(SMLoc L);
+  bool parseDirectiveFPOPushReg(SMLoc L);
+  bool parseDirectiveFPOStackAlloc(SMLoc L);
+  bool parseDirectiveFPOEndPrologue(SMLoc L);
+  bool parseDirectiveFPOEndProc(SMLoc L);
+  bool parseDirectiveFPOData(SMLoc L);
 
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
@@ -3027,6 +3044,19 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   } else if (IDVal == ".even")
     return parseDirectiveEven(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_proc")
+    return parseDirectiveFPOProc(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_setframe")
+    return parseDirectiveFPOSetFrame(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_pushreg")
+    return parseDirectiveFPOPushReg(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_stackalloc")
+    return parseDirectiveFPOStackAlloc(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_endprologue")
+    return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_endproc")
+    return parseDirectiveFPOEndProc(DirectiveID.getLoc());
+
   return true;
 }
 
@@ -3122,6 +3152,71 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
   }
 
   return false;
+}
+
+// .cv_fpo_proc foo
+bool X86AsmParser::parseDirectiveFPOProc(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  StringRef ProcName;
+  int64_t ParamsSize;
+  if (Parser.parseIdentifier(ProcName))
+    return Parser.TokError("expected symbol name");
+  if (Parser.parseIntToken(ParamsSize, "expected parameter byte count"))
+    return true;
+  if (!isUIntN(32, ParamsSize))
+    return Parser.TokError("parameters size out of range");
+  if (Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_proc' directive");
+  MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
+  return getTargetStreamer().emitFPOProc(ProcSym, ParamsSize, L);
+}
+
+// .cv_fpo_setframe ebp
+bool X86AsmParser::parseDirectiveFPOSetFrame(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  unsigned Reg;
+  SMLoc DummyLoc;
+  if (ParseRegister(Reg, DummyLoc, DummyLoc) ||
+      Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_setframe' directive");
+  return getTargetStreamer().emitFPOSetFrame(Reg, L);
+}
+
+// .cv_fpo_pushreg ebx
+bool X86AsmParser::parseDirectiveFPOPushReg(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  unsigned Reg;
+  SMLoc DummyLoc;
+  if (ParseRegister(Reg, DummyLoc, DummyLoc) ||
+      Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_pushreg' directive");
+  return getTargetStreamer().emitFPOPushReg(Reg, L);
+}
+
+// .cv_fpo_stackalloc 20
+bool X86AsmParser::parseDirectiveFPOStackAlloc(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  int64_t Offset;
+  if (Parser.parseIntToken(Offset, "expected offset") ||
+      Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_stackalloc' directive");
+  return getTargetStreamer().emitFPOStackAlloc(Offset, L);
+}
+
+// .cv_fpo_endprologue
+bool X86AsmParser::parseDirectiveFPOEndPrologue(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  if (Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_endprologue' directive");
+  return getTargetStreamer().emitFPOEndPrologue(L);
+}
+
+// .cv_fpo_endproc
+bool X86AsmParser::parseDirectiveFPOEndProc(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  if (Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_endproc' directive");
+  return getTargetStreamer().emitFPOEndProc(L);
 }
 
 // Force static initialization.

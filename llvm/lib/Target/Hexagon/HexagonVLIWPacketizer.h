@@ -38,6 +38,9 @@ class HexagonPacketizerList : public VLIWPacketizerList {
   // Has the feeder instruction been glued to new value jump.
   bool GlueToNewValueJump;
 
+  // This holds the offset value, when pruning the dependences.
+  int64_t ChangedOffset;
+
   // Check if there is a dependence between some instruction already in this
   // packet and this instruction.
   bool Dependence;
@@ -117,6 +120,8 @@ protected:
   bool demoteToDotOld(MachineInstr &MI);
   bool useCallersSP(MachineInstr &MI);
   void useCalleesSP(MachineInstr &MI);
+  bool updateOffset(SUnit *SUI, SUnit *SUJ);
+  void undoChangedOffset(MachineInstr &MI);
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr&, unsigned);
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);

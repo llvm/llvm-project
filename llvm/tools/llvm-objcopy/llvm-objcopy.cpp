@@ -56,11 +56,14 @@ cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
 cl::opt<std::string>
     OutputFormat("O", cl::desc("set output format to one of the following:"
                                "\n\tbinary"));
-
 cl::list<std::string> ToRemove("remove-section",
                                cl::desc("Remove a specific section"));
 cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
                     cl::aliasopt(ToRemove));
+cl::opt<bool> StripSections("strip-sections",
+                            cl::desc("Remove all section headers"));
+
+typedef std::function<bool(const SectionBase &Sec)> SectionPred;
 
 void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::unique_ptr<FileOutputBuffer> Buffer;
@@ -71,12 +74,25 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
     Obj = llvm::make_unique<BinaryObject<ELF64LE>>(ObjFile);
   else
     Obj = llvm::make_unique<ELFObject<ELF64LE>>(ObjFile);
+
+  SectionPred RemovePred = [](const SectionBase &) { return false; };
+
   if (!ToRemove.empty()) {
-    Obj->removeSections([&](const SectionBase &Sec) {
+    RemovePred = [&](const SectionBase &Sec) {
       return std::find(std::begin(ToRemove), std::end(ToRemove), Sec.Name) !=
              std::end(ToRemove);
-    });
+    };
   }
+
+  if (StripSections) {
+    RemovePred = [RemovePred](const SectionBase &Sec) {
+      return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
+    };
+    Obj->WriteSectionHeaders = false;
+  }
+
+  Obj->removeSections(RemovePred);
+
   Obj->finalize();
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFilename, Obj->totalSize(),

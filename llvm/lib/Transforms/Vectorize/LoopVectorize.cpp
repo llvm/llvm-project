@@ -1248,25 +1248,29 @@ public:
   /// Dumps all the hint information.
   void emitRemarkWithHints() const {
     using namespace ore;
-    if (Force.Value == LoopVectorizeHints::FK_Disabled)
-      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
+    ORE.emit([&]() {
+      if (Force.Value == LoopVectorizeHints::FK_Disabled)
+        return OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
                                         TheLoop->getStartLoc(),
                                         TheLoop->getHeader())
-               << "loop not vectorized: vectorization is explicitly disabled");
-    else {
-      OptimizationRemarkMissed R(LV_NAME, "MissedDetails",
-                                 TheLoop->getStartLoc(), TheLoop->getHeader());
-      R << "loop not vectorized";
-      if (Force.Value == LoopVectorizeHints::FK_Enabled) {
-        R << " (Force=" << NV("Force", true);
-        if (Width.Value != 0)
-          R << ", Vector Width=" << NV("VectorWidth", Width.Value);
-        if (Interleave.Value != 0)
-          R << ", Interleave Count=" << NV("InterleaveCount", Interleave.Value);
-        R << ")";
+               << "loop not vectorized: vectorization is explicitly disabled";
+      else {
+        OptimizationRemarkMissed R(LV_NAME, "MissedDetails",
+                                   TheLoop->getStartLoc(),
+                                   TheLoop->getHeader());
+        R << "loop not vectorized";
+        if (Force.Value == LoopVectorizeHints::FK_Enabled) {
+          R << " (Force=" << NV("Force", true);
+          if (Width.Value != 0)
+            R << ", Vector Width=" << NV("VectorWidth", Width.Value);
+          if (Interleave.Value != 0)
+            R << ", Interleave Count="
+              << NV("InterleaveCount", Interleave.Value);
+          R << ")";
+        }
+        return R;
       }
-      ORE.emit(R);
-    }
+    });
   }
 
   unsigned getWidth() const { return Width.Value; }
@@ -2277,12 +2281,14 @@ public:
     const char *PassName = Hints.vectorizeAnalysisPassName();
     bool Failed = false;
     if (UnsafeAlgebraInst && !Hints.allowReordering()) {
-      ORE.emit(
-          OptimizationRemarkAnalysisFPCommute(PassName, "CantReorderFPOps",
-                                              UnsafeAlgebraInst->getDebugLoc(),
-                                              UnsafeAlgebraInst->getParent())
-          << "loop not vectorized: cannot prove it is safe to reorder "
-             "floating-point operations");
+      ORE.emit([&]() {
+        return OptimizationRemarkAnalysisFPCommute(
+                   PassName, "CantReorderFPOps",
+                   UnsafeAlgebraInst->getDebugLoc(),
+                   UnsafeAlgebraInst->getParent())
+               << "loop not vectorized: cannot prove it is safe to reorder "
+                  "floating-point operations";
+      });
       Failed = true;
     }
 
@@ -2293,11 +2299,13 @@ public:
         NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
     if ((ThresholdReached && !Hints.allowReordering()) ||
         PragmaThresholdReached) {
-      ORE.emit(OptimizationRemarkAnalysisAliasing(PassName, "CantReorderMemOps",
+      ORE.emit([&]() {
+        return OptimizationRemarkAnalysisAliasing(PassName, "CantReorderMemOps",
                                                   L->getStartLoc(),
                                                   L->getHeader())
                << "loop not vectorized: cannot prove it is safe to reorder "
-                  "memory operations");
+                  "memory operations";
+      });
       DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
       Failed = true;
     }
@@ -5742,9 +5750,10 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   InterleaveInfo.setLAI(LAI);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
-    OptimizationRemarkAnalysis VR(Hints->vectorizeAnalysisPassName(),
-                                  "loop not vectorized: ", *LAR);
-    ORE->emit(VR);
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(Hints->vectorizeAnalysisPassName(),
+                                        "loop not vectorized: ", *LAR);
+    });
   }
   if (!LAI->canVectorizeMemory())
     return false;
@@ -8573,24 +8582,32 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
-    ORE->emit(OptimizationRemarkMissed(VAPassName, VecDiagMsg.first,
-                                         L->getStartLoc(), L->getHeader())
-              << VecDiagMsg.second);
-    ORE->emit(OptimizationRemarkMissed(LV_NAME, IntDiagMsg.first,
-                                         L->getStartLoc(), L->getHeader())
-              << IntDiagMsg.second);
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(VAPassName, VecDiagMsg.first,
+                                      L->getStartLoc(), L->getHeader())
+             << VecDiagMsg.second;
+    });
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(LV_NAME, IntDiagMsg.first,
+                                      L->getStartLoc(), L->getHeader())
+             << IntDiagMsg.second;
+    });
     return false;
   } else if (!VectorizeLoop && InterleaveLoop) {
     DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
-    ORE->emit(OptimizationRemarkAnalysis(VAPassName, VecDiagMsg.first,
-                                         L->getStartLoc(), L->getHeader())
-              << VecDiagMsg.second);
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(VAPassName, VecDiagMsg.first,
+                                        L->getStartLoc(), L->getHeader())
+             << VecDiagMsg.second;
+    });
   } else if (VectorizeLoop && !InterleaveLoop) {
     DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
                  << DebugLocStr << '\n');
-    ORE->emit(OptimizationRemarkAnalysis(LV_NAME, IntDiagMsg.first,
-                                         L->getStartLoc(), L->getHeader())
-              << IntDiagMsg.second);
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(LV_NAME, IntDiagMsg.first,
+                                        L->getStartLoc(), L->getHeader())
+             << IntDiagMsg.second;
+    });
   } else if (VectorizeLoop && InterleaveLoop) {
     DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
                  << DebugLocStr << '\n');
@@ -8608,10 +8625,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                &CM);
     LVP.executePlan(Unroller, DT);
 
-    ORE->emit(OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
-                                 L->getHeader())
-              << "interleaved loop (interleaved count: "
-              << NV("InterleaveCount", IC) << ")");
+    ORE->emit([&]() {
+      return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
+                                L->getHeader())
+             << "interleaved loop (interleaved count: "
+             << NV("InterleaveCount", IC) << ")";
+    });
   } else {
     // If we decided that it is *legal* to vectorize the loop, then do it.
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC,
@@ -8626,11 +8645,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       AddRuntimeUnrollDisableMetaData(L);
 
     // Report the vectorization decision.
-    ORE->emit(OptimizationRemark(LV_NAME, "Vectorized", L->getStartLoc(),
-                                 L->getHeader())
-              << "vectorized loop (vectorization width: "
-              << NV("VectorizationFactor", VF.Width)
-              << ", interleaved count: " << NV("InterleaveCount", IC) << ")");
+    ORE->emit([&]() {
+      return OptimizationRemark(LV_NAME, "Vectorized", L->getStartLoc(),
+                                L->getHeader())
+             << "vectorized loop (vectorization width: "
+             << NV("VectorizationFactor", VF.Width)
+             << ", interleaved count: " << NV("InterleaveCount", IC) << ")";
+    });
   }
 
   // Mark the loop as already vectorized to avoid vectorizing again.

@@ -808,6 +808,10 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   if (FuncName.empty())
     FuncName = GlobalValue::dropLLVMManglingEscape(GV->getName());
 
+  // Emit FPO data, but only on 32-bit x86. No other platforms use it.
+  if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)
+    OS.EmitCVFPOData(Fn);
+
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
   MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
