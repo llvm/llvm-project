@@ -1011,20 +1011,12 @@
 // CHECK_GLM_M32: #define __XSAVEOPT__ 1
 // CHECK_GLM_M32: #define __XSAVES__ 1
 // CHECK_GLM_M32: #define __XSAVE__ 1
-// CHECK_GLM_M32: #define __clang__ 1
 // CHECK_GLM_M32: #define __goldmont 1
 // CHECK_GLM_M32: #define __goldmont__ 1
 // CHECK_GLM_M32: #define __i386 1
 // CHECK_GLM_M32: #define __i386__ 1
-// CHECK_GLM_M32: #define __linux 1
-// CHECK_GLM_M32: #define __linux__ 1
-// CHECK_GLM_M32: #define __llvm__ 1
 // CHECK_GLM_M32: #define __tune_goldmont__ 1
-// CHECK_GLM_M32: #define __unix 1
-// CHECK_GLM_M32: #define __unix__ 1
 // CHECK_GLM_M32: #define i386 1
-// CHECK_GLM_M32: #define linux 1
-// CHECK_GLM_M32: #define unix 1
 //
 // RUN: %clang -march=goldmont -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
@@ -1049,19 +1041,11 @@
 // CHECK_GLM_M64: #define __XSAVEOPT__ 1
 // CHECK_GLM_M64: #define __XSAVES__ 1
 // CHECK_GLM_M64: #define __XSAVE__ 1
-// CHECK_GLM_M64: #define __gnu_linux__ 1
 // CHECK_GLM_M64: #define __goldmont 1
 // CHECK_GLM_M64: #define __goldmont__ 1
-// CHECK_GLM_M64: #define __linux 1
-// CHECK_GLM_M64: #define __linux__ 1
-// CHECK_GLM_M64: #define __llvm__ 1
 // CHECK_GLM_M64: #define __tune_goldmont__ 1
-// CHECK_GLM_M64: #define __unix 1
-// CHECK_GLM_M64: #define __unix__ 1
 // CHECK_GLM_M64: #define __x86_64 1
 // CHECK_GLM_M64: #define __x86_64__ 1
-// CHECK_GLM_M64: #define linux 1
-// CHECK_GLM_M64: #define unix 1
 //
 // RUN: %clang -march=slm -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \

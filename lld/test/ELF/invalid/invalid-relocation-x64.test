@@ -3,8 +3,8 @@
 # RUN: echo ".global foo; foo:" > %t2.s
 # RUN: llvm-mc %t2.s -o %t2.o -filetype=obj -triple x86_64-pc-linux
 # RUN: not ld.lld %t1.o %t2.o -o /dev/null 2>&1 | FileCheck %s
-# CHECK: {{.*}}1.o: unknown relocation type: Unknown (152)
-# CHECK: {{.*}}1.o: unknown relocation type: Unknown (153)
+# CHECK: error: unrecognized reloc 152
+# CHECK: error: unrecognized reloc 153
 
 !ELF
 FileHeader:

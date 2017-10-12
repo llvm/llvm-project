@@ -22,10 +22,17 @@
 namespace llvm {
 namespace rc {
 
+struct SearchParams {
+  std::vector<std::string> Include;   // Additional folders to search for files.
+  std::vector<std::string> NoInclude; // Folders to exclude from file search.
+  StringRef InputFilePath;            // The full path of the input file.
+};
+
 class ResourceFileWriter : public Visitor {
 public:
-  ResourceFileWriter(std::unique_ptr<raw_fd_ostream> Stream)
-      : FS(std::move(Stream)), IconCursorID(1) {
+  ResourceFileWriter(const SearchParams &Params,
+                     std::unique_ptr<raw_fd_ostream> Stream)
+      : Params(Params), FS(std::move(Stream)), IconCursorID(1) {
     assert(FS && "Output stream needs to be provided to the serializator");
   }
 
@@ -136,6 +143,8 @@ private:
   Error writeVersionInfoBlock(const VersionInfoBlock &);
   Error writeVersionInfoValue(const VersionInfoValue &);
 
+  const SearchParams &Params;
+
   // Output stream handling.
   std::unique_ptr<raw_fd_ostream> FS;
 
@@ -169,6 +178,8 @@ private:
   Error appendFile(StringRef Filename);
 
   void padStream(uint64_t Length);
+
+  Expected<std::unique_ptr<MemoryBuffer>> loadFile(StringRef File) const;
 
   // Icon and cursor IDs are allocated starting from 1 and increasing for
   // each icon/cursor dumped. This maintains the current ID to be allocated.

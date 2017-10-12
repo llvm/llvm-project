@@ -867,10 +867,16 @@ static Optional<uint64_t> parseInt(StringRef Tok) {
 
   // Hexadecimal
   uint64_t Val;
-  if (Tok.startswith_lower("0x") && to_integer(Tok.substr(2), Val, 16))
+  if (Tok.startswith_lower("0x")) {
+    if (!to_integer(Tok.substr(2), Val, 16))
+      return None;
     return Val;
-  if (Tok.endswith_lower("H") && to_integer(Tok.drop_back(), Val, 16))
+  }
+  if (Tok.endswith_lower("H")) {
+    if (!to_integer(Tok.drop_back(), Val, 16))
+      return None;
     return Val;
+  }
 
   // Decimal
   if (Tok.endswith_lower("K")) {

@@ -611,7 +611,7 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
       if (auto AddendOrErr = i->getAddend())
         Addend = *AddendOrErr;
       else
-        return errorCodeToError(AddendOrErr.getError());
+        return AddendOrErr.takeError();
 
       ++i;
       if (i == e)
@@ -1079,8 +1079,11 @@ RuntimeDyldELF::processRelocationRef(
     ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) {
   const auto &Obj = cast<ELFObjectFileBase>(O);
   uint64_t RelType = RelI->getType();
-  ErrorOr<int64_t> AddendOrErr = ELFRelocationRef(*RelI).getAddend();
-  int64_t Addend = AddendOrErr ? *AddendOrErr : 0;
+  int64_t Addend = 0;
+  if (Expected<int64_t> AddendOrErr = ELFRelocationRef(*RelI).getAddend())
+    Addend = *AddendOrErr;
+  else
+    consumeError(AddendOrErr.takeError());
   elf_symbol_iterator Symbol = RelI->getSymbol();
 
   // Obtain the symbol name which is referenced in the relocation

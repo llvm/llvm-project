@@ -15,6 +15,7 @@
 #include "InstPrinter/X86ATTInstPrinter.h"
 #include "InstPrinter/X86InstComments.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86TargetStreamer.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "X86AsmPrinter.h"
 #include "X86RegisterInfo.h"
@@ -1363,6 +1364,82 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
   }
 }
 
+void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
+  assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+  assert(getSubtarget().isOSWindows() && "SEH_ instruction Windows only");
+  const X86RegisterInfo *RI =
+      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+
+  // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
+  if (EmitFPOData) {
+    X86TargetStreamer *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    switch (MI->getOpcode()) {
+    case X86::SEH_PushReg:
+      XTS->emitFPOPushReg(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_StackAlloc:
+      XTS->emitFPOStackAlloc(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_SetFrame:
+      assert(MI->getOperand(1).getImm() == 0 &&
+             ".cv_fpo_setframe takes no offset");
+      XTS->emitFPOSetFrame(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_EndPrologue:
+      XTS->emitFPOEndPrologue();
+      break;
+    case X86::SEH_SaveReg:
+    case X86::SEH_SaveXMM:
+    case X86::SEH_PushFrame:
+      llvm_unreachable("SEH_ directive incompatible with FPO");
+      break;
+    default:
+      llvm_unreachable("expected SEH_ instruction");
+    }
+    return;
+  }
+
+  // Otherwise, use the .seh_ directives for all other Windows platforms.
+  switch (MI->getOpcode()) {
+  case X86::SEH_PushReg:
+    OutStreamer->EmitWinCFIPushReg(
+        RI->getSEHRegNum(MI->getOperand(0).getImm()));
+    break;
+
+  case X86::SEH_SaveReg:
+    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+                                   MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_SaveXMM:
+    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+                                   MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_StackAlloc:
+    OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_SetFrame:
+    OutStreamer->EmitWinCFISetFrame(
+        RI->getSEHRegNum(MI->getOperand(0).getImm()),
+        MI->getOperand(1).getImm());
+    break;
+
+  case X86::SEH_PushFrame:
+    OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_EndPrologue:
+    OutStreamer->EmitWinCFIEndProlog();
+    break;
+
+  default:
+    llvm_unreachable("expected SEH_ instruction");
+  }
+}
+
 void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI = MF->getSubtarget<X86Subtarget>().getRegisterInfo();
@@ -1540,41 +1617,13 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::SEH_PushReg:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIPushReg(RI->getSEHRegNum(MI->getOperand(0).getImm()));
-    return;
-
   case X86::SEH_SaveReg:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                   MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_SaveXMM:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                   MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_StackAlloc:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
-    return;
-
   case X86::SEH_SetFrame:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFISetFrame(RI->getSEHRegNum(MI->getOperand(0).getImm()),
-                                    MI->getOperand(1).getImm());
-    return;
-
   case X86::SEH_PushFrame:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
-    return;
-
   case X86::SEH_EndPrologue:
-    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    OutStreamer->EmitWinCFIEndProlog();
+    EmitSEHInstruction(MI);
     return;
 
   case X86::SEH_Epilogue: {

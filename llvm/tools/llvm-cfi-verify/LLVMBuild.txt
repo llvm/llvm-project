@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-cfi-verify
 parent = Tools
-required_libraries = MC MCDisassembler MCParser Support all-targets
+required_libraries = all-targets MC MCDisassembler MCParser Support

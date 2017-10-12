@@ -26,23 +26,23 @@ namespace {
 template <class ELFT> class X86_64 final : public TargetInfo {
 public:
   X86_64();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
-  bool isPicRel(uint32_t Type) const override;
+  bool isPicRel(RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 
-  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+  RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
   void relaxGot(uint8_t *Loc, uint64_t Val) const override;
-  void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 
 private:
   void relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
@@ -73,8 +73,7 @@ template <class ELFT> X86_64<ELFT>::X86_64() {
 }
 
 template <class ELFT>
-RelExpr X86_64<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
-                                 const InputFile &File,
+RelExpr X86_64<ELFT>::getRelExpr(RelType Type, const SymbolBody &S,
                                  const uint8_t *Loc) const {
   switch (Type) {
   case R_X86_64_8:
@@ -110,8 +109,7 @@ RelExpr X86_64<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(toString(&File) + ": unknown relocation type: " + toString(Type));
-    return R_HINT;
+    return R_INVALID;
   }
 }
 
@@ -158,13 +156,13 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
 }
 
-template <class ELFT> bool X86_64<ELFT>::isPicRel(uint32_t Type) const {
+template <class ELFT> bool X86_64<ELFT>::isPicRel(RelType Type) const {
   return Type != R_X86_64_PC32 && Type != R_X86_64_32 &&
          Type != R_X86_64_TPOFF32;
 }
 
 template <class ELFT>
-void X86_64<ELFT>::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
+void X86_64<ELFT>::relaxTlsGdToLe(uint8_t *Loc, RelType Type,
                                   uint64_t Val) const {
   // Convert
   //   .byte 0x66
@@ -187,7 +185,7 @@ void X86_64<ELFT>::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT>
-void X86_64<ELFT>::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
+void X86_64<ELFT>::relaxTlsGdToIe(uint8_t *Loc, RelType Type,
                                   uint64_t Val) const {
   // Convert
   //   .byte 0x66
@@ -212,7 +210,7 @@ void X86_64<ELFT>::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
 template <class ELFT>
-void X86_64<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
+void X86_64<ELFT>::relaxTlsIeToLe(uint8_t *Loc, RelType Type,
                                   uint64_t Val) const {
   uint8_t *Inst = Loc - 3;
   uint8_t Reg = Loc[-1] >> 3;
@@ -255,7 +253,7 @@ void X86_64<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT>
-void X86_64<ELFT>::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
+void X86_64<ELFT>::relaxTlsLdToLe(uint8_t *Loc, RelType Type,
                                   uint64_t Val) const {
   // Convert
   //   leaq bar@tlsld(%rip), %rdi
@@ -284,8 +282,7 @@ void X86_64<ELFT>::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT>
-void X86_64<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
-                               uint64_t Val) const {
+void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
     checkUInt<8>(Loc, Val, Type);
@@ -324,12 +321,12 @@ void X86_64<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   default:
-    llvm_unreachable("unexpected relocation");
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
 template <class ELFT>
-RelExpr X86_64<ELFT>::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+RelExpr X86_64<ELFT>::adjustRelaxExpr(RelType Type, const uint8_t *Data,
                                       RelExpr RelExpr) const {
   if (Type != R_X86_64_GOTPCRELX && Type != R_X86_64_REX_GOTPCRELX)
     return RelExpr;

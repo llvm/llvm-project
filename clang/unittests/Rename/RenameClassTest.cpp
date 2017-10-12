@@ -674,6 +674,124 @@ TEST_F(ClangRenameTest, ReferencesInLambdaFunctionParameters) {
   CompareSnippets(Expected, After);
 }
 
+TEST_F(ClangRenameTest, DontChangeIfSameName) {
+  std::string Before = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(foo::Old * x) {
+        foo::Old::foo() ;
+      }
+      using foo::Old;)";
+  std::string Expected = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(foo::Old * x) {
+        foo::Old::foo() ;
+      }
+      using foo::Old;)";
+  std::string After = runClangRenameOnCode(Before, "foo::Old", "foo::Old");
+  CompareSnippets(Expected, After);
+}
+
+TEST_F(ClangRenameTest, ChangeIfNewNameWithLeadingDotDot) {
+  std::string Before = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(foo::Old * x) {
+        foo::Old::foo() ;
+      }
+      using foo::Old;)";
+  std::string Expected = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(::foo::Old * x) {
+        ::foo::Old::foo() ;
+      }
+      using ::foo::Old;)";
+  std::string After = runClangRenameOnCode(Before, "foo::Old", "::foo::Old");
+  CompareSnippets(Expected, After);
+}
+
+TEST_F(ClangRenameTest, ChangeIfSameNameWithLeadingDotDot) {
+  std::string Before = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(foo::Old * x) {
+        foo::Old::foo() ;
+      }
+      using foo::Old;)";
+  std::string Expected = R"(
+      namespace foo {
+      class Old {
+       public:
+         static void foo() {}
+      };
+      }
+
+      void f(::foo::Old * x) {
+        ::foo::Old::foo() ;
+      }
+      using ::foo::Old;)";
+  std::string After = runClangRenameOnCode(Before, "::foo::Old", "::foo::Old");
+  CompareSnippets(Expected, After);
+}
+
+TEST_F(RenameClassTest, UsingAlias) {
+  std::string Before = R"(
+      namespace a { struct A {}; }
+
+      namespace foo {
+      using Alias = a::A;
+      Alias a;
+      })";
+  std::string Expected = R"(
+      namespace a { struct B {}; }
+
+      namespace foo {
+      using Alias = b::B;
+      Alias a;
+      })";
+  std::string After = runClangRenameOnCode(Before, "a::A", "b::B");
+  CompareSnippets(Expected, After);
+}
+
+TEST_F(ClangRenameTest, NestedTemplates) {
+  std::string Before = R"(
+      namespace a { template <typename T> struct A {}; }
+      a::A<a::A<int>> foo;)";
+  std::string Expected = R"(
+      namespace a { template <typename T> struct B {}; }
+      b::B<b::B<int>> foo;)";
+  std::string After = runClangRenameOnCode(Before, "a::A", "b::B");
+  CompareSnippets(Expected, After);
+}
+
+
 } // anonymous namespace
 } // namespace test
 } // namespace clang_rename

@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/BasicBlock.h"
@@ -39,12 +38,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ssaupdater"
 
-typedef DenseMap<BasicBlock*, Value*> AvailableValsTy;
+using AvailableValsTy = DenseMap<BasicBlock *, Value *>;
+
 static AvailableValsTy &getAvailableVals(void *AV) {
   return *static_cast<AvailableValsTy*>(AV);
 }
 
-SSAUpdater::SSAUpdater(SmallVectorImpl<PHINode*> *NewPHI)
+SSAUpdater::SSAUpdater(SmallVectorImpl<PHINode *> *NewPHI)
   : InsertedPHIs(NewPHI) {}
 
 SSAUpdater::~SSAUpdater() {
@@ -72,7 +72,7 @@ void SSAUpdater::AddAvailableValue(BasicBlock *BB, Value *V) {
 }
 
 static bool IsEquivalentPHI(PHINode *PHI,
-                          SmallDenseMap<BasicBlock*, Value*, 8> &ValueMapping) {
+                        SmallDenseMap<BasicBlock *, Value *, 8> &ValueMapping) {
   unsigned PHINumValues = PHI->getNumIncomingValues();
   if (PHINumValues != ValueMapping.size())
     return false;
@@ -100,7 +100,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
 
   // Otherwise, we have the hard case.  Get the live-in values for each
   // predecessor.
-  SmallVector<std::pair<BasicBlock*, Value*>, 8> PredValues;
+  SmallVector<std::pair<BasicBlock *, Value *>, 8> PredValues;
   Value *SingularValue = nullptr;
 
   // We can get our predecessor info by walking the pred_iterator list, but it
@@ -145,8 +145,8 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // Otherwise, we do need a PHI: check to see if we already have one available
   // in this block that produces the right value.
   if (isa<PHINode>(BB->begin())) {
-    SmallDenseMap<BasicBlock*, Value*, 8> ValueMapping(PredValues.begin(),
-                                                       PredValues.end());
+    SmallDenseMap<BasicBlock *, Value *, 8> ValueMapping(PredValues.begin(),
+                                                         PredValues.end());
     PHINode *SomePHI;
     for (BasicBlock::iterator It = BB->begin();
          (SomePHI = dyn_cast<PHINode>(It)); ++It) {
@@ -218,11 +218,11 @@ namespace llvm {
 template<>
 class SSAUpdaterTraits<SSAUpdater> {
 public:
-  typedef BasicBlock BlkT;
-  typedef Value *ValT;
-  typedef PHINode PhiT;
+  using BlkT = BasicBlock;
+  using ValT = Value *;
+  using PhiT = PHINode;
+  using BlkSucc_iterator = succ_iterator;
 
-  typedef succ_iterator BlkSucc_iterator;
   static BlkSucc_iterator BlkSucc_begin(BlkT *BB) { return succ_begin(BB); }
   static BlkSucc_iterator BlkSucc_end(BlkT *BB) { return succ_end(BB); }
 
@@ -253,7 +253,7 @@ public:
   /// FindPredecessorBlocks - Put the predecessors of Info->BB into the Preds
   /// vector, set Info->NumPreds, and allocate space in Info->Preds.
   static void FindPredecessorBlocks(BasicBlock *BB,
-                                    SmallVectorImpl<BasicBlock*> *Preds) {
+                                    SmallVectorImpl<BasicBlock *> *Preds) {
     // We can get our predecessor info by walking the pred_iterator list,
     // but it is relatively slow.  If we already have PHI nodes in this
     // block, walk one of them to get the predecessor list instead.
@@ -293,7 +293,6 @@ public:
   }
 
   /// ValueIsPHI - Check if a value is a PHI.
-  ///
   static PHINode *ValueIsPHI(Value *Val, SSAUpdater *Updater) {
     return dyn_cast<PHINode>(Val);
   }
@@ -333,7 +332,7 @@ Value *SSAUpdater::GetValueAtEndOfBlockInternal(BasicBlock *BB) {
 //===----------------------------------------------------------------------===//
 
 LoadAndStorePromoter::
-LoadAndStorePromoter(ArrayRef<const Instruction*> Insts,
+LoadAndStorePromoter(ArrayRef<const Instruction *> Insts,
                      SSAUpdater &S, StringRef BaseName) : SSA(S) {
   if (Insts.empty()) return;
   
@@ -349,11 +348,11 @@ LoadAndStorePromoter(ArrayRef<const Instruction*> Insts,
 }
 
 void LoadAndStorePromoter::
-run(const SmallVectorImpl<Instruction*> &Insts) const {
+run(const SmallVectorImpl<Instruction *> &Insts) const {
   // First step: bucket up uses of the alloca by the block they occur in.
   // This is important because we have to handle multiple defs/uses in a block
   // ourselves: SSAUpdater is purely for cross-block references.
-  DenseMap<BasicBlock*, TinyPtrVector<Instruction*>> UsesByBlock;
+  DenseMap<BasicBlock *, TinyPtrVector<Instruction *>> UsesByBlock;
 
   for (Instruction *User : Insts)
     UsesByBlock[User->getParent()].push_back(User);
@@ -361,12 +360,12 @@ run(const SmallVectorImpl<Instruction*> &Insts) const {
   // Okay, now we can iterate over all the blocks in the function with uses,
   // processing them.  Keep track of which loads are loading a live-in value.
   // Walk the uses in the use-list order to be determinstic.
-  SmallVector<LoadInst*, 32> LiveInLoads;
-  DenseMap<Value*, Value*> ReplacedLoads;
+  SmallVector<LoadInst *, 32> LiveInLoads;
+  DenseMap<Value *, Value *> ReplacedLoads;
 
   for (Instruction *User : Insts) {
     BasicBlock *BB = User->getParent();
-    TinyPtrVector<Instruction*> &BlockUses = UsesByBlock[BB];
+    TinyPtrVector<Instruction *> &BlockUses = UsesByBlock[BB];
     
     // If this block has already been processed, ignore this repeat use.
     if (BlockUses.empty()) continue;
@@ -489,7 +488,7 @@ run(const SmallVectorImpl<Instruction*> &Insts) const {
 
 bool
 LoadAndStorePromoter::isInstInList(Instruction *I,
-                                   const SmallVectorImpl<Instruction*> &Insts)
+                                   const SmallVectorImpl<Instruction *> &Insts)
                                    const {
   return is_contained(Insts, I);
 }

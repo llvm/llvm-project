@@ -33,7 +33,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstdint>
@@ -61,7 +60,7 @@ protected:
   virtual uint64_t getSectionFlags(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionOffset(DataRefImpl Sec) const = 0;
 
-  virtual ErrorOr<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
+  virtual Expected<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
 
 public:
   using elf_symbol_iterator_range = iterator_range<elf_symbol_iterator>;
@@ -167,7 +166,7 @@ public:
     return cast<ELFObjectFileBase>(RelocationRef::getObject());
   }
 
-  ErrorOr<int64_t> getAddend() const {
+  Expected<int64_t> getAddend() const {
     return getObject()->getRelocationAddend(getRawDataRefImpl());
   }
 };
@@ -359,7 +358,7 @@ public:
   section_iterator section_begin() const override;
   section_iterator section_end() const override;
 
-  ErrorOr<int64_t> getRelocationAddend(DataRefImpl Rel) const override;
+  Expected<int64_t> getRelocationAddend(DataRefImpl Rel) const override;
 
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
@@ -822,10 +821,10 @@ void ELFObjectFile<ELFT>::getRelocationTypeName(
 }
 
 template <class ELFT>
-ErrorOr<int64_t>
+Expected<int64_t>
 ELFObjectFile<ELFT>::getRelocationAddend(DataRefImpl Rel) const {
   if (getRelSection(Rel)->sh_type != ELF::SHT_RELA)
-    return object_error::parse_failed;
+    return createError("Section is not SHT_RELA");
   return (int64_t)getRela(Rel)->r_addend;
 }
 

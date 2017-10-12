@@ -790,6 +790,9 @@ public:
   /// directive.
   virtual void EmitCVFileChecksumOffsetDirective(unsigned FileNo) {}
 
+  /// This implements the CodeView '.cv_fpo_data' assembler directive.
+  virtual void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc = {}) {}
+
   /// Emit the absolute difference between two symbols.
   ///
   /// \pre Offset of \c Hi is greater than the offset \c Lo.

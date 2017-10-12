@@ -222,8 +222,7 @@ class InputCorpus {
   void UpdateFeatureFrequencyScore(InputInfo *II) {
     II->FeatureFrequencyScore = 0.00000001;
     for (auto Idx : II->UniqFeatureSet)
-      II->FeatureFrequencyScore +=
-          1. / (GetFeatureFrequency(Idx) * GetFeatureFrequency(Idx) + 1.);
+      II->FeatureFrequencyScore += 1. / (GetFeatureFrequency(Idx) + 1.);
   }
 
   size_t NumFeatures() const { return NumAddedFeatures; }

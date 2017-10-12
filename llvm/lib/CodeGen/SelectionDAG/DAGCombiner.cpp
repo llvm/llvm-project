@@ -415,6 +415,7 @@ namespace {
     SDValue CombineConsecutiveLoads(SDNode *N, EVT VT);
     SDValue CombineExtLoad(SDNode *N);
     SDValue combineRepeatedFPDivisors(SDNode *N);
+    SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
     SDValue ConstantFoldBITCASTofBUILD_VECTOR(SDNode *, EVT);
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
@@ -444,7 +445,6 @@ namespace {
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecConvertToConvertBuildVec(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
-    SDValue reduceBuildVecToTrunc(SDNode *N);
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
                                   SDValue VecIn2, unsigned LeftIdx);
@@ -13747,6 +13747,60 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
   return St1;
 }
 
+/// Convert a disguised subvector insertion into a shuffle:
+/// insert_vector_elt V, (bitcast X from vector type), IdxC -->
+/// bitcast(shuffle (bitcast V), (extended X), Mask)
+/// Note: We do not use an insert_subvector node because that requires a legal
+/// subvector type.
+SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
+  SDValue InsertVal = N->getOperand(1);
+  if (InsertVal.getOpcode() != ISD::BITCAST || !InsertVal.hasOneUse() ||
+      !InsertVal.getOperand(0).getValueType().isVector())
+    return SDValue();
+
+  SDValue SubVec = InsertVal.getOperand(0);
+  SDValue DestVec = N->getOperand(0);
+  EVT SubVecVT = SubVec.getValueType();
+  EVT VT = DestVec.getValueType();
+  unsigned NumSrcElts = SubVecVT.getVectorNumElements();
+  unsigned ExtendRatio = VT.getSizeInBits() / SubVecVT.getSizeInBits();
+  unsigned NumMaskVals = ExtendRatio * NumSrcElts;
+
+  // Step 1: Create a shuffle mask that implements this insert operation. The
+  // vector that we are inserting into will be operand 0 of the shuffle, so
+  // those elements are just 'i'. The inserted subvector is in the first
+  // positions of operand 1 of the shuffle. Example:
+  // insert v4i32 V, (v2i16 X), 2 --> shuffle v8i16 V', X', {0,1,2,3,8,9,6,7}
+  SmallVector<int, 16> Mask(NumMaskVals);
+  for (unsigned i = 0; i != NumMaskVals; ++i) {
+    if (i / NumSrcElts == InsIndex)
+      Mask[i] = (i % NumSrcElts) + NumMaskVals;
+    else
+      Mask[i] = i;
+  }
+
+  // Bail out if the target can not handle the shuffle we want to create.
+  EVT SubVecEltVT = SubVecVT.getVectorElementType();
+  EVT ShufVT = EVT::getVectorVT(*DAG.getContext(), SubVecEltVT, NumMaskVals);
+  if (!TLI.isShuffleMaskLegal(Mask, ShufVT))
+    return SDValue();
+
+  // Step 2: Create a wide vector from the inserted source vector by appending
+  // undefined elements. This is the same size as our destination vector.
+  SDLoc DL(N);
+  SmallVector<SDValue, 8> ConcatOps(ExtendRatio, DAG.getUNDEF(SubVecVT));
+  ConcatOps[0] = SubVec;
+  SDValue PaddedSubV = DAG.getNode(ISD::CONCAT_VECTORS, DL, ShufVT, ConcatOps);
+
+  // Step 3: Shuffle in the padded subvector.
+  SDValue DestVecBC = DAG.getBitcast(ShufVT, DestVec);
+  SDValue Shuf = DAG.getVectorShuffle(ShufVT, DL, DestVecBC, PaddedSubV, Mask);
+  AddToWorklist(PaddedSubV.getNode());
+  AddToWorklist(DestVecBC.getNode());
+  AddToWorklist(Shuf.getNode());
+  return DAG.getBitcast(VT, Shuf);
+}
+
 SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   SDValue InVec = N->getOperand(0);
   SDValue InVal = N->getOperand(1);
@@ -13765,10 +13819,14 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
 
-  // Check that we know which element is being inserted
-  if (!isa<ConstantSDNode>(EltNo))
+  // We must know which element is being inserted for folds below here.
+  auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
+  if (!IndexC)
     return SDValue();
-  unsigned Elt = cast<ConstantSDNode>(EltNo)->getZExtValue();
+  unsigned Elt = IndexC->getZExtValue();
+
+  if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
+    return Shuf;
 
   // Canonicalize insert_vector_elt dag nodes.
   // Example:
@@ -14628,93 +14686,6 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   return Shuffles[0];
 }
 
-// Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
-// operations which can be matched to a truncate or to a shuffle-truncate.
-SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
-  // TODO: Add support for big-endian.
-  if (DAG.getDataLayout().isBigEndian())
-    return SDValue();
-  if (N->getNumOperands() < 2)
-    return SDValue();
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  unsigned NumElems = N->getNumOperands();
-
-  if (!isTypeLegal(VT))
-    return SDValue();
-
-  // If the input is something other than an EXTRACT_VECTOR_ELT with a constant
-  // index, bail out.
-  // TODO: Allow undef elements in some cases?
-  if (llvm::any_of(N->ops(), [VT](SDValue Op) {
-        return Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-               !isa<ConstantSDNode>(Op.getOperand(1)) ||
-               Op.getValueType() != VT.getVectorElementType();
-      }))
-    return SDValue();
-
-  // Helper for obtaining an EXTRACT_VECTOR_ELT's constant index
-  auto GetExtractIdx = [](SDValue Extract) {
-    return cast<ConstantSDNode>(Extract.getOperand(1))->getSExtValue();
-  };
-
-  // The offset is defined to be the BUILD_VECTOR's first operand (assuming no
-  // undef and little-endian).
-  int Offset = GetExtractIdx(N->getOperand(0));
-
-  // Compute the stride from the next operand.
-  int Stride = GetExtractIdx(N->getOperand(1)) - Offset;
-  SDValue ExtractedFromVec = N->getOperand(0).getOperand(0);
-
-  // Proceed only if the stride and the types can be matched to a truncate.
-  if ((Stride == 1 || !isPowerOf2_32(Stride)) ||
-      (ExtractedFromVec.getValueType().getVectorNumElements() !=
-       Stride * NumElems) ||
-      (VT.getScalarSizeInBits() * Stride > 64))
-    return SDValue();
-
-  // Check remaining operands are consistent with the computed stride.
-  for (unsigned i = 1; i != NumElems; ++i) {
-    SDValue Op = N->getOperand(i);
-
-    if ((Op.getOperand(0) != ExtractedFromVec) ||
-        (GetExtractIdx(Op) != Stride * i + Offset))
-      return SDValue();
-  }
-
-  SDValue Res = ExtractedFromVec;
-  EVT TruncVT =
-      VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
-  if (Offset) {
-    // If the first index is non-zero, need to shuffle elements of interest to
-    // lower parts of the vector's elements the truncate will act upon.
-    // TODO: Generalize to compute the permute-shuffle that will prepare any
-    // element permutation for the truncate, and let the target decide if
-    // profitable.
-    EVT ExtractedVT = ExtractedFromVec.getValueType();
-    SmallVector<int, 64> Mask;
-    for (unsigned i = 0; i != NumElems; ++i) {
-      Mask.push_back(Offset + i * Stride);
-      // Pad the elements that will be lost after the truncate with undefs.
-      Mask.append(Stride - 1, -1);
-    }
-    if (!TLI.isShuffleMaskLegal(Mask, ExtractedVT) ||
-        !TLI.isDesirableToCombineBuildVectorToShuffleTruncate(Mask, ExtractedVT,
-                                                              TruncVT))
-      return SDValue();
-    Res = DAG.getVectorShuffle(ExtractedVT, SDLoc(N), Res,
-                               DAG.getUNDEF(ExtractedVT), Mask);
-  }
-  // Construct the truncate.
-  LLVMContext &Ctx = *DAG.getContext();
-  EVT NewVT = VT.getVectorVT(
-      Ctx, EVT::getIntegerVT(Ctx, VT.getScalarSizeInBits() * Stride), NumElems);
-
-  Res = DAG.getBitcast(NewVT, Res);
-  Res = DAG.getNode(ISD::TRUNCATE, SDLoc(N), TruncVT, Res);
-  return DAG.getBitcast(VT, Res);
-}
-
 SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -14756,10 +14727,6 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
 
   if (SDValue V = reduceBuildVecConvertToConvertBuildVec(N))
     return V;
-
-  if (TLI.isDesirableToCombineBuildVectorToTruncate())
-    if (SDValue V = reduceBuildVecToTrunc(N))
-      return V;
 
   if (SDValue V = reduceBuildVecToShuffle(N))
     return V;

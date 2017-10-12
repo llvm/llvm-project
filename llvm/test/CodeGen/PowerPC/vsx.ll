@@ -235,8 +235,11 @@ entry:
 ; CHECK-FISL-LABEL: @test14
 ; CHECK-FISL: xxlor 0, 34, 35
 ; CHECK-FISL: xxlnor 34, 34, 35
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65520
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -16
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxvd2x 0, 1, 3
 ; CHECK-FISL: blr
 
@@ -260,8 +263,11 @@ entry:
 ; CHECK-FISL: xxlor 36, 0, 0
 ; CHECK-FISL: xxlnor 0, 34, 35
 ; CHECK-FISL: xxlor 34, 0, 0
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65520
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -16
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxvd2x 36, 1, 3
 ; CHECK-FISL: blr
 
@@ -285,8 +291,11 @@ entry:
 ; CHECK-FISL: xxlor 36, 0, 0
 ; CHECK-FISL: xxlnor 0, 34, 35
 ; CHECK-FISL: xxlor 34, 0, 0
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65520
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -16
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxvd2x 36, 1, 3
 ; CHECK-FISL: blr
 
@@ -330,8 +339,11 @@ entry:
 ; CHECK-FISL: xxlor 36, 0, 0
 ; CHECK-FISL: xxlandc 0, 34, 35
 ; CHECK-FISL: xxlor 34, 0, 0
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65520
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -16
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxvd2x 36, 1, 3
 ; CHECK-FISL: blr
 
@@ -355,8 +367,11 @@ entry:
 ; CHECK-FISL: xxlor 36, 0, 0
 ; CHECK-FISL: xxlandc 0, 34, 35
 ; CHECK-FISL: xxlor 34, 0, 0
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65520
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -16
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxvd2x 36, 1, 3
 ; CHECK-FISL: blr
 

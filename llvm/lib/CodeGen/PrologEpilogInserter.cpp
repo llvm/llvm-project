@@ -960,11 +960,12 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   MFI.setStackSize(StackSize);
   NumBytesStackSpace += StackSize;
 
-  MachineOptimizationRemarkAnalysis R(
-      DEBUG_TYPE, "StackSize", Fn.getFunction()->getSubprogram(), &Fn.front());
-  R << ore::NV("NumStackBytes", StackSize)
-    << " stack bytes in function";
-  ORE->emit(R);
+  ORE->emit([&]() {
+    return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "StackSize",
+                                             Fn.getFunction()->getSubprogram(),
+                                             &Fn.front())
+           << ore::NV("NumStackBytes", StackSize) << " stack bytes in function";
+  });
 }
 
 /// insertPrologEpilogCode - Scan the function for modified callee saved

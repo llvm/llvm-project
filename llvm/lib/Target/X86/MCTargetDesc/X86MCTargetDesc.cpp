@@ -319,7 +319,13 @@ extern "C" void LLVMInitializeX86TargetMC() {
     // Register the code emitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createX86MCCodeEmitter);
 
-    // Register the object streamer.
+    // Register the obj target streamer.
+    TargetRegistry::RegisterObjectTargetStreamer(*T,
+                                                 createX86ObjectTargetStreamer);
+
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createX86AsmTargetStreamer);
+
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
 
     // Register the MCInstPrinter.

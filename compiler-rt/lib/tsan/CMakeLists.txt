@@ -222,7 +222,8 @@ endif()
 
 # Build libcxx instrumented with TSan.
 if(COMPILER_RT_HAS_LIBCXX_SOURCES AND
-   COMPILER_RT_TEST_COMPILER_ID STREQUAL "Clang")
+   COMPILER_RT_TEST_COMPILER_ID STREQUAL "Clang" AND
+   NOT ANDROID)
   set(libcxx_tsan_deps)
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     get_target_flags_for_arch(${arch} TARGET_CFLAGS)

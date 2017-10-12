@@ -46,7 +46,7 @@ OS           Arch                 Compilers    Unwind Info
 ============ ==================== ============ ========================
 Mac OS X     i386, x86_64         Clang, GCC   DWARF CFI
 iOS          ARM                  Clang        SjLj
-Linux        i386, x86_64         Clang, GCC   DWARF CFI
+Linux        i386, x86_64, ARM64  Clang, GCC   DWARF CFI
 Linux        ARM                  Clang, GCC   EHABI
 Bare Metal   ARM                  Clang, GCC   EHABI
 NetBSD       x86_64               Clang, GCC   DWARF CFI
