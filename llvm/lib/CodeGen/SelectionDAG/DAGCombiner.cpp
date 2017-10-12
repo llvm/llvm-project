@@ -445,7 +445,6 @@ namespace {
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecConvertToConvertBuildVec(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
-    SDValue reduceBuildVecToTrunc(SDNode *N);
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
                                   SDValue VecIn2, unsigned LeftIdx);
@@ -14687,93 +14686,6 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   return Shuffles[0];
 }
 
-// Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
-// operations which can be matched to a truncate or to a shuffle-truncate.
-SDValue DAGCombiner::reduceBuildVecToTrunc(SDNode *N) {
-  // TODO: Add support for big-endian.
-  if (DAG.getDataLayout().isBigEndian())
-    return SDValue();
-  if (N->getNumOperands() < 2)
-    return SDValue();
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  unsigned NumElems = N->getNumOperands();
-
-  if (!isTypeLegal(VT))
-    return SDValue();
-
-  // If the input is something other than an EXTRACT_VECTOR_ELT with a constant
-  // index, bail out.
-  // TODO: Allow undef elements in some cases?
-  if (llvm::any_of(N->ops(), [VT](SDValue Op) {
-        return Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-               !isa<ConstantSDNode>(Op.getOperand(1)) ||
-               Op.getValueType() != VT.getVectorElementType();
-      }))
-    return SDValue();
-
-  // Helper for obtaining an EXTRACT_VECTOR_ELT's constant index
-  auto GetExtractIdx = [](SDValue Extract) {
-    return cast<ConstantSDNode>(Extract.getOperand(1))->getSExtValue();
-  };
-
-  // The offset is defined to be the BUILD_VECTOR's first operand (assuming no
-  // undef and little-endian).
-  int Offset = GetExtractIdx(N->getOperand(0));
-
-  // Compute the stride from the next operand.
-  int Stride = GetExtractIdx(N->getOperand(1)) - Offset;
-  SDValue ExtractedFromVec = N->getOperand(0).getOperand(0);
-
-  // Proceed only if the stride and the types can be matched to a truncate.
-  if ((Stride == 1 || !isPowerOf2_32(Stride)) ||
-      (ExtractedFromVec.getValueType().getVectorNumElements() !=
-       Stride * NumElems) ||
-      (VT.getScalarSizeInBits() * Stride > 64))
-    return SDValue();
-
-  // Check remaining operands are consistent with the computed stride.
-  for (unsigned i = 1; i != NumElems; ++i) {
-    SDValue Op = N->getOperand(i);
-
-    if ((Op.getOperand(0) != ExtractedFromVec) ||
-        (GetExtractIdx(Op) != Stride * i + Offset))
-      return SDValue();
-  }
-
-  SDValue Res = ExtractedFromVec;
-  EVT TruncVT =
-      VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
-  if (Offset) {
-    // If the first index is non-zero, need to shuffle elements of interest to
-    // lower parts of the vector's elements the truncate will act upon.
-    // TODO: Generalize to compute the permute-shuffle that will prepare any
-    // element permutation for the truncate, and let the target decide if
-    // profitable.
-    EVT ExtractedVT = ExtractedFromVec.getValueType();
-    SmallVector<int, 64> Mask;
-    for (unsigned i = 0; i != NumElems; ++i) {
-      Mask.push_back(Offset + i * Stride);
-      // Pad the elements that will be lost after the truncate with undefs.
-      Mask.append(Stride - 1, -1);
-    }
-    if (!TLI.isShuffleMaskLegal(Mask, ExtractedVT) ||
-        !TLI.isDesirableToCombineBuildVectorToShuffleTruncate(Mask, ExtractedVT,
-                                                              TruncVT))
-      return SDValue();
-    Res = DAG.getVectorShuffle(ExtractedVT, SDLoc(N), Res,
-                               DAG.getUNDEF(ExtractedVT), Mask);
-  }
-  // Construct the truncate.
-  LLVMContext &Ctx = *DAG.getContext();
-  EVT NewVT = VT.getVectorVT(
-      Ctx, EVT::getIntegerVT(Ctx, VT.getScalarSizeInBits() * Stride), NumElems);
-
-  Res = DAG.getBitcast(NewVT, Res);
-  Res = DAG.getNode(ISD::TRUNCATE, SDLoc(N), TruncVT, Res);
-  return DAG.getBitcast(VT, Res);
-}
-
 SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -14815,10 +14727,6 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
 
   if (SDValue V = reduceBuildVecConvertToConvertBuildVec(N))
     return V;
-
-  if (TLI.isDesirableToCombineBuildVectorToTruncate())
-    if (SDValue V = reduceBuildVecToTrunc(N))
-      return V;
 
   if (SDValue V = reduceBuildVecToShuffle(N))
     return V;

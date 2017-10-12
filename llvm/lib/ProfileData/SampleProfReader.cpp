@@ -759,8 +759,6 @@ setupMemoryBuffer(const Twine &Filename) {
 ///
 /// \param Filename The file to open.
 ///
-/// \param Reader The reader to instantiate according to \p Filename's format.
-///
 /// \param C The LLVM context to use to emit diagnostics.
 ///
 /// \returns an error code indicating the status of the created reader.
@@ -775,8 +773,6 @@ SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
 /// \brief Create a sample profile reader based on the format of the input data.
 ///
 /// \param B The memory buffer to create the reader from (assumes ownership).
-///
-/// \param Reader The reader to instantiate according to \p Filename's format.
 ///
 /// \param C The LLVM context to use to emit diagnostics.
 ///
