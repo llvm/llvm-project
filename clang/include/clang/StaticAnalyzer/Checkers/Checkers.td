@@ -132,6 +132,10 @@ def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
   DescFile<"DynamicTypePropagation.cpp">;
 
+def NonnullStringConstantsChecker: Checker<"NonnilStringConstants">,
+  HelpText<"Assume that const string-like globals are non-null">,
+  DescFile<"NonilStringConstantsChecker.cpp">;
+
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
