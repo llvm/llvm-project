@@ -266,9 +266,13 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    true:                                   false:
-    int a;     // My comment a      vs.     int a; // My comment a
-    int b = 2; // comment  b                int b = 2; // comment about b
+    true:
+    int a;     // My comment a
+    int b = 2; // comment  b
+
+    false:
+    int a; // My comment a
+    int b = 2; // comment about b
 
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
   If the function declaration doesn't fit on a line,

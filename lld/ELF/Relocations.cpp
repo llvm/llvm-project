@@ -553,17 +553,7 @@ static void errorOrWarn(const Twine &Msg) {
 
 template <class ELFT>
 static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, RelType Type,
-                          const uint8_t *Data, InputSectionBase &S,
-                          typename ELFT::uint RelOff) {
-  if (Body.isGnuIFunc()) {
-    Expr = toPlt(Expr);
-  } else if (!isPreemptible(Body, Type)) {
-    if (needsPlt(Expr))
-      Expr = fromPlt(Expr);
-    if (Expr == R_GOT_PC && !isAbsoluteValue(Body))
-      Expr = Target->adjustRelaxExpr(Type, Data, Expr);
-  }
-
+                          InputSectionBase &S, uint64_t RelOff) {
   bool IsWrite = !Config->ZText || (S.Flags & SHF_WRITE);
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
@@ -696,29 +686,38 @@ static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
   return 0;
 }
 
+// Report an undefined symbol if necessary.
+// Returns true if this function printed out an error message.
 template <class ELFT>
-static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
-                            uint64_t Offset) {
+static bool maybeReportUndefined(SymbolBody &Sym, InputSectionBase &Sec,
+                                 uint64_t Offset) {
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
-    return;
+    return false;
+
+  if (Sym.isLocal() || !Sym.isUndefined() || Sym.symbol()->isWeak())
+    return false;
 
   bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
                        Sym.getVisibility() == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
-    return;
+    return false;
 
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = S.getSrcMsg<ELFT>(Offset);
+  std::string Src = Sec.getSrcMsg<ELFT>(Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
-  Msg += S.getObjMsg<ELFT>(Offset);
+  Msg += Sec.getObjMsg<ELFT>(Offset);
 
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal)
+  if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
+      Config->NoinhibitExec) {
     warn(Msg);
-  else
-    errorOrWarn(Msg);
+    return false;
+  }
+
+  error(Msg);
+  return true;
 }
 
 // MIPS N32 ABI treats series of successive relocations with the same offset
@@ -843,22 +842,14 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Config->MipsN32Abi)
       Type = getMipsN32RelType(I, End);
 
-    // Compute the offset of this section in the output section.
+    // Get an offset in an output section this relocation is applied to.
     uint64_t Offset = GetOffset.get(Rel.r_offset);
     if (Offset == uint64_t(-1))
       continue;
 
-    // Report undefined symbols. The fact that we report undefined
-    // symbols here means that we report undefined symbols only when
-    // they have relocations pointing to them. We don't care about
-    // undefined symbols that are in dead-stripped sections.
-    if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak()) {
-      reportUndefined<ELFT>(Body, Sec, Rel.r_offset);
-
-      // If we report an undefined, and we have an error, go on.
-      if (ErrorCount)
-        continue;
-    }
+    // Skip if the target symbol is an erroneous undefined symbol.
+    if (maybeReportUndefined<ELFT>(Body, Sec, Rel.r_offset))
+      continue;
 
     RelExpr Expr =
         Target->getRelExpr(Type, Body, Sec.Data.begin() + Rel.r_offset);
@@ -868,8 +859,27 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
 
     bool Preemptible = isPreemptible(Body, Type);
-    Expr = adjustExpr<ELFT>(Body, Expr, Type, Sec.Data.data() + Rel.r_offset,
-                            Sec, Rel.r_offset);
+
+    // Strenghten or relax a PLT access.
+    //
+    // GNU ifunc symbols must be accessed via PLT because their addresses
+    // are determined by runtime.
+    //
+    // On the other hand, if we know that a PLT entry will be resolved within
+    // the same ELF module, we can skip PLT access and directly jump to the
+    // destination function. For example, if we are linking a main exectuable,
+    // all dynamic symbols that can be resolved within the executable will
+    // actually be resolved that way at runtime, because the main exectuable
+    // is always at the beginning of a search list. We can leverage that fact.
+    if (Body.isGnuIFunc())
+      Expr = toPlt(Expr);
+    else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Body))
+      Expr =
+          Target->adjustRelaxExpr(Type, Sec.Data.data() + Rel.r_offset, Expr);
+    else if (!Preemptible)
+      Expr = fromPlt(Expr);
+
+    Expr = adjustExpr<ELFT>(Body, Expr, Type, Sec, Rel.r_offset);
     if (ErrorCount)
       continue;
 
