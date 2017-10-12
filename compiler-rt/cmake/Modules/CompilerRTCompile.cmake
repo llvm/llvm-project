@@ -51,7 +51,7 @@ function(sanitizer_test_compile obj_list source arch)
   endif()
   clang_compile(${output_obj} ${source}
                 CFLAGS ${TEST_CFLAGS} ${TARGET_CFLAGS}
-                DEPS ${TEST_COMPILE_DEPS})
+                DEPS ${COMPILE_DEPS})
   list(APPEND ${obj_list} ${output_obj})
   set("${obj_list}" "${${obj_list}}" PARENT_SCOPE)
 endfunction()

@@ -17,8 +17,12 @@
 
 #if !SCUDO_TSD_EXCLUSIVE
 
+ALWAYS_INLINE ScudoTSD* getCurrentTSD() {
+  return reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+}
+
 ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
-  if (LIKELY(*get_android_tls_ptr()))
+  if (LIKELY(getCurrentTSD()))
     return;
   initThread(MinimalInit);
 }
@@ -26,7 +30,7 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
 ScudoTSD *getTSDAndLockSlow();
 
 ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
-  ScudoTSD *TSD = reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+  ScudoTSD *TSD = getCurrentTSD();
   CHECK(TSD && "No TSD associated with the current thread!");
   // Try to lock the currently associated context.
   if (TSD->tryLock())

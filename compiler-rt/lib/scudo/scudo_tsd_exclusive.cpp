@@ -15,8 +15,6 @@
 
 #if SCUDO_TSD_EXCLUSIVE
 
-#include <pthread.h>
-
 namespace __scudo {
 
 static pthread_once_t GlobalInitialized = PTHREAD_ONCE_INIT;

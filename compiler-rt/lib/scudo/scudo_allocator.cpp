@@ -22,9 +22,9 @@
 
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
-#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
 
+#include <errno.h>
 #include <string.h>
 
 namespace __scudo {
@@ -640,7 +640,7 @@ void *scudoValloc(uptr Size) {
 void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
-    errno = errno_ENOMEM;
+    errno = ENOMEM;
     return Instance.handleBadRequest();
   }
   // pvalloc(0) should allocate one page.
@@ -650,7 +650,7 @@ void *scudoPvalloc(uptr Size) {
 
 void *scudoMemalign(uptr Alignment, uptr Size) {
   if (UNLIKELY(!IsPowerOfTwo(Alignment))) {
-    errno = errno_EINVAL;
+    errno = EINVAL;
     return Instance.handleBadRequest();
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMemalign));
@@ -659,18 +659,18 @@ void *scudoMemalign(uptr Alignment, uptr Size) {
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(Alignment))) {
     Instance.handleBadRequest();
-    return errno_EINVAL;
+    return EINVAL;
   }
   void *Ptr = Instance.allocate(Size, Alignment, FromMemalign);
   if (UNLIKELY(!Ptr))
-    return errno_ENOMEM;
+    return ENOMEM;
   *MemPtr = Ptr;
   return 0;
 }
 
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(Alignment, Size))) {
-    errno = errno_EINVAL;
+    errno = EINVAL;
     return Instance.handleBadRequest();
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMalloc));

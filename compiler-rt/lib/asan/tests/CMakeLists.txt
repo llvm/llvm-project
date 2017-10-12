@@ -205,7 +205,7 @@ function(add_asan_tests arch test_runtime)
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
         SUBDIR "dynamic"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
-        DEPS gtest asan ${ASAN_INST_TEST_OBJECTS}
+        DEPS asan ${ASAN_INST_TEST_OBJECTS}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
         )
     endif()
