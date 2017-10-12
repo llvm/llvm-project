@@ -261,7 +261,7 @@ unsigned PHILinearize::getNumSources(unsigned DestReg) {
   return phiInfoElementGetSources(findPHIInfoElement(DestReg)).size();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void PHILinearize::dump(MachineRegisterInfo *MRI) {
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
   dbgs() << "=PHIInfo Start=\n";

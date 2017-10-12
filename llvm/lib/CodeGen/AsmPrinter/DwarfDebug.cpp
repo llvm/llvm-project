@@ -233,6 +233,16 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
   assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
   assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
 
+  // FIXME: This logic should not be necessary anymore, as we now have proper
+  // deduplication. However, without it, we currently run into the assertion
+  // below, which means that we are likely dealing with broken input, i.e. two
+  // non-fragment entries for the same variable at different frame indices.
+  if (FrameIndexExprs.size()) {
+    auto *Expr = FrameIndexExprs.back().Expr;
+    if (!Expr || !Expr->isFragment())
+      return;
+  }
+
   for (const auto &FIE : V.FrameIndexExprs)
     // Ignore duplicate entries.
     if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {

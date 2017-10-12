@@ -37,11 +37,9 @@ replacementsToEdits(StringRef Code,
 
 } // namespace
 
-void ClangdLSPServer::onInitialize(StringRef ID, InitializeParams IP,
-                                   JSONOutput &Out) {
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID +
-      R"(,"result":{"capabilities":{
+void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
+  C.reply(
+      R"({"capabilities":{
           "textDocumentSync": 1,
           "documentFormattingProvider": true,
           "documentRangeFormattingProvider": true,
@@ -50,73 +48,68 @@ void ClangdLSPServer::onInitialize(StringRef ID, InitializeParams IP,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
           "signatureHelpProvider": {"triggerCharacters": ["(",","]},
           "definitionProvider": true
-        }}})");
-  if (IP.rootUri && !IP.rootUri->file.empty())
-    Server.setRootPath(IP.rootUri->file);
-  else if (IP.rootPath && !IP.rootPath->empty())
-    Server.setRootPath(*IP.rootPath);
+        }})");
+  if (Params.rootUri && !Params.rootUri->file.empty())
+    Server.setRootPath(Params.rootUri->file);
+  else if (Params.rootPath && !Params.rootPath->empty())
+    Server.setRootPath(*Params.rootPath);
 }
 
-void ClangdLSPServer::onShutdown(JSONOutput &Out) { IsDone = true; }
+void ClangdLSPServer::onShutdown(Ctx C, ShutdownParams &Params) {
+  IsDone = true;
+}
 
-void ClangdLSPServer::onDocumentDidOpen(DidOpenTextDocumentParams Params,
-                                        JSONOutput &Out) {
+void ClangdLSPServer::onDocumentDidOpen(Ctx C,
+                                        DidOpenTextDocumentParams &Params) {
   if (Params.metadata && !Params.metadata->extraFlags.empty())
     CDB.setExtraFlagsForFile(Params.textDocument.uri.file,
                              std::move(Params.metadata->extraFlags));
   Server.addDocument(Params.textDocument.uri.file, Params.textDocument.text);
 }
 
-void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams Params,
-                                          JSONOutput &Out) {
+void ClangdLSPServer::onDocumentDidChange(Ctx C,
+                                          DidChangeTextDocumentParams &Params) {
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);
 }
 
-void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
+void ClangdLSPServer::onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) {
   Server.onFileEvent(Params);
 }
 
-void ClangdLSPServer::onDocumentDidClose(DidCloseTextDocumentParams Params,
-                                         JSONOutput &Out) {
+void ClangdLSPServer::onDocumentDidClose(Ctx C,
+                                         DidCloseTextDocumentParams &Params) {
   Server.removeDocument(Params.textDocument.uri.file);
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
-    DocumentOnTypeFormattingParams Params, StringRef ID, JSONOutput &Out) {
+    Ctx C, DocumentOnTypeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
   std::string Edits =
       replacementsToEdits(Code, Server.formatOnType(File, Params.position));
-
-  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() +
-                   R"(,"result":[)" + Edits + R"(]})");
+  C.reply("[" + Edits + "]");
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
-    DocumentRangeFormattingParams Params, StringRef ID, JSONOutput &Out) {
+    Ctx C, DocumentRangeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
   std::string Edits =
       replacementsToEdits(Code, Server.formatRange(File, Params.range));
-
-  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() +
-                   R"(,"result":[)" + Edits + R"(]})");
+  C.reply("[" + Edits + "]");
 }
 
-void ClangdLSPServer::onDocumentFormatting(DocumentFormattingParams Params,
-                                           StringRef ID, JSONOutput &Out) {
+void ClangdLSPServer::onDocumentFormatting(Ctx C,
+                                           DocumentFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
   std::string Edits = replacementsToEdits(Code, Server.formatFile(File));
-
-  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() +
-                   R"(,"result":[)" + Edits + R"(]})");
+  C.reply("[" + Edits + "]");
 }
 
-void ClangdLSPServer::onCodeAction(CodeActionParams Params, StringRef ID,
-                                   JSONOutput &Out) {
+void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
   // We provide a code action for each diagnostic at the requested location
   // which has FixIts available.
   std::string Code = Server.getDocument(Params.textDocument.uri.file);
@@ -136,16 +129,10 @@ void ClangdLSPServer::onCodeAction(CodeActionParams Params, StringRef ID,
   }
   if (!Commands.empty())
     Commands.pop_back();
-
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID.str() +
-      R"(, "result": [)" + Commands +
-      R"(]})");
+  C.reply("[" + Commands + "]");
 }
 
-void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
-                                   StringRef ID, JSONOutput &Out) {
-
+void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
   auto Items = Server
                    .codeComplete(Params.textDocument.uri.file,
                                  Position{Params.position.line,
@@ -162,26 +149,21 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams Params,
   }
   if (!Completions.empty())
     Completions.pop_back();
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID.str() +
-      R"(,"result":[)" + Completions + R"(]})");
+  C.reply("[" + Completions + "]");
 }
 
-void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams Params,
-                                      StringRef ID, JSONOutput &Out) {
-  const auto SigHelp = SignatureHelp::unparse(
+void ClangdLSPServer::onSignatureHelp(Ctx C,
+                                      TextDocumentPositionParams &Params) {
+  C.reply(SignatureHelp::unparse(
       Server
           .signatureHelp(
               Params.textDocument.uri.file,
               Position{Params.position.line, Params.position.character})
-          .Value);
-  Out.writeMessage(R"({"jsonrpc":"2.0","id":)" + ID.str() + R"(,"result":)" +
-                   SigHelp + "}");
+          .Value));
 }
 
-void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams Params,
-                                       StringRef ID, JSONOutput &Out) {
-
+void ClangdLSPServer::onGoToDefinition(Ctx C,
+                                       TextDocumentPositionParams &Params) {
   auto Items = Server
                    .findDefinitions(Params.textDocument.uri.file,
                                     Position{Params.position.line,
@@ -195,23 +177,14 @@ void ClangdLSPServer::onGoToDefinition(TextDocumentPositionParams Params,
   }
   if (!Locations.empty())
     Locations.pop_back();
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID.str() +
-      R"(,"result":[)" + Locations + R"(]})");
+  C.reply("[" + Locations + "]");
 }
 
-void ClangdLSPServer::onSwitchSourceHeader(TextDocumentIdentifier Params,
-                                           StringRef ID, JSONOutput &Out) {
+void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
+                                           TextDocumentIdentifier &Params) {
   llvm::Optional<Path> Result = Server.switchSourceHeader(Params.uri.file);
   std::string ResultUri;
-  if (Result)
-    ResultUri = URI::unparse(URI::fromFile(*Result));
-  else
-    ResultUri = "\"\"";
-
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID.str() +
-      R"(,"result":)" + ResultUri + R"(})");
+  C.reply(Result ? URI::unparse(URI::fromFile(*Result)) : R"("")");
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
@@ -226,7 +199,10 @@ void ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
 
   // Set up JSONRPCDispatcher.
-  JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
+  JSONRPCDispatcher Dispatcher(
+      [](RequestContext Ctx, llvm::yaml::MappingNode *Params) {
+        Ctx.replyError(-32601, "method not found");
+      });
   registerCallbackHandlers(Dispatcher, Out, /*Callbacks=*/*this);
 
   // Run the Language Server loop.

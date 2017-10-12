@@ -320,7 +320,7 @@ void ARMConstantIslands::verify() {
 #endif
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
   DEBUG({

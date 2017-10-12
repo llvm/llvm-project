@@ -581,7 +581,7 @@ void MachineSchedulerBase::print(raw_ostream &O, const Module* m) const {
   // unimplemented
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
   for (const SUnit *SU : Queue)
@@ -919,7 +919,7 @@ void ScheduleDAGMI::placeDebugValues() {
   FirstDbgValue = nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   for (MachineBasicBlock::iterator MI = begin(), ME = end(); MI != ME; ++MI) {
     if (SUnit *SU = getSUnit(&(*MI)))
@@ -2354,7 +2354,7 @@ SUnit *SchedBoundary::pickOnlyChoice() {
   return nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 // This is useful information to dump after bumpNode.
 // Note that the Queue contents are more useful before pickNodeFromQueue.
 LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
@@ -2698,7 +2698,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
 
 void GenericScheduler::dumpPolicy() const {
   // Cannot completely remove virtual function even in release mode.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   dbgs() << "GenericScheduler RegionPolicy: "
          << " ShouldTrackPressure=" << RegionPolicy.ShouldTrackPressure
          << " OnlyTopDown=" << RegionPolicy.OnlyTopDown

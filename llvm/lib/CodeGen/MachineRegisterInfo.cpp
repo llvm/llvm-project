@@ -458,7 +458,7 @@ LaneBitmask MachineRegisterInfo::getMaxLaneMaskForVReg(unsigned Reg) const {
   return TRC.getLaneMask();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void MachineRegisterInfo::dumpUses(unsigned Reg) const {
   for (MachineInstr &I : use_instructions(Reg))
     I.dump();

@@ -1284,8 +1284,10 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
-  this->Link = InX::DynSymTab ? InX::DynSymTab->getParent()->SectionIndex
-                              : InX::SymTab->getParent()->SectionIndex;
+  // If all relocations are *RELATIVE they don't refer to any
+  // dynamic symbol and we don't need a dynamic symbol table. If that
+  // is the case, just use 0 as the link.
+  this->Link = InX::DynSymTab ? InX::DynSymTab->getParent()->SectionIndex : 0;
 
   // Set required output section properties.
   getParent()->Link = this->Link;

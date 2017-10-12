@@ -398,7 +398,7 @@ void MetadataStreamer::begin(const Module &Mod) {
 
 void MetadataStreamer::end() {
   std::string HSAMetadataString;
-  if (auto Error = toString(HSAMetadata, HSAMetadataString))
+  if (toString(HSAMetadata, HSAMetadataString))
     return;
 
   if (DumpHSAMetadata)

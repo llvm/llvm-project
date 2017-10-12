@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void SubtargetFeatureInfo::dump() const {
   errs() << getEnumName() << " " << Index << "\n" << *TheDef;
 }

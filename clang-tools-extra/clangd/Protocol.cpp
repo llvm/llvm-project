@@ -305,11 +305,16 @@ TraceLevel getTraceLevel(llvm::StringRef TraceLevelStr,
 llvm::Optional<InitializeParams>
 InitializeParams::parse(llvm::yaml::MappingNode *Params,
                         clangd::Logger &Logger) {
+  // If we don't understand the params, proceed with default parameters.
+  auto ParseFailure = [&] {
+    Logger.log("Failed to decode InitializeParams\n");
+    return InitializeParams();
+  };
   InitializeParams Result;
   for (auto &NextKeyValue : *Params) {
     auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
     if (!KeyString)
-      return llvm::None;
+      return ParseFailure();
 
     llvm::SmallString<10> KeyStorage;
     StringRef KeyValue = KeyString->getValue(KeyStorage);
@@ -322,10 +327,10 @@ InitializeParams::parse(llvm::yaml::MappingNode *Params,
       auto *Value =
           dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
       if (!Value)
-        return llvm::None;
+        return ParseFailure();
       long long Val;
       if (llvm::getAsSignedInteger(Value->getValue(KeyStorage), 0, Val))
-        return llvm::None;
+        return ParseFailure();
       Result.processId = Val;
     } else if (KeyValue == "rootPath") {
       Result.rootPath = Value->getValue(KeyStorage);

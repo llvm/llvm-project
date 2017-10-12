@@ -265,6 +265,13 @@ public:
     return nullptr;
   }
 
+  /// \brief Get an LValue for the current ThreadID variable.
+  LValue getThreadIDVariableLValue(CodeGenFunction &CGF) override {
+    if (OuterRegionInfo)
+      return OuterRegionInfo->getThreadIDVariableLValue(CGF);
+    llvm_unreachable("No LValue for inlined OpenMP construct");
+  }
+
   /// \brief Get the name of the capture helper.
   StringRef getHelperName() const override {
     if (auto *OuterRegionInfo = getOldCSI())
@@ -980,7 +987,8 @@ void ReductionCodeGen::emitInitialization(
   SharedLVal = CGF.MakeAddrLValue(
       CGF.Builder.CreateElementBitCast(SharedLVal.getAddress(),
                                        CGF.ConvertTypeForMem(SharedType)),
-      SharedType, SharedAddresses[N].first.getBaseInfo());
+      SharedType, SharedAddresses[N].first.getBaseInfo(),
+      CGF.CGM.getTBAAAccessInfo(SharedType));
   if (isa<OMPArraySectionExpr>(ClausesData[N].Ref) ||
       CGF.getContext().getAsArrayType(PrivateVD->getType())) {
     emitAggregateInitialization(CGF, N, PrivateAddr, SharedLVal, DRD);
@@ -1033,7 +1041,8 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
   return CGF.MakeAddrLValue(
       CGF.Builder.CreateElementBitCast(BaseLV.getAddress(),
                                        CGF.ConvertTypeForMem(ElTy)),
-      BaseLV.getType(), BaseLV.getBaseInfo());
+      BaseLV.getType(), BaseLV.getBaseInfo(),
+      CGF.CGM.getTBAAAccessInfo(BaseLV.getType()));
 }
 
 static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
@@ -4072,7 +4081,8 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
             Address(SharedRefLValue.getPointer(), C.getDeclAlign(OriginalVD)),
             SharedRefLValue.getType(),
             LValueBaseInfo(AlignmentSource::Decl,
-                           SharedRefLValue.getBaseInfo().getMayAlias()));
+                           SharedRefLValue.getBaseInfo().getMayAlias()),
+            CGF.CGM.getTBAAAccessInfo(SharedRefLValue.getType()));
         QualType Type = OriginalVD->getType();
         if (Type->isArrayType()) {
           // Initialize firstprivate array.

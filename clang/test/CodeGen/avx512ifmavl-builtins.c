@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
-
-#define __MM_MALLOC_H
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +avx512ifma -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 

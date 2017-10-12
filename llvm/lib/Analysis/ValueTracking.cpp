@@ -810,19 +810,20 @@ static void computeKnownBitsFromShiftOperator(
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     Known.Zero = KZF(Known.Zero, ShiftAmt);
     Known.One  = KOF(Known.One, ShiftAmt);
-    // If there is conflict between Known.Zero and Known.One, this must be an
-    // overflowing left shift, so the shift result is undefined. Clear Known
-    // bits so that other code could propagate this undef.
-    if ((Known.Zero & Known.One) != 0)
-      Known.resetAll();
+    // If the known bits conflict, this must be an overflowing left shift, so
+    // the shift result is poison. We can return anything we want. Choose 0 for
+    // the best folding opportunity.
+    if (Known.hasConflict())
+      Known.setAllZero();
 
     return;
   }
 
   computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
 
-  // If the shift amount could be greater than or equal to the bit-width of the LHS, the
-  // value could be undef, so we don't know anything about it.
+  // If the shift amount could be greater than or equal to the bit-width of the
+  // LHS, the value could be poison, but bail out because the check below is
+  // expensive. TODO: Should we just carry on?
   if ((~Known.Zero).uge(BitWidth)) {
     Known.resetAll();
     return;
@@ -878,13 +879,10 @@ static void computeKnownBitsFromShiftOperator(
     Known.One  &= KOF(Known2.One, ShiftAmt);
   }
 
-  // If there are no compatible shift amounts, then we've proven that the shift
-  // amount must be >= the BitWidth, and the result is undefined. We could
-  // return anything we'd like, but we need to make sure the sets of known bits
-  // stay disjoint (it should be better for some other code to actually
-  // propagate the undef than to pick a value here using known bits).
-  if (Known.Zero.intersects(Known.One))
-    Known.resetAll();
+  // If the known bits conflict, the result is poison. Return a 0 and hope the
+  // caller can further optimize that.
+  if (Known.hasConflict())
+    Known.setAllZero();
 }
 
 static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,

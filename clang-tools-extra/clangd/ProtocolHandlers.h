@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the actions performed when the server gets a specific
-// request.
+// ProtocolHandlers translates incoming JSON requests from JSONRPCDispatcher
+// into method calls on ClangLSPServer.
+//
+// Currently it parses requests into objects, but the ClangLSPServer is
+// responsible for producing JSON responses. We should move that here, too.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,37 +26,31 @@
 namespace clang {
 namespace clangd {
 
+// The interface implemented by ClangLSPServer to handle incoming requests.
 class ProtocolCallbacks {
 public:
+  using Ctx = RequestContext;
   virtual ~ProtocolCallbacks() = default;
 
-  virtual void onInitialize(StringRef ID, InitializeParams IP,
-                            JSONOutput &Out) = 0;
-  virtual void onShutdown(JSONOutput &Out) = 0;
-  virtual void onDocumentDidOpen(DidOpenTextDocumentParams Params,
-                                 JSONOutput &Out) = 0;
-  virtual void onDocumentDidChange(DidChangeTextDocumentParams Params,
-                                   JSONOutput &Out) = 0;
-
-  virtual void onDocumentDidClose(DidCloseTextDocumentParams Params,
-                                  JSONOutput &Out) = 0;
-  virtual void onDocumentFormatting(DocumentFormattingParams Params,
-                                    StringRef ID, JSONOutput &Out) = 0;
-  virtual void onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams Params,
-                                          StringRef ID, JSONOutput &Out) = 0;
-  virtual void onDocumentRangeFormatting(DocumentRangeFormattingParams Params,
-                                         StringRef ID, JSONOutput &Out) = 0;
-  virtual void onCodeAction(CodeActionParams Params, StringRef ID,
-                            JSONOutput &Out) = 0;
-  virtual void onCompletion(TextDocumentPositionParams Params, StringRef ID,
-                            JSONOutput &Out) = 0;
-  virtual void onSignatureHelp(TextDocumentPositionParams Params, StringRef ID,
-                               JSONOutput &Out) = 0;
-  virtual void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
-                                JSONOutput &Out) = 0;
-  virtual void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
-                                    JSONOutput &Out) = 0;
-  virtual void onFileEvent(const DidChangeWatchedFilesParams &Params) = 0;
+  virtual void onInitialize(Ctx C, InitializeParams &Params) = 0;
+  virtual void onShutdown(Ctx C, ShutdownParams &Params) = 0;
+  virtual void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) = 0;
+  virtual void onDocumentDidChange(Ctx C,
+                                   DidChangeTextDocumentParams &Params) = 0;
+  virtual void onDocumentDidClose(Ctx C,
+                                  DidCloseTextDocumentParams &Params) = 0;
+  virtual void onDocumentFormatting(Ctx C,
+                                    DocumentFormattingParams &Params) = 0;
+  virtual void
+  onDocumentOnTypeFormatting(Ctx C, DocumentOnTypeFormattingParams &Params) = 0;
+  virtual void
+  onDocumentRangeFormatting(Ctx C, DocumentRangeFormattingParams &Params) = 0;
+  virtual void onCodeAction(Ctx C, CodeActionParams &Params) = 0;
+  virtual void onCompletion(Ctx C, TextDocumentPositionParams &Params) = 0;
+  virtual void onSignatureHelp(Ctx C, TextDocumentPositionParams &Params) = 0;
+  virtual void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) = 0;
+  virtual void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) = 0;
+  virtual void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) = 0;
 };
 
 void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,

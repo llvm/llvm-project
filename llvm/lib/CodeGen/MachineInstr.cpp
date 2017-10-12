@@ -566,7 +566,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "[TF=" << TF << ']';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void MachineOperand::dump() const {
   dbgs() << *this << '\n';
 }
@@ -1129,9 +1129,9 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
       if (Check == IgnoreDefs)
         continue;
       else if (Check == IgnoreVRegDefs) {
-        if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()) ||
-            TargetRegisterInfo::isPhysicalRegister(OMO.getReg()))
-          if (MO.getReg() != OMO.getReg())
+        if (!TargetRegisterInfo::isVirtualRegister(MO.getReg()) ||
+            !TargetRegisterInfo::isVirtualRegister(OMO.getReg()))
+          if (!MO.isIdenticalTo(OMO))
             return false;
       } else {
         if (!MO.isIdenticalTo(OMO))
@@ -1873,7 +1873,7 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
   print(dbgs());
