@@ -81,6 +81,5 @@ def main(argv):
         for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):
             updateReferenceResults(ProjName, int(ProjBuildMode))
 
-
 if __name__ == '__main__':
     main(sys.argv)

@@ -112,7 +112,7 @@ public:
 
   /// Returns a *first* member field of a record declaration with a given name.
   /// \return an nullptr if no member with such a name exists.
-  NamedDecl *findMemberField(const CXXRecordDecl *RD, StringRef Name);
+  ValueDecl *findMemberField(const RecordDecl *RD, StringRef Name);
 
 private:
   ASTContext &C;
@@ -247,7 +247,7 @@ MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
       OK_Ordinary);
 }
 
-NamedDecl *ASTMaker::findMemberField(const CXXRecordDecl *RD, StringRef Name) {
+ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {
 
   CXXBasePaths Paths(
       /* FindAmbiguities=*/false,
@@ -259,7 +259,7 @@ NamedDecl *ASTMaker::findMemberField(const CXXRecordDecl *RD, StringRef Name) {
   DeclContextLookupResult Decls = RD->lookup(DeclName);
   for (NamedDecl *FoundDecl : Decls)
     if (!FoundDecl->getDeclContext()->isFunctionOrMethod())
-      return FoundDecl;
+      return cast<ValueDecl>(FoundDecl);
 
   return nullptr;
 }
@@ -340,6 +340,34 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   const ParmVarDecl *Flag = D->getParamDecl(0);
   const ParmVarDecl *Callback = D->getParamDecl(1);
   QualType CallbackType = Callback->getType().getNonReferenceType();
+  QualType FlagType = Flag->getType().getNonReferenceType();
+  auto *FlagRecordDecl = dyn_cast_or_null<RecordDecl>(FlagType->getAsTagDecl());
+
+  if (!FlagRecordDecl) {
+    DEBUG(llvm::dbgs() << "Flag field is not a record: "
+                       << "unknown std::call_once implementation, "
+                       << "ignoring the call.\n");
+    return nullptr;
+  }
+
+  // We initially assume libc++ implementation of call_once,
+  // where the once_flag struct has a field `__state_`.
+  ValueDecl *FlagFieldDecl = M.findMemberField(FlagRecordDecl, "__state_");
+
+  // Otherwise, try libstdc++ implementation, with a field
+  // `_M_once`
+  if (!FlagFieldDecl) {
+    DEBUG(llvm::dbgs() << "No field __state_ found on std::once_flag struct, "
+                       << "assuming libstdc++ implementation\n");
+    FlagFieldDecl = M.findMemberField(FlagRecordDecl, "_M_once");
+  }
+
+  if (!FlagFieldDecl) {
+    DEBUG(llvm::dbgs() << "No field _M_once found on std::once flag struct: "
+                       << "unknown std::call_once implementation, "
+                       << "ignoring the call");
+    return nullptr;
+  }
 
   bool isLambdaCall = CallbackType->getAsCXXRecordDecl() &&
                       CallbackType->getAsCXXRecordDecl()->isLambda();
@@ -368,29 +396,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
     CallbackCall = create_call_once_funcptr_call(C, M, Callback, CallArgs);
   }
 
-  QualType FlagType = Flag->getType().getNonReferenceType();
   DeclRefExpr *FlagDecl =
       M.makeDeclRefExpr(Flag,
                         /* RefersToEnclosingVariableOrCapture=*/true,
                         /* GetNonReferenceType=*/true);
 
-  CXXRecordDecl *FlagCXXDecl = FlagType->getAsCXXRecordDecl();
 
-  // Note: here we are assuming libc++ implementation of call_once,
-  // which has a struct with a field `__state_`.
-  // Body farming might not work for other `call_once` implementations.
-  NamedDecl *FoundDecl = M.findMemberField(FlagCXXDecl, "__state_");
-  ValueDecl *FieldDecl;
-  if (FoundDecl) {
-    FieldDecl = dyn_cast<ValueDecl>(FoundDecl);
-  } else {
-    DEBUG(llvm::dbgs() << "No field __state_ found on std::once_flag struct, "
-                       << "unable to synthesize call_once body, ignoring "
-                       << "the call.\n");
-    return nullptr;
-  }
-
-  MemberExpr *Deref = M.makeMemberExpression(FlagDecl, FieldDecl);
+  MemberExpr *Deref = M.makeMemberExpression(FlagDecl, FlagFieldDecl);
   assert(Deref->isLValue());
   QualType DerefType = Deref->getType();
 
