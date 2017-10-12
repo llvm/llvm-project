@@ -24,11 +24,11 @@ namespace {
 class SPARCV9 final : public TargetInfo {
 public:
   SPARCV9();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -46,8 +46,8 @@ SPARCV9::SPARCV9() {
   DefaultImageBase = 0x100000;
 }
 
-RelExpr SPARCV9::getRelExpr(uint32_t Type, const SymbolBody &S,
-                            const InputFile &File, const uint8_t *Loc) const {
+RelExpr SPARCV9::getRelExpr(RelType Type, const SymbolBody &S,
+                            const uint8_t *Loc) const {
   switch (Type) {
   case R_SPARC_32:
   case R_SPARC_UA32:
@@ -68,12 +68,11 @@ RelExpr SPARCV9::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_SPARC_NONE:
     return R_NONE;
   default:
-    error(toString(&File) + ": unknown relocation type: " + toString(Type));
-    return R_HINT;
+    return R_INVALID;
   }
 }
 
-void SPARCV9::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void SPARCV9::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_SPARC_32:
   case R_SPARC_UA32:

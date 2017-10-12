@@ -76,22 +76,6 @@ static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> *File,
   return check(File->getObj().getSectionContents(Hdr));
 }
 
-// Return true if a section with given section flags is live (will never be
-// GCed) by default. If a section can be GCed, this function returns false.
-static bool isLiveByDefault(uint64_t Flags, uint32_t Type) {
-  // If GC is enabled, all memory-mapped sections are subject of GC.
-  if (!Config->GcSections)
-    return true;
-  if (Flags & SHF_ALLOC)
-    return false;
-
-  // Besides that, relocation sections can also be GCed because their
-  // relocation target sections may be GCed. This doesn't really matter
-  // in most cases because the linker usually consumes relocation
-  // sections instead of emitting them, but -emit-reloc needs this.
-  return Type != SHT_REL && Type != SHT_RELA;
-}
-
 InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
                                    uint32_t Type, uint64_t Entsize,
                                    uint32_t Link, uint32_t Info,
@@ -100,7 +84,6 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
     : SectionBase(SectionKind, Name, Flags, Entsize, Alignment, Type, Info,
                   Link),
       File(File), Data(Data), Repl(this) {
-  Live = isLiveByDefault(Flags, Type);
   Assigned = false;
   NumRelocations = 0;
   AreRelocsRela = false;
@@ -213,10 +196,7 @@ OutputSection *SectionBase::getOutputSection() {
 // Uncompress section contents if required. Note that this function
 // is called from parallelForEach, so it must be thread-safe.
 void InputSectionBase::maybeUncompress() {
-  if (UncompressBuf)
-    return;
-
-  if (!Decompressor::isCompressedELFSection(Flags, Name))
+  if (UncompressBuf || !Decompressor::isCompressedELFSection(Flags, Name))
     return;
 
   Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
@@ -389,7 +369,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   InputSectionBase *Sec = getRelocatedSection();
 
   for (const RelTy &Rel : Rels) {
-    uint32_t Type = Rel.getType(Config->IsMips64EL);
+    RelType Type = Rel.getType(Config->IsMips64EL);
     SymbolBody &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);
 
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
@@ -438,7 +418,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 // this context is the address of the place P. A further special case is that
 // branch relocations to an undefined weak reference resolve to the next
 // instruction.
-static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
+static uint32_t getARMUndefinedRelativeWeakVA(RelType Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {
   // Unresolved branch relocations to weak references resolve to next
@@ -505,9 +485,11 @@ static uint64_t getARMStaticBase(const SymbolBody &Body) {
   return OS->PtLoad->FirstSec->Addr;
 }
 
-static uint64_t getRelocTargetVA(uint32_t Type, int64_t A, uint64_t P,
+static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
                                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
+  case R_INVALID:
+    return 0;
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA(A);
@@ -673,7 +655,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   const unsigned Bits = sizeof(typename ELFT::uint) * 8;
 
   for (const RelTy &Rel : Rels) {
-    uint32_t Type = Rel.getType(Config->IsMips64EL);
+    RelType Type = Rel.getType(Config->IsMips64EL);
     uint64_t Offset = getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
     int64_t Addend = getAddend<ELFT>(Rel);
@@ -681,7 +663,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
-    RelExpr Expr = Target->getRelExpr(Type, Sym, *File, BufLoc);
+    RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {
@@ -718,7 +700,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
   for (const Relocation &Rel : Relocations) {
     uint64_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
-    uint32_t Type = Rel.Type;
+    RelType Type = Rel.Type;
 
     uint64_t AddrLoc = getOutputSection()->Addr + Offset;
     RelExpr Expr = Rel.Expr;

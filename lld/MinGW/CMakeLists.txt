@@ -10,8 +10,8 @@ add_lld_library(lldMinGW
   Driver.cpp
 
   LINK_COMPONENTS
-  Support
   Option
+  Support
 
   LINK_LIBS
   lldCOFF

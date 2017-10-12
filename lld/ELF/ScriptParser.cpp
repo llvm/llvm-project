@@ -74,7 +74,7 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
-  BytesDataCommand *readBytesDataCommand(StringRef Tok);
+  ByteCommand *readByteCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
   void readSectionAddressType(OutputSection *Cmd);
@@ -150,7 +150,7 @@ static ExprValue add(ExprValue A, ExprValue B) {
 }
 
 static ExprValue sub(ExprValue A, ExprValue B) {
-  return {A.Sec, A.getSectionOffset() - B.getValue(), A.Loc};
+  return {A.Sec, false, A.getSectionOffset() - B.getValue(), A.Loc};
 }
 
 static ExprValue mul(ExprValue A, ExprValue B) {
@@ -234,7 +234,7 @@ void ScriptParser::readLinkerScript() {
       continue;
 
     if (Tok == "ASSERT") {
-      Script->Opt.Commands.push_back(readAssert());
+      Script->SectionCommands.push_back(readAssert());
     } else if (Tok == "ENTRY") {
       readEntry();
     } else if (Tok == "EXTERN") {
@@ -262,7 +262,7 @@ void ScriptParser::readLinkerScript() {
     } else if (Tok == "VERSION") {
       readVersion();
     } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
-      Script->Opt.Commands.push_back(Cmd);
+      Script->SectionCommands.push_back(Cmd);
     } else {
       setError("unknown directive: " + Tok);
     }
@@ -407,7 +407,7 @@ void ScriptParser::readPhdrs() {
         setError("unexpected header attribute: " + next());
     }
 
-    Script->Opt.PhdrsCommands.push_back(Cmd);
+    Script->PhdrsCommands.push_back(Cmd);
   }
 }
 
@@ -418,11 +418,11 @@ void ScriptParser::readRegionAlias() {
   StringRef Name = next();
   expect(")");
 
-  if (Script->Opt.MemoryRegions.count(Alias))
+  if (Script->MemoryRegions.count(Alias))
     setError("redefinition of memory region '" + Alias + "'");
-  if (!Script->Opt.MemoryRegions.count(Name))
+  if (!Script->MemoryRegions.count(Name))
     setError("memory region '" + Name + "' is not defined");
-  Script->Opt.MemoryRegions[Alias] = Script->Opt.MemoryRegions[Name];
+  Script->MemoryRegions[Alias] = Script->MemoryRegions[Name];
 }
 
 void ScriptParser::readSearchDir() {
@@ -434,7 +434,7 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
-  Script->Opt.HasSections = true;
+  Script->HasSectionsCommand = true;
 
   // -no-rosegment is used to avoid placing read only non-executable sections in
   // their own segment. We do the same if SECTIONS command is present in linker
@@ -451,7 +451,7 @@ void ScriptParser::readSections() {
       else
         Cmd = readOutputSectionDescription(Tok);
     }
-    Script->Opt.Commands.push_back(Cmd);
+    Script->SectionCommands.push_back(Cmd);
   }
 }
 
@@ -572,7 +572,7 @@ ScriptParser::readInputSectionDescription(StringRef Tok) {
     StringRef FilePattern = next();
     InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
-    Script->Opt.KeptSections.push_back(Cmd);
+    Script->KeptSections.push_back(Cmd);
     return Cmd;
   }
   return readInputSectionRules(Tok);
@@ -669,11 +669,11 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     if (Tok == ";") {
       // Empty commands are allowed. Do nothing here.
     } else if (SymbolAssignment *Assign = readProvideOrAssignment(Tok)) {
-      Cmd->Commands.push_back(Assign);
-    } else if (BytesDataCommand *Data = readBytesDataCommand(Tok)) {
-      Cmd->Commands.push_back(Data);
+      Cmd->SectionCommands.push_back(Assign);
+    } else if (ByteCommand *Data = readByteCommand(Tok)) {
+      Cmd->SectionCommands.push_back(Data);
     } else if (Tok == "ASSERT") {
-      Cmd->Commands.push_back(readAssert());
+      Cmd->SectionCommands.push_back(readAssert());
       expect(";");
     } else if (Tok == "CONSTRUCTORS") {
       // CONSTRUCTORS is a keyword to make the linker recognize C++ ctors/dtors
@@ -684,7 +684,7 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     } else if (Tok == "SORT") {
       readSort();
     } else if (peek() == "(") {
-      Cmd->Commands.push_back(readInputSectionDescription(Tok));
+      Cmd->SectionCommands.push_back(readInputSectionDescription(Tok));
     } else {
       setError("unknown command " + Tok);
     }
@@ -756,7 +756,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E = readExpr();
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
-    E = [=] { return add(Script->getSymbolValue(Loc, Name), E()); };
+    E = [=] { return add(Script->getSymbolValue(Name, Loc), E()); };
   }
   return make<SymbolAssignment>(Name, E, getCurrentLocation());
 }
@@ -867,10 +867,16 @@ static Optional<uint64_t> parseInt(StringRef Tok) {
 
   // Hexadecimal
   uint64_t Val;
-  if (Tok.startswith_lower("0x") && to_integer(Tok.substr(2), Val, 16))
+  if (Tok.startswith_lower("0x")) {
+    if (!to_integer(Tok.substr(2), Val, 16))
+      return None;
     return Val;
-  if (Tok.endswith_lower("H") && to_integer(Tok.drop_back(), Val, 16))
+  }
+  if (Tok.endswith_lower("H")) {
+    if (!to_integer(Tok.drop_back(), Val, 16))
+      return None;
     return Val;
+  }
 
   // Decimal
   if (Tok.endswith_lower("K")) {
@@ -888,7 +894,7 @@ static Optional<uint64_t> parseInt(StringRef Tok) {
   return Val;
 }
 
-BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
+ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
   int Size = StringSwitch<int>(Tok)
                  .Case("BYTE", 1)
                  .Case("SHORT", 2)
@@ -897,8 +903,7 @@ BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
                  .Default(-1);
   if (Size == -1)
     return nullptr;
-
-  return make<BytesDataCommand>(readParenExpr(), Size);
+  return make<ByteCommand>(readParenExpr(), Size);
 }
 
 StringRef ScriptParser::readParenLiteral() {
@@ -945,10 +950,10 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
-    OutputSection *Cmd = Script->getOrCreateOutputSection(Name);
+    OutputSection *Sec = Script->getOrCreateOutputSection(Name);
     return [=]() -> ExprValue {
-      checkIfExists(Cmd, Location);
-      return {Cmd, 0, Location};
+      checkIfExists(Sec, Location);
+      return {Sec, false, 0, Location};
     };
   }
   if (Tok == "ALIGN") {
@@ -1013,9 +1018,9 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "LENGTH") {
     StringRef Name = readParenLiteral();
-    if (Script->Opt.MemoryRegions.count(Name) == 0)
+    if (Script->MemoryRegions.count(Name) == 0)
       setError("memory region not defined: " + Name);
-    return [=] { return Script->Opt.MemoryRegions[Name]->Length; };
+    return [=] { return Script->MemoryRegions[Name]->Length; };
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
@@ -1027,9 +1032,9 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "ORIGIN") {
     StringRef Name = readParenLiteral();
-    if (Script->Opt.MemoryRegions.count(Name) == 0)
+    if (Script->MemoryRegions.count(Name) == 0)
       setError("memory region not defined: " + Name);
-    return [=] { return Script->Opt.MemoryRegions[Name]->Origin; };
+    return [=] { return Script->MemoryRegions[Name]->Origin; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
@@ -1052,7 +1057,7 @@ Expr ScriptParser::readPrimary() {
 
   // Tok is the dot.
   if (Tok == ".")
-    return [=] { return Script->getSymbolValue(Location, Tok); };
+    return [=] { return Script->getSymbolValue(Tok, Location); };
 
   // Tok is a literal number.
   if (Optional<uint64_t> Val = parseInt(Tok))
@@ -1061,8 +1066,8 @@ Expr ScriptParser::readPrimary() {
   // Tok is a symbol name.
   if (!isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
-  Script->Opt.ReferencedSymbols.push_back(Tok);
-  return [=] { return Script->getSymbolValue(Location, Tok); };
+  Script->ReferencedSymbols.push_back(Tok);
+  return [=] { return Script->getSymbolValue(Tok, Location); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
@@ -1261,11 +1266,11 @@ void ScriptParser::readMemory() {
     uint64_t Length = readMemoryAssignment("LENGTH", "len", "l");
 
     // Add the memory region to the region map.
-    if (Script->Opt.MemoryRegions.count(Name))
+    if (Script->MemoryRegions.count(Name))
       setError("region '" + Name + "' already defined");
     MemoryRegion *MR = make<MemoryRegion>();
     *MR = {Name, Origin, Length, Flags, NegFlags};
-    Script->Opt.MemoryRegions[Name] = MR;
+    Script->MemoryRegions[Name] = MR;
   }
 }
 
