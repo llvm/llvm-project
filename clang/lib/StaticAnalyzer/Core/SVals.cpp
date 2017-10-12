@@ -113,12 +113,12 @@ SymbolRef SVal::getLocSymbolInBase() const {
 /// Casts are ignored during lookup.
 /// \param IncludeBaseRegions The boolean that controls whether the search
 /// should continue to the base regions if the region is not symbolic.
-SymbolRef SVal::getAsSymbol(bool IncludeBaseRegion) const {
+SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
   // FIXME: should we consider SymbolRef wrapped in CodeTextRegion?
   if (Optional<nonloc::SymbolVal> X = getAs<nonloc::SymbolVal>())
     return X->getSymbol();
 
-  return getAsLocSymbol(IncludeBaseRegion);
+  return getAsLocSymbol(IncludeBaseRegions);
 }
 
 /// getAsSymbolicExpression - If this Sval wraps a symbolic expression then
