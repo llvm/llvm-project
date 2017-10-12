@@ -1,4 +1,4 @@
-//===-- Transform/Utils/CodeExtractor.h - Code extraction util --*- C++ -*-===//
+//===- Transform/Utils/CodeExtractor.h - Code extraction util ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,22 +15,24 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 #define LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include <limits>
 
 namespace llvm {
-template <typename T> class ArrayRef;
-  class BasicBlock;
-  class BlockFrequency;
-  class BlockFrequencyInfo;
-  class BranchProbabilityInfo;
-  class DominatorTree;
-  class Function;
-  class Instruction;
-  class Loop;
-  class Module;
-  class RegionNode;
-  class Type;
-  class Value;
+
+class BasicBlock;
+class BlockFrequency;
+class BlockFrequencyInfo;
+class BranchProbabilityInfo;
+class DominatorTree;
+class Function;
+class Instruction;
+class Loop;
+class Module;
+class Type;
+class Value;
 
   /// \brief Utility class for extracting code into a new function.
   ///
@@ -46,7 +48,7 @@ template <typename T> class ArrayRef;
   /// 3) Add allocas for any scalar outputs, adding all of the outputs' allocas
   ///    as arguments, and inserting stores to the arguments for any scalars.
   class CodeExtractor {
-    typedef SetVector<Value *> ValueSet;
+    using ValueSet = SetVector<Value *>;
 
     // Various bits of state computed on construction.
     DominatorTree *const DT;
@@ -56,16 +58,10 @@ template <typename T> class ArrayRef;
 
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
-    unsigned NumExitBlocks;
+    unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
 
   public:
-
-    /// \brief Check to see if a block is valid for extraction.
-    ///
-    /// Blocks containing EHPads, allocas, invokes, or vastarts are not valid.
-    static bool isBlockValidForExtraction(const BasicBlock &BB);
-
     /// \brief Create a code extractor for a sequence of blocks.
     ///
     /// Given a sequence of basic blocks where the first block in the sequence
@@ -83,6 +79,11 @@ template <typename T> class ArrayRef;
     CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
                   BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr);
+
+    /// \brief Check to see if a block is valid for extraction.
+    ///
+    /// Blocks containing EHPads, allocas, invokes, or vastarts are not valid.
+    static bool isBlockValidForExtraction(const BasicBlock &BB);
 
     /// \brief Perform the extraction, returning the new function.
     ///
@@ -112,6 +113,7 @@ template <typename T> class ArrayRef;
     ///
     /// Returns true if it is safe to do the code motion.
     bool isLegalToShrinkwrapLifetimeMarkers(Instruction *AllocaAddr) const;
+
     /// Find the set of allocas whose life ranges are contained within the
     /// outlined region.
     ///
@@ -155,6 +157,7 @@ template <typename T> class ArrayRef;
                                     ValueSet &inputs,
                                     ValueSet &outputs);
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_CODEEXTRACTOR_H

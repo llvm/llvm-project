@@ -7501,6 +7501,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
     INTEL_KNL,
     AMD_BTVER1,
     AMD_BTVER2,
+    AMDFAM17H,
     CPU_SUBTYPE_START,
     INTEL_COREI7_NEHALEM,
     INTEL_COREI7_WESTMERE,
@@ -7527,6 +7528,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
       .Case("amdfam10", AMDFAM10H)
       .Case("amdfam15h", AMDFAM15H)
       .Case("amdfam15", AMDFAM15H)
+      .Case("amdfam17h", AMDFAM17H)
       .Case("atom", INTEL_BONNELL)
       .Case("barcelona", AMDFAM10H_BARCELONA)
       .Case("bdver1", AMDFAM15H_BDVER1)

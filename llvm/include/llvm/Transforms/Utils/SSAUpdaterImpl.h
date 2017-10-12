@@ -1,4 +1,4 @@
-//===-- SSAUpdaterImpl.h - SSA Updater Implementation -----------*- C++ -*-===//
+//===- SSAUpdaterImpl.h - SSA Updater Implementation ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,17 +17,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "ssaupdater"
 
 namespace llvm {
 
-class CastInst;
-class PHINode;
 template<typename T> class SSAUpdaterTraits;
 
 template<typename UpdaterT>
@@ -35,51 +32,67 @@ class SSAUpdaterImpl {
 private:
   UpdaterT *Updater;
 
-  typedef SSAUpdaterTraits<UpdaterT> Traits;
-  typedef typename Traits::BlkT BlkT;
-  typedef typename Traits::ValT ValT;
-  typedef typename Traits::PhiT PhiT;
+  using Traits = SSAUpdaterTraits<UpdaterT>;
+  using BlkT = typename Traits::BlkT;
+  using ValT = typename Traits::ValT;
+  using PhiT = typename Traits::PhiT;
 
   /// BBInfo - Per-basic block information used internally by SSAUpdaterImpl.
   /// The predecessors of each block are cached here since pred_iterator is
   /// slow and we need to iterate over the blocks at least a few times.
   class BBInfo {
   public:
-    BlkT *BB;          // Back-pointer to the corresponding block.
-    ValT AvailableVal; // Value to use in this block.
-    BBInfo *DefBB;     // Block that defines the available value.
-    int BlkNum;        // Postorder number.
-    BBInfo *IDom;      // Immediate dominator.
-    unsigned NumPreds; // Number of predecessor blocks.
-    BBInfo **Preds;    // Array[NumPreds] of predecessor blocks.
-    PhiT *PHITag;      // Marker for existing PHIs that match.
+    // Back-pointer to the corresponding block.
+    BlkT *BB;
+
+    // Value to use in this block.
+    ValT AvailableVal;
+
+    // Block that defines the available value.
+    BBInfo *DefBB;
+
+    // Postorder number.
+    int BlkNum = 0;
+
+    // Immediate dominator.
+    BBInfo *IDom = nullptr;
+
+    // Number of predecessor blocks.
+    unsigned NumPreds = 0;
+
+    // Array[NumPreds] of predecessor blocks.
+    BBInfo **Preds = nullptr;
+
+    // Marker for existing PHIs that match.
+    PhiT *PHITag = nullptr;
 
     BBInfo(BlkT *ThisBB, ValT V)
-      : BB(ThisBB), AvailableVal(V), DefBB(V ? this : nullptr), BlkNum(0),
-        IDom(nullptr), NumPreds(0), Preds(nullptr), PHITag(nullptr) {}
+      : BB(ThisBB), AvailableVal(V), DefBB(V ? this : nullptr) {}
   };
 
-  typedef DenseMap<BlkT*, ValT> AvailableValsTy;
+  using AvailableValsTy = DenseMap<BlkT *, ValT>;
+
   AvailableValsTy *AvailableVals;
 
-  SmallVectorImpl<PhiT*> *InsertedPHIs;
+  SmallVectorImpl<PhiT *> *InsertedPHIs;
 
-  typedef SmallVectorImpl<BBInfo*> BlockListTy;
-  typedef DenseMap<BlkT*, BBInfo*> BBMapTy;
+  using BlockListTy = SmallVectorImpl<BBInfo *>;
+  using BBMapTy = DenseMap<BlkT *, BBInfo *>;
+
   BBMapTy BBMap;
   BumpPtrAllocator Allocator;
 
 public:
   explicit SSAUpdaterImpl(UpdaterT *U, AvailableValsTy *A,
-                          SmallVectorImpl<PhiT*> *Ins) :
-    Updater(U), AvailableVals(A), InsertedPHIs(Ins) { }
+                          SmallVectorImpl<PhiT *> *Ins) :
+    Updater(U), AvailableVals(A), InsertedPHIs(Ins) {}
 
   /// GetValue - Check to see if AvailableVals has an entry for the specified
   /// BB and if so, return it.  If not, construct SSA form by first
   /// calculating the required placement of PHIs and then inserting new PHIs
   /// where needed.
   ValT GetValue(BlkT *BB) {
-    SmallVector<BBInfo*, 100> BlockList;
+    SmallVector<BBInfo *, 100> BlockList;
     BBInfo *PseudoEntry = BuildBlockList(BB, &BlockList);
 
     // Special case: bail out if BB is unreachable.
@@ -101,8 +114,8 @@ public:
   /// Create BBInfo structures for the blocks and append them to the block
   /// list.
   BBInfo *BuildBlockList(BlkT *BB, BlockListTy *BlockList) {
-    SmallVector<BBInfo*, 10> RootList;
-    SmallVector<BBInfo*, 64> WorkList;
+    SmallVector<BBInfo *, 10> RootList;
+    SmallVector<BBInfo *, 64> WorkList;
 
     BBInfo *Info = new (Allocator) BBInfo(BB, 0);
     BBMap[BB] = Info;
@@ -111,7 +124,7 @@ public:
     // Search backward from BB, creating BBInfos along the way and stopping
     // when reaching blocks that define the value.  Record those defining
     // blocks on the RootList.
-    SmallVector<BlkT*, 10> Preds;
+    SmallVector<BlkT *, 10> Preds;
     while (!WorkList.empty()) {
       Info = WorkList.pop_back_val();
       Preds.clear();
@@ -395,7 +408,7 @@ public:
   /// CheckIfPHIMatches - Check if a PHI node matches the placement and values
   /// in the BBMap.
   bool CheckIfPHIMatches(PhiT *PHI) {
-    SmallVector<PhiT*, 20> WorkList;
+    SmallVector<PhiT *, 20> WorkList;
     WorkList.push_back(PHI);
 
     // Mark that the block containing this PHI has been visited.
@@ -453,7 +466,7 @@ public:
   }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 #undef DEBUG_TYPE // "ssaupdater"
 

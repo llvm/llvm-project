@@ -419,7 +419,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
                                                       Opts.CPU, Options);
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-        T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *Out, CE, *STI,
+                T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *Out, std::unique_ptr<MCCodeEmitter>(CE), *STI,
         Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     Str.get()->InitSections(Opts.NoExecStack);

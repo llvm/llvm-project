@@ -23,8 +23,11 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL: @foo1
-; CHECK-FISL: lis 3, -1
-; CHECK-FISL: ori 3, 3, 65384
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
+; CHECK-FISL: li 3, -152
+; CHECK-FISL-NOT: lis
+; CHECK-FISL-NOT: ori
 ; CHECK-FISL: stxsdx 1, 1, 3
 ; CHECK-FISL: blr
 

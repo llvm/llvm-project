@@ -382,14 +382,14 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
   DEBUG(dbgs() << *DefaultBB << "\n");
   DEBUG(dbgs() << *MergeBB << "\n");
 
-  {
+  ORE.emit([&]() {
     using namespace ore;
-    ORE.emit(OptimizationRemark(DEBUG_TYPE, "memopt-opt", MI)
+    return OptimizationRemark(DEBUG_TYPE, "memopt-opt", MI)
              << "optimized " << NV("Intrinsic", StringRef(getMIName(MI)))
              << " with count " << NV("Count", SumForOpt) << " out of "
              << NV("Total", TotalCount) << " for " << NV("Versions", Version)
-             << " versions");
-  }
+             << " versions";
+  });
 
   return true;
 }

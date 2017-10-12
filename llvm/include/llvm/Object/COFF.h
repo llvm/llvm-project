@@ -25,7 +25,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -954,28 +953,28 @@ public:
     Res = reinterpret_cast<coff_symbol_type *>(getSymbolTable()) + Index;
     return std::error_code();
   }
-  ErrorOr<COFFSymbolRef> getSymbol(uint32_t index) const {
+  Expected<COFFSymbolRef> getSymbol(uint32_t index) const {
     if (SymbolTable16) {
       const coff_symbol16 *Symb = nullptr;
       if (std::error_code EC = getSymbol(index, Symb))
-        return EC;
+        return errorCodeToError(EC);
       return COFFSymbolRef(Symb);
     }
     if (SymbolTable32) {
       const coff_symbol32 *Symb = nullptr;
       if (std::error_code EC = getSymbol(index, Symb))
-        return EC;
+        return errorCodeToError(EC);
       return COFFSymbolRef(Symb);
     }
-    return object_error::parse_failed;
+    return errorCodeToError(object_error::parse_failed);
   }
 
   template <typename T>
   std::error_code getAuxSymbol(uint32_t index, const T *&Res) const {
-    ErrorOr<COFFSymbolRef> s = getSymbol(index);
-    if (std::error_code EC = s.getError())
-      return EC;
-    Res = reinterpret_cast<const T *>(s->getRawPtr());
+    Expected<COFFSymbolRef> S = getSymbol(index);
+    if (Error E = S.takeError())
+      return errorToErrorCode(std::move(E));
+    Res = reinterpret_cast<const T *>(S->getRawPtr());
     return std::error_code();
   }
 
@@ -1164,16 +1163,17 @@ public:
   ResourceSectionRef() = default;
   explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
 
-  ErrorOr<ArrayRef<UTF16>> getEntryNameString(const coff_resource_dir_entry &Entry);
-  ErrorOr<const coff_resource_dir_table &>
+  Expected<ArrayRef<UTF16>>
+  getEntryNameString(const coff_resource_dir_entry &Entry);
+  Expected<const coff_resource_dir_table &>
   getEntrySubDir(const coff_resource_dir_entry &Entry);
-  ErrorOr<const coff_resource_dir_table &> getBaseTable();
+  Expected<const coff_resource_dir_table &> getBaseTable();
 
 private:
   BinaryByteStream BBS;
 
-  ErrorOr<const coff_resource_dir_table &> getTableAtOffset(uint32_t Offset);
-  ErrorOr<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
+  Expected<const coff_resource_dir_table &> getTableAtOffset(uint32_t Offset);
+  Expected<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
 };
 
 // Corresponds to `_FPO_DATA` structure in the PE/COFF spec.

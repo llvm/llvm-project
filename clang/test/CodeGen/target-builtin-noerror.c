@@ -81,6 +81,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("amd");
   (void)__builtin_cpu_is("amdfam10h");
   (void)__builtin_cpu_is("amdfam15h");
+  (void)__builtin_cpu_is("amdfam17h");
   (void)__builtin_cpu_is("atom");
   (void)__builtin_cpu_is("barcelona");
   (void)__builtin_cpu_is("bdver1");

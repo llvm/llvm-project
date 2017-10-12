@@ -528,17 +528,18 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
     bool FirstMark =
         CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());
     if (FirstMark) {
-      if (Discriminator)
-        ORE->emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AppliedSamples", &Inst)
-                  << "Applied " << ore::NV("NumSamples", *R)
-                  << " samples from profile (offset: "
-                  << ore::NV("LineOffset", LineOffset) << "."
-                  << ore::NV("Discriminator", Discriminator) << ")");
-      else
-        ORE->emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AppliedSamples", &Inst)
-                  << "Applied " << ore::NV("NumSamples", *R)
-                  << " samples from profile (offset: "
-                  << ore::NV("LineOffset", LineOffset) << ")");
+      ORE->emit([&]() {
+        OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
+        Remark << "Applied " << ore::NV("NumSamples", *R);
+        Remark << " samples from profile (offset: ";
+        Remark << ore::NV("LineOffset", LineOffset);
+        if (Discriminator) {
+          Remark << ".";
+          Remark << ore::NV("Discriminator", Discriminator);
+        }
+        Remark << ")";
+        return Remark;
+      });
     }
     DEBUG(dbgs() << "    " << DLoc.getLine() << "."
                  << DIL->getBaseDiscriminator() << ":" << Inst
@@ -1324,9 +1325,11 @@ void SampleProfileLoader::propagateWeights(Function &F) {
       DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
       TI->setMetadata(llvm::LLVMContext::MD_prof,
                       MDB.createBranchWeights(Weights));
-      ORE->emit(OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
-                << "most popular destination for conditional branches at "
-                << ore::NV("CondBranchesLoc", BranchLoc));
+      ORE->emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
+               << "most popular destination for conditional branches at "
+               << ore::NV("CondBranchesLoc", BranchLoc);
+      });
     } else {
       DEBUG(dbgs() << "SKIPPED. All branch weights are zero.\n");
     }

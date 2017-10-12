@@ -230,7 +230,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         const MCSymbolRefExpr *Expr
           = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
         Expr->print(Str, MAI);
-        OutStreamer->emitRawComment(" mask branch " + BBStr);
+        OutStreamer->emitRawComment(Twine(" mask branch ") + BBStr);
       }
 
       return;

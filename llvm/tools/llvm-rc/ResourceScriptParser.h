@@ -25,6 +25,9 @@
 #include <vector>
 
 namespace llvm {
+namespace opt {
+class InputArgList;
+}
 namespace rc {
 
 class RCParser {
@@ -51,7 +54,7 @@ public:
     LocIter ErrorLoc, FileEnd;
   };
 
-  RCParser(std::vector<RCToken> TokenList);
+  explicit RCParser(std::vector<RCToken> TokenList);
 
   // Reads and returns a single resource definition, or error message if any
   // occurred.

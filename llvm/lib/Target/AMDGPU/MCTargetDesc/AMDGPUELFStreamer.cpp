@@ -11,14 +11,15 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
 
 using namespace llvm;
 
 AMDGPUELFStreamer::AMDGPUELFStreamer(const Triple &T, MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
                                      raw_pwrite_stream &OS,
-                                     MCCodeEmitter *Emitter)
-    : MCELFStreamer(Context, std::move(MAB), OS, Emitter) {
+                                     std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCELFStreamer(Context, std::move(MAB), OS, std::move(Emitter)) {
   unsigned Arch = ELF::EF_AMDGPU_ARCH_NONE;
   switch (T.getArch()) {
   case Triple::r600:
@@ -40,6 +41,8 @@ AMDGPUELFStreamer::AMDGPUELFStreamer(const Triple &T, MCContext &Context,
 
 MCELFStreamer *llvm::createAMDGPUELFStreamer(
     const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    raw_pwrite_stream &OS, MCCodeEmitter *Emitter, bool RelaxAll) {
-  return new AMDGPUELFStreamer(T, Context, std::move(MAB), OS, Emitter);
+    raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+    bool RelaxAll) {
+  return new AMDGPUELFStreamer(T, Context, std::move(MAB), OS,
+                               std::move(Emitter));
 }

@@ -276,6 +276,10 @@ public:
   /// Emits the offset into the checksum table of the given file number.
   void emitFileChecksumOffset(MCObjectStreamer &OS, unsigned FileNo);
 
+  /// Add something to the string table.  Returns the final string as well as
+  /// offset into the string table.
+  std::pair<StringRef, unsigned> addToStringTable(StringRef S);
+
 private:
   /// The current CodeView line information from the last .cv_loc directive.
   MCCVLoc CurrentCVLoc = MCCVLoc(0, 0, 0, 0, false, true);
@@ -289,10 +293,6 @@ private:
   bool InsertedStrTabFragment = false;
 
   MCDataFragment *getStringTableFragment();
-
-  /// Add something to the string table.  Returns the final string as well as
-  /// offset into the string table.
-  std::pair<StringRef, unsigned> addToStringTable(StringRef S);
 
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);

@@ -32,20 +32,20 @@ namespace {
 class AArch64 final : public TargetInfo {
 public:
   AArch64();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
-  bool isPicRel(uint32_t Type) const override;
+  bool isPicRel(RelType Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool usesOnlyLowPageBits(uint32_t Type) const override;
-  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+  bool usesOnlyLowPageBits(RelType Type) const override;
+  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
-  void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -68,11 +68,9 @@ AArch64::AArch64() {
   TcbSize = 16;
 }
 
-RelExpr AArch64::getRelExpr(uint32_t Type, const SymbolBody &S,
-                            const InputFile &File, const uint8_t *Loc) const {
+RelExpr AArch64::getRelExpr(RelType Type, const SymbolBody &S,
+                            const uint8_t *Loc) const {
   switch (Type) {
-  default:
-    return R_ABS;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
@@ -104,10 +102,12 @@ RelExpr AArch64::getRelExpr(uint32_t Type, const SymbolBody &S,
     return R_GOT_PAGE_PC;
   case R_AARCH64_NONE:
     return R_NONE;
+  default:
+    return R_ABS;
   }
 }
 
-RelExpr AArch64::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+RelExpr AArch64::adjustRelaxExpr(RelType Type, const uint8_t *Data,
                                  RelExpr Expr) const {
   if (Expr == R_RELAX_TLS_GD_TO_IE) {
     if (Type == R_AARCH64_TLSDESC_ADR_PAGE21)
@@ -117,7 +117,7 @@ RelExpr AArch64::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
   return Expr;
 }
 
-bool AArch64::usesOnlyLowPageBits(uint32_t Type) const {
+bool AArch64::usesOnlyLowPageBits(RelType Type) const {
   switch (Type) {
   default:
     return false;
@@ -135,7 +135,7 @@ bool AArch64::usesOnlyLowPageBits(uint32_t Type) const {
   }
 }
 
-bool AArch64::isPicRel(uint32_t Type) const {
+bool AArch64::isPicRel(RelType Type) const {
   return Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64;
 }
 
@@ -202,7 +202,7 @@ static void or32AArch64Imm(uint8_t *L, uint64_t Imm) {
   or32le(L, (Imm & 0xFFF) << 10);
 }
 
-void AArch64::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
@@ -307,7 +307,7 @@ void AArch64::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-void AArch64::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void AArch64::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // TLSDESC Global-Dynamic relocation are in the form:
   //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12]
@@ -337,7 +337,7 @@ void AArch64::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-void AArch64::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void AArch64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // TLSDESC Global-Dynamic relocation are in the form:
   //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12]
@@ -368,7 +368,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   }
 }
 
-void AArch64::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
+void AArch64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   checkUInt<32>(Loc, Val, Type);
 
   if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {

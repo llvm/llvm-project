@@ -248,6 +248,7 @@ public:
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
   void EmitCVFileChecksumOffsetDirective(unsigned FileNo) override;
+  void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
 
   void EmitIdent(StringRef IdentString) override;
   void EmitCFISections(bool EH, bool Debug) override;
@@ -1249,6 +1250,12 @@ void MCAsmStreamer::EmitCVFileChecksumsDirective() {
 
 void MCAsmStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
   OS << "\t.cv_filechecksumoffset\t" << FileNo;
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) {
+  OS << "\t.cv_fpo_data\t";
+  ProcSym->print(OS, MAI);
   EmitEOL();
 }
 

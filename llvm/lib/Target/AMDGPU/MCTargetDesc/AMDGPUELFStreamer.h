@@ -27,13 +27,14 @@ class AMDGPUELFStreamer : public MCELFStreamer {
 public:
   AMDGPUELFStreamer(const Triple &T, MCContext &Context,
                     std::unique_ptr<MCAsmBackend> MAB, raw_pwrite_stream &OS,
-                    MCCodeEmitter *Emitter);
+                    std::unique_ptr<MCCodeEmitter> Emitter);
 };
 
 MCELFStreamer *createAMDGPUELFStreamer(const Triple &T, MCContext &Context,
                                        std::unique_ptr<MCAsmBackend> MAB,
                                        raw_pwrite_stream &OS,
-                                       MCCodeEmitter *Emitter, bool RelaxAll);
+                                       std::unique_ptr<MCCodeEmitter> Emitter,
+                                       bool RelaxAll);
 } // namespace llvm.
 
 #endif

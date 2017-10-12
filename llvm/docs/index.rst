@@ -183,6 +183,7 @@ For developers of applications which use LLVM as a library.
    ProgrammersManual
    Extensions
    LibFuzzer
+   FuzzingLLVM
    ScudoHardenedAllocator
    OptBisect
 
@@ -227,6 +228,9 @@ For developers of applications which use LLVM as a library.
 
 :doc:`LibFuzzer`
   A library for writing in-process guided fuzzers.
+
+:doc:`FuzzingLLVM`
+  Information on writing and using Fuzzers to find bugs in LLVM.
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.

@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-dump-comd -amdgpu-verify-comd -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -amdgpu-dump-comd -amdgpu-verify-comd -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-dump-comd -amdgpu-verify-comd -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 %struct.A = type { i8, float }
 %opencl.image1d_t = type opaque
@@ -1203,7 +1203,7 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
 ; CHECK-NEXT:   Language:        OpenCL C
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Attrs:
-; CHECK-NEXT:       RuntimeHandle:       __test_block_invoke_kernel_runtime_handle
+; CHECK-NEXT:       RuntimeHandle: __test_block_invoke_kernel_runtime_handle
 ; CHECK-NEXT:   Args:
 ; CHECK-NEXT:     - Size:          25
 ; CHECK-NEXT:       Align:         1
@@ -1229,13 +1229,13 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @__test_block_invoke_kernel(
-    <{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }> %arg) #1
+    <{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }> %arg) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
     !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
   ret void
 }
 
-attributes #1 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
+attributes #0 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 
 !llvm.printf.fmts = !{!100, !101}
 
@@ -1300,4 +1300,4 @@ attributes #1 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 ; GFX800:     AMD      0x000092e4   Unknown note type: (0x0000000a)
 ; GFX900:     AMD      0x00008f64   Unknown note type: (0x0000000a)
 
-; PARSER: AMDGPU Code Object Metadata Parser Test: PASS
+; PARSER: AMDGPU HSA Metadata Parser Test: PASS
