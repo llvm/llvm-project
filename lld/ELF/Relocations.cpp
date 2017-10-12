@@ -752,37 +752,34 @@ namespace {
 class OffsetGetter {
 public:
   explicit OffsetGetter(InputSectionBase &Sec) {
-    if (auto *Eh = dyn_cast<EhInputSection>(&Sec)) {
-      P = Eh->Pieces;
-      Size = Eh->Pieces.size();
-    }
+    if (auto *Eh = dyn_cast<EhInputSection>(&Sec))
+      Pieces = Eh->Pieces;
   }
 
   // Translates offsets in input sections to offsets in output sections.
-  // Given offset must increase monotonically. We assume that P is
+  // Given offset must increase monotonically. We assume that Piece is
   // sorted by InputOff.
   uint64_t get(uint64_t Off) {
-    if (P.empty())
+    if (Pieces.empty())
       return Off;
 
-    while (I != Size && P[I].InputOff + P[I].Size <= Off)
+    while (I != Pieces.size() && Pieces[I].InputOff + Pieces[I].Size <= Off)
       ++I;
-    if (I == Size)
+    if (I == Pieces.size())
       return Off;
 
-    // P must be contiguous, so there must be no holes in between.
-    assert(P[I].InputOff <= Off && "Relocation not in any piece");
+    // Pieces must be contiguous, so there must be no holes in between.
+    assert(Pieces[I].InputOff <= Off && "Relocation not in any piece");
 
     // Offset -1 means that the piece is dead (i.e. garbage collected).
-    if (P[I].OutputOff == -1)
+    if (Pieces[I].OutputOff == -1)
       return -1;
-    return P[I].OutputOff + Off - P[I].InputOff;
+    return Pieces[I].OutputOff + Off - Pieces[I].InputOff;
   }
 
 private:
-  ArrayRef<EhSectionPiece> P;
+  ArrayRef<EhSectionPiece> Pieces;
   size_t I = 0;
-  size_t Size;
 };
 } // namespace
 
@@ -867,8 +864,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         continue;
     }
 
-    RelExpr Expr = Target->getRelExpr(Type, Body, *Sec.File,
-                                      Sec.Data.begin() + Rel.r_offset);
+    RelExpr Expr =
+        Target->getRelExpr(Type, Body, Sec.Data.begin() + Rel.r_offset);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))

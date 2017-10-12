@@ -26,7 +26,7 @@ namespace {
 class ARM final : public TargetInfo {
 public:
   ARM();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(RelType Type) const override;
   RelType getDynRel(RelType Type) const override;
@@ -65,10 +65,8 @@ ARM::ARM() {
 }
 
 RelExpr ARM::getRelExpr(RelType Type, const SymbolBody &S,
-                        const InputFile &File, const uint8_t *Loc) const {
+                        const uint8_t *Loc) const {
   switch (Type) {
-  default:
-    return R_ABS;
   case R_ARM_THM_JUMP11:
     return R_PC;
   case R_ARM_CALL:
@@ -119,6 +117,8 @@ RelExpr ARM::getRelExpr(RelType Type, const SymbolBody &S,
     return R_NONE;
   case R_ARM_TLS_LE32:
     return R_TLS;
+  default:
+    return R_ABS;
   }
 }
 

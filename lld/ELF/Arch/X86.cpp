@@ -24,7 +24,7 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
@@ -63,8 +63,10 @@ X86::X86() {
   TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
+static bool hasBaseReg(uint8_t ModRM) { return (ModRM & 0xc7) != 0x5; }
+
 RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
-                        const InputFile &File, const uint8_t *Loc) const {
+                        const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
   case R_386_16:
@@ -87,24 +89,42 @@ RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
     return R_GOT;
   case R_386_GOT32:
   case R_386_GOT32X:
-    // These relocations can be calculated in two different ways.
-    // Usual calculation is G + A - GOT what means an offset in GOT table
-    // (R_GOT_FROM_END). When instruction pointed by relocation has no base
-    // register, then relocations can be used when PIC code is disabled. In that
-    // case calculation is G + A, it resolves to an address of entry in GOT
-    // (R_GOT) and not an offset.
+    // These relocations are arguably mis-designed because their calculations
+    // depend on the instructions they are applied to. This is bad because we
+    // usually don't care about whether the target section contains valid
+    // machine instructions or not. But this is part of the documented ABI, so
+    // we had to implement as the standard requires.
     //
-    // To check that instruction has no base register we scan ModR/M byte.
-    // See "Table 2-2. 32-Bit Addressing Forms with the ModR/M Byte"
-    // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
-    //  64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
-    if ((Loc[-1] & 0xc7) != 0x5)
-      return R_GOT_FROM_END;
-    if (Config->Pic)
-      error(toString(&File) + ": relocation " + toString(Type) + " against '" +
-            S.getName() +
-            "' without base register can not be used when PIC enabled");
-    return R_GOT;
+    // x86 does not support PC-relative data access. Therefore, in order to
+    // access GOT contents, a GOT address needs to be known at link-time
+    // (which means non-PIC) or compilers have to emit code to get a GOT
+    // address at runtime (which means code is position-independent but
+    // compilers need to emit extra code for each GOT access.) This decision
+    // is made at compile-time. In the latter case, compilers emit code to
+    // load an GOT address to a register, which is usually %ebx.
+    //
+    // So, there are two ways to refer to symbol foo's GOT entry: foo@GOT or
+    // foo@GOT(%reg).
+    //
+    // foo@GOT is not usable in PIC. If we are creating a PIC output and if we
+    // find such relocation, we should report an error. foo@GOT is resolved to
+    // an *absolute* address of foo's GOT entry, because both GOT address and
+    // foo's offset are known. In other words, it's G + A.
+    //
+    // foo@GOT(%reg) needs to be resolved to a *relative* offset from a GOT to
+    // foo's GOT entry in the table, because GOT address is not known but foo's
+    // offset in the table is known. It's G + A - GOT.
+    //
+    // It's unfortunate that compilers emit the same relocation for these
+    // different use cases. In order to distinguish them, we have to read a
+    // machine instruction.
+    //
+    // The following code implements it. We assume that Loc[0] is the first
+    // byte of a displacement or an immediate field of a valid machine
+    // instruction. That means a ModRM byte is at Loc[-1]. By taking a look at
+    // the byte, we can determine whether the instruction is register-relative
+    // (i.e. it was generated for foo@GOT(%reg)) or absolute (i.e. foo@GOT).
+    return hasBaseReg(Loc[-1]) ? R_GOT_FROM_END : R_GOT;
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
@@ -116,8 +136,7 @@ RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(toString(&File) + ": unknown relocation type: " + toString(Type));
-    return R_HINT;
+    return R_INVALID;
   }
 }
 
@@ -210,8 +229,6 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
 int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   switch (Type) {
-  default:
-    return 0;
   case R_386_8:
   case R_386_PC8:
     return SignExtend64<8>(*Buf);
@@ -228,6 +245,8 @@ int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   case R_386_TLS_LDO_32:
   case R_386_TLS_LE:
     return SignExtend64<32>(read32le(Buf));
+  default:
+    return 0;
   }
 }
 
@@ -262,9 +281,27 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     checkInt<17>(Loc, Val, Type);
     write16le(Loc, Val);
     break;
-  default:
+  case R_386_32:
+  case R_386_GLOB_DAT:
+  case R_386_GOT32:
+  case R_386_GOT32X:
+  case R_386_GOTOFF:
+  case R_386_GOTPC:
+  case R_386_PC32:
+  case R_386_PLT32:
+  case R_386_RELATIVE:
+  case R_386_TLS_GD:
+  case R_386_TLS_GOTIE:
+  case R_386_TLS_IE:
+  case R_386_TLS_LDM:
+  case R_386_TLS_LDO_32:
+  case R_386_TLS_LE:
+  case R_386_TLS_LE_32:
     checkInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
+    break;
+  default:
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
