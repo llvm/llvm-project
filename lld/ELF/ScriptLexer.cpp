@@ -164,7 +164,7 @@ bool ScriptLexer::atEOF() { return ErrorCount || Tokens.size() == Pos; }
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
 static std::vector<StringRef> tokenizeExpr(StringRef S) {
-  StringRef Ops = "+-*/:!"; // List of operators
+  StringRef Ops = "+-*/:!~"; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
   if (S.startswith("\""))

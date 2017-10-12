@@ -13,6 +13,8 @@
 // class basic_streambuf;
 
 // void pbump(int n);
+//
+// REQUIRES: long_tests
 
 #include <sstream>
 #include <cassert>
