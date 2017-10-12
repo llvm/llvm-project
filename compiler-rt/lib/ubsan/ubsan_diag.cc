@@ -97,7 +97,9 @@ class Decorator : public SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *Highlight() const { return Green(); }
+  const char *EndHighlight() const { return Default(); }
   const char *Note() const { return Black(); }
+  const char *EndNote() const { return Default(); }
 };
 }
 
@@ -293,7 +295,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
     Buffer.append("%c", P == Loc ? '^' : Byte);
     Buffer.append("%c", Byte);
   }
-  Buffer.append("%s\n", Decor.Default());
+  Buffer.append("%s\n", Decor.EndHighlight());
 
   // Go over the line again, and print names for the ranges.
   InRange = 0;
@@ -343,12 +345,12 @@ Diag::~Diag() {
 
   switch (Level) {
   case DL_Error:
-    Buffer.append("%s runtime error: %s%s", Decor.Warning(), Decor.Default(),
+    Buffer.append("%s runtime error: %s%s", Decor.Warning(), Decor.EndWarning(),
                   Decor.Bold());
     break;
 
   case DL_Note:
-    Buffer.append("%s note: %s", Decor.Note(), Decor.Default());
+    Buffer.append("%s note: %s", Decor.Note(), Decor.EndNote());
     break;
   }
 
