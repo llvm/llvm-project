@@ -43,8 +43,10 @@ using namespace llvm;
 
 MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
-                                     MCCodeEmitter &CE, raw_pwrite_stream &OS)
-    : MCObjectStreamer(Context, std::move(MAB), OS, &CE), CurSymbol(nullptr) {}
+                                     std::unique_ptr<MCCodeEmitter> CE,
+                                     raw_pwrite_stream &OS)
+    : MCObjectStreamer(Context, std::move(MAB), OS, std::move(CE)),
+      CurSymbol(nullptr) {}
 
 void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {

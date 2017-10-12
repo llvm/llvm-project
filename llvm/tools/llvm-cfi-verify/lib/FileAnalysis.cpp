@@ -124,6 +124,83 @@ const Instr &FileAnalysis::getInstructionOrDie(uint64_t Address) const {
   return InstrKV->second;
 }
 
+bool FileAnalysis::isCFITrap(const Instr &InstrMeta) const {
+  return MII->getName(InstrMeta.Instruction.getOpcode()) == "TRAP";
+}
+
+bool FileAnalysis::canFallThrough(const Instr &InstrMeta) const {
+  if (!InstrMeta.Valid)
+    return false;
+
+  if (isCFITrap(InstrMeta))
+    return false;
+
+  const auto &InstrDesc = MII->get(InstrMeta.Instruction.getOpcode());
+  if (InstrDesc.mayAffectControlFlow(InstrMeta.Instruction, *RegisterInfo))
+    return InstrDesc.isConditionalBranch();
+
+  return true;
+}
+
+const Instr *
+FileAnalysis::getDefiniteNextInstruction(const Instr &InstrMeta) const {
+  if (!InstrMeta.Valid)
+    return nullptr;
+
+  if (isCFITrap(InstrMeta))
+    return nullptr;
+
+  const auto &InstrDesc = MII->get(InstrMeta.Instruction.getOpcode());
+  const Instr *NextMetaPtr;
+  if (InstrDesc.mayAffectControlFlow(InstrMeta.Instruction, *RegisterInfo)) {
+    if (InstrDesc.isConditionalBranch())
+      return nullptr;
+
+    uint64_t Target;
+    if (!MIA->evaluateBranch(InstrMeta.Instruction, InstrMeta.VMAddress,
+                             InstrMeta.InstructionSize, Target))
+      return nullptr;
+
+    NextMetaPtr = getInstruction(Target);
+  } else {
+    NextMetaPtr =
+        getInstruction(InstrMeta.VMAddress + InstrMeta.InstructionSize);
+  }
+
+  if (!NextMetaPtr || !NextMetaPtr->Valid)
+    return nullptr;
+
+  return NextMetaPtr;
+}
+
+std::set<const Instr *>
+FileAnalysis::getDirectControlFlowXRefs(const Instr &InstrMeta) const {
+  std::set<const Instr *> CFCrossReferences;
+  const Instr *PrevInstruction = getPrevInstructionSequential(InstrMeta);
+
+  if (PrevInstruction && canFallThrough(*PrevInstruction))
+    CFCrossReferences.insert(PrevInstruction);
+
+  const auto &TargetRefsKV = StaticBranchTargetings.find(InstrMeta.VMAddress);
+  if (TargetRefsKV == StaticBranchTargetings.end())
+    return CFCrossReferences;
+
+  for (uint64_t SourceInstrAddress : TargetRefsKV->second) {
+    const auto &SourceInstrKV = Instructions.find(SourceInstrAddress);
+    if (SourceInstrKV == Instructions.end()) {
+      errs() << "Failed to find source instruction at address "
+             << format_hex(SourceInstrAddress, 2)
+             << " for the cross-reference to instruction at address "
+             << format_hex(InstrMeta.VMAddress, 2) << ".\n";
+      continue;
+    }
+
+    CFCrossReferences.insert(&SourceInstrKV->second);
+  }
+
+  return CFCrossReferences;
+}
+
 const std::set<uint64_t> &FileAnalysis::getIndirectInstructions() const {
   return IndirectInstructions;
 }

@@ -175,7 +175,7 @@ public:
     if (MF.getFunction()->getContext().getDiagnosticsOutputFile() ||
         MF.getFunction()->getContext().getDiagHandlerPtr()->isAnyRemarkEnabled()) {
       auto R = RemarkBuilder();
-      emit(R);
+      emit((DiagnosticInfoOptimizationBase &)R);
     }
   }
 

@@ -24,7 +24,7 @@ class MCInst;
 class MCELFStreamer : public MCObjectStreamer {
 public:
   MCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                raw_pwrite_stream &OS, MCCodeEmitter *Emitter);
+                raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter);
 
   ~MCELFStreamer() override = default;
 
@@ -92,8 +92,8 @@ private:
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> TAB,
                                     raw_pwrite_stream &OS,
-                                    MCCodeEmitter *Emitter, bool RelaxAll,
-                                    bool IsThumb);
+                                    std::unique_ptr<MCCodeEmitter> Emitter,
+                                    bool RelaxAll, bool IsThumb);
 
 } // end namespace llvm
 
