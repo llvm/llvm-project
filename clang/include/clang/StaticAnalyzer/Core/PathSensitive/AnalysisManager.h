@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_ANALYSISMANAGER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_ANALYSISMANAGER_H
 
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"

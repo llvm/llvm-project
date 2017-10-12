@@ -13,7 +13,7 @@
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/Support/raw_ostream.h"

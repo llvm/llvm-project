@@ -20,7 +20,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_EXPLODEDGRAPH_H
 
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"

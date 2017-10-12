@@ -18,7 +18,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"

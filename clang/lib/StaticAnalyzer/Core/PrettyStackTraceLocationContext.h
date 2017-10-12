@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_PRETTYSTACKTRACELOCATIONCONTEXT_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CORE_PRETTYSTACKTRACELOCATIONCONTEXT_H
 
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 
 namespace clang {
 namespace ento {

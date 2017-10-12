@@ -18,7 +18,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"

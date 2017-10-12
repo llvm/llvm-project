@@ -25,7 +25,7 @@
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/OperatorKinds.h"
 #include <memory>
 #include <ostream>
