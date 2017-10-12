@@ -686,7 +686,6 @@ def updateSVN(Mode, PMapFile):
         print "Error: SVN update failed."
         sys.exit(-1)
 
-
 def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
     """
     Test a given project.
