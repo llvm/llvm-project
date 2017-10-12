@@ -63,9 +63,9 @@ private:
 
 public:
   MCMachOStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-                  raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
+                  raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
                   bool DWARFMustBeAtTheEnd, bool label)
-      : MCObjectStreamer(Context, std::move(MAB), OS, Emitter),
+      : MCObjectStreamer(Context, std::move(MAB), OS, std::move(Emitter)),
         LabelSections(label), DWARFMustBeAtTheEnd(DWARFMustBeAtTheEnd),
         CreatedADWARFSection(false) {}
 
@@ -487,11 +487,13 @@ void MCMachOStreamer::FinishImpl() {
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                      raw_pwrite_stream &OS, MCCodeEmitter *CE,
+                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool RelaxAll, bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
-  MCMachOStreamer *S = new MCMachOStreamer(Context, std::move(MAB), OS, CE,
-                                           DWARFMustBeAtTheEnd, LabelSections);
+  MCMachOStreamer *S =
+      new MCMachOStreamer(Context, std::move(MAB), OS, std::move(CE),
+                          DWARFMustBeAtTheEnd, LabelSections);
   const Triple &TT = Context.getObjectFileInfo()->getTargetTriple();
   if (TT.isOSDarwin()) {
     unsigned Major, Minor, Update;

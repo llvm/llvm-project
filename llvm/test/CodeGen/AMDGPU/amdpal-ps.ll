@@ -7,7 +7,7 @@
 ; it has a value starting 0x42 as it is set to 0x42000000 in the metadata
 ; below. Also check that key 0x10000000 value 0x12345678 is propagated.
 ; GCN-LABEL: {{^}}ps_amdpal:
-; GCN: .amdgpu_pal_metadata{{.*0x2c0a,[^,]*,0x2c0b,0x42.*,0x10000000,0x12345678}}
+; GCN: .amd_amdgpu_pal_metadata{{.*0x2c0a,[^,]*,0x2c0b,0x42.*,0x10000000,0x12345678}}
 define amdgpu_ps half @ps_amdpal(half %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add

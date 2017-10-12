@@ -19,6 +19,7 @@
 #include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -93,13 +94,15 @@ static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     raw_pwrite_stream &OS,
-                                    MCCodeEmitter *Emitter, bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
   MCStreamer *S;
   if (!T.isOSNaCl())
-    S = createMipsELFStreamer(Context, std::move(MAB), OS, Emitter, RelaxAll);
+    S = createMipsELFStreamer(Context, std::move(MAB), OS, std::move(Emitter),
+                              RelaxAll);
   else
-    S = createMipsNaClELFStreamer(Context, std::move(MAB), OS, Emitter,
-                                  RelaxAll);
+    S = createMipsNaClELFStreamer(Context, std::move(MAB), OS,
+                                  std::move(Emitter), RelaxAll);
   return S;
 }
 

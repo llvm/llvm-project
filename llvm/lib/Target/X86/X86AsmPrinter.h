@@ -104,9 +104,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void EmitSEHInstruction(const MachineInstr *MI);
 
 public:
-  explicit X86AsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
+  X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
   StringRef getPassName() const override {
     return "X86 Assembly Printer";

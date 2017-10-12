@@ -150,11 +150,12 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
+  handleExecNameEncodedBEOpts(*argv[0]);
   parseFuzzerCLOpts(*argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << *argv[0] << ": -mtriple must be specified\n";
-    return 1;
+    exit(1);
   }
 
   Triple TheTriple = Triple(Triple::normalize(TargetTriple));

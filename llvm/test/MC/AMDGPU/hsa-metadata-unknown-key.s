@@ -6,7 +6,7 @@
 // RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj %s 2>&1 | FileCheck %s
 
 // CHECK: error: unknown key 'UnknownKey'
-.amdgpu_code_object_metadata
+.amd_amdgpu_hsa_metadata
   UnknownKey: [ 2, 0 ]
   Version: [ 1, 0 ]
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
@@ -38,4 +38,4 @@
           ValueKind:     HiddenPrintfBuffer
           ValueType:     I8
           AddrSpaceQual: Global
-.end_amdgpu_code_object_metadata
+.end_amd_amdgpu_hsa_metadata

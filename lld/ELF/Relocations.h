@@ -23,10 +23,14 @@ class InputSectionBase;
 class OutputSection;
 class OutputSection;
 
+// Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
+typedef uint32_t RelType;
+
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
 // doesn't have to know about architecture-specific details.
 enum RelExpr {
+  R_INVALID,
   R_ABS,
   R_ARM_SBREL,
   R_GOT,
@@ -111,7 +115,7 @@ template <RelExpr... Exprs> bool isRelExprOneOf(RelExpr Expr) {
 // Architecture-neutral representation of relocation.
 struct Relocation {
   RelExpr Expr;
-  uint32_t Type;
+  RelType Type;
   uint64_t Offset;
   int64_t Addend;
   SymbolBody *Sym;
@@ -142,7 +146,7 @@ private:
       std::function<void(OutputSection *, std::vector<InputSection *> *,
                          InputSection *)>
           Fn);
-  std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
+  std::pair<Thunk *, bool> getThunk(SymbolBody &Body, RelType Type);
   ThunkSection *addThunkSection(OutputSection *OS,
                                 std::vector<InputSection *> *, uint64_t Off);
   // Record all the available Thunks for a Symbol

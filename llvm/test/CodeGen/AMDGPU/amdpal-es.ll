@@ -3,7 +3,7 @@
 
 ; amdpal evaluation shader: check for 0x2cca (SPI_SHADER_PGM_RSRC1_ES) in pal metadata
 ; GCN-LABEL: {{^}}es_amdpal:
-; GCN: .amdgpu_pal_metadata{{.*}}0x2cca,
+; GCN: .amd_amdgpu_pal_metadata{{.*}}0x2cca,
 define amdgpu_es half @es_amdpal(half %arg0) {
   %add = fadd half %arg0, 1.0
   ret half %add

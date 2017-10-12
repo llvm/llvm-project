@@ -1,4 +1,4 @@
-//===--- AMDGPUCodeObjectMetadataStreamer.h ---------------------*- C++ -*-===//
+//===--- AMDGPUHSAMetadataStreamer.h ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,19 +8,18 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief AMDGPU Code Object Metadata Streamer.
+/// \brief AMDGPU HSA Metadata Streamer.
 ///
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
-#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AMDGPUCodeObjectMetadata.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/AMDGPUMetadata.h"
 
 namespace llvm {
 
@@ -32,16 +31,16 @@ class Module;
 class Type;
 
 namespace AMDGPU {
-namespace CodeObject {
+namespace HSAMD {
 
 class MetadataStreamer final {
 private:
-  Metadata CodeObjectMetadata;
+  Metadata HSAMetadata;
   AMDGPUAS AMDGPUASI;
 
-  void dump(StringRef YamlString) const;
+  void dump(StringRef HSAMetadataString) const;
 
-  void verify(StringRef YamlString) const;
+  void verify(StringRef HSAMetadataString) const;
 
   AccessQualifier getAccessQualifier(StringRef AccQual) const;
 
@@ -81,19 +80,19 @@ public:
   MetadataStreamer() = default;
   ~MetadataStreamer() = default;
 
+  const Metadata &getHSAMetadata() const {
+    return HSAMetadata;
+  }
+
   void begin(const Module &Mod);
 
-  void end() {}
+  void end();
 
   void emitKernel(const Function &Func, const amd_kernel_code_t &KernelCode);
-
-  ErrorOr<std::string> toYamlString();
-
-  ErrorOr<std::string> toYamlString(StringRef YamlString);
 };
 
-} // end namespace CodeObject
+} // end namespace HSAMD
 } // end namespace AMDGPU
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATASTREAMER_H
+#endif // LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
