@@ -753,8 +753,12 @@ void USRGenerator::VisitType(QualType T) {
     if (const FunctionProtoType *FT = T->getAs<FunctionProtoType>()) {
       Out << 'F';
       VisitType(FT->getReturnType());
-      for (const auto &I : FT->param_types())
+      Out << '(';
+      for (const auto &I : FT->param_types()) {
+        Out << '#';
         VisitType(I);
+      }
+      Out << ')';
       if (FT->isVariadic())
         Out << '.';
       return;
@@ -813,6 +817,25 @@ void USRGenerator::VisitType(QualType T) {
       Out << (T->isExtVectorType() ? ']' : '[');
       Out << VT->getNumElements();
       T = VT->getElementType();
+      continue;
+    }
+    if (const auto *const AT = dyn_cast<ArrayType>(T)) {
+      Out << '{';
+      switch (AT->getSizeModifier()) {
+      case ArrayType::Static:
+        Out << 's';
+        break;
+      case ArrayType::Star:
+        Out << '*';
+        break;
+      case ArrayType::Normal:
+        Out << 'n';
+        break;
+      }
+      if (const auto *const CAT = dyn_cast<ConstantArrayType>(T))
+        Out << CAT->getSize();
+
+      T = AT->getElementType();
       continue;
     }
 
