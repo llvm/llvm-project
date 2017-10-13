@@ -57,20 +57,20 @@ def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
 // FPStack pattern fragments
 //===----------------------------------------------------------------------===//
 
-def fpimm0 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+def fpimm0 : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+0.0);
 }]>;
 
-def fpimmneg0 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(-0.0);
+def fpimmneg0 : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(-0.0);
 }]>;
 
-def fpimm1 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+1.0);
+def fpimm1 : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+1.0);
 }]>;
 
-def fpimmneg1 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(-1.0);
+def fpimmneg1 : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(-1.0);
 }]>;
 
 // Some 'special' instructions

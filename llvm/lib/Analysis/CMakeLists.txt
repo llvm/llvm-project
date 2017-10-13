@@ -81,6 +81,7 @@ add_llvm_library(LLVMAnalysis
   TypeMetadataUtils.cpp
   ScopedNoAliasAA.cpp
   ValueLattice.cpp
+  ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
 

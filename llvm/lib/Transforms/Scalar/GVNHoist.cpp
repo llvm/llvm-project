@@ -35,20 +35,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils/Local.h"
-
-#include <stack>
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -67,6 +97,7 @@ static cl::opt<int>
     MaxHoistedThreshold("gvn-max-hoisted", cl::Hidden, cl::init(-1),
                         cl::desc("Max number of instructions to hoist "
                                  "(default unlimited = -1)"));
+
 static cl::opt<int> MaxNumberOfBBSInPath(
     "gvn-hoist-max-bbs", cl::Hidden, cl::init(4),
     cl::desc("Max number of basic blocks on the path between "
@@ -84,16 +115,20 @@ static cl::opt<int>
 
 namespace llvm {
 
-typedef DenseMap<const BasicBlock *, bool> BBSideEffectsSet;
-typedef SmallVector<Instruction *, 4> SmallVecInsn;
-typedef SmallVectorImpl<Instruction *> SmallVecImplInsn;
+using BBSideEffectsSet = DenseMap<const BasicBlock *, bool>;
+using SmallVecInsn = SmallVector<Instruction *, 4>;
+using SmallVecImplInsn = SmallVectorImpl<Instruction *>;
+
 // Each element of a hoisting list contains the basic block where to hoist and
 // a list of instructions to be hoisted.
-typedef std::pair<BasicBlock *, SmallVecInsn> HoistingPointInfo;
-typedef SmallVector<HoistingPointInfo, 4> HoistingPointList;
+using HoistingPointInfo = std::pair<BasicBlock *, SmallVecInsn>;
+
+using HoistingPointList = SmallVector<HoistingPointInfo, 4>;
+
 // A map from a pair of VNs to all the instructions with those VNs.
-typedef std::pair<unsigned, unsigned> VNType;
-typedef DenseMap<VNType, SmallVector<Instruction *, 4>> VNtoInsns;
+using VNType = std::pair<unsigned, unsigned>;
+
+using VNtoInsns = DenseMap<VNType, SmallVector<Instruction *, 4>>;
 
 // CHI keeps information about values flowing out of a basic block.  It is
 // similar to PHI but in the inverse graph, and used for outgoing values on each
@@ -107,19 +142,22 @@ typedef DenseMap<VNType, SmallVector<Instruction *, 4>> VNtoInsns;
 // instruction as well as the edge where the value is flowing to.
 struct CHIArg {
   VNType VN;
+
   // Edge destination (shows the direction of flow), may not be where the I is.
   BasicBlock *Dest;
+
   // The instruction (VN) which uses the values flowing out of CHI.
   Instruction *I;
+
   bool operator==(const CHIArg &A) { return VN == A.VN; }
   bool operator!=(const CHIArg &A) { return !(*this == A); }
 };
 
-typedef SmallVectorImpl<CHIArg>::iterator CHIIt;
-typedef iterator_range<CHIIt> CHIArgs;
-typedef DenseMap<BasicBlock *, SmallVector<CHIArg, 2>> OutValuesType;
-typedef DenseMap<BasicBlock *, SmallVector<std::pair<VNType, Instruction *>, 2>>
-    InValuesType;
+using CHIIt = SmallVectorImpl<CHIArg>::iterator;
+using CHIArgs = iterator_range<CHIIt>;
+using OutValuesType = DenseMap<BasicBlock *, SmallVector<CHIArg, 2>>;
+using InValuesType =
+    DenseMap<BasicBlock *, SmallVector<std::pair<VNType, Instruction *>, 2>>;
 
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
@@ -199,9 +237,7 @@ public:
   }
 
   const VNtoInsns &getScalarVNTable() const { return VNtoCallsScalars; }
-
   const VNtoInsns &getLoadVNTable() const { return VNtoCallsLoads; }
-
   const VNtoInsns &getStoreVNTable() const { return VNtoCallsStores; }
 };
 
@@ -222,8 +258,7 @@ public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
            MemoryDependenceResults *MD, MemorySSA *MSSA)
       : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
-        MSSAUpdater(make_unique<MemorySSAUpdater>(MSSA)),
-        HoistingGeps(false) {}
+        MSSAUpdater(llvm::make_unique<MemorySSAUpdater>(MSSA)) {}
 
   bool run(Function &F) {
     NumFuncArgs = F.arg_size();
@@ -243,7 +278,7 @@ public:
     int ChainLength = 0;
 
     // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
-    while (1) {
+    while (true) {
       if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
         return Res;
 
@@ -302,10 +337,9 @@ private:
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
   DenseSet<const BasicBlock *> HoistBarrier;
-
   SmallVector<BasicBlock *, 32> IDFBlocks;
   unsigned NumFuncArgs;
-  const bool HoistingGeps;
+  const bool HoistingGeps = false;
 
   enum InsKind { Unknown, Scalar, Load, Store };
 
@@ -338,7 +372,7 @@ private:
     return false;
   }
 
-  /* Return true when I1 appears before I2 in the instructions of BB.  */
+  // Return true when I1 appears before I2 in the instructions of BB.
   bool firstInBB(const Instruction *I1, const Instruction *I2) {
     assert(I1->getParent() == I2->getParent());
     unsigned I1DFS = DFSNumber.lookup(I1);
@@ -483,7 +517,6 @@ private:
   // to NewPt.
   bool safeToHoistLdSt(const Instruction *NewPt, const Instruction *OldPt,
                        MemoryUseOrDef *U, InsKind K, int &NBBsOnAllPaths) {
-
     // In place hoisting is safe.
     if (NewPt == OldPt)
       return true;
@@ -551,7 +584,7 @@ private:
     for (auto CHI : C) {
       BasicBlock *Dest = CHI.Dest;
       // Find if all the edges have values flowing out of BB.
-      bool Found = any_of(TI->successors(), [Dest](const BasicBlock *BB) {
+      bool Found = llvm::any_of(TI->successors(), [Dest](const BasicBlock *BB) {
           return BB == Dest; });
       if (!Found)
         return false;
@@ -579,7 +612,8 @@ private:
     }
   }
 
-  typedef DenseMap<VNType, SmallVector<Instruction *, 2>> RenameStackType;
+  using RenameStackType = DenseMap<VNType, SmallVector<Instruction *, 2>>;
+
   // Push all the VNs corresponding to BB into RenameStack.
   void fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
                        RenameStackType &RenameStack) {
@@ -822,7 +856,6 @@ private:
     Instruction *ClonedGep = Gep->clone();
     for (unsigned i = 0, e = Gep->getNumOperands(); i != e; ++i)
       if (Instruction *Op = dyn_cast<Instruction>(Gep->getOperand(i))) {
-
         // Check whether the operand is already available.
         if (DT->dominates(Op->getParent(), HoistPt))
           continue;
@@ -912,7 +945,7 @@ private:
 
     for (MemoryPhi *Phi : UsePhis) {
       auto In = Phi->incoming_values();
-      if (all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
+      if (llvm::all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
         Phi->replaceAllUsesWith(NewMemAcc);
         MSSAUpdater->removeMemoryAccess(Phi);
       }
@@ -1007,7 +1040,6 @@ private:
         // The order in which hoistings are done may influence the availability
         // of operands.
         if (!allOperandsAvailable(Repl, DestBB)) {
-
           // When HoistingGeps there is nothing more we can do to make the
           // operands available: just continue.
           if (HoistingGeps)
@@ -1027,7 +1059,6 @@ private:
       }
 
       NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
-
 
       if (isa<LoadInst>(Repl))
         ++NL;
@@ -1141,7 +1172,8 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
-} // namespace llvm
+
+} // end namespace llvm
 
 PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
@@ -1161,6 +1193,7 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 char GVNHoistLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(GVNHoistLegacyPass, "gvn-hoist",
                       "Early GVN Hoisting of Expressions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
