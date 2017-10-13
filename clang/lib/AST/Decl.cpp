@@ -2732,6 +2732,20 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
   return Params == FPT->getNumParams();
 }
 
+bool FunctionDecl::isDestroyingOperatorDelete() const {
+  // C++ P0722:
+  //   Within a class C, a single object deallocation function with signature
+  //     (T, std::destroying_delete_t, <more params>)
+  //   is a destroying operator delete.
+  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
+      getNumParams() < 2)
+    return false;
+
+  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
+         RD->getIdentifier()->isStr("destroying_delete_t");
+}
+
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
   return getDeclLanguageLinkage(*this);
 }

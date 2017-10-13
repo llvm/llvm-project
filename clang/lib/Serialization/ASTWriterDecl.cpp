@@ -1311,6 +1311,8 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
   Record.AddDeclRef(D->getOperatorDelete());
+  if (D->getOperatorDelete())
+    Record.AddStmt(D->getOperatorDeleteThisArg());
 
   Code = serialization::DECL_CXX_DESTRUCTOR;
 }
