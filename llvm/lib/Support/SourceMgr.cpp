@@ -384,6 +384,11 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
         S.changeColor(raw_ostream::BLACK, true);
       S << "note: ";
       break;
+    case SourceMgr::DK_Remark:
+      if (ShowColors)
+        S.changeColor(raw_ostream::BLUE, true);
+      S << "remark: ";
+      break;
     }
 
     if (ShowColors) {

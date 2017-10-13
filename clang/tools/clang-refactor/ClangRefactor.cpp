@@ -18,6 +18,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
+#include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
@@ -32,10 +33,10 @@ namespace cl = llvm::cl;
 
 namespace opts {
 
-static cl::OptionCategory CommonRefactorOptions("Common refactoring options");
+static cl::OptionCategory CommonRefactorOptions("Refactoring options");
 
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
-                             cl::cat(CommonRefactorOptions),
+                             cl::cat(cl::GeneralCategory),
                              cl::sub(*cl::AllSubCommands));
 } // end namespace opts
 
@@ -116,6 +117,92 @@ SourceSelectionArgument::fromString(StringRef Value) {
   return nullptr;
 }
 
+/// A container that stores the command-line options used by a single
+/// refactoring option.
+class RefactoringActionCommandLineOptions {
+public:
+  void addStringOption(const RefactoringOption &Option,
+                       std::unique_ptr<cl::opt<std::string>> CLOption) {
+    StringOptions[&Option] = std::move(CLOption);
+  }
+
+  const cl::opt<std::string> &
+  getStringOption(const RefactoringOption &Opt) const {
+    auto It = StringOptions.find(&Opt);
+    return *It->second;
+  }
+
+private:
+  llvm::DenseMap<const RefactoringOption *,
+                 std::unique_ptr<cl::opt<std::string>>>
+      StringOptions;
+};
+
+/// Passes the command-line option values to the options used by a single
+/// refactoring action rule.
+class CommandLineRefactoringOptionVisitor final
+    : public RefactoringOptionVisitor {
+public:
+  CommandLineRefactoringOptionVisitor(
+      const RefactoringActionCommandLineOptions &Options)
+      : Options(Options) {}
+
+  void visit(const RefactoringOption &Opt,
+             Optional<std::string> &Value) override {
+    const cl::opt<std::string> &CLOpt = Options.getStringOption(Opt);
+    if (!CLOpt.getValue().empty()) {
+      Value = CLOpt.getValue();
+      return;
+    }
+    Value = None;
+    if (Opt.isRequired())
+      MissingRequiredOptions.push_back(&Opt);
+  }
+
+  ArrayRef<const RefactoringOption *> getMissingRequiredOptions() const {
+    return MissingRequiredOptions;
+  }
+
+private:
+  llvm::SmallVector<const RefactoringOption *, 4> MissingRequiredOptions;
+  const RefactoringActionCommandLineOptions &Options;
+};
+
+/// Creates the refactoring options used by all the rules in a single
+/// refactoring action.
+class CommandLineRefactoringOptionCreator final
+    : public RefactoringOptionVisitor {
+public:
+  CommandLineRefactoringOptionCreator(
+      cl::OptionCategory &Category, cl::SubCommand &Subcommand,
+      RefactoringActionCommandLineOptions &Options)
+      : Category(Category), Subcommand(Subcommand), Options(Options) {}
+
+  void visit(const RefactoringOption &Opt, Optional<std::string> &) override {
+    if (Visited.insert(&Opt).second)
+      Options.addStringOption(Opt, create<std::string>(Opt));
+  }
+
+private:
+  template <typename T>
+  std::unique_ptr<cl::opt<T>> create(const RefactoringOption &Opt) {
+    if (!OptionNames.insert(Opt.getName()).second)
+      llvm::report_fatal_error("Multiple identical refactoring options "
+                               "specified for one refactoring action");
+    // FIXME: cl::Required can be specified when this option is present
+    // in all rules in an action.
+    return llvm::make_unique<cl::opt<T>>(
+        Opt.getName(), cl::desc(Opt.getDescription()), cl::Optional,
+        cl::cat(Category), cl::sub(Subcommand));
+  }
+
+  llvm::SmallPtrSet<const RefactoringOption *, 8> Visited;
+  llvm::StringSet<> OptionNames;
+  cl::OptionCategory &Category;
+  cl::SubCommand &Subcommand;
+  RefactoringActionCommandLineOptions &Options;
+};
+
 /// A subcommand that corresponds to individual refactoring action.
 class RefactoringActionSubcommand : public cl::SubCommand {
 public:
@@ -137,6 +224,12 @@ public:
                    "be initiated (<file>:<line>:<column>-<line>:<column> or "
                    "<file>:<line>:<column>)"),
           cl::cat(Category), cl::sub(*this));
+    }
+    // Create the refactoring options.
+    for (const auto &Rule : this->ActionRules) {
+      CommandLineRefactoringOptionCreator OptionCreator(Category, *this,
+                                                        Options);
+      Rule->visitRefactoringOptions(OptionCreator);
     }
   }
 
@@ -160,11 +253,17 @@ public:
     assert(Selection && "selection not supported!");
     return ParsedSelection.get();
   }
+
+  const RefactoringActionCommandLineOptions &getOptions() const {
+    return Options;
+  }
+
 private:
   std::unique_ptr<RefactoringAction> Action;
   RefactoringActionRules ActionRules;
   std::unique_ptr<cl::opt<std::string>> Selection;
   std::unique_ptr<SourceSelectionArgument> ParsedSelection;
+  RefactoringActionCommandLineOptions Options;
 };
 
 class ClangRefactorConsumer : public RefactoringResultConsumer {
@@ -262,14 +361,22 @@ public:
 
     bool HasSelection = false;
     for (const auto &Rule : Subcommand.getActionRules()) {
+      bool SelectionMatches = true;
       if (Rule->hasSelectionRequirement()) {
         HasSelection = true;
-        if (Subcommand.getSelection())
-          MatchingRules.push_back(Rule.get());
-        else
+        if (!Subcommand.getSelection()) {
           MissingOptions.insert("selection");
+          SelectionMatches = false;
+        }
       }
-      // FIXME (Alex L): Support custom options.
+      CommandLineRefactoringOptionVisitor Visitor(Subcommand.getOptions());
+      Rule->visitRefactoringOptions(Visitor);
+      if (SelectionMatches && Visitor.getMissingRequiredOptions().empty()) {
+        MatchingRules.push_back(Rule.get());
+        continue;
+      }
+      for (const RefactoringOption *Opt : Visitor.getMissingRequiredOptions())
+        MissingOptions.insert(Opt->getName());
     }
     if (MatchingRules.empty()) {
       llvm::errs() << "error: '" << Subcommand.getName()
@@ -326,7 +433,7 @@ int main(int argc, const char **argv) {
   ClangRefactorTool Tool;
 
   CommonOptionsParser Options(
-      argc, argv, opts::CommonRefactorOptions, cl::ZeroOrMore,
+      argc, argv, cl::GeneralCategory, cl::ZeroOrMore,
       "Clang-based refactoring tool for C, C++ and Objective-C");
 
   // Figure out which action is specified by the user. The user must specify

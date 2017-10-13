@@ -479,7 +479,7 @@ TargetLowering::SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
   return true;
 }
 
-bool TargetLowering::SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
+bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                                           DAGCombinerInfo &DCI) const {
 
   SelectionDAG &DAG = DCI.DAG;
@@ -1079,61 +1079,47 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
   }
   case ISD::ZERO_EXTEND: {
     unsigned OperandBitWidth = Op.getOperand(0).getScalarValueSizeInBits();
-    APInt InMask = NewMask.trunc(OperandBitWidth);
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    APInt NewBits =
-      APInt::getHighBitsSet(BitWidth, BitWidth - OperandBitWidth) & NewMask;
-    if (!NewBits.intersects(NewMask))
+    if (NewMask.getActiveBits() <= OperandBitWidth)
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl,
                                                Op.getValueType(),
                                                Op.getOperand(0)));
 
+    APInt InMask = NewMask.trunc(OperandBitWidth);
     if (SimplifyDemandedBits(Op.getOperand(0), InMask, Known, TLO, Depth+1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known = Known.zext(BitWidth);
-    Known.Zero |= NewBits;
+    Known.Zero.setBitsFrom(OperandBitWidth);
     break;
   }
   case ISD::SIGN_EXTEND: {
-    EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-    APInt InMask    = APInt::getLowBitsSet(BitWidth, InBits);
-    APInt InSignBit = APInt::getOneBitSet(BitWidth, InBits - 1);
-    APInt NewBits   = ~InMask & NewMask;
+    unsigned InBits = Op.getOperand(0).getValueType().getScalarSizeInBits();
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    if (NewBits == 0)
+    if (NewMask.getActiveBits() <= InBits)
       return TLO.CombineTo(Op,TLO.DAG.getNode(ISD::ANY_EXTEND, dl,
                                               Op.getValueType(),
                                               Op.getOperand(0)));
 
     // Since some of the sign extended bits are demanded, we know that the sign
     // bit is demanded.
-    APInt InDemandedBits = InMask & NewMask;
-    InDemandedBits |= InSignBit;
-    InDemandedBits = InDemandedBits.trunc(InBits);
+    APInt InDemandedBits = NewMask.trunc(InBits);
+    InDemandedBits.setBit(InBits - 1);
 
     if (SimplifyDemandedBits(Op.getOperand(0), InDemandedBits, Known, TLO,
                              Depth+1))
       return true;
-    Known = Known.zext(BitWidth);
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    // If the sign bit is known one, the top bits match.
+    Known = Known.sext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    if (Known.Zero.intersects(InSignBit))
+    if (Known.isNonNegative())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl,
                                                Op.getValueType(),
                                                Op.getOperand(0)));
-
-    // If the sign bit is known one, the top bits match.
-    if (Known.One.intersects(InSignBit)) {
-      Known.One |= NewBits;
-      assert((Known.Zero & NewBits) == 0);
-    } else {   // Otherwise, top bits aren't known.
-      assert((Known.One & NewBits) == 0);
-      assert((Known.Zero & NewBits) == 0);
-    }
     break;
   }
   case ISD::ANY_EXTEND: {

@@ -1788,6 +1788,14 @@ bool CXXMethodDecl::isUsualDeallocationFunction() const {
     return true;
   unsigned UsualParams = 1;
 
+  // C++ P0722:
+  //   A destroying operator delete is a usual deallocation function if
+  //   removing the std::destroying_delete_t parameter and changing the
+  //   first parameter type from T* to void* results in the signature of
+  //   a usual deallocation function.
+  if (isDestroyingOperatorDelete())
+    ++UsualParams;
+
   // C++ <=14 [basic.stc.dynamic.deallocation]p2:
   //   [...] If class T does not declare such an operator delete but does 
   //   declare a member deallocation function named operator delete with 
@@ -2187,12 +2195,13 @@ CXXDestructorDecl::Create(ASTContext &C, CXXRecordDecl *RD,
                                        isInline, isImplicitlyDeclared);
 }
 
-void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD) {
+void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   auto *First = cast<CXXDestructorDecl>(getFirstDecl());
   if (OD && !First->OperatorDelete) {
     First->OperatorDelete = OD;
+    First->OperatorDeleteThisArg = ThisArg;
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorDelete(First, OD);
+      L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
 }
 

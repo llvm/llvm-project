@@ -47,6 +47,7 @@ static const LangAS::Map AMDGPUPrivIsZeroDefIsGenMap = {
     1, // opencl_global
     3, // opencl_local
     2, // opencl_constant
+    0, // opencl_private
     4, // opencl_generic
     1, // cuda_device
     2, // cuda_constant
@@ -58,6 +59,7 @@ static const LangAS::Map AMDGPUGenIsZeroDefIsGenMap = {
     1, // opencl_global
     3, // opencl_local
     2, // opencl_constant
+    5, // opencl_private
     0, // opencl_generic
     1, // cuda_device
     2, // cuda_constant
@@ -69,6 +71,7 @@ static const LangAS::Map AMDGPUPrivIsZeroDefIsPrivMap = {
     1, // opencl_global
     3, // opencl_local
     2, // opencl_constant
+    0, // opencl_private
     4, // opencl_generic
     1, // cuda_device
     2, // cuda_constant
@@ -80,6 +83,7 @@ static const LangAS::Map AMDGPUGenIsZeroDefIsPrivMap = {
     1, // opencl_global
     3, // opencl_local
     2, // opencl_constant
+    5, // opencl_private
     0, // opencl_generic
     1, // cuda_device
     2, // cuda_constant

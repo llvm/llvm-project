@@ -1677,15 +1677,18 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     addSpace = true;
   }
   if (unsigned addrspace = getAddressSpace()) {
-    if (addSpace)
-      OS << ' ';
-    addSpace = true;
-    switch (addrspace) {
+    if (addrspace != LangAS::opencl_private) {
+      if (addSpace)
+        OS << ' ';
+      addSpace = true;
+      switch (addrspace) {
       case LangAS::opencl_global:
         OS << "__global";
         break;
       case LangAS::opencl_local:
         OS << "__local";
+        break;
+      case LangAS::opencl_private:
         break;
       case LangAS::opencl_constant:
       case LangAS::cuda_constant:
@@ -1705,6 +1708,7 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
         OS << "__attribute__((address_space(";
         OS << addrspace - LangAS::FirstTargetAddressSpace;
         OS << ")))";
+      }
     }
   }
   if (Qualifiers::GC gc = getObjCGCAttr()) {

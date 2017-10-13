@@ -25,16 +25,17 @@ namespace LangAS {
 ///
 enum ID {
   // The default value 0 is the value used in QualType for the the situation
-  // where there is no address space qualifier. For most languages, this also
-  // corresponds to the situation where there is no address space qualifier in
-  // the source code, except for OpenCL, where the address space value 0 in
-  // QualType represents private address space in OpenCL source code.
+  // where there is no address space qualifier.
   Default = 0,
 
   // OpenCL specific address spaces.
+  // In OpenCL each l-value must have certain non-default address space, each
+  // r-value must have no address space (i.e. the default address space). The
+  // pointee of a pointer must have non-default address space.
   opencl_global,
   opencl_local,
   opencl_constant,
+  opencl_private,
   opencl_generic,
 
   // CUDA specific address spaces.

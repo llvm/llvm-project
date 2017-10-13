@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Tooling/Refactoring/RefactoringOption.h"
 #include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
 #include "llvm/Support/Error.h"
 #include <type_traits>
@@ -51,6 +52,45 @@ public:
         "refactoring action can't be initiated without a selection",
         llvm::inconvertibleErrorCode());
   }
+};
+
+/// A base class for any requirement that requires some refactoring options.
+class RefactoringOptionsRequirement : public RefactoringActionRuleRequirement {
+public:
+  virtual ~RefactoringOptionsRequirement() {}
+
+  /// Returns the set of refactoring options that are used when evaluating this
+  /// requirement.
+  virtual ArrayRef<std::shared_ptr<RefactoringOption>>
+  getRefactoringOptions() const = 0;
+};
+
+/// A requirement that evaluates to the value of the given \c OptionType when
+/// the \c OptionType is a required option. When the \c OptionType is an
+/// optional option, the requirement will evaluate to \c None if the option is
+/// not specified or to an appropriate value otherwise.
+template <typename OptionType>
+class OptionRequirement : public RefactoringOptionsRequirement {
+public:
+  OptionRequirement() : Opt(createRefactoringOption<OptionType>()) {}
+
+  ArrayRef<std::shared_ptr<RefactoringOption>>
+  getRefactoringOptions() const final override {
+    return Opt;
+  }
+
+  Expected<typename OptionType::ValueType>
+  evaluate(RefactoringRuleContext &) const {
+    return static_cast<OptionType *>(Opt.get())->getValue();
+  }
+
+private:
+  /// The partially-owned option.
+  ///
+  /// The ownership of the option is shared among the different requirements
+  /// because the same option can be used by multiple rules in one refactoring
+  /// action.
+  std::shared_ptr<RefactoringOption> Opt;
 };
 
 } // end namespace tooling

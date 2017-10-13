@@ -54,3 +54,46 @@ bb:
 exit:
   ret void
 }
+
+; looping case where loop has exactly one block
+; at the point of ashr, we know that the operand is always greater than 0,
+; because of the guard before it, so we can transform it to lshr.
+declare void @llvm.experimental.guard(i1,...)
+; CHECK-LABEL: @test4
+define void @test4(i32 %n) {
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+; CHECK: lshr i32 %a, 1
+  %a = phi i32 [ %n, %entry ], [ %shr, %loop ]
+  %cond = icmp sgt i32 %a, 2
+  call void(i1,...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
+  %shr = ashr i32 %a, 1
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; same test as above with assume instead of guard.
+declare void @llvm.assume(i1)
+; CHECK-LABEL: @test5
+define void @test5(i32 %n) {
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+; CHECK: lshr i32 %a, 1
+  %a = phi i32 [ %n, %entry ], [ %shr, %loop ]
+  %cond = icmp sgt i32 %a, 4
+  call void @llvm.assume(i1 %cond)
+  %shr = ashr i32 %a, 1
+  %loopcond = icmp sgt i32 %shr, 8
+  br i1 %loopcond, label %loop, label %exit
+
+exit:
+  ret void
+}
