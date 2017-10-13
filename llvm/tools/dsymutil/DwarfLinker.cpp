@@ -525,8 +525,8 @@ public:
   /// Emit the string table described by \p Pool.
   void emitStrings(const NonRelocatableStringpool &Pool);
 
-  /// Emit the swift_ast section stored in \p Buffers.
-  void emitSwiftAST(const std::vector<MemoryBufferRef> &Buffers);
+  /// Emit the swift_ast section stored in \p Buffer.
+  void emitSwiftAST(StringRef Buffer);
 
   /// Emit debug_ranges for \p FuncRange by translating the
   /// original \p Entries.
@@ -713,12 +713,11 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
 }
 
 /// Emit the swift_ast section stored in \p Buffers.
-void DwarfStreamer::emitSwiftAST(const std::vector<MemoryBufferRef> &Buffers) {
+void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
   SwiftASTSection->setAlignment(1 << 5);
   MS->SwitchSection(SwiftASTSection);
-  for (auto Buf : Buffers)
-    MS->EmitBytes(Buf.getBuffer());
+  MS->EmitBytes(Buffer);
 }
 
 /// Emit the debug_range section contents for \p FuncRange by
@@ -3492,12 +3491,28 @@ bool DwarfLinker::link(const DebugMap &Map) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
     if (Obj->getType() == MachO::N_AST) {
-      auto ErrOrMemBufferRefs = BinHolder.GetMemoryBuffersForFile(
-          Obj->getObjectFilename(), Obj->getTimestamp());
-      if (ErrOrMemBufferRefs.getError())
+      StringRef File = Obj->getObjectFilename();
+      auto ErrorOrMem = MemoryBuffer::getFile(File);
+      if (!ErrorOrMem) {
+        errs() << "Warning: Could not open " << File << "\n";
         continue;
+      }
+      sys::fs::file_status Stat;
+      if (auto errc = sys::fs::status(File, Stat)) {
+        errs() << "Warning: " << errc.message() << "\n";
+        continue;
+      }
+      if (!Options.NoTimestamp && Stat.getLastModificationTime() !=
+                                      sys::TimePoint<>(Obj->getTimestamp())) {
+        errs() << "Warning: Timestamp mismatch for " << File << ": "
+               << Stat.getLastModificationTime() << " and "
+               << sys::TimePoint<>(Obj->getTimestamp()) << "\n";
+        continue;
+      }
+
+      // Copy the module into the .swift_ast section.
       if (!Options.NoOutput)
-        Streamer->emitSwiftAST(ErrOrMemBufferRefs.get());
+        Streamer->emitSwiftAST((*ErrorOrMem)->getBuffer());
       continue;
     }
 

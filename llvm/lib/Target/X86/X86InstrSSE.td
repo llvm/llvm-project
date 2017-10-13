@@ -7969,6 +7969,11 @@ let Predicates = [HasAVX, NoVLX] in {
             (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
   def : Pat<(v2f64 (X86VBroadcast (loadf64 addr:$src))),
             (VMOVDDUPrm addr:$src)>;
+
+  def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
+            (VMOVDDUPrr VR128:$src)>;
+  def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+            (VMOVDDUPrm addr:$src)>;
 }
 
 let Predicates = [HasAVX1Only] in {

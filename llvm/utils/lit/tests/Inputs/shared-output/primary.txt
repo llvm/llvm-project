@@ -1,0 +1,2 @@
+RUN: echo "primary" >> %{shared_output(SHARED)}
+RUN: echo "other" >> %{shared_output(OTHER)}

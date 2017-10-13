@@ -68,6 +68,13 @@ this fuzzer has reported are `on OSS Fuzz's tracker`__
 
 __ https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+llvm-dwarfdump-fuzzer
 
+llvm-demangle-fuzzer
+---------------------
+
+A |generic fuzzer| for the Itanium demangler used in various LLVM tools. We've
+fuzzed __cxa_demangle to death, why not fuzz LLVM's implementation of the same
+function!
+
 llvm-isel-fuzzer
 ----------------
 

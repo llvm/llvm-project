@@ -189,11 +189,6 @@ public:
     return BaseT::getGEPCost(PointeeType, Ptr, Operands);
   }
 
-  int getGEPCost(const GEPOperator *GEP,
-                 ArrayRef<const Value *> Operands) {
-    return BaseT::getGEPCost(GEP, Operands);
-  }
-
   int getExtCost(const Instruction *I, const Value *Src) {
     if (getTLI()->isExtFree(I))
       return TargetTransformInfo::TCC_Free;
