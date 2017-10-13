@@ -214,6 +214,9 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   case SourceMgr::DK_Note:
     Kind = DS_Note;
     break;
+  case SourceMgr::DK_Remark:
+    llvm_unreachable("remark unexpected");
+    break;
   }
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
