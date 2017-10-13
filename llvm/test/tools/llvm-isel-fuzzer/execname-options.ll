@@ -1,3 +1,7 @@
+; If the binary looks up libraries using an rpath, we can't test this
+; without copying the whole lib dir or polluting the build dir.
+; UNSUPPORTED: rpath_in_use
+
 ; RUN: echo > %t.input
 
 ; RUN: cp llvm-isel-fuzzer %t.bin=gisel

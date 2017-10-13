@@ -97,7 +97,7 @@ static unsigned getReductionSize() {
 }
 
 static void dumpSUList(ScheduleDAGInstrs::SUList &L) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   dbgs() << "{ ";
   for (const SUnit *su : L) {
     dbgs() << "SU(" << su->NodeNum << ")";
@@ -1096,7 +1096,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 
 void ScheduleDAGInstrs::dumpNode(const SUnit *SU) const {
   // Cannot completely remove virtual function even in release mode.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   SU->getInstr()->dump();
 #endif
 }
@@ -1408,7 +1408,7 @@ void SchedDFSResult::scheduleTree(unsigned SubtreeID) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void ILPValue::print(raw_ostream &OS) const {
   OS << InstrCount << " / " << Length << " = ";
   if (!Length)

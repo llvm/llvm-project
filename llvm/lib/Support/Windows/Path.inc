@@ -377,9 +377,14 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
   RenameInfo.FileNameLength = ToWide.size();
   std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
+  SetLastError(ERROR_SUCCESS);
   if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
-                                  RenameInfoBuf.size()))
-    return mapWindowsError(GetLastError());
+                                  RenameInfoBuf.size())) {
+    unsigned Error = GetLastError();
+    if (Error == ERROR_SUCCESS)
+      Error = ERROR_CALL_NOT_IMPLEMENTED; // Wine doesn't always set error code.
+    return mapWindowsError(Error);
+  }
 
   return std::error_code();
 }

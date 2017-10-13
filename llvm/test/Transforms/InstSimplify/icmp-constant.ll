@@ -576,12 +576,7 @@ define <2 x i1> @add_nsw_pos_const5_splat_vec(<2 x i32> %x) {
 
 define i1 @ne_shl_by_constant_produces_poison(i8 %x) {
 ; CHECK-LABEL: @ne_shl_by_constant_produces_poison(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 %x to i16
-; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[ZX]], 32767
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[ZX]], [[XOR]]
-; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i16 [[SUB]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[POISON]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zx = zext i8 %x to i16      ; zx  = 0x00xx
   %xor = xor i16 %zx, 32767    ; xor = 0x7fyy
@@ -593,11 +588,7 @@ define i1 @ne_shl_by_constant_produces_poison(i8 %x) {
 
 define i1 @eq_shl_by_constant_produces_poison(i8 %x) {
 ; CHECK-LABEL: @eq_shl_by_constant_produces_poison(
-; CHECK-NEXT:    [[CLEAR_HIGH_BIT:%.*]] = and i8 %x, 127
-; CHECK-NEXT:    [[SET_NEXT_HIGH_BITS:%.*]] = or i8 [[CLEAR_HIGH_BIT]], 112
-; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i8 [[SET_NEXT_HIGH_BITS]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[POISON]], 15
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %clear_high_bit = and i8 %x, 127                 ; 0x7f
   %set_next_high_bits = or i8 %clear_high_bit, 112 ; 0x70
@@ -612,13 +603,7 @@ define i1 @eq_shl_by_constant_produces_poison(i8 %x) {
 
 define i1 @eq_shl_by_variable_produces_poison(i8 %x) {
 ; CHECK-LABEL: @eq_shl_by_variable_produces_poison(
-; CHECK-NEXT:    [[CLEAR_HIGH_BIT:%.*]] = and i8 %x, 127
-; CHECK-NEXT:    [[SET_NEXT_HIGH_BITS:%.*]] = or i8 [[CLEAR_HIGH_BIT]], 112
-; CHECK-NEXT:    [[NOTUNDEF_SHIFTAMT:%.*]] = and i8 %x, 3
-; CHECK-NEXT:    [[NONZERO_SHIFTAMT:%.*]] = or i8 [[NOTUNDEF_SHIFTAMT]], 1
-; CHECK-NEXT:    [[POISON:%.*]] = shl nsw i8 [[SET_NEXT_HIGH_BITS]], [[NONZERO_SHIFTAMT]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[POISON]], 15
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %clear_high_bit = and i8 %x, 127                 ; 0x7f
   %set_next_high_bits = or i8 %clear_high_bit, 112 ; 0x70

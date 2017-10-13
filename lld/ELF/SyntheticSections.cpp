@@ -734,7 +734,7 @@ void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
     if (!A)
       S.GotIndex = NewIndex;
   };
-  if (Sym.isPreemptible()) {
+  if (Sym.IsPreemptible) {
     // Ignore addends for preemptible symbols. They got single GOT entry anyway.
     AddEntry(Sym, 0, GlobalEntries);
     Sym.IsInGlobalMipsGot = true;
@@ -910,7 +910,7 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   if (TlsIndexOff != -1U && !Config->Pic)
     writeUint(Buf + TlsIndexOff, 1);
   for (const SymbolBody *B : TlsEntries) {
-    if (!B || B->isPreemptible())
+    if (!B || B->IsPreemptible)
       continue;
     uint64_t VA = B->getVA();
     if (B->GotIndex != -1U) {
@@ -1284,8 +1284,10 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
-  this->Link = InX::DynSymTab ? InX::DynSymTab->getParent()->SectionIndex
-                              : InX::SymTab->getParent()->SectionIndex;
+  // If all relocations are *RELATIVE they don't refer to any
+  // dynamic symbol and we don't need a dynamic symbol table. If that
+  // is the case, just use 0 as the link.
+  this->Link = InX::DynSymTab ? InX::DynSymTab->getParent()->SectionIndex : 0;
 
   // Set required output section properties.
   getParent()->Link = this->Link;

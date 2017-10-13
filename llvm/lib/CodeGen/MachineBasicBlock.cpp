@@ -222,7 +222,7 @@ bool MachineBasicBlock::hasEHPadSuccessor() const {
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void MachineBasicBlock::dump() const {
   print(dbgs());
 }

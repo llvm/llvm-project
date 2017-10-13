@@ -27,7 +27,15 @@ namespace fuzzing {
 
 	int nth_element      (const uint8_t *data, size_t size);
 	int partial_sort     (const uint8_t *data, size_t size);
-	
+
+//	Various flavors of regex
+	int regex_ECMAScript (const uint8_t *data, size_t size);
+	int regex_POSIX      (const uint8_t *data, size_t size);
+	int regex_extended   (const uint8_t *data, size_t size);
+	int regex_awk        (const uint8_t *data, size_t size);
+	int regex_grep       (const uint8_t *data, size_t size);
+	int regex_egrep      (const uint8_t *data, size_t size);
+
 } // namespace fuzzing
 
 #endif // _LIBCPP_FUZZING

@@ -26,8 +26,7 @@
 #include "fuzzing.h"
 #include <vector>
 #include <algorithm>
-
-#include <iostream>
+#include <regex>
 
 //	If we had C++14, we could use the four iterator version of is_permutation
 
@@ -216,6 +215,61 @@ int partial_sort (const uint8_t *data, size_t size)
 	if (!std::is_sorted(working.begin(), sort_iter)) return 3;
 	if (!std::is_permutation(data + 1, data + size, working.begin())) return 99;
 
+	return 0;
+}
+
+
+// --	regex fuzzers
+
+static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type flag)
+{
+	if (size > 0)
+	{
+		try
+		{
+			std::string s((const char *)data, size);
+			std::regex re(s, flag);
+			return std::regex_match(s, re) ? 1 : 0;
+		} 
+		catch (std::regex_error &ex) {} 
+	}
+	return 0;		
+}
+
+
+int regex_ECMAScript (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::ECMAScript);
+	return 0;
+}
+
+int regex_POSIX (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::basic);
+	return 0;
+}
+
+int regex_extended (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::extended);
+	return 0;
+}
+
+int regex_awk (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::awk);
+	return 0;
+}
+
+int regex_grep (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::grep);
+	return 0;
+}
+
+int regex_egrep (const uint8_t *data, size_t size)
+{
+	(void) regex_helper(data, size, std::regex_constants::egrep);
 	return 0;
 }
 

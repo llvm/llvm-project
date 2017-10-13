@@ -166,6 +166,14 @@ enum class TraceLevel {
   Verbose = 2,
 };
 
+struct NoParams {
+  static llvm::Optional<NoParams> parse(llvm::yaml::MappingNode *Params,
+                                        Logger &Logger) {
+    return NoParams{};
+  }
+};
+using ShutdownParams = NoParams;
+
 struct InitializeParams {
   /// The process Id of the parent process that started
   /// the server. Is null if the process has not been started by another

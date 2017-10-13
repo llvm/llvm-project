@@ -132,7 +132,7 @@ def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
 ]>;
-def SDTIntUnaryOp : SDTypeProfile<1, 1, [   // ctlz
+def SDTIntUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
   SDTCisSameAs<0, 1>, SDTCisInt<0>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext

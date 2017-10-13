@@ -76,7 +76,6 @@ public:
   bool isUndefWeak() const;
 
   InputFile *getFile() const;
-  bool isPreemptible() const { return IsPreemptible; }
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();

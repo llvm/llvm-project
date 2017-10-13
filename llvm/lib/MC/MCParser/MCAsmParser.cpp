@@ -131,7 +131,7 @@ bool MCAsmParser::parseExpression(const MCExpr *&Res) {
 
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   dbgs() << "  " << *this;
 #endif
 }

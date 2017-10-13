@@ -250,7 +250,7 @@ void StackColoring::calculateLiveIntervals() {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void StackColoring::dumpAllocas() {
   dbgs() << "Allocas:\n";
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)

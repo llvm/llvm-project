@@ -619,7 +619,7 @@ AttributeSet::iterator AttributeSet::end() const {
   return SetNode ? SetNode->end() : nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void AttributeSet::dump() const {
   dbgs() << "AS =\n";
     dbgs() << "  { ";
@@ -828,7 +828,7 @@ void AttributeListImpl::Profile(FoldingSetNodeID &ID,
     ID.AddPointer(Set.SetNode);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
   AttributeList(const_cast<AttributeListImpl *>(this)).dump();
 }
@@ -1288,7 +1288,7 @@ unsigned AttributeList::getNumAttrSets() const {
   return pImpl ? pImpl->NumAttrSets : 0;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void AttributeList::dump() const {
   dbgs() << "PAL[\n";
 

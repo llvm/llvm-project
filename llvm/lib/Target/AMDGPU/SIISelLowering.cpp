@@ -1494,14 +1494,31 @@ SDValue SITargetLowering::LowerFormalArguments(
     // - At least one of PERSP_* (0xF) or LINEAR_* (0x70) must be enabled.
     // - If POS_W_FLOAT (11) is enabled, at least one of PERSP_* must be
     //   enabled too.
-    if (CallConv == CallingConv::AMDGPU_PS &&
-        ((Info->getPSInputAddr() & 0x7F) == 0 ||
-         ((Info->getPSInputAddr() & 0xF) == 0 &&
-          Info->isPSInputAllocated(11)))) {
-      CCInfo.AllocateReg(AMDGPU::VGPR0);
-      CCInfo.AllocateReg(AMDGPU::VGPR1);
-      Info->markPSInputAllocated(0);
-      Info->markPSInputEnabled(0);
+    if (CallConv == CallingConv::AMDGPU_PS) {
+      if ((Info->getPSInputAddr() & 0x7F) == 0 ||
+           ((Info->getPSInputAddr() & 0xF) == 0 &&
+            Info->isPSInputAllocated(11))) {
+        CCInfo.AllocateReg(AMDGPU::VGPR0);
+        CCInfo.AllocateReg(AMDGPU::VGPR1);
+        Info->markPSInputAllocated(0);
+        Info->markPSInputEnabled(0);
+      }
+      if (Subtarget->isAmdPalOS()) {
+        // For isAmdPalOS, the user does not enable some bits after compilation
+        // based on run-time states; the register values being generated here are
+        // the final ones set in hardware. Therefore we need to apply the
+        // workaround to PSInputAddr and PSInputEnable together.  (The case where
+        // a bit is set in PSInputAddr but not PSInputEnable is where the
+        // frontend set up an input arg for a particular interpolation mode, but
+        // nothing uses that input arg. Really we should have an earlier pass
+        // that removes such an arg.)
+        unsigned PsInputBits = Info->getPSInputAddr() & Info->getPSInputEnable();
+        if ((PsInputBits & 0x7F) == 0 ||
+            ((PsInputBits & 0xF) == 0 &&
+             (PsInputBits >> 11 & 1)))
+          Info->markPSInputEnabled(
+              countTrailingZeros(Info->getPSInputAddr(), ZB_Undefined));
+      }
     }
 
     assert(!Info->hasDispatchPtr() &&

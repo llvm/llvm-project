@@ -233,6 +233,16 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
   assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
   assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
 
+  // FIXME: This logic should not be necessary anymore, as we now have proper
+  // deduplication. However, without it, we currently run into the assertion
+  // below, which means that we are likely dealing with broken input, i.e. two
+  // non-fragment entries for the same variable at different frame indices.
+  if (FrameIndexExprs.size()) {
+    auto *Expr = FrameIndexExprs.back().Expr;
+    if (!Expr || !Expr->isFragment())
+      return;
+  }
+
   for (const auto &FIE : V.FrameIndexExprs)
     // Ignore duplicate entries.
     if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
@@ -533,13 +543,18 @@ static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
 sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   std::sort(GVEs.begin(), GVEs.end(),
             [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-              if (A.Expr != B.Expr && A.Expr && B.Expr) {
-                auto FragmentA = A.Expr->getFragmentInfo();
-                auto FragmentB = B.Expr->getFragmentInfo();
-                if (FragmentA && FragmentB)
-                  return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
-              }
-              return false;
+              // Sort order: first null exprs, then exprs without fragment
+              // info, then sort by fragment offset in bits.
+              // FIXME: Come up with a more comprehensive comparator so
+              // the sorting isn't non-deterministic, and so the following
+              // std::unique call works correctly.
+              if (!A.Expr || !B.Expr)
+                return !!B.Expr;
+              auto FragmentA = A.Expr->getFragmentInfo();
+              auto FragmentB = B.Expr->getFragmentInfo();
+              if (!FragmentA || !FragmentB)
+                return !!FragmentB;
+              return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
             });
   GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
                          [](DwarfCompileUnit::GlobalExpr A,

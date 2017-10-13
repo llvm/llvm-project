@@ -45,38 +45,42 @@ void JSONOutput::mirrorInput(const Twine &Message) {
   InputMirror->flush();
 }
 
-void Handler::handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) {
-  Output.log("Method ignored.\n");
-  // Return that this method is unsupported.
-  writeMessage(
-      R"({"jsonrpc":"2.0","id":)" + ID +
-      R"(,"error":{"code":-32601,"message":"method not found"}})");
+void RequestContext::reply(const llvm::Twine &Result) {
+  if (ID.empty()) {
+    Out.log("Attempted to reply to a notification!\n");
+    return;
+  }
+  Out.writeMessage(llvm::Twine(R"({"jsonrpc":"2.0","id":)") + ID +
+                   R"(,"result":)" + Result + "}");
 }
 
-void Handler::handleNotification(llvm::yaml::MappingNode *Params) {
-  Output.log("Notification ignored.\n");
+void RequestContext::replyError(int code, const llvm::StringRef &Message) {
+  Out.log("Error " + llvm::Twine(code) + ": " + Message + "\n");
+  if (!ID.empty()) {
+    Out.writeMessage(llvm::Twine(R"({"jsonrpc":"2.0","id":)") + ID +
+                     R"(,"error":{"code":)" + llvm::Twine(code) +
+                     R"(,"message":")" + llvm::yaml::escape(Message) +
+                     R"("}})");
+  }
 }
 
-void JSONRPCDispatcher::registerHandler(StringRef Method,
-                                        std::unique_ptr<Handler> H) {
+void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
   assert(!Handlers.count(Method) && "Handler already registered!");
   Handlers[Method] = std::move(H);
 }
 
 static void
-callHandler(const llvm::StringMap<std::unique_ptr<Handler>> &Handlers,
+callHandler(const llvm::StringMap<JSONRPCDispatcher::Handler> &Handlers,
             llvm::yaml::ScalarNode *Method, llvm::yaml::ScalarNode *Id,
-            llvm::yaml::MappingNode *Params, Handler *UnknownHandler) {
-  llvm::SmallString<10> MethodStorage;
+            llvm::yaml::MappingNode *Params,
+            const JSONRPCDispatcher::Handler &UnknownHandler, JSONOutput &Out) {
+  llvm::SmallString<64> MethodStorage;
   auto I = Handlers.find(Method->getValue(MethodStorage));
-  auto *Handler = I != Handlers.end() ? I->second.get() : UnknownHandler;
-  if (Id)
-    Handler->handleMethod(Params, Id->getRawValue());
-  else
-    Handler->handleNotification(Params);
+  auto &Handler = I != Handlers.end() ? I->second : UnknownHandler;
+  Handler(RequestContext(Out, Id ? Id->getRawValue() : ""), Params);
 }
 
-bool JSONRPCDispatcher::call(StringRef Content) const {
+bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
   llvm::SourceMgr SM;
   llvm::yaml::Stream YAMLStream(Content, SM);
 
@@ -124,7 +128,7 @@ bool JSONRPCDispatcher::call(StringRef Content) const {
       // because it will break clients that put the id after params. A possible
       // fix would be to split the parsing and execution phases.
       Params = dyn_cast<llvm::yaml::MappingNode>(Value);
-      callHandler(Handlers, Method, Id, Params, UnknownHandler.get());
+      callHandler(Handlers, Method, Id, Params, UnknownHandler, Out);
       return true;
     } else {
       return false;
@@ -135,7 +139,7 @@ bool JSONRPCDispatcher::call(StringRef Content) const {
   // leftovers.
   if (!Method)
     return false;
-  callHandler(Handlers, Method, Id, nullptr, UnknownHandler.get());
+  callHandler(Handlers, Method, Id, nullptr, UnknownHandler, Out);
 
   return true;
 }
@@ -215,7 +219,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       Out.log("<-- " + JSONRef + "\n");
 
       // Finally, execute the action for this JSON message.
-      if (!Dispatcher.call(JSONRef))
+      if (!Dispatcher.call(JSONRef, Out))
         Out.log("JSON dispatch failed!\n");
 
       // If we're done, exit the loop.

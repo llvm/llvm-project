@@ -82,7 +82,7 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
@@ -97,7 +97,7 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void SampleRecord::dump() const { print(dbgs(), 0); }
 #endif
 
@@ -150,6 +150,6 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif
