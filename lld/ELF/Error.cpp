@@ -9,7 +9,8 @@
 
 #include "Error.h"
 #include "Config.h"
-#include "Threads.h"
+
+#include "lld/Common/Threads.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"

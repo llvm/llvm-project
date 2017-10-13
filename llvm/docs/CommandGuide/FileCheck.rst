@@ -397,10 +397,11 @@ All FileCheck directives take a pattern to match.
 For most uses of FileCheck, fixed string matching is perfectly sufficient.  For
 some things, a more flexible form of matching is desired.  To support this,
 FileCheck allows you to specify regular expressions in matching strings,
-surrounded by double braces: ``{{yourregex}}``.  Because we want to use fixed
-string matching for a majority of what we do, FileCheck has been designed to
-support mixing and matching fixed string matching with regular expressions.
-This allows you to write things like this:
+surrounded by double braces: ``{{yourregex}}``. FileCheck implements a POSIX
+regular expression matcher; it supports Extended POSIX regular expressions
+(ERE). Because we want to use fixed string matching for a majority of what we
+do, FileCheck has been designed to support mixing and matching fixed string
+matching with regular expressions.  This allows you to write things like this:
 
 .. code-block:: llvm
 
@@ -434,7 +435,7 @@ The first check line matches a regex ``%[a-z]+`` and captures it into the
 variable ``REGISTER``.  The second line verifies that whatever is in
 ``REGISTER`` occurs later in the file after an "``andw``".  :program:`FileCheck`
 variable references are always contained in ``[[ ]]`` pairs, and their names can
-be formed with the regex ``[a-zA-Z][a-zA-Z0-9]*``.  If a colon follows the name,
+be formed with the regex ``[a-zA-Z_][a-zA-Z0-9_]*``.  If a colon follows the name,
 then it is a definition of the variable; otherwise, it is a use.
 
 :program:`FileCheck` variables can be defined multiple times, and uses always

@@ -40,7 +40,6 @@ add_lld_library(lldELF
   Symbols.cpp
   SyntheticSections.cpp
   Target.cpp
-  Threads.cpp
   Thunks.cpp
   Writer.cpp
 

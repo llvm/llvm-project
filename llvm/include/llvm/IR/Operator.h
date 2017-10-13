@@ -61,9 +61,9 @@ public:
   }
 };
 
-/// Utility class for integer arithmetic operators which may exhibit overflow -
-/// Add, Sub, and Mul. It does not include SDiv, despite that operator having
-/// the potential for overflow.
+/// Utility class for integer operators which may exhibit overflow - Add, Sub,
+/// Mul, and Shl. It does not include SDiv, despite that operator having the
+/// potential for overflow.
 class OverflowingBinaryOperator : public Operator {
 public:
   enum {
@@ -456,8 +456,6 @@ public:
       if (ConstantInt *C = dyn_cast<ConstantInt>(I))
         if (C->isZero())
           continue;
-      if (isa<ConstantAggregateZero>(I))
-        continue;
       return false;
     }
     return true;

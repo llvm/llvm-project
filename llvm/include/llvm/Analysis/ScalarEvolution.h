@@ -29,6 +29,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1262,6 +1263,10 @@ private:
 
     /// Invalidate this result and free associated memory.
     void clear();
+
+    /// Insert all loops referred to by this BackedgeTakenCount into \p Result.
+    void findUsedLoops(ScalarEvolution &SE,
+                       SmallPtrSetImpl<const Loop *> &Result) const;
   };
 
   /// Cache the backedge-taken count of the loops for this function as they
@@ -1741,6 +1746,12 @@ private:
   const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride,
                              bool Equality);
 
+  // Compute the maximum backedge count based on the range of values
+  // permitted by Start, End, and Stride.
+  const SCEV *computeMaxBECount(const SCEV *Start, const SCEV *Stride,
+                                const SCEV *End, unsigned BitWidth,
+                                bool IsSigned);
+
   /// Verify if an linear IV with positive stride can overflow when in a
   /// less-than comparison, knowing the invariant term of the comparison,
   /// the stride and the knowledge of NSW/NUW flags on the recurrence.
@@ -1761,9 +1772,23 @@ private:
   const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                                  SCEV::NoWrapFlags Flags);
 
+  /// Find all of the loops transitively used in \p S, and update \c LoopUsers
+  /// accordingly.
+  void addToLoopUseLists(const SCEV *S);
+  void addToLoopUseLists(const BackedgeTakenInfo &BTI, const Loop *L);
+
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
+
+  /// This maps loops to a list of entities that (transitively) use said loop.
+  /// A SCEV expression in the vector corresponding to a loop denotes that the
+  /// SCEV expression transitively uses said loop.  A loop (LA) in the vector
+  /// corresponding to another loop (LB) denotes that LB is used in one of the
+  /// cached trip counts for LA.
+  DenseMap<const Loop *,
+           SmallVector<PointerUnion<const SCEV *, const Loop *>, 4>>
+      LoopUsers;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.

@@ -1010,20 +1010,28 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Expr == R_SIZE)
       Addend += Body.getSize<ELFT>();
 
+    // If the produced value is a constant, we just remember to write it
+    // when outputting this section. We also have to do it if the format
+    // uses Elf_Rel, since in that case the written value is the addend.
+    if (IsConstant) {
+      Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+      continue;
+    }
+
     // If the output being produced is position independent, the final value
     // is still not known. In that case we still need some help from the
     // dynamic linker. We can however do better than just copying the incoming
     // relocation. We can process some of it and and just ask the dynamic
     // linker to add the load address.
-    if (!IsConstant)
+    if (Config->IsRela) {
       In<ELFT>::RelaDyn->addReloc(
           {Target->RelativeRel, &Sec, Offset, true, &Body, Addend});
-
-    // If the produced value is a constant, we just remember to write it
-    // when outputting this section. We also have to do it if the format
-    // uses Elf_Rel, since in that case the written value is the addend.
-    if (IsConstant || !RelTy::IsRela)
+    } else {
+      // In REL, addends are stored to the target section.
+      In<ELFT>::RelaDyn->addReloc(
+          {Target->RelativeRel, &Sec, Offset, true, &Body, 0});
       Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    }
   }
 }
 

@@ -458,7 +458,7 @@ TargetLowering::SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
   // If Old has more than one use then it must be Op, because the
   // AssumeSingleUse flag is not propogated to recursive calls of
   // SimplifyDemanded bits, so the only node with multiple use that
-  // it will attempt to combine will be opt.
+  // it will attempt to combine will be Op.
   assert(TLO.Old == Op);
 
   SmallVector <SDValue, 4> NewOps;
@@ -986,15 +986,13 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     break;
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    unsigned ExVTBits = ExVT.getScalarSizeInBits();
 
-    APInt MsbMask = APInt::getHighBitsSet(BitWidth, 1);
     // If we only care about the highest bit, don't bother shifting right.
-    if (MsbMask == NewMask) {
-      unsigned ShAmt = ExVT.getScalarSizeInBits();
+    if (NewMask.isSignMask()) {
       SDValue InOp = Op.getOperand(0);
-      unsigned VTBits = Op->getValueType(0).getScalarSizeInBits();
       bool AlreadySignExtended =
-        TLO.DAG.ComputeNumSignBits(InOp) >= VTBits-ShAmt+1;
+        TLO.DAG.ComputeNumSignBits(InOp) >= BitWidth-ExVTBits+1;
       // However if the input is already sign extended we expect the sign
       // extension to be dropped altogether later and do not simplify.
       if (!AlreadySignExtended) {
@@ -1004,7 +1002,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         if (TLO.LegalTypes() && !ShiftAmtTy.isVector())
           ShiftAmtTy = getShiftAmountTy(ShiftAmtTy, DL);
 
-        SDValue ShiftAmt = TLO.DAG.getConstant(BitWidth - ShAmt, dl,
+        SDValue ShiftAmt = TLO.DAG.getConstant(BitWidth - ExVTBits, dl,
                                                ShiftAmtTy);
         return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SHL, dl,
                                                  Op.getValueType(), InOp,
@@ -1012,26 +1010,15 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       }
     }
 
-    // Sign extension.  Compute the demanded bits in the result that are not
-    // present in the input.
-    APInt NewBits =
-      APInt::getHighBitsSet(BitWidth,
-                            BitWidth - ExVT.getScalarSizeInBits());
-
     // If none of the extended bits are demanded, eliminate the sextinreg.
-    if ((NewBits & NewMask) == 0)
+    if (NewMask.getActiveBits() <= ExVTBits)
       return TLO.CombineTo(Op, Op.getOperand(0));
 
-    APInt InSignBit =
-      APInt::getSignMask(ExVT.getScalarSizeInBits()).zext(BitWidth);
-    APInt InputDemandedBits =
-      APInt::getLowBitsSet(BitWidth,
-                           ExVT.getScalarSizeInBits()) &
-      NewMask;
+    APInt InputDemandedBits = NewMask.getLoBits(ExVTBits);
 
     // Since the sign extended bits are demanded, we know that the sign
     // bit is demanded.
-    InputDemandedBits |= InSignBit;
+    InputDemandedBits.setBit(ExVTBits - 1);
 
     if (SimplifyDemandedBits(Op.getOperand(0), InputDemandedBits,
                              Known, TLO, Depth+1))
@@ -1042,16 +1029,17 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // top bits of the result.
 
     // If the input sign bit is known zero, convert this into a zero extension.
-    if (Known.Zero.intersects(InSignBit))
+    if (Known.Zero[ExVTBits - 1])
       return TLO.CombineTo(Op, TLO.DAG.getZeroExtendInReg(
                                    Op.getOperand(0), dl, ExVT.getScalarType()));
 
-    if (Known.One.intersects(InSignBit)) {    // Input sign bit known set
-      Known.One |= NewBits;
-      Known.Zero &= ~NewBits;
+    APInt Mask = APInt::getLowBitsSet(BitWidth, ExVTBits);
+    if (Known.One[ExVTBits - 1]) {    // Input sign bit known set
+      Known.One.setBitsFrom(ExVTBits);
+      Known.Zero &= Mask;
     } else {                       // Input sign bit unknown
-      Known.Zero &= ~NewBits;
-      Known.One &= ~NewBits;
+      Known.Zero &= Mask;
+      Known.One &= Mask;
     }
     break;
   }

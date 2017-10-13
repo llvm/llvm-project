@@ -203,6 +203,10 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     /// Knights Landing processor.
     CK_KNL,
 
+    /// \name Knights Mill
+    /// Knights Mill processor.
+    CK_KNM,
+
     /// \name Lakemont
     /// Lakemont microarchitecture based processors.
     CK_Lakemont,
@@ -321,6 +325,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     case CK_SkylakeServer:
     case CK_Cannonlake:
     case CK_KNL:
+    case CK_KNM:
     case CK_K8:
     case CK_K8SSE3:
     case CK_AMDFAM10:

@@ -25,12 +25,13 @@ namespace llvm {
 namespace dsymutil {
 
 struct LinkOptions {
-  bool Verbose;  ///< Verbosity
-  bool NoOutput; ///< Skip emitting output
-  bool NoODR;    ///< Do not unique types according to ODR
+  bool Verbose;            ///< Verbosity
+  bool NoOutput;           ///< Skip emitting output
+  bool NoODR;              ///< Do not unique types according to ODR
+  bool NoTimestamp;        ///< Do not check swiftmodule timestamp
   std::string PrependPath; ///< -oso-prepend-path
 
-  LinkOptions() : Verbose(false), NoOutput(false) {}
+  LinkOptions() : Verbose(false), NoOutput(false), NoTimestamp(false) {}
 };
 
 /// \brief Extract the DebugMaps from the given file.

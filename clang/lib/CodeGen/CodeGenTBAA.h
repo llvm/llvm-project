@@ -47,6 +47,12 @@ struct TBAAAccessInfo {
     : TBAAAccessInfo(/* AccessType= */ nullptr)
   {}
 
+  bool operator==(const TBAAAccessInfo &Other) const {
+    return BaseType == Other.BaseType &&
+           AccessType == Other.AccessType &&
+           Offset == Other.Offset;
+  }
+
   /// BaseType - The base/leading access type. May be null if this access
   /// descriptor represents an access that is not considered to be an access
   /// to an aggregate or union member.
@@ -136,6 +142,11 @@ public:
   /// getMayAliasAccessInfo - Get TBAA information that represents may-alias
   /// accesses.
   TBAAAccessInfo getMayAliasAccessInfo();
+
+  /// mergeTBAAInfoForCast - Get merged TBAA information for the purpose of
+  /// type casts.
+  TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
+                                      TBAAAccessInfo TargetInfo);
 };
 
 }  // end namespace CodeGen
