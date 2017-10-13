@@ -5,6 +5,7 @@ endif()
 add_lld_library(lldCommon
   Reproduce.cpp
   TargetOptionsCommandFlags.cpp
+  Threads.cpp
   Version.cpp
 
   ADDITIONAL_HEADER_DIRS

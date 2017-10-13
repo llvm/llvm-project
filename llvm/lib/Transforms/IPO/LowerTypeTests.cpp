@@ -259,6 +259,7 @@ class LowerTypeTestsModule {
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
   PointerType *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
+  ArrayType *Int8Arr0Ty = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
   IntegerType *Int32Ty = Type::getInt32Ty(M.getContext());
   PointerType *Int32PtrTy = PointerType::getUnqual(Int32Ty);
   IntegerType *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -803,10 +804,13 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   TIL.TheKind = TTRes.TheKind;
 
   auto ImportGlobal = [&](StringRef Name) {
-    Constant *C =
-        M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(), Int8Ty);
+    // Give the global a type of length 0 so that it is not assumed not to alias
+    // with any other global.
+    Constant *C = M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(),
+                                      Int8Arr0Ty);
     if (auto *GV = dyn_cast<GlobalVariable>(C))
       GV->setVisibility(GlobalValue::HiddenVisibility);
+    C = ConstantExpr::getBitCast(C, Int8PtrTy);
     return C;
   };
 

@@ -56,19 +56,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_THREADS_H
-#define LLD_ELF_THREADS_H
-
-#include "Config.h"
+#ifndef LLD_COMMON_THREADS_H
+#define LLD_COMMON_THREADS_H
 
 #include "llvm/Support/Parallel.h"
 #include <functional>
 
 namespace lld {
-namespace elf {
+
+extern bool ThreadsEnabled;
 
 template <typename R, class FuncTy> void parallelForEach(R &&Range, FuncTy Fn) {
-  if (Config->Threads)
+  if (ThreadsEnabled)
     for_each(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
   else
     for_each(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
@@ -76,7 +75,7 @@ template <typename R, class FuncTy> void parallelForEach(R &&Range, FuncTy Fn) {
 
 inline void parallelForEachN(size_t Begin, size_t End,
                              std::function<void(size_t)> Fn) {
-  if (Config->Threads)
+  if (ThreadsEnabled)
     for_each_n(llvm::parallel::par, Begin, End, Fn);
   else
     for_each_n(llvm::parallel::seq, Begin, End, Fn);
@@ -85,7 +84,6 @@ inline void parallelForEachN(size_t Begin, size_t End,
 void runBackground(std::function<void()> Fn);
 void waitForBackgroundThreads();
 
-} // namespace elf
 } // namespace lld
 
 #endif

@@ -1913,6 +1913,9 @@ private:
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
 
+  void emitImmPredicates(raw_ostream &OS,
+                         std::function<bool(const Record *R)> Filter);
+
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
@@ -2559,6 +2562,38 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   return std::move(M);
 }
 
+// Emit imm predicate table and an enum to reference them with.
+// The 'Predicate_' part of the name is redundant but eliminating it is more
+// trouble than it's worth.
+void GlobalISelEmitter::emitImmPredicates(
+    raw_ostream &OS, std::function<bool(const Record *R)> Filter) {
+  std::vector<const Record *> MatchedRecords;
+  const auto &Defs = RK.getAllDerivedDefinitions("PatFrag");
+  std::copy_if(Defs.begin(), Defs.end(), std::back_inserter(MatchedRecords),
+               [&](Record *Record) {
+                 return !Record->getValueAsString("ImmediateCode").empty() &&
+                        Filter(Record);
+               });
+
+  OS << "// PatFrag predicates.\n"
+     << "enum {\n";
+  StringRef EnumeratorSeparator = " = GIPFP_Invalid + 1,\n";
+  for (const auto *Record : MatchedRecords) {
+    OS << "  GIPFP_Predicate_" << Record->getName() << EnumeratorSeparator;
+    EnumeratorSeparator = ",\n";
+  }
+  OS << "};\n";
+  for (const auto *Record : MatchedRecords)
+    OS << "  static bool Predicate_" << Record->getName() << "(int64_t Imm) {"
+       << Record->getValueAsString("ImmediateCode") << "  }\n";
+  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = "
+        "{\n"
+     << "  nullptr,\n";
+  for (const auto *Record : MatchedRecords)
+    OS << "  Predicate_" << Record->getName() << ",\n";
+  OS << "};\n";
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   // Track the GINodeEquiv definitions.
   gatherNodeEquivs();
@@ -2742,32 +2777,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "};\n"
      << "// See constructor for table contents\n\n";
 
-  // Emit imm predicate table and an enum to reference them with.
-  // The 'Predicate_' part of the name is redundant but eliminating it is more
-  // trouble than it's worth.
-  {
-    OS << "// PatFrag predicates.\n"
-       << "enum {\n";
-    StringRef EnumeratorSeparator = " = GIPFP_Invalid + 1,\n";
-    for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag")) {
-      if (!Record->getValueAsString("ImmediateCode").empty()) {
-        OS << "  GIPFP_Predicate_" << Record->getName() << EnumeratorSeparator;
-        EnumeratorSeparator = ",\n";
-      }
-    }
-    OS << "};\n";
-  }
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  static bool Predicate_" << Record->getName() << "(int64_t Imm) {"
-         << Record->getValueAsString("ImmediateCode") << "  }\n";
-  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = "
-        "{\n"
-     << "  nullptr,\n";
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  Predicate_" << Record->getName() << ",\n";
-  OS << "};\n";
+  emitImmPredicates(OS, [](const Record *R) {
+    bool Unset;
+    return !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+           !R->getValueAsBit("IsAPInt");
+  });
 
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"

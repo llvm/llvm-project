@@ -66,12 +66,6 @@ class BinaryHolder {
   MapArchiveAndGetMemberBuffers(StringRef Filename,
                                 sys::TimePoint<std::chrono::seconds> Timestamp);
 
-  void changeBackingMemoryBuffer(std::unique_ptr<MemoryBuffer> &&MemBuf);
-  ErrorOr<const object::ObjectFile &> getObjfileForArch(const Triple &T);
-
-public:
-  BinaryHolder(bool Verbose) : Verbose(Verbose) {}
-
   /// Return the MemoryBufferRef that holds the memory mapping for the
   /// given \p Filename. This function will try to parse archive
   /// member specifications of the form /path/to/archive.a(member.o).
@@ -84,6 +78,12 @@ public:
   ErrorOr<std::vector<MemoryBufferRef>>
   GetMemoryBuffersForFile(StringRef Filename,
                           sys::TimePoint<std::chrono::seconds> Timestamp);
+
+  void changeBackingMemoryBuffer(std::unique_ptr<MemoryBuffer> &&MemBuf);
+  ErrorOr<const object::ObjectFile &> getObjfileForArch(const Triple &T);
+
+public:
+  BinaryHolder(bool Verbose) : Verbose(Verbose) {}
 
   /// Get the ObjectFiles designated by the \p Filename. This
   /// might be an archive member specification of the form

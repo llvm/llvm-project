@@ -193,13 +193,6 @@ public:
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) const;
 
-  /// \brief Estimate the cost of a GEP operation when lowered.
-  ///
-  /// This user-based overload adds the ability to check if the GEP can be
-  /// folded into its users.
-  int getGEPCost(const GEPOperator *GEP,
-                 ArrayRef<const Value *> Operands) const;
-
   /// \brief Estimate the cost of a EXT operation when lowered.
   ///
   /// The contract for this function is the same as \c getOperationCost except
@@ -258,9 +251,9 @@ public:
   /// \brief Estimate the cost of a given IR user when lowered.
   ///
   /// This can estimate the cost of either a ConstantExpr or Instruction when
-  /// lowered. It has two primary advantages over the \c getOperationCost above,
-  /// and one significant disadvantage: it can only be used when the IR
-  /// construct has already been formed.
+  /// lowered. It has two primary advantages over the \c getOperationCost and
+  /// \c getGEPCost above, and one significant disadvantage: it can only be
+  /// used when the IR construct has already been formed.
   ///
   /// The advantages are that it can inspect the SSA use graph to reason more
   /// accurately about the cost. For example, all-constant-GEPs can often be
@@ -939,8 +932,6 @@ public:
   virtual int getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) = 0;
   virtual int getGEPCost(Type *PointeeType, const Value *Ptr,
                          ArrayRef<const Value *> Operands) = 0;
-  virtual int getGEPCost(const GEPOperator *GEP,
-                         ArrayRef<const Value *> Operands) = 0;
   virtual int getExtCost(const Instruction *I, const Value *Src) = 0;
   virtual int getCallCost(FunctionType *FTy, int NumArgs) = 0;
   virtual int getCallCost(const Function *F, int NumArgs) = 0;
@@ -1121,10 +1112,6 @@ public:
   int getGEPCost(Type *PointeeType, const Value *Ptr,
                  ArrayRef<const Value *> Operands) override {
     return Impl.getGEPCost(PointeeType, Ptr, Operands);
-  }
-  int getGEPCost(const GEPOperator *GEP,
-                 ArrayRef<const Value *> Operands) override {
-    return Impl.getGEPCost(GEP, Operands);
   }
   int getExtCost(const Instruction *I, const Value *Src) override {
     return Impl.getExtCost(I, Src);

@@ -222,7 +222,7 @@ kernel void foo(global int *buf)
 
 kernel void bar(global int *buf)
 {
-  ndrange_t n;
+  __private ndrange_t n;
   buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){});
   buf[0] = get_kernel_sub_group_count_for_ndrange(0, ^(){}); // expected-error{{illegal call to 'get_kernel_sub_group_count_for_ndrange', expected 'ndrange_t' argument type}}
   buf[0] = get_kernel_sub_group_count_for_ndrange(n, 1); // expected-error{{illegal call to 'get_kernel_sub_group_count_for_ndrange', expected block argument type}}

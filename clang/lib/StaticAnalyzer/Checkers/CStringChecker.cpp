@@ -1050,31 +1050,22 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
     // If this is mempcpy, get the byte after the last byte copied and
     // bind the expr.
     if (IsMempcpy) {
-      loc::MemRegionVal destRegVal = destVal.castAs<loc::MemRegionVal>();
-
-      // Get the length to copy.
-      if (Optional<NonLoc> lenValNonLoc = sizeVal.getAs<NonLoc>()) {
-        // Get the byte after the last byte copied.
-        SValBuilder &SvalBuilder = C.getSValBuilder();
-        ASTContext &Ctx = SvalBuilder.getContext();
-        QualType CharPtrTy = Ctx.getPointerType(Ctx.CharTy);
-        loc::MemRegionVal DestRegCharVal = SvalBuilder.evalCast(destRegVal,
-          CharPtrTy, Dest->getType()).castAs<loc::MemRegionVal>();
-        SVal lastElement = C.getSValBuilder().evalBinOpLN(state, BO_Add,
-                                                          DestRegCharVal,
-                                                          *lenValNonLoc,
-                                                          Dest->getType());
-
-        // The byte after the last byte copied is the return value.
-        state = state->BindExpr(CE, LCtx, lastElement);
-      } else {
-        // If we don't know how much we copied, we can at least
-        // conjure a return value for later.
-        SVal result = C.getSValBuilder().conjureSymbolVal(nullptr, CE, LCtx,
+      // Get the byte after the last byte copied.
+      SValBuilder &SvalBuilder = C.getSValBuilder();
+      ASTContext &Ctx = SvalBuilder.getContext();
+      QualType CharPtrTy = Ctx.getPointerType(Ctx.CharTy);
+      SVal DestRegCharVal =
+          SvalBuilder.evalCast(destVal, CharPtrTy, Dest->getType());
+      SVal lastElement = C.getSValBuilder().evalBinOp(
+          state, BO_Add, DestRegCharVal, sizeVal, Dest->getType());
+      // If we don't know how much we copied, we can at least
+      // conjure a return value for later.
+      if (lastElement.isUnknown())
+        lastElement = C.getSValBuilder().conjureSymbolVal(nullptr, CE, LCtx,
                                                           C.blockCount());
-        state = state->BindExpr(CE, LCtx, result);
-      }
 
+      // The byte after the last byte copied is the return value.
+      state = state->BindExpr(CE, LCtx, lastElement);
     } else {
       // All other copies return the destination buffer.
       // (Well, bcopy() has a void return type, but this won't hurt.)

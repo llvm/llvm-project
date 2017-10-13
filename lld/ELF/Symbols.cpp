@@ -121,15 +121,23 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
 
 SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsPltAddr(false), IsLocal(IsLocal),
+    : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
       IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
       Name(Name) {}
 
+// Returns true if this is a weak undefined symbol.
 bool SymbolBody::isUndefWeak() const {
-  if (isLocal())
-    return false;
-  return symbol()->isWeak() && (isUndefined() || isLazy());
+  // A note on isLazy() in the following expression: If you add a weak
+  // undefined symbol and then a lazy symbol to the symbol table, the
+  // combined result is a lazy weak symbol. isLazy is for that situation.
+  //
+  // Weak undefined symbols shouldn't fetch archive members (for
+  // compatibility with other linkers), but we still want to memorize
+  // that there are lazy symbols, because strong undefined symbols
+  // could be added later which triggers archive member fetching.
+  // Thus, the weak lazy symbol is a valid concept in lld.
+  return !isLocal() && symbol()->isWeak() && (isUndefined() || isLazy());
 }
 
 InputFile *SymbolBody::getFile() const {

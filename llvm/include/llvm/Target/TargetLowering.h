@@ -1993,7 +1993,8 @@ public:
   bool isExtFree(const Instruction *I) const {
     switch (I->getOpcode()) {
     case Instruction::FPExt:
-      if (isFPExtFree(EVT::getEVT(I->getType())))
+      if (isFPExtFree(EVT::getEVT(I->getType()),
+                      EVT::getEVT(I->getOperand(0)->getType())))
         return true;
       break;
     case Instruction::ZExt:
@@ -2120,9 +2121,19 @@ public:
   /// Return true if an fpext operation is free (for instance, because
   /// single-precision floating-point numbers are implicitly extended to
   /// double-precision).
-  virtual bool isFPExtFree(EVT VT) const {
-    assert(VT.isFloatingPoint());
+  virtual bool isFPExtFree(EVT DestVT, EVT SrcVT) const {
+    assert(SrcVT.isFloatingPoint() && DestVT.isFloatingPoint() &&
+           "invalid fpext types");
     return false;
+  }
+
+  /// Return true if an fpext operation input to an \p Opcode operation is free
+  /// (for instance, because half-precision floating-point numbers are
+  /// implicitly extended to float-precision) for an FMA instruction.
+  virtual bool isFPExtFoldable(unsigned Opcode, EVT DestVT, EVT SrcVT) const {
+    assert(DestVT.isFloatingPoint() && SrcVT.isFloatingPoint() &&
+           "invalid fpext types");
+    return isFPExtFree(DestVT, SrcVT);
   }
 
   /// Return true if folding a vector load into ExtVal (a sign, zero, or any

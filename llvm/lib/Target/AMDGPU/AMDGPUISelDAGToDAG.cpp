@@ -1982,14 +1982,30 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
     assert(Src.getValueType() == MVT::f16);
     Src = stripBitcast(Src);
 
+    // Be careful about folding modifiers if we already have an abs. fneg is
+    // applied last, so we don't want to apply an earlier fneg.
+    if ((Mods & SISrcMods::ABS) == 0) {
+      unsigned ModsTmp;
+      SelectVOP3ModsImpl(Src, Src, ModsTmp);
+
+      if ((ModsTmp & SISrcMods::NEG) != 0)
+        Mods ^= SISrcMods::NEG;
+
+      if ((ModsTmp & SISrcMods::ABS) != 0)
+        Mods |= SISrcMods::ABS;
+    }
+
     // op_sel/op_sel_hi decide the source type and source.
     // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
     // If the sources's op_sel is set, it picks the high half of the source
     // register.
 
     Mods |= SISrcMods::OP_SEL_1;
-    if (isExtractHiElt(Src, Src))
+    if (isExtractHiElt(Src, Src)) {
       Mods |= SISrcMods::OP_SEL_0;
+
+      // TODO: Should we try to look for neg/abs here?
+    }
 
     return true;
   }

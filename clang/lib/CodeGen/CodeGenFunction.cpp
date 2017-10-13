@@ -120,12 +120,17 @@ CodeGenFunction::~CodeGenFunction() {
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,
                                                     LValueBaseInfo *BaseInfo) {
   return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo,
-                                 /*forPointee*/ true);
+                                 /* TBAAInfo= */ nullptr,
+                                 /* forPointeeType= */ true);
 }
 
 CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
                                                    LValueBaseInfo *BaseInfo,
+                                                   TBAAAccessInfo *TBAAInfo,
                                                    bool forPointeeType) {
+  if (TBAAInfo)
+    *TBAAInfo = CGM.getTBAAAccessInfo(T);
+
   // Honor alignment typedef attributes even on incomplete types.
   // We also honor them straight for C++ class types, even as pointees;
   // there's an expressivity gap here.
@@ -169,9 +174,10 @@ CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
 
 LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
   LValueBaseInfo BaseInfo;
-  CharUnits Alignment = getNaturalTypeAlignment(T, &BaseInfo);
+  TBAAAccessInfo TBAAInfo;
+  CharUnits Alignment = getNaturalTypeAlignment(T, &BaseInfo, &TBAAInfo);
   return LValue::MakeAddr(Address(V, Alignment), T, getContext(), BaseInfo,
-                          CGM.getTBAAAccessInfo(T));
+                          TBAAInfo);
 }
 
 /// Given a value of type T* that may not be to a complete object,
@@ -179,9 +185,10 @@ LValue CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T) {
 LValue
 CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T) {
   LValueBaseInfo BaseInfo;
-  CharUnits Align = getNaturalTypeAlignment(T, &BaseInfo, /*pointee*/ true);
-  return MakeAddrLValue(Address(V, Align), T, BaseInfo,
-                        CGM.getTBAAAccessInfo(T));
+  TBAAAccessInfo TBAAInfo;
+  CharUnits Align = getNaturalTypeAlignment(T, &BaseInfo, &TBAAInfo,
+                                            /* forPointeeType= */ true);
+  return MakeAddrLValue(Address(V, Align), T, BaseInfo, TBAAInfo);
 }
 
 

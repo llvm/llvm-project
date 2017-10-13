@@ -615,8 +615,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     // lld and .tbss is not referenced, it gets reclaimed and we don't
     // create a TLS program header. Therefore, we resolve this
     // statically to zero.
-    if (Body.isTls() && (Body.isLazy() || Body.isUndefined()) &&
-        Body.symbol()->isWeak())
+    if (Body.isTls() && Body.isUndefWeak())
       return 0;
     if (Target->TcbSize)
       return Body.getVA(A) + alignTo(Target->TcbSize, Out::TlsPhdr->p_align);

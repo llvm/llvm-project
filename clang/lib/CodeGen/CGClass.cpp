@@ -129,14 +129,16 @@ Address
 CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                                  llvm::Value *memberPtr,
                                       const MemberPointerType *memberPtrType,
-                                                 LValueBaseInfo *BaseInfo) {
+                                                 LValueBaseInfo *BaseInfo,
+                                                 TBAAAccessInfo *TBAAInfo) {
   // Ask the ABI to compute the actual address.
   llvm::Value *ptr =
     CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
                                                  memberPtr, memberPtrType);
 
   QualType memberType = memberPtrType->getPointeeType();
-  CharUnits memberAlign = getNaturalTypeAlignment(memberType, BaseInfo);
+  CharUnits memberAlign = getNaturalTypeAlignment(memberType, BaseInfo,
+                                                  TBAAInfo);
   memberAlign =
     CGM.getDynamicOffsetAlignment(base.getAlignment(),
                             memberPtrType->getClass()->getAsCXXRecordDecl(),
@@ -1413,10 +1415,11 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (DtorType == Dtor_Deleting) {
+    RunCleanupsScope DtorEpilogue(*this);
     EnterDtorCleanups(Dtor, Dtor_Deleting);
-    EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
-                          /*Delegating=*/false, LoadCXXThisAddress());
-    PopCleanupBlock();
+    if (HaveInsertPoint())
+      EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
+                            /*Delegating=*/false, LoadCXXThisAddress());
     return;
   }
 
@@ -1512,6 +1515,13 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
 }
 
 namespace {
+  llvm::Value *LoadThisForDtorDelete(CodeGenFunction &CGF,
+                                     const CXXDestructorDecl *DD) {
+    if (Expr *ThisArg = DD->getOperatorDeleteThisArg())
+      return CGF.EmitScalarExpr(ThisArg);
+    return CGF.LoadCXXThis();
+  }
+
   /// Call the operator delete associated with the current destructor.
   struct CallDtorDelete final : EHScopeStack::Cleanup {
     CallDtorDelete() {}
@@ -1519,10 +1529,37 @@ namespace {
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
       const CXXRecordDecl *ClassDecl = Dtor->getParent();
-      CGF.EmitDeleteCall(Dtor->getOperatorDelete(), CGF.LoadCXXThis(),
+      CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
+                         LoadThisForDtorDelete(CGF, Dtor),
                          CGF.getContext().getTagDeclType(ClassDecl));
     }
   };
+
+  void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
+                                     llvm::Value *ShouldDeleteCondition,
+                                     bool ReturnAfterDelete) {
+    llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
+    llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
+    llvm::Value *ShouldCallDelete
+      = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
+    CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
+
+    CGF.EmitBlock(callDeleteBB);
+    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+    const CXXRecordDecl *ClassDecl = Dtor->getParent();
+    CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
+                       LoadThisForDtorDelete(CGF, Dtor),
+                       CGF.getContext().getTagDeclType(ClassDecl));
+    assert(Dtor->getOperatorDelete()->isDestroyingOperatorDelete() ==
+               ReturnAfterDelete &&
+           "unexpected value for ReturnAfterDelete");
+    if (ReturnAfterDelete)
+      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+    else
+      CGF.Builder.CreateBr(continueBB);
+
+    CGF.EmitBlock(continueBB);
+  }
 
   struct CallDtorDeleteConditional final : EHScopeStack::Cleanup {
     llvm::Value *ShouldDeleteCondition;
@@ -1534,20 +1571,8 @@ namespace {
     }
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
-      llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
-      llvm::Value *ShouldCallDelete
-        = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
-      CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
-
-      CGF.EmitBlock(callDeleteBB);
-      const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
-      const CXXRecordDecl *ClassDecl = Dtor->getParent();
-      CGF.EmitDeleteCall(Dtor->getOperatorDelete(), CGF.LoadCXXThis(),
-                         CGF.getContext().getTagDeclType(ClassDecl));
-      CGF.Builder.CreateBr(continueBB);
-
-      CGF.EmitBlock(continueBB);
+      EmitConditionalDtorDeleteCall(CGF, ShouldDeleteCondition,
+                                    /*ReturnAfterDelete*/false);
     }
   };
 
@@ -1706,6 +1731,9 @@ namespace {
 /// \brief Emit all code that comes at the end of class's
 /// destructor. This is to call destructors on members and base classes
 /// in reverse order of their construction.
+///
+/// For a deleting destructor, this also handles the case where a destroying
+/// operator delete completely overrides the definition.
 void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
                                         CXXDtorType DtorType) {
   assert((!DD->isTrivial() || DD->hasAttr<DLLExportAttr>()) &&
@@ -1718,11 +1746,23 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
            "operator delete missing - EnterDtorCleanups");
     if (CXXStructorImplicitParamValue) {
       // If there is an implicit param to the deleting dtor, it's a boolean
-      // telling whether we should call delete at the end of the dtor.
-      EHStack.pushCleanup<CallDtorDeleteConditional>(
-          NormalAndEHCleanup, CXXStructorImplicitParamValue);
+      // telling whether this is a deleting destructor.
+      if (DD->getOperatorDelete()->isDestroyingOperatorDelete())
+        EmitConditionalDtorDeleteCall(*this, CXXStructorImplicitParamValue,
+                                      /*ReturnAfterDelete*/true);
+      else
+        EHStack.pushCleanup<CallDtorDeleteConditional>(
+            NormalAndEHCleanup, CXXStructorImplicitParamValue);
     } else {
-      EHStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
+      if (DD->getOperatorDelete()->isDestroyingOperatorDelete()) {
+        const CXXRecordDecl *ClassDecl = DD->getParent();
+        EmitDeleteCall(DD->getOperatorDelete(),
+                       LoadThisForDtorDelete(*this, DD),
+                       getContext().getTagDeclType(ClassDecl));
+        EmitBranchThroughCleanup(ReturnBlock);
+      } else {
+        EHStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
+      }
     }
     return;
   }

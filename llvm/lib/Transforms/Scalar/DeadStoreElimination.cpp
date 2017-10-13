@@ -16,32 +16,55 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstddef>
+#include <iterator>
 #include <map>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dse"
@@ -62,12 +85,11 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
   cl::init(true), cl::Hidden,
   cl::desc("Enable partial store merging in DSE"));
 
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
-typedef std::map<int64_t, int64_t> OverlapIntervalsTy;
-typedef DenseMap<Instruction *, OverlapIntervalsTy> InstOverlapIntervalsTy;
+using OverlapIntervalsTy = std::map<int64_t, int64_t>;
+using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
 
 /// Delete this instruction.  Before we do, go through and zero out all the
 /// operands of this instruction.  If any of them become dead, delete them and
@@ -216,7 +238,6 @@ static bool isRemovable(Instruction *I) {
     case Intrinsic::init_trampoline:
       // Always safe to remove init_trampoline.
       return true;
-
     case Intrinsic::memset:
     case Intrinsic::memmove:
     case Intrinsic::memcpy:
@@ -230,7 +251,6 @@ static bool isRemovable(Instruction *I) {
 
   return false;
 }
-
 
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
@@ -294,6 +314,7 @@ static uint64_t getPointerSize(const Value *V, const DataLayout &DL,
 }
 
 namespace {
+
 enum OverwriteResult {
   OW_Begin,
   OW_Complete,
@@ -301,7 +322,8 @@ enum OverwriteResult {
   OW_PartialEarlierWithFullLater,
   OW_Unknown
 };
-}
+
+} // end anonymous namespace
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely
 /// overwrites a store to the 'Earlier' location, 'OW_End' if the end of the
@@ -868,7 +890,7 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
   if (!IsOverwriteEnd)
     LaterOffset = int64_t(LaterOffset + LaterSize);
 
-  if (!(llvm::isPowerOf2_64(LaterOffset) && EarlierWriteAlign <= LaterOffset) &&
+  if (!(isPowerOf2_64(LaterOffset) && EarlierWriteAlign <= LaterOffset) &&
       !((EarlierWriteAlign != 0) && LaterOffset % EarlierWriteAlign == 0))
     return false;
 
@@ -1286,9 +1308,12 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 namespace {
+
 /// A legacy pass for the legacy pass manager that wraps \c DSEPass.
 class DSELegacyPass : public FunctionPass {
 public:
+  static char ID; // Pass identification, replacement for typeid
+
   DSELegacyPass() : FunctionPass(ID) {
     initializeDSELegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -1317,12 +1342,12 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<MemoryDependenceWrapperPass>();
   }
-
-  static char ID; // Pass identification, replacement for typeid
 };
+
 } // end anonymous namespace
 
 char DSELegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(DSELegacyPass, "dse", "Dead Store Elimination", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

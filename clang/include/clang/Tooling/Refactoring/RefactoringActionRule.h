@@ -16,6 +16,7 @@
 namespace clang {
 namespace tooling {
 
+class RefactoringOptionVisitor;
 class RefactoringResultConsumer;
 class RefactoringRuleContext;
 
@@ -43,6 +44,14 @@ public:
   /// Returns true when the rule has a source selection requirement that has
   /// to be fullfilled before refactoring can be performed.
   virtual bool hasSelectionRequirement() = 0;
+
+  /// Traverses each refactoring option used by the rule and invokes the
+  /// \c visit callback in the consumer for each option.
+  ///
+  /// Options are visited in the order of use, e.g. if a rule has two
+  /// requirements that use options, the options from the first requirement
+  /// are visited before the options in the second requirement.
+  virtual void visitRefactoringOptions(RefactoringOptionVisitor &Visitor) = 0;
 };
 
 } // end namespace tooling

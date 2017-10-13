@@ -266,7 +266,6 @@ define i32 @test17(i32 %A) {
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = xor i32 %A, -1
-  ; == sub int 0, %A
   %C = add i32 %B, 1
   ret i32 %C
 }
@@ -277,9 +276,18 @@ define i8 @test18(i8 %A) {
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = xor i8 %A, -1
-  ; == sub ubyte 16, %A
   %C = add i8 %B, 17
   ret i8 %C
+}
+
+define <2 x i64> @test18vec(<2 x i64> %A) {
+; CHECK-LABEL: @test18vec(
+; CHECK-NEXT:    [[ADD:%.*]] = sub <2 x i64> <i64 1, i64 2>, %A
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %xor = xor <2 x i64> %A, <i64 -1, i64 -1>
+  %add = add <2 x i64> %xor, <i64 2, i64 3>
+  ret <2 x i64> %add
 }
 
 define i32 @test19(i1 %C) {
@@ -601,6 +609,8 @@ define i1 @test40(i32 %a, i32 %b) {
   ret i1 %cmp
 }
 
+; (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))
+
 define i64 @test41(i32 %a) {
 ; CHECK-LABEL: @test41(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 %a, 15
@@ -611,6 +621,35 @@ define i64 @test41(i32 %a) {
   %zext = zext i32 %add to i64
   %sub = add i64 %zext, -1
   ret i64 %sub
+}
+
+; (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))
+
+define <2 x i64> @test41vec(<2 x i32> %a) {
+; CHECK-LABEL: @test41vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i32> %a, <i32 15, i32 15>
+; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+;
+  %add = add nuw <2 x i32> %a, <i32 16, i32 16>
+  %zext = zext <2 x i32> %add to <2 x i64>
+  %sub = add <2 x i64> %zext, <i64 -1, i64 -1>
+  ret <2 x i64> %sub
+}
+
+define <2 x i64> @test41vec_and_multiuse(<2 x i32> %a) {
+; CHECK-LABEL: @test41vec_and_multiuse(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i32> %a, <i32 16, i32 16>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[ADD]] to <2 x i64>
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i64> [[ZEXT]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw <2 x i64> [[SUB]], [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i64> [[EXTRAUSE]]
+;
+  %add = add nuw <2 x i32> %a, <i32 16, i32 16>
+  %zext = zext <2 x i32> %add to <2 x i64>
+  %sub = add <2 x i64> %zext, <i64 -1, i64 -1>
+  %extrause = add <2 x i64> %zext, %sub
+  ret <2 x i64> %extrause
 }
 
 define i32 @test42(i1 %C) {
