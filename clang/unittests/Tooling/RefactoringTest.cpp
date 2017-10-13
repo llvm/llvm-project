@@ -1094,7 +1094,7 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
 }
 
 namespace {
-struct TestRefactoringValueOption final : RefactoringOption {
+struct TestRefactoringValueOption final : OldRefactoringOption {
   int Value;
   TestRefactoringValueOption(int Value) : Value(Value) {}
 
@@ -1119,7 +1119,7 @@ TEST(RefactoringOptionSet, AddGet) {
 }
 
 namespace {
-struct TestRefactoringOption final : RefactoringOption {
+struct TestRefactoringOption final : OldRefactoringOption {
   int &Counter;
   TestRefactoringOption(int &Counter) : Counter(Counter) {}
   ~TestRefactoringOption() { ++Counter; }

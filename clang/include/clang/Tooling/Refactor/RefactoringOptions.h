@@ -25,7 +25,7 @@ namespace option {
 
 namespace detail {
 
-struct BoolOptionBase : RefactoringOption {
+struct BoolOptionBase : OldRefactoringOption {
 protected:
   bool Value = false;
   void serializeImpl(const SerializationContext &Context, const char *Name);
