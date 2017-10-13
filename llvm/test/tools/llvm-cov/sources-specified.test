@@ -1,0 +1,28 @@
+RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -check-prefix=REPORT %s
+
+RUN: llvm-cov show -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -check-prefix=SHOW %s
+
+
+REPORT: {{^}}main.cc{{.*}}
+REPORT: {{^}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+REPORT: {{^}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+REPORT-NOT: {{^}}abs.h{{.*}}
+
+SHOW: {{.*}}main.cc{{.*}}
+SHOW: {{.*}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+SHOW: {{.*}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+SHOW-NOT: {{.*}}abs.h{{.*}}
+
+Instructions for regenerating the test:
+
+clang -mllvm -enable-name-compression=false -fprofile-instr-generate -fcoverage-mapping main.cc -o main
+
+LLVM_PROFILE_FILE="main.raw" ./main
+llvm-profdata merge main.raw -o main.profdata
+llvm-cov convert-for-testing ./main -o ./main.covmapping
