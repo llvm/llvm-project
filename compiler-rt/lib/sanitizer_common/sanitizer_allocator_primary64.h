@@ -223,11 +223,14 @@ class SizeClassAllocator64 {
     uptr avail_chunks = region->allocated_user / ClassIdToSize(class_id);
     Printf(
         "%s %02zd (%6zd): mapped: %6zdK allocs: %7zd frees: %7zd inuse: %6zd "
-        "num_freed_chunks %7zd avail: %6zd rss: %6zdK releases: %6zd\n",
+        "num_freed_chunks %7zd avail: %6zd rss: %6zdK releases: %6zd "
+        "last released: %6zdK region: 0x%zx\n",
         region->exhausted ? "F" : " ", class_id, ClassIdToSize(class_id),
         region->mapped_user >> 10, region->stats.n_allocated,
         region->stats.n_freed, in_use, region->num_freed_chunks, avail_chunks,
-        rss >> 10, region->rtoi.num_releases);
+        rss >> 10, region->rtoi.num_releases,
+        region->rtoi.last_released_bytes >> 10,
+        SpaceBeg() + kRegionSize * class_id);
   }
 
   void PrintStats() {
@@ -563,6 +566,7 @@ class SizeClassAllocator64 {
     uptr n_freed_at_last_release;
     uptr num_releases;
     u64 last_release_at_ns;
+    u64 last_released_bytes;
   };
 
   struct RegionInfo {
@@ -739,11 +743,16 @@ class SizeClassAllocator64 {
     MemoryMapper(const ThisT& base_allocator, uptr class_id)
         : allocator(base_allocator),
           region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
-          released_ranges_count(0) {
+          released_ranges_count(0),
+          released_bytes(0) {
     }
 
     uptr GetReleasedRangesCount() const {
       return released_ranges_count;
+    }
+
+    uptr GetReleasedBytes() const {
+      return released_bytes;
     }
 
     uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
@@ -761,16 +770,18 @@ class SizeClassAllocator64 {
 
     // Releases [from, to) range of pages back to OS.
     void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
-      ReleaseMemoryPagesToOS(
-          allocator.CompactPtrToPointer(region_base, from),
-          allocator.CompactPtrToPointer(region_base, to));
+      const uptr from_page = allocator.CompactPtrToPointer(region_base, from);
+      const uptr to_page = allocator.CompactPtrToPointer(region_base, to);
+      ReleaseMemoryPagesToOS(from_page, to_page);
       released_ranges_count++;
+      released_bytes += to_page - from_page;
     }
 
    private:
     const ThisT& allocator;
     const uptr region_base;
     uptr released_ranges_count;
+    uptr released_bytes;
   };
 
   // Attempts to release RAM occupied by freed chunks back to OS. The region is
@@ -805,6 +816,7 @@ class SizeClassAllocator64 {
     if (memory_mapper.GetReleasedRangesCount() > 0) {
       region->rtoi.n_freed_at_last_release = region->stats.n_freed;
       region->rtoi.num_releases += memory_mapper.GetReleasedRangesCount();
+      region->rtoi.last_released_bytes = memory_mapper.GetReleasedBytes();
     }
     region->rtoi.last_release_at_ns = NanoTime();
   }

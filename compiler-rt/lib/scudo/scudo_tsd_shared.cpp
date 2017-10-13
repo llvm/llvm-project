@@ -18,7 +18,7 @@
 namespace __scudo {
 
 static pthread_once_t GlobalInitialized = PTHREAD_ONCE_INIT;
-static pthread_key_t PThreadKey;
+pthread_key_t PThreadKey;
 
 static atomic_uint32_t CurrentIndex;
 static ScudoTSD *TSDs;
@@ -32,10 +32,6 @@ static uptr getNumberOfCPUs() {
 }
 
 static void initOnce() {
-  // Hack: TLS_SLOT_TSAN was introduced in N. To be able to use it on M for
-  // testing, we create an unused key. Since the key_data array follows the tls
-  // array, it basically gives us the extra entry we need.
-  // TODO(kostyak): remove and restrict to N and above.
   CHECK_EQ(pthread_key_create(&PThreadKey, NULL), 0);
   initScudo();
   NumberOfTSDs = getNumberOfCPUs();
@@ -50,7 +46,11 @@ static void initOnce() {
 }
 
 ALWAYS_INLINE void setCurrentTSD(ScudoTSD *TSD) {
+#if SANITIZER_ANDROID
   *get_android_tls_ptr() = reinterpret_cast<uptr>(TSD);
+#else
+  CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(TSD)), 0);
+#endif  // SANITIZER_ANDROID
 }
 
 void initThread(bool MinimalInit) {
