@@ -13936,6 +13936,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBCommandInterpreter_WasInterrupted(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBCommandInterpreter_WasInterrupted",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBCommandInterpreter, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreter_WasInterrupted" "', argument " "1"" of type '" "lldb::SBCommandInterpreter const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreter * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBCommandInterpreter const *)arg1)->WasInterrupted();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *SBCommandInterpreter_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
@@ -74560,6 +74586,7 @@ static PyMethodDef SwigMethods[] = {
 		"    SBStringList matches) -> int\n"
 		""},
 	 { (char *)"SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_VARARGS, (char *)"SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
+	 { (char *)"SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_VARARGS, (char *)"SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
 	 { (char *)"SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBCommandReturnObject", _wrap_new_SBCommandReturnObject, METH_VARARGS, (char *)"\n"
 		"SBCommandReturnObject()\n"
