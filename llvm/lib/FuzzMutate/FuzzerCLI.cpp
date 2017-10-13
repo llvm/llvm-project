@@ -34,7 +34,7 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
 void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
   std::vector<std::string> Args{ExecName};
 
-  auto NameAndArgs = ExecName.split('=');
+  auto NameAndArgs = ExecName.split("--");
   if (NameAndArgs.second.empty())
     return;
 

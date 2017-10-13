@@ -307,3 +307,26 @@ exit:
   ret void
 }
 
+; single basic block loop
+; because the loop exit condition is SLT, we can supplement the iv add
+; (iv.next def) with an nsw.
+; CHECK-LABEL: @test16(
+define i32 @test16(i32* %n, i32* %a) {
+preheader:
+  br label %loop
+
+loop:
+; CHECK: %iv.next = add nsw i32 %iv, 1
+  %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %preheader ], [ %acc.curr, %loop ]
+  %x = load atomic i32, i32* %a unordered, align 8
+  fence acquire
+  %acc.curr = add i32 %acc, %x
+  %iv.next = add i32 %iv, 1
+  %nval = load atomic i32, i32* %n unordered, align 8
+  %cmp = icmp slt i32 %iv.next, %nval
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %acc.curr
+}

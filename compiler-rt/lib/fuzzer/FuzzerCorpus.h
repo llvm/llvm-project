@@ -220,9 +220,11 @@ class InputCorpus {
     return FeatureFrequency[Idx % kFeatureSetSize];
   }
   void UpdateFeatureFrequencyScore(InputInfo *II) {
-    II->FeatureFrequencyScore = 0.00000001;
+    const float kMin = 0.01, kMax = 100.;
+    II->FeatureFrequencyScore = kMin;
     for (auto Idx : II->UniqFeatureSet)
       II->FeatureFrequencyScore += 1. / (GetFeatureFrequency(Idx) + 1.);
+    II->FeatureFrequencyScore = Min(II->FeatureFrequencyScore, kMax);
   }
 
   size_t NumFeatures() const { return NumAddedFeatures; }
@@ -261,8 +263,20 @@ private:
     Weights.resize(N);
     std::iota(Intervals.begin(), Intervals.end(), 0);
     for (size_t i = 0; i < N; i++)
-      Weights[i] =
-          Inputs[i]->NumFeatures * (i + 1) * Inputs[i]->FeatureFrequencyScore;
+      Weights[i] = Inputs[i]->NumFeatures
+                       ? (i + 1) * Inputs[i]->FeatureFrequencyScore
+                       : 0.;
+    if (FeatureDebug) {
+      for (size_t i = 0; i < N; i++)
+        Printf("%zd ", Inputs[i]->NumFeatures);
+      Printf("NUM\n");
+      for (size_t i = 0; i < N; i++)
+        Printf("%f ", Inputs[i]->FeatureFrequencyScore);
+      Printf("SCORE\n");
+      for (size_t i = 0; i < N; i++)
+        Printf("%f ", Weights[i]);
+      Printf("Weights\n");
+    }
     CorpusDistribution = std::piecewise_constant_distribution<double>(
         Intervals.begin(), Intervals.end(), Weights.begin());
   }

@@ -75,7 +75,7 @@ template <class ELFT> void elf::createCommonSections() {
     // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
     // don't have to care about DefinedCommon symbols beyond this point.
     replaceBody<DefinedRegular>(S, Sym->getFile(), Sym->getName(),
-                                static_cast<bool>(Sym->IsLocal), Sym->StOther,
+                                static_cast<bool>(Sym->isLocal()), Sym->StOther,
                                 Sym->Type, 0, Sym->getSize<ELFT>(), Section);
   }
 }

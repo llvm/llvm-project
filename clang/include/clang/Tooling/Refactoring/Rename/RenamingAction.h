@@ -17,6 +17,7 @@
 
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
 #include "llvm/Support/Error.h"
 
@@ -45,12 +46,19 @@ private:
   bool PrintLocations;
 };
 
+class NewNameOption : public RequiredRefactoringOption<std::string> {
+public:
+  StringRef getName() const override { return "new-name"; }
+  StringRef getDescription() const override {
+    return "The new name to change the symbol to";
+  }
+};
+
 /// Returns source replacements that correspond to the rename of the given
 /// symbol occurrences.
 llvm::Expected<std::vector<AtomicChange>>
 createRenameReplacements(const SymbolOccurrences &Occurrences,
-                         const SourceManager &SM,
-                         ArrayRef<StringRef> NewNameStrings);
+                         const SourceManager &SM, const SymbolName &NewName);
 
 /// Rename all symbols identified by the given USRs.
 class QualifiedRenamingAction {

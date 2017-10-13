@@ -28,9 +28,9 @@ void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
 /// Handle backend options that are encoded in the executable name.
 ///
 /// Parses some common backend options out of a specially crafted executable
-/// name (argv[0]). For example, a name like llvm-foo-fuzzer:aarch64-gisel might
-/// set up an AArch64 triple and the Global ISel selector. This should be called
-/// *before* parseFuzzerCLOpts if calling both.
+/// name (argv[0]). For example, a name like llvm-foo-fuzzer--aarch64-gisel
+/// might set up an AArch64 triple and the Global ISel selector. This should be
+/// called *before* parseFuzzerCLOpts if calling both.
 ///
 /// This is meant to be used for environments like OSS-Fuzz that aren't capable
 /// of passing in command line arguments in the normal way.

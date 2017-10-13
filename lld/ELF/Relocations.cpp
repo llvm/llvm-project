@@ -802,26 +802,41 @@ template <class ELFT>
 static void addGotEntry(SymbolBody &Sym, bool Preemptible) {
   InX::Got->addEntry(Sym);
 
+  RelExpr Expr = Sym.isTls() ? R_TLS : R_ABS;
   uint64_t Off = Sym.getGotOffset();
-  RelExpr Expr = R_ABS;
-  RelType DynType;
 
-  if (Sym.isTls()) {
-    DynType = Target->TlsGotRel;
-    Expr = R_TLS;
-  } else if (!Preemptible && Config->Pic && !isAbsolute(Sym)) {
-    DynType = Target->RelativeRel;
-  } else {
-    DynType = Target->GotRel;
+  // If a GOT slot value can be calculated at link-time, which is now,
+  // we can just fill that out.
+  //
+  // (We don't actually write a value to a GOT slot right now, but we
+  // add a static relocation to a Relocations vector so that
+  // InputSection::relocate will do the work for us. We may be able
+  // to just write a value now, but it is a TODO.)
+  bool IsLinkTimeConstant = !Preemptible && (!Config->Pic || isAbsolute(Sym));
+  if (IsLinkTimeConstant) {
+    InX::Got->Relocations.push_back({Expr, Target->GotRel, Off, 0, &Sym});
+    return;
   }
 
-  bool Constant = !Preemptible && !(Config->Pic && !isAbsolute(Sym));
-  if (!Constant)
-    In<ELFT>::RelaDyn->addReloc(
-        {DynType, InX::Got, Off, !Preemptible, &Sym, 0});
+  // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
+  // the GOT slot will be fixed at load-time.
+  RelType Type;
+  if (Sym.isTls())
+    Type = Target->TlsGotRel;
+  else if (!Preemptible && Config->Pic && !isAbsolute(Sym))
+    Type = Target->RelativeRel;
+  else
+    Type = Target->GotRel;
+  In<ELFT>::RelaDyn->addReloc({Type, InX::Got, Off, !Preemptible, &Sym, 0});
 
-  if (Constant || (!Config->IsRela && !Preemptible))
-    InX::Got->Relocations.push_back({Expr, DynType, Off, 0, &Sym});
+  // REL type relocations don't have addend fields unlike RELAs, and
+  // their addends are stored to the section to which they are applied.
+  // So, store addends if we need to.
+  //
+  // This is ugly -- the difference between REL and RELA should be
+  // handled in a better way. It's a TODO.
+  if (!Config->IsRela)
+    InX::Got->Relocations.push_back({R_ABS, Target->GotRel, Off, 0, &Sym});
 }
 
 // The reason we have to do this early scan is as follows

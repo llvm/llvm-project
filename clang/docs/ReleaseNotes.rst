@@ -78,10 +78,6 @@ Improvements to Clang's diagnostics
   when the signed integer is coerced to an unsigned type for the comparison.
   ``-Wsign-compare`` was adjusted not to warn in this case.
 
-- ``-Wtautological-constant-compare`` is a new warning that warns on
-  tautological comparisons between integer variable of the type ``T`` and the
-  largest/smallest possible integer constant of that same type.
-
 - ``-Wnull-pointer-arithmetic`` now warns about performing pointer arithmetic
   on a null pointer. Such pointer arithmetic has an undefined behavior if the
   offset is nonzero. It also now warns about arithmetic on a null pointer

@@ -160,6 +160,22 @@ bool CXXNewExpr::shouldNullCheckAllocation(const ASTContext &Ctx) const {
 // CXXDeleteExpr
 QualType CXXDeleteExpr::getDestroyedType() const {
   const Expr *Arg = getArgument();
+
+  // For a destroying operator delete, we may have implicitly converted the
+  // pointer type to the type of the parameter of the 'operator delete'
+  // function.
+  while (auto *ICE = dyn_cast<ImplicitCastExpr>(Arg)) {
+    if (ICE->getCastKind() == CK_DerivedToBase ||
+        ICE->getCastKind() == CK_UncheckedDerivedToBase ||
+        ICE->getCastKind() == CK_NoOp) {
+      assert((ICE->getCastKind() == CK_NoOp ||
+              getOperatorDelete()->isDestroyingOperatorDelete()) &&
+             "only a destroying operator delete can have a converted arg");
+      Arg = ICE->getSubExpr();
+    } else
+      break;
+  }
+
   // The type-to-delete may not be a pointer if it's a dependent type.
   const QualType ArgType = Arg->getType();
 
