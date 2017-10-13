@@ -856,6 +856,17 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   EXPECT_TRUE(isa<SCEVConstant>(EC));
   EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999u);
 
+  // The add recurrence {5,+,1} does not correspond to any PHI in the IR, and
+  // that is relevant to this test.
+  auto *Five = SE.getConstant(APInt(/*numBits=*/64, 5));
+  auto *AR =
+      SE.getAddRecExpr(Five, SE.getOne(T_int64), Loop, SCEV::FlagAnyWrap);
+  const SCEV *ARAtLoopExit = SE.getSCEVAtScope(AR, nullptr);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(ARAtLoopExit));
+  EXPECT_TRUE(isa<SCEVConstant>(ARAtLoopExit));
+  EXPECT_EQ(cast<SCEVConstant>(ARAtLoopExit)->getAPInt().getLimitedValue(),
+            1004u);
+
   SE.forgetLoop(Loop);
   Br->eraseFromParent();
   Cond->eraseFromParent();
@@ -868,6 +879,11 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
   EXPECT_TRUE(isa<SCEVConstant>(NewEC));
   EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
+  const SCEV *NewARAtLoopExit = SE.getSCEVAtScope(AR, nullptr);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewARAtLoopExit));
+  EXPECT_TRUE(isa<SCEVConstant>(NewARAtLoopExit));
+  EXPECT_EQ(cast<SCEVConstant>(NewARAtLoopExit)->getAPInt().getLimitedValue(),
+            2004u);
 }
 
 // Make sure that SCEV invalidates exit limits after invalidating the values it

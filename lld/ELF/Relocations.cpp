@@ -556,8 +556,19 @@ static void errorOrWarn(const Twine &Msg) {
 template <class ELFT>
 static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff) {
-  bool IsWrite = !Config->ZText || (S.Flags & SHF_WRITE);
-  if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
+  // We can create any dynamic relocation if a section is simply writable.
+  if (S.Flags & SHF_WRITE)
+    return Expr;
+
+  // Or, if we are allowed to create dynamic relocations against
+  // read-only sections (i.e. unless "-z notext" is given),
+  // we can create a dynamic relocation as we want, too.
+  if (!Config->ZText)
+    return Expr;
+
+  // If a relocation can be applied at link-time, we don't need to
+  // create a dynamic relocation in the first place.
+  if (isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
 
   // If we got here we know that this relocation would require the dynamic
@@ -999,20 +1010,28 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Expr == R_SIZE)
       Addend += Body.getSize<ELFT>();
 
+    // If the produced value is a constant, we just remember to write it
+    // when outputting this section. We also have to do it if the format
+    // uses Elf_Rel, since in that case the written value is the addend.
+    if (IsConstant) {
+      Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+      continue;
+    }
+
     // If the output being produced is position independent, the final value
     // is still not known. In that case we still need some help from the
     // dynamic linker. We can however do better than just copying the incoming
     // relocation. We can process some of it and and just ask the dynamic
     // linker to add the load address.
-    if (!IsConstant)
+    if (Config->IsRela) {
       In<ELFT>::RelaDyn->addReloc(
           {Target->RelativeRel, &Sec, Offset, true, &Body, Addend});
-
-    // If the produced value is a constant, we just remember to write it
-    // when outputting this section. We also have to do it if the format
-    // uses Elf_Rel, since in that case the written value is the addend.
-    if (IsConstant || !RelTy::IsRela)
+    } else {
+      // In REL, addends are stored to the target section.
+      In<ELFT>::RelaDyn->addReloc(
+          {Target->RelativeRel, &Sec, Offset, true, &Body, 0});
       Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    }
   }
 }
 
