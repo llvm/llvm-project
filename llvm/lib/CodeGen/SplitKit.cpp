@@ -392,7 +392,7 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   Edit->anyRematerializable(nullptr);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void SplitEditor::dump() const {
   if (RegAssign.empty()) {
     dbgs() << " empty\n";

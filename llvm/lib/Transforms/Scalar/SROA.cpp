@@ -292,7 +292,7 @@ public:
   /// need to replace with undef.
   ArrayRef<Use *> getDeadOperands() const { return DeadOperands; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   void print(raw_ostream &OS, const_iterator I, StringRef Indent = "  ") const;
   void printSlice(raw_ostream &OS, const_iterator I,
                   StringRef Indent = "  ") const;
@@ -309,7 +309,7 @@ private:
 
   friend class AllocaSlices::SliceBuilder;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   /// \brief Handle to alloca instruction to simplify method interfaces.
   AllocaInst &AI;
 #endif
@@ -1027,7 +1027,7 @@ private:
 
 AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     :
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
       AI(AI),
 #endif
       PointerEscapingInstr(nullptr) {
@@ -1059,7 +1059,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
   std::sort(Slices.begin(), Slices.end());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 
 void AllocaSlices::print(raw_ostream &OS, const_iterator I,
                          StringRef Indent) const {
@@ -1098,7 +1098,7 @@ LLVM_DUMP_METHOD void AllocaSlices::dump(const_iterator I) const {
 }
 LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
-#endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#endif // LLVM_ENABLE_DUMP
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.

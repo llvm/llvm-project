@@ -212,7 +212,7 @@ static cl::opt<unsigned>
 // Implementation of the SCEV class.
 //
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void SCEV::dump() const {
   print(dbgs());
   dbgs() << '\n';

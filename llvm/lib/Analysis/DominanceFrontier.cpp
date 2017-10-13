@@ -59,7 +59,7 @@ void DominanceFrontierWrapperPass::print(raw_ostream &OS, const Module *) const 
   DF.print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void DominanceFrontierWrapperPass::dump() const {
   print(dbgs());
 }

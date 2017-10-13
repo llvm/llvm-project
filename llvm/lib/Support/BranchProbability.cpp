@@ -32,7 +32,7 @@ raw_ostream &BranchProbability::print(raw_ostream &OS) const {
                       Percent);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void BranchProbability::dump() const { print(dbgs()) << '\n'; }
 #endif
 

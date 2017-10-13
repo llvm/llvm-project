@@ -31,7 +31,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD
 void llvm::printLivesAt(SlotIndex SI,
                         const LiveIntervals &LIS,
@@ -175,7 +175,7 @@ bool GCNRegPressure::less(const SISubtarget &ST,
                          (getVGPRNum() < O.getVGPRNum());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD
 void GCNRegPressure::print(raw_ostream &OS, const SISubtarget *ST) const {
   OS << "VGPRs: " << getVGPRNum();
@@ -433,7 +433,7 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
   return advance(End);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD
 static void reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                            const GCNRPTracker::LiveRegSet &TrackedLR,

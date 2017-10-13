@@ -250,7 +250,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void SlotIndexes::dump() const {
   for (IndexList::const_iterator itr = indexList.begin();
        itr != indexList.end(); ++itr) {
@@ -277,7 +277,7 @@ void SlotIndex::print(raw_ostream &os) const {
     os << "invalid";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 // Dump a SlotIndex to stderr.
 LLVM_DUMP_METHOD void SlotIndex::dump() const {
   print(dbgs());

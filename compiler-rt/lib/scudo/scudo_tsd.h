@@ -19,6 +19,8 @@
 #include "scudo_allocator.h"
 #include "scudo_utils.h"
 
+#include <pthread.h>
+
 namespace __scudo {
 
 struct ALIGNED(64) ScudoTSD {

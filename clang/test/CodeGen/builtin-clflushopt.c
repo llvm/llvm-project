@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +clflushopt  -emit-llvm -o - -Wall -Werror | FileCheck %s
-#define __MM_MALLOC_H
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +clflushopt  -emit-llvm -o - -Wall -Werror | FileCheck %s
 
-#include <immintrin.h>
+#include <x86intrin.h>
+
 void test_mm_clflushopt(char * __m) {
   //CHECK-LABEL: @test_mm_clflushopt
   //CHECK: @llvm.x86.clflushopt

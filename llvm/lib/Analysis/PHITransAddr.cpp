@@ -41,7 +41,7 @@ static bool CanPHITrans(Instruction *Inst) {
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void PHITransAddr::dump() const {
   if (!Addr) {
     dbgs() << "PHITransAddr: null\n";

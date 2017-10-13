@@ -32,7 +32,7 @@ private:
   /// legalized from a smaller type VT. Need to match pre-legalized type because
   /// the generic legalization inserts the add/sub between the select and
   /// compare.
-  SDValue getFFBH_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL) const;
+  SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL, unsigned Opc) const;
 
 public:
   static bool isOrEquivalentToAdd(SelectionDAG &DAG, SDValue Op);
@@ -57,7 +57,7 @@ protected:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerCTLZ(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
@@ -88,7 +88,7 @@ protected:
   SDValue performMulhsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhuCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulLoHi24Combine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performCtlzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
+  SDValue performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
                              SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -371,6 +371,7 @@ enum NodeType : unsigned {
   BFM, // Insert a range of bits into a 32-bit word.
   FFBH_U32, // ctlz with -1 if input is zero.
   FFBH_I32,
+  FFBL_B32, // cttz with -1 if input is zero.
   MUL_U24,
   MUL_I24,
   MULHI_U24,

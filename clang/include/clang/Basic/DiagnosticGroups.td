@@ -432,13 +432,15 @@ def StrncatSize : DiagGroup<"strncat-size">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
 def TautologicalUnsignedEnumZeroCompare : DiagGroup<"tautological-unsigned-enum-zero-compare">;
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
+def TautologicalConstantCompare : DiagGroup<"tautological-constant-compare",
+                                            [TautologicalUnsignedZeroCompare,
+                                             TautologicalUnsignedEnumZeroCompare,
+                                             TautologicalOutOfRangeCompare]>;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
 def TautologicalUndefinedCompare : DiagGroup<"tautological-undefined-compare">;
 def TautologicalCompare : DiagGroup<"tautological-compare",
-                                    [TautologicalUnsignedZeroCompare,
-                                     TautologicalUnsignedEnumZeroCompare,
-                                     TautologicalOutOfRangeCompare,
+                                    [TautologicalConstantCompare,
                                      TautologicalPointerCompare,
                                      TautologicalOverlapCompare,
                                      TautologicalUndefinedCompare]>;

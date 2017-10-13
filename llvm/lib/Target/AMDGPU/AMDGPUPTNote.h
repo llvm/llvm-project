@@ -25,7 +25,7 @@ const char SectionName[] = ".note";
 
 const char NoteName[] = "AMD";
 
-// TODO: Move this enum to include/llvm/Support so it can be used in tools?
+// TODO: Remove this file once we drop code object v2.
 enum NoteType{
     NT_AMDGPU_HSA_RESERVED_0 = 0,
     NT_AMDGPU_HSA_CODE_OBJECT_VERSION = 1,
@@ -37,9 +37,6 @@ enum NoteType{
     NT_AMDGPU_HSA_RESERVED_7 = 7,
     NT_AMDGPU_HSA_RESERVED_8 = 8,
     NT_AMDGPU_HSA_RESERVED_9 = 9,
-    NT_AMDGPU_HSA_CODE_OBJECT_METADATA = 10,
-    NT_AMD_AMDGPU_ISA = 11,
-    NT_AMDGPU_PAL_METADATA = 12,
     NT_AMDGPU_HSA_HLDEBUG_DEBUG = 101,
     NT_AMDGPU_HSA_HLDEBUG_TARGET = 102
 };

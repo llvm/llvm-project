@@ -45,12 +45,12 @@ Content-Length: 140
 Content-Length: 86
 
 {"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[""]}}
-# STDERR: Failed to decode DidChangeWatchedFilesParams.
+# STDERR: Failed to decode workspace/didChangeWatchedFiles request.
 # Changes field with no sequence
 Content-Length: 84
 
 {"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":""}}
-# STDERR: Failed to decode DidChangeWatchedFilesParams.
+# STDERR: Failed to decode workspace/didChangeWatchedFiles request.
 # Custom field
 Content-Length: 86
 

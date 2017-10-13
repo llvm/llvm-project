@@ -48,7 +48,7 @@ IntRecTy IntRecTy::Shared;
 StringRecTy StringRecTy::Shared;
 DagRecTy DagRecTy::Shared;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void RecTy::dump() const { print(errs()); }
 #endif
 
@@ -172,7 +172,7 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
 
 void Init::anchor() {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
 #endif
 
@@ -1581,7 +1581,7 @@ StringRef RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 #endif
 
@@ -1660,7 +1660,7 @@ void Record::resolveReferencesTo(const RecordVal *RV) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 #endif
 
@@ -1854,7 +1854,7 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
     FieldName + "' does not have a dag initializer!");
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void MultiClass::dump() const {
   errs() << "Record:\n";
   Rec.dump();

@@ -6149,6 +6149,49 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Use PINSRB/PINSRW/PINSRD to create a build vector.
+static SDValue LowerBuildVectorAsInsert(SDValue Op, unsigned NonZeros,
+                                        unsigned NumNonZero, unsigned NumZero,
+                                        SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(((VT == MVT::v8i16 && Subtarget.hasSSE2()) ||
+          ((VT == MVT::v16i8 || VT == MVT::v4i32) && Subtarget.hasSSE41())) &&
+         "Illegal vector insertion");
+
+  SDLoc dl(Op);
+  SDValue V;
+  bool First = true;
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    bool IsNonZero = (NonZeros & (1 << i)) != 0;
+    if (!IsNonZero)
+      continue;
+
+    // If the build vector contains zeros or our first insertion is not the
+    // first index then insert into zero vector to break any register
+    // dependency else use SCALAR_TO_VECTOR/VZEXT_MOVL.
+    if (First) {
+      First = false;
+      if (NumZero || 0 != i)
+        V = getZeroVector(VT, Subtarget, DAG, dl);
+      else {
+        assert(0 == i && "Expected insertion into zero-index");
+        V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
+        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+        V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+        V = DAG.getBitcast(VT, V);
+        continue;
+      }
+    }
+    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, V, Op.getOperand(i),
+                    DAG.getIntPtrConstant(i, dl));
+  }
+
+  return V;
+}
+
 /// Custom lower build_vector of v16i8.
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
                                      unsigned NumNonZero, unsigned NumZero,
@@ -6157,38 +6200,14 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
   if (NumNonZero > 8 && !Subtarget.hasSSE41())
     return SDValue();
 
+  // SSE4.1 - use PINSRB to insert each byte directly.
+  if (Subtarget.hasSSE41())
+    return LowerBuildVectorAsInsert(Op, NonZeros, NumNonZero, NumZero, DAG,
+                                    Subtarget);
+
   SDLoc dl(Op);
   SDValue V;
   bool First = true;
-
-  // SSE4.1 - use PINSRB to insert each byte directly.
-  if (Subtarget.hasSSE41()) {
-    for (unsigned i = 0; i < 16; ++i) {
-      bool IsNonZero = (NonZeros & (1 << i)) != 0;
-      if (IsNonZero) {
-        // If the build vector contains zeros or our first insertion is not the
-        // first index then insert into zero vector to break any register
-        // dependency else use SCALAR_TO_VECTOR/VZEXT_MOVL.
-        if (First) {
-          First = false;
-          if (NumZero || 0 != i)
-            V = getZeroVector(MVT::v16i8, Subtarget, DAG, dl);
-          else {
-            assert(0 == i && "Expected insertion into zero-index");
-            V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
-            V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
-            V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
-            V = DAG.getBitcast(MVT::v16i8, V);
-            continue;
-          }
-        }
-        V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v16i8, V,
-                        Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
-      }
-    }
-
-    return V;
-  }
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
   for (unsigned i = 0; i < 16; ++i) {
@@ -6245,34 +6264,9 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
   if (NumNonZero > 4 && !Subtarget.hasSSE41())
     return SDValue();
 
-  SDLoc dl(Op);
-  SDValue V;
-  bool First = true;
-  for (unsigned i = 0; i < 8; ++i) {
-    bool IsNonZero = (NonZeros & (1 << i)) != 0;
-    if (IsNonZero) {
-      // If the build vector contains zeros or our first insertion is not the
-      // first index then insert into zero vector to break any register
-      // dependency else use SCALAR_TO_VECTOR/VZEXT_MOVL.
-      if (First) {
-        First = false;
-        if (NumZero || 0 != i)
-          V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
-        else {
-          assert(0 == i && "Expected insertion into zero-index");
-          V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
-          V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
-          V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
-          V = DAG.getBitcast(MVT::v8i16, V);
-          continue;
-        }
-      }
-      V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V,
-                      Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
-    }
-  }
-
-  return V;
+  // Use PINSRW to insert each byte directly.
+  return LowerBuildVectorAsInsert(Op, NonZeros, NumNonZero, NumZero, DAG,
+                                  Subtarget);
 }
 
 /// Custom lower build_vector of v4i32 or v4f32.
@@ -35922,9 +35916,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
     SubusRHS = Op1;
     SDValue MaxLHS = Op0.getOperand(0);
     SDValue MaxRHS = Op0.getOperand(1);
-    if (DAG.isEqualTo(MaxLHS, Op1))
+    if (MaxLHS == Op1)
       SubusLHS = MaxRHS;
-    else if (DAG.isEqualTo(MaxRHS, Op1))
+    else if (MaxRHS == Op1)
       SubusLHS = MaxLHS;
     else
       return SDValue();
@@ -35932,9 +35926,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
     SubusLHS = Op0;
     SDValue MinLHS = Op1.getOperand(0);
     SDValue MinRHS = Op1.getOperand(1);
-    if (DAG.isEqualTo(MinLHS, Op0))
+    if (MinLHS == Op0)
       SubusRHS = MinRHS;
-    else if (DAG.isEqualTo(MinRHS, Op0))
+    else if (MinRHS == Op0)
       SubusRHS = MinLHS;
     else
       return SDValue();

@@ -21,6 +21,9 @@
 // XFAIL: msan
 // XFAIL: tsan
 
+// Flaky errors in debuggerd with "waitpid returned unexpected pid (0)" in logcat.
+// UNSUPPORTED: android
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
