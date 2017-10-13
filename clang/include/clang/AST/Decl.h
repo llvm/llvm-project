@@ -2036,6 +2036,9 @@ public:
   /// true through IsAligned.
   bool isReplaceableGlobalAllocationFunction(bool *IsAligned = nullptr) const;
 
+  /// \brief Determine whether this is a destroying operator delete.
+  bool isDestroyingOperatorDelete() const;
+
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
 

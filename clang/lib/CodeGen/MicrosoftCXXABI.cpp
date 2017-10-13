@@ -3805,7 +3805,7 @@ static void emitCXXDestructor(CodeGenModule &CGM, const CXXDestructorDecl *dtor,
   if (!dtor->getParent()->getNumVBases() &&
       (dtorType == StructorType::Complete || dtorType == StructorType::Base)) {
     bool ProducedAlias = !CGM.TryEmitDefinitionAsAlias(
-        GlobalDecl(dtor, Dtor_Complete), GlobalDecl(dtor, Dtor_Base), true);
+        GlobalDecl(dtor, Dtor_Complete), GlobalDecl(dtor, Dtor_Base));
     if (ProducedAlias) {
       if (dtorType == StructorType::Complete)
         return;

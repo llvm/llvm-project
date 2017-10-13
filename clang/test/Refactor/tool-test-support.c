@@ -1,4 +1,4 @@
-// RUN: clang-refactor local-rename -selection=test:%s -v %s -- | FileCheck %s
+// RUN: clang-refactor local-rename -selection=test:%s -new-name=test -v %s -- | FileCheck %s
 
 /*range=*/int test;
 
@@ -11,12 +11,12 @@
 /*range named =+0*/int test5;
 
 // CHECK: Test selection group '':
-// CHECK-NEXT:   90-90
-// CHECK-NEXT:   143-143
-// CHECK-NEXT:   182-182
+// CHECK-NEXT:   105-105
+// CHECK-NEXT:   158-158
+// CHECK-NEXT:   197-197
 // CHECK-NEXT: Test selection group 'named':
-// CHECK-NEXT:   117-117
-// CHECK-NEXT:   203-203
+// CHECK-NEXT:   132-132
+// CHECK-NEXT:   218-218
 
 // The following invocations are in the default group:
 
