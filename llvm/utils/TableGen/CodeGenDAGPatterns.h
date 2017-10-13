@@ -310,10 +310,15 @@ public:
   /// not N.  This handles casting and conversion to a concrete node type as
   /// appropriate.
   std::string getCodeToRunOnSDNode() const;
-  
+
+  /// Get the data type of the argument to getImmediatePredicateCode().
+  std::string getImmType() const;
+
 private:
   std::string getPredCode() const;
   std::string getImmCode() const;
+  bool immCodeUsesAPInt() const;
+  bool immCodeUsesAPFloat() const;
 };
   
 
