@@ -13,7 +13,7 @@ target datalayout = "n8:16:32:64"
 ; CHECK: %[[PHI:.*]] = phi i32 [ 0, %entry ], [ %{{.*}}, %if.then5 ], [ %[[PHI]], %if.end ]
 ; CHECK-LABEL: Determining loop execution counts for: @test
 ; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
-; CHECK: Loop %for.body18: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body18: max backedge-taken count is 2147483646
 ; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK: Loop %for.cond: Unpredictable max backedge-taken count.
@@ -25,7 +25,7 @@ target datalayout = "n8:16:32:64"
 ; CHECK: phi i32 [ %{{.*}}, %if.then5 ], [ 0, %entry ]
 ; CHECK-LABEL: Determining loop execution counts for: @test
 ; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
-; CHECK: Loop %for.body18: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body18: max backedge-taken count is 2147483646
 ; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK: Loop %for.cond: max backedge-taken count is -2147483647

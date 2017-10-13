@@ -947,7 +947,10 @@ int CodeCoverageTool::report(int argc, const char **argv,
 
   CoverageReport Report(ViewOpts, *Coverage.get());
   if (!ShowFunctionSummaries) {
-    Report.renderFileReports(llvm::outs());
+    if (SourceFiles.empty())
+      Report.renderFileReports(llvm::outs());
+    else
+      Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
     if (SourceFiles.empty()) {
       error("Source files must be specified when -show-functions=true is "

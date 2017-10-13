@@ -1119,6 +1119,21 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
+  /// We don't rely on operator== working on double values, as
+  /// it returns true for things that are clearly not equal, like -0.0 and 0.0.
+  /// As such, this method can be used to do an exact bit-for-bit comparison of
+  /// two floating point values.
+  ///
+  /// We leave the version with the double argument here because it's just so
+  /// convenient to write "2.0" and the like.  Without this function we'd
+  /// have to duplicate its logic everywhere it's called.
+  bool isExactlyValue(double V) const {
+    bool ignored;
+    APFloat Tmp(V);
+    Tmp.convert(getSemantics(), APFloat::rmNearestTiesToEven, &ignored);
+    return bitwiseIsEqual(Tmp);
+  }
+
   unsigned int convertToHexString(char *DST, unsigned int HexDigits,
                                   bool UpperCase, roundingMode RM) const {
     APFLOAT_DISPATCH_ON_SEMANTICS(

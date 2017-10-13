@@ -130,7 +130,7 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
 bool SymbolBody::isUndefWeak() const {
   // A note on isLazy() in the following expression: If you add a weak
   // undefined symbol and then a lazy symbol to the symbol table, the
-  // combined result is a lazy weak symbol. isLazy is for that sitaution.
+  // combined result is a lazy weak symbol. isLazy is for that situation.
   //
   // Weak undefined symbols shouldn't fetch archive members (for
   // compatibility with other linkers), but we still want to memorize

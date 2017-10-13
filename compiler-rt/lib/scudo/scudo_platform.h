@@ -20,15 +20,25 @@
 # error "The Scudo hardened allocator is not supported on this platform."
 #endif
 
-#if SANITIZER_ANDROID || SANITIZER_FUCHSIA
+#define SCUDO_TSD_EXCLUSIVE_SUPPORTED (!SANITIZER_ANDROID && !SANITIZER_FUCHSIA)
+
+#ifndef SCUDO_TSD_EXCLUSIVE
+// SCUDO_TSD_EXCLUSIVE wasn't defined, use a default TSD model for the platform.
+# if SANITIZER_ANDROID || SANITIZER_FUCHSIA
 // Android and Fuchsia use a pool of TSDs shared between threads.
-# define SCUDO_TSD_EXCLUSIVE 0
-#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#  define SCUDO_TSD_EXCLUSIVE 0
+# elif SANITIZER_LINUX && !SANITIZER_ANDROID
 // Non-Android Linux use an exclusive TSD per thread.
-# define SCUDO_TSD_EXCLUSIVE 1
-#else
-# error "No default TSD model defined for this platform."
-#endif  // SANITIZER_ANDROID || SANITIZER_FUCHSIA
+#  define SCUDO_TSD_EXCLUSIVE 1
+# else
+#  error "No default TSD model defined for this platform."
+# endif  // SANITIZER_ANDROID || SANITIZER_FUCHSIA
+#endif  // SCUDO_TSD_EXCLUSIVE
+
+// If the exclusive TSD model is chosen, make sure the platform supports it.
+#if SCUDO_TSD_EXCLUSIVE && !SCUDO_TSD_EXCLUSIVE_SUPPORTED
+# error "The exclusive TSD model is not supported on this platform."
+#endif
 
 namespace __scudo {
 

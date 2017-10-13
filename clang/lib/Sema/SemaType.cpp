@@ -7079,7 +7079,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
   // type, but others can be present in the type specifiers even though they
   // apply to the decl.  Here we apply type attributes and ignore the rest.
 
-  bool hasOpenCLAddressSpace = false;
   while (attrs) {
     AttributeList &attr = *attrs;
     attrs = attr.getNext(); // reset to the next here due to early loop continue
@@ -7142,7 +7141,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case AttributeList::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
-      hasOpenCLAddressSpace = true;
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
       if (!handleObjCPointerTypeAttr(state, attr, type))

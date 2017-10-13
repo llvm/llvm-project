@@ -139,7 +139,6 @@ struct Configuration {
   bool Static = false;
   bool SysvHash = false;
   bool Target1Rel;
-  bool Threads;
   bool Trace;
   bool Verbose;
   bool WarnCommon;

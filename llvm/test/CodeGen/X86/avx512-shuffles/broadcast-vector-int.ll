@@ -110,7 +110,7 @@ define <4 x i32> @test_masked_z_2xi32_to_4xi32_mask3(<4 x i32> %vec) {
 define <8 x i32> @test_2xi32_to_8xi32(<8 x i32> %vec) {
 ; CHECK-LABEL: test_2xi32_to_8xi32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %ymm0
+; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   ret <8 x i32> %res
@@ -214,7 +214,7 @@ define <8 x i32> @test_masked_z_2xi32_to_8xi32_mask3(<8 x i32> %vec) {
 define <16 x i32> @test_2xi32_to_16xi32(<16 x i32> %vec) {
 ; CHECK-LABEL: test_2xi32_to_16xi32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   ret <16 x i32> %res

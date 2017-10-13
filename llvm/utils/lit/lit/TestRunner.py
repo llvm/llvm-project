@@ -829,6 +829,9 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     sourcepath = test.getSourcePath()
     sourcedir = os.path.dirname(sourcepath)
 
+    sharedOutputDir = os.path.join(test.suite.exec_root, 'Output', 'Shared')
+    sharedOutputDir += os.path.sep
+
     # Normalize slashes, if requested.
     if normalize_slashes:
         sourcepath = sourcepath.replace('\\', '/')
@@ -849,6 +852,8 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
                           ('%t', tmpName),
                           ('%basename_t', baseName),
                           ('%T', tmpDir),
+                          ('%{shared_output\(([-+=._a-zA-Z0-9]+)\)}',
+                           '%s\\1.tmp' % (sharedOutputDir,)),
                           ('#_MARKER_#', '%')])
 
     # "%/[STpst]" should be normalized.

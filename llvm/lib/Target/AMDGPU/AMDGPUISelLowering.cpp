@@ -827,6 +827,17 @@ bool AMDGPUTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return isZExtFree(Val.getValueType(), VT2);
 }
 
+// v_mad_mix* support a conversion from f16 to f32.
+//
+// There is only one special case when denormals are enabled we don't currently,
+// where this is OK to use.
+bool AMDGPUTargetLowering::isFPExtFoldable(unsigned Opcode,
+                                           EVT DestVT, EVT SrcVT) const {
+  return Opcode == ISD::FMAD && Subtarget->hasMadMixInsts() &&
+         DestVT.getScalarType() == MVT::f32 && !Subtarget->hasFP32Denormals() &&
+         SrcVT.getScalarType() == MVT::f16;
+}
+
 bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
   // There aren't really 64-bit registers, but pairs of 32-bit ones and only a
   // limited number of native 64-bit operations. Shrinking an operation to fit

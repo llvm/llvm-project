@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
@@ -502,6 +503,13 @@ static bool functionHasLines(Function &F) {
   return false;
 }
 
+static bool isUsingFuncletBasedEH(Function &F) {
+  if (!F.hasPersonalityFn()) return false;
+
+  EHPersonality Personality = classifyEHPersonality(F.getPersonalityFn());
+  return isFuncletEHPersonality(Personality);
+}
+
 static bool shouldKeepInEntry(BasicBlock::iterator It) {
 	if (isa<AllocaInst>(*It)) return true;
 	if (isa<DbgInfoIntrinsic>(*It)) return true;
@@ -542,6 +550,8 @@ void GCOVProfiler::emitProfileNotes() {
       DISubprogram *SP = F.getSubprogram();
       if (!SP) continue;
       if (!functionHasLines(F)) continue;
+      // TODO: Functions using funclet-based EH are currently not supported.
+      if (isUsingFuncletBasedEH(F)) continue;
 
       // gcov expects every function to start with an entry block that has a
       // single successor, so split the entry block to make sure of that.
@@ -619,7 +629,10 @@ bool GCOVProfiler::emitProfileArcs() {
       DISubprogram *SP = F.getSubprogram();
       if (!SP) continue;
       if (!functionHasLines(F)) continue;
+      // TODO: Functions using funclet-based EH are currently not supported.
+      if (isUsingFuncletBasedEH(F)) continue;
       if (!Result) Result = true;
+
       unsigned Edges = 0;
       for (auto &BB : F) {
         TerminatorInst *TI = BB.getTerminator();

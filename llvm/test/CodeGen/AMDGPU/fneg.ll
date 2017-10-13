@@ -84,3 +84,15 @@ define amdgpu_kernel void @fneg_fold_f32(float addrspace(1)* %out, float %in) {
   store float %fmul, float addrspace(1)* %out
   ret void
 }
+
+; Make sure we turn some integer operations back into fabs
+; FUNC-LABEL: {{^}}bitpreserve_fneg_f32:
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -4.0
+define amdgpu_kernel void @bitpreserve_fneg_f32(float addrspace(1)* %out, float %in) {
+  %in.bc = bitcast float %in to i32
+  %int.abs = xor i32 %in.bc, 2147483648
+  %bc = bitcast i32 %int.abs to float
+  %fadd = fmul float %bc, 4.0
+  store float %fadd, float addrspace(1)* %out
+  ret void
+}

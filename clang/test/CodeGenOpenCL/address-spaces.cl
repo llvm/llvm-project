@@ -102,7 +102,8 @@ void test_struct() {
 // SPIR-LABEL: define void @test_void_par()
 void test_void_par(void) {}
 
-// SPIR-LABEL: define i32 @test_func_return_type()
+// On ppc64 returns signext i32.
+// SPIR-LABEL: define{{.*}} i32 @test_func_return_type()
 int test_func_return_type(void) {
   return 0;
 }

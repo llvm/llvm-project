@@ -27,6 +27,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -261,6 +262,12 @@ public:
 
   void AddArgumentTrackedFunction(Function *F) {
     TrackingIncomingArguments.insert(F);
+  }
+
+  /// Returns true if the given function is in the solver's set of
+  /// argument-tracked functions.
+  bool isArgumentTrackedFunction(Function *F) {
+    return TrackingIncomingArguments.count(F);
   }
 
   /// Solve - Solve for constants and executable blocks.
@@ -1699,38 +1706,11 @@ INITIALIZE_PASS_END(SCCPLegacyPass, "sccp",
 // createSCCPPass - This is the public interface to this file.
 FunctionPass *llvm::createSCCPPass() { return new SCCPLegacyPass(); }
 
-static bool AddressIsTaken(const GlobalValue *GV) {
-  // Delete any dead constantexpr klingons.
-  GV->removeDeadConstantUsers();
-
-  for (const Use &U : GV->uses()) {
-    const User *UR = U.getUser();
-    if (const auto *SI = dyn_cast<StoreInst>(UR)) {
-      if (SI->getOperand(0) == GV || SI->isVolatile())
-        return true;  // Storing addr of GV.
-    } else if (isa<InvokeInst>(UR) || isa<CallInst>(UR)) {
-      // Make sure we are calling the function, not passing the address.
-      ImmutableCallSite CS(cast<Instruction>(UR));
-      if (!CS.isCallee(&U))
-        return true;
-    } else if (const auto *LI = dyn_cast<LoadInst>(UR)) {
-      if (LI->isVolatile())
-        return true;
-    } else if (isa<BlockAddress>(UR)) {
-      // blockaddress doesn't take the address of the function, it takes addr
-      // of label.
-    } else {
-      return true;
-    }
-  }
-  return false;
-}
-
 static void findReturnsToZap(Function &F,
-                             SmallPtrSet<Function *, 32> &AddressTakenFunctions,
-                             SmallVector<ReturnInst *, 8> &ReturnsToZap) {
+                             SmallVector<ReturnInst *, 8> &ReturnsToZap,
+                             SCCPSolver &Solver) {
   // We can only do this if we know that nothing else can call the function.
-  if (!F.hasLocalLinkage() || AddressTakenFunctions.count(&F))
+  if (!Solver.isArgumentTrackedFunction(&F))
     return;
 
   for (BasicBlock &BB : F)
@@ -1743,13 +1723,6 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
                       const TargetLibraryInfo *TLI) {
   SCCPSolver Solver(DL, TLI);
 
-  // AddressTakenFunctions - This set keeps track of the address-taken functions
-  // that are in the input.  As IPSCCP runs through and simplifies code,
-  // functions that were address taken can end up losing their
-  // address-taken-ness.  Because of this, we keep track of their addresses from
-  // the first pass so we can use them for the later simplification pass.
-  SmallPtrSet<Function*, 32> AddressTakenFunctions;
-
   // Loop over all functions, marking arguments to those with their addresses
   // taken or that are external as overdefined.
   //
@@ -1757,25 +1730,16 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     if (F.isDeclaration())
       continue;
 
-    // If this is an exact definition of this function, then we can propagate
-    // information about its result into callsites of it.
-    // Don't touch naked functions. They may contain asm returning a
-    // value we don't see, so we may end up interprocedurally propagating
-    // the return value incorrectly.
-    if (F.hasExactDefinition() && !F.hasFnAttribute(Attribute::Naked))
+    // Determine if we can track the function's return values. If so, add the
+    // function to the solver's set of return-tracked functions.
+    if (canTrackReturnsInterprocedurally(&F))
       Solver.AddTrackedFunction(&F);
 
-    // If this function only has direct calls that we can see, we can track its
-    // arguments and return value aggressively, and can assume it is not called
-    // unless we see evidence to the contrary.
-    if (F.hasLocalLinkage()) {
-      if (F.hasAddressTaken()) {
-        AddressTakenFunctions.insert(&F);
-      }
-      else {
-        Solver.AddArgumentTrackedFunction(&F);
-        continue;
-      }
+    // Determine if we can track the function's arguments. If so, add the
+    // function to the solver's set of argument-tracked functions.
+    if (canTrackArgumentsInterprocedurally(&F)) {
+      Solver.AddArgumentTrackedFunction(&F);
+      continue;
     }
 
     // Assume the function is called.
@@ -1786,13 +1750,14 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
       Solver.markOverdefined(&AI);
   }
 
-  // Loop over global variables.  We inform the solver about any internal global
-  // variables that do not have their 'addresses taken'.  If they don't have
-  // their addresses taken, we can propagate constants through them.
-  for (GlobalVariable &G : M.globals())
-    if (!G.isConstant() && G.hasLocalLinkage() &&
-        G.hasDefinitiveInitializer() && !AddressIsTaken(&G))
+  // Determine if we can track any of the module's global variables. If so, add
+  // the global variables we can track to the solver's set of tracked global
+  // variables.
+  for (GlobalVariable &G : M.globals()) {
+    G.removeDeadConstantUsers();
+    if (canTrackGlobalVariableInterprocedurally(&G))
       Solver.TrackValueOfGlobalVariable(&G);
+  }
 
   // Solve for constants.
   bool ResolvedUndefs = true;
@@ -1897,7 +1862,7 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     Function *F = I.first;
     if (I.second.isOverdefined() || F->getReturnType()->isVoidTy())
       continue;
-    findReturnsToZap(*F, AddressTakenFunctions, ReturnsToZap);
+    findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
   for (const auto &F : Solver.getMRVFunctionsTracked()) {
@@ -1905,7 +1870,7 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
            "The return type should be a struct");
     StructType *STy = cast<StructType>(F->getReturnType());
     if (Solver.isStructLatticeConstant(F, STy))
-      findReturnsToZap(*F, AddressTakenFunctions, ReturnsToZap);
+      findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
   // Zap all returns which we've identified as zap to change.

@@ -68,6 +68,13 @@ this fuzzer has reported are `on OSS Fuzz's tracker`__
 
 __ https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+llvm-dwarfdump-fuzzer
 
+llvm-demangle-fuzzer
+---------------------
+
+A |generic fuzzer| for the Itanium demangler used in various LLVM tools. We've
+fuzzed __cxa_demangle to death, why not fuzz LLVM's implementation of the same
+function!
+
 llvm-isel-fuzzer
 ----------------
 
@@ -199,9 +206,9 @@ Configuring LLVM to Build Fuzzers
 
 Fuzzers will be built and linked to libFuzzer by default as long as you build
 LLVM with sanitizer coverage enabled. You would typically also enable at least
-one sanitizer for the fuzzers to be particularly likely, so the most common way
-to build the fuzzers is by adding the following two flags to your CMake
-invocation: ``-DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=On``.
+one sanitizer to find bugs faster. The most common way to build the fuzzers is
+by adding the following two flags to your CMake invocation:
+``-DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=On``.
 
 .. note:: If you have ``compiler-rt`` checked out in an LLVM tree when building
           with sanitizers, you'll want to specify ``-DLLVM_BUILD_RUNTIME=Off``
