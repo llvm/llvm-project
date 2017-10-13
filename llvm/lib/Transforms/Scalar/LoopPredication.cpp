@@ -289,6 +289,10 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
  
   Type *Ty = LHS->getType();
   assert(Ty == RHS->getType() && "expandCheck operands have different types?");
+
+  if (SE->isLoopEntryGuardedByCond(L, Pred, LHS, RHS))
+    return Builder.getTrue();
+
   Value *LHSV = Expander.expandCodeFor(LHS, Ty, InsertAt);
   Value *RHSV = Expander.expandCodeFor(RHS, Ty, InsertAt);
   return Builder.CreateICmp(Pred, LHSV, RHSV);
@@ -358,10 +362,10 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
     return None;
 
   Instruction *InsertAt = Preheader->getTerminator();
-  auto *FirstIterationCheck = expandCheck(Expander, Builder, RangeCheck->Pred,
-                                          Start, RangeCheck->Limit, InsertAt);
   auto *LimitCheck = expandCheck(Expander, Builder, LimitCheckPred,
                                  LatchCheck.Limit, RangeCheck->Limit, InsertAt);
+  auto *FirstIterationCheck = expandCheck(Expander, Builder, RangeCheck->Pred,
+                                          Start, RangeCheck->Limit, InsertAt);
   return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
 }
 

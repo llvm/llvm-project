@@ -2654,7 +2654,7 @@ public:
                             bool AssumeSingleUse = false) const;
 
   /// Helper wrapper around SimplifyDemandedBits
-  bool SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
   /// Determine which of the bits specified in Mask are known to be either zero

@@ -14865,10 +14865,16 @@ void Sema::checkExceptionSpecification(
         return;
       }
 
-      if (!NoexceptExpr->isValueDependent())
-        NoexceptExpr = VerifyIntegerConstantExpression(NoexceptExpr, nullptr,
-                         diag::err_noexcept_needs_constant_expression,
-                         /*AllowFold*/ false).get();
+      if (!NoexceptExpr->isValueDependent()) {
+        ExprResult Result = VerifyIntegerConstantExpression(
+            NoexceptExpr, nullptr, diag::err_noexcept_needs_constant_expression,
+            /*AllowFold*/ false);
+        if (Result.isInvalid()) {
+          ESI.Type = EST_BasicNoexcept;
+          return;
+        }
+        NoexceptExpr = Result.get();
+      }
       ESI.NoexceptExpr = NoexceptExpr;
     }
     return;

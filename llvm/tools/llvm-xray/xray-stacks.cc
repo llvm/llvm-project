@@ -66,8 +66,52 @@ static cl::opt<bool>
                      cl::desc("Aggregate stack times across threads"),
                      cl::sub(Stack), cl::init(false));
 
-/// A helper struct to work with formatv and XRayRecords. Makes it easier to use
-/// instrumentation map names or addresses in formatted output.
+static cl::opt<bool>
+    DumpAllStacks("all-stacks",
+                  cl::desc("Dump sum of timings for all stacks. "
+                           "By default separates stacks per-thread."),
+                  cl::sub(Stack), cl::init(false));
+static cl::alias DumpAllStacksShort("all", cl::aliasopt(DumpAllStacks),
+                                    cl::desc("Alias for -all-stacks"),
+                                    cl::sub(Stack));
+
+// TODO(kpw): Add other interesting formats. Perhaps chrome trace viewer format
+// possibly with aggregations or just a linear trace of timings.
+enum StackOutputFormat { HUMAN, FLAMETOOL };
+
+static cl::opt<StackOutputFormat> StacksOutputFormat(
+    "stack-format",
+    cl::desc("The format that output stacks should be "
+             "output in. Only applies with all-stacks."),
+    cl::values(
+        clEnumValN(HUMAN, "human",
+                   "Human readable output. Only valid without -all-stacks."),
+        clEnumValN(FLAMETOOL, "flame",
+                   "Format consumable by Brendan Gregg's FlameGraph tool. "
+                   "Only valid with -all-stacks.")),
+    cl::sub(Stack), cl::init(HUMAN));
+
+// Types of values for each stack in a CallTrie.
+enum class AggregationType {
+  TOTAL_TIME,      // The total time spent in a stack and its callees.
+  INVOCATION_COUNT // The number of times the stack was invoked.
+};
+
+static cl::opt<AggregationType> RequestedAggregation(
+    "aggregation-type",
+    cl::desc("The type of aggregation to do on call stacks."),
+    cl::values(
+        clEnumValN(
+            AggregationType::TOTAL_TIME, "time",
+            "Capture the total time spent in an all invocations of a stack."),
+        clEnumValN(AggregationType::INVOCATION_COUNT, "count",
+                   "Capture the number of times a stack was invoked. "
+                   "In flamegraph mode, this count also includes invocations "
+                   "of all callees.")),
+    cl::sub(Stack), cl::init(AggregationType::TOTAL_TIME));
+
+/// A helper struct to work with formatv and XRayRecords. Makes it easier to
+/// use instrumentation map names or addresses in formatted output.
 struct format_xray_record : public FormatAdapter<XRayRecord> {
   explicit format_xray_record(XRayRecord record,
                               const FuncIdConversionHelper &conv)
@@ -274,10 +318,45 @@ TrieNode *mergeTrieNodes(const TrieNode &Left, const TrieNode &Right,
   return Node;
 }
 
+template <AggregationType AggType>
+std::size_t GetValueForStack(const TrieNode *Node);
+
+// When computing total time spent in a stack, we're adding the timings from
+// its callees and the timings from when it was a leaf.
+template <>
+std::size_t
+GetValueForStack<AggregationType::TOTAL_TIME>(const TrieNode *Node) {
+  auto TopSum = std::accumulate(Node->TerminalDurations.begin(),
+                                Node->TerminalDurations.end(), 0uLL);
+  return std::accumulate(Node->IntermediateDurations.begin(),
+                         Node->IntermediateDurations.end(), TopSum);
+}
+
+// Calculates how many times a function was invoked.
+// TODO: Hook up option to produce stacks
+template <>
+std::size_t
+GetValueForStack<AggregationType::INVOCATION_COUNT>(const TrieNode *Node) {
+  return Node->TerminalDurations.size() + Node->IntermediateDurations.size();
+}
+
+// Make sure there are implementations for each enum value.
+template <AggregationType T> struct DependentFalseType : std::false_type {};
+
+template <AggregationType AggType>
+std::size_t GetValueForStack(const TrieNode *Node) {
+  static_assert(DependentFalseType<AggType>::value,
+                "No implementation found for aggregation type provided.");
+  return 0;
+}
+
 class StackTrie {
+  // Avoid the magic number of 4 propagated through the code with an alias.
+  // We use this SmallVector to track the root nodes in a call graph.
+  using RootVector = SmallVector<TrieNode *, 4>;
 
   // We maintain pointers to the roots of the tries we see.
-  DenseMap<uint32_t, SmallVector<TrieNode *, 4>> Roots;
+  DenseMap<uint32_t, RootVector> Roots;
 
   // We make sure all the nodes are accounted for in this list.
   std::forward_list<TrieNode> NodeStore;
@@ -439,11 +518,23 @@ public:
     }
   }
 
+  /// Prints timing sums for each stack in each threads.
+  template <AggregationType AggType>
+  void printAllPerThread(raw_ostream &OS, FuncIdConversionHelper &FN,
+                         StackOutputFormat format) {
+    for (auto iter : Roots) {
+      uint32_t threadId = iter.first;
+      RootVector &perThreadRoots = iter.second;
+      bool reportThreadId = true;
+      printAll<AggType>(OS, FN, perThreadRoots, threadId, reportThreadId);
+    }
+  }
+
   /// Prints top stacks from looking at all the leaves and ignoring thread IDs.
   /// Stacks that consist of the same function IDs but were called in different
   /// thread IDs are not considered unique in this printout.
   void printIgnoringThreads(raw_ostream &OS, FuncIdConversionHelper &FN) {
-    SmallVector<TrieNode *, 4> RootValues;
+    RootVector RootValues;
 
     // Function to pull the values out of a map iterator.
     using RootsType = decltype(Roots.begin())::value_type;
@@ -459,30 +550,88 @@ public:
     print(OS, FN, RootValues);
   }
 
-  /// Merges the trie by thread id before printing top stacks.
-  void printAggregatingThreads(raw_ostream &OS, FuncIdConversionHelper &FN) {
-    std::forward_list<TrieNode> AggregatedNodeStore;
-    SmallVector<TrieNode *, 4> RootValues;
+  /// Creates a merged list of Tries for unique stacks that disregards their
+  /// thread IDs.
+  RootVector mergeAcrossThreads(std::forward_list<TrieNode> &NodeStore) {
+    RootVector MergedByThreadRoots;
     for (auto MapIter : Roots) {
       const auto &RootNodeVector = MapIter.second;
       for (auto *Node : RootNodeVector) {
-        auto MaybeFoundIter = find_if(RootValues, [Node](TrieNode *elem) {
-          return Node->FuncId == elem->FuncId;
-        });
-        if (MaybeFoundIter == RootValues.end()) {
-          RootValues.push_back(Node);
+        auto MaybeFoundIter =
+            find_if(MergedByThreadRoots, [Node](TrieNode *elem) {
+              return Node->FuncId == elem->FuncId;
+            });
+        if (MaybeFoundIter == MergedByThreadRoots.end()) {
+          MergedByThreadRoots.push_back(Node);
         } else {
-          RootValues.push_back(mergeTrieNodes(**MaybeFoundIter, *Node, nullptr,
-                                              AggregatedNodeStore));
-          RootValues.erase(MaybeFoundIter);
+          MergedByThreadRoots.push_back(
+              mergeTrieNodes(**MaybeFoundIter, *Node, nullptr, NodeStore));
+          MergedByThreadRoots.erase(MaybeFoundIter);
         }
       }
     }
-    print(OS, FN, RootValues);
+    return MergedByThreadRoots;
+  }
+
+  /// Print timing sums for all stacks merged by Thread ID.
+  template <AggregationType AggType>
+  void printAllAggregatingThreads(raw_ostream &OS, FuncIdConversionHelper &FN,
+                                  StackOutputFormat format) {
+    std::forward_list<TrieNode> AggregatedNodeStore;
+    RootVector MergedByThreadRoots = mergeAcrossThreads(AggregatedNodeStore);
+    bool reportThreadId = false;
+    printAll<AggType>(OS, FN, MergedByThreadRoots,
+                      /*threadId*/ 0, reportThreadId);
+  }
+
+  /// Merges the trie by thread id before printing top stacks.
+  void printAggregatingThreads(raw_ostream &OS, FuncIdConversionHelper &FN) {
+    std::forward_list<TrieNode> AggregatedNodeStore;
+    RootVector MergedByThreadRoots = mergeAcrossThreads(AggregatedNodeStore);
+    print(OS, FN, MergedByThreadRoots);
+  }
+
+  // TODO: Add a format option when more than one are supported.
+  template <AggregationType AggType>
+  void printAll(raw_ostream &OS, FuncIdConversionHelper &FN,
+                RootVector RootValues, uint32_t ThreadId, bool ReportThread) {
+    SmallVector<const TrieNode *, 16> S;
+    for (const auto *N : RootValues) {
+      S.clear();
+      S.push_back(N);
+      while (!S.empty()) {
+        auto *Top = S.pop_back_val();
+        printSingleStack<AggType>(OS, FN, ReportThread, ThreadId, Top);
+        for (const auto *C : Top->Callees)
+          S.push_back(C);
+      }
+    }
+  }
+
+  /// Prints values for stacks in a format consumable for the flamegraph.pl
+  /// tool. This is a line based format that lists each level in the stack
+  /// hierarchy in a semicolon delimited form followed by a space and a numeric
+  /// value. If breaking down by thread, the thread ID will be added as the
+  /// root level of the stack.
+  template <AggregationType AggType>
+  void printSingleStack(raw_ostream &OS, FuncIdConversionHelper &Converter,
+                        bool ReportThread, uint32_t ThreadId,
+                        const TrieNode *Node) {
+    if (ReportThread)
+      OS << "thread_" << ThreadId << ";";
+    SmallVector<const TrieNode *, 5> lineage{};
+    lineage.push_back(Node);
+    while (lineage.back()->Parent != nullptr)
+      lineage.push_back(lineage.back()->Parent);
+    while (!lineage.empty()) {
+      OS << Converter.SymbolOrNumber(lineage.back()->FuncId) << ";";
+      lineage.pop_back();
+    }
+    OS << " " << GetValueForStack<AggType>(Node) << "\n";
   }
 
   void print(raw_ostream &OS, FuncIdConversionHelper &FN,
-             SmallVector<TrieNode *, 4> RootValues) {
+             RootVector RootValues) {
     // Go through each of the roots, and traverse the call stack, producing the
     // aggregates as you go along. Remember these aggregates and stacks, and
     // show summary statistics about:
@@ -502,7 +651,7 @@ public:
       S.emplace_back(N);
 
       while (!S.empty()) {
-        auto Top = S.pop_back_val();
+        auto *Top = S.pop_back_val();
 
         // We only start printing the stack (by walking up the parent pointers)
         // when we get to a leaf function.
@@ -587,6 +736,17 @@ static CommandRegistration Unused(&Stack, []() -> Error {
               "that aggregates threads."),
         std::make_error_code(std::errc::invalid_argument));
 
+  if (!DumpAllStacks && StacksOutputFormat != HUMAN)
+    return make_error<StringError>(
+        Twine("Can't specify a non-human format without -all-stacks."),
+        std::make_error_code(std::errc::invalid_argument));
+
+  if (DumpAllStacks && StacksOutputFormat == HUMAN)
+    return make_error<StringError>(
+        Twine("You must specify a non-human format when reporting with "
+              "-all-stacks."),
+        std::make_error_code(std::errc::invalid_argument));
+
   symbolize::LLVMSymbolizer::Options Opts(
       symbolize::FunctionNameKind::LinkageName, true, true, false, "");
   symbolize::LLVMSymbolizer Symbolizer(Opts);
@@ -625,6 +785,36 @@ static CommandRegistration Unused(&Stack, []() -> Error {
         "No instrumented calls were accounted in the input file.",
         make_error_code(errc::result_out_of_range));
   }
+
+  // Report the stacks in a long form mode for another tool to analyze.
+  if (DumpAllStacks) {
+    if (AggregateThreads) {
+      switch (RequestedAggregation) {
+      case AggregationType::TOTAL_TIME:
+        ST.printAllAggregatingThreads<AggregationType::TOTAL_TIME>(
+            outs(), FuncIdHelper, StacksOutputFormat);
+        break;
+      case AggregationType::INVOCATION_COUNT:
+        ST.printAllAggregatingThreads<AggregationType::INVOCATION_COUNT>(
+            outs(), FuncIdHelper, StacksOutputFormat);
+        break;
+      }
+    } else {
+      switch (RequestedAggregation) {
+      case AggregationType::TOTAL_TIME:
+        ST.printAllPerThread<AggregationType::TOTAL_TIME>(outs(), FuncIdHelper,
+                                                          StacksOutputFormat);
+        break;
+      case AggregationType::INVOCATION_COUNT:
+        ST.printAllPerThread<AggregationType::INVOCATION_COUNT>(
+            outs(), FuncIdHelper, StacksOutputFormat);
+        break;
+      }
+    }
+    return Error::success();
+  }
+
+  // We're only outputting top stacks.
   if (AggregateThreads) {
     ST.printAggregatingThreads(outs(), FuncIdHelper);
   } else if (SeparateThreadStacks) {

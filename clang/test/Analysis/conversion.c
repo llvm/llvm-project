@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-conversion -Wno-tautological-constant-compare -analyzer-checker=core,alpha.core.Conversion -verify %s
+// RUN: %clang_analyze_cc1 -Wno-conversion -analyzer-checker=core,alpha.core.Conversion -verify %s
 
 unsigned char U8;
 signed char S8;

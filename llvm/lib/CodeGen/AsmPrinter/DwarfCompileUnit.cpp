@@ -810,6 +810,12 @@ void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
 /// DbgVariable based on provided MachineLocation.
 void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
                                           MachineLocation Location) {
+  // addBlockByrefAddress is obsolete and will be removed soon.
+  // The clang frontend always generates block byref variables with a
+  // complex expression that encodes exactly what addBlockByrefAddress
+  // would do.
+  assert((!DV.isBlockByrefVariable() || DV.hasComplexAddress()) &&
+         "block byref variable without a complex expression");
   if (DV.hasComplexAddress())
     addComplexAddress(DV, Die, dwarf::DW_AT_location, Location);
   else if (DV.isBlockByrefVariable())

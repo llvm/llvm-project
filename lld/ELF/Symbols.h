@@ -214,8 +214,23 @@ public:
                const void *ElfSym, const void *Verdef)
       : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, StOther, Type),
         Verdef(Verdef), ElfSym(ElfSym) {
-    // IFuncs defined in DSOs are treated as functions by the static linker.
-    if (isGnuIFunc())
+    // GNU ifunc is a mechanism to allow user-supplied functions to
+    // resolve PLT slot values at load-time. This is contrary to the
+    // regualr symbol resolution scheme in which symbols are resolved just
+    // by name. Using this hook, you can program how symbols are solved
+    // for you program. For example, you can make "memcpy" to be resolved
+    // to a SSE-enabled version of memcpy only when a machine running the
+    // program supports the SSE instruction set.
+    //
+    // Naturally, such symbols should always be called through their PLT
+    // slots. What GNU ifunc symbols point to are resolver functions, and
+    // calling them directly doesn't make sense (unless you are writing a
+    // loader).
+    //
+    // For DSO symbols, we always call them through PLT slots anyway.
+    // So there's no difference between GNU ifunc and regular function
+    // symbols if they are in DSOs. So we can handle GNU_IFUNC as FUNC.
+    if (this->Type == llvm::ELF::STT_GNU_IFUNC)
       this->Type = llvm::ELF::STT_FUNC;
   }
 
