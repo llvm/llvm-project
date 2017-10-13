@@ -11,8 +11,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -47,8 +47,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ult i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ult i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -83,8 +83,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -119,9 +119,45 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %length.ptr, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_ult_check_length_range_known
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  %length = load i32, i32* %length.ptr, !range !{i32 1, i32 2147483648}
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 true, [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
 
@@ -155,8 +191,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -191,8 +227,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -295,8 +331,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -372,11 +408,11 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
-; CHECK-NEXT: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2}}
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
 ; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
-; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
 ; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2}}
 ; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -420,14 +456,14 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
-; CHECK-NEXT: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
-; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
-; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[limit_check_3:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = and i1 [[first_iteration_check_3]], [[limit_check_3]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -478,14 +514,14 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
-; CHECK-NEXT: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK: [[limit_check_1:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_1:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_1:[^ ]+]] = and i1 [[first_iteration_check_1]], [[limit_check_1]]
-; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[limit_check_2:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_2:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_2:[^ ]+]] = and i1 [[first_iteration_check_2]], [[limit_check_2]]
-; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[limit_check_3:[^ ]+]] = icmp ule i32 %n, %length.{{1|2|3}}
+; CHECK-NEXT: [[first_iteration_check_3:[^ ]+]] = icmp ult i32 0, %length.{{1|2|3}}
 ; CHECK-NEXT: [[wide_cond_3:[^ ]+]] = and i1 [[first_iteration_check_3]], [[limit_check_3]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -538,8 +574,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
@@ -693,8 +729,8 @@ entry:
 loop.preheader:
 ; CHECK: loop.preheader:
 ; CHECK: [[length:[^ ]+]] = zext i16 %length.i16 to i32
-; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, [[length]]
 ; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, [[length]]
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, [[length]]
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop
