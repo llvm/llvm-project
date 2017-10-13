@@ -100,26 +100,25 @@
 // implies M.
 //
 // For now the transformation is limited to the following case:
-//   * The loop has a single latch with either ult or slt icmp condition.
+//   * The loop has a single latch with the condition of the form:
+//      ++i <pred> latchLimit, where <pred> is u<, u<=, s<, or s<=.
 //   * The step of the IV used in the latch condition is 1.
 //   * The IV of the latch condition is the same as the post increment IV of the
 //   guard condition.
-//   * The guard condition is ult.
+//   * The guard condition is
+//     i u< guardLimit.
 //
-// In this case the latch is of the from:
-//   ++i u< latchLimit or ++i s< latchLimit
-// and the guard is of the form:
-//   i u< guardLimit
-//
-// For the unsigned latch comparison case M is:
+// For the ult latch comparison case M is:
 //   forall X . X u< guardLimit && (X + 1) u< latchLimit =>
 //      (X + 1) u< guardLimit
 //
 // This is true if latchLimit u<= guardLimit since then
 //   (X + 1) u< latchLimit u<= guardLimit == (X + 1) u< guardLimit.
 //
-// So the widened condition is:
+// So for ult condition the widened condition is:
 //   i.start u< guardLimit && latchLimit u<= guardLimit
+// Similarly for ule condition the widened condition is:
+//   i.start u< guardLimit && latchLimit u< guardLimit
 //
 // For the signed latch comparison case M is:
 //   forall X . X u< guardLimit && (X + 1) s< latchLimit =>
@@ -147,6 +146,8 @@
 //
 // So the widened condition is:
 //   i.start u< guardLimit && latchLimit s<= guardLimit
+// Similarly for sle condition the widened condition is:
+//   i.start u< guardLimit && latchLimit s< guardLimit
 //
 //===----------------------------------------------------------------------===//
 
@@ -303,7 +304,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   DEBUG(ICI->dump());
 
   // parseLoopStructure guarantees that the latch condition is:
-  //   ++i u< latchLimit or ++i s< latchLimit
+  //   ++i <pred> latchLimit, where <pred> is u<, u<=, s<, or s<=.
   // We are looking for the range checks of the form:
   //   i u< guardLimit
   auto RangeCheck = parseLoopICmp(ICI);
@@ -327,15 +328,27 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   assert(RangeCheckIV->getStepRecurrence(*SE)->isOne() && "must be one");
   const SCEV *Start = RangeCheckIV->getStart();
 
-  // Generate the widened condition. See the file header comment for reasoning.
-  // If the latch condition is unsigned:
-  //   i.start u< guardLimit && latchLimit u<= guardLimit
-  // If the latch condition is signed:
-  //   i.start u< guardLimit && latchLimit s<= guardLimit
-
-  auto LimitCheckPred = ICmpInst::isSigned(LatchCheck.Pred)
-                                           ? ICmpInst::ICMP_SLE
-                                           : ICmpInst::ICMP_ULE;
+  // Generate the widened condition:
+  //   i.start u< guardLimit && latchLimit <pred> guardLimit
+  // where <pred> depends on the latch condition predicate. See the file
+  // header comment for the reasoning.
+  ICmpInst::Predicate LimitCheckPred;
+  switch (LatchCheck.Pred) {
+  case ICmpInst::ICMP_ULT:
+    LimitCheckPred = ICmpInst::ICMP_ULE;
+    break;
+  case ICmpInst::ICMP_ULE:
+    LimitCheckPred = ICmpInst::ICMP_ULT;
+    break;
+  case ICmpInst::ICMP_SLT:
+    LimitCheckPred = ICmpInst::ICMP_SLE;
+    break;
+  case ICmpInst::ICMP_SLE:
+    LimitCheckPred = ICmpInst::ICMP_SLT;
+    break;
+  default:
+    llvm_unreachable("Unsupported loop latch!");
+  }
 
   auto CanExpand = [this](const SCEV *S) {
     return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
@@ -443,7 +456,9 @@ Optional<LoopPredication::LoopICmp> LoopPredication::parseLoopLatchICmp() {
   }
 
   if (Result->Pred != ICmpInst::ICMP_ULT &&
-      Result->Pred != ICmpInst::ICMP_SLT) {
+      Result->Pred != ICmpInst::ICMP_SLT &&
+      Result->Pred != ICmpInst::ICMP_ULE &&
+      Result->Pred != ICmpInst::ICMP_SLE) {
     DEBUG(dbgs() << "Unsupported loop latch predicate(" << Result->Pred
                  << ")!\n");
     return None;

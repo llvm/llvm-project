@@ -127,7 +127,7 @@ void DIEAbbrev::print(raw_ostream &O) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void DIEAbbrev::dump() const {
   print(dbgs());
 }
@@ -267,7 +267,7 @@ void DIE::print(raw_ostream &O, unsigned IndentCount) const {
   O << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void DIE::dump() const {
   print(dbgs());
 }
@@ -359,7 +359,7 @@ void DIEValue::print(raw_ostream &O) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void DIEValue::dump() const {
   print(dbgs());
 }

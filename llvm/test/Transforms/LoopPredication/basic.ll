@@ -39,6 +39,42 @@ exit:
   ret i32 %result
 }
 
+define i32 @unsigned_loop_0_to_n_ule_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @unsigned_loop_0_to_n_ule_latch_ult_check
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ult i32 %n, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ule i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
 define i32 @unsigned_loop_0_to_n_ugt_check(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @unsigned_loop_0_to_n_ugt_check
 entry:
@@ -104,6 +140,78 @@ loop:
 
   %i.next = add nuw i32 %i, 1
   %continue = icmp slt i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_inverse_latch_predicate(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_inverse_latch_predicate
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp sgt i32 %i.next, %n
+  br i1 %continue, label %exit, label %loop
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @signed_loop_0_to_n_sle_latch_ult_check(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @signed_loop_0_to_n_sle_latch_ult_check
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
+; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp slt i32 %n, %length
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp sle i32 %i.next, %n
   br i1 %continue, label %loop, label %exit
 
 exit:

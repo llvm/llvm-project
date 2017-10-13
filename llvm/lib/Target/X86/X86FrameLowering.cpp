@@ -951,8 +951,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool IsWin64CC = STI.isCallingConvWin64(Fn->getCallingConv());
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWin64CFI = IsWin64Prologue && Fn->needsUnwindTableEntry();
-  bool NeedsWinFPO = STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
-  NeedsWinFPO &= !MF.hasEHFunclets(); // FIXME
+  // FIXME: Emit FPO data for EH funclets.
+  bool NeedsWinFPO =
+      !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI =
       !IsWin64Prologue && (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());

@@ -558,7 +558,7 @@ public:
     os << "\n";
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
 #endif
 };
@@ -4010,7 +4010,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   DEBUG(dump(););
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.

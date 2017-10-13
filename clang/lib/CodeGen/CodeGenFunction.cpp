@@ -180,7 +180,8 @@ LValue
 CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T) {
   LValueBaseInfo BaseInfo;
   CharUnits Align = getNaturalTypeAlignment(T, &BaseInfo, /*pointee*/ true);
-  return MakeAddrLValue(Address(V, Align), T, BaseInfo);
+  return MakeAddrLValue(Address(V, Align), T, BaseInfo,
+                        CGM.getTBAAAccessInfo(T));
 }
 
 

@@ -80,6 +80,14 @@ struct SST {
 // CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
+//CHECK: foo_array_sect
+//CHECK: call void {{.+}}@__kmpc_fork_call(
+//CHECK: ret void
+void foo_array_sect(short x[1]) {
+#pragma omp parallel reduction(+ : x[:])
+  {}
+}
+
 template <typename T>
 T tmain() {
   T t;
