@@ -11,8 +11,8 @@ entry:
 
 loop.preheader:
 ; CHECK: loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp ule i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %loop
   br label %loop

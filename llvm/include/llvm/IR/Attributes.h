@@ -283,7 +283,7 @@ public:
 
   iterator begin() const;
   iterator end() const;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   void dump() const;
 #endif
 };

@@ -205,22 +205,24 @@ class LLVMConfig(object):
     def get_clang_has_lsan(self, clang, triple):
         if not clang:
             self.lit_config.warning(
-                "config.host_cxx is unset but test suite is configured to use sanitizers.")
+                'config.host_cxx is unset but test suite is configured to use sanitizers.')
             return False
 
         clang_binary = clang.split()[0]
-        version_string, _ = self.get_process_output([clang_binary, '--version'])
+        version_string, _ = self.get_process_output(
+            [clang_binary, '--version'])
         if not 'clang' in version_string:
             self.lit_config.warning(
                 "compiler '%s' does not appear to be clang, " % clang_binary +
-                "but test suite is configured to use sanitizers.")
+                'but test suite is configured to use sanitizers.')
             return False
 
         if re.match(r'.*-linux', triple):
             return True
 
         if re.match(r'^x86_64.*-apple', triple):
-            version_number = int(re.search(r'version ([0-9]+)\.', version_string).group(1))
+            version_number = int(
+                re.search(r'version ([0-9]+)\.', version_string).group(1))
             if 'Apple LLVM' in version_string:
                 return version_number >= 9
             else:
@@ -299,3 +301,168 @@ class LLVMConfig(object):
         self.config.substitutions.append(('%python', sys.executable))
         self.add_tool_substitutions(
             tool_patterns, [self.config.llvm_tools_dir])
+
+    def use_llvm_tool(self, name, search_env=None, required=False, quiet=False):
+        """Find the executable program 'name', optionally using the specified
+        environment variable as an override before searching the
+        configuration's PATH."""
+        # If the override is specified in the environment, use it without
+        # validation.
+        if search_env:
+            tool = self.config.environment.get(search_env)
+            if tool:
+                return tool
+
+        # Otherwise look in the path.
+        tool = lit.util.which(name, self.config.llvm_tools_dir)
+
+        if required and not tool:
+            message = "couldn't find '{}' program".format(name)
+            if search_env:
+                message = message + \
+                    ', try setting {} in your environment'.format(search_env)
+            self.lit_config.fatal(message)
+
+        if tool:
+            tool = os.path.normpath(tool)
+            if not self.lit_config.quiet and not quiet:
+                self.lit_config.note('using {}: {}'.format(name, tool))
+        return tool
+
+    def use_clang(self, required=True):
+        """Configure the test suite to be able to invoke clang.
+
+        Sets up some environment variables important to clang, locates a
+        just-built or installed clang, and add a set of standard
+        substitutions useful to any test suite that makes use of clang.
+
+        """
+        # Clear some environment variables that might affect Clang.
+        #
+        # This first set of vars are read by Clang, but shouldn't affect tests
+        # that aren't specifically looking for these features, or are required
+        # simply to run the tests at all.
+        #
+        # FIXME: Should we have a tool that enforces this?
+
+        # safe_env_vars = ('TMPDIR', 'TEMP', 'TMP', 'USERPROFILE', 'PWD',
+        #                  'MACOSX_DEPLOYMENT_TARGET', 'IPHONEOS_DEPLOYMENT_TARGET',
+        #                  'VCINSTALLDIR', 'VC100COMNTOOLS', 'VC90COMNTOOLS',
+        #                  'VC80COMNTOOLS')
+        possibly_dangerous_env_vars = ['COMPILER_PATH', 'RC_DEBUG_OPTIONS',
+                                       'CINDEXTEST_PREAMBLE_FILE', 'LIBRARY_PATH',
+                                       'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH',
+                                       'OBJC_INCLUDE_PATH', 'OBJCPLUS_INCLUDE_PATH',
+                                       'LIBCLANG_TIMING', 'LIBCLANG_OBJTRACKING',
+                                       'LIBCLANG_LOGGING', 'LIBCLANG_BGPRIO_INDEX',
+                                       'LIBCLANG_BGPRIO_EDIT', 'LIBCLANG_NOTHREADS',
+                                       'LIBCLANG_RESOURCE_USAGE',
+                                       'LIBCLANG_CODE_COMPLETION_LOGGING']
+        # Clang/Win32 may refer to %INCLUDE%. vsvarsall.bat sets it.
+        if platform.system() != 'Windows':
+            possibly_dangerous_env_vars.append('INCLUDE')
+
+        self.clear_environment(possibly_dangerous_env_vars)
+
+        # Tweak the PATH to include the tools dir and the scripts dir.
+        paths = [self.config.llvm_tools_dir]
+        tools = getattr(self.config, 'clang_tools_dir', None)
+        if tools:
+            paths = paths + [tools]
+        self.with_environment('PATH', paths, append_path=True)
+
+        paths = [self.config.llvm_shlib_dir, self.config.llvm_libs_dir]
+        self.with_environment('LD_LIBRARY_PATH', paths, append_path=True)
+
+        # Discover the 'clang' and 'clangcc' to use.
+
+        self.config.clang = self.use_llvm_tool(
+            'clang', search_env='CLANG', required=required)
+
+        self.config.substitutions.append(
+            ('%llvmshlibdir', self.config.llvm_shlib_dir))
+        self.config.substitutions.append(
+            ('%pluginext', self.config.llvm_plugin_ext))
+
+        builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
+        tool_substitutions = [
+            ToolSubst('%clang', command=self.config.clang),
+            ToolSubst('%clang_analyze_cc1', command='%clang_cc1', extra_args=['-analyze']),
+            ToolSubst('%clang_cc1', command=self.config.clang, extra_args=['-cc1', '-internal-isystem', builtin_include_dir, '-nostdsysteminc']),
+            ToolSubst('%clang_cpp', command=self.config.clang, extra_args=['--driver-mode=cpp']),
+            ToolSubst('%clang_cl', command=self.config.clang, extra_args=['--driver-mode=cl']),
+            ToolSubst('%clangxx', command=self.config.clang, extra_args=['--driver-mode=g++']),
+            ]
+        self.add_tool_substitutions(tool_substitutions)
+
+        self.config.substitutions.append(('%itanium_abi_triple',
+                                          self.make_itanium_abi_triple(self.config.target_triple)))
+        self.config.substitutions.append(('%ms_abi_triple',
+                                          self.make_msabi_triple(self.config.target_triple)))
+        self.config.substitutions.append(
+            ('%resource_dir', builtin_include_dir))
+
+        # The host triple might not be set, at least if we're compiling clang from
+        # an already installed llvm.
+        if self.config.host_triple and self.config.host_triple != '@LLVM_HOST_TRIPLE@':
+            self.config.substitutions.append(('%target_itanium_abi_host_triple',
+                                              '--target=%s' % self.make_itanium_abi_triple(self.config.host_triple)))
+        else:
+            self.config.substitutions.append(
+                ('%target_itanium_abi_host_triple', ''))
+
+        self.config.substitutions.append(
+            ('%src_include_dir', self.config.clang_src_dir + '/include'))
+
+        # FIXME: Find nicer way to prohibit this.
+        self.config.substitutions.append(
+            (' clang ', """*** Do not use 'clang' in tests, use '%clang'. ***"""))
+        self.config.substitutions.append(
+            (' clang\+\+ ', """*** Do not use 'clang++' in tests, use '%clangxx'. ***"""))
+        self.config.substitutions.append(
+            (' clang-cc ',
+             """*** Do not use 'clang-cc' in tests, use '%clang_cc1'. ***"""))
+        self.config.substitutions.append(
+            (' clang -cc1 -analyze ',
+             """*** Do not use 'clang -cc1 -analyze' in tests, use '%clang_analyze_cc1'. ***"""))
+        self.config.substitutions.append(
+            (' clang -cc1 ',
+             """*** Do not use 'clang -cc1' in tests, use '%clang_cc1'. ***"""))
+        self.config.substitutions.append(
+            (' %clang-cc1 ',
+             """*** invalid substitution, use '%clang_cc1'. ***"""))
+        self.config.substitutions.append(
+            (' %clang-cpp ',
+             """*** invalid substitution, use '%clang_cpp'. ***"""))
+        self.config.substitutions.append(
+            (' %clang-cl ',
+             """*** invalid substitution, use '%clang_cl'. ***"""))
+
+    def use_lld(self, required=True):
+        """Configure the test suite to be able to invoke lld.
+
+        Sets up some environment variables important to lld, locates a
+        just-built or installed lld, and add a set of standard
+        substitutions useful to any test suite that makes use of lld.
+
+        """
+        # Tweak the PATH to include the tools dir
+        tool_dirs = [self.config.llvm_tools_dir]
+        lib_dirs = [self.config.llvm_libs_dir]
+        lld_tools_dir = getattr(self.config, 'lld_tools_dir', None)
+        lld_libs_dir = getattr(self.config, 'lld_libs_dir', None)
+
+        if lld_tools_dir:
+            tool_dirs = tool_dirs + [lld_tools_dir]
+        if lld_libs_dir:
+            lib_dirs = lib_dirs + [lld_libs_dir]
+
+        self.with_environment('PATH', tool_dirs, append_path=True)
+        self.with_environment('LD_LIBRARY_PATH', lib_dirs, append_path=True)
+
+        self.config.substitutions.append(
+            (r"\bld.lld\b", 'ld.lld --full-shutdown'))
+
+        tool_patterns = ['ld.lld', 'lld-link', 'lld']
+
+        self.add_tool_substitutions(tool_patterns, tool_dirs)

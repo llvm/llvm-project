@@ -62,10 +62,6 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   EmitFPOData =
       Subtarget->isTargetWin32() && MF.getMMI().getModule()->getCodeViewFlag();
 
-  // FIXME: EH
-  if (MF.hasEHFunclets())
-    EmitFPOData = false;
-
   SetupMachineFunction(MF);
 
   if (Subtarget->isTargetCOFF()) {
