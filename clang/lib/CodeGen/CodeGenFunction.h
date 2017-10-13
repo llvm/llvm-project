@@ -1917,9 +1917,9 @@ public:
                             CGM.getTBAAAccessInfo(T));
   }
 
-  LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo) {
-    return LValue::MakeAddr(Addr, T, getContext(), BaseInfo,
-                            CGM.getTBAAAccessInfo(T));
+  LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
+                        TBAAAccessInfo TBAAInfo) {
+    return LValue::MakeAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
   }
 
   LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
@@ -1930,9 +1930,9 @@ public:
   }
 
   LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
-                        LValueBaseInfo BaseInfo) {
+                        LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
-                            BaseInfo, CGM.getTBAAAccessInfo(T));
+                            BaseInfo, TBAAInfo);
   }
 
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);

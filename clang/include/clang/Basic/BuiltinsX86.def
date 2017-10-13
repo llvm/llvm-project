@@ -641,6 +641,9 @@ TARGET_BUILTIN(__builtin_ia32_xsaves, "vv*ULLi", "", "xsaves")
 //CLFLUSHOPT
 TARGET_BUILTIN(__builtin_ia32_clflushopt, "vvC*", "", "clflushopt")
 
+//CLWB
+TARGET_BUILTIN(__builtin_ia32_clwb, "vvC*", "", "clwb")
+
 // ADX
 TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "", "adx")
 TARGET_BUILTIN(__builtin_ia32_addcarry_u32, "UcUcUiUiUi*", "", "")
