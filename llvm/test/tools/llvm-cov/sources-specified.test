@@ -9,10 +9,10 @@ RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
 RUN:   | FileCheck -check-prefix=SHOW %s
 
 
-REPORT: {{^}}main.cc{{.*}}
-REPORT: {{^}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
-REPORT: {{^}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
-REPORT-NOT: {{^}}abs.h{{.*}}
+REPORT: {{.*}}main.cc{{.*}}
+REPORT: {{.*}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+REPORT: {{.*}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
+REPORT-NOT: {{.*}}abs.h{{.*}}
 
 SHOW: {{.*}}main.cc{{.*}}
 SHOW: {{.*}}extra{{[/\\]}}{{dec|inc}}.h{{.*}}
