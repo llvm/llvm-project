@@ -444,7 +444,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (InputFile *File : ObjectFiles) {
     ObjFile<ELFT> *F = cast<ObjFile<ELFT>>(File);
     for (SymbolBody *B : F->getLocalSymbols()) {
-      if (!B->IsLocal)
+      if (!B->isLocal())
         fatal(toString(F) +
               ": broken object: getLocalSymbols returns a non-local symbol");
       auto *DR = dyn_cast<DefinedRegular>(B);

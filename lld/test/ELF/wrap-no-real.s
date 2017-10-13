@@ -1,8 +1,13 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/wrap-no-real.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/wrap-no-real2.s -o %t3.o
+// RUN: ld.lld -o %t3.so -shared %t3.o
 
 // RUN: ld.lld -o %t %t1.o %t2.o -wrap foo
+// RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s
+
+// RUN: ld.lld -o %t %t1.o %t2.o %t3.so -wrap foo
 // RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s
 
 // CHECK: _start:
