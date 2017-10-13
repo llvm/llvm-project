@@ -1761,9 +1761,17 @@ private:
   const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                                  SCEV::NoWrapFlags Flags);
 
+  /// Find all of the loops transitively used in \p S, and update \c LoopUsers
+  /// accordingly.
+  void addToLoopUseLists(const SCEV *S);
+
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
+
+  /// This maps loops to a list of SCEV expressions that (transitively) use said
+  /// loop.
+  DenseMap<const Loop *, SmallVector<const SCEV *, 4>> LoopUsers;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.
