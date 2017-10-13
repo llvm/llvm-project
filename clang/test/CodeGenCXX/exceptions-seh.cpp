@@ -76,6 +76,27 @@ extern "C" void use_seh() {
 // CHECK: [[cont]]
 // CHECK: br label %[[ret]]
 
+extern "C" void nested_finally() {
+  __try {
+    might_throw();
+  } __finally {
+    __try {
+      might_throw();
+    } __finally {
+    }
+  }
+}
+
+// CHECK-LABEL: define void @nested_finally() #{{[0-9]+}}
+// CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
+// CHECK: invoke void @might_throw()
+// CHECK: call void @"\01?fin$0@0@nested_finally@@"(i8 1, i8* {{.*}})
+
+// CHECK-LABEL: define internal void @"\01?fin$0@0@nested_finally@@"
+// CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
+// CHECK: invoke void @might_throw()
+// CHECK: call void @"\01?fin$1@0@nested_finally@@"(i8 1, i8* {{.*}})
+
 void use_seh_in_lambda() {
   ([]() {
     __try {

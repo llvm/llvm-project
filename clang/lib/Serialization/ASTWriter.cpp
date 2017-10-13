@@ -5151,6 +5151,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
       case UPD_CXX_RESOLVED_DTOR_DELETE:
         Record.AddDeclRef(Update.getDecl());
+        Record.AddStmt(cast<CXXDestructorDecl>(D)->getOperatorDeleteThisArg());
         break;
 
       case UPD_CXX_RESOLVED_EXCEPTION_SPEC:
@@ -6178,7 +6179,8 @@ void ASTWriter::DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) {
 }
 
 void ASTWriter::ResolvedOperatorDelete(const CXXDestructorDecl *DD,
-                                       const FunctionDecl *Delete) {
+                                       const FunctionDecl *Delete,
+                                       Expr *ThisArg) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
   assert(Delete && "Not given an operator delete");

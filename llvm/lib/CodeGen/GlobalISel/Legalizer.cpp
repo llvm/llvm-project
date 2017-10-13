@@ -70,6 +70,9 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // convergence for performance reasons.
   bool Changed = false;
   MachineBasicBlock::iterator NextMI;
+  using VecType = SmallSetVector<MachineInstr *, 8>;
+  VecType WorkList;
+  VecType CombineList;
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); MI = NextMI) {
       // Get the next Instruction before we try to legalize, because there's a
@@ -81,9 +84,8 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       if (!isPreISelGenericOpcode(MI->getOpcode()))
         continue;
       unsigned NumNewInsns = 0;
-      using VecType = SetVector<MachineInstr *, SmallVector<MachineInstr *, 8>>;
-      VecType WorkList;
-      VecType CombineList;
+      WorkList.clear();
+      CombineList.clear();
       Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
         // Only legalize pre-isel generic instructions.
         // Legalization process could generate Target specific pseudo

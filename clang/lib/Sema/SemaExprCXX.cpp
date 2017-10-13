@@ -1407,14 +1407,20 @@ namespace {
     UsualDeallocFnInfo() : Found(), FD(nullptr) {}
     UsualDeallocFnInfo(Sema &S, DeclAccessPair Found)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
-          HasSizeT(false), HasAlignValT(false), CUDAPref(Sema::CFP_Native) {
+          Destroying(false), HasSizeT(false), HasAlignValT(false),
+          CUDAPref(Sema::CFP_Native) {
       // A function template declaration is never a usual deallocation function.
       if (!FD)
         return;
-      if (FD->getNumParams() == 3)
+      unsigned NumBaseParams = 1;
+      if (FD->isDestroyingOperatorDelete()) {
+        Destroying = true;
+        ++NumBaseParams;
+      }
+      if (FD->getNumParams() == NumBaseParams + 2)
         HasAlignValT = HasSizeT = true;
-      else if (FD->getNumParams() == 2) {
-        HasSizeT = FD->getParamDecl(1)->getType()->isIntegerType();
+      else if (FD->getNumParams() == NumBaseParams + 1) {
+        HasSizeT = FD->getParamDecl(NumBaseParams)->getType()->isIntegerType();
         HasAlignValT = !HasSizeT;
       }
 
@@ -1428,6 +1434,12 @@ namespace {
 
     bool isBetterThan(const UsualDeallocFnInfo &Other, bool WantSize,
                       bool WantAlign) const {
+      // C++ P0722:
+      //   A destroying operator delete is preferred over a non-destroying
+      //   operator delete.
+      if (Destroying != Other.Destroying)
+        return Destroying;
+
       // C++17 [expr.delete]p10:
       //   If the type has new-extended alignment, a function with a parameter
       //   of type std::align_val_t is preferred; otherwise a function without
@@ -1444,7 +1456,7 @@ namespace {
 
     DeclAccessPair Found;
     FunctionDecl *FD;
-    bool HasSizeT, HasAlignValT;
+    bool Destroying, HasSizeT, HasAlignValT;
     Sema::CUDAFunctionPreference CUDAPref;
   };
 }
@@ -3261,16 +3273,30 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     MarkFunctionReferenced(StartLoc, OperatorDelete);
 
-    // Check access and ambiguity of operator delete and destructor.
+    // Check access and ambiguity of destructor if we're going to call it.
+    // Note that this is required even for a virtual delete.
+    bool IsVirtualDelete = false;
     if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-          CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
-                      PDiag(diag::err_access_dtor) << PointeeElem);
+        CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
+                              PDiag(diag::err_access_dtor) << PointeeElem);
+        IsVirtualDelete = Dtor->isVirtual();
       }
     }
 
     diagnoseUnavailableAlignedAllocation(*OperatorDelete, StartLoc, true,
                                          *this);
+
+    // Convert the operand to the type of the first parameter of operator
+    // delete. This is only necessary if we selected a destroying operator
+    // delete that we are going to call (non-virtually); converting to void*
+    // is trivial and left to AST consumers to handle.
+    QualType ParamType = OperatorDelete->getParamDecl(0)->getType();
+    if (!IsVirtualDelete && !ParamType->getPointeeType()->isVoidType()) {
+      Ex = PerformImplicitConversion(Ex.get(), ParamType, AA_Passing);
+      if (Ex.isInvalid())
+        return ExprError();
+    }
   }
 
   CXXDeleteExpr *Result = new (Context) CXXDeleteExpr(

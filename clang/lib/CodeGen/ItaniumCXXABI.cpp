@@ -3664,6 +3664,18 @@ void ItaniumCXXABI::emitCXXStructor(const CXXMethodDecl *MD,
       !CGM.TryEmitBaseDestructorAsAlias(DD))
     return;
 
+  // FIXME: The deleting destructor is equivalent to the selected operator
+  // delete if:
+  //  * either the delete is a destroying operator delete or the destructor
+  //    would be trivial if it weren't virtual,
+  //  * the conversion from the 'this' parameter to the first parameter of the
+  //    destructor is equivalent to a bitcast,
+  //  * the destructor does not have an implicit "this" return, and
+  //  * the operator delete has the same calling convention and IR function type
+  //    as the destructor.
+  // In such cases we should try to emit the deleting dtor as an alias to the
+  // selected 'operator delete'.
+
   llvm::Function *Fn = CGM.codegenCXXStructor(MD, Type);
 
   if (CGType == StructorCodegen::COMDAT) {

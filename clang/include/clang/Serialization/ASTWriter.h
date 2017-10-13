@@ -698,7 +698,8 @@ private:
   void ResolvedExceptionSpec(const FunctionDecl *FD) override;
   void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override;
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
-                              const FunctionDecl *Delete) override;
+                              const FunctionDecl *Delete,
+                              Expr *ThisArg) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;

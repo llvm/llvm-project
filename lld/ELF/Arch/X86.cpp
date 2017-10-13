@@ -290,6 +290,8 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_RELATIVE:
+  case R_386_TLS_DTPMOD32:
+  case R_386_TLS_DTPOFF32:
   case R_386_TLS_GD:
   case R_386_TLS_GOTIE:
   case R_386_TLS_IE:
@@ -297,6 +299,8 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_386_TLS_LDO_32:
   case R_386_TLS_LE:
   case R_386_TLS_LE_32:
+  case R_386_TLS_TPOFF:
+  case R_386_TLS_TPOFF32:
     checkInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
     break;

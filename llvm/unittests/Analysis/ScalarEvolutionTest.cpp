@@ -24,10 +24,18 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
 namespace {
+
+MATCHER_P3(IsAffineAddRec, S, X, L, "") {
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(arg))
+    return AR->isAffine() && AR->getLoop() == L && AR->getOperand(0) == S &&
+           AR->getOperand(1) == X;
+  return false;
+}
 
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
@@ -856,6 +864,17 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   EXPECT_TRUE(isa<SCEVConstant>(EC));
   EXPECT_EQ(cast<SCEVConstant>(EC)->getAPInt().getLimitedValue(), 999u);
 
+  // The add recurrence {5,+,1} does not correspond to any PHI in the IR, and
+  // that is relevant to this test.
+  auto *Five = SE.getConstant(APInt(/*numBits=*/64, 5));
+  auto *AR =
+      SE.getAddRecExpr(Five, SE.getOne(T_int64), Loop, SCEV::FlagAnyWrap);
+  const SCEV *ARAtLoopExit = SE.getSCEVAtScope(AR, nullptr);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(ARAtLoopExit));
+  EXPECT_TRUE(isa<SCEVConstant>(ARAtLoopExit));
+  EXPECT_EQ(cast<SCEVConstant>(ARAtLoopExit)->getAPInt().getLimitedValue(),
+            1004u);
+
   SE.forgetLoop(Loop);
   Br->eraseFromParent();
   Cond->eraseFromParent();
@@ -868,90 +887,11 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
   EXPECT_TRUE(isa<SCEVConstant>(NewEC));
   EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
-}
-
-// Make sure that SCEV invalidates exit limits after invalidating the values it
-// depends on when we forget a value.
-TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
-  /*
-   * Create the following code:
-   * func(i64 addrspace(10)* %arg)
-   * top:
-   *  br label %L.ph
-   * L.ph:
-   *  %load = load i64 addrspace(10)* %arg
-   *  br label %L
-   * L:
-   *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
-   *  %add = add i64 %phi2, 1
-   *  %cond = icmp slt i64 %add, %load ; then becomes 2000.
-   *  br i1 %cond, label %post, label %L2
-   * post:
-   *  ret void
-   *
-   */
-
-  // Create a module with non-integral pointers in it's datalayout
-  Module NIM("nonintegral", Context);
-  std::string DataLayout = M.getDataLayoutStr();
-  if (!DataLayout.empty())
-    DataLayout += "-";
-  DataLayout += "ni:10";
-  NIM.setDataLayout(DataLayout);
-
-  Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
-
-  FunctionType *FTy =
-      FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
-  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
-
-  Argument *Arg = &*F->arg_begin();
-
-  BasicBlock *Top = BasicBlock::Create(Context, "top", F);
-  BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
-  BasicBlock *L = BasicBlock::Create(Context, "L", F);
-  BasicBlock *Post = BasicBlock::Create(Context, "post", F);
-
-  IRBuilder<> Builder(Top);
-  Builder.CreateBr(LPh);
-
-  Builder.SetInsertPoint(LPh);
-  auto *Load = cast<Instruction>(Builder.CreateLoad(T_int64, Arg, "load"));
-  Builder.CreateBr(L);
-
-  Builder.SetInsertPoint(L);
-  PHINode *Phi = Builder.CreatePHI(T_int64, 2);
-  auto *Add = cast<Instruction>(
-      Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add"));
-  auto *Cond = cast<Instruction>(
-      Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, Load, "cond"));
-  auto *Br = cast<Instruction>(Builder.CreateCondBr(Cond, L, Post));
-  Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
-  Phi->addIncoming(Add, L);
-
-  Builder.SetInsertPoint(Post);
-  Builder.CreateRetVoid();
-
-  ScalarEvolution SE = buildSE(*F);
-  auto *Loop = LI->getLoopFor(L);
-  const SCEV *EC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_FALSE(isa<SCEVCouldNotCompute>(EC));
-  EXPECT_FALSE(isa<SCEVConstant>(EC));
-
-  SE.forgetValue(Load);
-  Br->eraseFromParent();
-  Cond->eraseFromParent();
-  Load->eraseFromParent();
-
-  Builder.SetInsertPoint(L);
-  auto *NewCond = Builder.CreateICmp(
-      ICmpInst::ICMP_SLT, Add, ConstantInt::get(T_int64, 2000), "new.cond");
-  Builder.CreateCondBr(NewCond, L, Post);
-  const SCEV *NewEC = SE.getBackedgeTakenCount(Loop);
-  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewEC));
-  EXPECT_TRUE(isa<SCEVConstant>(NewEC));
-  EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
+  const SCEV *NewARAtLoopExit = SE.getSCEVAtScope(AR, nullptr);
+  EXPECT_FALSE(isa<SCEVCouldNotCompute>(NewARAtLoopExit));
+  EXPECT_TRUE(isa<SCEVConstant>(NewARAtLoopExit));
+  EXPECT_EQ(cast<SCEVConstant>(NewARAtLoopExit)->getAPInt().getLimitedValue(),
+            2004u);
 }
 
 TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
@@ -1064,6 +1004,75 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   EXPECT_NE(nullptr, Expr);
   EXPECT_TRUE(isa<SCEVUnknown>(Expr));
   auto Result = SE.createAddRecFromPHIWithCasts(cast<SCEVUnknown>(Expr));
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVForgetDependentLoop) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "target datalayout = \"e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128\" "
+      " "
+      "define void @f(i32 %first_limit, i1* %cond) { "
+      "entry: "
+      " br label %first_loop.ph "
+      " "
+      "first_loop.ph: "
+      "  br label %first_loop "
+      " "
+      "first_loop: "
+      "  %iv_first = phi i32 [0, %first_loop.ph], [%iv_first.inc, %first_loop] "
+      "  %iv_first.inc = add i32 %iv_first, 1 "
+      "  %known_cond = icmp slt i32 %iv_first, 2000 "
+      "  %unknown_cond = load volatile i1, i1* %cond "
+      "  br i1 %unknown_cond, label %first_loop, label %first_loop.exit "
+      " "
+      "first_loop.exit: "
+      "  %iv_first.3x = mul i32 %iv_first, 3 "
+      "  %iv_first.5x = mul i32 %iv_first, 5 "
+      "  br label %second_loop.ph "
+      " "
+      "second_loop.ph: "
+      "  br label %second_loop "
+      " "
+      "second_loop: "
+      "  %iv_second = phi i32 [%iv_first.3x, %second_loop.ph], [%iv_second.inc, %second_loop] "
+      "  %iv_second.inc = add i32 %iv_second, 1 "
+      "  %second_loop.cond = icmp ne i32 %iv_second, %iv_first.5x "
+      "  br i1 %second_loop.cond, label %second_loop, label %second_loop.exit "
+      " "
+      "second_loop.exit: "
+      "  ret void "
+      "} "
+      " ",
+      Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto &FirstIV = GetInstByName(F, "iv_first");
+    auto &SecondIV = GetInstByName(F, "iv_second");
+
+    auto *FirstLoop = LI.getLoopFor(FirstIV.getParent());
+    auto *SecondLoop = LI.getLoopFor(SecondIV.getParent());
+
+    auto *Zero = SE.getZero(FirstIV.getType());
+    auto *Two = SE.getConstant(APInt(32, 2));
+
+    EXPECT_EQ(SE.getBackedgeTakenCount(FirstLoop), SE.getCouldNotCompute());
+    EXPECT_THAT(SE.getBackedgeTakenCount(SecondLoop),
+                IsAffineAddRec(Zero, Two, FirstLoop));
+
+    auto &UnknownCond = GetInstByName(F, "unknown_cond");
+    auto &KnownCond = GetInstByName(F, "known_cond");
+
+    UnknownCond.replaceAllUsesWith(&KnownCond);
+
+    SE.forgetLoop(FirstLoop);
+
+    EXPECT_EQ(SE.getBackedgeTakenCount(FirstLoop), SE.getConstant(APInt(32, 2000)));
+    EXPECT_EQ(SE.getBackedgeTakenCount(SecondLoop), SE.getConstant(APInt(32, 4000)));
+  });
 }
 
 TEST_F(ScalarEvolutionsTest, SCEVFoldSumOfTruncs) {

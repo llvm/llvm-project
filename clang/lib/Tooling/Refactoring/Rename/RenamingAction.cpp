@@ -23,6 +23,8 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
+#include "clang/Tooling/Refactoring/RefactoringOptions.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
@@ -75,7 +77,8 @@ private:
 
 class RenameOccurrences final : public SourceChangeRefactoringRule {
 public:
-  RenameOccurrences(const NamedDecl *ND) : Finder(ND) {}
+  RenameOccurrences(const NamedDecl *ND, std::string NewName)
+      : Finder(ND), NewName(NewName) {}
 
   Expected<AtomicChanges>
   createSourceReplacements(RefactoringRuleContext &Context) {
@@ -83,15 +86,15 @@ public:
         Finder.findSymbolOccurrences(Context);
     if (!Occurrences)
       return Occurrences.takeError();
-    // FIXME: This is a temporary workaround that's needed until the refactoring
-    // options are implemented.
-    StringRef NewName = "Bar";
+    // FIXME: Verify that the new name is valid.
+    SymbolName Name(NewName);
     return createRenameReplacements(
-        *Occurrences, Context.getASTContext().getSourceManager(), NewName);
+        *Occurrences, Context.getASTContext().getSourceManager(), Name);
   }
 
 private:
   OccurrenceFinder Finder;
+  std::string NewName;
 };
 
 class LocalRename final : public RefactoringAction {
@@ -107,7 +110,7 @@ public:
   RefactoringActionRules createActionRules() const override {
     RefactoringActionRules Rules;
     Rules.push_back(createRefactoringActionRule<RenameOccurrences>(
-        SymbolSelectionRequirement()));
+        SymbolSelectionRequirement(), OptionRequirement<NewNameOption>()));
     return Rules;
   }
 };
@@ -120,19 +123,18 @@ std::unique_ptr<RefactoringAction> createLocalRenameAction() {
 
 Expected<std::vector<AtomicChange>>
 createRenameReplacements(const SymbolOccurrences &Occurrences,
-                         const SourceManager &SM,
-                         ArrayRef<StringRef> NewNameStrings) {
+                         const SourceManager &SM, const SymbolName &NewName) {
   // FIXME: A true local rename can use just one AtomicChange.
   std::vector<AtomicChange> Changes;
   for (const auto &Occurrence : Occurrences) {
     ArrayRef<SourceRange> Ranges = Occurrence.getNameRanges();
-    assert(NewNameStrings.size() == Ranges.size() &&
+    assert(NewName.getNamePieces().size() == Ranges.size() &&
            "Mismatching number of ranges and name pieces");
     AtomicChange Change(SM, Ranges[0].getBegin());
     for (const auto &Range : llvm::enumerate(Ranges)) {
       auto Error =
           Change.replace(SM, CharSourceRange::getCharRange(Range.value()),
-                         NewNameStrings[Range.index()]);
+                         NewName.getNamePieces()[Range.index()]);
       if (Error)
         return std::move(Error);
     }
@@ -196,7 +198,7 @@ public:
     }
     // FIXME: Support multi-piece names.
     // FIXME: better error handling (propagate error out).
-    StringRef NewNameRef = NewName;
+    SymbolName NewNameRef(NewName);
     Expected<std::vector<AtomicChange>> Change =
         createRenameReplacements(Occurrences, SourceMgr, NewNameRef);
     if (!Change) {

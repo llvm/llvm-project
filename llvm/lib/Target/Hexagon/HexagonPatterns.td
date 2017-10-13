@@ -63,6 +63,11 @@ def IsNPow2_64H : PatLeaf<(i64 imm), [{
   return isPowerOf2_64(NV) && Log2_64(NV) >= 32;
 }]>;
 
+class IsUGT<int Width, int Arg>: PatLeaf<(i32 imm),
+  "uint64_t V = N->getZExtValue();" #
+  "return isUInt<" # Width # ">(V) && V > " # Arg # ";"
+>;
+
 def SDEC1 : SDNodeXForm<imm, [{
   int32_t V = N->getSExtValue();
   return CurDAG->getTargetConstant(V-1, SDLoc(N), MVT::i32);
@@ -113,6 +118,47 @@ class T_CMP_pat <InstHexagon MI, PatFrag OpNode, PatLeaf ImmPred>
 def : T_CMP_pat <C2_cmpeqi,  seteq,  s10_0ImmPred>;
 def : T_CMP_pat <C2_cmpgti,  setgt,  s10_0ImmPred>;
 def : T_CMP_pat <C2_cmpgtui, setugt, u9_0ImmPred>;
+
+
+def SDTAssertZext: SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0,1>]>;
+def AssertZextSD: SDNode<"ISD::AssertZext", SDTAssertZext>;
+class AssertZext<ValueType T>: PatFrag<(ops node:$A), (AssertZextSD $A, T)>;
+
+multiclass Cmpb_pat<InstHexagon MI, PatFrag Op, PatFrag AssertExt,
+                    PatLeaf ImmPred, int Mask> {
+  def: Pat<(i1 (Op (and I32:$Rs, Mask), ImmPred:$I)),
+           (MI I32:$Rs, imm:$I)>;
+  def: Pat<(i1 (Op (AssertExt I32:$Rs), ImmPred:$I)),
+           (MI I32:$Rs, imm:$I)>;
+}
+
+multiclass CmpbN_pat<InstHexagon MI, PatFrag Op, PatFrag AssertExt,
+                     PatLeaf ImmPred, int Mask> {
+  def: Pat<(i1 (Op (and I32:$Rs, Mask), ImmPred:$I)),
+           (C2_not (MI I32:$Rs, imm:$I))>;
+  def: Pat<(i1 (Op (AssertExt I32:$Rs), ImmPred:$I)),
+           (C2_not (MI I32:$Rs, imm:$I))>;
+}
+
+multiclass CmpbND_pat<InstHexagon MI, PatFrag Op, PatFrag AssertExt,
+                      PatLeaf ImmPred, int Mask> {
+  def: Pat<(i1 (Op (and I32:$Rs, Mask), ImmPred:$I)),
+           (C2_not (MI I32:$Rs, (UDEC1 imm:$I)))>;
+  def: Pat<(i1 (Op (AssertExt I32:$Rs), ImmPred:$I)),
+           (C2_not (MI I32:$Rs, (UDEC1 imm:$I)))>;
+}
+
+let AddedComplexity = 200 in {
+  defm: Cmpb_pat  <A4_cmpbeqi,  seteq,  AssertZext<i8>,  IsUGT<8,31>,  255>;
+  defm: CmpbN_pat <A4_cmpbeqi,  setne,  AssertZext<i8>,  IsUGT<8,31>,  255>;
+  defm: Cmpb_pat  <A4_cmpbgtui, setugt, AssertZext<i8>,  IsUGT<32,31>, 255>;
+  defm: CmpbN_pat <A4_cmpbgtui, setule, AssertZext<i8>,  IsUGT<32,31>, 255>;
+  defm: Cmpb_pat  <A4_cmphgtui, setugt, AssertZext<i16>, IsUGT<32,31>, 65535>;
+  defm: CmpbN_pat <A4_cmphgtui, setule, AssertZext<i16>, IsUGT<32,31>, 65535>;
+  defm: CmpbND_pat<A4_cmpbgtui, setult, AssertZext<i8>,  IsUGT<32,32>, 255>;
+  defm: CmpbND_pat<A4_cmphgtui, setult, AssertZext<i16>, IsUGT<32,32>, 65535>;
+}
+
 
 def SDTHexagonI64I32I32 : SDTypeProfile<1, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, i32>, SDTCisSameAs<1, 2>]>;

@@ -579,18 +579,19 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
 
 class HaswellProc<string Name> : ProcModel<Name, HaswellModel,
                                            HSWFeatures.Value, [
-    ProcIntelHSW
-  ]>;
+  ProcIntelHSW
+]>;
 def : HaswellProc<"haswell">;
 def : HaswellProc<"core-avx2">; // Legacy alias.
 
 def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
-  ProcIntelBDW,
   FeatureADX,
   FeatureRDSEED
 ]>;
 class BroadwellProc<string Name> : ProcModel<Name, HaswellModel,
-                                             BDWFeatures.Value, []>;
+                                             BDWFeatures.Value, [
+  ProcIntelBDW
+]>;
 def : BroadwellProc<"broadwell">;
 
 def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
@@ -605,14 +606,11 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
 
 class SkylakeClientProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKLFeatures.Value, [
-    ProcIntelSKL
-  ]>;
+  ProcIntelSKL
+]>;
 def : SkylakeClientProc<"skylake">;
 
-// FIXME: define KNL model
-class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
-                                                  IVBFeatures.Value, [
-  ProcIntelKNL,                                                  
+def KNLFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureAVX512,
   FeatureERI,
   FeatureCDI,
@@ -624,11 +622,25 @@ class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
   FeatureLZCNT,
   FeatureBMI,
   FeatureBMI2,
-  FeatureFMA,
+  FeatureFMA
+]>;
+
+// FIXME: define KNL model
+class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
+                                                  KNLFeatures.Value, [
+  ProcIntelKNL,
   FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite
 ]>;
 def : KnightsLandingProc<"knl">;
+
+class KnightsMillProc<string Name> : ProcModel<Name, HaswellModel,
+                                               KNLFeatures.Value, [
+  ProcIntelKNL,
+  FeatureSlowTwoMemOps,
+  FeatureFastPartialYMMorZMMWrite
+]>;
+def : KnightsMillProc<"knm">; // TODO Add AVX5124FMAPS/AVX5124VNNIW features
 
 def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeatureAVX512,
@@ -655,8 +667,8 @@ def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
 
 class CannonlakeProc<string Name> : ProcModel<Name, HaswellModel,
                                               CNLFeatures.Value, [
-    ProcIntelCNL
-  ]>;
+  ProcIntelCNL
+]>;
 def : CannonlakeProc<"cannonlake">;
 
 // AMD CPUs.

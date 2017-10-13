@@ -11,6 +11,12 @@
 # RUN: ld.lld %t --gc-sections -o %tout
 # RUN: llvm-objdump -d %tout | FileCheck -check-prefix=DISASM %s
 
+# RUN: echo ".global __start_foo; __start_foo:" > %t2.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t2.s -o %t2.o
+# RUN: ld.lld -shared %t2.o -o %t2.so
+# RUN: ld.lld %t --gc-sections -o %tout %t2.so
+# RUN: llvm-objdump -d %tout | FileCheck -check-prefix=DISASM %s
+
 # DISASM:      _start:
 # DISASM-NEXT: 201000:        e8 05 00 00 00  callq   5 <__start_foo>
 # DISASM-NEXT: 201005:        e8 02 00 00 00  callq   2 <__stop_bar>

@@ -1939,16 +1939,19 @@ public:
   LValue MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T);
   CharUnits getNaturalTypeAlignment(QualType T,
                                     LValueBaseInfo *BaseInfo = nullptr,
+                                    TBAAAccessInfo *TBAAInfo = nullptr,
                                     bool forPointeeType = false);
   CharUnits getNaturalPointeeTypeAlignment(QualType T,
                                            LValueBaseInfo *BaseInfo = nullptr);
 
   Address EmitLoadOfReference(Address Ref, const ReferenceType *RefTy,
-                              LValueBaseInfo *BaseInfo = nullptr);
+                              LValueBaseInfo *BaseInfo = nullptr,
+                              TBAAAccessInfo *TBAAInfo = nullptr);
   LValue EmitLoadOfReferenceLValue(Address Ref, const ReferenceType *RefTy);
 
   Address EmitLoadOfPointer(Address Ptr, const PointerType *PtrTy,
-                            LValueBaseInfo *BaseInfo = nullptr);
+                            LValueBaseInfo *BaseInfo = nullptr,
+                            TBAAAccessInfo *TBAAInfo = nullptr);
   LValue EmitLoadOfPointerLValue(Address Ptr, const PointerType *PtrTy);
 
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
@@ -3327,7 +3330,8 @@ public:
   Address EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
                                           llvm::Value *memberPtr,
                                           const MemberPointerType *memberPtrType,
-                                          LValueBaseInfo *BaseInfo = nullptr);
+                                          LValueBaseInfo *BaseInfo = nullptr,
+                                          TBAAAccessInfo *TBAAInfo = nullptr);
   RValue EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
                                       ReturnValueSlot ReturnValue);
 

@@ -288,3 +288,146 @@ loop.exit:
 exit:
   ret i32 0
 }
+
+; The end bound of the loop can change between iterations, so the exact trip
+; count is unknown, but SCEV can calculate the max trip count.
+define void @changing_end_bound(i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: max backedge-taken count is 2147483646
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add nsw i32 %iv, 1
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+; Similar test as above, but unknown start value.
+; Also, there's no nsw on the iv.next, but SCEV knows 
+; the termination condition is LT, so the IV cannot wrap.
+define void @changing_end_bound2(i32 %start, i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound2
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: max backedge-taken count is -1
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add i32 %iv, 1
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+; changing end bound and greater than one stride
+define void @changing_end_bound3(i32 %start, i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound3
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: max backedge-taken count is 1073741823
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add nsw i32 %iv, 4
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+; same as above test, but the IV can wrap around.
+; so the max backedge taken count is unpredictable.
+define void @changing_end_bound4(i32 %start, i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound4
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add i32 %iv, 4
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+; unknown stride. Since it's not knownPositive, we do not estimate the max
+; backedge taken count.
+define void @changing_end_bound5(i32 %stride, i32 %start, i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound5
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add nsw i32 %iv, %stride
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+; negative stride value
+define void @changing_end_bound6(i32 %start, i32* %n_addr, i32* %addr) {
+; CHECK-LABEL: Determining loop execution counts for: @changing_end_bound6
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %loop ]
+  %val = load atomic i32, i32* %addr unordered, align 4
+  fence acquire
+  %acc.next = add i32 %acc, %val
+  %iv.next = add nsw i32 %iv, -1
+  %n = load atomic i32, i32* %n_addr unordered, align 4
+  %cmp = icmp slt i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}

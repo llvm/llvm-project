@@ -1,12 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 // Nullability of const string-like globals, testing
-// NonnullStringConstantsChecker.
+// NonnullGlobalConstantsChecker.
 
 void clang_analyzer_eval(bool);
 
 @class NSString;
 typedef const struct __CFString *CFStringRef;
+typedef const struct __CFBoolean * CFBooleanRef;
 
 // Global NSString* is non-null.
 extern NSString *const StringConstGlobal;
@@ -87,4 +88,16 @@ typedef nstr1 nstr2;
 extern nstr2 nglobalStr2;
 void testNestedTypedefsForNSString() {
   clang_analyzer_eval(nglobalStr2); // expected-warning{{TRUE}}
+}
+
+// And for CFBooleanRefs.
+extern const CFBooleanRef kBool;
+void testNonnullBool() {
+  clang_analyzer_eval(kBool); // expected-warning{{TRUE}}
+}
+
+// And again, only for const one.
+extern CFBooleanRef kBoolMutable;
+void testNonnullNonconstBool() {
+  clang_analyzer_eval(kBoolMutable); // expected-warning{{UNKNOWN}}
 }

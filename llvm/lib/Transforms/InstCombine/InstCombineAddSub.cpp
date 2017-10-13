@@ -950,9 +950,25 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
   return nullptr;
 }
 
-static Instruction *foldAddWithConstant(BinaryOperator &Add,
-                                        InstCombiner::BuilderTy &Builder) {
+Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
   Value *Op0 = Add.getOperand(0), *Op1 = Add.getOperand(1);
+  Constant *Op1C;
+  if (!match(Op1, m_Constant(Op1C)))
+    return nullptr;
+
+  if (Instruction *NV = foldOpWithConstantIntoOperand(Add))
+    return NV;
+
+  Value *X;
+  // zext(bool) + C -> bool ? C + 1 : C
+  if (match(Op0, m_ZExt(m_Value(X))) &&
+      X->getType()->getScalarSizeInBits() == 1)
+    return SelectInst::Create(X, AddOne(Op1C), Op1);
+
+  // ~X + C --> (C-1) - X
+  if (match(Op0, m_Not(m_Value(X))))
+    return BinaryOperator::CreateSub(SubOne(Op1C), X);
+
   const APInt *C;
   if (!match(Op1, m_APInt(C)))
     return nullptr;
@@ -968,21 +984,17 @@ static Instruction *foldAddWithConstant(BinaryOperator &Add,
     return BinaryOperator::CreateXor(Op0, Op1);
   }
 
-  Value *X;
-  const APInt *C2;
-  Type *Ty = Add.getType();
-
   // Is this add the last step in a convoluted sext?
   // add(zext(xor i16 X, -32768), -32768) --> sext X
+  Type *Ty = Add.getType();
+  const APInt *C2;
   if (match(Op0, m_ZExt(m_Xor(m_Value(X), m_APInt(C2)))) &&
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
 
   // (add (zext (add nuw X, C2)), C) --> (zext (add nuw X, C2 + C))
-  // FIXME: This should check hasOneUse to not increase the instruction count?
-  if (C->isNegative() &&
-      match(Op0, m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C2)))) &&
-      C->sge(-C2->sext(C->getBitWidth()))) {
+  if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C2))))) &&
+      C->isNegative() && C->sge(-C2->sext(C->getBitWidth()))) {
     Constant *NewC =
         ConstantInt::get(X->getType(), *C2 + C->trunc(C2->getBitWidth()));
     return new ZExtInst(Builder.CreateNUWAdd(X, NewC), Ty);
@@ -1013,11 +1025,10 @@ static Instruction *foldAddWithConstant(BinaryOperator &Add,
 
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
-  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   if (Value *V =
           SimplifyAddInst(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
                           SQ.getWithInstruction(&I)))
@@ -1027,20 +1038,16 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldAddWithConstant(I, Builder))
+  if (Instruction *X = foldAddWithConstant(I))
     return X;
 
   // FIXME: This should be moved into the above helper function to allow these
-  // transforms for splat vectors.
+  // transforms for general constant or constant splat vectors.
+  Type *Ty = I.getType();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-    // zext(bool) + C -> bool ? C + 1 : C
-    if (ZExtInst *ZI = dyn_cast<ZExtInst>(LHS))
-      if (ZI->getSrcTy()->isIntegerTy(1))
-        return SelectInst::Create(ZI->getOperand(0), AddOne(CI), CI);
-
     Value *XorLHS = nullptr; ConstantInt *XorRHS = nullptr;
     if (match(LHS, m_Xor(m_Value(XorLHS), m_ConstantInt(XorRHS)))) {
-      uint32_t TySizeBits = I.getType()->getScalarSizeInBits();
+      unsigned TySizeBits = Ty->getScalarSizeInBits();
       const APInt &RHSVal = CI->getValue();
       unsigned ExtendAmt = 0;
       // If we have ADD(XOR(AND(X, 0xFF), 0x80), 0xF..F80), it's a sext.
@@ -1059,7 +1066,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       }
 
       if (ExtendAmt) {
-        Constant *ShAmt = ConstantInt::get(I.getType(), ExtendAmt);
+        Constant *ShAmt = ConstantInt::get(Ty, ExtendAmt);
         Value *NewShl = Builder.CreateShl(XorLHS, ShAmt, "sext");
         return BinaryOperator::CreateAShr(NewShl, ShAmt);
       }
@@ -1080,20 +1087,15 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     }
   }
 
-  if (isa<Constant>(RHS))
-    if (Instruction *NV = foldOpWithConstantIntoOperand(I))
-      return NV;
-
-  if (I.getType()->isIntOrIntVectorTy(1))
+  if (Ty->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(LHS, RHS);
 
   // X + X --> X << 1
   if (LHS == RHS) {
-    BinaryOperator *New =
-      BinaryOperator::CreateShl(LHS, ConstantInt::get(I.getType(), 1));
-    New->setHasNoSignedWrap(I.hasNoSignedWrap());
-    New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-    return New;
+    auto *Shl = BinaryOperator::CreateShl(LHS, ConstantInt::get(Ty, 1));
+    Shl->setHasNoSignedWrap(I.hasNoSignedWrap());
+    Shl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+    return Shl;
   }
 
   // -A + B  -->  B - A
@@ -1119,12 +1121,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
-
-  if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
-    Value *X;
-    if (match(LHS, m_Not(m_Value(X)))) // ~X + C --> (C-1) - X
-      return BinaryOperator::CreateSub(SubOne(CRHS), X);
-  }
 
   // FIXME: We already did a check for ConstantInt RHS above this.
   // FIXME: Is this pattern covered by another fold? No regression tests fail on
@@ -1187,12 +1183,12 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       if (LHSConv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());
-        if (ConstantExpr::getSExt(CI, I.getType()) == RHSC &&
+        if (ConstantExpr::getSExt(CI, Ty) == RHSC &&
             willNotOverflowSignedAdd(LHSConv->getOperand(0), CI, I)) {
           // Insert the new, smaller add.
           Value *NewAdd =
               Builder.CreateNSWAdd(LHSConv->getOperand(0), CI, "addconv");
-          return new SExtInst(NewAdd, I.getType());
+          return new SExtInst(NewAdd, Ty);
         }
       }
     }
@@ -1210,7 +1206,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
         // Insert the new integer add.
         Value *NewAdd = Builder.CreateNSWAdd(LHSConv->getOperand(0),
                                              RHSConv->getOperand(0), "addconv");
-        return new SExtInst(NewAdd, I.getType());
+        return new SExtInst(NewAdd, Ty);
       }
     }
   }
@@ -1223,12 +1219,12 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       if (LHSConv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());
-        if (ConstantExpr::getZExt(CI, I.getType()) == RHSC &&
+        if (ConstantExpr::getZExt(CI, Ty) == RHSC &&
             willNotOverflowUnsignedAdd(LHSConv->getOperand(0), CI, I)) {
           // Insert the new, smaller add.
           Value *NewAdd =
               Builder.CreateNUWAdd(LHSConv->getOperand(0), CI, "addconv");
-          return new ZExtInst(NewAdd, I.getType());
+          return new ZExtInst(NewAdd, Ty);
         }
       }
     }
@@ -1246,41 +1242,36 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
         // Insert the new integer add.
         Value *NewAdd = Builder.CreateNUWAdd(
             LHSConv->getOperand(0), RHSConv->getOperand(0), "addconv");
-        return new ZExtInst(NewAdd, I.getType());
+        return new ZExtInst(NewAdd, Ty);
       }
     }
   }
 
+  Value *A, *B;
   // (add (xor A, B) (and A, B)) --> (or A, B)
-  {
-    Value *A = nullptr, *B = nullptr;
-    if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
-        match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
+  if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
+      match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
 
-    if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
-        match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
-  }
+  // (add (and A, B) (xor A, B)) --> (or A, B)
+  if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
+      match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
 
   // (add (or A, B) (and A, B)) --> (add A, B)
-  {
-    Value *A = nullptr, *B = nullptr;
-    if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
-        match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
-      auto *New = BinaryOperator::CreateAdd(A, B);
-      New->setHasNoSignedWrap(I.hasNoSignedWrap());
-      New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return New;
-    }
+  if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
+      match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
+  }
 
-    if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
-        match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
-      auto *New = BinaryOperator::CreateAdd(A, B);
-      New->setHasNoSignedWrap(I.hasNoSignedWrap());
-      New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return New;
-    }
+  // (add (and A, B) (or A, B)) --> (add A, B)
+  if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
+      match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
   }
 
   // TODO(jingyue): Consider willNotOverflowSignedAdd and

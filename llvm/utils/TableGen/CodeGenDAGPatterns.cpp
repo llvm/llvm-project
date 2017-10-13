@@ -854,14 +854,32 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
         ".td file corrupt: can't have a node predicate *and* an imm predicate");
 }
 
-StringRef TreePredicateFn::getPredCode() const {
+std::string TreePredicateFn::getPredCode() const {
   return PatFragRec->getRecord()->getValueAsString("PredicateCode");
 }
 
-StringRef TreePredicateFn::getImmCode() const {
+std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
 
+bool TreePredicateFn::immCodeUsesAPInt() const {
+  return getOrigPatFragRecord()->getRecord()->getValueAsBit("IsAPInt");
+}
+
+bool TreePredicateFn::immCodeUsesAPFloat() const {
+  bool Unset;
+  // The return value will be false when IsAPFloat is unset.
+  return getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset("IsAPFloat",
+                                                                   Unset);
+}
+
+std::string TreePredicateFn::getImmType() const {
+  if (immCodeUsesAPInt())
+    return "const APInt &";
+  if (immCodeUsesAPFloat())
+    return "const APFloat &";
+  return "int64_t";
+}
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
@@ -880,16 +898,21 @@ std::string TreePredicateFn::getFnName() const {
 /// appropriate.
 std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   // Handle immediate predicates first.
-  StringRef ImmCode = getImmCode();
+  std::string ImmCode = getImmCode();
   if (!ImmCode.empty()) {
-    std::string Result =
-      "    int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();\n";
-    return Result + ImmCode.str();
+    std::string Result = "    " + getImmType() + " Imm = ";
+    if (immCodeUsesAPFloat())
+      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
+    else if (immCodeUsesAPInt())
+      Result += "cast<ConstantSDNode>(Node)->getAPIntValue();\n";
+    else
+      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
+    return Result + ImmCode;
   }
 
   // Handle arbitrary node predicates.
   assert(!getPredCode().empty() && "Don't have any predicate code!");
-  StringRef ClassName;
+  std::string ClassName;
   if (PatFragRec->getOnlyTree()->isLeaf())
     ClassName = "SDNode";
   else {
@@ -900,9 +923,9 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   if (ClassName == "SDNode")
     Result = "    SDNode *N = Node;\n";
   else
-    Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
+    Result = "    auto *N = cast<" + ClassName + ">(Node);\n";
 
-  return Result + getPredCode().str();
+  return Result + getPredCode();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2564,7 +2587,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R) :
   VerifyInstructionFlags();
 }
 
-Record *CodeGenDAGPatterns::getSDNodeNamed(StringRef Name) const {
+Record *CodeGenDAGPatterns::getSDNodeNamed(const std::string &Name) const {
   Record *N = Records.getDef(Name);
   if (!N || !N->isSubClassOf("SDNode"))
     PrintFatalError("Error getting SDNode '" + Name + "'!");

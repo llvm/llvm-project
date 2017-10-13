@@ -84,7 +84,7 @@ const RegisterBank *
 RegisterBankInfo::getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
   if (TargetRegisterInfo::isPhysicalRegister(Reg))
-    return &getRegBankFromRegClass(*TRI.getMinimalPhysRegClass(Reg));
+    return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI));
 
   assert(Reg && "NoRegister does not have a register bank");
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
@@ -93,6 +93,19 @@ RegisterBankInfo::getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
   if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
     return &getRegBankFromRegClass(*RC);
   return nullptr;
+}
+
+const TargetRegisterClass &
+RegisterBankInfo::getMinimalPhysRegClass(unsigned Reg,
+                                         const TargetRegisterInfo &TRI) const {
+  assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
+         "Reg must be a physreg");
+  const auto &RegRCIt = PhysRegMinimalRCs.find(Reg);
+  if (RegRCIt != PhysRegMinimalRCs.end())
+    return *RegRCIt->second;
+  const TargetRegisterClass *PhysRC = TRI.getMinimalPhysRegClass(Reg);
+  PhysRegMinimalRCs[Reg] = PhysRC;
+  return *PhysRC;
 }
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
@@ -441,13 +454,13 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
 
 unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
                                          const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI) {
+                                         const TargetRegisterInfo &TRI) const {
   const TargetRegisterClass *RC = nullptr;
   if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
     // The size is not directly available for physical registers.
     // Instead, we need to access a register class that contains Reg and
     // get the size of that register class.
-    RC = TRI.getMinimalPhysRegClass(Reg);
+    RC = &getMinimalPhysRegClass(Reg, TRI);
   } else {
     LLT Ty = MRI.getType(Reg);
     unsigned RegSize = Ty.isValid() ? Ty.getSizeInBits() : 0;
@@ -546,7 +559,8 @@ bool RegisterBankInfo::InstructionMapping::verify(
   assert(MI.getParent() && MI.getMF() &&
          "MI must be connected to a MachineFunction");
   const MachineFunction &MF = *MI.getMF();
-  (void)MF;
+  const RegisterBankInfo *RBI = MF.getSubtarget().getRegBankInfo();
+  (void)RBI;
 
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     const MachineOperand &MO = MI.getOperand(Idx);
@@ -564,7 +578,7 @@ bool RegisterBankInfo::InstructionMapping::verify(
     (void)MOMapping;
     // Register size in bits.
     // This size must match what the mapping expects.
-    assert(MOMapping.verify(getSizeInBits(
+    assert(MOMapping.verify(RBI->getSizeInBits(
                Reg, MF.getRegInfo(), *MF.getSubtarget().getRegisterInfo())) &&
            "Value mapping is invalid");
   }

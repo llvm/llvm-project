@@ -2149,35 +2149,38 @@ static LValue EmitThreadPrivateVarDeclLValue(
 
 Address CodeGenFunction::EmitLoadOfReference(Address Addr,
                                              const ReferenceType *RefTy,
-                                             LValueBaseInfo *BaseInfo) {
+                                             LValueBaseInfo *BaseInfo,
+                                             TBAAAccessInfo *TBAAInfo) {
   llvm::Value *Ptr = Builder.CreateLoad(Addr);
   return Address(Ptr, getNaturalTypeAlignment(RefTy->getPointeeType(),
-                                              BaseInfo, /*forPointee*/ true));
+                                              BaseInfo, TBAAInfo,
+                                              /* forPointeeType= */ true));
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(Address RefAddr,
                                                   const ReferenceType *RefTy) {
   LValueBaseInfo BaseInfo;
-  Address Addr = EmitLoadOfReference(RefAddr, RefTy, &BaseInfo);
-  return MakeAddrLValue(Addr, RefTy->getPointeeType(), BaseInfo,
-                        CGM.getTBAAAccessInfo(RefTy->getPointeeType()));
+  TBAAAccessInfo TBAAInfo;
+  Address Addr = EmitLoadOfReference(RefAddr, RefTy, &BaseInfo, &TBAAInfo);
+  return MakeAddrLValue(Addr, RefTy->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
 Address CodeGenFunction::EmitLoadOfPointer(Address Ptr,
                                            const PointerType *PtrTy,
-                                           LValueBaseInfo *BaseInfo) {
+                                           LValueBaseInfo *BaseInfo,
+                                           TBAAAccessInfo *TBAAInfo) {
   llvm::Value *Addr = Builder.CreateLoad(Ptr);
   return Address(Addr, getNaturalTypeAlignment(PtrTy->getPointeeType(),
-                                               BaseInfo,
+                                               BaseInfo, TBAAInfo,
                                                /*forPointeeType=*/true));
 }
 
 LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
                                                 const PointerType *PtrTy) {
   LValueBaseInfo BaseInfo;
-  Address Addr = EmitLoadOfPointer(PtrAddr, PtrTy, &BaseInfo);
-  return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo,
-                        CGM.getTBAAAccessInfo(PtrTy->getPointeeType()));
+  TBAAAccessInfo TBAAInfo;
+  Address Addr = EmitLoadOfPointer(PtrAddr, PtrTy, &BaseInfo, &TBAAInfo);
+  return MakeAddrLValue(Addr, PtrTy->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
 static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
@@ -2307,8 +2310,10 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       // FIXME: Eventually we will want to emit vector element references.
 
       // Should we be using the alignment of the constant pointer we emitted?
-      CharUnits Alignment = getNaturalTypeAlignment(E->getType(), nullptr,
-                                                    /*pointee*/ true);
+      CharUnits Alignment = getNaturalTypeAlignment(E->getType(),
+                                                    /* BaseInfo= */ nullptr,
+                                                    /* TBAAInfo= */ nullptr,
+                                                    /* forPointeeType= */ true);
       return MakeAddrLValue(Address(Val, Alignment), T, AlignmentSource::Decl);
     }
 
@@ -3313,8 +3318,11 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
 static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
                                        LValueBaseInfo &BaseInfo,
+                                       TBAAAccessInfo &TBAAInfo,
                                        QualType BaseTy, QualType ElTy,
                                        bool IsLowerBound) {
+  TBAAInfo = CGF.CGM.getTBAAAccessInfo(ElTy);
+
   LValue BaseLVal;
   if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
     BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
@@ -3444,13 +3452,14 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
 
   Address EltPtr = Address::invalid();
   LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
   if (auto *VLA = getContext().getAsVariableArrayType(ResultExprTy)) {
     // The base must be a pointer, which is not an aggregate.  Emit
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
     Address Base =
-        emitOMPArraySectionBase(*this, E->getBase(), BaseInfo, BaseTy,
-                                VLA->getElementType(), IsLowerBound);
+        emitOMPArraySectionBase(*this, E->getBase(), BaseInfo, TBAAInfo,
+                                BaseTy, VLA->getElementType(), IsLowerBound);
     // The element count here is the total number of non-VLA elements.
     llvm::Value *NumElements = getVLASize(VLA).first;
 
@@ -3486,16 +3495,17 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
         ResultExprTy, !getLangOpts().isSignedOverflowDefined(),
         /*SignedIndices=*/false, E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
+    TBAAInfo = CGM.getTBAAAccessInfo(ResultExprTy);
   } else {
     Address Base = emitOMPArraySectionBase(*this, E->getBase(), BaseInfo,
-                                           BaseTy, ResultExprTy, IsLowerBound);
+                                           TBAAInfo, BaseTy, ResultExprTy,
+                                           IsLowerBound);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, ResultExprTy,
                                    !getLangOpts().isSignedOverflowDefined(),
                                    /*SignedIndices=*/false, E->getExprLoc());
   }
 
-  return MakeAddrLValue(EltPtr, ResultExprTy, BaseInfo,
-                        CGM.getTBAAAccessInfo(ResultExprTy));
+  return MakeAddrLValue(EltPtr, ResultExprTy, BaseInfo, TBAAInfo);
 }
 
 LValue CodeGenFunction::
@@ -3721,7 +3731,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       type = refType->getPointeeType();
 
       CharUnits alignment =
-        getNaturalTypeAlignment(type, &FieldBaseInfo, /*pointee*/ true);
+        getNaturalTypeAlignment(type, &FieldBaseInfo, /* TBAAInfo= */ nullptr,
+                                /* forPointeeType= */ true);
       FieldBaseInfo.setMayAlias(false);
       addr = Address(load, alignment);
 
@@ -4566,11 +4577,12 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
     = E->getRHS()->getType()->getAs<MemberPointerType>();
 
   LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
   Address MemberAddr =
-    EmitCXXMemberDataPointerAddress(E, BaseAddr, OffsetV, MPT, &BaseInfo);
+    EmitCXXMemberDataPointerAddress(E, BaseAddr, OffsetV, MPT, &BaseInfo,
+                                    &TBAAInfo);
 
-  return MakeAddrLValue(MemberAddr, MPT->getPointeeType(), BaseInfo,
-                        CGM.getTBAAAccessInfo(MPT->getPointeeType()));
+  return MakeAddrLValue(MemberAddr, MPT->getPointeeType(), BaseInfo, TBAAInfo);
 }
 
 /// Given the address of a temporary variable, produce an r-value of

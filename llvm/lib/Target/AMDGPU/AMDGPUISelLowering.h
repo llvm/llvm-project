@@ -143,6 +143,7 @@ public:
   bool isZExtFree(Type *Src, Type *Dest) const override;
   bool isZExtFree(EVT Src, EVT Dest) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
+  bool isFPExtFoldable(unsigned Opcode, EVT DestVT, EVT SrcVT) const override;
 
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 

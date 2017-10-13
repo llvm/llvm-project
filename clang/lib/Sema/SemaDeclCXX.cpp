@@ -7896,8 +7896,34 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD)) {
+      Expr *ThisArg = nullptr;
+
+      // If the notional 'delete this' expression requires a non-trivial
+      // conversion from 'this' to the type of a destroying operator delete's
+      // first parameter, perform that conversion now.
+      if (OperatorDelete->isDestroyingOperatorDelete()) {
+        QualType ParamType = OperatorDelete->getParamDecl(0)->getType();
+        if (!declaresSameEntity(ParamType->getAsCXXRecordDecl(), RD)) {
+          // C++ [class.dtor]p13:
+          //   ... as if for the expression 'delete this' appearing in a
+          //   non-virtual destructor of the destructor's class.
+          ContextRAII SwitchContext(*this, Destructor);
+          ExprResult This =
+              ActOnCXXThis(OperatorDelete->getParamDecl(0)->getLocation());
+          assert(!This.isInvalid() && "couldn't form 'this' expr in dtor?");
+          This = PerformImplicitConversion(This.get(), ParamType, AA_Passing);
+          if (This.isInvalid()) {
+            // FIXME: Register this as a context note so that it comes out
+            // in the right order.
+            Diag(Loc, diag::note_implicit_delete_this_in_destructor_here);
+            return true;
+          }
+          ThisArg = This.get();
+        }
+      }
+
       MarkFunctionReferenced(Loc, OperatorDelete);
-      Destructor->setOperatorDelete(OperatorDelete);
+      Destructor->setOperatorDelete(OperatorDelete, ThisArg);
     }
   }
 
@@ -12664,14 +12690,34 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   if (CheckOperatorNewDeleteDeclarationScope(SemaRef, FnDecl))
     return true;
 
+  auto *MD = dyn_cast<CXXMethodDecl>(FnDecl);
+
+  // C++ P0722:
+  //   Within a class C, the first parameter of a destroying operator delete
+  //   shall be of type C *. The first parameter of any other deallocation
+  //   function shall be of type void *.
+  CanQualType ExpectedFirstParamType =
+      MD && MD->isDestroyingOperatorDelete()
+          ? SemaRef.Context.getCanonicalType(SemaRef.Context.getPointerType(
+                SemaRef.Context.getRecordType(MD->getParent())))
+          : SemaRef.Context.VoidPtrTy;
+
   // C++ [basic.stc.dynamic.deallocation]p2:
-  //   Each deallocation function shall return void and its first parameter
-  //   shall be void*.
-  if (CheckOperatorNewDeleteTypes(SemaRef, FnDecl, SemaRef.Context.VoidTy,
-                                  SemaRef.Context.VoidPtrTy,
-                                 diag::err_operator_delete_dependent_param_type,
-                                 diag::err_operator_delete_param_type))
+  //   Each deallocation function shall return void
+  if (CheckOperatorNewDeleteTypes(
+          SemaRef, FnDecl, SemaRef.Context.VoidTy, ExpectedFirstParamType,
+          diag::err_operator_delete_dependent_param_type,
+          diag::err_operator_delete_param_type))
     return true;
+
+  // C++ P0722:
+  //   A destroying operator delete shall be a usual deallocation function.
+  if (MD && !MD->getParent()->isDependentContext() &&
+      MD->isDestroyingOperatorDelete() && !MD->isUsualDeallocationFunction()) {
+    SemaRef.Diag(MD->getLocation(),
+                 diag::err_destroying_operator_delete_not_usual);
+    return true;
+  }
 
   return false;
 }

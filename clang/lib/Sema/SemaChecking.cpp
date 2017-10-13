@@ -340,7 +340,7 @@ static bool SemaOpenCLBuiltinNDRangeAndBlock(Sema &S, CallExpr *TheCall) {
 
   // First argument is an ndrange_t type.
   Expr *NDRangeArg = TheCall->getArg(0);
-  if (NDRangeArg->getType().getAsString() != "ndrange_t") {
+  if (NDRangeArg->getType().getUnqualifiedType().getAsString() != "ndrange_t") {
     S.Diag(NDRangeArg->getLocStart(),
            diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << "'ndrange_t'";
@@ -784,8 +784,11 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
   case Builtin::BIto_local:
     Qual.setAddressSpace(LangAS::opencl_local);
     break;
+  case Builtin::BIto_private:
+    Qual.setAddressSpace(LangAS::opencl_private);
+    break;
   default:
-    Qual.removeAddressSpace();
+    llvm_unreachable("Invalid builtin function");
   }
   Call->setType(S.Context.getPointerType(S.Context.getQualifiedType(
       RT.getUnqualifiedType(), Qual)));

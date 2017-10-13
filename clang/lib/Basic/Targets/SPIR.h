@@ -27,6 +27,7 @@ static const unsigned SPIRAddrSpaceMap[] = {
     1, // opencl_global
     3, // opencl_local
     2, // opencl_constant
+    0, // opencl_private
     4, // opencl_generic
     0, // cuda_device
     0, // cuda_constant

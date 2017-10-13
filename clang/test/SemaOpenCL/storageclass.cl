@@ -5,6 +5,20 @@ constant int G2 = 0;
 int G3 = 0;        // expected-error{{program scope variable must reside in constant address space}}
 global int G4 = 0; // expected-error{{program scope variable must reside in constant address space}}
 
+static float g_implicit_static_var = 0; // expected-error {{program scope variable must reside in constant address space}}
+static constant float g_constant_static_var = 0;
+static global float g_global_static_var = 0;   // expected-error {{program scope variable must reside in constant address space}}
+static local float g_local_static_var = 0;     // expected-error {{program scope variable must reside in constant address space}}
+static private float g_private_static_var = 0; // expected-error {{program scope variable must reside in constant address space}}
+static generic float g_generic_static_var = 0; // expected-error{{OpenCL version 1.2 does not support the 'generic' type qualifier}} // expected-error {{program scope variable must reside in constant address space}}
+
+extern float g_implicit_extern_var; // expected-error {{extern variable must reside in constant address space}}
+extern constant float g_constant_extern_var;
+extern global float g_global_extern_var;   // expected-error {{extern variable must reside in constant address space}}
+extern local float g_local_extern_var;     // expected-error {{extern variable must reside in constant address space}}
+extern private float g_private_extern_var; // expected-error {{extern variable must reside in constant address space}}
+extern generic float g_generic_extern_var; // expected-error{{OpenCL version 1.2 does not support the 'generic' type qualifier}} // expected-error {{extern variable must reside in constant address space}}
+
 void kernel foo(int x) {
   // static is not allowed at local scope before CL2.0
   static int S1 = 5;          // expected-error{{variables in function scope cannot be declared static}}
@@ -45,10 +59,17 @@ void f() {
     __attribute__((address_space(100))) int L4; // expected-error{{automatic variable qualified with an invalid address space}}
   }
 
+  static float l_implicit_static_var = 0;          // expected-error {{variables in function scope cannot be declared static}}
+  static constant float l_constant_static_var = 0; // expected-error {{variables in function scope cannot be declared static}}
+  static global float l_global_static_var = 0;     // expected-error {{variables in function scope cannot be declared static}}
+  static local float l_local_static_var = 0;       // expected-error {{variables in function scope cannot be declared static}}
+  static private float l_private_static_var = 0;   // expected-error {{variables in function scope cannot be declared static}}
+  static generic float l_generic_static_var = 0;   // expected-error{{OpenCL version 1.2 does not support the 'generic' type qualifier}} // expected-error {{variables in function scope cannot be declared static}}
 
-  extern constant float L5;
-  extern local float L6; // expected-error{{extern variable must reside in constant address space}}
-
-  static int L7 = 0;     // expected-error{{variables in function scope cannot be declared static}}
-  static int L8;         // expected-error{{variables in function scope cannot be declared static}}
+  extern float l_implicit_extern_var; // expected-error {{extern variable must reside in constant address space}}
+  extern constant float l_constant_extern_var;
+  extern global float l_global_extern_var;   // expected-error {{extern variable must reside in constant address space}}
+  extern local float l_local_extern_var;     // expected-error {{extern variable must reside in constant address space}}
+  extern private float l_private_extern_var; // expected-error {{extern variable must reside in constant address space}}
+  extern generic float l_generic_extern_var; // expected-error{{OpenCL version 1.2 does not support the 'generic' type qualifier}} // expected-error {{extern variable must reside in constant address space}}
 }

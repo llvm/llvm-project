@@ -621,6 +621,10 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxSize), kMaxSaneLen));
   assert(MaxInputLen > 0);
 
+  // Test the callback with empty input and never try it again.
+  uint8_t dummy = 0;
+  ExecuteCallback(&dummy, 0);
+
   if (SizedFiles.empty()) {
     Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
     Unit U({'\n'}); // Valid ASCII input.
@@ -648,9 +652,6 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     }
   }
 
-  // Test the callback with empty input and never try it again.
-  uint8_t dummy;
-  ExecuteCallback(&dummy, 0);
 
   PrintStats("INITED");
   if (Corpus.empty()) {

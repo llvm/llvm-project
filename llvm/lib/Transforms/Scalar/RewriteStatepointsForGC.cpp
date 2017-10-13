@@ -421,6 +421,11 @@ findBaseDefiningValueOfVector(Value *I) {
   if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
     return findBaseDefiningValue(GEP->getPointerOperand());
 
+  // If the pointer comes through a bitcast of a vector of pointers to
+  // a vector of another type of pointer, then look through the bitcast
+  if (auto *BC = dyn_cast<BitCastInst>(I))
+    return findBaseDefiningValue(BC->getOperand(0));
+
   // A PHI or Select is a base defining value.  The outer findBasePointer
   // algorithm is responsible for constructing a base value for this BDV.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&

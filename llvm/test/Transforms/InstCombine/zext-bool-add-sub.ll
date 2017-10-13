@@ -61,3 +61,33 @@ define i32 @PR30273_three_bools(i1 %x, i1 %y, i1 %z) {
   ret i32 %sel2
 }
 
+define i32 @zext_add_scalar(i1 %x) {
+; CHECK-LABEL: @zext_add_scalar(
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 %x, i32 43, i32 42
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i1 %x to i32
+  %add = add i32 %zext, 42
+  ret i32 %add
+}
+
+define <2 x i32> @zext_add_vec_splat(<2 x i1> %x) {
+; CHECK-LABEL: @zext_add_vec_splat(
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> %x, <2 x i32> <i32 43, i32 43>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %add = add <2 x i32> %zext, <i32 42, i32 42>
+  ret <2 x i32> %add
+}
+
+define <2 x i32> @zext_add_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zext_add_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> %x, <2 x i32> <i32 43, i32 24>, <2 x i32> <i32 42, i32 23>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %add = add <2 x i32> %zext, <i32 42, i32 23>
+  ret <2 x i32> %add
+}
+

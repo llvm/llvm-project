@@ -395,17 +395,18 @@ PRE-DEFINED SUBSTITUTIONS
 :program:`lit` provides various patterns that can be used with the RUN command.
 These are defined in TestRunner.py. The base set of substitutions are:
 
- ========== ==============
-  Macro      Substitution
- ========== ==============
- %s         source path (path to the file currently being run)
- %S         source dir (directory of the file currently being run)
- %p         same as %S
- %{pathsep} path separator
- %t         temporary file name unique to the test
- %T         temporary directory unique to the test
- %%         %
- ========== ==============
+ ======================= ==============
+  Macro                   Substitution
+ ======================= ==============
+ %s                      source path (path to the file currently being run)
+ %S                      source dir (directory of the file currently being run)
+ %p                      same as %S
+ %{pathsep}              path separator
+ %t                      temporary file name unique to the test
+ %T                      temporary directory unique to the test
+ %{shared_output(LABEL)} temporary file name, identified by "LABEL", shared across all tests
+ %%                      %
+ ======================= ==============
 
 Other substitutions are provided that are variations on this base set and
 further substitution patterns can be defined by each test module. See the

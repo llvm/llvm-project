@@ -421,6 +421,36 @@ void SDNode::print_types(raw_ostream &OS, const SelectionDAG *G) const {
 }
 
 void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
+  if (getFlags().hasNoUnsignedWrap())
+    OS << " nuw";
+
+  if (getFlags().hasNoSignedWrap())
+    OS << " nsw";
+
+  if (getFlags().hasExact())
+    OS << " exact";
+
+  if (getFlags().hasUnsafeAlgebra())
+    OS << " unsafe";
+
+  if (getFlags().hasNoNaNs())
+    OS << " nnan";
+
+  if (getFlags().hasNoInfs())
+    OS << " ninf";
+
+  if (getFlags().hasNoSignedZeros())
+    OS << " nsz";
+
+  if (getFlags().hasAllowReciprocal())
+    OS << " arcp";
+
+  if (getFlags().hasAllowContract())
+    OS << " contract";
+
+  if (getFlags().hasVectorReduction())
+    OS << " vector-reduction";
+
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {
       OS << "<";

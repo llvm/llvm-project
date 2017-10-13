@@ -1110,17 +1110,29 @@ multiclass avx512_broadcast_scalar<bits<8> opc, string OpcodeStr,
 multiclass avx512_broadcast_rm_split<bits<8> opc, string OpcodeStr,
                                      X86VectorVTInfo MaskInfo,
                                      X86VectorVTInfo DestInfo,
-                                     X86VectorVTInfo SrcInfo> {
-  let ExeDomain = DestInfo.ExeDomain in {
-  defm r : AVX512_maskable<opc, MRMSrcReg, MaskInfo, (outs MaskInfo.RC:$dst),
+                                     X86VectorVTInfo SrcInfo,
+                                     SDPatternOperator UnmaskedOp = X86VBroadcast> {
+  let ExeDomain = DestInfo.ExeDomain, hasSideEffects = 0 in {
+  defm r : AVX512_maskable_split<opc, MRMSrcReg, MaskInfo,
+                   (outs MaskInfo.RC:$dst),
                    (ins SrcInfo.RC:$src), OpcodeStr, "$src", "$src",
+                   (MaskInfo.VT
+                    (bitconvert
+                     (DestInfo.VT
+                      (UnmaskedOp (SrcInfo.VT SrcInfo.RC:$src))))),
                    (MaskInfo.VT
                     (bitconvert
                      (DestInfo.VT
                       (X86VBroadcast (SrcInfo.VT SrcInfo.RC:$src)))))>,
                    T8PD, EVEX;
-  defm m : AVX512_maskable<opc, MRMSrcMem, MaskInfo, (outs MaskInfo.RC:$dst),
+  let mayLoad = 1 in
+  defm m : AVX512_maskable_split<opc, MRMSrcMem, MaskInfo,
+                   (outs MaskInfo.RC:$dst),
                    (ins SrcInfo.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
+                   (MaskInfo.VT
+                    (bitconvert
+                     (DestInfo.VT (UnmaskedOp
+                                   (SrcInfo.ScalarLdFrag addr:$src))))),
                    (MaskInfo.VT
                     (bitconvert
                      (DestInfo.VT (X86VBroadcast
@@ -1130,7 +1142,7 @@ multiclass avx512_broadcast_rm_split<bits<8> opc, string OpcodeStr,
 
   def : Pat<(MaskInfo.VT
              (bitconvert
-              (DestInfo.VT (X86VBroadcast
+              (DestInfo.VT (UnmaskedOp
                             (SrcInfo.VT (scalar_to_vector
                                          (SrcInfo.ScalarLdFrag addr:$src))))))),
             (!cast<Instruction>(NAME#MaskInfo.ZSuffix#m) addr:$src)>;
@@ -1486,11 +1498,11 @@ multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,
                          AVX512VLVectorVTInfo _Dst, AVX512VLVectorVTInfo _Src> {
   let Predicates = [HasDQI] in
     defm Z :    avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info512,
-                                          _Src.info512, _Src.info128>,
+                                          _Src.info512, _Src.info128, null_frag>,
                                           EVEX_V512;
   let Predicates = [HasDQI, HasVLX] in
     defm Z256 : avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info256,
-                                          _Src.info256, _Src.info128>,
+                                          _Src.info256, _Src.info128, null_frag>,
                                           EVEX_V256;
 }
 
@@ -1500,7 +1512,7 @@ multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
 
   let Predicates = [HasDQI, HasVLX] in
     defm Z128 : avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info128,
-                                          _Src.info128, _Src.info128>,
+                                          _Src.info128, _Src.info128, null_frag>,
                                           EVEX_V128;
 }
 
