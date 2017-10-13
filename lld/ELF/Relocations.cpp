@@ -815,7 +815,7 @@ static void addGotEntry(SymbolBody &Sym, bool Preemptible) {
     DynType = Target->GotRel;
   }
 
-  bool Constant = !Preemptible && !(Config->Pic && !isAbsolute(Sym));
+  bool Constant = !Preemptible && (!Config->Pic || isAbsolute(Sym));
   if (!Constant)
     In<ELFT>::RelaDyn->addReloc(
         {DynType, InX::Got, Off, !Preemptible, &Sym, 0});
