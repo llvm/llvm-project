@@ -112,6 +112,9 @@ void SourceMgrAdapter::handleDiag(const llvm::SMDiagnostic &diag) {
     diagID = WarningDiagID;
     break;
 
+  case llvm::SourceMgr::DK_Remark:
+    llvm_unreachable("remarks not implemented");
+
   case llvm::SourceMgr::DK_Note:
     diagID = NoteDiagID;
     break;
