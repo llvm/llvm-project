@@ -753,8 +753,12 @@ void USRGenerator::VisitType(QualType T) {
     if (const FunctionProtoType *FT = T->getAs<FunctionProtoType>()) {
       Out << 'F';
       VisitType(FT->getReturnType());
-      for (const auto &I : FT->param_types())
+      Out << '(';
+      for (const auto &I : FT->param_types()) {
+        Out << '#';
         VisitType(I);
+      }
+      Out << ')';
       if (FT->isVariadic())
         Out << '.';
       return;
