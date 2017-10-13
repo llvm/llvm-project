@@ -17,8 +17,14 @@
 
 #if !SCUDO_TSD_EXCLUSIVE
 
+extern pthread_key_t PThreadKey;
+
 ALWAYS_INLINE ScudoTSD* getCurrentTSD() {
+#if SANITIZER_ANDROID
   return reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
+#else
+  return reinterpret_cast<ScudoTSD *>(pthread_getspecific(PThreadKey));
+#endif  // SANITIZER_ANDROID
 }
 
 ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
