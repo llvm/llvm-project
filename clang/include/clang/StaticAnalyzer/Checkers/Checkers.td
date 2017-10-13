@@ -132,7 +132,7 @@ def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
   DescFile<"DynamicTypePropagation.cpp">;
 
-def NonnullStringConstantsChecker: Checker<"NonnilStringConstants">,
+def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   HelpText<"Assume that const string-like globals are non-null">,
   DescFile<"NonilStringConstantsChecker.cpp">;
 
