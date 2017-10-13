@@ -43,7 +43,8 @@ public:
   enum DiagKind {
     DK_Error,
     DK_Warning,
-    DK_Note
+    DK_Remark,
+    DK_Note,
   };
 
   /// Clients that want to handle their own diagnostics in a custom way can

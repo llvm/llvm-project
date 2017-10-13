@@ -24,7 +24,7 @@ struct InstrItinerary;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   const char *Name;
 #endif
   unsigned NumUnits; // Number of resource of this kind
@@ -102,7 +102,7 @@ struct MCSchedClassDesc {
   static const unsigned short InvalidNumMicroOps = UINT16_MAX;
   static const unsigned short VariantNumMicroOps = UINT16_MAX - 1;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   const char* Name;
 #endif
   unsigned short NumMicroOps;

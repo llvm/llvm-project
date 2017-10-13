@@ -496,8 +496,318 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
+// Each instruction has four addressing variants. WMMA_VARIANTS() macro below
+// constructs an array indexed by WmmaVariant which getWmmaLdVariant() uses to
+// look up the intrinsic ID of particular variant.
+enum WmmaVariant {
+  WMMA_VARIANT_ARI64,
+  WMMA_VARIANT_ARI64_STRIDE,
+  WMMA_VARIANT_AVAR,
+  WMMA_VARIANT_AVAR_STRIDE,
+};
+
+// clang-format off
+#define WMMA_VARIANTS(base) \
+  {{ base##_ari64, base##_ari64_stride, base##_avar, base##_avar_stride }}
+// clang-format on
+
+static unsigned getWmmaLdVariant(WmmaVariant Variant, bool Stride,
+                                 const std::array<unsigned, 4> Variants) {
+  if (Stride) {
+    if (Variant == WMMA_VARIANT_ARI64)
+      Variant = WMMA_VARIANT_ARI64_STRIDE;
+    else if (Variant == WMMA_VARIANT_AVAR)
+      Variant = WMMA_VARIANT_AVAR_STRIDE;
+  }
+  return Variants[Variant];
+}
+
+static Optional<unsigned>
+getWmmaLdStOpcode(unsigned IntrinsicID,
+                  WmmaVariant Variant = WMMA_VARIANT_ARI64) {
+  switch (IntrinsicID) {
+  default:
+    return None;
+  //
+  // WMMA_LOAD_A f16
+  //
+  case Intrinsic::nvvm_wmma_load_a_f16_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col));
+  case Intrinsic::nvvm_wmma_load_a_f16_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row));
+  case Intrinsic::nvvm_wmma_load_a_f16_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col));
+  case Intrinsic::nvvm_wmma_load_a_f16_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row));
+  case Intrinsic::nvvm_wmma_load_a_f16_col_shared:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_shared));
+  case Intrinsic::nvvm_wmma_load_a_f16_row_shared:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_shared));
+  case Intrinsic::nvvm_wmma_load_a_f16_col_shared_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_shared));
+  case Intrinsic::nvvm_wmma_load_a_f16_row_shared_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_shared));
+  case Intrinsic::nvvm_wmma_load_a_f16_col_global:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_global));
+  case Intrinsic::nvvm_wmma_load_a_f16_row_global:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_global));
+  case Intrinsic::nvvm_wmma_load_a_f16_col_global_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_col_global));
+  case Intrinsic::nvvm_wmma_load_a_f16_row_global_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_A_row_global));
+
+  //
+  // WMMA_LOAD_B f16
+  //
+  case Intrinsic::nvvm_wmma_load_b_f16_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col));
+  case Intrinsic::nvvm_wmma_load_b_f16_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row));
+  case Intrinsic::nvvm_wmma_load_b_f16_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col));
+  case Intrinsic::nvvm_wmma_load_b_f16_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row));
+  case Intrinsic::nvvm_wmma_load_b_f16_col_shared:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_shared));
+  case Intrinsic::nvvm_wmma_load_b_f16_row_shared:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_shared));
+  case Intrinsic::nvvm_wmma_load_b_f16_col_shared_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_shared));
+  case Intrinsic::nvvm_wmma_load_b_f16_row_shared_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_shared));
+  case Intrinsic::nvvm_wmma_load_b_f16_col_global:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_global));
+  case Intrinsic::nvvm_wmma_load_b_f16_row_global:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_global));
+  case Intrinsic::nvvm_wmma_load_b_f16_col_global_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_col_global));
+  case Intrinsic::nvvm_wmma_load_b_f16_row_global_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_B_row_global));
+
+  //
+  // WMMA_LOAD_C f16
+  //
+  case Intrinsic::nvvm_wmma_load_c_f16_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col));
+  case Intrinsic::nvvm_wmma_load_c_f16_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row));
+  case Intrinsic::nvvm_wmma_load_c_f16_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col));
+  case Intrinsic::nvvm_wmma_load_c_f16_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row));
+  case Intrinsic::nvvm_wmma_load_c_f16_col_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_shared));
+  case Intrinsic::nvvm_wmma_load_c_f16_row_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_shared));
+  case Intrinsic::nvvm_wmma_load_c_f16_col_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_shared));
+  case Intrinsic::nvvm_wmma_load_c_f16_row_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_shared));
+  case Intrinsic::nvvm_wmma_load_c_f16_col_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_global));
+  case Intrinsic::nvvm_wmma_load_c_f16_row_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_global));
+  case Intrinsic::nvvm_wmma_load_c_f16_col_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_col_global));
+  case Intrinsic::nvvm_wmma_load_c_f16_row_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f16_row_global));
+
+  //
+  // WMMA_LOAD_C f32
+  //
+  case Intrinsic::nvvm_wmma_load_c_f32_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col));
+  case Intrinsic::nvvm_wmma_load_c_f32_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row));
+  case Intrinsic::nvvm_wmma_load_c_f32_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col));
+  case Intrinsic::nvvm_wmma_load_c_f32_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row));
+  case Intrinsic::nvvm_wmma_load_c_f32_col_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_shared));
+  case Intrinsic::nvvm_wmma_load_c_f32_row_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_shared));
+  case Intrinsic::nvvm_wmma_load_c_f32_col_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_shared));
+  case Intrinsic::nvvm_wmma_load_c_f32_row_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_shared));
+  case Intrinsic::nvvm_wmma_load_c_f32_col_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_global));
+  case Intrinsic::nvvm_wmma_load_c_f32_row_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_global));
+  case Intrinsic::nvvm_wmma_load_c_f32_col_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_col_global));
+  case Intrinsic::nvvm_wmma_load_c_f32_row_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_LOAD_C_f32_row_global));
+
+  //
+  // WMMA_STORE_D f16
+  //
+  case Intrinsic::nvvm_wmma_store_d_f16_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col));
+  case Intrinsic::nvvm_wmma_store_d_f16_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row));
+  case Intrinsic::nvvm_wmma_store_d_f16_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col));
+  case Intrinsic::nvvm_wmma_store_d_f16_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row));
+  case Intrinsic::nvvm_wmma_store_d_f16_col_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_shared));
+  case Intrinsic::nvvm_wmma_store_d_f16_row_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_shared));
+  case Intrinsic::nvvm_wmma_store_d_f16_col_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_shared));
+  case Intrinsic::nvvm_wmma_store_d_f16_row_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_shared));
+  case Intrinsic::nvvm_wmma_store_d_f16_col_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_global));
+  case Intrinsic::nvvm_wmma_store_d_f16_row_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_global));
+  case Intrinsic::nvvm_wmma_store_d_f16_col_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_col_global));
+  case Intrinsic::nvvm_wmma_store_d_f16_row_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f16_row_global));
+
+  //
+  // WMMA_STORE_D f32
+  //
+  case Intrinsic::nvvm_wmma_store_d_f32_col:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col));
+  case Intrinsic::nvvm_wmma_store_d_f32_row:
+    return getWmmaLdVariant(Variant, /*Stride=*/false,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row));
+  case Intrinsic::nvvm_wmma_store_d_f32_col_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col));
+  case Intrinsic::nvvm_wmma_store_d_f32_row_stride:
+    return getWmmaLdVariant(Variant, /*Stride=*/true,
+                            WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row));
+  case Intrinsic::nvvm_wmma_store_d_f32_col_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_shared));
+  case Intrinsic::nvvm_wmma_store_d_f32_row_shared:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_shared));
+  case Intrinsic::nvvm_wmma_store_d_f32_col_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_shared));
+  case Intrinsic::nvvm_wmma_store_d_f32_row_shared_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_shared));
+  case Intrinsic::nvvm_wmma_store_d_f32_col_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_global));
+  case Intrinsic::nvvm_wmma_store_d_f32_row_global:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/false,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_global));
+  case Intrinsic::nvvm_wmma_store_d_f32_col_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_col_global));
+  case Intrinsic::nvvm_wmma_store_d_f32_row_global_stride:
+    return getWmmaLdVariant(
+        Variant, /*Stride=*/true,
+        WMMA_VARIANTS(NVPTX::INT_WMMA_STORE_D_f32_row_global));
+  }
+}
+#undef WMMA_VARIANTS
+
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  if (getWmmaLdStOpcode(IID))
+    return tryWMMA_LDST(N);
+
   switch (IID) {
   default:
     return false;
@@ -719,6 +1029,39 @@ bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   case Intrinsic::nvvm_match_all_sync_i64p:
     SelectMatchAll(N);
     return true;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16_satfinite:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32:
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32_satfinite:
+    return tryWMMA_MMA(N);
   }
 }
 
@@ -3724,4 +4067,173 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
       return IsSigned ? NVPTX::CVT_s32_s64 : NVPTX::CVT_u32_u64;
     }
   }
+}
+
+bool NVPTXDAGToDAGISel::tryWMMA_LDST(SDNode *N) {
+  SDValue Chain = N->getOperand(0);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  SDValue Op1 = N->getOperand(2);
+  SDValue Addr, Offset, Base;
+  Optional<unsigned> Opcode;
+  SDLoc DL(N);
+  MemSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  WmmaVariant Variant;
+  SmallVector<SDValue, 12> Ops;
+  bool isStore = N->getNumValues() == 1; // Store ops only return a chain.
+
+  if (SelectDirectAddr(Op1, Addr)) {
+    Variant = WMMA_VARIANT_AVAR;
+    Ops.push_back(Addr);
+  } else if (SelectADDRsi64(Op1.getNode(), Op1, Base, Offset) ||
+             SelectADDRri64(Op1.getNode(), Op1, Base, Offset)) {
+    Variant = WMMA_VARIANT_ARI64;
+    Ops.push_back(Base);
+    Ops.push_back(Offset);
+  } else {
+    Variant = WMMA_VARIANT_AVAR;
+    Ops.push_back(Op1);
+  }
+  unsigned NumOps = N->getNumOperands();
+  // Pass through the rest of the operands to the machine node.
+  for (unsigned i = 3; i < NumOps; ++i)
+    Ops.push_back(N->getOperand(i));
+  Ops.push_back(Chain);
+
+  Opcode = getWmmaLdStOpcode(IID, Variant);
+  if (!Opcode) {
+    llvm::errs() << "tryWMMALD - no Opcode.\n";
+    return false;
+  }
+
+  EVT MemVT = MemSD->getMemoryVT();
+  assert(MemVT.isVector() && "Expected vector return type.");
+
+  SDNode *MN;
+  if (isStore) {
+    MN = CurDAG->getMachineNode(Opcode.getValue(), DL, MVT::Other, Ops);
+  } else {
+    SmallVector<EVT, 9> InstVTs(MemVT.getVectorNumElements(),
+                                MemSD->getValueType(0));
+    InstVTs.push_back(MVT::Other);
+    MN = CurDAG->getMachineNode(Opcode.getValue(), DL, InstVTs, Ops);
+  }
+
+  ReplaceNode(N, MN);
+  return true;
+}
+
+bool NVPTXDAGToDAGISel::tryWMMA_MMA(SDNode *N) {
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  SDLoc DL(N);
+  unsigned Opc;
+
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f16_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_col_f32_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_col_f32_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f16_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f16_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_col_row_f32_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_col_row_f32_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f16_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f16_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_col_f32_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_col_f32_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f16_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f16_f32_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f16;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f16_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f16_satfinite;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f32;
+    break;
+  case Intrinsic::nvvm_wmma_mma_sync_row_row_f32_f32_satfinite:
+    Opc = NVPTX::INT_WMMA_MMA_row_row_f32_f32_satfinite;
+    break;
+  }
+
+  SmallVector<SDValue, 24> Ops;
+  // Pass through operands and return value types to the machine node.
+  for (unsigned i = 1; i < N->getNumOperands(); ++i)
+    Ops.push_back(N->getOperand(i));
+  SmallVector<EVT, 8> InstVTs(N->getNumValues(), N->getValueType(0));
+  SDNode *MN = CurDAG->getMachineNode(Opc, DL, InstVTs, Ops);
+  ReplaceNode(N, MN);
+  return true;
 }

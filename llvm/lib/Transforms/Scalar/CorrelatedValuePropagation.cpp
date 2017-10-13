@@ -335,18 +335,6 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   return true;
 }
 
-// Helper function to rewrite srem and sdiv. As a policy choice, we choose not
-// to waste compile time on anything where the operands are local defs.  While
-// LVI can sometimes reason about such cases, it's not its primary purpose.
-static bool hasLocalDefs(BinaryOperator *SDI) {
-  for (Value *O : SDI->operands()) {
-    auto *I = dyn_cast<Instruction>(O);
-    if (I && I->getParent() == SDI->getParent())
-      return true;
-  }
-  return false;
-}
-
 static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
   Constant *Zero = ConstantInt::get(SDI->getType(), 0);
   for (Value *O : SDI->operands()) {
@@ -358,7 +346,7 @@ static bool hasPositiveOperands(BinaryOperator *SDI, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || hasLocalDefs(SDI) ||
+  if (SDI->getType()->isVectorTy() ||
       !hasPositiveOperands(SDI, LVI))
     return false;
 
@@ -376,7 +364,7 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || hasLocalDefs(SDI) ||
+  if (SDI->getType()->isVectorTy() ||
       !hasPositiveOperands(SDI, LVI))
     return false;
 
@@ -391,7 +379,7 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
 }
 
 static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || hasLocalDefs(SDI))
+  if (SDI->getType()->isVectorTy())
     return false;
 
   Constant *Zero = ConstantInt::get(SDI->getType(), 0);
@@ -415,7 +403,7 @@ static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
   if (DontProcessAdds)
     return false;
 
-  if (AddOp->getType()->isVectorTy() || hasLocalDefs(AddOp))
+  if (AddOp->getType()->isVectorTy())
     return false;
 
   bool NSW = AddOp->hasNoSignedWrap();

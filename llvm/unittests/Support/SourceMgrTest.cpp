@@ -67,6 +67,16 @@ TEST_F(SourceMgrTest, BasicWarning) {
             Output);
 }
 
+TEST_F(SourceMgrTest, BasicRemark) {
+  setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
+  printMessage(getLoc(4), SourceMgr::DK_Remark, "message", None, None);
+
+  EXPECT_EQ("file.in:1:5: remark: message\n"
+            "aaa bbb\n"
+            "    ^\n",
+            Output);
+}
+
 TEST_F(SourceMgrTest, BasicNote) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   printMessage(getLoc(4), SourceMgr::DK_Note, "message", None, None);

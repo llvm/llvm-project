@@ -78,8 +78,7 @@ public:
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
 
-  void EmitAMDGPUNote(const MCExpr *DescSize,
-                      AMDGPU::ElfNote::NoteType Type,
+  void EmitAMDGPUNote(const MCExpr *DescSize, unsigned NoteType,
                       function_ref<void(MCELFStreamer &)> EmitDesc);
 
 public:

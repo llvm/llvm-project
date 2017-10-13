@@ -20,8 +20,8 @@ outer.loop:
   
 inner.loop.preheader:
 ; CHECK: inner.loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %l, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %l, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %inner.loop
   br label %inner.loop
@@ -63,8 +63,8 @@ entry:
 
 outer.loop.preheader:
 ; CHECK: outer.loop.preheader:
-; CHECK: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
-; CHECK-NEXT: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK: [[limit_check:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond:[^ ]+]] = and i1 [[first_iteration_check]], [[limit_check]]
 ; CHECK-NEXT: br label %outer.loop
   br label %outer.loop
@@ -116,8 +116,8 @@ entry:
 
 outer.loop.preheader:
 ; CHECK: outer.loop.preheader:
-; CHECK-NEXT: [[first_iteration_check_outer:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[limit_check_outer:[^ ]+]] = icmp sle i32 %n, %length
+; CHECK-NEXT: [[first_iteration_check_outer:[^ ]+]] = icmp ult i32 0, %length
 ; CHECK-NEXT: [[wide_cond_outer:[^ ]+]] = and i1 [[first_iteration_check_outer]], [[limit_check_outer]]
 ; CHECK-NEXT: br label %outer.loop
   br label %outer.loop

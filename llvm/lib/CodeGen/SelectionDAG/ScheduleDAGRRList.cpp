@@ -1855,7 +1855,7 @@ public:
     return V;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
   LLVM_DUMP_METHOD void dump(ScheduleDAG *DAG) const override {
     // Emulate pop() without clobbering NodeQueueIds.
     std::vector<SUnit *> DumpQueue = Queue;
@@ -2026,7 +2026,7 @@ unsigned RegReductionPQBase::getNodePriority(const SUnit *SU) const {
 //                     Register Pressure Tracking
 //===----------------------------------------------------------------------===//
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifdef LLVM_ENABLE_DUMP
 LLVM_DUMP_METHOD void RegReductionPQBase::dumpRegPressure() const {
   for (const TargetRegisterClass *RC : TRI->regclasses()) {
     unsigned Id = RC->getID();
