@@ -229,6 +229,8 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     break;
 
+  case CK_KNM:
+    // TODO: Add avx5124fmaps/avx5124vnniw.
   case CK_KNL:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
@@ -852,6 +854,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_KNL:
     defineCPUMacros(Builder, "knl");
+    break;
+  case CK_KNM:
     break;
   case CK_Lakemont:
     Builder.defineMacro("__tune_lakemont__");
@@ -1553,6 +1557,7 @@ X86TargetInfo::CPUKind X86TargetInfo::getCPUKind(StringRef CPU) const {
       .Cases("skylake-avx512", "skx", CK_SkylakeServer)
       .Case("cannonlake", CK_Cannonlake)
       .Case("knl", CK_KNL)
+      .Case("knm", CK_KNM)
       .Case("lakemont", CK_Lakemont)
       .Case("k6", CK_K6)
       .Case("k6-2", CK_K6_2)

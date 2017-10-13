@@ -52,6 +52,10 @@
 // RUN:   | FileCheck %s -check-prefix=knl
 // knl: "-target-cpu" "knl"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=knm 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=knm
+// knm: "-target-cpu" "knm"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=cannonlake 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=cannonlake
 // cannonlake: "-target-cpu" "cannonlake"
