@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} FuzzMutate)
 set(CXX_FLAGS_NOFUZZ ${CMAKE_CXX_FLAGS})
 set(DUMMY_MAIN DummyClangFuzzer.cpp)
-if(DEFINED LIB_FUZZING_ENGINE)
+if(LLVM_LIB_FUZZING_ENGINE)
   unset(DUMMY_MAIN)
 elseif(LLVM_USE_SANITIZE_COVERAGE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
@@ -50,7 +50,7 @@ if(CLANG_ENABLE_PROTO_FUZZER)
   target_link_libraries(clang-proto-fuzzer
     ${ProtobufMutator_LIBRARIES}
     ${PROTOBUF_LIBRARIES}
-    ${LIB_FUZZING_ENGINE}
+    ${LLVM_LIB_FUZZING_ENGINE}
     clangCXXProto
     clangHandleCXX
     clangProtoToCXX
@@ -66,6 +66,6 @@ add_clang_executable(clang-fuzzer
   )
 
 target_link_libraries(clang-fuzzer
-  ${LIB_FUZZING_ENGINE}
+  ${LLVM_LIB_FUZZING_ENGINE}
   clangHandleCXX
   )
