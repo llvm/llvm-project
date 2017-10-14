@@ -345,7 +345,7 @@ bool InstructionSelector::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[OtherInsnID] != nullptr && "Used insn before defined");
       if (!State.MIs[InsnID]->getOperand(OpIdx).isIdenticalTo(
-              State.MIs[OtherInsnID]->getOperand(OtherInsnID))) {
+              State.MIs[OtherInsnID]->getOperand(OtherOpIdx))) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
