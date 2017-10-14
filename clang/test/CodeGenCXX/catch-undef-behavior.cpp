@@ -426,6 +426,66 @@ void indirect_function_call(void (*p)(int)) {
   p(42);
 }
 
+namespace FunctionSanitizerVirtualCalls {
+struct A {
+  virtual void f() {}
+  virtual void g() {}
+  void h() {}
+};
+
+struct B : virtual A {
+  virtual void b() {}
+  virtual void f();
+  void g() final {}
+  static void q() {}
+};
+
+void B::f() {}
+
+void force_irgen() {
+  A a;
+  a.g();
+  a.h();
+
+  B b;
+  b.f();
+  b.b();
+  b.g();
+  B::q();
+}
+
+// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define void @_ZTv0_n24_N29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls11force_irgenEv()
+// CHECK: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1AC1Ev
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1A1gEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1A1hEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1BC1Ev
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1bEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1gEv
+// CHECK-NOT: prologue
+//
+// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1qEv
+// CHECK: prologue
+
+}
+
 namespace UpcastPointerTest {
 struct S {};
 struct T : S { double d; };

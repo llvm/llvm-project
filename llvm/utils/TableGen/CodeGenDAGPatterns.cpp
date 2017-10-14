@@ -881,6 +881,14 @@ std::string TreePredicateFn::getImmType() const {
   return "int64_t";
 }
 
+std::string TreePredicateFn::getImmTypeIdentifier() const {
+  if (immCodeUsesAPInt())
+    return "APInt";
+  else if (immCodeUsesAPFloat())
+    return "APFloat";
+  return "I64";
+}
+
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
   return getPredCode().empty() && getImmCode().empty();

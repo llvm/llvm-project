@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestSupport.h"
-#include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
@@ -55,7 +54,7 @@ public:
 
   /// Prints any additional state associated with the selection argument to
   /// the given output stream.
-  virtual void print(raw_ostream &OS) {}
+  virtual void print(raw_ostream &OS) = 0;
 
   /// Returns a replacement refactoring result consumer (if any) that should
   /// consume the results of a refactoring operation.
@@ -100,41 +99,6 @@ private:
   TestSelectionRangesInFile TestSelections;
 };
 
-/// Stores the parsed -selection=filename:line:column[-line:column] option.
-class SourceRangeSelectionArgument final : public SourceSelectionArgument {
-public:
-  SourceRangeSelectionArgument(ParsedSourceRange Range)
-      : Range(std::move(Range)) {}
-
-  bool forAllRanges(const SourceManager &SM,
-                    llvm::function_ref<void(SourceRange R)> Callback) override {
-    const FileEntry *FE = SM.getFileManager().getFile(Range.FileName);
-    FileID FID = FE ? SM.translateFile(FE) : FileID();
-    if (!FE || FID.isInvalid()) {
-      llvm::errs() << "error: -selection=" << Range.FileName
-                   << ":... : given file is not in the target TU\n";
-      return true;
-    }
-
-    SourceLocation Start = SM.getMacroArgExpandedLocation(
-        SM.translateLineCol(FID, Range.Begin.first, Range.Begin.second));
-    SourceLocation End = SM.getMacroArgExpandedLocation(
-        SM.translateLineCol(FID, Range.End.first, Range.End.second));
-    if (Start.isInvalid() || End.isInvalid()) {
-      llvm::errs() << "error: -selection=" << Range.FileName << ':'
-                   << Range.Begin.first << ':' << Range.Begin.second << '-'
-                   << Range.End.first << ':' << Range.End.second
-                   << " : invalid source location\n";
-      return true;
-    }
-    Callback(SourceRange(Start, End));
-    return false;
-  }
-
-private:
-  ParsedSourceRange Range;
-};
-
 std::unique_ptr<SourceSelectionArgument>
 SourceSelectionArgument::fromString(StringRef Value) {
   if (Value.startswith("test:")) {
@@ -146,12 +110,10 @@ SourceSelectionArgument::fromString(StringRef Value) {
     return llvm::make_unique<TestSourceSelectionArgument>(
         std::move(*ParsedTestSelection));
   }
-  Optional<ParsedSourceRange> Range = ParsedSourceRange::fromString(Value);
-  if (Range)
-    return llvm::make_unique<SourceRangeSelectionArgument>(std::move(*Range));
+  // FIXME: Support true selection ranges.
   llvm::errs() << "error: '-selection' option must be specified using "
                   "<file>:<line>:<column> or "
-                  "<file>:<line>:<column>-<line>:<column> format\n";
+                  "<file>:<line>:<column>-<line>:<column> format";
   return nullptr;
 }
 
@@ -306,22 +268,11 @@ private:
 
 class ClangRefactorConsumer : public RefactoringResultConsumer {
 public:
-  void handleError(llvm::Error Err) override {
+  void handleError(llvm::Error Err) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }
 
-  void handle(AtomicChanges Changes) override {
-    SourceChanges.insert(SourceChanges.begin(), Changes.begin(), Changes.end());
-  }
-
-  void handle(SymbolOccurrences Occurrences) override {
-    RefactoringResultConsumer::handle(std::move(Occurrences));
-  }
-
-  const AtomicChanges &getSourceChanges() const { return SourceChanges; }
-
-private:
-  AtomicChanges SourceChanges;
+  // FIXME: Consume atomic changes and apply them to files.
 };
 
 class ClangRefactorTool {
@@ -401,39 +352,6 @@ public:
     }
   }
 
-  bool applySourceChanges(const AtomicChanges &Replacements) {
-    std::set<std::string> Files;
-    for (const auto &Change : Replacements)
-      Files.insert(Change.getFilePath());
-    // FIXME: Add automatic formatting support as well.
-    tooling::ApplyChangesSpec Spec;
-    // FIXME: We should probably cleanup the result by default as well.
-    Spec.Cleanup = false;
-    for (const auto &File : Files) {
-      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferErr =
-          llvm::MemoryBuffer::getFile(File);
-      if (!BufferErr) {
-        llvm::errs() << "error: failed to open " << File << " for rewriting\n";
-        return true;
-      }
-      auto Result = tooling::applyAtomicChanges(File, (*BufferErr)->getBuffer(),
-                                                Replacements, Spec);
-      if (!Result) {
-        llvm::errs() << toString(Result.takeError());
-        return true;
-      }
-
-      std::error_code EC;
-      llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::F_Text);
-      if (EC) {
-        llvm::errs() << EC.message() << "\n";
-        return true;
-      }
-      OS << *Result;
-    }
-    return false;
-  }
-
   bool invokeAction(RefactoringActionSubcommand &Subcommand,
                     const CompilationDatabase &DB,
                     ArrayRef<std::string> Sources) {
@@ -505,7 +423,7 @@ public:
           // FIXME (Alex L): Implement non-selection based invocation path.
         }))
       return true;
-    return HasFailed || applySourceChanges(Consumer.getSourceChanges());
+    return HasFailed;
   }
 };
 

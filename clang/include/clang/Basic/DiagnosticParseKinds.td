@@ -558,10 +558,13 @@ def warn_cxx98_compat_noexcept_expr : Warning<
 def warn_cxx98_compat_nullptr : Warning<
   "'nullptr' is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 
-def warn_cxx14_compat_attribute : Warning<
+def ext_ns_enum_attribute : Extension<
+  "attributes on %select{a namespace|an enumerator}0 declaration are "
+  "a C++17 extension">, InGroup<CXX17>;
+def warn_cxx14_compat_ns_enum_attribute : Warning<
   "attributes on %select{a namespace|an enumerator}0 declaration are "
   "incompatible with C++ standards before C++17">,
-  InGroup<CXXPre17Compat>, DefaultIgnore;
+  InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def warn_cxx98_compat_alignas : Warning<"'alignas' is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_attribute : Warning<
