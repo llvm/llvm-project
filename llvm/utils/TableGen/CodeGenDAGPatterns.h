@@ -288,13 +288,12 @@ public:
   /// getImmediatePredicateCode - Return the code that evaluates this pattern if
   /// this is an immediate predicate.  It is an error to call this on a
   /// non-immediate pattern.
-  std::string getImmediatePredicateCode() const {
-    std::string Result = getImmCode();
+  StringRef getImmediatePredicateCode() const {
+    StringRef Result = getImmCode();
     assert(!Result.empty() && "Isn't an immediate pattern!");
     return Result;
   }
-  
-  
+
   bool operator==(const TreePredicateFn &RHS) const {
     return PatFragRec == RHS.PatFragRec;
   }
@@ -312,15 +311,15 @@ public:
   std::string getCodeToRunOnSDNode() const;
 
   /// Get the data type of the argument to getImmediatePredicateCode().
-  std::string getImmType() const;
+  StringRef getImmType() const;
 
   /// Get a string that describes the type returned by getImmType() but is
   /// usable as part of an identifier.
-  std::string getImmTypeIdentifier() const;
+  StringRef getImmTypeIdentifier() const;
 
 private:
-  std::string getPredCode() const;
-  std::string getImmCode() const;
+  StringRef getPredCode() const;
+  StringRef getImmCode() const;
   bool immCodeUsesAPInt() const;
   bool immCodeUsesAPFloat() const;
 };

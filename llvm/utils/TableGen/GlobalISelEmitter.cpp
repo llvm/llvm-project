@@ -68,13 +68,13 @@ namespace {
 
 /// Get the name of the enum value used to number the predicate function.
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
-  return "GIPFP_" + Predicate.getImmTypeIdentifier() + "_" +
+  return "GIPFP_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
 
 /// Get the opcode used to check this predicate.
 std::string getMatchOpcodeForPredicate(const TreePredicateFn &Predicate) {
-  return "GIM_Check" + Predicate.getImmTypeIdentifier() + "ImmPredicate";
+  return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 /// This class stands in for LLT wherever we want to tablegen-erate an
