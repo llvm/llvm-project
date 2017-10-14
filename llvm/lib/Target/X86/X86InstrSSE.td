@@ -1890,8 +1890,14 @@ let Predicates = [HasAVX, NoVLX] in {
                                  (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
               (VCVTPD2DQrr VR128:$src)>;
     def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvtp2Int (loadv2f64 addr:$src)))))),
+              (VCVTPD2DQrm addr:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
                                  (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
               (VCVTTPD2DQrr VR128:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvttp2si (loadv2f64 addr:$src)))))),
+              (VCVTTPD2DQrm addr:$src)>;
   }
 } // Predicates = [HasAVX]
 
@@ -1912,8 +1918,14 @@ let Predicates = [UseSSE2] in {
                                  (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
               (CVTPD2DQrr VR128:$src)>;
     def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvtp2Int (memopv2f64 addr:$src)))))),
+              (CVTPD2DQrm addr:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
                                  (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
               (CVTTPD2DQrr VR128:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvttp2si (memopv2f64 addr:$src)))))),
+              (CVTTPD2DQrm addr:$src)>;
   }
 } // Predicates = [UseSSE2]
 
@@ -2054,18 +2066,26 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
 
 let Predicates = [HasAVX, NoVLX] in {
   // Match fpround and fpextend for 128/256-bit conversions
-  let AddedComplexity = 15 in
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
-            (VCVTPD2PSrr VR128:$src)>;
+  let AddedComplexity = 15 in {
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
+              (VCVTPD2PSrr VR128:$src)>;
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (loadv2f64 addr:$src)))))),
+              (VCVTPD2PSrm addr:$src)>;
+  }
 }
 
 let Predicates = [UseSSE2] in {
   // Match fpround and fpextend for 128 conversions
-  let AddedComplexity = 15 in
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
-            (CVTPD2PSrr VR128:$src)>;
+  let AddedComplexity = 15 in {
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
+              (CVTPD2PSrr VR128:$src)>;
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (memopv2f64 addr:$src)))))),
+              (CVTPD2PSrm addr:$src)>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

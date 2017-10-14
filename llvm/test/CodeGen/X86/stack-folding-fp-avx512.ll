@@ -200,6 +200,14 @@ define <8 x double> @stack_fold_cvtudq2pd(<8 x i32> %a0) {
   ret <8 x double> %2
 }
 
+define <8 x float> @stack_fold_cvtpd2ps(<8 x double> %a0) {
+  ;CHECK-LABEL: stack_fold_cvtpd2ps
+  ;CHECK:   vcvtpd2ps {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = fptrunc <8 x double> %a0 to <8 x float>
+  ret <8 x float> %2
+}
+
 define <4 x float> @stack_fold_insertps(<4 x float> %a0, <4 x float> %a1) {
   ;CHECK-LABEL: stack_fold_insertps
   ;CHECK:       vinsertps $17, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
