@@ -3677,8 +3677,10 @@ static void LookupVisibleDecls(Scope *S, LookupResult &Result,
        !Visited.alreadyVisitedContext(S->getEntity())) ||
       (S->getEntity())->isFunctionOrMethod()) {
     FindLocalExternScope FindLocals(Result);
-    // Walk through the declarations in this Scope.
-    for (auto *D : S->decls()) {
+    // Walk through the declarations in this Scope. The consumer might add new
+    // decls to the scope as part of deserialization, so make a copy first.
+    SmallVector<Decl *, 8> ScopeDecls(S->decls().begin(), S->decls().end());
+    for (Decl *D : ScopeDecls) {
       if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
         if ((ND = Result.getAcceptableDecl(ND))) {
           Consumer.FoundDecl(ND, Visited.checkHidden(ND), nullptr, false);

@@ -125,7 +125,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       FileCheck count not llvm-nm llvm-objdump llvm-symbolizer)
 
     # Add top-level targets for various compiler-rt test suites.
-    set(COMPILER_RT_TEST_SUITES check-asan check-asan-dynamic check-dfsan
+    set(COMPILER_RT_TEST_SUITES check-fuzzer check-asan check-asan-dynamic check-dfsan
       check-lsan check-msan check-sanitizer check-tsan check-ubsan check-ubsan-minimal
       check-profile check-cfi check-cfi-and-supported check-safestack)
     foreach(test_suite ${COMPILER_RT_TEST_SUITES})

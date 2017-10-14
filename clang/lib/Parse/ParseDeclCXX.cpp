@@ -77,9 +77,10 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(unsigned Context,
   ParsedAttributesWithRange attrs(AttrFactory);
   SourceLocation attrLoc;
   if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-    if (!getLangOpts().CPlusPlus1z)
-      Diag(Tok.getLocation(), diag::warn_cxx14_compat_attribute)
-          << 0 /*namespace*/;
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+                                ? diag::warn_cxx14_compat_ns_enum_attribute
+                                : diag::ext_ns_enum_attribute)
+      << 0 /*namespace*/;
     attrLoc = Tok.getLocation();
     ParseCXX11Attributes(attrs);
   }
