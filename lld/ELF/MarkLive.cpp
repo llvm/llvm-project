@@ -74,8 +74,8 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     return;
   }
 
-  if (auto *U = dyn_cast<Undefined>(&B))
-    for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
+  if (!B.isInCurrentDSO())
+    for (InputSectionBase *Sec : CNamedSections.lookup(B.getName()))
       Fn(Sec, 0);
 }
 

@@ -76,7 +76,7 @@
 #include "ICF.h"
 #include "Config.h"
 #include "SymbolTable.h"
-#include "Threads.h"
+#include "lld/Common/Threads.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
@@ -366,7 +366,7 @@ template <class ELFT>
 void ICF<ELFT>::forEachClass(std::function<void(size_t, size_t)> Fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
-  if (!Config->Threads || Sections.size() < 1024) {
+  if (!ThreadsEnabled || Sections.size() < 1024) {
     forEachClassRange(0, Sections.size(), Fn);
     ++Cnt;
     return;

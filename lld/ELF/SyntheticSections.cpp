@@ -24,8 +24,8 @@
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
-#include "Threads.h"
 #include "Writer.h"
+#include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
@@ -2258,7 +2258,7 @@ void MergeNoTailSection::finalizeContents() {
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.
   size_t Concurrency = 1;
-  if (Config->Threads)
+  if (ThreadsEnabled)
     Concurrency =
         std::min<size_t>(PowerOf2Floor(hardware_concurrency()), NumShards);
 

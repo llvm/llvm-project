@@ -147,6 +147,7 @@ int main()
 #if TEST_STD_VER > 11
     {
         constexpr std::tuple<Empty> t0{Empty()};
+        (void)t0;
     }
     {
         constexpr std::tuple<A, A> t(3, 2);
