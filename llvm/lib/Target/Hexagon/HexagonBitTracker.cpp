@@ -60,8 +60,12 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
   // der the initial sequence of formal parameters that are known to be
   // passed via registers.
   unsigned InVirtReg, InPhysReg = 0;
+  const Function &F = *MF.getFunction();
 
-  for (const Argument &Arg : MF.getFunction()->args()) {
+  using arg_iterator = Function::const_arg_iterator;
+
+  for (arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E; ++I) {
+    const Argument &Arg = *I;
     Type *ATy = Arg.getType();
     unsigned Width = 0;
     if (ATy->isIntegerTy())
@@ -186,7 +190,8 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   unsigned NumDefs = 0;
 
   // Sanity verification: there should not be any defs with subregisters.
-  for (const MachineOperand &MO : MI.operands()) {
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isDef())
       continue;
     NumDefs++;
@@ -235,7 +240,8 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   // checking what kind of operand a given instruction has individually
   // for each instruction, do it here. Global symbols as operands gene-
   // rally do not provide any useful information.
-  for (const MachineOperand &MO : MI.operands()) {
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (MO.isGlobal() || MO.isBlockAddress() || MO.isSymbol() || MO.isJTI() ||
         MO.isCPI())
       return false;

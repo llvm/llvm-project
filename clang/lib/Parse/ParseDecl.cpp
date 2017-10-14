@@ -4413,9 +4413,10 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     MaybeParseGNUAttributes(attrs);
     ProhibitAttributes(attrs); // GNU-style attributes are prohibited.
     if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-      if (!getLangOpts().CPlusPlus1z)
-        Diag(Tok.getLocation(), diag::warn_cxx14_compat_attribute)
-            << 1 /*enumerator*/;
+      Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+                                  ? diag::warn_cxx14_compat_ns_enum_attribute
+                                  : diag::ext_ns_enum_attribute)
+        << 1 /*enumerator*/;
       ParseCXX11Attributes(attrs);
     }
 

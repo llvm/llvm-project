@@ -124,9 +124,11 @@ void TracePC::PrintModuleInfo() {
 
     if ((NumGuards && NumGuards != NumPCsInPCTables) ||
         (NumInline8bitCounters && NumInline8bitCounters != NumPCsInPCTables)) {
-      Printf("ERROR: The size of coverage PC tables does not match the"
-             " number of instrumented PCs. This might be a bug in the compiler,"
-             " please contact the libFuzzer developers.\n");
+      Printf("ERROR: The size of coverage PC tables does not match the\n"
+             "number of instrumented PCs. This might be a compiler bug,\n"
+             "please contact the libFuzzer developers.\n"
+             "Also check https://bugs.llvm.org/show_bug.cgi?id=34636\n"
+             "for possible workarounds (tl;dr: don't use the old GNU ld)\n");
       _Exit(1);
     }
   }
