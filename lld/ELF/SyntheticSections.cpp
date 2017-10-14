@@ -1608,7 +1608,7 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
-        return !S.Symbol->isInCurrentDSO();
+        return S.Symbol->isUndefined();
       });
   if (Mid == V.end())
     return;

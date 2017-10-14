@@ -4033,12 +4033,6 @@ let Predicates = [HasAVX512], AddedComplexity = 400 in {
             (VMOVNTDQAZrm addr:$src)>;
   def : Pat<(v8i64 (alignednontemporalload addr:$src)),
             (VMOVNTDQAZrm addr:$src)>;
-  def : Pat<(v16i32 (bitconvert (v8i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZrm addr:$src)>;
-  def : Pat<(v32i16 (bitconvert (v8i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZrm addr:$src)>;
-  def : Pat<(v64i8 (bitconvert (v8i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZrm addr:$src)>;
 }
 
 let Predicates = [HasVLX], AddedComplexity = 400 in {
@@ -4055,12 +4049,6 @@ let Predicates = [HasVLX], AddedComplexity = 400 in {
             (VMOVNTDQAZ256rm addr:$src)>;
   def : Pat<(v4i64 (alignednontemporalload addr:$src)),
             (VMOVNTDQAZ256rm addr:$src)>;
-  def : Pat<(v8i32 (bitconvert (v4i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZ256rm addr:$src)>;
-  def : Pat<(v16i16 (bitconvert (v4i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZ256rm addr:$src)>;
-  def : Pat<(v32i8 (bitconvert (v4i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZ256rm addr:$src)>;
 
   def : Pat<(alignednontemporalstore (v4i32 VR128X:$src), addr:$dst),
             (VMOVNTDQZ128mr addr:$dst, VR128X:$src)>;
@@ -4074,12 +4062,6 @@ let Predicates = [HasVLX], AddedComplexity = 400 in {
   def : Pat<(v4f32 (alignednontemporalload addr:$src)),
             (VMOVNTDQAZ128rm addr:$src)>;
   def : Pat<(v2i64 (alignednontemporalload addr:$src)),
-            (VMOVNTDQAZ128rm addr:$src)>;
-  def : Pat<(v4i32 (bitconvert (v2i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZ128rm addr:$src)>;
-  def : Pat<(v8i16 (bitconvert (v2i64 (alignednontemporalload addr:$src)))),
-            (VMOVNTDQAZ128rm addr:$src)>;
-  def : Pat<(v16i8 (bitconvert (v2i64 (alignednontemporalload addr:$src)))),
             (VMOVNTDQAZ128rm addr:$src)>;
 }
 
@@ -6669,10 +6651,14 @@ def : Pat<(v8f64 (extloadv8f32 addr:$src)),
             (VCVTPS2PDZrm addr:$src)>;
 
 let Predicates = [HasVLX] in {
-  let AddedComplexity = 15 in
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128X:$src)))))),
-            (VCVTPD2PSZ128rr VR128X:$src)>;
+  let AddedComplexity = 15 in {
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (v2f64 VR128X:$src)))))),
+              (VCVTPD2PSZ128rr VR128X:$src)>;
+    def : Pat<(X86vzmovl (v2f64 (bitconvert
+                                 (v4f32 (X86vfpround (loadv2f64 addr:$src)))))),
+              (VCVTPD2PSZ128rm addr:$src)>;
+  }
   def : Pat<(v2f64 (extloadv2f32 addr:$src)),
               (VCVTPS2PDZ128rm addr:$src)>;
   def : Pat<(v4f64 (extloadv4f32 addr:$src)),
@@ -7045,16 +7031,32 @@ let Predicates = [HasAVX512, HasVLX] in {
     def : Pat<(X86vzmovl (v2i64 (bitconvert
                                 (v4i32 (X86cvtp2Int (v2f64 VR128X:$src)))))),
               (VCVTPD2DQZ128rr VR128X:$src)>;
-    def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
-                                 (v4i32 (X86cvtp2UInt (v2f64 VR128X:$src)))))))),
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                (v4i32 (X86cvtp2Int (loadv2f64 addr:$src)))))),
+              (VCVTPD2DQZ128rm addr:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvtp2UInt (v2f64 VR128X:$src)))))),
               (VCVTPD2UDQZ128rr VR128X:$src)>;
     def : Pat<(X86vzmovl (v2i64 (bitconvert
                                 (v4i32 (X86cvttp2si (v2f64 VR128X:$src)))))),
               (VCVTTPD2DQZ128rr VR128X:$src)>;
-    def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
-                                 (v4i32 (X86cvttp2ui (v2f64 VR128X:$src)))))))),
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                (v4i32 (X86cvttp2si (loadv2f64 addr:$src)))))),
+              (VCVTTPD2DQZ128rm addr:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvttp2ui (v2f64 VR128X:$src)))))),
               (VCVTTPD2UDQZ128rr VR128X:$src)>;
   }
+
+  def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (VCVTDQ2PDZ128rm addr:$src)>;
+  def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (X86vzload addr:$src))))),
+            (VCVTDQ2PDZ128rm addr:$src)>;
+
+  def : Pat<(v2f64 (X86VUintToFP (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+            (VCVTUDQ2PDZ128rm addr:$src)>;
+  def : Pat<(v2f64 (X86VUintToFP (bc_v4i32 (v2i64 (X86vzload addr:$src))))),
+            (VCVTUDQ2PDZ128rm addr:$src)>;
 }
 
 let Predicates = [HasAVX512] in {

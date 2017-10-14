@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import threading
 import time
@@ -136,13 +135,6 @@ class Run(object):
                 abort_now()
                 return True
             win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
-
-        # Make fresh shared output directories.
-        suites = set(test.suite for test in self.tests)
-        for suite in suites:
-            shared_dir = os.path.join(suite.exec_root, 'Output', 'Shared')
-            shutil.rmtree(shared_dir, ignore_errors=True)
-            lit.util.mkdir_p(shared_dir)
 
         # Save the display object on the runner so that we can update it from
         # our task completion callback.

@@ -464,12 +464,6 @@ RUN lines:
 
    Example: ``/home/user/llvm.build/test/MC/ELF/Output``
 
-``%{shared_output(LABEL)}``
-   File path to a temporary file name shared across all tests, identified by
-   LABEL. This is useful as a cache for generated resources.
-
-   Example: ``/home/user/llvm.build/test/Output/Shared/LABEL.tmp``
-
 ``%{pathsep}``
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).

@@ -1,1 +1,0 @@
-RUN: echo "sub" >> %{shared_output(SHARED)}
