@@ -420,4 +420,9 @@ TEST_F(LexerTest, DontOverallocateStringifyArgs) {
 #endif
 }
 
+TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
+  std::vector<Token> LexedTokens = Lex("  //  \\\n");
+  EXPECT_TRUE(LexedTokens.empty());
+}
+
 } // anonymous namespace
