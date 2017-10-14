@@ -1417,6 +1417,7 @@ def STDWPtrQRr : Pseudo<(outs),
 // Load program memory operations.
 let canFoldAsLoad = 1,
 isReMaterializable = 1,
+mayLoad = 1,
 hasSideEffects = 0 in
 {
   let Defs = [R0],
@@ -1437,8 +1438,7 @@ hasSideEffects = 0 in
                Requires<[HasLPMX]>;
 
   // Load program memory, while postincrementing the Z register.
-  let mayLoad = 1,
-  Defs = [R31R30] in
+  let Defs = [R31R30] in
   {
     def LPMRdZPi : FLPMX<0,
                          1,
