@@ -19,7 +19,9 @@ using namespace coverage;
 
 LineCoverageStats::LineCoverageStats(
     ArrayRef<const coverage::CoverageSegment *> LineSegments,
-    const coverage::CoverageSegment *WrappedSegment) {
+    const coverage::CoverageSegment *WrappedSegment, unsigned Line)
+    : ExecutionCount(0), HasMultipleRegions(false), Mapped(false), Line(Line),
+      LineSegments(LineSegments), WrappedSegment(WrappedSegment) {
   // Find the minimum number of regions which start in this line.
   unsigned MinRegionCount = 0;
   auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
@@ -33,7 +35,6 @@ LineCoverageStats::LineCoverageStats(
                               !LineSegments.front()->HasCount &&
                               LineSegments.front()->IsRegionEntry;
 
-  ExecutionCount = 0;
   HasMultipleRegions = MinRegionCount > 1;
   Mapped =
       !StartOfSkippedRegion &&
@@ -61,6 +62,22 @@ LineCoverageStats::LineCoverageStats(
     ExecutionCount = WrappedSegment->Count;
 }
 
+LineCoverageIterator &LineCoverageIterator::operator++() {
+  if (Next == CD.end()) {
+    Stats = LineCoverageStats();
+    Ended = true;
+    return *this;
+  }
+  if (Segments.size())
+    WrappedSegment = Segments.back();
+  Segments.clear();
+  while (Next != CD.end() && Next->Line == Line)
+    Segments.push_back(&*Next++);
+  Stats = LineCoverageStats(Segments, WrappedSegment, Line);
+  ++Line;
+  return *this;
+}
+
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
                              const coverage::FunctionRecord &Function) {
@@ -77,27 +94,12 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   // Compute the line coverage
   size_t NumLines = 0, CoveredLines = 0;
   CoverageData CD = CM.getCoverageForFunction(Function);
-  auto NextSegment = CD.begin();
-  auto EndSegment = CD.end();
-  const coverage::CoverageSegment *WrappedSegment = nullptr;
-  SmallVector<const coverage::CoverageSegment *, 4> LineSegments;
-  unsigned Line = NextSegment->Line;
-  while (NextSegment != EndSegment) {
-    // Gather the segments on this line and the wrapped segment.
-    if (LineSegments.size())
-      WrappedSegment = LineSegments.back();
-    LineSegments.clear();
-    while (NextSegment != EndSegment && NextSegment->Line == Line)
-      LineSegments.push_back(&*NextSegment++);
-
-    LineCoverageStats LCS{LineSegments, WrappedSegment};
-    if (LCS.isMapped()) {
-      ++NumLines;
-      if (LCS.ExecutionCount)
-        ++CoveredLines;
-    }
-
-    ++Line;
+  for (const auto &LCS : getLineCoverageStats(CD)) {
+    if (!LCS.isMapped())
+      continue;
+    ++NumLines;
+    if (LCS.getExecutionCount())
+      ++CoveredLines;
   }
 
   return FunctionCoverageSummary(
