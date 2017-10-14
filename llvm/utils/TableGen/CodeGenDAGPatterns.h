@@ -478,6 +478,10 @@ public:
   /// Get the data type of the argument to getImmediatePredicateCode().
   std::string getImmType() const;
 
+  /// Get a string that describes the type returned by getImmType() but is
+  /// usable as part of an identifier.
+  std::string getImmTypeIdentifier() const;
+
 private:
   std::string getPredCode() const;
   std::string getImmCode() const;

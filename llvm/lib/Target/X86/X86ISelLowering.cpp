@@ -10000,7 +10000,9 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
   // With MOVDDUP (v2f64) we can broadcast from a register or a load, otherwise
   // we can only broadcast from a register with AVX2.
   unsigned NumElts = Mask.size();
-  unsigned Opcode = VT == MVT::v2f64 ? X86ISD::MOVDDUP : X86ISD::VBROADCAST;
+  unsigned Opcode = (VT == MVT::v2f64 && !Subtarget.hasAVX2())
+                        ? X86ISD::MOVDDUP
+                        : X86ISD::VBROADCAST;
   bool BroadcastFromReg = (Opcode == X86ISD::MOVDDUP) || Subtarget.hasAVX2();
 
   // Check that the mask is a broadcast.
@@ -10086,7 +10088,9 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     // 32-bit targets need to load i64 as a f64 and then bitcast the result.
     if (!Subtarget.is64Bit() && VT.getScalarType() == MVT::i64) {
       BroadcastVT = MVT::getVectorVT(MVT::f64, VT.getVectorNumElements());
-      Opcode = (BroadcastVT.is128BitVector() ? X86ISD::MOVDDUP : Opcode);
+      Opcode = (BroadcastVT.is128BitVector() && !Subtarget.hasAVX2())
+                   ? X86ISD::MOVDDUP
+                   : Opcode;
     }
 
     // If we are broadcasting a load that is only used by the shuffle
@@ -27317,7 +27321,7 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   // instructions are no slower than UNPCKLPD but has the option to
   // fold the input operand into even an unaligned memory load.
   if (MaskVT.is128BitVector() && Subtarget.hasSSE3() && AllowFloatDomain) {
-    if (isTargetShuffleEquivalent(Mask, {0, 0})) {
+    if (!Subtarget.hasAVX2() && isTargetShuffleEquivalent(Mask, {0, 0})) {
       Shuffle = X86ISD::MOVDDUP;
       SrcVT = DstVT = MVT::v2f64;
       return true;
@@ -36412,6 +36416,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVDDUP:
   case X86ISD::MOVSS:
   case X86ISD::MOVSD:
+  case X86ISD::VBROADCAST:
   case X86ISD::VPPERM:
   case X86ISD::VPERMI:
   case X86ISD::VPERMV:

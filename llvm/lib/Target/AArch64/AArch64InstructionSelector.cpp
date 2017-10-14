@@ -705,6 +705,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
                      << " constant on bank: " << RB << ", expected: FPR\n");
         return false;
       }
+
+      // The case when we have 0.0 is covered by tablegen. Reject it here so we
+      // can be sure tablegen works correctly and isn't rescued by this code.
+      if (I.getOperand(1).getFPImm()->getValueAPF().isExactlyValue(0.0))
+        return false;
     } else {
       // s32 and s64 are covered by tablegen.
       if (Ty != p0) {

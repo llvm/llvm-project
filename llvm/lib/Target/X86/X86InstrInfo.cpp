@@ -764,12 +764,12 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VUCOMISSrr,      X86::VUCOMISSrm,          0 },
 
     // AVX 256-bit foldable instructions
-    { X86::VCVTDQ2PDYrr,    X86::VCVTDQ2PDYrm,        TB_NO_REVERSE },
+    { X86::VCVTDQ2PDYrr,    X86::VCVTDQ2PDYrm,        0 },
     { X86::VCVTDQ2PSYrr,    X86::VCVTDQ2PSYrm,        0 },
     { X86::VCVTPD2DQYrr,    X86::VCVTPD2DQYrm,        0 },
     { X86::VCVTPD2PSYrr,    X86::VCVTPD2PSYrm,        0 },
     { X86::VCVTPS2DQYrr,    X86::VCVTPS2DQYrm,        0 },
-    { X86::VCVTPS2PDYrr,    X86::VCVTPS2PDYrm,        TB_NO_REVERSE },
+    { X86::VCVTPS2PDYrr,    X86::VCVTPS2PDYrm,        0 },
     { X86::VCVTTPD2DQYrr,   X86::VCVTTPD2DQYrm,       0 },
     { X86::VCVTTPS2DQYrr,   X86::VCVTTPS2DQYrm,       0 },
     { X86::VMOVAPDYrr,      X86::VMOVAPDYrm,          TB_ALIGN_32 },
@@ -929,6 +929,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 foldable instructions
     { X86::VBROADCASTSSZr,   X86::VBROADCASTSSZm,     TB_NO_REVERSE },
     { X86::VBROADCASTSDZr,   X86::VBROADCASTSDZm,     TB_NO_REVERSE },
+    { X86::VCVTDQ2PDZrr,     X86::VCVTDQ2PDZrm,       0 },
+    { X86::VCVTUDQ2PDZrr,    X86::VCVTUDQ2PDZrm,      0 },
     { X86::VMOV64toPQIZrr,   X86::VMOVQI2PQIZrm,      0 },
     { X86::VMOV64toSDZrr,    X86::VMOV64toSDZrm,      0 },
     { X86::VMOVDI2PDIZrr,    X86::VMOVDI2PDIZrm,      0 },
@@ -988,6 +990,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 foldable instructions (256-bit versions)
     { X86::VBROADCASTSSZ256r,    X86::VBROADCASTSSZ256m,    TB_NO_REVERSE },
     { X86::VBROADCASTSDZ256r,    X86::VBROADCASTSDZ256m,    TB_NO_REVERSE },
+    { X86::VCVTDQ2PDZ256rr,      X86::VCVTDQ2PDZ256rm,      0 },
+    { X86::VCVTUDQ2PDZ256rr,     X86::VCVTUDQ2PDZ256rm,     0 },
     { X86::VMOVAPDZ256rr,        X86::VMOVAPDZ256rm,        TB_ALIGN_32 },
     { X86::VMOVAPSZ256rr,        X86::VMOVAPSZ256rm,        TB_ALIGN_32 },
     { X86::VMOVDQA32Z256rr,      X86::VMOVDQA32Z256rm,      TB_ALIGN_32 },
@@ -1039,6 +1043,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // AVX-512 foldable instructions (128-bit versions)
     { X86::VBROADCASTSSZ128r,    X86::VBROADCASTSSZ128m,    TB_NO_REVERSE },
+    { X86::VCVTDQ2PDZ128rr,      X86::VCVTDQ2PDZ128rm,      TB_NO_REVERSE },
+    { X86::VCVTUDQ2PDZ128rr,     X86::VCVTUDQ2PDZ128rm,     TB_NO_REVERSE },
     { X86::VMOVAPDZ128rr,        X86::VMOVAPDZ128rm,        TB_ALIGN_16 },
     { X86::VMOVAPSZ128rr,        X86::VMOVAPSZ128rm,        TB_ALIGN_16 },
     { X86::VMOVDQA32Z128rr,      X86::VMOVDQA32Z128rm,      TB_ALIGN_16 },

@@ -216,6 +216,40 @@ define <8 x float> @stack_fold_divps_ymm(<8 x float> %a0, <8 x float> %a1) {
   ret <8 x float> %2
 }
 
+define <2 x double> @stack_fold_cvtdq2pd(<4 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_cvtdq2pd
+  ;CHECK:   vcvtdq2pd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %3 = sitofp <2 x i32> %2 to <2 x double>
+  ret <2 x double> %3
+}
+
+define <4 x double> @stack_fold_cvtdq2pd_ymm(<4 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_cvtdq2pd_ymm
+  ;CHECK:   vcvtdq2pd {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = sitofp <4 x i32> %a0 to <4 x double>
+  ret <4 x double> %2
+}
+
+define <2 x double> @stack_fold_cvtudq2pd(<4 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_cvtudq2pd
+  ;CHECK:   vcvtudq2pd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <4 x i32> %a0, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %3 = uitofp <2 x i32> %2 to <2 x double>
+  ret <2 x double> %3
+}
+
+define <4 x double> @stack_fold_cvtudq2pd_ymm(<4 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_cvtudq2pd_ymm
+  ;CHECK:   vcvtudq2pd {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = uitofp <4 x i32> %a0 to <4 x double>
+  ret <4 x double> %2
+}
+
 define <2 x double> @stack_fold_maxpd(<2 x double> %a0, <2 x double> %a1) #0 {
   ;CHECK-LABEL: stack_fold_maxpd
   ;CHECK:       vmaxpd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
