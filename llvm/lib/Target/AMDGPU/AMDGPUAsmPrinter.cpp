@@ -112,26 +112,50 @@ AMDGPUTargetStreamer& AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
-  AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(getSTI()->getFeatureBits());
-
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
-    readPALMetadata(M);
-    // AMDPAL wants an HSA_ISA .note.
-    getTargetStreamer().EmitDirectiveHSACodeObjectISA(
-        ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
-  }
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  if (TM.getTargetTriple().getArch() != Triple::amdgcn)
     return;
 
-  getTargetStreamer().EmitDirectiveHSACodeObjectVersion(2, 1);
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
+      TM.getTargetTriple().getOS() != Triple::AMDPAL)
+    return;
+
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+    HSAMetadataStream.begin(M);
+
+  if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
+    readPALMetadata(M);
+
+  // Deprecated notes are not emitted for code object v3.
+  if (IsaInfo::hasCodeObjectV3(getSTI()->getFeatureBits()))
+    return;
+
+  // HSA emits NT_AMDGPU_HSA_CODE_OBJECT_VERSION for code objects v2.
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+    getTargetStreamer().EmitDirectiveHSACodeObjectVersion(2, 1);
+
+  // HSA and PAL emit NT_AMDGPU_HSA_ISA for code objects v2.
+  IsaInfo::IsaVersion ISA = IsaInfo::getIsaVersion(getSTI()->getFeatureBits());
   getTargetStreamer().EmitDirectiveHSACodeObjectISA(
       ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
-
-  HSAMetadataStream.begin(M);
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  if (TM.getTargetTriple().getArch() != Triple::amdgcn)
+    return;
+
+  // Emit ISA Version (NT_AMD_AMDGPU_ISA).
+  std::string ISAVersionString;
+  raw_string_ostream ISAVersionStream(ISAVersionString);
+  IsaInfo::streamIsaVersion(getSTI(), ISAVersionStream);
+  getTargetStreamer().EmitISAVersion(ISAVersionStream.str());
+
+  // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+    HSAMetadataStream.end();
+    getTargetStreamer().EmitHSAMetadata(HSAMetadataStream.getHSAMetadata());
+  }
+
+  // Emit PAL Metadata (NT_AMD_AMDGPU_PAL_METADATA).
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
     // Copy the PAL metadata from the map where we collected it into a vector,
     // then write it as a .note.
@@ -142,12 +166,6 @@ void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
     }
     getTargetStreamer().EmitPALMetadata(PALMetadataVector);
   }
-
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
-
-  HSAMetadataStream.end();
-  getTargetStreamer().EmitHSAMetadata(HSAMetadataStream.getHSAMetadata());
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
@@ -181,7 +199,9 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
-  HSAMetadataStream.emitKernel(*MF->getFunction(), KernelCode);
+  HSAMetadataStream.emitKernel(*MF->getFunction(),
+                               getHSACodeProps(*MF, CurrentProgramInfo),
+                               getHSADebugProps(*MF, CurrentProgramInfo));
 }
 
 void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
@@ -1135,6 +1155,53 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
     Out.debug_private_segment_buffer_sgpr =
       CurrentProgramInfo.DebuggerPrivateSegmentBufferSGPR;
   }
+}
+
+AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
+
+  HSACodeProps.mKernargSegmentSize =
+      STM.getKernArgSegmentSize(MF, MFI.getABIArgOffset());
+  HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
+  HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
+  HSACodeProps.mKernargSegmentAlign =
+      std::max(uint32_t(4), MFI.getMaxKernArgAlign());
+  HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
+  HSACodeProps.mNumSGPRs = CurrentProgramInfo.NumSGPR;
+  HSACodeProps.mNumVGPRs = CurrentProgramInfo.NumVGPR;
+  // TODO: Emit HSACodeProps.mMaxFlatWorkgroupSize.
+  HSACodeProps.mIsDynamicCallStack = ProgramInfo.DynamicCallStack;
+  HSACodeProps.mIsXNACKEnabled = STM.isXNACKEnabled();
+
+  return HSACodeProps;
+}
+
+AMDGPU::HSAMD::Kernel::DebugProps::Metadata AMDGPUAsmPrinter::getHSADebugProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
+
+  if (!STM.debuggerSupported())
+    return HSADebugProps;
+
+  HSADebugProps.mDebuggerABIVersion.push_back(1);
+  HSADebugProps.mDebuggerABIVersion.push_back(0);
+  HSADebugProps.mReservedNumVGPRs = ProgramInfo.ReservedVGPRCount;
+  HSADebugProps.mReservedFirstVGPR = ProgramInfo.ReservedVGPRFirst;
+
+  if (STM.debuggerEmitPrologue()) {
+    HSADebugProps.mPrivateSegmentBufferSGPR =
+        ProgramInfo.DebuggerPrivateSegmentBufferSGPR;
+    HSADebugProps.mWavefrontPrivateSegmentOffsetSGPR =
+        ProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
+  }
+
+  return HSADebugProps;
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

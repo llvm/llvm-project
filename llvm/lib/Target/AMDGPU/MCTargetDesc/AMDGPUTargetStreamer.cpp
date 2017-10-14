@@ -39,9 +39,6 @@ using namespace llvm::AMDGPU;
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
 
-AMDGPUTargetStreamer::AMDGPUTargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S) {}
-
 bool AMDGPUTargetStreamer::EmitHSAMetadata(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
   if (HSAMD::fromString(HSAMetadataString, HSAMetadata))
@@ -92,6 +89,11 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
       OS << "\t.amdgpu_hsa_kernel " << SymbolName << '\n' ;
       break;
   }
+}
+
+bool AMDGPUTargetAsmStreamer::EmitISAVersion(StringRef IsaVersionString) {
+  OS << "\t.amd_amdgpu_isa \"" << IsaVersionString << "\"\n";
+  return true;
 }
 
 bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
@@ -206,6 +208,28 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   MCSymbolELF *Symbol = cast<MCSymbolELF>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
   Symbol->setType(ELF::STT_AMDGPU_HSA_KERNEL);
+}
+
+bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
+  // Create two labels to mark the beginning and end of the desc field
+  // and a MCExpr to calculate the size of the desc field.
+  auto &Context = getContext();
+  auto *DescBegin = Context.createTempSymbol();
+  auto *DescEnd = Context.createTempSymbol();
+  auto *DescSZ = MCBinaryExpr::createSub(
+    MCSymbolRefExpr::create(DescEnd, Context),
+    MCSymbolRefExpr::create(DescBegin, Context), Context);
+
+  EmitAMDGPUNote(
+    DescSZ,
+    ELF::NT_AMD_AMDGPU_ISA,
+    [&](MCELFStreamer &OS) {
+      OS.EmitLabel(DescBegin);
+      OS.EmitBytes(IsaVersionString);
+      OS.EmitLabel(DescEnd);
+    }
+  );
+  return true;
 }
 
 bool AMDGPUTargetELFStreamer::EmitHSAMetadata(

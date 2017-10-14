@@ -14,4 +14,5 @@
 int main()
 {
     std::complex<double> d;
+    (void)d;
 }

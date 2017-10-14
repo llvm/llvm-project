@@ -16,6 +16,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
+#include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include <assert.h>
@@ -109,4 +110,39 @@ llvm::PointerType *CGOpenCLRuntime::getGenericVoidPointerType() {
   return llvm::IntegerType::getInt8PtrTy(
       CGM.getLLVMContext(),
       CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic));
+}
+
+CGOpenCLRuntime::EnqueuedBlockInfo
+CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
+  // The block literal may be assigned to a const variable. Chasing down
+  // to get the block literal.
+  if (auto DR = dyn_cast<DeclRefExpr>(E)) {
+    E = cast<VarDecl>(DR->getDecl())->getInit();
+  }
+  if (auto Cast = dyn_cast<CastExpr>(E)) {
+    E = Cast->getSubExpr();
+  }
+  auto *Block = cast<BlockExpr>(E);
+
+  // The same block literal may be enqueued multiple times. Cache it if
+  // possible.
+  auto Loc = EnqueuedBlockMap.find(Block);
+  if (Loc != EnqueuedBlockMap.end()) {
+    return Loc->second;
+  }
+
+  // Emit block literal as a common block expression and get the block invoke
+  // function.
+  llvm::Function *Invoke;
+  auto *V = CGF.EmitBlockLiteral(cast<BlockExpr>(Block), &Invoke);
+  auto *F = CGF.getTargetHooks().createEnqueuedBlockKernel(
+      CGF, Invoke, V->stripPointerCasts());
+
+  // The common part of the post-processing of the kernel goes here.
+  F->addFnAttr(llvm::Attribute::NoUnwind);
+  F->setCallingConv(
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel));
+  EnqueuedBlockInfo Info{F, V};
+  EnqueuedBlockMap[Block] = Info;
+  return Info;
 }

@@ -750,23 +750,20 @@ define <16 x i8> @constant_fold_pshufb_2() {
 define i32 @mask_zzz3_v16i8(<16 x i8> %a0) {
 ; SSSE3-LABEL: mask_zzz3_v16i8:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,10,12,14,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,xmm0[14,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movd %xmm0, %eax
-; SSSE3-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: mask_zzz3_v16i8:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm0[14]
 ; SSE41-NEXT:    pextrd $3, %xmm0, %eax
-; SSE41-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mask_zzz3_v16i8:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,u,u,u,u,u,u],zero,zero,zero,xmm0[14]
 ; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    andl $-16777216, %eax # imm = 0xFF000000
 ; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14, i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14>)
   %2 = bitcast <16 x i8> %1 to <4 x i32>
@@ -778,23 +775,20 @@ define i32 @mask_zzz3_v16i8(<16 x i8> %a0) {
 define i32 @mask_z1z3_v16i8(<16 x i8> %a0) {
 ; SSSE3-LABEL: mask_z1z3_v16i8:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,10,12,14,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,xmm0[10],zero,xmm0[14,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movd %xmm0, %eax
-; SSSE3-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: mask_z1z3_v16i8:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,u,u,u,u,u,u],zero,xmm0[10],zero,xmm0[14]
 ; SSE41-NEXT:    pextrd $3, %xmm0, %eax
-; SSE41-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mask_z1z3_v16i8:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,u,u,u,u,u,u],zero,xmm0[10],zero,xmm0[14]
 ; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    andl $-16711936, %eax # imm = 0xFF00FF00
 ; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14, i8 0, i8 2, i8 4, i8 6, i8 8, i8 10, i8 12, i8 14>)
   %2 = bitcast <16 x i8> %1 to <4 x i32>
@@ -806,16 +800,14 @@ define i32 @mask_z1z3_v16i8(<16 x i8> %a0) {
 define i32 @PR22415(double %a0) {
 ; SSE-LABEL: PR22415:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR22415:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
 ; AVX-NEXT:    retq
   %1 = bitcast double %a0 to <8 x i8>
   %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 undef>
