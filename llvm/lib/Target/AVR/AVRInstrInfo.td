@@ -1152,10 +1152,10 @@ isReMaterializable = 1 in
   //
   // Expands to:
   // ld Rd,   P+
-  // ld Rd+1, P+
+  // ld Rd+1, P
   let Constraints = "@earlyclobber $reg" in
   def LDWRdPtr : Pseudo<(outs DREGS:$reg),
-                        (ins PTRDISPREGS:$ptrreg),
+                        (ins PTRREGS:$ptrreg),
                         "ldw\t$reg, $ptrreg",
                         [(set i16:$reg, (load i16:$ptrreg))]>,
                  Requires<[HasSRAM]>;
@@ -1164,7 +1164,7 @@ isReMaterializable = 1 in
 // Indirect loads (with postincrement or predecrement).
 let mayLoad = 1,
 hasSideEffects = 0,
-Constraints = "$ptrreg = $base_wb,@earlyclobber $reg,@earlyclobber $base_wb" in
+Constraints = "$ptrreg = $base_wb,@earlyclobber $reg" in
 {
   def LDRdPtrPi : FSTLD<0,
                         0b01,
