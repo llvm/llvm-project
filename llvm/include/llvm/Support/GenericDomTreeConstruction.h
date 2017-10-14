@@ -1461,40 +1461,6 @@ struct SemiNCAInfo {
     return true;
   }
 
-  // Checks if for every edge From -> To in the graph
-  //     NCD(From, To) == IDom(To) or To.
-  bool verifyNCD(const DomTreeT &DT) {
-    clear();
-    doFullDFSWalk(DT, AlwaysDescend);
-
-    for (auto &BlockToInfo : NodeToInfo) {
-      auto &Info = BlockToInfo.second;
-
-      const NodePtr From = NumToNode[Info.Parent];
-      if (!From) continue;
-
-      const NodePtr To = BlockToInfo.first;
-      const TreeNodePtr ToTN = DT.getNode(To);
-      assert(ToTN);
-
-      const NodePtr NCD = DT.findNearestCommonDominator(From, To);
-      const TreeNodePtr NCDTN = DT.getNode(NCD);
-      const TreeNodePtr ToIDom = ToTN->getIDom();
-      if (NCDTN != ToTN && NCDTN != ToIDom) {
-        errs() << "NearestCommonDominator verification failed:\n\tNCD(From:"
-               << BlockNamePrinter(From) << ", To:" << BlockNamePrinter(To)
-               << ") = " << BlockNamePrinter(NCD)
-               << ",\t (should be To or IDom[To]: " << BlockNamePrinter(ToIDom)
-               << ")\n";
-        errs().flush();
-
-        return false;
-      }
-    }
-
-    return true;
-  }
-
   // The below routines verify the correctness of the dominator tree relative to
   // the CFG it's coming from.  A tree is a dominator tree iff it has two
   // properties, called the parent property and the sibling property.  Tarjan
@@ -1632,9 +1598,8 @@ template <class DomTreeT>
 bool Verify(const DomTreeT &DT) {
   SemiNCAInfo<DomTreeT> SNCA(nullptr);
   return SNCA.verifyRoots(DT) && SNCA.verifyReachability(DT) &&
-         SNCA.VerifyLevels(DT) && SNCA.verifyNCD(DT) &&
-         SNCA.verifyParentProperty(DT) && SNCA.verifySiblingProperty(DT) &&
-         SNCA.VerifyDFSNumbers(DT);
+         SNCA.VerifyLevels(DT) && SNCA.verifyParentProperty(DT) &&
+         SNCA.verifySiblingProperty(DT) && SNCA.VerifyDFSNumbers(DT);
 }
 
 }  // namespace DomTreeBuilder
