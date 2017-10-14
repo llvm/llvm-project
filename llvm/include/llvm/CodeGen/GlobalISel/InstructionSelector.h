@@ -150,6 +150,13 @@ enum {
   /// - InsnID - Instruction ID
   GIM_CheckIsSafeToFold,
 
+  /// Check the specified operands are identical.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - OtherInsnID - Other instruction ID
+  /// - OtherOpIdx - Other operand index
+  GIM_CheckIsSameOperand,
+
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
   GIM_Reject,

@@ -334,7 +334,25 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-
+    case GIM_CheckIsSameOperand: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t OtherInsnID = MatchTable[CurrentIdx++];
+      int64_t OtherOpIdx = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckIsSameOperand(MIs[" << InsnID
+                   << "][" << OpIdx << "], MIs[" << OtherInsnID << "]["
+                   << OtherOpIdx << "])\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[OtherInsnID] != nullptr && "Used insn before defined");
+      State.MIs[InsnID]->getOperand(OpIdx).dump();
+      State.MIs[OtherInsnID]->getOperand(OtherOpIdx).dump();
+      if (!State.MIs[InsnID]->getOperand(OpIdx).isIdenticalTo(
+              State.MIs[OtherInsnID]->getOperand(OtherInsnID))) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_Reject:
       DEBUG(dbgs() << CurrentIdx << ": GIM_Reject");
       if (handleReject() == RejectAndGiveUp)
