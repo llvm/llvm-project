@@ -699,7 +699,9 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   OpHi = AVR::LDDRdPtrQ;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  assert(Imm <= 63 && "Offset is out of range");
+  // Since we add 1 to the Imm value for the high byte below, and 63 is the highest Imm value
+  // allowed for the instruction, 62 is the limit here.
+  assert(Imm <= 62 && "Offset is out of range");
 
   // Use a temporary register if src and dst registers are the same.
   if (DstReg == SrcReg)
@@ -1074,7 +1076,9 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   OpHi = AVR::STDPtrQRr;
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  assert(Imm <= 63 && "Offset is out of range");
+  // Since we add 1 to the Imm value for the high byte below, and 63 is the highest Imm value
+  // allowed for the instruction, 62 is the limit here.
+  assert(Imm <= 62 && "Offset is out of range");
 
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
     .addReg(DstReg)
@@ -1104,7 +1108,9 @@ bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
   OpHi = AVR::INRdA;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  assert(Imm <= 63 && "Address is out of range");
+  // Since we add 1 to the Imm value for the high byte below, and 63 is the highest Imm value
+  // allowed for the instruction, 62 is the limit here.
+  assert(Imm <= 62 && "Address is out of range");
 
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
     .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
@@ -1132,7 +1138,9 @@ bool AVRExpandPseudo::expand<AVR::OUTWARr>(Block &MBB, BlockIt MBBI) {
   OpHi = AVR::OUTARr;
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  assert(Imm <= 63 && "Address is out of range");
+  // Since we add 1 to the Imm value for the high byte below, and 63 is the highest Imm value
+  // allowed for the instruction, 62 is the limit here.
+  assert(Imm <= 62 && "Address is out of range");
 
   // 16 bit I/O writes need the high byte first
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
