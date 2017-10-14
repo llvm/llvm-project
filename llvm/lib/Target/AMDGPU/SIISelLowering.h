@@ -246,6 +246,8 @@ public:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+
+  bool hasBitPreservingFPLogic(EVT VT) const override;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;

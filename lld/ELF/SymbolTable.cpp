@@ -509,8 +509,8 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   SymbolBody *Body = S->body();
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (WasInserted ||
-      (Body->isUndefined() && Body->getVisibility() == STV_DEFAULT)) {
+  if (WasInserted || ((Body->isUndefined() || Body->isLazy()) &&
+                      Body->getVisibility() == STV_DEFAULT)) {
     replaceBody<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(), &Sym,
                               Verdef);
     if (!S->isWeak())

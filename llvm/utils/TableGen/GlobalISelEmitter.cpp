@@ -65,6 +65,18 @@ static cl::opt<bool> WarnOnSkippedPatterns(
 namespace {
 //===- Helper functions ---------------------------------------------------===//
 
+
+/// Get the name of the enum value used to number the predicate function.
+std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
+  return "GIPFP_" + Predicate.getImmTypeIdentifier() + "_" +
+         Predicate.getFnName();
+}
+
+/// Get the opcode used to check this predicate.
+std::string getMatchOpcodeForPredicate(const TreePredicateFn &Predicate) {
+  return "GIM_Check" + Predicate.getImmTypeIdentifier() + "ImmPredicate";
+}
+
 /// This class stands in for LLT wherever we want to tablegen-erate an
 /// equivalent at compiler run-time.
 class LLTCodeGen {
@@ -1057,10 +1069,10 @@ public:
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
                             unsigned InsnVarID) const override {
-    Table << MatchTable::Opcode("GIM_CheckImmPredicate")
+    Table << MatchTable::Opcode(getMatchOpcodeForPredicate(Predicate))
           << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::Comment("Predicate")
-          << MatchTable::NamedValue("GIPFP_" + Predicate.getFnName())
+          << MatchTable::NamedValue(getEnumNameForPredicate(Predicate))
           << MatchTable::LineBreak;
   }
 };
@@ -1258,6 +1270,7 @@ public:
     OR_Copy,
     OR_CopySubReg,
     OR_CopyConstantAsImm,
+    OR_CopyFConstantAsFPImm,
     OR_Imm,
     OR_Register,
     OR_ComplexPattern
@@ -1338,6 +1351,36 @@ public:
     unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
     Table << MatchTable::Opcode(Signed ? "GIR_CopyConstantAsSImm"
                                        : "GIR_CopyConstantAsUImm")
+          << MatchTable::Comment("NewInsnID") << MatchTable::IntValue(NewInsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::IntValue(OldInsnVarID)
+          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+  }
+};
+
+/// A CopyFConstantAsFPImmRenderer emits code to render a G_FCONSTANT
+/// instruction to an extended immediate operand.
+class CopyFConstantAsFPImmRenderer : public OperandRenderer {
+protected:
+  unsigned NewInsnID;
+  /// The name of the operand.
+  const std::string SymbolicName;
+
+public:
+  CopyFConstantAsFPImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
+      : OperandRenderer(OR_CopyFConstantAsFPImm), NewInsnID(NewInsnID),
+        SymbolicName(SymbolicName) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_CopyFConstantAsFPImm;
+  }
+
+  const StringRef getSymbolicName() const { return SymbolicName; }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    const InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
+    unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
+    Table << MatchTable::Opcode("GIR_CopyFConstantAsFPImm")
           << MatchTable::Comment("NewInsnID") << MatchTable::IntValue(NewInsnID)
           << MatchTable::Comment("OldInsnID")
           << MatchTable::IntValue(OldInsnVarID)
@@ -1913,6 +1956,10 @@ private:
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
 
+  void emitImmPredicates(raw_ostream &OS, StringRef TypeIdentifier,
+                         StringRef Type,
+                         std::function<bool(const Record *R)> Filter);
+
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
@@ -2026,8 +2073,9 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
-    if (SrcGIOrNull->TheDef->getName() == "G_CONSTANT") {
-      // imm still has an operand but we don't need to do anything with it
+    if (SrcGIOrNull->TheDef->getName() == "G_CONSTANT" ||
+        SrcGIOrNull->TheDef->getName() == "G_FCONSTANT") {
+      // imm/fpimm still have operands but we don't need to do anything with it
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
       InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
@@ -2181,6 +2229,10 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild->getOperator()->getName() == "imm") {
       DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(0,
                                                           DstChild->getName());
+      return Error::success();
+    } else if (DstChild->getOperator()->getName() == "fpimm") {
+      DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
+          0, DstChild->getName());
       return Error::success();
     }
 
@@ -2559,6 +2611,45 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   return std::move(M);
 }
 
+// Emit imm predicate table and an enum to reference them with.
+// The 'Predicate_' part of the name is redundant but eliminating it is more
+// trouble than it's worth.
+void GlobalISelEmitter::emitImmPredicates(
+    raw_ostream &OS, StringRef TypeIdentifier, StringRef Type,
+    std::function<bool(const Record *R)> Filter) {
+  std::vector<const Record *> MatchedRecords;
+  const auto &Defs = RK.getAllDerivedDefinitions("PatFrag");
+  std::copy_if(Defs.begin(), Defs.end(), std::back_inserter(MatchedRecords),
+               [&](Record *Record) {
+                 return !Record->getValueAsString("ImmediateCode").empty() &&
+                        Filter(Record);
+               });
+
+  if (!MatchedRecords.empty()) {
+    OS << "// PatFrag predicates.\n"
+       << "enum {\n";
+    std::string EnumeratorSeparator =
+        (" = GIPFP_" + TypeIdentifier + "_Invalid + 1,\n").str();
+    for (const auto *Record : MatchedRecords) {
+      OS << "  GIPFP_" << TypeIdentifier << "_Predicate_" << Record->getName()
+         << EnumeratorSeparator;
+      EnumeratorSeparator = ",\n";
+    }
+    OS << "};\n";
+  }
+
+  for (const auto *Record : MatchedRecords)
+    OS << "static bool Predicate_" << Record->getName() << "(" << Type
+       << " Imm) {" << Record->getValueAsString("ImmediateCode") << "}\n";
+
+  OS << "static InstructionSelector::" << TypeIdentifier
+     << "ImmediatePredicateFn " << TypeIdentifier << "ImmPredicateFns[] = {\n"
+     << "  nullptr,\n";
+  for (const auto *Record : MatchedRecords)
+    OS << "  Predicate_" << Record->getName() << ",\n";
+  OS << "};\n";
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   // Track the GINodeEquiv definitions.
   gatherNodeEquivs();
@@ -2629,7 +2720,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
      << ", State(" << MaxTemporaries << "),\n"
-     << "MatcherInfo({TypeObjects, FeatureBitsets, ImmPredicateFns, {\n"
+     << "MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, "
+        "APIntImmPredicateFns, APFloatImmPredicateFns, {\n"
      << "  nullptr, // GICP_Invalid\n";
   for (const auto &Record : ComplexPredicates)
     OS << "  &" << Target.getName()
@@ -2742,32 +2834,18 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "};\n"
      << "// See constructor for table contents\n\n";
 
-  // Emit imm predicate table and an enum to reference them with.
-  // The 'Predicate_' part of the name is redundant but eliminating it is more
-  // trouble than it's worth.
-  {
-    OS << "// PatFrag predicates.\n"
-       << "enum {\n";
-    StringRef EnumeratorSeparator = " = GIPFP_Invalid + 1,\n";
-    for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag")) {
-      if (!Record->getValueAsString("ImmediateCode").empty()) {
-        OS << "  GIPFP_Predicate_" << Record->getName() << EnumeratorSeparator;
-        EnumeratorSeparator = ",\n";
-      }
-    }
-    OS << "};\n";
-  }
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  static bool Predicate_" << Record->getName() << "(int64_t Imm) {"
-         << Record->getValueAsString("ImmediateCode") << "  }\n";
-  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = "
-        "{\n"
-     << "  nullptr,\n";
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  Predicate_" << Record->getName() << ",\n";
-  OS << "};\n";
+  emitImmPredicates(OS, "I64", "int64_t", [](const Record *R) {
+    bool Unset;
+    return !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+           !R->getValueAsBit("IsAPInt");
+  });
+  emitImmPredicates(OS, "APFloat", "const APFloat &", [](const Record *R) {
+    bool Unset;
+    return R->getValueAsBitOrUnset("IsAPFloat", Unset);
+  });
+  emitImmPredicates(OS, "APInt", "const APInt &", [](const Record *R) {
+    return R->getValueAsBit("IsAPInt");
+  });
 
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"

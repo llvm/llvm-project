@@ -758,7 +758,7 @@ namespace llvm {
 
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-    bool isFPExtFree(EVT VT) const override;
+    bool isFPExtFree(EVT DestVT, EVT SrcVT) const override;
 
     /// \brief Returns true if it is beneficial to convert a load of a constant
     /// to just the constant itself.

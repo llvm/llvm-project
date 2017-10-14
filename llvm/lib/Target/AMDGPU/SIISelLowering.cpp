@@ -3107,6 +3107,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
+bool SITargetLowering::hasBitPreservingFPLogic(EVT VT) const {
+  return isTypeLegal(VT.getScalarType());
+}
+
 bool SITargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   // This currently forces unfolding various combinations of fsub into fma with
   // free fneg'd operands. As long as we have fast FMA (controlled by

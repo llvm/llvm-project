@@ -266,7 +266,6 @@ define i32 @test17(i32 %A) {
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = xor i32 %A, -1
-  ; == sub int 0, %A
   %C = add i32 %B, 1
   ret i32 %C
 }
@@ -277,9 +276,18 @@ define i8 @test18(i8 %A) {
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = xor i8 %A, -1
-  ; == sub ubyte 16, %A
   %C = add i8 %B, 17
   ret i8 %C
+}
+
+define <2 x i64> @test18vec(<2 x i64> %A) {
+; CHECK-LABEL: @test18vec(
+; CHECK-NEXT:    [[ADD:%.*]] = sub <2 x i64> <i64 1, i64 2>, %A
+; CHECK-NEXT:    ret <2 x i64> [[ADD]]
+;
+  %xor = xor <2 x i64> %A, <i64 -1, i64 -1>
+  %add = add <2 x i64> %xor, <i64 2, i64 3>
+  ret <2 x i64> %add
 }
 
 define i32 @test19(i1 %C) {

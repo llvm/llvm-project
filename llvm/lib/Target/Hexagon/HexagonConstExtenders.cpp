@@ -1627,11 +1627,13 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     // If addi/subri are replaced with the exactly matching initializer,
     // they amount to COPY.
     // Check that the initializer is an exact match (for simplicity).
+#ifndef NDEBUG
     bool IsAddi = ExtOpc == Hexagon::A2_addi;
     const MachineOperand &RegOp = MI.getOperand(IsAddi ? 1 : 2);
     const MachineOperand &ImmOp = MI.getOperand(IsAddi ? 2 : 1);
     assert(Ex.Rs == RegOp && EV == ImmOp && Ex.Neg != IsAddi &&
            "Initializer mismatch");
+#endif
     BuildMI(MBB, At, dl, HII->get(TargetOpcode::COPY))
       .add(MI.getOperand(0))
       .add(MachineOperand(ExtR));
@@ -1648,10 +1650,12 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     // Check that Rs and V match the initializer expression. The Rs+V is the
     // combination that is considered "subexpression" for V, although Rx+V
     // would also be valid.
+#ifndef NDEBUG
     bool IsSub = ExtOpc == Hexagon::S4_subaddi;
     Register Rs = MI.getOperand(IsSub ? 3 : 2);
     ExtValue V = MI.getOperand(IsSub ? 2 : 3);
     assert(EV == V && Rs == Ex.Rs && IsSub == Ex.Neg && "Initializer mismatch");
+#endif
     unsigned NewOpc = ExtOpc == Hexagon::M2_naccii ? Hexagon::A2_sub
                                                    : Hexagon::A2_add;
     BuildMI(MBB, At, dl, HII->get(NewOpc))

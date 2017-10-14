@@ -500,14 +500,14 @@ let DiagnosticType = "LogicalSecondSource" in {
     let Name = "LogicalImm64Not";
   }
 }
-def logical_imm32 : Operand<i32>, PatLeaf<(imm), [{
-  return AArch64_AM::isLogicalImmediate(N->getZExtValue(), 32);
+def logical_imm32 : Operand<i32>, IntImmLeaf<i32, [{
+  return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), 32);
 }], logical_imm32_XFORM> {
   let PrintMethod = "printLogicalImm32";
   let ParserMatchClass = LogicalImm32Operand;
 }
-def logical_imm64 : Operand<i64>, PatLeaf<(imm), [{
-  return AArch64_AM::isLogicalImmediate(N->getZExtValue(), 64);
+def logical_imm64 : Operand<i64>, IntImmLeaf<i64, [{
+  return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), 64);
 }], logical_imm64_XFORM> {
   let PrintMethod = "printLogicalImm64";
   let ParserMatchClass = LogicalImm64Operand;
@@ -754,8 +754,8 @@ class arith_extended_reg32to64<ValueType Ty> : Operand<Ty>,
 
 // Floating-point immediate.
 def fpimm16 : Operand<f16>,
-              PatLeaf<(f16 fpimm), [{
-      return AArch64_AM::getFP16Imm(N->getValueAPF()) != -1;
+              FPImmLeaf<f16, [{
+      return AArch64_AM::getFP16Imm(Imm) != -1;
     }], SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::getFP16Imm(InVal);
@@ -765,8 +765,8 @@ def fpimm16 : Operand<f16>,
   let PrintMethod = "printFPImmOperand";
 }
 def fpimm32 : Operand<f32>,
-              PatLeaf<(f32 fpimm), [{
-      return AArch64_AM::getFP32Imm(N->getValueAPF()) != -1;
+              FPImmLeaf<f32, [{
+      return AArch64_AM::getFP32Imm(Imm) != -1;
     }], SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::getFP32Imm(InVal);
@@ -776,8 +776,8 @@ def fpimm32 : Operand<f32>,
   let PrintMethod = "printFPImmOperand";
 }
 def fpimm64 : Operand<f64>,
-              PatLeaf<(f64 fpimm), [{
-      return AArch64_AM::getFP64Imm(N->getValueAPF()) != -1;
+              FPImmLeaf<f64, [{
+      return AArch64_AM::getFP64Imm(Imm) != -1;
     }], SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::getFP64Imm(InVal);
@@ -792,8 +792,8 @@ def fpimm8 : Operand<i32> {
   let PrintMethod = "printFPImmOperand";
 }
 
-def fpimm0 : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+def fpimm0 : FPImmLeaf<fAny, [{
+  return Imm.isExactlyValue(+0.0);
 }]>;
 
 // Vector lane operands
@@ -847,10 +847,9 @@ def VectorIndexD : Operand<i64>, ImmLeaf<i64, [{
 // aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg hhhhhhhh
 // are encoded as the eight bit value 'abcdefgh'.
 def simdimmtype10 : Operand<i32>,
-                    PatLeaf<(f64 fpimm), [{
-      return AArch64_AM::isAdvSIMDModImmType10(N->getValueAPF()
-                                               .bitcastToAPInt()
-                                               .getZExtValue());
+                    FPImmLeaf<f64, [{
+      return AArch64_AM::isAdvSIMDModImmType10(
+                 Imm.bitcastToAPInt().getZExtValue());
     }], SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = AArch64_AM::encodeAdvSIMDModImmType10(N->getValueAPF()

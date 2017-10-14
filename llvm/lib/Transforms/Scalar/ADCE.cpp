@@ -15,8 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ADCE.h"
-
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,14 +28,29 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "adce"
@@ -53,10 +69,12 @@ static cl::opt<bool> RemoveLoops("adce-remove-loops", cl::init(false),
                                  cl::Hidden);
 
 namespace {
+
 /// Information about Instructions
 struct InstInfoType {
   /// True if the associated instruction is live.
   bool Live = false;
+
   /// Quick access to information for block containing associated Instruction.
   struct BlockInfoType *Block = nullptr;
 };
@@ -65,18 +83,19 @@ struct InstInfoType {
 struct BlockInfoType {
   /// True when this block contains a live instructions.
   bool Live = false;
+
   /// True when this block ends in an unconditional branch.
   bool UnconditionalBranch = false;
+
   /// True when this block is known to have live PHI nodes.
   bool HasLivePhiNodes = false;
+
   /// Control dependence sources need to be live for this block.
   bool CFLive = false;
 
   /// Quick access to the LiveInfo for the terminator,
   /// holds the value &InstInfo[Terminator]
   InstInfoType *TerminatorLiveInfo = nullptr;
-
-  bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
 
   /// Corresponding BasicBlock.
   BasicBlock *BB = nullptr;
@@ -86,6 +105,8 @@ struct BlockInfoType {
 
   /// Post-order numbering of reverse control flow graph.
   unsigned PostOrder;
+
+  bool terminatorIsLive() const { return TerminatorLiveInfo->Live; }
 };
 
 class AggressiveDeadCodeElimination {
@@ -107,6 +128,7 @@ class AggressiveDeadCodeElimination {
   /// Instructions known to be live where we need to mark
   /// reaching definitions as live.
   SmallVector<Instruction *, 128> Worklist;
+
   /// Debug info scopes around a live instruction.
   SmallPtrSet<const Metadata *, 32> AliveScopes;
 
@@ -121,15 +143,19 @@ class AggressiveDeadCodeElimination {
   /// Set up auxiliary data structures for Instructions and BasicBlocks and
   /// initialize the Worklist to the set of must-be-live Instruscions.
   void initialize();
+
   /// Return true for operations which are always treated as live.
   bool isAlwaysLive(Instruction &I);
+
   /// Return true for instrumentation instructions for value profiling.
   bool isInstrumentsConstant(Instruction &I);
 
   /// Propagate liveness to reaching definitions.
   void markLiveInstructions();
+
   /// Mark an instruction as live.
   void markLive(Instruction *I);
+
   /// Mark a block as live.
   void markLive(BlockInfoType &BB);
   void markLive(BasicBlock *BB) { markLive(BlockInfo[BB]); }
@@ -162,12 +188,14 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
- AggressiveDeadCodeElimination(Function &F, DominatorTree &DT,
-                               PostDominatorTree &PDT)
-     : F(F), DT(DT), PDT(PDT) {}
- bool performDeadCodeElimination();
+  AggressiveDeadCodeElimination(Function &F, DominatorTree &DT,
+                                PostDominatorTree &PDT)
+      : F(F), DT(DT), PDT(PDT) {}
+
+  bool performDeadCodeElimination();
 };
-}
+
+} // end anonymous namespace
 
 bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
   initialize();
@@ -181,7 +209,6 @@ static bool isUnconditionalBranch(TerminatorInst *Term) {
 }
 
 void AggressiveDeadCodeElimination::initialize() {
-
   auto NumBlocks = F.size();
 
   // We will have an entry in the map for each block so we grow the
@@ -223,7 +250,8 @@ void AggressiveDeadCodeElimination::initialize() {
     // to recording which nodes have been visited we also record whether
     // a node is currently on the "stack" of active ancestors of the current
     // node.
-    typedef DenseMap<BasicBlock *, bool>  StatusMap ;
+    using StatusMap = DenseMap<BasicBlock *, bool>;
+
     class DFState : public StatusMap {
     public:
       std::pair<StatusMap::iterator, bool> insert(BasicBlock *BB) {
@@ -320,7 +348,6 @@ bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
 }
 
 void AggressiveDeadCodeElimination::markLiveInstructions() {
-
   // Propagate liveness backwards to operands.
   do {
     // Worklist holds newly discovered live instructions
@@ -345,7 +372,6 @@ void AggressiveDeadCodeElimination::markLiveInstructions() {
 }
 
 void AggressiveDeadCodeElimination::markLive(Instruction *I) {
-
   auto &Info = InstInfo[I];
   if (Info.Live)
     return;
@@ -432,7 +458,6 @@ void AggressiveDeadCodeElimination::markPhiLive(PHINode *PN) {
 }
 
 void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
-
   if (BlocksWithDeadTerminators.empty())
     return;
 
@@ -471,7 +496,6 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
 //
 //===----------------------------------------------------------------------===//
 bool AggressiveDeadCodeElimination::removeDeadInstructions() {
-
   // Updates control and dataflow around dead blocks
   updateDeadRegions();
 
@@ -529,7 +553,6 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
 
 // A dead region is the set of dead blocks with a common live post-dominator.
 void AggressiveDeadCodeElimination::updateDeadRegions() {
-
   DEBUG({
     dbgs() << "final dead terminator blocks: " << '\n';
     for (auto *BB : BlocksWithDeadTerminators)
@@ -597,7 +620,6 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
 
 // reverse top-sort order
 void AggressiveDeadCodeElimination::computeReversePostOrder() {
-
   // This provides a post-order numbering of the reverse control flow graph
   // Note that it is incomplete in the presence of infinite loops but we don't
   // need numbers blocks which don't reach the end of the functions since
@@ -660,8 +682,10 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 namespace {
+
 struct ADCELegacyPass : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
+
   ADCELegacyPass() : FunctionPass(ID) {
     initializeADCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -689,9 +713,11 @@ struct ADCELegacyPass : public FunctionPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
-}
+
+} // end anonymous namespace
 
 char ADCELegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
                       "Aggressive Dead Code Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

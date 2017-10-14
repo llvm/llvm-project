@@ -612,13 +612,6 @@ TBAAAccessInfo CodeGenModule::getTBAAMayAliasAccessInfo() {
   return TBAA->getMayAliasAccessInfo();
 }
 
-TBAAAccessInfo CodeGenModule::mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
-                                                   TBAAAccessInfo TargetInfo) {
-  if (!TBAA)
-    return TBAAAccessInfo();
-  return TBAA->mergeTBAAInfoForCast(SourceInfo, TargetInfo);
-}
-
 void CodeGenModule::DecorateInstructionWithTBAA(llvm::Instruction *Inst,
                                                 TBAAAccessInfo TBAAInfo) {
   if (llvm::MDNode *Tag = getTBAAAccessTagInfo(TBAAInfo))

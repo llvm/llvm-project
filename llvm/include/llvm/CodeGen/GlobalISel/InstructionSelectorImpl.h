@@ -36,7 +36,9 @@ namespace llvm {
 
 /// GlobalISel PatFrag Predicates
 enum {
-  GIPFP_Invalid,
+  GIPFP_I64_Invalid = 0,
+  GIPFP_APInt_Invalid = 0,
+  GIPFP_APFloat_Invalid = 0,
 };
 
 template <class TgtInstructionSelector, class PredicateBitset,
@@ -149,16 +151,15 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-
-    case GIM_CheckImmPredicate: {
+    case GIM_CheckI64ImmPredicate: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t Predicate = MatchTable[CurrentIdx++];
-      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckImmPredicate(MIs[" << InsnID
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckI64ImmPredicate(MIs[" << InsnID
                    << "], Predicate=" << Predicate << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_CONSTANT &&
              "Expected G_CONSTANT");
-      assert(Predicate > GIPFP_Invalid && "Expected a valid predicate");
+      assert(Predicate > GIPFP_I64_Invalid && "Expected a valid predicate");
       int64_t Value = 0;
       if (State.MIs[InsnID]->getOperand(1).isCImm())
         Value = State.MIs[InsnID]->getOperand(1).getCImm()->getSExtValue();
@@ -167,7 +168,43 @@ bool InstructionSelector::executeMatchTable(
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
-      if (!MatcherInfo.ImmPredicateFns[Predicate](Value))
+      if (!MatcherInfo.I64ImmPredicateFns[Predicate](Value))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
+    case GIM_CheckAPIntImmPredicate: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t Predicate = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckAPIntImmPredicate(MIs["
+                   << InsnID << "], Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[InsnID]->getOpcode() && "Expected G_CONSTANT");
+      assert(Predicate > GIPFP_APInt_Invalid && "Expected a valid predicate");
+      APInt Value;
+      if (State.MIs[InsnID]->getOperand(1).isCImm())
+        Value = State.MIs[InsnID]->getOperand(1).getCImm()->getValue();
+      else
+        llvm_unreachable("Expected Imm or CImm operand");
+
+      if (!MatcherInfo.APIntImmPredicateFns[Predicate](Value))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
+    case GIM_CheckAPFloatImmPredicate: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t Predicate = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckAPFloatImmPredicate(MIs[" << InsnID
+                   << "], Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_FCONSTANT &&
+             "Expected G_FCONSTANT");
+      assert(State.MIs[InsnID]->getOperand(1).isFPImm() && "Expected FPImm operand");
+      assert(Predicate > GIPFP_APFloat_Invalid && "Expected a valid predicate");
+      APFloat Value = State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
+
+      if (!MatcherInfo.APFloatImmPredicateFns[Predicate](Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;

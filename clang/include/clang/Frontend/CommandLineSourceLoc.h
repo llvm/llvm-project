@@ -51,6 +51,51 @@ public:
   }
 };
 
+/// A source range that has been parsed on the command line.
+struct ParsedSourceRange {
+  std::string FileName;
+  /// The starting location of the range. The first element is the line and
+  /// the second element is the column.
+  std::pair<unsigned, unsigned> Begin;
+  /// The ending location of the range. The first element is the line and the
+  /// second element is the column.
+  std::pair<unsigned, unsigned> End;
+
+  /// Returns a parsed source range from a string or None if the string is
+  /// invalid.
+  ///
+  /// These source string has the following format:
+  ///
+  /// file:start_line:start_column[-end_line:end_column]
+  ///
+  /// If the end line and column are omitted, the starting line and columns
+  /// are used as the end values.
+  static Optional<ParsedSourceRange> fromString(StringRef Str) {
+    std::pair<StringRef, StringRef> RangeSplit;
+    // Avoid splitting '-' when there's no end line & column as '-' might be
+    // part of the filename.
+    if (Str.count(':') > 2)
+      RangeSplit = Str.rsplit('-');
+    else
+      RangeSplit = {Str, ""};
+    auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
+    if (Begin.FileName.empty())
+      return None;
+    unsigned EndLine, EndColumn;
+    if (RangeSplit.second.empty()) {
+      EndLine = Begin.Line;
+      EndColumn = Begin.Column;
+    } else {
+      std::pair<StringRef, StringRef> Split = RangeSplit.second.rsplit(':');
+      if (Split.first.getAsInteger(10, EndLine) ||
+          Split.second.getAsInteger(10, EndColumn))
+        return None;
+    }
+    return ParsedSourceRange{std::move(Begin.FileName),
+                             {Begin.Line, Begin.Column},
+                             {EndLine, EndColumn}};
+  }
+};
 }
 
 namespace llvm {

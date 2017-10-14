@@ -61,6 +61,7 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   else
     ++NumNonEmpty; // Track density.
   *Bucket = Ptr;
+  incrementEpoch();
   return std::make_pair(Bucket, true);
 }
 

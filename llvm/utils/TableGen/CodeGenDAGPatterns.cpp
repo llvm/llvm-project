@@ -862,6 +862,32 @@ std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
 
+bool TreePredicateFn::immCodeUsesAPInt() const {
+  return getOrigPatFragRecord()->getRecord()->getValueAsBit("IsAPInt");
+}
+
+bool TreePredicateFn::immCodeUsesAPFloat() const {
+  bool Unset;
+  // The return value will be false when IsAPFloat is unset.
+  return getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset("IsAPFloat",
+                                                                   Unset);
+}
+
+std::string TreePredicateFn::getImmType() const {
+  if (immCodeUsesAPInt())
+    return "const APInt &";
+  if (immCodeUsesAPFloat())
+    return "const APFloat &";
+  return "int64_t";
+}
+
+std::string TreePredicateFn::getImmTypeIdentifier() const {
+  if (immCodeUsesAPInt())
+    return "APInt";
+  else if (immCodeUsesAPFloat())
+    return "APFloat";
+  return "I64";
+}
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
@@ -882,8 +908,13 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   // Handle immediate predicates first.
   std::string ImmCode = getImmCode();
   if (!ImmCode.empty()) {
-    std::string Result =
-      "    int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();\n";
+    std::string Result = "    " + getImmType() + " Imm = ";
+    if (immCodeUsesAPFloat())
+      Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
+    else if (immCodeUsesAPInt())
+      Result += "cast<ConstantSDNode>(Node)->getAPIntValue();\n";
+    else
+      Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
     return Result + ImmCode;
   }
 

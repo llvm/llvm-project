@@ -960,9 +960,14 @@ Instruction *InstCombiner::foldAddWithConstant(BinaryOperator &Add) {
     return NV;
 
   Value *X;
-  if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->getScalarSizeInBits() == 1)
-    // zext(bool) + C -> bool ? C + 1 : C
+  // zext(bool) + C -> bool ? C + 1 : C
+  if (match(Op0, m_ZExt(m_Value(X))) &&
+      X->getType()->getScalarSizeInBits() == 1)
     return SelectInst::Create(X, AddOne(Op1C), Op1);
+
+  // ~X + C --> (C-1) - X
+  if (match(Op0, m_Not(m_Value(X))))
+    return BinaryOperator::CreateSub(SubOne(Op1C), X);
 
   const APInt *C;
   if (!match(Op1, m_APInt(C)))
@@ -1093,22 +1098,19 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return Shl;
   }
 
-  // -A + B  -->  B - A
-  // -A + -B  -->  -(A + B)
-  if (Value *LHSV = dyn_castNegVal(LHS)) {
-    if (!isa<Constant>(RHS))
-      if (Value *RHSV = dyn_castNegVal(RHS)) {
-        Value *NewAdd = Builder.CreateAdd(LHSV, RHSV, "sum");
-        return BinaryOperator::CreateNeg(NewAdd);
-      }
+  Value *A, *B;
+  if (match(LHS, m_Neg(m_Value(A)))) {
+    // -A + -B --> -(A + B)
+    if (match(RHS, m_Neg(m_Value(B))))
+      return BinaryOperator::CreateNeg(Builder.CreateAdd(A, B));
 
-    return BinaryOperator::CreateSub(RHS, LHSV);
+    // -A + B --> B - A
+    return BinaryOperator::CreateSub(RHS, A);
   }
 
   // A + -B  -->  A - B
-  if (!isa<Constant>(RHS))
-    if (Value *V = dyn_castNegVal(RHS))
-      return BinaryOperator::CreateSub(LHS, V);
+  if (match(RHS, m_Neg(m_Value(B))))
+    return BinaryOperator::CreateSub(LHS, B);
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -1116,12 +1118,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
-
-  if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
-    Value *X;
-    if (match(LHS, m_Not(m_Value(X)))) // ~X + C --> (C-1) - X
-      return BinaryOperator::CreateSub(SubOne(CRHS), X);
-  }
 
   // FIXME: We already did a check for ConstantInt RHS above this.
   // FIXME: Is this pattern covered by another fold? No regression tests fail on
@@ -1249,35 +1245,29 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   }
 
   // (add (xor A, B) (and A, B)) --> (or A, B)
-  {
-    Value *A = nullptr, *B = nullptr;
-    if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
-        match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
+  if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
+      match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
 
-    if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
-        match(RHS, m_c_And(m_Specific(A), m_Specific(B))))
-      return BinaryOperator::CreateOr(A, B);
-  }
+  // (add (and A, B) (xor A, B)) --> (or A, B)
+  if (match(RHS, m_Xor(m_Value(A), m_Value(B))) &&
+      match(LHS, m_c_And(m_Specific(A), m_Specific(B))))
+    return BinaryOperator::CreateOr(A, B);
 
   // (add (or A, B) (and A, B)) --> (add A, B)
-  {
-    Value *A = nullptr, *B = nullptr;
-    if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
-        match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
-      auto *New = BinaryOperator::CreateAdd(A, B);
-      New->setHasNoSignedWrap(I.hasNoSignedWrap());
-      New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return New;
-    }
+  if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
+      match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
+  }
 
-    if (match(LHS, m_Or(m_Value(A), m_Value(B))) &&
-        match(RHS, m_c_And(m_Specific(A), m_Specific(B)))) {
-      auto *New = BinaryOperator::CreateAdd(A, B);
-      New->setHasNoSignedWrap(I.hasNoSignedWrap());
-      New->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return New;
-    }
+  // (add (and A, B) (or A, B)) --> (add A, B)
+  if (match(RHS, m_Or(m_Value(A), m_Value(B))) &&
+      match(LHS, m_c_And(m_Specific(A), m_Specific(B)))) {
+    I.setOperand(0, A);
+    I.setOperand(1, B);
+    return &I;
   }
 
   // TODO(jingyue): Consider willNotOverflowSignedAdd and

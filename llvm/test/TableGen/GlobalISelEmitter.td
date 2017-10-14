@@ -53,7 +53,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 // CHECK-NEXT:    , State(2),
-// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, ImmPredicateFns, {
+// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, APIntImmPredicateFns, APFloatImmPredicateFns, {
 // CHECK-NEXT:      nullptr, // GICP_Invalid
 // CHECK-NEXT:      &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
 // CHECK-NEXT:    }})
@@ -111,12 +111,32 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_Predicate_simm8 = GIPFP_Invalid + 1,
+// CHECK-NEXT:    GIPFP_I64_Predicate_simm8 = GIPFP_I64_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  static bool Predicate_simm8(int64_t Imm) { return isInt<8>(Imm);   }
-// CHECK-NEXT:  static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = {
+// CHECK-NEXT:  static InstructionSelector::I64ImmediatePredicateFn I64ImmPredicateFns[] = {
 // CHECK-NEXT:    nullptr,
 // CHECK-NEXT:    Predicate_simm8,
+// CHECK-NEXT:  };
+
+// CHECK-LABEL: // PatFrag predicates.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:    GIPFP_APFloat_Predicate_fpimmz = GIPFP_APFloat_Invalid + 1,
+// CHECK-NEXT:  };
+// CHECK-NEXT:  static bool Predicate_fpimmz(const APFloat & Imm) { return Imm->isExactlyValue(0.0); }
+// CHECK-NEXT:  static InstructionSelector::APFloatImmediatePredicateFn APFloatImmPredicateFns[] = {
+// CHECK-NEXT:    nullptr,
+// CHECK-NEXT:    Predicate_fpimmz,
+// CHECK-NEXT:  };
+
+// CHECK-LABEL: // PatFrag predicates.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:    GIPFP_APInt_Predicate_simm9 = GIPFP_APInt_Invalid + 1,
+// CHECK-NEXT:  };
+// CHECK-NEXT:  static bool Predicate_simm9(const APInt & Imm) { return isInt<9>(Imm->getSExtValue());   }
+// CHECK-NEXT:  static InstructionSelector::APIntImmediatePredicateFn APIntImmPredicateFns[] = {
+// CHECK-NEXT:    nullptr,
+// CHECK-NEXT:    Predicate_simm9,
 // CHECK-NEXT:  };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
@@ -671,7 +691,7 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 17*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:    GIM_CheckImmPredicate, /*MI*/0, /*Predicate*/GIPFP_Predicate_simm8,
+// CHECK-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIPFP_I64_Predicate_simm8,
 // CHECK-NEXT:    // MIs[0] dst
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -689,9 +709,32 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 def simm8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$imm)]>;
 
-//===- Test a simple pattern with just a leaf immediate. ------------------===//
+//===- Same again but use an IntImmLeaf. ----------------------------------===//
 
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 18*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GIPFP_APInt_Predicate_simm9,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    // No operand predicates
+// CHECK-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm9>>:$imm =>  (MOVimm9:{ *:[i32] } (imm:{ *:[i32] }):$imm)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVimm9,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label 18: @[[LABEL]]
+
+def simm9 : IntImmLeaf<i32, [{ return isInt<9>(Imm->getSExtValue()); }]>;
+def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$imm)]>;
+
+//===- Test a simple pattern with just a leaf immediate. ------------------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 19*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -706,13 +749,36 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 18: @[[LABEL]]
+// CHECK-NEXT:  // Label 19: @[[LABEL]]
 
 def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)]>;
 
+//===- Test a simple pattern with a FP immediate and a predicate. ---------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 20*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCONSTANT,
+// CHECK-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GIPFP_APFloat_Predicate_fpimmz,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::FPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    // No operand predicates
+// CHECK-NEXT:    // (fpimm:{ *:[f32] })<<P:Predicate_fpimmz>>:$imm =>  (MOVfpimmz:{ *:[f32] } (fpimm:{ *:[f32] }):$imm)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVfpimmz,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label 20: @[[LABEL]]
+
+def fpimmz : FPImmLeaf<f32, [{ return Imm->isExactlyValue(0.0); }]>;
+def MOVfpimmz : I<(outs FPR32:$dst), (ins f32imm:$imm), [(set FPR32:$dst, fpimmz:$imm)]>;
+
 //===- Test a pattern with an MBB operand. --------------------------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 19*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 21*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
@@ -721,7 +787,7 @@ def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 19: @[[LABEL]]
+// CHECK-NEXT:  // Label 21: @[[LABEL]]
 
 def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;

@@ -398,6 +398,106 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src
   ret float %result
 }
 
+; GCN-LABEL: {{^}}v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 ; encoding
+; GFX9-NEXT: s_setpc_b64
+
+; CIVI: v_mad_f32
+define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %src0 = extractelement <2 x half> %src0.arg.bc, i32 0
+  %src0.neg = fsub half -0.0, %src0
+  %src0.ext = fpext half %src0.neg to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+;  %src0.ext.neg = fsub float -0.0, %src0.ext
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+; Make sure we don't fold pre-cvt fneg if we already have a fabs
+; GCN-LABEL: {{^}}v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:
+; GFX9: s_waitcnt
+define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %src0 = extractelement <2 x half> %src0.arg.bc, i32 1
+  %src0.neg = fsub half -0.0, %src0
+  %src0.ext = fpext half %src0.neg to float
+  %src0.ext.abs = call float @llvm.fabs.f32(float %src0.ext)
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext.abs, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+; GCN-LABEL: {{^}}v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mad_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: s_setpc_b64
+define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %src0 = extractelement <2 x half> %src0.arg.bc, i32 1
+  %src0.abs = call half @llvm.fabs.f16(half %src0)
+  %src0.ext = fpext half %src0.abs to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: s_setpc_b64
+define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %fneg = fsub <2 x half> <half -0.0, half -0.0>, %src0.arg.bc
+  %src0 = extractelement <2 x half> %fneg, i32 1
+  %src0.ext = fpext half %src0 to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+; FIXME: Should be able to fold
+; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: s_setpc_b64
+define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %src0.arg.bc)
+  %src0 = extractelement <2 x half> %fabs, i32 1
+  %src0.ext = fpext half %src0 to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+; FIXME: Should be able to fold
+; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: s_setpc_b64
+define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
+  %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %src0.arg.bc)
+  %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
+  %src0 = extractelement <2 x half> %fneg.fabs, i32 1
+  %src0.ext = fpext half %src0 to float
+  %src1.ext = fpext half %src1 to float
+  %src2.ext = fpext half %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  ret float %result
+}
+
+declare half @llvm.fabs.f16(half) #2
+declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #2
 declare float @llvm.fabs.f32(float) #2
 declare float @llvm.minnum.f32(float, float) #2
 declare float @llvm.maxnum.f32(float, float) #2

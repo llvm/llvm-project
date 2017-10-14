@@ -118,9 +118,9 @@ CodeGenFunction::~CodeGenFunction() {
 }
 
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,
-                                                    LValueBaseInfo *BaseInfo,
-                                                    TBAAAccessInfo *TBAAInfo) {
-  return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo, TBAAInfo,
+                                                    LValueBaseInfo *BaseInfo) {
+  return getNaturalTypeAlignment(T->getPointeeType(), BaseInfo,
+                                 /* TBAAInfo= */ nullptr,
                                  /* forPointeeType= */ true);
 }
 

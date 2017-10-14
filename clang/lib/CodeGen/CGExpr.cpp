@@ -916,8 +916,7 @@ void CodeGenModule::EmitExplicitCastExprType(const ExplicitCastExpr *E,
 /// EmitPointerWithAlignment - Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
 Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
-                                                  LValueBaseInfo *BaseInfo,
-                                                  TBAAAccessInfo *TBAAInfo) {
+                                                  LValueBaseInfo *BaseInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(E->getType()->isPointerType() ||
          E->getType()->isObjCObjectPointerType());
@@ -937,28 +936,19 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
         if (PtrTy->getPointeeType()->isVoidType())
           break;
 
-        LValueBaseInfo InnerBaseInfo;
-        TBAAAccessInfo InnerTBAAInfo;
-        Address Addr = EmitPointerWithAlignment(CE->getSubExpr(),
-                                                &InnerBaseInfo,
-                                                &InnerTBAAInfo);
-        if (BaseInfo) *BaseInfo = InnerBaseInfo;
-        if (TBAAInfo) *TBAAInfo = InnerTBAAInfo;
+        LValueBaseInfo InnerInfo;
+        Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), &InnerInfo);
+        if (BaseInfo) *BaseInfo = InnerInfo;
 
         // If this is an explicit bitcast, and the source l-value is
         // opaque, honor the alignment of the casted-to type.
         if (isa<ExplicitCastExpr>(CE) &&
-            InnerBaseInfo.getAlignmentSource() != AlignmentSource::Decl) {
-          LValueBaseInfo TargetTypeBaseInfo;
-          TBAAAccessInfo TargetTypeTBAAInfo;
+            InnerInfo.getAlignmentSource() != AlignmentSource::Decl) {
+          LValueBaseInfo ExpInfo;
           CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(),
-                                                           &TargetTypeBaseInfo,
-                                                           &TargetTypeTBAAInfo);
+                                                           &ExpInfo);
           if (BaseInfo)
-            BaseInfo->mergeForCast(TargetTypeBaseInfo);
-          if (TBAAInfo)
-            *TBAAInfo = CGM.mergeTBAAInfoForCast(*TBAAInfo,
-                                                 TargetTypeTBAAInfo);
+            BaseInfo->mergeForCast(ExpInfo);
           Addr = Address(Addr.getPointer(), Align);
         }
 
@@ -979,13 +969,12 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
 
     // Array-to-pointer decay.
     case CK_ArrayToPointerDecay:
-      return EmitArrayToPointerDecay(CE->getSubExpr(), BaseInfo, TBAAInfo);
+      return EmitArrayToPointerDecay(CE->getSubExpr(), BaseInfo);
 
     // Derived-to-base conversions.
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo,
-                                              TBAAInfo);
+      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo);
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
       return GetAddressOfBaseClass(Addr, Derived,
                                    CE->path_begin(), CE->path_end(),
@@ -1005,7 +994,6 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
     if (UO->getOpcode() == UO_AddrOf) {
       LValue LV = EmitLValue(UO->getSubExpr());
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
-      if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
       return LV.getAddress();
     }
   }
@@ -1013,8 +1001,7 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
   // TODO: conditional operators, comma.
 
   // Otherwise, use the alignment of the type.
-  CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo,
-                                                   TBAAInfo);
+  CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
   return Address(EmitScalarExpr(E), Align);
 }
 
@@ -2460,10 +2447,8 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     assert(!T.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
 
     LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo,
-                                            &TBAAInfo);
-    LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
+    Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo);
+    LValue LV = MakeAddrLValue(Addr, T, BaseInfo, CGM.getTBAAAccessInfo(T));
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
     // We should not generate __weak write barrier on indirect reference
@@ -3063,8 +3048,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 }
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
-                                                 LValueBaseInfo *BaseInfo,
-                                                 TBAAAccessInfo *TBAAInfo) {
+                                                 LValueBaseInfo *BaseInfo) {
   assert(E->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 
@@ -3072,7 +3056,6 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
   LValue LV = EmitLValue(E);
   Address Addr = LV.getAddress();
   if (BaseInfo) *BaseInfo = LV.getBaseInfo();
-  if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
 
   // If the array type was an incomplete type, we need to make sure
   // the decay ends up being the right type.
@@ -3233,14 +3216,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   }
 
   LValueBaseInfo BaseInfo;
-  TBAAAccessInfo TBAAInfo;
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
            getContext().getAsVariableArrayType(E->getType())) {
     // The base must be a pointer, which is not an aggregate.  Emit
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     // The element count here is the total number of non-VLA elements.
@@ -3264,7 +3246,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // Indexing over an interface, as in "NSString *P; P[4];"
 
     // Emit the base pointer.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     CharUnits InterfaceSize = getContext().getTypeSizeInChars(OIT);
@@ -3312,17 +3294,19 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
         E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
-    TBAAInfo = CGM.getTBAAAccessInfo(E->getType());
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc());
   }
 
-  LValue LV = MakeAddrLValue(Addr, E->getType(), BaseInfo, TBAAInfo);
+  LValue LV = MakeAddrLValue(Addr, E->getType(), BaseInfo,
+                             CGM.getTBAAAccessInfo(E->getType()));
+
+  // TODO: Preserve/extend path TBAA metadata?
 
   if (getLangOpts().ObjC1 &&
       getLangOpts().getGC() != LangOptions::NonGC) {
@@ -3337,6 +3321,8 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
                                        TBAAAccessInfo &TBAAInfo,
                                        QualType BaseTy, QualType ElTy,
                                        bool IsLowerBound) {
+  TBAAInfo = CGF.CGM.getTBAAAccessInfo(ElTy);
+
   LValue BaseLVal;
   if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
     BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
@@ -3366,7 +3352,7 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
     BaseInfo.mergeForCast(TypeInfo);
     return Address(CGF.Builder.CreateLoad(BaseLVal.getAddress()), Align);
   }
-  return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+  return CGF.EmitPointerWithAlignment(Base, &BaseInfo);
 }
 
 LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
@@ -3532,10 +3518,10 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     // If it is a pointer to a vector, emit the address and form an lvalue with
     // it.
     LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
+    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
     const PointerType *PT = E->getBase()->getType()->getAs<PointerType>();
-    Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo, TBAAInfo);
+    Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo,
+                          CGM.getTBAAAccessInfo(PT->getPointeeType()));
     Base.getQuals().removeObjCGCAttr();
   } else if (E->getBase()->isGLValue()) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
@@ -3591,8 +3577,7 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   LValue BaseLV;
   if (E->isArrow()) {
     LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
+    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
     bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
@@ -3602,7 +3587,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
       SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
-    BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
+    BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo,
+                            CGM.getTBAAAccessInfo(PtrTy));
   } else
     BaseLV = EmitCheckedLValue(BaseExpr, TCK_MemberAccess);
 
