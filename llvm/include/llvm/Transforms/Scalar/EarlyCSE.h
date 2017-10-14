@@ -6,18 +6,20 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file provides the interface for a simple, fast CSE pass.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_SCALAR_EARLYCSE_H
 #define LLVM_TRANSFORMS_SCALAR_EARLYCSE_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+class Function;
 
 /// \brief A simple and fast domtree-based CSE pass.
 ///
@@ -35,6 +37,6 @@ struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
   bool UseMemorySSA;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_SCALAR_EARLYCSE_H

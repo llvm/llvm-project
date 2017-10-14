@@ -9100,7 +9100,7 @@ defm VMOVSLDUP : avx512_replicate<0x12, "vmovsldup", X86Movsldup>;
 //===----------------------------------------------------------------------===//
 
 multiclass avx512_movddup_128<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                                            X86VectorVTInfo _> {
+                              X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain in {
   defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                    (ins _.RC:$src), OpcodeStr, "$src", "$src",
@@ -9116,13 +9116,13 @@ multiclass avx512_movddup_128<bits<8> opc, string OpcodeStr, SDNode OpNode,
 multiclass avx512_movddup_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                                   AVX512VLVectorVTInfo VTInfo> {
 
-  defm Z : avx512_unary_rm<opc, OpcodeStr, OpNode, VTInfo.info512>, EVEX_V512;
+  defm Z : avx512_unary_rm<opc, OpcodeStr, X86Movddup, VTInfo.info512>, EVEX_V512;
 
   let Predicates = [HasAVX512, HasVLX] in {
-    defm Z256 : avx512_unary_rm<opc, OpcodeStr, OpNode, VTInfo.info256>,
+    defm Z256 : avx512_unary_rm<opc, OpcodeStr, X86Movddup, VTInfo.info256>,
                                EVEX_V256;
-    defm Z128 : avx512_movddup_128<opc, OpcodeStr, OpNode, VTInfo.info128>,
-                               EVEX_V128;
+    defm Z128 : avx512_movddup_128<opc, OpcodeStr, X86VBroadcast, VTInfo.info128>,
+                                  EVEX_V128;
   }
 }
 
@@ -9134,19 +9134,12 @@ multiclass avx512_movddup<bits<8> opc, string OpcodeStr, SDNode OpNode>{
 defm VMOVDDUP : avx512_movddup<0x12, "vmovddup", X86Movddup>;
 
 let Predicates = [HasVLX] in {
-def : Pat<(X86Movddup (loadv2f64 addr:$src)),
-          (VMOVDDUPZ128rm addr:$src)>;
 def : Pat<(v2f64 (X86VBroadcast (loadf64 addr:$src))),
           (VMOVDDUPZ128rm addr:$src)>;
 def : Pat<(v2f64 (X86VBroadcast f64:$src)),
           (VMOVDDUPZ128rr (COPY_TO_REGCLASS FR64X:$src, VR128X))>;
-
-def : Pat<(vselect (v2i1 VK2WM:$mask), (X86Movddup (loadv2f64 addr:$src)),
-                   (v2f64 VR128X:$src0)),
-          (VMOVDDUPZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
-def : Pat<(vselect (v2i1 VK2WM:$mask), (X86Movddup (loadv2f64 addr:$src)),
-                   (bitconvert (v4i32 immAllZerosV))),
-          (VMOVDDUPZ128rmkz VK2WM:$mask, addr:$src)>;
+def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+          (VMOVDDUPZ128rm addr:$src)>;
 
 def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast f64:$src)),
                    (v2f64 VR128X:$src0)),
@@ -9160,6 +9153,13 @@ def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast (loadf64 addr:$src)
                    (v2f64 VR128X:$src0)),
           (VMOVDDUPZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
 def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                   (bitconvert (v4i32 immAllZerosV))),
+          (VMOVDDUPZ128rmkz VK2WM:$mask, addr:$src)>;
+
+def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+                   (v2f64 VR128X:$src0)),
+          (VMOVDDUPZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
                    (bitconvert (v4i32 immAllZerosV))),
           (VMOVDDUPZ128rmkz VK2WM:$mask, addr:$src)>;
 }

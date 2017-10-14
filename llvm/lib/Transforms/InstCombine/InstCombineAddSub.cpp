@@ -1098,22 +1098,19 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return Shl;
   }
 
-  // -A + B  -->  B - A
-  // -A + -B  -->  -(A + B)
-  if (Value *LHSV = dyn_castNegVal(LHS)) {
-    if (!isa<Constant>(RHS))
-      if (Value *RHSV = dyn_castNegVal(RHS)) {
-        Value *NewAdd = Builder.CreateAdd(LHSV, RHSV, "sum");
-        return BinaryOperator::CreateNeg(NewAdd);
-      }
+  Value *A, *B;
+  if (match(LHS, m_Neg(m_Value(A)))) {
+    // -A + -B --> -(A + B)
+    if (match(RHS, m_Neg(m_Value(B))))
+      return BinaryOperator::CreateNeg(Builder.CreateAdd(A, B));
 
-    return BinaryOperator::CreateSub(RHS, LHSV);
+    // -A + B --> B - A
+    return BinaryOperator::CreateSub(RHS, A);
   }
 
   // A + -B  -->  A - B
-  if (!isa<Constant>(RHS))
-    if (Value *V = dyn_castNegVal(RHS))
-      return BinaryOperator::CreateSub(LHS, V);
+  if (match(RHS, m_Neg(m_Value(B))))
+    return BinaryOperator::CreateSub(LHS, B);
 
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
@@ -1247,7 +1244,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     }
   }
 
-  Value *A, *B;
   // (add (xor A, B) (and A, B)) --> (or A, B)
   if (match(LHS, m_Xor(m_Value(A), m_Value(B))) &&
       match(RHS, m_c_And(m_Specific(A), m_Specific(B))))

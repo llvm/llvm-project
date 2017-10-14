@@ -26,6 +26,8 @@
 
 namespace llvm {
 
+class APInt;
+class APFloat;
 class LLT;
 class MachineInstr;
 class MachineInstrBuilder;
@@ -96,7 +98,15 @@ enum {
   /// Check an immediate predicate on the specified instruction
   /// - InsnID - Instruction ID
   /// - The predicate to test
-  GIM_CheckImmPredicate,
+  GIM_CheckI64ImmPredicate,
+  /// Check an immediate predicate on the specified instruction via an APInt.
+  /// - InsnID - Instruction ID
+  /// - The predicate to test
+  GIM_CheckAPIntImmPredicate,
+  /// Check a floating point immediate predicate on the specified instruction.
+  /// - InsnID - Instruction ID
+  /// - The predicate to test
+  GIM_CheckAPFloatImmPredicate,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
@@ -139,6 +149,13 @@ enum {
   /// instruction.
   /// - InsnID - Instruction ID
   GIM_CheckIsSafeToFold,
+
+  /// Check the specified operands are identical.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - OtherInsnID - Other instruction ID
+  /// - OtherOpIdx - Other operand index
+  GIM_CheckIsSameOperand,
 
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
@@ -226,7 +243,9 @@ enum {
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
-  using ImmediatePredicateFn = bool (*)(int64_t);
+  using I64ImmediatePredicateFn = bool (*)(int64_t);
+  using APIntImmediatePredicateFn = bool (*)(const APInt &);
+  using APFloatImmediatePredicateFn = bool (*)(const APFloat &);
 
   virtual ~InstructionSelector() = default;
 
@@ -259,7 +278,9 @@ public:
   struct MatcherInfoTy {
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
-    const ImmediatePredicateFn *ImmPredicateFns;
+    const I64ImmediatePredicateFn *I64ImmPredicateFns;
+    const APIntImmediatePredicateFn *APIntImmPredicateFns;
+    const APFloatImmediatePredicateFn *APFloatImmPredicateFns;
     const std::vector<ComplexMatcherMemFn> ComplexPredicates;
   };
 

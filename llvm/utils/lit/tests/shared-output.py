@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: echo 'lit_config.load_config(config, "%{inputs}/shared-output/lit.cfg")' > %t/lit.site.cfg
+# RUN: echo 'lit_config.load_config(config, os.path.join(r"%{inputs}", "shared-output", "lit.cfg"))' > %t/lit.site.cfg
 # RUN: %{lit} %t
 # RUN: FileCheck %s < %t/Output/Shared/SHARED.tmp
 # RUN: FileCheck -check-prefix=NEGATIVE %s < %t/Output/Shared/SHARED.tmp
