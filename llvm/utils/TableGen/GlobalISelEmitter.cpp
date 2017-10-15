@@ -68,13 +68,13 @@ namespace {
 
 /// Get the name of the enum value used to number the predicate function.
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
-  return "GIPFP_" + Predicate.getImmTypeIdentifier() + "_" +
+  return "GIPFP_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
 
 /// Get the opcode used to check this predicate.
 std::string getMatchOpcodeForPredicate(const TreePredicateFn &Predicate) {
-  return "GIM_Check" + Predicate.getImmTypeIdentifier() + "ImmPredicate";
+  return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
 /// This class stands in for LLT wherever we want to tablegen-erate an
@@ -170,6 +170,28 @@ static std::string explainPredicates(const TreePatternNode *N) {
       Explanation += " always-true";
     if (P.isImmediatePattern())
       Explanation += " immediate";
+
+    if (P.isUnindexed())
+      Explanation += " unindexed";
+
+    if (P.isNonExtLoad())
+      Explanation += " non-extload";
+    if (P.isAnyExtLoad())
+      Explanation += " extload";
+    if (P.isSignExtLoad())
+      Explanation += " sextload";
+    if (P.isZeroExtLoad())
+      Explanation += " zextload";
+
+    if (P.isNonTruncStore())
+      Explanation += " non-truncstore";
+    if (P.isTruncStore())
+      Explanation += " truncstore";
+
+    if (Record *VT = P.getMemoryVT())
+      Explanation += (" MemVT=" + VT->getName()).str();
+    if (Record *VT = P.getScalarMemoryVT())
+      Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
   }
   return Explanation;
 }
@@ -204,6 +226,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     HasUnsupportedPredicate = true;
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
+    Explanation += (Separator + "first-failing:" +
+                    Predicate.getOrigPatFragRecord()->getRecord()->getName())
+                       .str();
     break;
   }
 
@@ -972,6 +997,7 @@ protected:
   enum PredicateKind {
     IPM_Opcode,
     IPM_ImmPredicate,
+    IPM_NonAtomicMMO,
   };
 
   PredicateKind Kind;
@@ -1096,6 +1122,24 @@ public:
           << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::Comment("Predicate")
           << MatchTable::NamedValue(getEnumNameForPredicate(Predicate))
+          << MatchTable::LineBreak;
+  }
+};
+
+/// Generates code to check that a memory instruction has a non-atomic MachineMemoryOperand.
+class NonAtomicMMOPredicateMatcher : public InstructionPredicateMatcher {
+public:
+  NonAtomicMMOPredicateMatcher()
+      : InstructionPredicateMatcher(IPM_NonAtomicMMO) {}
+
+  static bool classof(const InstructionPredicateMatcher *P) {
+    return P->getKind() == IPM_NonAtomicMMO;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                            unsigned InsnVarID) const override {
+    Table << MatchTable::Opcode("GIM_CheckNonAtomic")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::LineBreak;
   }
 };
@@ -1966,9 +2010,11 @@ private:
   const CodeGenTarget &Target;
   CodeGenRegBank CGRegs;
 
-  /// Keep track of the equivalence between SDNodes and Instruction.
+  /// Keep track of the equivalence between SDNodes and Instruction by mapping
+  /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
+  /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
-  DenseMap<Record *, const CodeGenInstruction *> NodeEquivs;
+  DenseMap<Record *, Record *> NodeEquivs;
 
   /// Keep track of the equivalence between ComplexPattern's and
   /// GIComplexOperandMatcher. Map entries are specified by subclassing
@@ -1979,7 +2025,7 @@ private:
   SubtargetFeatureInfoMap SubtargetFeatures;
 
   void gatherNodeEquivs();
-  const CodeGenInstruction *findNodeEquiv(Record *N) const;
+  Record *findNodeEquiv(Record *N) const;
 
   Error importRulePredicates(RuleMatcher &M, ArrayRef<Predicate> Predicates);
   Expected<InstructionMatcher &>
@@ -2016,8 +2062,7 @@ private:
 void GlobalISelEmitter::gatherNodeEquivs() {
   assert(NodeEquivs.empty());
   for (Record *Equiv : RK.getAllDerivedDefinitions("GINodeEquiv"))
-    NodeEquivs[Equiv->getValueAsDef("Node")] =
-        &Target.getInstruction(Equiv->getValueAsDef("I"));
+    NodeEquivs[Equiv->getValueAsDef("Node")] = Equiv;
 
   assert(ComplexPatternEquivs.empty());
   for (Record *Equiv : RK.getAllDerivedDefinitions("GIComplexPatternEquiv")) {
@@ -2028,7 +2073,7 @@ void GlobalISelEmitter::gatherNodeEquivs() {
  }
 }
 
-const CodeGenInstruction *GlobalISelEmitter::findNodeEquiv(Record *N) const {
+Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
   return NodeEquivs.lookup(N);
 }
 
@@ -2055,6 +2100,7 @@ Expected<InstructionMatcher &>
 GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
                                                 const TreePatternNode *Src,
                                                 unsigned &TempOpIdx) const {
+  Record *SrcGIEquivOrNull = nullptr;
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
   // Start with the defined operands (i.e., the results of the root operator).
@@ -2070,14 +2116,14 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
   } else {
-    SrcGIOrNull = findNodeEquiv(Src->getOperator());
-    if (!SrcGIOrNull)
+    SrcGIEquivOrNull = findNodeEquiv(Src->getOperator());
+    if (!SrcGIEquivOrNull)
       return failedImport("Pattern operator lacks an equivalent Instruction" +
                           explainOperator(Src->getOperator()));
-    auto &SrcGI = *SrcGIOrNull;
+    SrcGIOrNull = &Target.getInstruction(SrcGIEquivOrNull->getValueAsDef("I"));
 
     // The operators look good: match the opcode
-    InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
+    InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
   }
 
   unsigned OpIdx = 0;
@@ -2107,6 +2153,8 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
     return failedImport("Src pattern child has predicate (" +
                         explainPredicates(Src) + ")");
   }
+  if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<NonAtomicMMOPredicateMatcher>();
 
   if (Src->isLeaf()) {
     Init *SrcInit = Src->getLeafValue();

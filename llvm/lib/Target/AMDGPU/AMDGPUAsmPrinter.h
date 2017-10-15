@@ -155,7 +155,7 @@ public:
 
   const MCSubtargetInfo* getSTI() const;
 
-  AMDGPUTargetStreamer& getTargetStreamer() const;
+  AMDGPUTargetStreamer* getTargetStreamer() const;
 
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
