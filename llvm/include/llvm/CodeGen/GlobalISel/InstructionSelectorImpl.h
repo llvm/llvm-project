@@ -209,6 +209,25 @@ bool InstructionSelector::executeMatchTable(
           return false;
       break;
     }
+    case GIM_CheckNonAtomic: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckNonAtomic(MIs[" << InsnID
+                   << "])\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert((State.MIs[InsnID]->getOpcode() == TargetOpcode::G_LOAD ||
+              State.MIs[InsnID]->getOpcode() == TargetOpcode::G_STORE) &&
+             "Expected G_LOAD/G_STORE");
+
+      if (!State.MIs[InsnID]->hasOneMemOperand())
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+
+      for (const auto &MMO : State.MIs[InsnID]->memoperands())
+        if (MMO->getOrdering() != AtomicOrdering::NotAtomic)
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+      break;
+    }
 
     case GIM_CheckType: {
       int64_t InsnID = MatchTable[CurrentIdx++];
