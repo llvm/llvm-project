@@ -944,7 +944,7 @@ raw_ostream& llvm::operator<<(raw_ostream& OS, const LiveRange::Segment &S) {
   return OS << '[' << S.start << ',' << S.end << ':' << S.valno->id << ')';
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveRange::Segment::dump() const {
   dbgs() << *this << '\n';
 }
@@ -993,7 +993,7 @@ void LiveInterval::print(raw_ostream &OS) const {
     OS << SR;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveRange::dump() const {
   dbgs() << *this << '\n';
 }
@@ -1077,7 +1077,7 @@ void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
 // When they exist, Spills.back().start <= LastStart,
 //                 and WriteI[-1].start <= LastStart.
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LiveRangeUpdater::print(raw_ostream &OS) const {
   if (!isDirty()) {
     if (LR)

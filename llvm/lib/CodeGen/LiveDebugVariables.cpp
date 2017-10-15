@@ -398,7 +398,7 @@ public:
 
 } // end anonymous namespace
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
@@ -1218,7 +1218,7 @@ bool LiveDebugVariables::doInitialization(Module &M) {
   return Pass::doInitialization(M);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->print(dbgs());

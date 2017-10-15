@@ -109,7 +109,7 @@ public:
   void print(raw_ostream &OS) const;
 
   /// dump - Dump the dominance frontier to dbgs().
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
 };

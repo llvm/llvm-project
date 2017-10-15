@@ -4075,7 +4075,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (const Arg *StdArg = Args.getLastArg(options::OPT__SLASH_std)) {
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c++14", "-std=c++14")
-                             .Case("c++latest", "-std=c++1z")
+                             .Case("c++17", "-std=c++17")
+                             .Case("c++latest", "-std=c++2a")
                              .Default("");
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)

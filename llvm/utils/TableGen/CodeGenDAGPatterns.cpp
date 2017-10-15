@@ -514,48 +514,26 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     // MinS = min scalar in Small, remove all scalars from Big that are
     // smaller-or-equal than MinS.
     auto MinS = min_if(S.begin(), S.end(), isScalar, LT);
-    if (MinS != S.end()) {
+    if (MinS != S.end())
       Changed |= berase_if(B, std::bind(LE, std::placeholders::_1, *MinS));
-      if (B.empty()) {
-        TP.error("Type contradiction in " +
-                 Twine(__func__) + ":" + Twine(__LINE__));
-        return Changed;
-      }
-    }
+
     // MaxS = max scalar in Big, remove all scalars from Small that are
     // larger than MaxS.
     auto MaxS = max_if(B.begin(), B.end(), isScalar, LT);
-    if (MaxS != B.end()) {
+    if (MaxS != B.end())
       Changed |= berase_if(S, std::bind(LE, *MaxS, std::placeholders::_1));
-      if (B.empty()) {
-        TP.error("Type contradiction in " +
-                 Twine(__func__) + ":" + Twine(__LINE__));
-        return Changed;
-      }
-    }
 
     // MinV = min vector in Small, remove all vectors from Big that are
     // smaller-or-equal than MinV.
     auto MinV = min_if(S.begin(), S.end(), isVector, LT);
-    if (MinV != S.end()) {
+    if (MinV != S.end())
       Changed |= berase_if(B, std::bind(LE, std::placeholders::_1, *MinV));
-      if (B.empty()) {
-        TP.error("Type contradiction in " +
-                 Twine(__func__) + ":" + Twine(__LINE__));
-        return Changed;
-      }
-    }
+
     // MaxV = max vector in Big, remove all vectors from Small that are
     // larger than MaxV.
     auto MaxV = max_if(B.begin(), B.end(), isVector, LT);
-    if (MaxV != B.end()) {
+    if (MaxV != B.end())
       Changed |= berase_if(S, std::bind(LE, *MaxV, std::placeholders::_1));
-      if (B.empty()) {
-        TP.error("Type contradiction in " +
-                 Twine(__func__) + ":" + Twine(__LINE__));
-        return Changed;
-      }
-    }
   }
 
   return Changed;
@@ -600,12 +578,6 @@ bool TypeInfer::EnforceVectorEltTypeIs(TypeSetByHwMode &Vec,
     // Remove from E all (scalar) types, for which there is no corresponding
     // type in V.
     Changed |= berase_if(E, [&VT](MVT T) -> bool { return !VT.count(T); });
-
-    if (V.empty() || E.empty()) {
-      TP.error("Type contradiction in " +
-               Twine(__func__) + ":" + Twine(__LINE__));
-      return Changed;
-    }
   }
 
   return Changed;
@@ -666,27 +638,12 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
     TypeSetByHwMode::SetType &V = Vec.get(M);
 
     Changed |= berase_if(S, isScalar);
-    if (S.empty()) {
-      TP.error("Type contradiction in " +
-               Twine(__func__) + ":" + Twine(__LINE__));
-      return Changed;
-    }
 
     // Erase all types from S that are not sub-vectors of a type in V.
     Changed |= berase_if(S, std::bind(NoSubV, V, std::placeholders::_1));
-    if (S.empty()) {
-      TP.error("Type contradiction in " +
-               Twine(__func__) + ":" + Twine(__LINE__));
-      return Changed;
-    }
 
     // Erase all types from V that are not super-vectors of a type in S.
     Changed |= berase_if(V, std::bind(NoSupV, S, std::placeholders::_1));
-    if (V.empty()) {
-      TP.error("Type contradiction in " +
-               Twine(__func__) + ":" + Twine(__LINE__));
-      return Changed;
-    }
   }
 
   return Changed;
@@ -850,8 +807,14 @@ TypeSetByHwMode TypeInfer::getLegalTypes() {
 
 /// TreePredicateFn constructor.  Here 'N' is a subclass of PatFrag.
 TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
-  assert((getPredCode().empty() || getImmCode().empty()) &&
-        ".td file corrupt: can't have a node predicate *and* an imm predicate");
+  assert(
+      (!hasPredCode() || !hasImmCode()) &&
+      ".td file corrupt: can't have a node predicate *and* an imm predicate");
+}
+
+bool TreePredicateFn::hasPredCode() const {
+  return isLoad() || isStore() ||
+         !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
 std::string TreePredicateFn::getPredCode() const {
@@ -976,6 +939,10 @@ std::string TreePredicateFn::getPredCode() const {
   return Code;
 }
 
+bool TreePredicateFn::hasImmCode() const {
+  return !PatFragRec->getRecord()->getValueAsString("ImmediateCode").empty();
+}
+
 std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
@@ -1058,7 +1025,7 @@ StringRef TreePredicateFn::getImmTypeIdentifier() const {
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
-  return getPredCode().empty() && getImmCode().empty();
+  return !hasPredCode() && !hasImmCode();
 }
 
 /// Return the name to use in the generated code to reference this, this is
@@ -1128,7 +1095,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   }
 
   // Handle arbitrary node predicates.
-  assert(!getPredCode().empty() && "Don't have any predicate code!");
+  assert(hasPredCode() && "Don't have any predicate code!");
   StringRef ClassName;
   if (PatFragRec->getOnlyTree()->isLeaf())
     ClassName = "SDNode";

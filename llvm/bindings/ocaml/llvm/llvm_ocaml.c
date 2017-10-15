@@ -336,7 +336,7 @@ CAMLprim LLVMContextRef llvm_type_context(LLVMTypeRef Ty) {
 
 /* lltype -> unit */
 CAMLprim value llvm_dump_type(LLVMTypeRef Val) {
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVMDumpType(Val);
 #else
   caml_raise_with_arg(*caml_named_value("Llvm.FeatureDisabled"),

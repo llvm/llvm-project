@@ -14,10 +14,6 @@
 #ifndef LLVM_CONFIG_H
 #define LLVM_CONFIG_H
 
-/* Defined in debug builds and release builds if LLVM_FORCE_ENABLE_DUMP
-   or LLVM_ENABLE_ASSERTIONS */
-#cmakedefine LLVM_ENABLE_DUMP
-
 /* Define if we link Polly to the tools */
 #cmakedefine LINK_POLLY_INTO_TOOLS
 
