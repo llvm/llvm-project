@@ -9,17 +9,18 @@
 ; CHECK:    - Name:       test
 ; CHECK:      SymbolName: 'test@kd'
 ; CHECK:      CodeProps:
-; CHECK:        KernargSegmentSize:  24
-; CHECK:        GroupSegmentFixedSize: 0
+; CHECK:        KernargSegmentSize:      24
+; CHECK:        GroupSegmentFixedSize:   0
 ; CHECK:        PrivateSegmentFixedSize: 0
-; CHECK:        KernargSegmentAlign: 8
-; CHECK:        WavefrontSize: 64
-; GFX700:       NumSGPRs: 6
-; GFX800:       NumSGPRs: 96
-; GFX900:       NumSGPRs: 6
-; GFX700:       NumVGPRs: 4
-; GFX800:       NumVGPRs: 6
-; GFX900:       NumVGPRs: 6
+; CHECK:        KernargSegmentAlign:     8
+; CHECK:        WavefrontSize:           64
+; GFX700:       NumSGPRs:                6
+; GFX800:       NumSGPRs:                96
+; GFX900:       NumSGPRs:                6
+; GFX700:       NumVGPRs:                4
+; GFX800:       NumVGPRs:                6
+; GFX900:       NumVGPRs:                6
+; CHECK:        MaxFlatWorkgroupSize:    256
 define amdgpu_kernel void @test(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
