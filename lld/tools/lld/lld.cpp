@@ -45,7 +45,7 @@ static Flavor getFlavor(StringRef S) {
   return StringSwitch<Flavor>(S)
       .CasesLower("ld", "ld.lld", "gnu", Gnu)
       .CaseLower("link", WinLink)
-      .CaseLower("darwin", Darwin)
+      .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
       .Default(Invalid);
 }
 

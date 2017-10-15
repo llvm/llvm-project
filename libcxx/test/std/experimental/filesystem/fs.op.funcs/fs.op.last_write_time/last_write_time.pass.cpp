@@ -88,6 +88,13 @@ bool TestSupportsNegativeTimes() {
     return !ec && new_write_time <= -5;
 }
 
+// In some configurations, the comparison is tautological and the test is valid.
+// We disable the warning so that we can actually test it regardless.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-constant-compare"
+#endif
+
 bool TestSupportsMaxTime() {
     using namespace std::chrono;
     using Lim = std::numeric_limits<std::time_t>;
@@ -106,10 +113,21 @@ bool TestSupportsMaxTime() {
     return !ec && new_write_time > max_sec - 1;
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
 static const bool SupportsNegativeTimes = TestSupportsNegativeTimes();
 static const bool SupportsMaxTime = TestSupportsMaxTime();
 
 } // end namespace
+
+// In some configurations, the comparison is tautological and the test is valid.
+// We disable the warning so that we can actually test it regardless.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-constant-compare"
+#endif
 
 // Check if a time point is representable on a given filesystem. Check that:
 // (A) 'tp' is representable as a time_t
@@ -126,6 +144,10 @@ inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
     else if (tp == file_time_type::max() && !SupportsMaxTime) return false;
     return true;
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 TEST_SUITE(exists_test_suite)
 
