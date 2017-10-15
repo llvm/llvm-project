@@ -287,6 +287,16 @@ public:
   virtual TargetOpenCLBlockHelper *getTargetOpenCLBlockHelper() const {
     return nullptr;
   }
+
+  /// Create an OpenCL kernel for an enqueued block. The kernel function is
+  /// a wrapper for the block invoke function with target-specific calling
+  /// convention and ABI as an OpenCL kernel. The wrapper function accepts
+  /// block context and block arguments in target-specific way and calls
+  /// the original block invoke function.
+  virtual llvm::Function *
+  createEnqueuedBlockKernel(CodeGenFunction &CGF,
+                            llvm::Function *BlockInvokeFunc,
+                            llvm::Value *BlockLiteral) const;
 };
 
 } // namespace CodeGen
