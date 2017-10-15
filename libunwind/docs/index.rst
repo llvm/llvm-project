@@ -44,13 +44,14 @@ libunwind is known to work on the following platforms:
 ============ ==================== ============ ========================
 OS           Arch                 Compilers    Unwind Info
 ============ ==================== ============ ========================
-Mac OS X     i386, x86_64         Clang, GCC   DWARF CFI
-iOS          ARM                  Clang        SjLj
-Linux        i386, x86_64, ARM64  Clang, GCC   DWARF CFI
-Linux        ARM                  Clang, GCC   EHABI
-Bare Metal   ARM                  Clang, GCC   EHABI
-NetBSD       x86_64               Clang, GCC   DWARF CFI
 Any          i386, x86_64, ARM    Clang        SjLj
+Bare Metal   ARM                  Clang, GCC   EHABI
+FreeBSD      i386, x86_64, ARM64  Clang        DWARF CFI
+iOS          ARM                  Clang        SjLj
+Linux        ARM                  Clang, GCC   EHABI
+Linux        i386, x86_64, ARM64  Clang, GCC   DWARF CFI
+Mac OS X     i386, x86_64         Clang, GCC   DWARF CFI
+NetBSD       x86_64               Clang, GCC   DWARF CFI
 ============ ==================== ============ ========================
 
 The following minimum compiler versions are strongly recommended.
