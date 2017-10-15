@@ -119,6 +119,7 @@ protected:
   bool DX10Clamp;
   bool FlatForGlobal;
   bool AutoWaitcntBeforeBarrier;
+  bool CodeObjectV3;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
   bool HasApertureRegs;
@@ -397,6 +398,10 @@ public:
 
   bool hasAutoWaitcntBeforeBarrier() const {
     return AutoWaitcntBeforeBarrier;
+  }
+
+  bool hasCodeObjectV3() const {
+    return CodeObjectV3;
   }
 
   bool hasUnalignedBufferAccess() const {

@@ -68,13 +68,9 @@ private:
   void emitKernelArg(const Argument &Arg);
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, ValueKind ValueKind,
-                     StringRef TypeQual = "", StringRef BaseTypeName = "",
-                     StringRef AccQual = "", StringRef Name = "",
-                     StringRef TypeName = "");
-
-  void emitKernelCodeProps(const amd_kernel_code_t &KernelCode);
-
-  void emitKernelDebugProps(const amd_kernel_code_t &KernelCode);
+                     StringRef Name = "", StringRef TypeName = "",
+                     StringRef BaseTypeName = "", StringRef AccQual = "",
+                     StringRef TypeQual = "");
 
 public:
   MetadataStreamer() = default;
@@ -88,7 +84,9 @@ public:
 
   void end();
 
-  void emitKernel(const Function &Func, const amd_kernel_code_t &KernelCode);
+  void emitKernel(const Function &Func,
+                  const Kernel::CodeProps::Metadata &CodeProps,
+                  const Kernel::DebugProps::Metadata &DebugProps);
 };
 
 } // end namespace HSAMD

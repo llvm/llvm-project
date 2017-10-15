@@ -17,6 +17,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace clang;
@@ -168,6 +169,59 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
   return true;
 }
 
+void TokenLexer::stringifyVAOPTContents(
+    SmallVectorImpl<Token> &ResultToks, const VAOptExpansionContext &VCtx,
+    const SourceLocation VAOPTClosingParenLoc) {
+  const int NumToksPriorToVAOpt = VCtx.getNumberOfTokensPriorToVAOpt();
+  const unsigned int NumVAOptTokens = ResultToks.size() - NumToksPriorToVAOpt;
+  Token *const VAOPTTokens =
+      NumVAOptTokens ? &ResultToks[NumToksPriorToVAOpt] : nullptr;
+
+  SmallVector<Token, 64> ConcatenatedVAOPTResultToks;
+  // FIXME: Should we keep track within VCtx that we did or didnot
+  // encounter pasting - and only then perform this loop.
+
+  // Perform token pasting (concatenation) prior to stringization.
+  for (unsigned int CurTokenIdx = 0; CurTokenIdx != NumVAOptTokens;
+       ++CurTokenIdx) {
+    if (VAOPTTokens[CurTokenIdx].is(tok::hashhash)) {
+      assert(CurTokenIdx != 0 &&
+             "Can not have __VAOPT__ contents begin with a ##");
+      Token &LHS = VAOPTTokens[CurTokenIdx - 1];
+      pasteTokens(LHS, llvm::makeArrayRef(VAOPTTokens, NumVAOptTokens),
+                  CurTokenIdx);
+      // Replace the token prior to the first ## in this iteration.
+      ConcatenatedVAOPTResultToks.back() = LHS;
+      if (CurTokenIdx == NumVAOptTokens)
+        break;
+    }
+    ConcatenatedVAOPTResultToks.push_back(VAOPTTokens[CurTokenIdx]);
+  }
+
+  ConcatenatedVAOPTResultToks.push_back(VCtx.getEOFTok());
+  // Get the SourceLocation that represents the start location within
+  // the macro definition that marks where this string is substituted
+  // into: i.e. the __VA_OPT__ and the ')' within the spelling of the
+  // macro definition, and use it to indicate that the stringified token
+  // was generated from that location.
+  const SourceLocation ExpansionLocStartWithinMacro =
+      getExpansionLocForMacroDefLoc(VCtx.getVAOptLoc());
+  const SourceLocation ExpansionLocEndWithinMacro =
+      getExpansionLocForMacroDefLoc(VAOPTClosingParenLoc);
+
+  Token StringifiedVAOPT = MacroArgs::StringifyArgument(
+      &ConcatenatedVAOPTResultToks[0], PP, VCtx.hasCharifyBefore() /*Charify*/,
+      ExpansionLocStartWithinMacro, ExpansionLocEndWithinMacro);
+
+  if (VCtx.getLeadingSpaceForStringifiedToken())
+    StringifiedVAOPT.setFlag(Token::LeadingSpace);
+
+  StringifiedVAOPT.setFlag(Token::StringifiedInMacro);
+  // Resize (shrink) the token stream to just capture this stringified token.
+  ResultToks.resize(NumToksPriorToVAOpt + 1);
+  ResultToks.back() = StringifiedVAOPT;
+}
+
 /// Expand the arguments of a function-like macro so that we can quickly
 /// return preexpanded tokens from Tokens.
 void TokenLexer::ExpandFunctionArguments() {
@@ -178,10 +232,13 @@ void TokenLexer::ExpandFunctionArguments() {
   // we install the newly expanded sequence as the new 'Tokens' list.
   bool MadeChange = false;
 
+  const bool CalledWithVariadicArguments =
+      ActualArgs->invokedWithVariadicArgument(Macro);
+
+  VAOptExpansionContext VCtx(PP);
+  
   for (unsigned I = 0, E = NumTokens; I != E; ++I) {
-    // If we found the stringify operator, get the argument stringified.  The
-    // preprocessor already verified that the following token is a macro name
-    // when the #define was parsed.
+    
     const Token &CurTok = Tokens[I];
     // We don't want a space for the next token after a paste
     // operator.  In valid code, the token will get smooshed onto the
@@ -192,10 +249,98 @@ void TokenLexer::ExpandFunctionArguments() {
     if (I != 0 && !Tokens[I-1].is(tok::hashhash) && CurTok.hasLeadingSpace())
       NextTokGetsSpace = true;
 
+    if (VCtx.isVAOptToken(CurTok)) {
+      MadeChange = true;
+      assert(Tokens[I + 1].is(tok::l_paren) &&
+             "__VA_OPT__ must be followed by '('");
+
+      ++I;             // Skip the l_paren
+      VCtx.sawVAOptFollowedByOpeningParens(CurTok.getLocation(),
+                                           ResultToks.size());
+      
+      continue;
+    }
+
+    // We have entered into the __VA_OPT__ context, so handle tokens
+    // appropriately.
+    if (VCtx.isInVAOpt()) {
+      // If we are about to process a token that is either an argument to
+      // __VA_OPT__ or its closing rparen, then:
+      //  1) If the token is the closing rparen that exits us out of __VA_OPT__,
+      //  perform any necessary stringification or placemarker processing,
+      //  and/or skip to the next token.
+      //  2) else if macro was invoked without variadic arguments skip this
+      //  token.
+      //  3) else (macro was invoked with variadic arguments) process the token
+      //  normally.
+
+      if (Tokens[I].is(tok::l_paren))
+        VCtx.sawOpeningParen(Tokens[I].getLocation());
+      // Continue skipping tokens within __VA_OPT__ if the macro was not
+      // called with variadic arguments, else let the rest of the loop handle
+      // this token. Note sawClosingParen() returns true only if the r_paren matches
+      // the closing r_paren of the __VA_OPT__.
+      if (!Tokens[I].is(tok::r_paren) || !VCtx.sawClosingParen()) {
+        if (!CalledWithVariadicArguments) {
+          // Skip this token.
+          continue;
+        }
+        // ... else the macro was called with variadic arguments, and we do not
+        // have a closing rparen - so process this token normally.
+
+      } else {
+        // Current token is the closing r_paren which marks the end of the
+        // __VA_OPT__ invocation, so handle any place-marker pasting (if
+        // empty) by removing hashhash either before (if exists) or after. And
+        // also stringify the entire contents if VAOPT was preceded by a hash,
+        // but do so only after any token concatenation that needs to occur
+        // within the contents of VAOPT.
+
+        if (VCtx.hasStringifyOrCharifyBefore()) {
+          // Replace all the tokens just added from within VAOPT into a single
+          // stringified token. This requires token-pasting to eagerly occur
+          // within these tokens. If either the contents of VAOPT were empty
+          // or the macro wasn't called with any variadic arguments, the result
+          // is a token that represents an empty string.
+          stringifyVAOPTContents(ResultToks, VCtx,
+                                 /*ClosingParenLoc*/ Tokens[I].getLocation());
+
+        } else if (/*No tokens within VAOPT*/ !(
+            ResultToks.size() - VCtx.getNumberOfTokensPriorToVAOpt())) {
+          // Treat VAOPT as a placemarker token.  Eat either the '##' before the
+          // RHS/VAOPT (if one exists, suggesting that the LHS (if any) to that
+          // hashhash was not a placemarker) or the '##'
+          // after VAOPT, but not both.
+
+          if (ResultToks.size() && ResultToks.back().is(tok::hashhash)) {
+            ResultToks.pop_back();
+          } else if ((I + 1 != E) && Tokens[I + 1].is(tok::hashhash)) {
+            ++I; // Skip the following hashhash.
+          }
+        }
+        VCtx.reset();
+        // We processed __VA_OPT__'s closing paren (and the exit out of
+        // __VA_OPT__), so skip to the next token.
+        continue;
+      }
+    }
+
+    // If we found the stringify operator, get the argument stringified.  The
+    // preprocessor already verified that the following token is a macro 
+    // parameter or __VA_OPT__ when the #define was lexed.
+    
     if (CurTok.isOneOf(tok::hash, tok::hashat)) {
       int ArgNo = Macro->getParameterNum(Tokens[I+1].getIdentifierInfo());
-      assert(ArgNo != -1 && "Token following # is not an argument?");
-
+      assert((ArgNo != -1 || VCtx.isVAOptToken(Tokens[I + 1])) &&
+             "Token following # is not an argument or __VA_OPT__!");
+      
+      if (ArgNo == -1) {
+        // Handle the __VA_OPT__ case.
+        VCtx.sawHashOrHashAtBefore(NextTokGetsSpace,
+                                   CurTok.is(tok::hashat));
+        continue;
+      }
+      // Else handle the simple argument case.
       SourceLocation ExpansionLocStart =
           getExpansionLocForMacroDefLoc(CurTok.getLocation());
       SourceLocation ExpansionLocEnd =
@@ -232,7 +377,9 @@ void TokenLexer::ExpandFunctionArguments() {
       !ResultToks.empty() && ResultToks.back().is(tok::hashhash);
     bool PasteBefore = I != 0 && Tokens[I-1].is(tok::hashhash);
     bool PasteAfter = I+1 != E && Tokens[I+1].is(tok::hashhash);
-    assert(!NonEmptyPasteBefore || PasteBefore);
+
+    assert((!NonEmptyPasteBefore || PasteBefore || VCtx.isInVAOpt()) &&
+           "unexpected ## in ResultToks");
 
     // Otherwise, if this is not an argument token, just add the token to the
     // output buffer.
@@ -384,7 +531,13 @@ void TokenLexer::ExpandFunctionArguments() {
     assert(PasteBefore);
     if (NonEmptyPasteBefore) {
       assert(ResultToks.back().is(tok::hashhash));
-      ResultToks.pop_back();
+      // Do not remove the paste operator if it is the one before __VA_OPT__
+      // (and we are still processing tokens within VA_OPT).  We handle the case
+      // of removing the paste operator if __VA_OPT__ reduces to the notional
+      // placemarker above when we encounter the closing paren of VA_OPT.
+      if (!VCtx.isInVAOpt() ||
+          ResultToks.size() > VCtx.getNumberOfTokensPriorToVAOpt())
+        ResultToks.pop_back();
     }
 
     // If this is the __VA_ARGS__ token, and if the argument wasn't provided,

@@ -5,7 +5,8 @@
 // CHECK:  .amd_amdgpu_hsa_metadata
 // CHECK:    Version: [ 1, 0 ]
 // CHECK:    Kernels:
-// CHECK:      - Name: test_kernel
+// CHECK:      - Name:       test_kernel
+// CHECK:        SymbolName: 'test_kernel@kd'
 // CHECK:        DebugProps:
 // CHECK:          DebuggerABIVersion:                [ 1, 0 ]
 // CHECK:          ReservedNumVGPRs:                  4
@@ -17,6 +18,7 @@
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
   Kernels:
     - Name:            test_kernel
+      SymbolName:      test_kernel@kd
       DebugProps:
         DebuggerABIVersion:                [ 1, 0 ]
         ReservedNumVGPRs:                  4

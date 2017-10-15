@@ -128,6 +128,13 @@ private:
                               unsigned &NumSGPR,
                               unsigned &NumVGPR) const;
 
+  AMDGPU::HSAMD::Kernel::CodeProps::Metadata getHSACodeProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
+  AMDGPU::HSAMD::Kernel::DebugProps::Metadata getHSADebugProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
+
   /// \brief Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
   void EmitProgramInfoR600(const MachineFunction &MF);
@@ -148,7 +155,7 @@ public:
 
   const MCSubtargetInfo* getSTI() const;
 
-  AMDGPUTargetStreamer& getTargetStreamer() const;
+  AMDGPUTargetStreamer* getTargetStreamer() const;
 
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
