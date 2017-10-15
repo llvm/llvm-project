@@ -104,46 +104,50 @@ struct MappingTraits<Kernel::Attrs::Metadata> {
 template <>
 struct MappingTraits<Kernel::Arg::Metadata> {
   static void mapping(IO &YIO, Kernel::Arg::Metadata &MD) {
+    YIO.mapOptional(Kernel::Arg::Key::Name, MD.mName, std::string());
+    YIO.mapOptional(Kernel::Arg::Key::TypeName, MD.mTypeName, std::string());
     YIO.mapRequired(Kernel::Arg::Key::Size, MD.mSize);
     YIO.mapRequired(Kernel::Arg::Key::Align, MD.mAlign);
     YIO.mapRequired(Kernel::Arg::Key::ValueKind, MD.mValueKind);
     YIO.mapRequired(Kernel::Arg::Key::ValueType, MD.mValueType);
     YIO.mapOptional(Kernel::Arg::Key::PointeeAlign, MD.mPointeeAlign,
                     uint32_t(0));
-    YIO.mapOptional(Kernel::Arg::Key::AccQual, MD.mAccQual,
-                    AccessQualifier::Unknown);
     YIO.mapOptional(Kernel::Arg::Key::AddrSpaceQual, MD.mAddrSpaceQual,
                     AddressSpaceQualifier::Unknown);
+    YIO.mapOptional(Kernel::Arg::Key::AccQual, MD.mAccQual,
+                    AccessQualifier::Unknown);
+    YIO.mapOptional(Kernel::Arg::Key::ActualAccQual, MD.mActualAccQual,
+                    AccessQualifier::Unknown);
     YIO.mapOptional(Kernel::Arg::Key::IsConst, MD.mIsConst, false);
-    YIO.mapOptional(Kernel::Arg::Key::IsPipe, MD.mIsPipe, false);
     YIO.mapOptional(Kernel::Arg::Key::IsRestrict, MD.mIsRestrict, false);
     YIO.mapOptional(Kernel::Arg::Key::IsVolatile, MD.mIsVolatile, false);
-    YIO.mapOptional(Kernel::Arg::Key::Name, MD.mName, std::string());
-    YIO.mapOptional(Kernel::Arg::Key::TypeName, MD.mTypeName, std::string());
+    YIO.mapOptional(Kernel::Arg::Key::IsPipe, MD.mIsPipe, false);
   }
 };
 
 template <>
 struct MappingTraits<Kernel::CodeProps::Metadata> {
   static void mapping(IO &YIO, Kernel::CodeProps::Metadata &MD) {
-    YIO.mapOptional(Kernel::CodeProps::Key::KernargSegmentSize,
-                    MD.mKernargSegmentSize, uint64_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::WorkgroupGroupSegmentSize,
-                    MD.mWorkgroupGroupSegmentSize, uint32_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::WorkitemPrivateSegmentSize,
-                    MD.mWorkitemPrivateSegmentSize, uint32_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::WavefrontNumSGPRs,
-                    MD.mWavefrontNumSGPRs, uint16_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::WorkitemNumVGPRs,
-                    MD.mWorkitemNumVGPRs, uint16_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::KernargSegmentAlign,
-                    MD.mKernargSegmentAlign, uint8_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::GroupSegmentAlign,
-                    MD.mGroupSegmentAlign, uint8_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::PrivateSegmentAlign,
-                    MD.mPrivateSegmentAlign, uint8_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::WavefrontSize,
-                    MD.mWavefrontSize, uint8_t(0));
+    YIO.mapRequired(Kernel::CodeProps::Key::KernargSegmentSize,
+                    MD.mKernargSegmentSize);
+    YIO.mapRequired(Kernel::CodeProps::Key::GroupSegmentFixedSize,
+                    MD.mGroupSegmentFixedSize);
+    YIO.mapRequired(Kernel::CodeProps::Key::PrivateSegmentFixedSize,
+                    MD.mPrivateSegmentFixedSize);
+    YIO.mapRequired(Kernel::CodeProps::Key::KernargSegmentAlign,
+                    MD.mKernargSegmentAlign);
+    YIO.mapRequired(Kernel::CodeProps::Key::WavefrontSize,
+                    MD.mWavefrontSize);
+    YIO.mapOptional(Kernel::CodeProps::Key::NumSGPRs,
+                    MD.mNumSGPRs, uint16_t(0));
+    YIO.mapOptional(Kernel::CodeProps::Key::NumVGPRs,
+                    MD.mNumVGPRs, uint16_t(0));
+    YIO.mapOptional(Kernel::CodeProps::Key::MaxFlatWorkgroupSize,
+                    MD.mMaxFlatWorkgroupSize, uint32_t(0));
+    YIO.mapOptional(Kernel::CodeProps::Key::IsDynamicCallStack,
+                    MD.mIsDynamicCallStack, false);
+    YIO.mapOptional(Kernel::CodeProps::Key::IsXNACKEnabled,
+                    MD.mIsXNACKEnabled, false);
   }
 };
 
@@ -167,6 +171,7 @@ template <>
 struct MappingTraits<Kernel::Metadata> {
   static void mapping(IO &YIO, Kernel::Metadata &MD) {
     YIO.mapRequired(Kernel::Key::Name, MD.mName);
+    YIO.mapRequired(Kernel::Key::SymbolName, MD.mSymbolName);
     YIO.mapOptional(Kernel::Key::Language, MD.mLanguage, std::string());
     YIO.mapOptional(Kernel::Key::LanguageVersion, MD.mLanguageVersion,
                     std::vector<uint32_t>());

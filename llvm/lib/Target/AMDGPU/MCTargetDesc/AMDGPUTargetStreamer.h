@@ -12,6 +12,7 @@
 
 #include "AMDKernelCodeT.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 
 namespace llvm {
@@ -30,7 +31,8 @@ protected:
   MCContext &getContext() const { return Streamer.getContext(); }
 
 public:
-  AMDGPUTargetStreamer(MCStreamer &S);
+  AMDGPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
+
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                                  uint32_t Minor) = 0;
 
@@ -42,6 +44,9 @@ public:
   virtual void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) = 0;
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) = 0;
+
+  /// \returns True on success, false on failure.
+  virtual bool EmitISAVersion(StringRef IsaVersionString) = 0;
 
   /// \returns True on success, false on failure.
   virtual bool EmitHSAMetadata(StringRef HSAMetadataString);
@@ -67,6 +72,9 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  /// \returns True on success, false on failure.
+  bool EmitISAVersion(StringRef IsaVersionString) override;
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
@@ -96,6 +104,9 @@ public:
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
+
+  /// \returns True on success, false on failure.
+  bool EmitISAVersion(StringRef IsaVersionString) override;
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;

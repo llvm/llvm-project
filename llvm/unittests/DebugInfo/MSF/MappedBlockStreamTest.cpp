@@ -254,8 +254,6 @@ TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {
   DiscontiguousStream F(BlocksAry, Data);
   auto S = WritableMappedBlockStream::createStream(F.block_size(), F.layout(),
                                                    F, F.Allocator);
-  ArrayRef<uint8_t> Buffer;
-
   EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(LargeBuffer)), Failed());
   EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(SmallBuffer)),
                     Succeeded());

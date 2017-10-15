@@ -649,43 +649,6 @@ static unsigned UnrollCountPragmaValue(const Loop *L) {
   return 0;
 }
 
-// Remove existing unroll metadata and add unroll disable metadata to
-// indicate the loop has already been unrolled.  This prevents a loop
-// from being unrolled more than is directed by a pragma if the loop
-// unrolling pass is run more than once (which it generally is).
-static void SetLoopAlreadyUnrolled(Loop *L) {
-  MDNode *LoopID = L->getLoopID();
-  // First remove any existing loop unrolling metadata.
-  SmallVector<Metadata *, 4> MDs;
-  // Reserve first location for self reference to the LoopID metadata node.
-  MDs.push_back(nullptr);
-
-  if (LoopID) {
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      bool IsUnrollMetadata = false;
-      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-      if (MD) {
-        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-        IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
-      }
-      if (!IsUnrollMetadata)
-        MDs.push_back(LoopID->getOperand(i));
-    }
-  }
-
-  // Add unroll(disable) metadata to disable future unrolling.
-  LLVMContext &Context = L->getHeader()->getContext();
-  SmallVector<Metadata *, 1> DisableOperands;
-  DisableOperands.push_back(MDString::get(Context, "llvm.loop.unroll.disable"));
-  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-  MDs.push_back(DisableNode);
-
-  MDNode *NewLoopID = MDNode::get(Context, MDs);
-  // Set operand 0 to refer to the loop id itself.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
-  L->setLoopID(NewLoopID);
-}
-
 // Computes the boosting factor for complete unrolling.
 // If fully unrolling the loop would save a lot of RolledDynamicCost, it would
 // be beneficial to fully unroll the loop even if unrolledcost is large. We
@@ -1068,7 +1031,7 @@ static LoopUnrollResult tryToUnrollLoop(
   // we had, so we don't want to unroll or peel again.
   if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
       (IsCountSetExplicitly || UP.PeelCount))
-    SetLoopAlreadyUnrolled(L);
+    L->setLoopAlreadyUnrolled();
 
   return UnrollResult;
 }
