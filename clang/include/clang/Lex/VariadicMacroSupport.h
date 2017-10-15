@@ -69,8 +69,6 @@ namespace clang {
   /// \brief A class for tracking whether we're inside a VA_OPT during a
   /// traversal of the tokens of a variadic macro definition.
   class VAOptDefinitionContext {
-    Preprocessor &PP;
-    
     /// Contains all the locations of so far unmatched lparens.
     SmallVector<SourceLocation, 8> UnmatchedOpeningParens;
     
@@ -79,7 +77,7 @@ namespace clang {
     
   public:
     VAOptDefinitionContext(Preprocessor &PP)
-        : PP(PP), Ident__VA_OPT__(PP.Ident__VA_OPT__) {}
+        : Ident__VA_OPT__(PP.Ident__VA_OPT__) {}
 
     bool isVAOptToken(const Token &T) const {
       return Ident__VA_OPT__ && T.getIdentifierInfo() == Ident__VA_OPT__;

@@ -628,9 +628,15 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (!G->isInterposable() && !MergeFunctionsPDI) {
-    // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
-    // above).
-    replaceDirectCallers(G, F);
+    if (G->hasGlobalUnnamedAddr()) {
+      // If G's address is not significant, replace it entirely.
+      Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
+      G->replaceAllUsesWith(BitcastF);
+    } else {
+      // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
+      // above).
+      replaceDirectCallers(G, F);
+    }
   }
 
   // If G was internal then we may have replaced all uses of G with F. If so,
@@ -639,6 +645,16 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (G->hasLocalLinkage() && G->use_empty() && !MergeFunctionsPDI) {
     G->eraseFromParent();
     return;
+  }
+
+  // Don't merge tiny functions using a thunk, since it can just end up
+  // making the function larger.
+  if (F->size() == 1) {
+    if (F->front().size() <= 2) {
+      DEBUG(dbgs() << "writeThunk: " << F->getName()
+                   << " is too small to bother creating a thunk for\n");
+      return;
+    }
   }
 
   BasicBlock *GEntryBlock = nullptr;
@@ -772,18 +788,6 @@ bool MergeFunctions::insert(Function *NewFunction) {
   }
 
   const FunctionNode &OldF = *Result.first;
-
-  // Don't merge tiny functions, since it can just end up making the function
-  // larger.
-  // FIXME: Should still merge them if they are unnamed_addr and produce an
-  // alias.
-  if (NewFunction->size() == 1) {
-    if (NewFunction->front().size() <= 2) {
-      DEBUG(dbgs() << NewFunction->getName()
-                   << " is to small to bother merging\n");
-      return false;
-    }
-  }
 
   // Impose a total order (by name) on the replacement of functions. This is
   // important when operating on more than one module independently to prevent

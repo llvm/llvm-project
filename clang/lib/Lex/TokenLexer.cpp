@@ -184,18 +184,12 @@ void TokenLexer::stringifyVAOPTContents(
   // Perform token pasting (concatenation) prior to stringization.
   for (unsigned int CurTokenIdx = 0; CurTokenIdx != NumVAOptTokens;
        ++CurTokenIdx) {
-    const unsigned int PrevTokenIdx = CurTokenIdx;
-
     if (VAOPTTokens[CurTokenIdx].is(tok::hashhash)) {
       assert(CurTokenIdx != 0 &&
              "Can not have __VAOPT__ contents begin with a ##");
       Token &LHS = VAOPTTokens[CurTokenIdx - 1];
       pasteTokens(LHS, llvm::makeArrayRef(VAOPTTokens, NumVAOptTokens),
                   CurTokenIdx);
-      // CurTokenIdx is either the same as NumTokens or one past the
-      // last token concatenated.
-      // PrevTokenIdx is the index of the hashhash
-      const unsigned NumTokensPastedTogether = CurTokenIdx - PrevTokenIdx + 1;
       // Replace the token prior to the first ## in this iteration.
       ConcatenatedVAOPTResultToks.back() = LHS;
       if (CurTokenIdx == NumVAOptTokens)

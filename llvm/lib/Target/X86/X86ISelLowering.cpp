@@ -14077,15 +14077,15 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
       ISD::isBuildVectorOfConstantSDNodes(Op.getOperand(2).getNode()))
     return SDValue();
 
-  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
-  // with patterns on the mask registers on AVX-512.
-  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
-    return Op;
-
   // Try to lower this to a blend-style vector shuffle. This can handle all
   // constant condition cases.
   if (SDValue BlendOp = lowerVSELECTtoVectorShuffle(Op, Subtarget, DAG))
     return BlendOp;
+
+  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
+  // with patterns on the mask registers on AVX-512.
+  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
+    return Op;
 
   // Variable blends are only legal from SSE4.1 onward.
   if (!Subtarget.hasSSE41())

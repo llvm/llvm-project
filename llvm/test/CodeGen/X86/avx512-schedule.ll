@@ -5307,10 +5307,7 @@ define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ; CHECK-LABEL: test_build_vec_v64i1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $6432645796886517060, %rax # imm = 0x5945594549549544
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zmm0[2],zero,zero,zero,zmm0[6],zero,zmm0[8],zero,zmm0[10],zero,zmm0[12],zero,zero,zmm0[15],zero,zero,zmm0[18],zero,zmm0[20],zero,zmm0[22],zero,zmm0[24],zero,zero,zmm0[27],zero,zero,zmm0[30],zero,zmm0[32],zero,zmm0[34],zero,zero,zero,zmm0[38],zero,zmm0[40],zero,zero,zmm0[43,44],zero,zmm0[46],zero,zmm0[48],zero,zmm0[50],zero,zero,zero,zmm0[54],zero,zmm0[56],zero,zero,zmm0[59,60],zero,zmm0[62],zero sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %ret = select <64 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <64 x i8> %x, <64 x i8> zeroinitializer
   ret <64 x i8> %ret
