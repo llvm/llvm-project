@@ -458,7 +458,6 @@ public:
     return Result;
   }
 
-
   bool operator==(const TreePredicateFn &RHS) const {
     return PatFragRec == RHS.PatFragRec;
   }
@@ -476,17 +475,48 @@ public:
   std::string getCodeToRunOnSDNode() const;
 
   /// Get the data type of the argument to getImmediatePredicateCode().
-  std::string getImmType() const;
+  StringRef getImmType() const;
 
   /// Get a string that describes the type returned by getImmType() but is
   /// usable as part of an identifier.
-  std::string getImmTypeIdentifier() const;
+  StringRef getImmTypeIdentifier() const;
+
+  // Is the desired predefined predicate for a load?
+  bool isLoad() const;
+  // Is the desired predefined predicate for a store?
+  bool isStore() const;
+
+  /// Is this predicate the predefined unindexed load predicate?
+  /// Is this predicate the predefined unindexed store predicate?
+  bool isUnindexed() const;
+  /// Is this predicate the predefined non-extending load predicate?
+  bool isNonExtLoad() const;
+  /// Is this predicate the predefined any-extend load predicate?
+  bool isAnyExtLoad() const;
+  /// Is this predicate the predefined sign-extend load predicate?
+  bool isSignExtLoad() const;
+  /// Is this predicate the predefined zero-extend load predicate?
+  bool isZeroExtLoad() const;
+  /// Is this predicate the predefined non-truncating store predicate?
+  bool isNonTruncStore() const;
+  /// Is this predicate the predefined truncating store predicate?
+  bool isTruncStore() const;
+
+  /// If non-null, indicates that this predicate is a predefined memory VT
+  /// predicate for a load/store and returns the ValueType record for the memory VT.
+  Record *getMemoryVT() const;
+  /// If non-null, indicates that this predicate is a predefined memory VT
+  /// predicate (checking only the scalar type) for load/store and returns the
+  /// ValueType record for the memory VT.
+  Record *getScalarMemoryVT() const;
 
 private:
   std::string getPredCode() const;
   std::string getImmCode() const;
   bool immCodeUsesAPInt() const;
   bool immCodeUsesAPFloat() const;
+
+  bool isPredefinedPredicateEqualTo(StringRef Field, bool Value) const;
 };
 
 

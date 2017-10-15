@@ -889,7 +889,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 See
                                                 :ref:`amdgpu-amdhsa-code-object-kernel-attribute-metadata-mapping-table`
                                                 for the mapping definition.
-     "Arguments"       sequence of              Sequence of mappings of the
+     "Args"            sequence of              Sequence of mappings of the
                        mapping                  kernel arguments. See
                                                 :ref:`amdgpu-amdhsa-code-object-kernel-argument-metadata-mapping-table`
                                                 for the definition of the mapping.
@@ -1099,7 +1099,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 .. TODO
                                                    Does this apply to
                                                    GlobalBuffer?
-     "ActualAcc"       string                   The actual memory accesses
+     "ActualAccQual"   string                   The actual memory accesses
                                                 performed by the kernel on the
                                                 kernel argument. Only present if
                                                 "ValueKind" is "GlobalBuffer",
@@ -1224,7 +1224,8 @@ non-AMD key names should be prefixed by "*vendor-name*.".
      =================================== ============== ========= ==============
      String Key                          Value Type     Required? Description
      =================================== ============== ========= ==============
-     "DebuggerABIVersion"                string
+     "DebuggerABIVersion"                sequence of
+                                         2 integers
      "ReservedNumVGPRs"                  integer
      "ReservedFirstVGPR"                 integer
      "PrivateSegmentBufferSGPR"          integer
@@ -1426,7 +1427,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======= ======= =============================== ===========================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================
-     31:0    4 bytes group_segment_fixed_size        The amount of fixed local
+     31:0    4 bytes GroupSegmentFixedSize           The amount of fixed local
                                                      address space memory
                                                      required for a work-group
                                                      in bytes. This does not
@@ -1435,7 +1436,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      space memory that may be
                                                      added when the kernel is
                                                      dispatched.
-     63:32   4 bytes private_segment_fixed_size      The amount of fixed
+     63:32   4 bytes PrivateSegmentFixedSize         The amount of fixed
                                                      private address space
                                                      memory required for a
                                                      work-item in bytes. If
@@ -1443,18 +1444,18 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      then additional space must
                                                      be added to this value for
                                                      the call stack.
-     95:64   4 bytes max_flat_workgroup_size         Maximum flat work-group
+     95:64   4 bytes MaxFlatWorkgroupSize            Maximum flat work-group
                                                      size supported by the
                                                      kernel in work-items.
-     96      1 bit   is_dynamic_call_stack           Indicates if the generated
+     96      1 bit   IsDynamicCallStack              Indicates if the generated
                                                      machine code is using a
                                                      dynamically sized call
                                                      stack.
-     97      1 bit   is_xnack_enabled                Indicates if the generated
+     97      1 bit   IsXNACKEnabled                  Indicates if the generated
                                                      machine code is capable of
                                                      suppoting XNACK.
      127:98  30 bits                                 Reserved. Must be 0.
-     191:128 8 bytes kernel_code_entry_byte_offset   Byte offset (possibly
+     191:128 8 bytes KernelCodeEntryByteOffset       Byte offset (possibly
                                                      negative) from base
                                                      address of kernel
                                                      descriptor to kernel's
@@ -1463,22 +1464,22 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      aligned.
      383:192 24                                      Reserved. Must be 0.
              bytes
-     415:384 4 bytes compute_pgm_rsrc1               Compute Shader (CS)
+     415:384 4 bytes ComputePgmRsrc1                 Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC1``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1_t-gfx6-gfx9-table`.
-     447:416 4 bytes compute_pgm_rsrc2               Compute Shader (CS)
+     447:416 4 bytes ComputePgmRsrc2                 Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC2``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     448     1 bit   enable_sgpr_private_segment     Enable the setup of the
-                     _buffer                         SGPR user data registers
+     448     1 bit   EnableSGPRPrivateSegmentBuffer  Enable the setup of the
+                                                     SGPR user data registers
                                                      (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -1489,21 +1490,20 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``compute_pgm_rsrc2.user_sgpr.user_sgpr_count``.
                                                      Any requests beyond 16
                                                      will be ignored.
-     449     1 bit   enable_sgpr_dispatch_ptr        *see above*
-     450     1 bit   enable_sgpr_queue_ptr           *see above*
-     451     1 bit   enable_sgpr_kernarg_segment_ptr *see above*
-     452     1 bit   enable_sgpr_dispatch_id         *see above*
-     453     1 bit   enable_sgpr_flat_scratch_init   *see above*
-     454     1 bit   enable_sgpr_private_segment     *see above*
-                     _size
-     455     1 bit   enable_sgpr_grid_workgroup      Not implemented in CP and
-                     _count_X                        should always be 0.
-     456     1 bit   enable_sgpr_grid_workgroup      Not implemented in CP and
-                     _count_Y                        should always be 0.
-     457     1 bit   enable_sgpr_grid_workgroup      Not implemented in CP and
-                     _count_Z                        should always be 0.
+     449     1 bit   EnableSGPRDispatchPtr           *see above*
+     450     1 bit   EnableSGPRQueuePtr              *see above*
+     451     1 bit   EnableSGPRKernargSegmentPtr     *see above*
+     452     1 bit   EnableSGPRDispatchID            *see above*
+     453     1 bit   EnableSGPRFlatScratchInit       *see above*
+     454     1 bit   EnableSGPRPrivateSegmentSize    *see above*
+     455     1 bit   EnableSGPRGridWorkgroupCountX   Not implemented in CP and
+                                                     should always be 0.
+     456     1 bit   EnableSGPRGridWorkgroupCountY   Not implemented in CP and
+                                                     should always be 0.
+     457     1 bit   EnableSGPRGridWorkgroupCountZ   Not implemented in CP and
+                                                     should always be 0.
      463:458 6 bits                                  Reserved. Must be 0.
-     511:464 4                                       Reserved. Must be 0.
+     511:464 6                                       Reserved. Must be 0.
              bytes
      512     **Total size 64 bytes.**
      ======= ===================================================================
@@ -1516,7 +1516,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     5:0     6 bits  granulated_workitem_vgpr_count  Number of vector registers
+     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector registers
                                                      used by each work-item,
                                                      granularity is device
                                                      specific:
@@ -1527,7 +1527,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.VGPRS``.
-     9:6     4 bits  granulated_wavefront_sgpr_count Number of scalar registers
+     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar registers
                                                      used by a wavefront,
                                                      granularity is device
                                                      specific:
@@ -1549,7 +1549,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.SGPRS``.
-     11:10   2 bits  priority                        Must be 0.
+     11:10   2 bits  PRIORITY                        Must be 0.
 
                                                      Start executing wavefront
                                                      at the specified priority.
@@ -1557,7 +1557,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.PRIORITY``.
-     13:12   2 bits  float_mode_round_32             Wavefront starts execution
+     13:12   2 bits  FLOAT_ROUND_MODE_32             Wavefront starts execution
                                                      with specified rounding
                                                      mode for single (32
                                                      bit) floating point
@@ -1570,7 +1570,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.FLOAT_MODE``.
-     15:14   2 bits  float_mode_round_16_64          Wavefront starts execution
+     15:14   2 bits  FLOAT_ROUND_MODE_16_64          Wavefront starts execution
                                                      with specified rounding
                                                      denorm mode for half/double (16
                                                      and 64 bit) floating point
@@ -1583,7 +1583,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.FLOAT_MODE``.
-     17:16   2 bits  float_mode_denorm_32            Wavefront starts execution
+     17:16   2 bits  FLOAT_DENORM_MODE_32            Wavefront starts execution
                                                      with specified denorm mode
                                                      for single (32
                                                      bit)  floating point
@@ -1596,7 +1596,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.FLOAT_MODE``.
-     19:18   2 bits  float_mode_denorm_16_64         Wavefront starts execution
+     19:18   2 bits  FLOAT_DENORM_MODE_16_64         Wavefront starts execution
                                                      with specified denorm mode
                                                      for half/double (16
                                                      and 64 bit) floating point
@@ -1609,7 +1609,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.FLOAT_MODE``.
-     20      1 bit   priv                            Must be 0.
+     20      1 bit   PRIV                            Must be 0.
 
                                                      Start executing wavefront
                                                      in privilege trap handler
@@ -1618,7 +1618,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.PRIV``.
-     21      1 bit   enable_dx10_clamp               Wavefront starts execution
+     21      1 bit   ENABLE_DX10_CLAMP               Wavefront starts execution
                                                      with DX10 clamp mode
                                                      enabled. Used by the vector
                                                      ALU to force DX-10 style
@@ -1629,7 +1629,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.DX10_CLAMP``.
-     22      1 bit   debug_mode                      Must be 0.
+     22      1 bit   DEBUG_MODE                      Must be 0.
 
                                                      Start executing wavefront
                                                      in single step mode.
@@ -1637,7 +1637,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.DEBUG_MODE``.
-     23      1 bit   enable_ieee_mode                Wavefront starts execution
+     23      1 bit   ENABLE_IEEE_MODE                Wavefront starts execution
                                                      with IEEE mode
                                                      enabled. Floating point
                                                      opcodes that support
@@ -1652,7 +1652,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.IEEE_MODE``.
-     24      1 bit   bulky                           Must be 0.
+     24      1 bit   BULKY                           Must be 0.
 
                                                      Only one work-group allowed
                                                      to execute on a compute
@@ -1661,7 +1661,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.BULKY``.
-     25      1 bit   cdbg_user                       Must be 0.
+     25      1 bit   CDBG_USER                       Must be 0.
 
                                                      Flag that can be used to
                                                      control debugging code.
@@ -1669,7 +1669,29 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.CDBG_USER``.
-     31:26   6 bits                                  Reserved. Must be 0.
+     26      1 bit   FP16_OVFL                       GFX6-8:
+                                                       Reserved. Must be 0.
+                                                     GFX9:
+                                                       Wavefront starts
+                                                       execution with specified
+                                                       fp16 overflow mode.
+
+                                                       - If 0, then fp16
+                                                         overflow generates
+                                                         +/-INF values.
+                                                       - If 1, then fp16
+                                                         overflow that is the
+                                                         result of an +/-INF
+                                                         input value or divide
+                                                         by 0 generates a
+                                                         +/-INF, otherwise
+                                                         clamps computed
+                                                         overflow to +/-MAX_FP16
+                                                         as appropriate.
+
+                                                       Used by CP to set up
+                                                       ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
+     31:27   5 bits                                  Reserved. Must be 0.
      32      **Total size 4 bytes**
      ======= ===================================================================================================================
 
@@ -1681,14 +1703,14 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     0       1 bit   enable_sgpr_private_segment     Enable the setup of the
-                     _wave_offset                    SGPR wave scratch offset
+     0       1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
+                     _WAVE_OFFSET                    SGPR wave scratch offset
                                                      system register (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.SCRATCH_EN``.
-     5:1     5 bits  user_sgpr_count                 The total number of SGPR
+     5:1     5 bits  USER_SGPR_COUNT                 The total number of SGPR
                                                      user data registers
                                                      requested. This number must
                                                      match the number of user
@@ -1696,7 +1718,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
-     6       1 bit   enable_trap_handler             Set to 1 if code contains a
+     6       1 bit   ENABLE_TRAP_HANDLER             Set to 1 if code contains a
                                                      TRAP instruction which
                                                      requires a trap handler to
                                                      be enabled.
@@ -1707,7 +1729,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      installed a trap handler
                                                      regardless of the setting
                                                      of this field.
-     7       1 bit   enable_sgpr_workgroup_id_x      Enable the setup of the
+     7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
                                                      dimension (see
@@ -1715,7 +1737,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.TGID_X_EN``.
-     8       1 bit   enable_sgpr_workgroup_id_y      Enable the setup of the
+     8       1 bit   ENABLE_SGPR_WORKGROUP_ID_Y      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the Y
                                                      dimension (see
@@ -1723,7 +1745,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.TGID_Y_EN``.
-     9       1 bit   enable_sgpr_workgroup_id_z      Enable the setup of the
+     9       1 bit   ENABLE_SGPR_WORKGROUP_ID_Z      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the Z
                                                      dimension (see
@@ -1731,14 +1753,14 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.TGID_Z_EN``.
-     10      1 bit   enable_sgpr_workgroup_info      Enable the setup of the
+     10      1 bit   ENABLE_SGPR_WORKGROUP_INFO      Enable the setup of the
                                                      system SGPR register for
                                                      work-group information (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.TGID_SIZE_EN``.
-     12:11   2 bits  enable_vgpr_workitem_id         Enable the setup of the
+     12:11   2 bits  ENABLE_VGPR_WORKITEM_ID         Enable the setup of the
                                                      VGPR system registers used
                                                      for the work-item ID.
                                                      :ref:`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`
@@ -1746,7 +1768,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.TIDIG_CMP_CNT``.
-     13      1 bit   enable_exception_address_watch  Must be 0.
+     13      1 bit   ENABLE_EXCEPTION_ADDRESS_WATCH  Must be 0.
 
                                                      Wavefront starts execution
                                                      with address watch
@@ -1762,7 +1784,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``COMPUTE_PGM_RSRC2.EXCP_EN_MSB``
                                                      according to what the
                                                      runtime requests.
-     14      1 bit   enable_exception_memory         Must be 0.
+     14      1 bit   ENABLE_EXCEPTION_MEMORY         Must be 0.
 
                                                      Wavefront starts execution
                                                      with memory violation
@@ -1781,7 +1803,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``COMPUTE_PGM_RSRC2.EXCP_EN_MSB``
                                                      according to what the
                                                      runtime requests.
-     23:15   9 bits  granulated_lds_size             Must be 0.
+     23:15   9 bits  GRANULATED_LDS_SIZE             Must be 0.
 
                                                      CP uses the rounded value
                                                      from the dispatch packet,
@@ -1802,8 +1824,8 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      GFX7-GFX9:
                                                        roundup(lds-size / (128 * 4))
 
-     24      1 bit   enable_exception_ieee_754_fp    Wavefront starts execution
-                     _invalid_operation              with specified exceptions
+     24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
+                     _INVALID_OPERATION              with specified exceptions
                                                      enabled.
 
                                                      Used by CP to set up
@@ -1812,19 +1834,19 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      IEEE 754 FP Invalid
                                                      Operation
-     25      1 bit   enable_exception_fp_denormal    FP Denormal one or more
-                     _source                         input operands is a
+     25      1 bit   ENABLE_EXCEPTION_FP_DENORMAL    FP Denormal one or more
+                     _SOURCE                         input operands is a
                                                      denormal number
-     26      1 bit   enable_exception_ieee_754_fp    IEEE 754 FP Division by
-                     _division_by_zero               Zero
-     27      1 bit   enable_exception_ieee_754_fp    IEEE 754 FP FP Overflow
-                     _overflow
-     28      1 bit   enable_exception_ieee_754_fp    IEEE 754 FP Underflow
-                     _underflow
-     29      1 bit   enable_exception_ieee_754_fp    IEEE 754 FP Inexact
-                     _inexact
-     30      1 bit   enable_exception_int_divide_by  Integer Division by Zero
-                     _zero                           (rcp_iflag_f32 instruction
+     26      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    IEEE 754 FP Division by
+                     _DIVISION_BY_ZERO               Zero
+     27      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    IEEE 754 FP FP Overflow
+                     _OVERFLOW
+     28      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    IEEE 754 FP Underflow
+                     _UNDERFLOW
+     29      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    IEEE 754 FP Inexact
+                     _INEXACT
+     30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
+                     _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
      31      1 bit                                   Reserved. Must be 0.
      32      **Total size 4 bytes.**
@@ -1835,45 +1857,46 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
   .. table:: Floating Point Rounding Mode Enumeration Values
      :name: amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table
 
-     ===================================== ===== ===============================
-     Enumeration Name                      Value Description
-     ===================================== ===== ===============================
-     AMD_FLOAT_ROUND_MODE_NEAR_EVEN        0     Round Ties To Even
-     AMD_FLOAT_ROUND_MODE_PLUS_INFINITY    1     Round Toward +infinity
-     AMD_FLOAT_ROUND_MODE_MINUS_INFINITY   2     Round Toward -infinity
-     AMD_FLOAT_ROUND_MODE_ZERO             3     Round Toward 0
-     ===================================== ===== ===============================
+     ====================================== ===== ==============================
+     Enumeration Name                       Value Description
+     ====================================== ===== ==============================
+     AMDGPU_FLOAT_ROUND_MODE_NEAR_EVEN      0     Round Ties To Even
+     AMDGPU_FLOAT_ROUND_MODE_PLUS_INFINITY  1     Round Toward +infinity
+     AMDGPU_FLOAT_ROUND_MODE_MINUS_INFINITY 2     Round Toward -infinity
+     AMDGPU_FLOAT_ROUND_MODE_ZERO           3     Round Toward 0
+     ====================================== ===== ==============================
 
 ..
 
   .. table:: Floating Point Denorm Mode Enumeration Values
      :name: amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table
 
-     ===================================== ===== ===============================
-     Enumeration Name                      Value Description
-     ===================================== ===== ===============================
-     AMD_FLOAT_DENORM_MODE_FLUSH_SRC_DST   0     Flush Source and Destination
-                                                 Denorms
-     AMD_FLOAT_DENORM_MODE_FLUSH_DST       1     Flush Output Denorms
-     AMD_FLOAT_DENORM_MODE_FLUSH_SRC       2     Flush Source Denorms
-     AMD_FLOAT_DENORM_MODE_FLUSH_NONE      3     No Flush
-     ===================================== ===== ===============================
+     ====================================== ===== ==============================
+     Enumeration Name                       Value Description
+     ====================================== ===== ==============================
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC_DST 0     Flush Source and Destination
+                                                  Denorms
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_DST     1     Flush Output Denorms
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC     2     Flush Source Denorms
+     AMDGPU_FLOAT_DENORM_MODE_FLUSH_NONE    3     No Flush
+     ====================================== ===== ==============================
 
 ..
 
   .. table:: System VGPR Work-Item ID Enumeration Values
      :name: amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table
 
-     ===================================== ===== ===============================
-     Enumeration Name                      Value Description
-     ===================================== ===== ===============================
-     AMD_SYSTEM_VGPR_WORKITEM_ID_X         0     Set work-item X dimension ID.
-     AMD_SYSTEM_VGPR_WORKITEM_ID_X_Y       1     Set work-item X and Y
-                                                 dimensions ID.
-     AMD_SYSTEM_VGPR_WORKITEM_ID_X_Y_Z     2     Set work-item X, Y and Z
-                                                 dimensions ID.
-     AMD_SYSTEM_VGPR_WORKITEM_ID_UNDEFINED 3     Undefined.
-     ===================================== ===== ===============================
+     ======================================== ===== ============================
+     Enumeration Name                         Value Description
+     ======================================== ===== ============================
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X         0     Set work-item X dimension
+                                                    ID.
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y       1     Set work-item X and Y
+                                                    dimensions ID.
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y_Z     2     Set work-item X, Y and Z
+                                                    dimensions ID.
+     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_UNDEFINED 3     Undefined.
+     ======================================== ===== ============================
 
 .. _amdgpu-amdhsa-initial-kernel-execution-state:
 

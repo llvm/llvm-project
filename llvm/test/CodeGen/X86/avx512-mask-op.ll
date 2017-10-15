@@ -1700,16 +1700,12 @@ define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ;
 ; SKX-LABEL: test_build_vec_v64i1:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    movabsq $6432645796886517060, %rax ## imm = 0x5945594549549544
-; SKX-NEXT:    kmovq %rax, %k1
-; SKX-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zmm0[2],zero,zero,zero,zmm0[6],zero,zmm0[8],zero,zmm0[10],zero,zmm0[12],zero,zero,zmm0[15],zero,zero,zmm0[18],zero,zmm0[20],zero,zmm0[22],zero,zmm0[24],zero,zero,zmm0[27],zero,zero,zmm0[30],zero,zmm0[32],zero,zmm0[34],zero,zero,zero,zmm0[38],zero,zmm0[40],zero,zero,zmm0[43,44],zero,zmm0[46],zero,zmm0[48],zero,zmm0[50],zero,zero,zero,zmm0[54],zero,zmm0[56],zero,zero,zmm0[59,60],zero,zmm0[62],zero
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_build_vec_v64i1:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    movabsq $6432645796886517060, %rax ## imm = 0x5945594549549544
-; AVX512BW-NEXT:    kmovq %rax, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zmm0[2],zero,zero,zero,zmm0[6],zero,zmm0[8],zero,zmm0[10],zero,zmm0[12],zero,zero,zmm0[15],zero,zero,zmm0[18],zero,zmm0[20],zero,zmm0[22],zero,zmm0[24],zero,zero,zmm0[27],zero,zero,zmm0[30],zero,zmm0[32],zero,zmm0[34],zero,zero,zero,zmm0[38],zero,zmm0[40],zero,zero,zmm0[43,44],zero,zmm0[46],zero,zmm0[48],zero,zmm0[50],zero,zero,zero,zmm0[54],zero,zmm0[56],zero,zero,zmm0[59,60],zero,zmm0[62],zero
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_build_vec_v64i1:

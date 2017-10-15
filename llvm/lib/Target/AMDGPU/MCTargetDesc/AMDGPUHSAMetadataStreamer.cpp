@@ -279,10 +279,15 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
 
-  StringRef TypeQual;
-  Node = Func->getMetadata("kernel_arg_type_qual");
+  StringRef Name;
+  Node = Func->getMetadata("kernel_arg_name");
   if (Node && ArgNo < Node->getNumOperands())
-    TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+    Name = cast<MDString>(Node->getOperand(ArgNo))->getString();
+
+  StringRef TypeName;
+  Node = Func->getMetadata("kernel_arg_type");
+  if (Node && ArgNo < Node->getNumOperands())
+    TypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
   StringRef BaseTypeName;
   Node = Func->getMetadata("kernel_arg_base_type");
@@ -299,28 +304,25 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
       AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
   }
 
-  StringRef Name;
-  Node = Func->getMetadata("kernel_arg_name");
+  StringRef TypeQual;
+  Node = Func->getMetadata("kernel_arg_type_qual");
   if (Node && ArgNo < Node->getNumOperands())
-    Name = cast<MDString>(Node->getOperand(ArgNo))->getString();
-
-  StringRef TypeName;
-  Node = Func->getMetadata("kernel_arg_type");
-  if (Node && ArgNo < Node->getNumOperands())
-    TypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
+    TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
   emitKernelArg(Func->getParent()->getDataLayout(), Arg.getType(),
-                getValueKind(Arg.getType(), TypeQual, BaseTypeName), TypeQual,
-                BaseTypeName, AccQual, Name, TypeName);
+                getValueKind(Arg.getType(), TypeQual, BaseTypeName), Name,
+                TypeName, BaseTypeName, AccQual, TypeQual);
 }
 
 void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
-                                     ValueKind ValueKind, StringRef TypeQual,
-                                     StringRef BaseTypeName, StringRef AccQual,
-                                     StringRef Name, StringRef TypeName) {
+                                     ValueKind ValueKind, StringRef Name,
+                                     StringRef TypeName, StringRef BaseTypeName,
+                                     StringRef AccQual, StringRef TypeQual) {
   HSAMetadata.mKernels.back().mArgs.push_back(Kernel::Arg::Metadata());
   auto &Arg = HSAMetadata.mKernels.back().mArgs.back();
 
+  Arg.mName = Name;
+  Arg.mTypeName = TypeName;
   Arg.mSize = DL.getTypeAllocSize(Ty);
   Arg.mAlign = DL.getABITypeAlignment(Ty);
   Arg.mValueKind = ValueKind;
@@ -332,62 +334,25 @@ void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
       Arg.mPointeeAlign = DL.getABITypeAlignment(ElTy);
   }
 
-  Arg.mAccQual = getAccessQualifier(AccQual);
-
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     Arg.mAddrSpaceQual = getAddressSpaceQualifer(PtrTy->getAddressSpace());
+
+  Arg.mAccQual = getAccessQualifier(AccQual);
+
+  // TODO: Emit Arg.mActualAccQual.
 
   SmallVector<StringRef, 1> SplitTypeQuals;
   TypeQual.split(SplitTypeQuals, " ", -1, false);
   for (StringRef Key : SplitTypeQuals) {
     auto P = StringSwitch<bool*>(Key)
                  .Case("const",    &Arg.mIsConst)
-                 .Case("pipe",     &Arg.mIsPipe)
                  .Case("restrict", &Arg.mIsRestrict)
                  .Case("volatile", &Arg.mIsVolatile)
+                 .Case("pipe",     &Arg.mIsPipe)
                  .Default(nullptr);
     if (P)
       *P = true;
   }
-
-  Arg.mName = Name;
-  Arg.mTypeName = TypeName;
-}
-
-void MetadataStreamer::emitKernelCodeProps(
-    const amd_kernel_code_t &KernelCode) {
-  auto &CodeProps = HSAMetadata.mKernels.back().mCodeProps;
-
-  CodeProps.mKernargSegmentSize = KernelCode.kernarg_segment_byte_size;
-  CodeProps.mWorkgroupGroupSegmentSize =
-      KernelCode.workgroup_group_segment_byte_size;
-  CodeProps.mWorkitemPrivateSegmentSize =
-      KernelCode.workitem_private_segment_byte_size;
-  CodeProps.mWavefrontNumSGPRs = KernelCode.wavefront_sgpr_count;
-  CodeProps.mWorkitemNumVGPRs = KernelCode.workitem_vgpr_count;
-  CodeProps.mKernargSegmentAlign = KernelCode.kernarg_segment_alignment;
-  CodeProps.mGroupSegmentAlign = KernelCode.group_segment_alignment;
-  CodeProps.mPrivateSegmentAlign = KernelCode.private_segment_alignment;
-  CodeProps.mWavefrontSize = KernelCode.wavefront_size;
-}
-
-void MetadataStreamer::emitKernelDebugProps(
-    const amd_kernel_code_t &KernelCode) {
-  if (!(KernelCode.code_properties & AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED))
-    return;
-
-  auto &DebugProps = HSAMetadata.mKernels.back().mDebugProps;
-
-  // FIXME: Need to pass down debugger ABI version through features. This is ok
-  // for now because we only have one version.
-  DebugProps.mDebuggerABIVersion.push_back(1);
-  DebugProps.mDebuggerABIVersion.push_back(0);
-  DebugProps.mReservedNumVGPRs = KernelCode.reserved_vgpr_count;
-  DebugProps.mReservedFirstVGPR = KernelCode.reserved_vgpr_first;
-  DebugProps.mPrivateSegmentBufferSGPR =
-      KernelCode.debug_private_segment_buffer_sgpr;
-  DebugProps.mWavefrontPrivateSegmentOffsetSGPR =
-      KernelCode.debug_wavefront_private_segment_offset_sgpr;
 }
 
 void MetadataStreamer::begin(const Module &Mod) {
@@ -407,8 +372,10 @@ void MetadataStreamer::end() {
     verify(HSAMetadataString);
 }
 
-void MetadataStreamer::emitKernel(const Function &Func,
-                                  const amd_kernel_code_t &KernelCode) {
+void MetadataStreamer::emitKernel(
+    const Function &Func,
+    const Kernel::CodeProps::Metadata &CodeProps,
+    const Kernel::DebugProps::Metadata &DebugProps) {
   if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL)
     return;
 
@@ -416,11 +383,12 @@ void MetadataStreamer::emitKernel(const Function &Func,
   auto &Kernel = HSAMetadata.mKernels.back();
 
   Kernel.mName = Func.getName();
+  Kernel.mSymbolName = (Twine(Func.getName()) + Twine("@kd")).str();
   emitKernelLanguage(Func);
   emitKernelAttrs(Func);
   emitKernelArgs(Func);
-  emitKernelCodeProps(KernelCode);
-  emitKernelDebugProps(KernelCode);
+  HSAMetadata.mKernels.back().mCodeProps = CodeProps;
+  HSAMetadata.mKernels.back().mDebugProps = DebugProps;
 }
 
 } // end namespace HSAMD

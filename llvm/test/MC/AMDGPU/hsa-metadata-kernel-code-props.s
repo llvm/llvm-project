@@ -5,20 +5,24 @@
 // CHECK:  .amd_amdgpu_hsa_metadata
 // CHECK:    Version: [ 1, 0 ]
 // CHECK:    Kernels:
-// CHECK:      - Name: test_kernel
+// CHECK:      - Name:       test_kernel
+// CHECK:        SymbolName: 'test_kernel@kd'
 // CHECK:        CodeProps:
-// CHECK:          KernargSegmentSize:         24
-// CHECK:          WorkitemPrivateSegmentSize: 16
-// CHECK:          WavefrontNumSGPRs:          6
-// CHECK:          WorkitemNumVGPRs:           12
+// CHECK:          KernargSegmentSize:      24
+// CHECK:          GroupSegmentFixedSize:   24
+// CHECK:          PrivateSegmentFixedSize: 16
+// CHECK:          KernargSegmentAlign:     16
+// CHECK:          WavefrontSize:           64
 .amd_amdgpu_hsa_metadata
   Version: [ 1, 0 ]
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
   Kernels:
     - Name:            test_kernel
+      SymbolName:      test_kernel@kd
       CodeProps:
-        KernargSegmentSize:         24
-        WorkitemPrivateSegmentSize: 16
-        WavefrontNumSGPRs:          6
-        WorkitemNumVGPRs:           12
+        KernargSegmentSize:      24
+        GroupSegmentFixedSize:   24
+        PrivateSegmentFixedSize: 16
+        KernargSegmentAlign:     16
+        WavefrontSize:           64
 .end_amd_amdgpu_hsa_metadata

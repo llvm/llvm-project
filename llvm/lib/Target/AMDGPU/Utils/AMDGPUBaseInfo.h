@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
+#include <string>
 #include <utility>
 
 namespace llvm {
@@ -53,6 +54,13 @@ struct IsaVersion {
 
 /// \returns Isa version for given subtarget \p Features.
 IsaVersion getIsaVersion(const FeatureBitset &Features);
+
+/// \brief Streams isa version string for given subtarget \p STI into \p Stream.
+void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
+
+/// \returns True if given subtarget \p Features support code object version 3,
+/// false otherwise.
+bool hasCodeObjectV3(const FeatureBitset &Features);
 
 /// \returns Wavefront size for given subtarget \p Features.
 unsigned getWavefrontSize(const FeatureBitset &Features);
