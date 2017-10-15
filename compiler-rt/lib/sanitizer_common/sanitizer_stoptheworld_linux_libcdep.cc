@@ -263,7 +263,7 @@ static void TracerThreadSignalHandler(int signum, void *siginfo, void *uctx) {
 }
 
 // Size of alternative stack for signal handlers in the tracer thread.
-static const int kHandlerStackSize = 4096;
+static const int kHandlerStackSize = 8192;
 
 // This function will be run as a cloned task.
 static int TracerThread(void* argument) {

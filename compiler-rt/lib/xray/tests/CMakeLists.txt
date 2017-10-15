@@ -20,13 +20,14 @@ macro(add_xray_unittest testname)
       generate_compiler_rt_tests(TEST_OBJECTS
         XRayUnitTests "${testname}-${arch}-Test" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
-        DEPS gtest xray
+        DEPS gtest xray llvm-xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS -fxray-instrument
           ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
           -lpthread
           -ldl -lrt)
+      set_target_properties(XRayUnitTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()
 endmacro()
