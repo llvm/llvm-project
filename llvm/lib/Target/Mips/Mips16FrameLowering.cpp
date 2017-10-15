@@ -59,7 +59,6 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  MachineLocation DstML, SrcML;
 
   // Adjust stack.
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 
 %opencl.image1d_t = type opaque
 %opencl.image1d_array_t = type opaque
@@ -19,44 +19,45 @@
 ; CHECK:  Version: [ 1, 0 ]
 
 ; CHECK:  Kernels:
-; CHECK:    - Name: test
+; CHECK:    - Name:       test
+; CHECK:      SymbolName: 'test@kd'
 ; CHECK:      Args:
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image1d_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image1d_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image1d_array_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image1d_array_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image1d_buffer_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image1d_buffer_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_array_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_array_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_array_depth_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_array_depth_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_array_msaa_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_array_msaa_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_array_msaa_depth_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_array_msaa_depth_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_depth_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_depth_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_msaa_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_msaa_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image2d_msaa_depth_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image2d_msaa_depth_t
-; CHECK:        - Size:      8
+; CHECK:        - TypeName:  image3d_t
+; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:          TypeName:  image3d_t
 define amdgpu_kernel void @test(%opencl.image1d_t addrspace(1)* %a,
                                 %opencl.image1d_array_t addrspace(1)* %b,
                                 %opencl.image1d_buffer_t addrspace(1)* %c,

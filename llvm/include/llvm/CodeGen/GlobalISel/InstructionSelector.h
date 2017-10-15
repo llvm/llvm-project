@@ -107,6 +107,9 @@ enum {
   /// - InsnID - Instruction ID
   /// - The predicate to test
   GIM_CheckAPFloatImmPredicate,
+  /// Check a memory operation is non-atomic.
+  /// - InsnID - Instruction ID
+  GIM_CheckNonAtomic,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID

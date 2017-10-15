@@ -540,7 +540,7 @@ static unsigned ReplaceCounter = 0;
 
 char HCE::ID = 0;
 
-void RangeTree::dump() const {
+LLVM_DUMP_METHOD void RangeTree::dump() const {
   dbgs() << "Root: " << Root << '\n';
   if (Root)
     dump(Root);

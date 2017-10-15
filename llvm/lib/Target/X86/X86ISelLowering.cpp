@@ -14077,15 +14077,15 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
       ISD::isBuildVectorOfConstantSDNodes(Op.getOperand(2).getNode()))
     return SDValue();
 
-  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
-  // with patterns on the mask registers on AVX-512.
-  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
-    return Op;
-
   // Try to lower this to a blend-style vector shuffle. This can handle all
   // constant condition cases.
   if (SDValue BlendOp = lowerVSELECTtoVectorShuffle(Op, Subtarget, DAG))
     return BlendOp;
+
+  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
+  // with patterns on the mask registers on AVX-512.
+  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
+    return Op;
 
   // Variable blends are only legal from SSE4.1 onward.
   if (!Subtarget.hasSSE41())
@@ -29959,7 +29959,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   unsigned TypeSizeInBits = Type.getSizeInBits();
   // Return the lowest TypeSizeInBits bits.
   MVT ResVT = MVT::getVectorVT(Type, SadVT.getSizeInBits() / TypeSizeInBits);
-  SAD = DAG.getNode(ISD::BITCAST, DL, ResVT, SAD);
+  SAD = DAG.getBitcast(ResVT, SAD);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Type, SAD,
                      Extract->getOperand(1));
 }
@@ -31475,15 +31475,19 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getOperand(0).getValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((NumElts % 2) != 0)
+    return SDValue();
+
   unsigned RegSize = 128;
   MVT OpsVT = MVT::getVectorVT(MVT::i16, RegSize / 16);
-  EVT ReducedVT =
-      EVT::getVectorVT(*DAG.getContext(), MVT::i16, VT.getVectorNumElements());
+  EVT ReducedVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, NumElts);
+
   // Shrink the operands of mul.
   SDValue NewN0 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, N0);
   SDValue NewN1 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, N1);
 
-  if (VT.getVectorNumElements() >= OpsVT.getVectorNumElements()) {
+  if (NumElts >= OpsVT.getVectorNumElements()) {
     // Generate the lower part of mul: pmullw. For MULU8/MULS8, only the
     // lower part is needed.
     SDValue MulLo = DAG.getNode(ISD::MUL, DL, ReducedVT, NewN0, NewN1);
@@ -31491,7 +31495,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode((Mode == MULU8) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND,
                          DL, VT, MulLo);
     } else {
-      MVT ResVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() / 2);
+      MVT ResVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
       // Generate the higher part of mul: pmulhw/pmulhuw. For MULU16/MULS16,
       // the higher part is also needed.
       SDValue MulHi = DAG.getNode(Mode == MULS16 ? ISD::MULHS : ISD::MULHU, DL,
@@ -31500,22 +31504,22 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
       // Repack the lower part and higher part result of mul into a wider
       // result.
       // Generate shuffle functioning as punpcklwd.
-      SmallVector<int, 16> ShuffleMask(VT.getVectorNumElements());
-      for (unsigned i = 0; i < VT.getVectorNumElements() / 2; i++) {
+      SmallVector<int, 16> ShuffleMask(NumElts);
+      for (unsigned i = 0, e = NumElts / 2; i < e; i++) {
         ShuffleMask[2 * i] = i;
-        ShuffleMask[2 * i + 1] = i + VT.getVectorNumElements();
+        ShuffleMask[2 * i + 1] = i + NumElts;
       }
       SDValue ResLo =
           DAG.getVectorShuffle(ReducedVT, DL, MulLo, MulHi, ShuffleMask);
-      ResLo = DAG.getNode(ISD::BITCAST, DL, ResVT, ResLo);
+      ResLo = DAG.getBitcast(ResVT, ResLo);
       // Generate shuffle functioning as punpckhwd.
-      for (unsigned i = 0; i < VT.getVectorNumElements() / 2; i++) {
-        ShuffleMask[2 * i] = i + VT.getVectorNumElements() / 2;
-        ShuffleMask[2 * i + 1] = i + VT.getVectorNumElements() * 3 / 2;
+      for (unsigned i = 0, e = NumElts / 2; i < e; i++) {
+        ShuffleMask[2 * i] = i + NumElts / 2;
+        ShuffleMask[2 * i + 1] = i + NumElts * 3 / 2;
       }
       SDValue ResHi =
           DAG.getVectorShuffle(ReducedVT, DL, MulLo, MulHi, ShuffleMask);
-      ResHi = DAG.getNode(ISD::BITCAST, DL, ResVT, ResHi);
+      ResHi = DAG.getBitcast(ResVT, ResHi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
     }
   } else {
@@ -31562,7 +31566,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
       // result. Make sure the type of mul result is VT.
       MVT ResVT = MVT::getVectorVT(MVT::i32, RegSize / 32);
       SDValue Res = getUnpackl(DAG, DL, OpsVT, MulLo, MulHi);
-      Res = DAG.getNode(ISD::BITCAST, DL, ResVT, Res);
+      Res = DAG.getBitcast(ResVT, Res);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                          DAG.getIntPtrConstant(0, DL));
     }
@@ -32439,6 +32443,45 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
             /*HasVarMask*/ false, DAG, DCI, Subtarget)) {
       DCI.CombineTo(N, Res);
       return SDValue();
+    }
+  }
+
+  // Attempt to combine a scalar bitmask AND with an extracted shuffle.
+  if ((VT.getScalarSizeInBits() % 8) == 0 &&
+      N->getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      isa<ConstantSDNode>(N->getOperand(0).getOperand(1))) {
+    SDValue BitMask = N->getOperand(1);
+    SDValue SrcVec = N->getOperand(0).getOperand(0);
+    EVT SrcVecVT = SrcVec.getValueType();
+
+    // Check that the constant bitmask masks whole bytes.
+    APInt UndefElts;
+    SmallVector<APInt, 64> EltBits;
+    if (VT == SrcVecVT.getScalarType() &&
+        N->getOperand(0)->isOnlyUserOf(SrcVec.getNode()) &&
+        getTargetConstantBitsFromNode(BitMask, 8, UndefElts, EltBits) &&
+        llvm::all_of(EltBits, [](APInt M) {
+          return M.isNullValue() || M.isAllOnesValue();
+        })) {
+      unsigned NumElts = SrcVecVT.getVectorNumElements();
+      unsigned Scale = SrcVecVT.getScalarSizeInBits() / 8;
+      unsigned Idx = N->getOperand(0).getConstantOperandVal(1);
+
+      // Create a root shuffle mask from the byte mask and the extracted index.
+      SmallVector<int, 16> ShuffleMask(NumElts * Scale, SM_SentinelUndef);
+      for (unsigned i = 0; i != Scale; ++i) {
+        if (UndefElts[i])
+          continue;
+        int VecIdx = Scale * Idx + i;
+        ShuffleMask[VecIdx] =
+            EltBits[i].isNullValue() ? SM_SentinelZero : VecIdx;
+      }
+
+      if (SDValue Shuffle = combineX86ShufflesRecursively(
+              {SrcVec}, 0, SrcVec, ShuffleMask, {}, /*Depth*/ 2,
+              /*HasVarMask*/ false, DAG, DCI, Subtarget))
+        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N), VT, Shuffle,
+                           N->getOperand(0).getOperand(1));
     }
   }
 

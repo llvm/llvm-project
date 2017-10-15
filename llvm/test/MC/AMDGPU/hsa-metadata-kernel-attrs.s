@@ -9,6 +9,7 @@
 // CHECK:      - '2:1:8:%g\n'
 // CHECK:    Kernels:
 // CHECK:      - Name:            test_kernel
+// CHECK:        SymbolName:      'test_kernel@kd'
 // CHECK:        Language:        OpenCL C
 // CHECK:        LanguageVersion: [ 2, 0 ]
 // CHECK:    Attrs:
@@ -21,6 +22,7 @@
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
   Kernels:
     - Name:            test_kernel
+      SymbolName:      test_kernel@kd
       Language:        OpenCL C
       LanguageVersion: [ 2, 0 ]
       Attrs:

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -amdgpu-code-object-metadata -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -8,13 +8,14 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:  Version: [ 1, 0 ]
 
 ; CHECK:  Kernels:
-; CHECK:    - Name: test
+; CHECK:    - Name:       test
+; CHECK:      SymbolName: 'test@kd'
 ; CHECK:      DebugProps:
 ; CHECK:        DebuggerABIVersion:                [ 1, 0 ]
 ; CHECK:        ReservedNumVGPRs:                  4
 ; GFX700:       ReservedFirstVGPR:                 8
 ; GFX800:       ReservedFirstVGPR:                 8
-; GFX9:         ReservedFirstVGPR:                 14
+; GFX900:       ReservedFirstVGPR:                 11
 ; CHECK:        PrivateSegmentBufferSGPR:          0
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11
 define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {

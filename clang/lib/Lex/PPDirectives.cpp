@@ -2368,12 +2368,50 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
     // Otherwise, read the body of a function-like macro.  While we are at it,
     // check C99 6.10.3.2p1: ensure that # operators are followed by macro
     // parameters in function-like macro expansions.
+
+    VAOptDefinitionContext VAOCtx(*this);
+
     while (Tok.isNot(tok::eod)) {
       LastTok = Tok;
 
       if (!Tok.isOneOf(tok::hash, tok::hashat, tok::hashhash)) {
         MI->AddTokenToBody(Tok);
 
+        if (VAOCtx.isVAOptToken(Tok)) {
+          // If we're already within a VAOPT, emit an error.
+          if (VAOCtx.isInVAOpt()) {
+            Diag(Tok, diag::err_pp_vaopt_nested_use);
+            return nullptr;
+          }
+          // Ensure VAOPT is followed by a '(' .
+          LexUnexpandedToken(Tok);
+          if (Tok.isNot(tok::l_paren)) {
+            Diag(Tok, diag::err_pp_missing_lparen_in_vaopt_use);
+            return nullptr;
+          }
+          MI->AddTokenToBody(Tok);
+          VAOCtx.sawVAOptFollowedByOpeningParens(Tok.getLocation());
+          LexUnexpandedToken(Tok);
+          if (Tok.is(tok::hashhash)) {
+            Diag(Tok, diag::err_vaopt_paste_at_start);
+            return nullptr;
+          }
+          continue;
+        } else if (VAOCtx.isInVAOpt()) {
+          if (Tok.is(tok::r_paren)) {
+            if (VAOCtx.sawClosingParen()) {
+              const unsigned NumTokens = MI->getNumTokens();
+              assert(NumTokens >= 3 && "Must have seen at least __VA_OPT__( "
+                                       "and a subsequent tok::r_paren");
+              if (MI->getReplacementToken(NumTokens - 2).is(tok::hashhash)) {
+                Diag(Tok, diag::err_vaopt_paste_at_end);
+                return nullptr;
+              }
+            }
+          } else if (Tok.is(tok::l_paren)) {
+            VAOCtx.sawOpeningParen(Tok.getLocation());
+          }
+        }
         // Get the next token of the macro.
         LexUnexpandedToken(Tok);
         continue;
@@ -2414,12 +2452,14 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
         continue;
       }
 
+      // Our Token is a stringization operator.
       // Get the next token of the macro.
       LexUnexpandedToken(Tok);
 
-      // Check for a valid macro arg identifier.
-      if (Tok.getIdentifierInfo() == nullptr ||
-          MI->getParameterNum(Tok.getIdentifierInfo()) == -1) {
+      // Check for a valid macro arg identifier or __VA_OPT__.
+      if (!VAOCtx.isVAOptToken(Tok) &&
+          (Tok.getIdentifierInfo() == nullptr ||
+           MI->getParameterNum(Tok.getIdentifierInfo()) == -1)) {
 
         // If this is assembler-with-cpp mode, we accept random gibberish after
         // the '#' because '#' is often a comment character.  However, change
@@ -2438,11 +2478,24 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
 
       // Things look ok, add the '#' and param name tokens to the macro.
       MI->AddTokenToBody(LastTok);
-      MI->AddTokenToBody(Tok);
-      LastTok = Tok;
 
-      // Get the next token of the macro.
-      LexUnexpandedToken(Tok);
+      // If the token following '#' is VAOPT, let the next iteration handle it
+      // and check it for correctness, otherwise add the token and prime the
+      // loop with the next one.
+      if (!VAOCtx.isVAOptToken(Tok)) {
+        MI->AddTokenToBody(Tok);
+        LastTok = Tok;
+
+        // Get the next token of the macro.
+        LexUnexpandedToken(Tok);
+      }
+    }
+    if (VAOCtx.isInVAOpt()) {
+      assert(Tok.is(tok::eod) && "Must be at End Of preprocessing Directive");
+      Diag(Tok, diag::err_pp_expected_after)
+        << LastTok.getKind() << tok::r_paren;
+      Diag(VAOCtx.getUnmatchedOpeningParenLoc(), diag::note_matching) << tok::l_paren;
+      return nullptr;
     }
   }
   MI->setDefinitionEndLoc(LastTok.getLocation());

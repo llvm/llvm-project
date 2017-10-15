@@ -9,15 +9,16 @@
 // CHECK:      - '2:1:8:%g\n'
 // CHECK:    Kernels:
 // CHECK:      - Name:            test_kernel
+// CHECK:        SymbolName:      'test_kernel@kd'
 // CHECK:        Language:        OpenCL C
 // CHECK:        LanguageVersion: [ 2, 0 ]
 // CHECK:        Args:
-// CHECK:          - Size:          1
+// CHECK:          - TypeName:      char
+// CHECK:            Size:          1
 // CHECK:            Align:         1
 // CHECK:            ValueKind:     ByValue
 // CHECK:            ValueType:     I8
 // CHECK:            AccQual:       Default
-// CHECK:            TypeName:      char
 // CHECK:          - Size:          8
 // CHECK:            Align:         8
 // CHECK:            ValueKind:     HiddenGlobalOffsetX
@@ -41,15 +42,16 @@
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
   Kernels:
     - Name:            test_kernel
+      SymbolName:      test_kernel@kd
       Language:        OpenCL C
       LanguageVersion: [ 2, 0 ]
       Args:
-        - Size:          1
+        - TypeName:      char
+          Size:          1
           Align:         1
           ValueKind:     ByValue
           ValueType:     I8
           AccQual:       Default
-          TypeName:      char
         - Size:          8
           Align:         8
           ValueKind:     HiddenGlobalOffsetX

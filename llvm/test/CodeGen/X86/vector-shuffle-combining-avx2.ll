@@ -985,15 +985,9 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ;
 ; X32-AVX512-LABEL: PR34577:
 ; X32-AVX512:       # BB#0: # %entry
-; X32-AVX512-NEXT:    vmovaps {{.*#+}} ymm3 = <1,u,u,u,2,u,5,0>
-; X32-AVX512-NEXT:    vpermps %ymm0, %ymm3, %ymm0
-; X32-AVX512-NEXT:    vmovaps {{.*#+}} ymm3 = <u,2,3,5,u,5,u,u>
-; X32-AVX512-NEXT:    vpermps %ymm2, %ymm3, %ymm2
-; X32-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4],ymm2[5],ymm0[6,7]
-; X32-AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX512-NEXT:    movb $86, %al
-; X32-AVX512-NEXT:    kmovw %eax, %k1
-; X32-AVX512-NEXT:    vblendmps %zmm0, %zmm2, %zmm0 {%k1}
+; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
+; X32-AVX512-NEXT:    vpermps %ymm0, %ymm2, %ymm0
+; X32-AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; X32-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
 ; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
 ; X32-AVX512-NEXT:    vpermps %ymm1, %ymm2, %ymm1
@@ -1012,15 +1006,9 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ;
 ; X64-AVX512-LABEL: PR34577:
 ; X64-AVX512:       # BB#0: # %entry
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm3 = <1,u,u,u,2,u,5,0>
-; X64-AVX512-NEXT:    vpermps %ymm0, %ymm3, %ymm0
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm3 = <u,2,3,5,u,5,u,u>
-; X64-AVX512-NEXT:    vpermps %ymm2, %ymm3, %ymm2
-; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4],ymm2[5],ymm0[6,7]
-; X64-AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX512-NEXT:    movb $86, %al
-; X64-AVX512-NEXT:    kmovw %eax, %k1
-; X64-AVX512-NEXT:    vblendmps %zmm0, %zmm2, %zmm0 {%k1}
+; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
+; X64-AVX512-NEXT:    vpermps %ymm0, %ymm2, %ymm0
+; X64-AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; X64-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
 ; X64-AVX512-NEXT:    vpermps %ymm1, %ymm2, %ymm1

@@ -147,6 +147,25 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
   return {7, 0, 0};
 }
 
+void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
+  auto TargetTriple = STI->getTargetTriple();
+  auto ISAVersion = IsaInfo::getIsaVersion(STI->getFeatureBits());
+
+  Stream << TargetTriple.getArchName() << '-'
+         << TargetTriple.getVendorName() << '-'
+         << TargetTriple.getOSName() << '-'
+         << TargetTriple.getEnvironmentName() << '-'
+         << "gfx"
+         << ISAVersion.Major
+         << ISAVersion.Minor
+         << ISAVersion.Stepping;
+  Stream.flush();
+}
+
+bool hasCodeObjectV3(const FeatureBitset &Features) {
+  return Features.test(FeatureCodeObjectV3);
+}
+
 unsigned getWavefrontSize(const FeatureBitset &Features) {
   if (Features.test(FeatureWavefrontSize16))
     return 16;

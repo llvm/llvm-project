@@ -628,7 +628,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     MachineOperand *NonInlineUse = nullptr;
     int NonInlineUseOpNo = -1;
 
-    MachineRegisterInfo::use_iterator NextUse, NextInstUse;
+    MachineRegisterInfo::use_iterator NextUse;
     for (MachineRegisterInfo::use_iterator
            Use = MRI->use_begin(Dst.getReg()), E = MRI->use_end();
          Use != E; Use = NextUse) {
