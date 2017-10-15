@@ -15,12 +15,14 @@
 #define LLVM_CLANG_LEX_TOKENLEXER_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
   class MacroInfo;
   class Preprocessor;
   class Token;
   class MacroArgs;
+  class VAOptExpansionContext;
 
 /// TokenLexer - This implements a lexer that returns tokens from a macro body
 /// or token stream instead of lexing from a character buffer.  This is used for
@@ -188,7 +190,25 @@ private:
   /// CurTokenIdx data members.
   bool pasteTokens(Token &Tok);
 
-  
+
+  /// Takes the tail sequence of tokens within ReplacementToks that represent
+  /// the just expanded __VA_OPT__ tokens (possibly zero tokens) and transforms
+  /// them into a string.  \p VCtx is used to determine which token represents
+  /// the first __VA_OPT__ replacement token.
+  ///
+  /// \param[in,out] ReplacementToks - Contains the current Replacement Tokens
+  /// (prior to rescanning and token pasting), the tail end of which represents
+  /// the tokens just expanded through __VA_OPT__ processing.  These (sub)
+  /// sequence of tokens are folded into one stringified token.
+  ///
+  /// \param[in] VCtx - contains relevent contextual information about the
+  /// state of the tokens around and including the __VA_OPT__ token, necessary
+  /// for stringification.
+
+  void stringifyVAOPTContents(SmallVectorImpl<Token> &ReplacementToks,
+                              const VAOptExpansionContext &VCtx,
+                              SourceLocation VAOPTClosingParenLoc);
+
   /// Expand the arguments of a function-like macro so that we can quickly
   /// return preexpanded tokens from Tokens.
   void ExpandFunctionArguments();

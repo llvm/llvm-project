@@ -346,6 +346,23 @@ def ext_pp_extra_tokens_at_eol : ExtWarn<
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<
   "__VA_ARGS__ can only appear in the expansion of a C99 variadic macro">;
+
+def ext_pp_bad_vaopt_use
+    : ExtWarn<
+          "__VA_OPT__ can only appear in the expansion of a variadic macro">,
+      InGroup<VariadicMacros>;
+
+def err_pp_missing_lparen_in_vaopt_use : Error<
+  "missing '(' following __VA_OPT__">;
+def err_pp_vaopt_nested_use : Error<
+  "__VA_OPT__ cannot be nested within its own replacement tokens">;
+
+def err_vaopt_paste_at_start : Error<
+  "'##' cannot appear at start of __VA_OPT__ argument">;
+
+def err_vaopt_paste_at_end
+    : Error<"'##' cannot appear at end of __VA_OPT__ argument">;
+
 def ext_pp_macro_redef : ExtWarn<"%0 macro redefined">, InGroup<MacroRedefined>;
 def ext_variadic_macro : Extension<"variadic macros are a C99 feature">,
   InGroup<VariadicMacros>;
