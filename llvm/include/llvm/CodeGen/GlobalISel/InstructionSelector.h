@@ -117,6 +117,11 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected type
   GIM_CheckType,
+  /// Check the type of a pointer to any address space.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - SizeInBits - The size of the pointer value in bits.
+  GIM_CheckPointerToAny,
   /// Check the register bank for the specified operand
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
