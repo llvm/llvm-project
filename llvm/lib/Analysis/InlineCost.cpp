@@ -1698,7 +1698,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   return Cost < std::max(1, Threshold);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// \brief Dump stats about this call's analysis.
 LLVM_DUMP_METHOD void CallAnalyzer::dump() {
 #define DEBUG_PRINT_STAT(x) dbgs() << "      " #x ": " << x << "\n"

@@ -1622,7 +1622,7 @@ void MemorySSA::print(raw_ostream &OS) const {
   F.print(OS, &Writer);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MemorySSA::dump() const { print(dbgs()); }
 #endif
 
@@ -1899,7 +1899,7 @@ void MemoryUse::print(raw_ostream &OS) const {
 
 void MemoryAccess::dump() const {
 // Cannot completely remove virtual function even in release mode.
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   print(dbgs());
   dbgs() << "\n";
 #endif

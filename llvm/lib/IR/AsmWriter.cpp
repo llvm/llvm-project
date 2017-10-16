@@ -3623,7 +3623,7 @@ void Metadata::print(raw_ostream &OS, ModuleSlotTracker &MST,
   printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ false);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
 void Value::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }

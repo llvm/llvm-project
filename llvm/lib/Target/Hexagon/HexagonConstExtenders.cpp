@@ -404,6 +404,7 @@ namespace {
 
   using HCE = HexagonConstExtenders;
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const OffsetRange &OR) {
     if (OR.Min > OR.Max)
       OS << '!';
@@ -418,6 +419,7 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &P) {
     if (P.Rs.Reg != 0)
       OS << PrintReg(P.Rs.Reg, &P.HRI, P.Rs.Sub);
@@ -433,6 +435,7 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintExpr &P) {
     OS << "## " << (P.Ex.Neg ? "- " : "+ ");
     if (P.Ex.Rs.Reg != 0)
@@ -450,12 +453,14 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintInit &P) {
     OS << '[' << P.ExtI.first << ", "
        << PrintExpr(P.ExtI.second, P.HRI) << ']';
     return OS;
   }
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtDesc &ED) {
     assert(ED.OpNum != -1u);
     const MachineBasicBlock &MBB = *ED.getOp().getParent()->getParent();
@@ -472,6 +477,7 @@ namespace {
     return OS;
   }
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtRoot &ER) {
     switch (ER.Kind) {
       case MachineOperand::MO_Immediate:
@@ -505,6 +511,7 @@ namespace {
     return OS;
   }
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtValue &EV) {
     OS << HCE::ExtRoot(EV) << "  off:" << EV.Offset;
     return OS;
@@ -517,6 +524,7 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
+  LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintIMap &P) {
     OS << "{\n";
     for (const std::pair<HCE::ExtenderInit,HCE::IndexList> &Q : P.IMap) {

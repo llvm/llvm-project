@@ -2516,6 +2516,22 @@ def am_indexed32 : ComplexPattern<i64, 2, "SelectAddrModeIndexed32", []>;
 def am_indexed64 : ComplexPattern<i64, 2, "SelectAddrModeIndexed64", []>;
 def am_indexed128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed128", []>;
 
+def gi_am_indexed8 :
+    GIComplexOperandMatcher<s64, "selectAddrModeIndexed<8>">,
+    GIComplexPatternEquiv<am_indexed8>;
+def gi_am_indexed16 :
+    GIComplexOperandMatcher<s64, "selectAddrModeIndexed<16>">,
+    GIComplexPatternEquiv<am_indexed16>;
+def gi_am_indexed32 :
+    GIComplexOperandMatcher<s64, "selectAddrModeIndexed<32>">,
+    GIComplexPatternEquiv<am_indexed32>;
+def gi_am_indexed64 :
+    GIComplexOperandMatcher<s64, "selectAddrModeIndexed<64>">,
+    GIComplexPatternEquiv<am_indexed64>;
+def gi_am_indexed128 :
+    GIComplexOperandMatcher<s64, "selectAddrModeIndexed<128>">,
+    GIComplexPatternEquiv<am_indexed128>;
+
 class UImm12OffsetOperand<int Scale> : AsmOperandClass {
   let Name = "UImm12Offset" # Scale;
   let RenderMethod = "addUImm12OffsetOperands<" # Scale # ">";
@@ -3145,6 +3161,23 @@ def am_unscaled16 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled16", []>;
 def am_unscaled32 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled32", []>;
 def am_unscaled64 : ComplexPattern<i64, 2, "SelectAddrModeUnscaled64", []>;
 def am_unscaled128 :ComplexPattern<i64, 2, "SelectAddrModeUnscaled128", []>;
+
+def gi_am_unscaled8 :
+    GIComplexOperandMatcher<s64, "selectAddrModeUnscaled8">,
+    GIComplexPatternEquiv<am_unscaled8>;
+def gi_am_unscaled16 :
+    GIComplexOperandMatcher<s64, "selectAddrModeUnscaled16">,
+    GIComplexPatternEquiv<am_unscaled16>;
+def gi_am_unscaled32 :
+    GIComplexOperandMatcher<s64, "selectAddrModeUnscaled32">,
+    GIComplexPatternEquiv<am_unscaled32>;
+def gi_am_unscaled64 :
+    GIComplexOperandMatcher<s64, "selectAddrModeUnscaled64">,
+    GIComplexPatternEquiv<am_unscaled64>;
+def gi_am_unscaled128 :
+    GIComplexOperandMatcher<s64, "selectAddrModeUnscaled128">,
+    GIComplexPatternEquiv<am_unscaled128>;
+
 
 class BaseLoadStoreUnscale<bits<2> sz, bit V, bits<2> opc, dag oops, dag iops,
                            string asm, list<dag> pattern>

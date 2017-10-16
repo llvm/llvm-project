@@ -1318,6 +1318,24 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   return ExtractValueInst::Create(Call, 1, "sadd.overflow");
 }
 
+// Handle (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
+Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *X = Cmp.getOperand(0);
+
+  if (match(Cmp.getOperand(1), m_Zero()) && Pred == ICmpInst::ICMP_SGT) {
+    Value *A, *B;
+    SelectPatternResult SPR = matchSelectPattern(X, A, B);
+    if (SPR.Flavor == SPF_SMIN) {
+      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
+        return new ICmpInst(Pred, B, Cmp.getOperand(1));
+      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
+        return new ICmpInst(Pred, A, Cmp.getOperand(1));
+    }
+  }
+  return nullptr;
+}
+
 // Fold icmp Pred X, C.
 Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
@@ -1347,17 +1365,6 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
       if (Instruction *Res = processUGT_ADDCST_ADD(
               Cmp, A, B, CI2, cast<ConstantInt>(Cmp.getOperand(1)), *this))
         return Res;
-  }
-
-  // (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
-  if (C->isNullValue() && Pred == ICmpInst::ICMP_SGT) {
-    SelectPatternResult SPR = matchSelectPattern(X, A, B);
-    if (SPR.Flavor == SPF_SMIN) {
-      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
-        return new ICmpInst(Pred, B, Cmp.getOperand(1));
-      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
-        return new ICmpInst(Pred, A, Cmp.getOperand(1));
-    }
   }
 
   // FIXME: Use m_APInt to allow folds for splat constants.
@@ -2060,15 +2067,15 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
           (!IsAShr && C.shl(ShAmtVal).lshr(ShAmtVal) == C)) &&
          "Expected icmp+shr simplify did not occur.");
 
-  // Check if the bits shifted out are known to be zero. If so, we can compare
-  // against the unshifted value:
+  // If the bits shifted out are known zero, compare the unshifted value:
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
   Constant *ShiftedCmpRHS = ConstantInt::get(ShrTy, C << ShAmtVal);
-  if (Shr->hasOneUse()) {
-    if (Shr->isExact())
-      return new ICmpInst(Pred, X, ShiftedCmpRHS);
+  if (Shr->isExact())
+    return new ICmpInst(Pred, X, ShiftedCmpRHS);
 
-    // Otherwise strength reduce the shift into an 'and'.
+  if (Shr->hasOneUse()) {
+    // Canonicalize the shift into an 'and':
+    // icmp eq/ne (shr X, ShAmt), C --> icmp eq/ne (and X, HiMask), (C << ShAmt)
     APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
     Constant *Mask = ConstantInt::get(ShrTy, Val);
     Value *And = Builder.CreateAnd(X, Mask, Shr->getName() + ".mask");
@@ -4461,6 +4468,10 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
       if ((SI->getOperand(1) == Op0 && SI->getOperand(2) == Op1) ||
           (SI->getOperand(2) == Op0 && SI->getOperand(1) == Op1))
         return nullptr;
+
+  // Do this after checking for min/max to prevent infinite looping.
+  if (Instruction *Res = foldICmpWithZero(I))
+    return Res;
 
   // FIXME: We only do this after checking for min/max to prevent infinite
   // looping caused by a reverse canonicalization of these patterns for min/max.

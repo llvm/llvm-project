@@ -335,7 +335,7 @@ void SUnit::biasCriticalPath() {
     std::swap(*Preds.begin(), *BestI);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 raw_ostream &SUnit::print(raw_ostream &OS,
                           const SUnit *Entry, const SUnit *Exit) const {

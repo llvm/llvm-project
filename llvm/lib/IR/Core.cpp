@@ -358,7 +358,7 @@ LLVMContextRef LLVMGetTypeContext(LLVMTypeRef Ty) {
   return wrap(&unwrap(Ty)->getContext());
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LLVMDumpType(LLVMTypeRef Ty) {
   return unwrap(Ty)->dump();
 }

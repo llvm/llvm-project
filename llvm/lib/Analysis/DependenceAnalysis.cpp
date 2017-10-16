@@ -385,7 +385,7 @@ void DependenceInfo::Constraint::setAny(ScalarEvolution *NewSE) {
   Kind = Any;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // For debugging purposes. Dumps the constraint out to OS.
 LLVM_DUMP_METHOD void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
   if (isEmpty())

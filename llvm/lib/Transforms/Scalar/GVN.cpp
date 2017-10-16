@@ -646,7 +646,7 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   return PA;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
   errs() << "{\n";
   for (DenseMap<uint32_t, Value*>::iterator I = d.begin(),

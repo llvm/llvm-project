@@ -97,7 +97,7 @@ ARMConstantPoolValue::hasSameValue(ARMConstantPoolValue *ACPV) {
   return false;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ARMConstantPoolValue::dump() const {
   errs() << "  " << *this;
 }
