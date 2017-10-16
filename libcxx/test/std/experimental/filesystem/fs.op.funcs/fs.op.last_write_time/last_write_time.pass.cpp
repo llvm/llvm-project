@@ -89,9 +89,12 @@ bool TestSupportsNegativeTimes() {
 }
 
 // In some configurations, the comparison is tautological and the test is valid.
-// We disable the warning so that we can actually test it regardless.
+// We disable the warning so that we can actually test it regardless. Also, that
+// diagnostic is pretty new, so also don't fail if old clang does not support it
 #if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wtautological-constant-compare"
 #endif
 
@@ -123,9 +126,12 @@ static const bool SupportsMaxTime = TestSupportsMaxTime();
 } // end namespace
 
 // In some configurations, the comparison is tautological and the test is valid.
-// We disable the warning so that we can actually test it regardless.
+// We disable the warning so that we can actually test it regardless. Also, that
+// diagnostic is pretty new, so also don't fail if old clang does not support it
 #if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wtautological-constant-compare"
 #endif
 

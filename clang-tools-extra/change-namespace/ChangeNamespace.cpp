@@ -427,7 +427,8 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                      unless(templateSpecializationType())))))),
                            hasParent(nestedNameSpecifierLoc()),
                            hasAncestor(isImplicit()),
-                           hasAncestor(UsingShadowDeclInClass))),
+                           hasAncestor(UsingShadowDeclInClass),
+                           hasAncestor(functionDecl(isDefaulted())))),
               hasAncestor(decl().bind("dc")))
           .bind("type"),
       this);
@@ -451,6 +452,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
               specifiesType(hasDeclaration(DeclMatcher.bind("from_decl"))))),
           unless(anyOf(hasAncestor(isImplicit()),
                        hasAncestor(UsingShadowDeclInClass),
+                       hasAncestor(functionDecl(isDefaulted())),
                        hasAncestor(typeLoc(loc(qualType(hasDeclaration(
                            decl(equalsBoundNode("from_decl"))))))))))
           .bind("nested_specifier_loc"),

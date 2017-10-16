@@ -25,3 +25,38 @@ entry:
 }
 
 attributes #0 = { norecurse nounwind readonly }
+
+; test immediate out of 32-bit range
+; Source file:
+
+; unsigned long long
+; load_word(void *buf, unsigned long long off)
+; asm("llvm.bpf.load.word");
+;
+; int
+; foo(void *buf)
+; {
+;  unsigned long long sum = 0;
+;
+;  sum += load_word(buf, 100);
+;  sum += load_word(buf, 104);
+;
+;  if (sum != 0x1ffffffffULL)
+;    return ~0U;
+;
+;  return 0;
+;}
+
+; Function Attrs: nounwind readonly
+define i32 @foo(i8*) local_unnamed_addr #0 {
+  %2 = tail call i64 @llvm.bpf.load.word(i8* %0, i64 100)
+  %3 = tail call i64 @llvm.bpf.load.word(i8* %0, i64 104)
+  %4 = add i64 %3, %2
+  %5 = icmp ne i64 %4, 8589934591
+; CHECK:  r{{[0-9]+}} = 8589934591 ll
+  %6 = sext i1 %5 to i32
+  ret i32 %6
+}
+
+; Function Attrs: nounwind readonly
+declare i64 @llvm.bpf.load.word(i8*, i64) #1

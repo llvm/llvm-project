@@ -163,6 +163,7 @@ void FrameEntry::parseInstructions(DataExtractor Data, uint32_t *Offset,
         case DW_CFA_same_value:
         case DW_CFA_def_cfa_register:
         case DW_CFA_def_cfa_offset:
+        case DW_CFA_GNU_args_size:
           // Operands: ULEB128
           addInstruction(Opcode, Data.getULEB128(Offset));
           break;
