@@ -1,9 +1,5 @@
 # RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
 
-# This patch temporarily causes LD1Onev1d to match instead of LDRDui on a
-# couple functions. A patch to support iPTR will follow that fixes this.
-# XFAIL: *
-
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -533,13 +529,13 @@ registers:
 
 # CHECK:  body:
 # CHECK:    %0 = COPY %x0
-# CHECK:    %1 = LD1Onev2s %0
+# CHECK:    %1 = LDRDui %0, 0 :: (load 8 from %ir.addr)
 # CHECK:    %d0 = COPY %1
 body:             |
   bb.0:
     liveins: %x0
 
     %0(p0) = COPY %x0
-    %1(<2 x s32>) = G_LOAD %0 :: (load 4 from %ir.addr)
+    %1(<2 x s32>) = G_LOAD %0 :: (load 8 from %ir.addr)
     %d0 = COPY %1(<2 x s32>)
 ...

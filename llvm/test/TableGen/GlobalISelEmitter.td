@@ -55,15 +55,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFn(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> MatcherInfo;
+// CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 // CHECK-NEXT:    , State(2),
-// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, APIntImmPredicateFns, APFloatImmPredicateFns, {
-// CHECK-NEXT:      nullptr, // GICP_Invalid
-// CHECK-NEXT:      &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
-// CHECK-NEXT:      &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
-// CHECK-NEXT:    }})
+// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, APIntImmPredicateFns, APFloatImmPredicateFns, ComplexPredicateFns})
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -146,6 +143,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    nullptr,
 // CHECK-NEXT:    Predicate_simm9,
 // CHECK-NEXT:  };
+
+// CHECK-LABEL: MyTargetInstructionSelector::ComplexMatcherMemFn
+// CHECK-NEXT:  MyTargetInstructionSelector::ComplexPredicateFns[] = {
+// CHECK-NEXT:    nullptr, // GICP_Invalid
+// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
+// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
+// CHECK-NEXT:  }
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
 // CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
