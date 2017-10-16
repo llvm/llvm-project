@@ -94,6 +94,7 @@ bool TestSupportsNegativeTimes() {
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wtautological-constant-compare"
 #endif
 
@@ -130,6 +131,7 @@ static const bool SupportsMaxTime = TestSupportsMaxTime();
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wtautological-constant-compare"
 #endif
 

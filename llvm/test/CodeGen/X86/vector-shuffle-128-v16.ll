@@ -1215,6 +1215,28 @@ entry:
   ret <16 x i8> %shuffle
 }
 
+define <16 x i8> @shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; SSE:       # BB#0:
+; SSE-NEXT:    psrlw $8, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm1
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffe_v16i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = lshr <8 x i16> %a0, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %2 = lshr <8 x i16> %a1, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %3 = bitcast <8 x i16> %1 to <16 x i8>
+  %4 = bitcast <8 x i16> %2 to <16 x i8>
+  %5 = shufflevector <16 x i8> %3, <16 x i8> %4, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  ret <16 x i8> %5
+}
+
 define <16 x i8> @stress_test2(<16 x i8> %s.0.0, <16 x i8> %s.0.1, <16 x i8> %s.0.2) {
 ; Nothing interesting to test here. Just make sure we didn't crashe.
 ; ALL-LABEL: stress_test2:

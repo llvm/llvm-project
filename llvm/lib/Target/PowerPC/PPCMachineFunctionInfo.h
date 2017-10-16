@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Target/TargetCallingConv.h"
 
 namespace llvm {
 
@@ -113,6 +114,10 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// copies
   bool IsSplitCSR = false;
 
+  /// We keep track attributes for each live-in virtual registers
+  /// to use SExt/ZExt flags in later optimization.
+  std::vector<std::pair<unsigned, ISD::ArgFlagsTy>> LiveInAttrs;
+
 public:
   explicit PPCFunctionInfo(MachineFunction &MF) : MF(MF) {}
 
@@ -174,6 +179,19 @@ public:
 
   unsigned getVarArgsNumFPR() const { return VarArgsNumFPR; }
   void setVarArgsNumFPR(unsigned Num) { VarArgsNumFPR = Num; }
+
+  /// This function associates attributes for each live-in virtual register.
+  void addLiveInAttr(unsigned VReg, ISD::ArgFlagsTy Flags) {
+    LiveInAttrs.push_back(std::make_pair(VReg, Flags));
+  }
+
+  /// This function returns true if the spesified vreg is
+  /// a live-in register and sign-extended.
+  bool isLiveInSExt(unsigned VReg) const;
+
+  /// This function returns true if the spesified vreg is
+  /// a live-in register and zero-extended.
+  bool isLiveInZExt(unsigned VReg) const;
 
   int getCRSpillFrameIndex() const { return CRSpillFrameIndex; }
   void setCRSpillFrameIndex(int idx) { CRSpillFrameIndex = idx; }

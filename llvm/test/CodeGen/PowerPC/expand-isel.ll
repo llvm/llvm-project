@@ -215,9 +215,7 @@ cleanup:
 ; CHECK-LABEL: @testComplexISEL
 ; CHECK-DAG: [[LI:r[0-9]+]], 1
 ; CHECK-DAG: cmplwi [[LD:r[0-9]+]], 0
-; CHECK: beq cr0, [[EQ:.LBB[0-9_]+]]
-; CHECK: blr
-; CHECK: [[EQ]]
+; CHECK: bnelr cr0
 ; CHECK: xor [[XOR:r[0-9]+]]
 ; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]
 ; CHECK: rldicl [[SH:r[0-9]+]], [[CZ]], 58, 63

@@ -226,15 +226,21 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
-    if (IgnoreNodeResults(N))
+    DEBUG(dbgs() << "Legalizing node: "; N->dump());
+    if (IgnoreNodeResults(N)) {
+      DEBUG(dbgs() << "Ignoring node results\n");
       goto ScanOperands;
+    }
 
     // Scan the values produced by the node, checking to see if any result
     // types are illegal.
     for (unsigned i = 0, NumResults = N->getNumValues(); i < NumResults; ++i) {
       EVT ResultVT = N->getValueType(i);
+      DEBUG(dbgs() << "Analyzing result type: " <<
+                      ResultVT.getEVTString() << "\n");
       switch (getTypeAction(ResultVT)) {
       case TargetLowering::TypeLegal:
+        DEBUG(dbgs() << "Legal result type\n");
         break;
       // The following calls must take care of *all* of the node's results,
       // not just the illegal result they were passed (this includes results
@@ -291,9 +297,12 @@ ScanOperands:
       if (IgnoreNodeResults(N->getOperand(i).getNode()))
         continue;
 
-      EVT OpVT = N->getOperand(i).getValueType();
+      const auto Op = N->getOperand(i);
+      DEBUG(dbgs() << "Analyzing operand: "; Op.dump());
+      EVT OpVT = Op.getValueType();
       switch (getTypeAction(OpVT)) {
       case TargetLowering::TypeLegal:
+        DEBUG(dbgs() << "Legal operand\n");
         continue;
       // The following calls must either replace all of the node's results
       // using ReplaceValueWith, and return "false"; or update the node's

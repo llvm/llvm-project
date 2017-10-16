@@ -71,6 +71,7 @@ module Clang_Diagnostics {
   module Parse { header "Parse/ParseDiagnostic.h" export * }
   module Sema { header "Sema/SemaDiagnostic.h" export * }
   module Serialization { header "Serialization/SerializationDiagnostic.h" export * }
+  module Refactoring { header "Tooling/Refactoring/RefactoringDiagnostic.h" export * }
 }
 
 module Clang_Driver {

@@ -507,7 +507,7 @@ define i32 @clamp_check_for_no_infinite_loop1(i32 %i) {
 ; CHECK-LABEL: @clamp_check_for_no_infinite_loop1(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I:%.*]], 255
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[I]], i32 255
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[I]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SEL1]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[SEL1]], i32 0
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

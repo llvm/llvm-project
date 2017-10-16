@@ -29,13 +29,26 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/ADT/Statistic.h"
 #include "MCTargetDesc/PPCPredicates.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ppc-mi-peepholes"
 
+STATISTIC(NumEliminatedSExt, "Number of eliminated sign-extensions");
+STATISTIC(NumEliminatedZExt, "Number of eliminated zero-extensions");
 STATISTIC(NumOptADDLIs, "Number of optimized ADD instruction fed by LI");
+
+static cl::opt<bool>
+    EnableSExtElimination("ppc-eliminate-signext",
+                          cl::desc("enable elimination of sign-extensions"),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    EnableZExtElimination("ppc-eliminate-zeroext",
+                          cl::desc("enable elimination of zero-extensions"),
+                          cl::init(true), cl::Hidden);
 
 namespace llvm {
   void initializePPCMIPeepholePass(PassRegistry&);
@@ -108,6 +121,59 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
     return nullptr;
 
   return MRI->getVRegDef(Reg);
+}
+
+// This function returns number of known zero bits in output of MI
+// starting from the most significant bit.
+static unsigned
+getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
+  unsigned Opcode = MI->getOpcode();
+  if (Opcode == PPC::RLDICL || Opcode == PPC::RLDICLo ||
+      Opcode == PPC::RLDCL  || Opcode == PPC::RLDCLo)
+    return MI->getOperand(3).getImm();
+
+  if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDICo) &&
+       MI->getOperand(3).getImm() <= 63 - MI->getOperand(2).getImm())
+    return MI->getOperand(3).getImm();
+
+  if ((Opcode == PPC::RLWINM  || Opcode == PPC::RLWINMo ||
+       Opcode == PPC::RLWNM   || Opcode == PPC::RLWNMo  ||
+       Opcode == PPC::RLWINM8 || Opcode == PPC::RLWNM8) &&
+       MI->getOperand(3).getImm() <= MI->getOperand(4).getImm())
+    return 32 + MI->getOperand(3).getImm();
+
+  if (Opcode == PPC::ANDIo) {
+    uint16_t Imm = MI->getOperand(2).getImm();
+    return 48 + countLeadingZeros(Imm);
+  }
+
+  if (Opcode == PPC::CNTLZW  || Opcode == PPC::CNTLZWo ||
+      Opcode == PPC::CNTTZW  || Opcode == PPC::CNTTZWo ||
+      Opcode == PPC::CNTLZW8 || Opcode == PPC::CNTTZW8)
+    // The result ranges from 0 to 32.
+    return 58;
+
+  if (Opcode == PPC::CNTLZD  || Opcode == PPC::CNTLZDo ||
+      Opcode == PPC::CNTTZD  || Opcode == PPC::CNTTZDo)
+    // The result ranges from 0 to 64.
+    return 57;
+
+  if (Opcode == PPC::LHZ   || Opcode == PPC::LHZX  ||
+      Opcode == PPC::LHZ8  || Opcode == PPC::LHZX8 ||
+      Opcode == PPC::LHZU  || Opcode == PPC::LHZUX ||
+      Opcode == PPC::LHZU8 || Opcode == PPC::LHZUX8)
+    return 48;
+
+  if (Opcode == PPC::LBZ   || Opcode == PPC::LBZX  ||
+      Opcode == PPC::LBZ8  || Opcode == PPC::LBZX8 ||
+      Opcode == PPC::LBZU  || Opcode == PPC::LBZUX ||
+      Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8)
+    return 56;
+
+  if (TII->isZeroExtended(*MI))
+    return 32;
+
+  return 0;
 }
 
 // Perform peephole optimizations.
@@ -364,6 +430,156 @@ bool PPCMIPeephole::simplifyCode(void) {
             break;
           }
           removeFRSPIfPossible(P1);
+        }
+        break;
+      }
+      case PPC::EXTSH:
+      case PPC::EXTSH8:
+      case PPC::EXTSH8_32_64: {
+        if (!EnableSExtElimination) break;
+        unsigned NarrowReg = MI.getOperand(1).getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(NarrowReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        // If we've used a zero-extending load that we will sign-extend,
+        // just do a sign-extending load.
+        if (SrcMI->getOpcode() == PPC::LHZ ||
+            SrcMI->getOpcode() == PPC::LHZX) {
+          if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
+            break;
+          auto is64Bit = [] (unsigned Opcode) {
+            return Opcode == PPC::EXTSH8;
+          };
+          auto isXForm = [] (unsigned Opcode) {
+            return Opcode == PPC::LHZX;
+          };
+          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
+            if (is64Bit)
+              if (isXForm) return PPC::LHAX8;
+              else         return PPC::LHA8;
+            else
+              if (isXForm) return PPC::LHAX;
+              else         return PPC::LHA;
+          };
+          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
+                                       isXForm(SrcMI->getOpcode()));
+          DEBUG(dbgs() << "Zero-extending load\n");
+          DEBUG(SrcMI->dump());
+          DEBUG(dbgs() << "and sign-extension\n");
+          DEBUG(MI.dump());
+          DEBUG(dbgs() << "are merged into sign-extending load\n");
+          SrcMI->setDesc(TII->get(Opc));
+          SrcMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+          ToErase = &MI;
+          Simplified = true;
+          NumEliminatedSExt++;
+        }
+        break;
+      }
+      case PPC::EXTSW:
+      case PPC::EXTSW_32:
+      case PPC::EXTSW_32_64: {
+        if (!EnableSExtElimination) break;
+        unsigned NarrowReg = MI.getOperand(1).getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(NarrowReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        // If we've used a zero-extending load that we will sign-extend,
+        // just do a sign-extending load.
+        if (SrcMI->getOpcode() == PPC::LWZ ||
+            SrcMI->getOpcode() == PPC::LWZX) {
+          if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
+            break;
+          auto is64Bit = [] (unsigned Opcode) {
+            return Opcode == PPC::EXTSW || Opcode == PPC::EXTSW_32_64;
+          };
+          auto isXForm = [] (unsigned Opcode) {
+            return Opcode == PPC::LWZX;
+          };
+          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
+            if (is64Bit)
+              if (isXForm) return PPC::LWAX;
+              else         return PPC::LWA;
+            else
+              if (isXForm) return PPC::LWAX_32;
+              else         return PPC::LWA_32;
+          };
+          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
+                                       isXForm(SrcMI->getOpcode()));
+          DEBUG(dbgs() << "Zero-extending load\n");
+          DEBUG(SrcMI->dump());
+          DEBUG(dbgs() << "and sign-extension\n");
+          DEBUG(MI.dump());
+          DEBUG(dbgs() << "are merged into sign-extending load\n");
+          SrcMI->setDesc(TII->get(Opc));
+          SrcMI->getOperand(0).setReg(MI.getOperand(0).getReg());
+          ToErase = &MI;
+          Simplified = true;
+          NumEliminatedSExt++;
+        } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
+                   TII->isSignExtended(*SrcMI)) {
+          // We can eliminate EXTSW if the input is known to be already
+          // sign-extended.
+          DEBUG(dbgs() << "Removing redundant sign-extension\n");
+          unsigned TmpReg =
+            MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
+                  TmpReg);
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::INSERT_SUBREG),
+                  MI.getOperand(0).getReg())
+              .addReg(TmpReg)
+              .addReg(NarrowReg)
+              .addImm(PPC::sub_32);
+          ToErase = &MI;
+          Simplified = true;
+          NumEliminatedSExt++;
+        }
+        break;
+      }
+      case PPC::RLDICL: {
+        // We can eliminate RLDICL (e.g. for zero-extension)
+        // if all bits to clear are already zero in the input.
+        // This code assume following code sequence for zero-extension.
+        //   %vreg6<def> = COPY %vreg5:sub_32; (optional)
+        //   %vreg8<def> = IMPLICIT_DEF;
+        //   %vreg7<def,tied1> = INSERT_SUBREG %vreg8<tied0>, %vreg6, sub_32;
+        if (!EnableZExtElimination) break;
+
+        if (MI.getOperand(2).getImm() != 0)
+          break;
+
+        unsigned SrcReg = MI.getOperand(1).getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+        if (!(SrcMI && SrcMI->getOpcode() == PPC::INSERT_SUBREG &&
+              SrcMI->getOperand(0).isReg() && SrcMI->getOperand(1).isReg()))
+          break;
+
+        MachineInstr *ImpDefMI, *SubRegMI;
+        ImpDefMI = MRI->getVRegDef(SrcMI->getOperand(1).getReg());
+        SubRegMI = MRI->getVRegDef(SrcMI->getOperand(2).getReg());
+        if (ImpDefMI->getOpcode() != PPC::IMPLICIT_DEF) break;
+
+        SrcMI = SubRegMI;
+        if (SubRegMI->getOpcode() == PPC::COPY) {
+          unsigned CopyReg = SubRegMI->getOperand(1).getReg();
+          if (TargetRegisterInfo::isVirtualRegister(CopyReg))
+            SrcMI = MRI->getVRegDef(CopyReg);
+        }
+
+        unsigned KnownZeroCount = getKnownLeadingZeroCount(SrcMI, TII);
+        if (MI.getOperand(3).getImm() <= KnownZeroCount) {
+          DEBUG(dbgs() << "Removing redundant zero-extension\n");
+          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                  MI.getOperand(0).getReg())
+              .addReg(SrcReg);
+          ToErase = &MI;
+          Simplified = true;
+          NumEliminatedZExt++;
         }
         break;
       }

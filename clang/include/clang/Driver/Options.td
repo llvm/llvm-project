@@ -1045,6 +1045,13 @@ def fxray_never_instrument :
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.">;
 
+def ffine_grained_bitfield_accesses : Flag<["-"],
+  "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Use separate accesses for bitfields with legal widths and alignments.">;
+def fno_fine_grained_bitfield_accesses : Flag<["-"],
+  "fno-fine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Use large-integer access for consecutive bitfield runs.">;
+
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;

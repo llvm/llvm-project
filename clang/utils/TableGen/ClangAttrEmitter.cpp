@@ -3663,9 +3663,14 @@ class DocumentationData {
 public:
   const Record *Documentation;
   const Record *Attribute;
+  std::string Heading;
+  unsigned SupportedSpellings;
 
-  DocumentationData(const Record &Documentation, const Record &Attribute)
-      : Documentation(&Documentation), Attribute(&Attribute) {}
+  DocumentationData(const Record &Documentation, const Record &Attribute,
+                    const std::pair<std::string, unsigned> HeadingAndKinds)
+      : Documentation(&Documentation), Attribute(&Attribute),
+        Heading(std::move(HeadingAndKinds.first)),
+        SupportedSpellings(HeadingAndKinds.second) {}
 };
 
 static void WriteCategoryHeader(const Record *DocCategory,
@@ -3691,16 +3696,17 @@ enum SpellingKind {
   Pragma = 1 << 6
 };
 
-static void WriteDocumentation(RecordKeeper &Records,
-                               const DocumentationData &Doc, raw_ostream &OS) {
+static std::pair<std::string, unsigned>
+GetAttributeHeadingAndSpellingKinds(const Record &Documentation,
+                                    const Record &Attribute) {
   // FIXME: there is no way to have a per-spelling category for the attribute
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
 
-  std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Doc.Attribute);
+  std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
 
   // Determine the heading to be used for this attribute.
-  std::string Heading = Doc.Documentation->getValueAsString("Heading");
+  std::string Heading = Documentation.getValueAsString("Heading");
   bool CustomHeading = !Heading.empty();
   if (Heading.empty()) {
     // If there's only one spelling, we can simply use that.
@@ -3722,7 +3728,7 @@ static void WriteDocumentation(RecordKeeper &Records,
 
   // If the heading is still empty, it is an error.
   if (Heading.empty())
-    PrintFatalError(Doc.Attribute->getLoc(),
+    PrintFatalError(Attribute.getLoc(),
                     "This attribute requires a heading to be specified");
 
   // Gather a list of unique spellings; this is not the same as the semantic
@@ -3765,29 +3771,33 @@ static void WriteDocumentation(RecordKeeper &Records,
     }
     Heading += ")";
   }
-  OS << Heading << "\n" << std::string(Heading.length(), '-') << "\n";
-
   if (!SupportedSpellings)
-    PrintFatalError(Doc.Attribute->getLoc(),
+    PrintFatalError(Attribute.getLoc(),
                     "Attribute has no supported spellings; cannot be "
                     "documented");
+  return std::make_pair(std::move(Heading), SupportedSpellings);
+}
+
+static void WriteDocumentation(RecordKeeper &Records,
+                               const DocumentationData &Doc, raw_ostream &OS) {
+  OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
   // List what spelling syntaxes the attribute supports.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"C2x\", \"__declspec\", \"Keyword\",";
   OS << " \"Pragma\", \"Pragma clang attribute\"\n\n";
   OS << "   \"";
-  if (SupportedSpellings & GNU) OS << "X";
+  if (Doc.SupportedSpellings & GNU) OS << "X";
   OS << "\",\"";
-  if (SupportedSpellings & CXX11) OS << "X";
+  if (Doc.SupportedSpellings & CXX11) OS << "X";
   OS << "\",\"";
-  if (SupportedSpellings & C2x) OS << "X";
+  if (Doc.SupportedSpellings & C2x) OS << "X";
   OS << "\",\"";
-  if (SupportedSpellings & Declspec) OS << "X";
+  if (Doc.SupportedSpellings & Declspec) OS << "X";
   OS << "\",\"";
-  if (SupportedSpellings & Keyword) OS << "X";
+  if (Doc.SupportedSpellings & Keyword) OS << "X";
   OS << "\", \"";
-  if (SupportedSpellings & Pragma) OS << "X";
+  if (Doc.SupportedSpellings & Pragma) OS << "X";
   OS << "\", \"";
   if (getPragmaAttributeSupport(Records).isAttributedSupported(*Doc.Attribute))
     OS << "X";
@@ -3842,17 +3852,23 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
       if (Undocumented && Docs.size() > 1)
         PrintFatalError(Doc.getLoc(),
                         "Attribute is \"Undocumented\", but has multiple "
-                        "documentation categories");      
+                        "documentation categories");
 
       if (!Undocumented)
-        SplitDocs[Category].push_back(DocumentationData(Doc, Attr));
+        SplitDocs[Category].push_back(DocumentationData(
+            Doc, Attr, GetAttributeHeadingAndSpellingKinds(Doc, Attr)));
     }
   }
 
   // Having split the attributes out based on what documentation goes where,
   // we can begin to generate sections of documentation.
-  for (const auto &I : SplitDocs) {
+  for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
+
+    std::sort(I.second.begin(), I.second.end(),
+              [](const DocumentationData &D1, const DocumentationData &D2) {
+                return D1.Heading < D2.Heading;
+              });
 
     // Walk over each of the attributes in the category and write out their
     // documentation.

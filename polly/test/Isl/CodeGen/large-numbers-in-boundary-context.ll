@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; XFAIL: *
 ;
 ; The boundary context contains a constant that does not fit in 64 bits. Hence,
 ; make sure we bail out. On certain systems, e.g. AOSP, no runtime support for

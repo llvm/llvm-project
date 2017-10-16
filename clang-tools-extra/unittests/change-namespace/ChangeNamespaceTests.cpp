@@ -2093,6 +2093,68 @@ TEST_F(ChangeNamespaceTest, TypeAsTemplateParameter) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, DefaultMoveConstructors) {
+  std::string Code = "namespace na {\n"
+                     "class B {\n"
+                     " public:\n"
+                     "  B() = default;\n"
+                     "  // Allow move only.\n"
+                     "  B(B&&) = default;\n"
+                     "  B& operator=(B&&) = default;\n"
+                     "  B(const B&) = delete;\n"
+                     "  B& operator=(const B&) = delete;\n"
+                     " private:\n"
+                     "  int ref_;\n"
+                     "};\n"
+                     "} // namespace na\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "class A {\n"
+                     "public:\n"
+                     "  A() = default;\n"
+                     "  A(A&&) = default;\n"
+                     "  A& operator=(A&&) = default;\n"
+                     "private:\n"
+                     "  B b;\n"
+                     "  A(const A&) = delete;\n"
+                     "  A& operator=(const A&) = delete;\n"
+                     "};\n"
+                     "void f() { A a; a = A(); A aa = A(); }\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "class B {\n"
+                         " public:\n"
+                         "  B() = default;\n"
+                         "  // Allow move only.\n"
+                         "  B(B&&) = default;\n"
+                         "  B& operator=(B&&) = default;\n"
+                         "  B(const B&) = delete;\n"
+                         "  B& operator=(const B&) = delete;\n"
+                         " private:\n"
+                         "  int ref_;\n"
+                         "};\n"
+                         "} // namespace na\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "class A {\n"
+                         "public:\n"
+                         "  A() = default;\n"
+                         "  A(A&&) = default;\n"
+                         "  A& operator=(A&&) = default;\n"
+                         "private:\n"
+                         "  na::B b;\n"
+                         "  A(const A&) = delete;\n"
+                         "  A& operator=(const A&) = delete;\n"
+                         "};\n"
+                         "void f() { A a; a = A(); A aa = A(); }\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

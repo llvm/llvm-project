@@ -318,6 +318,9 @@ struct LineState {
   /// \brief \c true if this line contains a continued for-loop section.
   bool LineContainsContinuedForLoopSection;
 
+  /// \brief \c true if \p NextToken should not continue this line.
+  bool NoContinuation;
+
   /// \brief The \c NestingLevel at the start of this line.
   unsigned StartOfLineLevel;
 
@@ -364,6 +367,8 @@ struct LineState {
     if (LineContainsContinuedForLoopSection !=
         Other.LineContainsContinuedForLoopSection)
       return LineContainsContinuedForLoopSection;
+    if (NoContinuation != Other.NoContinuation)
+      return NoContinuation;
     if (StartOfLineLevel != Other.StartOfLineLevel)
       return StartOfLineLevel < Other.StartOfLineLevel;
     if (LowestLevelOnLine != Other.LowestLevelOnLine)

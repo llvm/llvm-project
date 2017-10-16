@@ -1186,10 +1186,8 @@ int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
   }
 
   const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
-  for (MachineRegisterInfo::livein_iterator LI = MRI.livein_begin(),
-                                            LE = MRI.livein_end();
-                                            LI != LE; ++LI) {
-    unsigned Reg = LI->first;
+  for (std::pair<unsigned, unsigned> LI : MRI.liveins()) {
+    unsigned Reg = LI.first;
     if (TargetRegisterInfo::isVirtualRegister(Reg) ||
         !IndirectRC->contains(Reg))
       continue;
