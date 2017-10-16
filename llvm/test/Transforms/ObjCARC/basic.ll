@@ -1345,6 +1345,26 @@ B:
 C:
   %h = phi double* [ null, %A ], [ %p, %B ]
   %c = bitcast double* %h to i8*
+  call void @objc_release(i8* %c), !clang.imprecise_release !0
+  ret void
+}
+
+; Do not move an objc_release that doesn't have the clang.imprecise_release tag.
+
+; CHECK-LABEL: define void @test22_precise(
+; CHECK: %[[P0:.*]] = phi double*
+; CHECK: %[[V0:.*]] = bitcast double* %[[P0]] to i8*
+; CHECK: call void @objc_release(i8* %[[V0]])
+; CHECK: ret void
+define void @test22_precise(double* %p, i1 %a) {
+  br i1 %a, label %A, label %B
+A:
+  br label %C
+B:
+  br label %C
+C:
+  %h = phi double* [ null, %A ], [ %p, %B ]
+  %c = bitcast double* %h to i8*
   call void @objc_release(i8* %c)
   ret void
 }

@@ -1746,9 +1746,10 @@ private:
   const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride,
                              bool Equality);
 
-  // Compute the maximum backedge count based on the range of values
-  // permitted by Start, End, and Stride.
-  const SCEV *computeMaxBECount(const SCEV *Start, const SCEV *Stride,
+  /// Compute the maximum backedge count based on the range of values
+  /// permitted by Start, End, and Stride. This is for loops of the form
+  /// {Start, +, Stride} LT End.
+  const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                 const SCEV *End, unsigned BitWidth,
                                 bool IsSigned);
 

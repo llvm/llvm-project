@@ -684,7 +684,12 @@ Following notations are used for specifying relocation calculations:
 
 **S**
   Represents the value of the symbol whose index resides in the relocation
-  entry.
+  entry. Relocations not using this must specify a symbol index of ``STN_UNDEF``.
+
+**B**
+  Represents the base address of a loaded executable or shared object which is
+  the difference between the ELF address and the actual load address. Relocations
+  using this are only valid in executable or shared objects.
 
 The following relocation types are supported:
 
@@ -706,6 +711,8 @@ The following relocation types are supported:
      ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
      ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
      ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
+     *reserved*                  12
+     ``R_AMDGPU_RELATIVE64``     13     ``word64``  B + A
      ==========================  =====  ==========  ==============================
 
 .. _amdgpu-dwarf:

@@ -312,11 +312,9 @@ static void HandleVRSaveUpdate(MachineInstr &MI, const TargetInstrInfo &TII) {
 
   // Live in and live out values already must be in the mask, so don't bother
   // marking them.
-  for (MachineRegisterInfo::livein_iterator
-       I = MF->getRegInfo().livein_begin(),
-       E = MF->getRegInfo().livein_end(); I != E; ++I) {
-    unsigned RegNo = TRI->getEncodingValue(I->first);
-    if (VRRegNo[RegNo] == I->first)        // If this really is a vector reg.
+  for (std::pair<unsigned, unsigned> LI : MF->getRegInfo().liveins()) {
+    unsigned RegNo = TRI->getEncodingValue(LI.first);
+    if (VRRegNo[RegNo] == LI.first)        // If this really is a vector reg.
       UsedRegMask &= ~(1 << (31-RegNo));   // Doesn't need to be marked.
   }
 

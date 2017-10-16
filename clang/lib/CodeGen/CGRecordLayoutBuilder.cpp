@@ -403,6 +403,27 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
     }
     return;
   }
+
+  // Check if current Field is better as a single field run. When current field
+  // has legal integer width, and its bitfield offset is naturally aligned, it
+  // is better to make the bitfield a separate storage component so as it can be
+  // accessed directly with lower cost.
+  auto IsBetterAsSingleFieldRun = [&](RecordDecl::field_iterator Field) {
+    if (!Types.getCodeGenOpts().FineGrainedBitfieldAccesses)
+      return false;
+    unsigned Width = Field->getBitWidthValue(Context);
+    if (!DataLayout.isLegalInteger(Width))
+      return false;
+    // Make sure Field is natually aligned if it is treated as an IType integer.
+    if (getFieldBitOffset(*Field) %
+            Context.toBits(getAlignment(getIntNType(Width))) !=
+        0)
+      return false;
+    return true;
+  };
+
+  // The start field is better as a single field run.
+  bool StartFieldAsSingleRun = false;
   for (;;) {
     // Check to see if we need to start a new run.
     if (Run == FieldEnd) {
@@ -414,17 +435,28 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
         Run = Field;
         StartBitOffset = getFieldBitOffset(*Field);
         Tail = StartBitOffset + Field->getBitWidthValue(Context);
+        StartFieldAsSingleRun = IsBetterAsSingleFieldRun(Run);
       }
       ++Field;
       continue;
     }
-    // Add bitfields to the run as long as they qualify.
-    if (Field != FieldEnd && Field->getBitWidthValue(Context) != 0 &&
+
+    // If the start field of a new run is better as a single run, or
+    // if current field is better as a single run, or
+    // if current field has zero width bitfield, or
+    // if the offset of current field is inconsistent with the offset of
+    // previous field plus its offset,
+    // skip the block below and go ahead to emit the storage.
+    // Otherwise, try to add bitfields to the run.
+    if (!StartFieldAsSingleRun && Field != FieldEnd &&
+        !IsBetterAsSingleFieldRun(Field) &&
+        Field->getBitWidthValue(Context) != 0 &&
         Tail == getFieldBitOffset(*Field)) {
       Tail += Field->getBitWidthValue(Context);
       ++Field;
       continue;
     }
+
     // We've hit a break-point in the run and need to emit a storage field.
     llvm::Type *Type = getIntNType(Tail - StartBitOffset);
     // Add the storage member to the record and set the bitfield info for all of
@@ -435,6 +467,7 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
       Members.push_back(MemberInfo(bitsToCharUnits(StartBitOffset),
                                    MemberInfo::Field, nullptr, *Run));
     Run = FieldEnd;
+    StartFieldAsSingleRun = false;
   }
 }
 

@@ -913,8 +913,8 @@ void DataFlowGraph::build(unsigned Options) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineBasicBlock &EntryB = *EA.Addr->getCode();
   assert(EntryB.pred_empty() && "Function entry block has predecessors");
-  for (auto I = MRI.livein_begin(), E = MRI.livein_end(); I != E; ++I)
-    LiveIns.insert(RegisterRef(I->first));
+  for (std::pair<unsigned,unsigned> P : MRI.liveins())
+    LiveIns.insert(RegisterRef(P.first));
   if (MRI.tracksLiveness()) {
     for (auto I : EntryB.liveins())
       LiveIns.insert(RegisterRef(I.PhysReg, I.LaneMask));

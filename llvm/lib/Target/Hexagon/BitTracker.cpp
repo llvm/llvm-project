@@ -181,8 +181,8 @@ namespace llvm {
 } // end namespace llvm
 
 void BitTracker::print_cells(raw_ostream &OS) const {
-  for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I)
-    dbgs() << PrintReg(I->first, &ME.TRI) << " -> " << I->second << "\n";
+  for (const std::pair<unsigned, RegisterCell> P : Map)
+    dbgs() << PrintReg(P.first, &ME.TRI) << " -> " << P.second << "\n";
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
@@ -830,18 +830,16 @@ void BT::visitNonBranch(const MachineInstr &MI) {
              << " cell: " << ME.getCell(RU, Map) << "\n";
     }
     dbgs() << "Outputs:\n";
-    for (CellMapType::iterator I = ResMap.begin(), E = ResMap.end();
-         I != E; ++I) {
-      RegisterRef RD(I->first);
-      dbgs() << "  " << PrintReg(I->first, &ME.TRI) << " cell: "
+    for (const std::pair<unsigned, RegisterCell> &P : ResMap) {
+      RegisterRef RD(P.first);
+      dbgs() << "  " << PrintReg(P.first, &ME.TRI) << " cell: "
              << ME.getCell(RD, ResMap) << "\n";
     }
   }
 
   // Iterate over all definitions of the instruction, and update the
   // cells accordingly.
-  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     // Visit register defs only.
     if (!MO.isReg() || !MO.isDef())
       continue;
@@ -926,14 +924,11 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
     ++It;
   } while (FallsThrough && It != End);
 
-  using succ_iterator = MachineBasicBlock::const_succ_iterator;
-
   if (!DefaultToAll) {
     // Need to add all CFG successors that lead to EH landing pads.
     // There won't be explicit branches to these blocks, but they must
     // be processed.
-    for (succ_iterator I = B.succ_begin(), E = B.succ_end(); I != E; ++I) {
-      const MachineBasicBlock *SB = *I;
+    for (const MachineBasicBlock *SB : B.successors()) {
       if (SB->isEHPad())
         Targets.insert(SB);
     }
@@ -944,33 +939,27 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    for (succ_iterator I = B.succ_begin(), E = B.succ_end(); I != E; ++I)
-      Targets.insert(*I);
+    for (const MachineBasicBlock *SB : B.successors())
+      Targets.insert(SB);
   }
 
-  for (unsigned i = 0, n = Targets.size(); i < n; ++i) {
-    int TargetN = Targets[i]->getNumber();
-    FlowQ.push(CFGEdge(ThisN, TargetN));
-  }
+  for (const MachineBasicBlock *TB : Targets)
+    FlowQ.push(CFGEdge(ThisN, TB->getNumber()));
 }
 
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
     dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
 
-  using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-
-  use_iterator End = MRI.use_nodbg_end();
-  for (use_iterator I = MRI.use_nodbg_begin(Reg); I != End; ++I) {
-    MachineInstr *UseI = I->getParent();
-    if (!InstrExec.count(UseI))
+  for (const MachineInstr &UseI : MRI.use_nodbg_instructions(Reg)) {
+    if (!InstrExec.count(&UseI))
       continue;
-    if (UseI->isPHI())
-      visitPHI(*UseI);
-    else if (!UseI->isBranch())
-      visitNonBranch(*UseI);
+    if (UseI.isPHI())
+      visitPHI(UseI);
+    else if (!UseI.isBranch())
+      visitNonBranch(UseI);
     else
-      visitBranchesFrom(*UseI);
+      visitBranchesFrom(UseI);
   }
 }
 
@@ -993,8 +982,8 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
   (void)NME;
   assert((OME-OMB == NME-NMB) &&
          "Substituting registers of different lengths");
-  for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I) {
-    RegisterCell &RC = I->second;
+  for (std::pair<const unsigned, RegisterCell> &P : Map) {
+    RegisterCell &RC = P.second;
     for (uint16_t i = 0, w = RC.width(); i < w; ++i) {
       BitValue &V = RC[i];
       if (V.Type != BitValue::Ref || V.RefI.Reg != OldRR.Reg)
@@ -1045,10 +1034,9 @@ void BT::run() {
   const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
 
   unsigned MaxBN = 0;
-  for (MachineFunction::const_iterator I = MF.begin(), E = MF.end();
-       I != E; ++I) {
-    assert(I->getNumber() >= 0 && "Disconnected block");
-    unsigned BN = I->getNumber();
+  for (const MachineBasicBlock &B : MF) {
+    assert(B.getNumber() >= 0 && "Disconnected block");
+    unsigned BN = B.getNumber();
     if (BN > MaxBN)
       MaxBN = BN;
   }

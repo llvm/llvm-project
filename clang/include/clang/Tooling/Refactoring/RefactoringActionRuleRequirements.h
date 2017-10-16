@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
 #include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
 #include "llvm/Support/Error.h"
@@ -47,10 +48,7 @@ public:
   Expected<SourceRange> evaluate(RefactoringRuleContext &Context) const {
     if (Context.getSelectionRange().isValid())
       return Context.getSelectionRange();
-    // FIXME: Use a diagnostic.
-    return llvm::make_error<llvm::StringError>(
-        "refactoring action can't be initiated without a selection",
-        llvm::inconvertibleErrorCode());
+    return Context.createDiagnosticError(diag::err_refactor_no_selection);
   }
 };
 

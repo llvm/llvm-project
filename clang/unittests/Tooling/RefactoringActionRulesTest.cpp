@@ -11,6 +11,7 @@
 #include "RewriterTestContext.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Errc.h"
@@ -128,12 +129,12 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
         createReplacements(Rule, RefContext);
 
     ASSERT_TRUE(!ErrorOrResult);
-    std::string Message;
-    llvm::handleAllErrors(
-        ErrorOrResult.takeError(),
-        [&](llvm::StringError &Error) { Message = Error.getMessage(); });
-    EXPECT_EQ(Message,
-              "refactoring action can't be initiated without a selection");
+    unsigned DiagID;
+    llvm::handleAllErrors(ErrorOrResult.takeError(),
+                          [&](DiagnosticError &Error) {
+                            DiagID = Error.getDiagnostic().second.getDiagID();
+                          });
+    EXPECT_EQ(DiagID, diag::err_refactor_no_selection);
   }
 }
 

@@ -219,3 +219,33 @@ define <4 x i32> @clamp_unsigned2(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define <4 x i32> @wrong_pred_for_smin_with_not(<4 x i32> %x) {
+; CHECK-LABEL: wrong_pred_for_smin_with_not:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [4294967291,4294967291,4294967291,4294967291]
+; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %not_x = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp = icmp ugt <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
+  %sel = select <4 x i1> %cmp, <4 x i32> %not_x, <4 x i32> <i32 -5, i32 -5, i32 -5, i32 -5>
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @wrong_pred_for_smin_with_subnsw(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: wrong_pred_for_smin_with_subnsw:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %sub = sub nsw <4 x i32> %x, %y
+  %cmp = icmp ugt <4 x i32> %x, %y
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %sub
+  ret <4 x i32> %sel
+}
+
