@@ -124,7 +124,7 @@ void Pass::print(raw_ostream &OS, const Module *) const {
   OS << "Pass::print not implemented for pass: '" << getPassName() << "'!\n";
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // dump - call print(cerr);
 LLVM_DUMP_METHOD void Pass::dump() const {
   print(dbgs(), nullptr);

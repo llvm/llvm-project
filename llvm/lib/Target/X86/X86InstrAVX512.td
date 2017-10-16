@@ -8006,46 +8006,6 @@ defm VPMOVSXWD: avx512_extend_WD<0x23, "vpmovsxwd", X86vsext, sext_invec, "s">;
 defm VPMOVSXWQ: avx512_extend_WQ<0x24, "vpmovsxwq", X86vsext, sext_invec, "s">;
 defm VPMOVSXDQ: avx512_extend_DQ<0x25, "vpmovsxdq", X86vsext, sext_invec, "s">;
 
-// EXTLOAD patterns, implemented using vpmovz
-multiclass avx512_ext_lowering<string InstrStr, X86VectorVTInfo To,
-                               X86VectorVTInfo From, PatFrag LdFrag> {
-  def : Pat<(To.VT (LdFrag addr:$src)),
-            (!cast<Instruction>("VPMOVZX"#InstrStr#"rm") addr:$src)>;
-  def : Pat<(To.VT (vselect To.KRCWM:$mask, (LdFrag addr:$src), To.RC:$src0)),
-            (!cast<Instruction>("VPMOVZX"#InstrStr#"rmk") To.RC:$src0,
-             To.KRC:$mask, addr:$src)>;
-  def : Pat<(To.VT (vselect To.KRCWM:$mask, (LdFrag addr:$src),
-                    To.ImmAllZerosV)),
-            (!cast<Instruction>("VPMOVZX"#InstrStr#"rmkz") To.KRC:$mask,
-             addr:$src)>;
-}
-
-let Predicates = [HasVLX, HasBWI] in {
-  defm : avx512_ext_lowering<"BWZ128", v8i16x_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"BWZ256", v16i16x_info, v16i8x_info,  extloadvi8>;
-}
-let Predicates = [HasBWI] in {
-  defm : avx512_ext_lowering<"BWZ",    v32i16_info,  v32i8x_info,  extloadvi8>;
-}
-let Predicates = [HasVLX, HasAVX512] in {
-  defm : avx512_ext_lowering<"BDZ128", v4i32x_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"BDZ256", v8i32x_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"BQZ128", v2i64x_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"BQZ256", v4i64x_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"WDZ128", v4i32x_info,  v8i16x_info,  extloadvi16>;
-  defm : avx512_ext_lowering<"WDZ256", v8i32x_info,  v8i16x_info,  extloadvi16>;
-  defm : avx512_ext_lowering<"WQZ128", v2i64x_info,  v8i16x_info,  extloadvi16>;
-  defm : avx512_ext_lowering<"WQZ256", v4i64x_info,  v8i16x_info,  extloadvi16>;
-  defm : avx512_ext_lowering<"DQZ128", v2i64x_info,  v4i32x_info,  extloadvi32>;
-  defm : avx512_ext_lowering<"DQZ256", v4i64x_info,  v4i32x_info,  extloadvi32>;
-}
-let Predicates = [HasAVX512] in {
-  defm : avx512_ext_lowering<"BDZ",    v16i32_info,  v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"BQZ",    v8i64_info,   v16i8x_info,  extloadvi8>;
-  defm : avx512_ext_lowering<"WDZ",    v16i32_info,  v16i16x_info, extloadvi16>;
-  defm : avx512_ext_lowering<"WQZ",    v8i64_info,   v8i16x_info,  extloadvi16>;
-  defm : avx512_ext_lowering<"DQZ",    v8i64_info,   v8i32x_info,  extloadvi32>;
-}
 
 multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
                                  SDNode InVecOp, PatFrag ExtLoad16> {

@@ -3108,7 +3108,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
   // node so that legalize doesn't hack it.
 
-  SDValue CalleeLo;
   EVT Ty = Callee.getValueType();
   bool GlobalOrExternal = false, IsCallReloc = false;
 

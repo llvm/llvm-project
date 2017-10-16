@@ -11,88 +11,88 @@ define <16 x i16> @test_16xi16_perm_mask0(<16 x i16> %vec) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mask0(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mask0(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:0.50]
-; CHECK-NEXT:    movw $-10197, %ax # imm = 0xD82B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm3, %ymm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mask0(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_mask0(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:0.50]
-; CHECK-NEXT:    movw $-10197, %ax # imm = 0xD82B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mask1(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mask1(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:0.50]
-; CHECK-NEXT:    movw $-15864, %ax # imm = 0xC208
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm3, %ymm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 4, i32 11, i32 14, i32 10, i32 7, i32 1, i32 6, i32 9, i32 14, i32 15, i32 7, i32 13, i32 4, i32 12, i32 8, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mask1(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_mask1(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:0.50]
-; CHECK-NEXT:    movw $-15864, %ax # imm = 0xC208
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 4, i32 11, i32 14, i32 10, i32 7, i32 1, i32 6, i32 9, i32 14, i32 15, i32 7, i32 13, i32 4, i32 12, i32 8, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mask2(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mask2(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:0.50]
-; CHECK-NEXT:    movw $27562, %ax # imm = 0x6BAA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm3, %ymm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 11, i32 6, i32 13, i32 10, i32 0, i32 7, i32 13, i32 3, i32 5, i32 13, i32 3, i32 9, i32 3, i32 15, i32 12, i32 7>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mask2(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_mask2(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:0.50]
-; CHECK-NEXT:    movw $27562, %ax # imm = 0x6BAA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 11, i32 6, i32 13, i32 10, i32 0, i32 7, i32 13, i32 3, i32 5, i32 13, i32 3, i32 9, i32 3, i32 15, i32 12, i32 7>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 define <16 x i16> @test_16xi16_perm_mask3(<16 x i16> %vec) {
@@ -104,32 +104,32 @@ define <16 x i16> @test_16xi16_perm_mask3(<16 x i16> %vec) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mask3(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mask3(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:0.50]
-; CHECK-NEXT:    movw $16968, %ax # imm = 0x4248
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm3, %ymm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mask3(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_mask3(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:0.50]
-; CHECK-NEXT:    movw $16968, %ax # imm = 0x4248
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 define <16 x i16> @test_16xi16_perm_mem_mask0(<16 x i16>* %vp) {
@@ -142,93 +142,93 @@ define <16 x i16> @test_16xi16_perm_mem_mask0(<16 x i16>* %vp) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mem_mask0(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mem_mask0(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:0.50]
-; CHECK-NEXT:    movw $-27811, %ax # imm = 0x935D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm2, %ymm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mem_mask0(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_mem_mask0(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:0.50]
-; CHECK-NEXT:    movw $-27811, %ax # imm = 0x935D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_mem_mask1(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mem_mask1(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:0.50]
-; CHECK-NEXT:    movw $19027, %ax # imm = 0x4A53
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm2, %ymm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 14, i32 9, i32 15, i32 9, i32 7, i32 10, i32 15, i32 14, i32 12, i32 1, i32 9, i32 7, i32 10, i32 13, i32 3, i32 11>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mem_mask1(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_mem_mask1(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:0.50]
-; CHECK-NEXT:    movw $19027, %ax # imm = 0x4A53
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 14, i32 9, i32 15, i32 9, i32 7, i32 10, i32 15, i32 14, i32 12, i32 1, i32 9, i32 7, i32 10, i32 13, i32 3, i32 11>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_mem_mask2(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mem_mask2(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:0.50]
-; CHECK-NEXT:    movw $12412, %ax # imm = 0x307C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm2, %ymm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 12, i32 5, i32 13, i32 1, i32 2, i32 11, i32 0, i32 9, i32 14, i32 8, i32 10, i32 0, i32 10, i32 9>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mem_mask2(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_mem_mask2(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:0.50]
-; CHECK-NEXT:    movw $12412, %ax # imm = 0x307C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 12, i32 5, i32 13, i32 1, i32 2, i32 11, i32 0, i32 9, i32 14, i32 8, i32 10, i32 0, i32 10, i32 9>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
@@ -242,33 +242,33 @@ define <16 x i16> @test_16xi16_perm_mem_mask3(<16 x i16>* %vp) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_mem_mask3(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_mem_mask3(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:0.50]
-; CHECK-NEXT:    movw $12238, %ax # imm = 0x2FCE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm2, %ymm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_mem_mask3(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_mem_mask3(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:0.50]
-; CHECK-NEXT:    movw $12238, %ax # imm = 0x2FCE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
@@ -281,88 +281,88 @@ define <32 x i16> @test_32xi16_perm_mask0(<32 x i16> %vec) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 16, i32 1, i32 3, i32 31, i32 6, i32 11, i32 23, i32 26, i32 29, i32 5, i32 21, i32 30, i32 1, i32 21, i32 27, i32 10, i32 8, i32 19, i32 14, i32 5, i32 15, i32 13, i32 18, i32 16, i32 9, i32 11, i32 26, i32 8, i32 17, i32 0, i32 23, i32 10>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mask0(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mask0(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [16,1,3,31,6,11,23,26,29,5,21,30,1,21,27,10,8,19,14,5,15,13,18,16,9,11,26,8,17,0,23,10] sched: [8:0.50]
-; CHECK-NEXT:    movl $948454498, %eax # imm = 0x38884462
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [16,1,3,31,6,11,23,26,29,5,21,30,1,21,27,10,8,19,14,5,15,13,18,16,9,11,26,8,17,0,23,10] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm3, %zmm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 16, i32 1, i32 3, i32 31, i32 6, i32 11, i32 23, i32 26, i32 29, i32 5, i32 21, i32 30, i32 1, i32 21, i32 27, i32 10, i32 8, i32 19, i32 14, i32 5, i32 15, i32 13, i32 18, i32 16, i32 9, i32 11, i32 26, i32 8, i32 17, i32 0, i32 23, i32 10>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mask0(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_mask0(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16,1,3,31,6,11,23,26,29,5,21,30,1,21,27,10,8,19,14,5,15,13,18,16,9,11,26,8,17,0,23,10] sched: [8:0.50]
-; CHECK-NEXT:    movl $948454498, %eax # imm = 0x38884462
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [16,1,3,31,6,11,23,26,29,5,21,30,1,21,27,10,8,19,14,5,15,13,18,16,9,11,26,8,17,0,23,10] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 16, i32 1, i32 3, i32 31, i32 6, i32 11, i32 23, i32 26, i32 29, i32 5, i32 21, i32 30, i32 1, i32 21, i32 27, i32 10, i32 8, i32 19, i32 14, i32 5, i32 15, i32 13, i32 18, i32 16, i32 9, i32 11, i32 26, i32 8, i32 17, i32 0, i32 23, i32 10>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mask1(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mask1(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,8,7,30,11,9,11,30,20,19,22,12,13,20,0,6,10,7,20,12,28,18,13,12,22,13,21,1,14,8,5,16] sched: [8:0.50]
-; CHECK-NEXT:    movl $-1516442487, %eax # imm = 0xA59CEC89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [1,8,7,30,11,9,11,30,20,19,22,12,13,20,0,6,10,7,20,12,28,18,13,12,22,13,21,1,14,8,5,16] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm3, %zmm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 1, i32 8, i32 7, i32 30, i32 11, i32 9, i32 11, i32 30, i32 20, i32 19, i32 22, i32 12, i32 13, i32 20, i32 0, i32 6, i32 10, i32 7, i32 20, i32 12, i32 28, i32 18, i32 13, i32 12, i32 22, i32 13, i32 21, i32 1, i32 14, i32 8, i32 5, i32 16>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mask1(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_mask1(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,8,7,30,11,9,11,30,20,19,22,12,13,20,0,6,10,7,20,12,28,18,13,12,22,13,21,1,14,8,5,16] sched: [8:0.50]
-; CHECK-NEXT:    movl $-1516442487, %eax # imm = 0xA59CEC89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,8,7,30,11,9,11,30,20,19,22,12,13,20,0,6,10,7,20,12,28,18,13,12,22,13,21,1,14,8,5,16] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 1, i32 8, i32 7, i32 30, i32 11, i32 9, i32 11, i32 30, i32 20, i32 19, i32 22, i32 12, i32 13, i32 20, i32 0, i32 6, i32 10, i32 7, i32 20, i32 12, i32 28, i32 18, i32 13, i32 12, i32 22, i32 13, i32 21, i32 1, i32 14, i32 8, i32 5, i32 16>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mask2(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mask2(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [15,17,24,28,15,9,14,25,28,25,6,31,20,2,23,31,12,21,10,6,22,0,26,16,3,3,20,27,8,31,3,27] sched: [8:0.50]
-; CHECK-NEXT:    movl $1504501134, %eax # imm = 0x59ACDD8E
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [15,17,24,28,15,9,14,25,28,25,6,31,20,2,23,31,12,21,10,6,22,0,26,16,3,3,20,27,8,31,3,27] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm3, %zmm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 15, i32 17, i32 24, i32 28, i32 15, i32 9, i32 14, i32 25, i32 28, i32 25, i32 6, i32 31, i32 20, i32 2, i32 23, i32 31, i32 12, i32 21, i32 10, i32 6, i32 22, i32 0, i32 26, i32 16, i32 3, i32 3, i32 20, i32 27, i32 8, i32 31, i32 3, i32 27>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mask2(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_mask2(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,17,24,28,15,9,14,25,28,25,6,31,20,2,23,31,12,21,10,6,22,0,26,16,3,3,20,27,8,31,3,27] sched: [8:0.50]
-; CHECK-NEXT:    movl $1504501134, %eax # imm = 0x59ACDD8E
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [15,17,24,28,15,9,14,25,28,25,6,31,20,2,23,31,12,21,10,6,22,0,26,16,3,3,20,27,8,31,3,27] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 15, i32 17, i32 24, i32 28, i32 15, i32 9, i32 14, i32 25, i32 28, i32 25, i32 6, i32 31, i32 20, i32 2, i32 23, i32 31, i32 12, i32 21, i32 10, i32 6, i32 22, i32 0, i32 26, i32 16, i32 3, i32 3, i32 20, i32 27, i32 8, i32 31, i32 3, i32 27>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 define <32 x i16> @test_32xi16_perm_mask3(<32 x i16> %vec) {
@@ -374,32 +374,32 @@ define <32 x i16> @test_32xi16_perm_mask3(<32 x i16> %vec) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 12, i32 2, i32 8, i32 14, i32 25, i32 27, i32 4, i32 16, i32 20, i32 11, i32 27, i32 8, i32 0, i32 1, i32 21, i32 17, i32 30, i32 30, i32 29, i32 1, i32 23, i32 22, i32 20, i32 22, i32 28, i32 20, i32 11, i32 17, i32 6, i32 18, i32 0, i32 4>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mask3(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mask3(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [12,2,8,14,25,27,4,16,20,11,27,8,0,1,21,17,30,30,29,1,23,22,20,22,28,20,11,17,6,18,0,4] sched: [8:0.50]
-; CHECK-NEXT:    movl $774459490, %eax # imm = 0x2E295062
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm1 {%k1} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [12,2,8,14,25,27,4,16,20,11,27,8,0,1,21,17,30,30,29,1,23,22,20,22,28,20,11,17,6,18,0,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm3, %zmm1 {%k1} # sched: [6:2.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 12, i32 2, i32 8, i32 14, i32 25, i32 27, i32 4, i32 16, i32 20, i32 11, i32 27, i32 8, i32 0, i32 1, i32 21, i32 17, i32 30, i32 30, i32 29, i32 1, i32 23, i32 22, i32 20, i32 22, i32 28, i32 20, i32 11, i32 17, i32 6, i32 18, i32 0, i32 4>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mask3(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_mask3(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [12,2,8,14,25,27,4,16,20,11,27,8,0,1,21,17,30,30,29,1,23,22,20,22,28,20,11,17,6,18,0,4] sched: [8:0.50]
-; CHECK-NEXT:    movl $774459490, %eax # imm = 0x2E295062
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [6:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [12,2,8,14,25,27,4,16,20,11,27,8,0,1,21,17,30,30,29,1,23,22,20,22,28,20,11,17,6,18,0,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [6:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 12, i32 2, i32 8, i32 14, i32 25, i32 27, i32 4, i32 16, i32 20, i32 11, i32 27, i32 8, i32 0, i32 1, i32 21, i32 17, i32 30, i32 30, i32 29, i32 1, i32 23, i32 22, i32 20, i32 22, i32 28, i32 20, i32 11, i32 17, i32 6, i32 18, i32 0, i32 4>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 define <32 x i16> @test_32xi16_perm_mem_mask0(<32 x i16>* %vp) {
@@ -412,93 +412,93 @@ define <32 x i16> @test_32xi16_perm_mem_mask0(<32 x i16>* %vp) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 19, i32 1, i32 5, i32 31, i32 9, i32 12, i32 17, i32 9, i32 15, i32 7, i32 1, i32 5, i32 16, i32 2, i32 12, i32 10, i32 13, i32 3, i32 29, i32 15, i32 26, i32 31, i32 10, i32 15, i32 22, i32 13, i32 9, i32 23, i32 28, i32 29, i32 20, i32 12>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mem_mask0(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mem_mask0(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [19,1,5,31,9,12,17,9,15,7,1,5,16,2,12,10,13,3,29,15,26,31,10,15,22,13,9,23,28,29,20,12] sched: [8:0.50]
-; CHECK-NEXT:    movl $1431978123, %eax # imm = 0x555A408B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [19,1,5,31,9,12,17,9,15,7,1,5,16,2,12,10,13,3,29,15,26,31,10,15,22,13,9,23,28,29,20,12] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm2, %zmm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 19, i32 1, i32 5, i32 31, i32 9, i32 12, i32 17, i32 9, i32 15, i32 7, i32 1, i32 5, i32 16, i32 2, i32 12, i32 10, i32 13, i32 3, i32 29, i32 15, i32 26, i32 31, i32 10, i32 15, i32 22, i32 13, i32 9, i32 23, i32 28, i32 29, i32 20, i32 12>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mem_mask0(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_mem_mask0(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [19,1,5,31,9,12,17,9,15,7,1,5,16,2,12,10,13,3,29,15,26,31,10,15,22,13,9,23,28,29,20,12] sched: [8:0.50]
-; CHECK-NEXT:    movl $1431978123, %eax # imm = 0x555A408B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [19,1,5,31,9,12,17,9,15,7,1,5,16,2,12,10,13,3,29,15,26,31,10,15,22,13,9,23,28,29,20,12] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 19, i32 1, i32 5, i32 31, i32 9, i32 12, i32 17, i32 9, i32 15, i32 7, i32 1, i32 5, i32 16, i32 2, i32 12, i32 10, i32 13, i32 3, i32 29, i32 15, i32 26, i32 31, i32 10, i32 15, i32 22, i32 13, i32 9, i32 23, i32 28, i32 29, i32 20, i32 12>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_mem_mask1(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mem_mask1(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [31,20,2,2,23,1,0,12,16,14,15,18,21,13,11,31,8,24,13,11,2,27,22,28,14,21,3,12,6,1,30,6] sched: [8:0.50]
-; CHECK-NEXT:    movl $-903561653, %eax # imm = 0xCA24BE4B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [31,20,2,2,23,1,0,12,16,14,15,18,21,13,11,31,8,24,13,11,2,27,22,28,14,21,3,12,6,1,30,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm2, %zmm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 31, i32 20, i32 2, i32 2, i32 23, i32 1, i32 0, i32 12, i32 16, i32 14, i32 15, i32 18, i32 21, i32 13, i32 11, i32 31, i32 8, i32 24, i32 13, i32 11, i32 2, i32 27, i32 22, i32 28, i32 14, i32 21, i32 3, i32 12, i32 6, i32 1, i32 30, i32 6>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mem_mask1(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_mem_mask1(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [31,20,2,2,23,1,0,12,16,14,15,18,21,13,11,31,8,24,13,11,2,27,22,28,14,21,3,12,6,1,30,6] sched: [8:0.50]
-; CHECK-NEXT:    movl $-903561653, %eax # imm = 0xCA24BE4B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [31,20,2,2,23,1,0,12,16,14,15,18,21,13,11,31,8,24,13,11,2,27,22,28,14,21,3,12,6,1,30,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 31, i32 20, i32 2, i32 2, i32 23, i32 1, i32 0, i32 12, i32 16, i32 14, i32 15, i32 18, i32 21, i32 13, i32 11, i32 31, i32 8, i32 24, i32 13, i32 11, i32 2, i32 27, i32 22, i32 28, i32 14, i32 21, i32 3, i32 12, i32 6, i32 1, i32 30, i32 6>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_mem_mask2(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mem_mask2(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,6,12,17,4,31,31,4,12,21,28,15,29,10,15,15,21,6,19,7,10,30,28,26,1,4,8,25,26,18,22,25] sched: [8:0.50]
-; CHECK-NEXT:    movl $-1209035774, %eax # imm = 0xB7EF9402
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,6,12,17,4,31,31,4,12,21,28,15,29,10,15,15,21,6,19,7,10,30,28,26,1,4,8,25,26,18,22,25] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm2, %zmm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 4, i32 6, i32 12, i32 17, i32 4, i32 31, i32 31, i32 4, i32 12, i32 21, i32 28, i32 15, i32 29, i32 10, i32 15, i32 15, i32 21, i32 6, i32 19, i32 7, i32 10, i32 30, i32 28, i32 26, i32 1, i32 4, i32 8, i32 25, i32 26, i32 18, i32 22, i32 25>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mem_mask2(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_mem_mask2(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [4,6,12,17,4,31,31,4,12,21,28,15,29,10,15,15,21,6,19,7,10,30,28,26,1,4,8,25,26,18,22,25] sched: [8:0.50]
-; CHECK-NEXT:    movl $-1209035774, %eax # imm = 0xB7EF9402
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,6,12,17,4,31,31,4,12,21,28,15,29,10,15,15,21,6,19,7,10,30,28,26,1,4,8,25,26,18,22,25] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 4, i32 6, i32 12, i32 17, i32 4, i32 31, i32 31, i32 4, i32 12, i32 21, i32 28, i32 15, i32 29, i32 10, i32 15, i32 15, i32 21, i32 6, i32 19, i32 7, i32 10, i32 30, i32 28, i32 26, i32 1, i32 4, i32 8, i32 25, i32 26, i32 18, i32 22, i32 25>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
@@ -512,33 +512,33 @@ define <32 x i16> @test_32xi16_perm_mem_mask3(<32 x i16>* %vp) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 27, i32 1, i32 7, i32 1, i32 0, i32 27, i32 10, i32 5, i32 4, i32 20, i32 30, i32 16, i32 28, i32 16, i32 18, i32 21, i32 25, i32 24, i32 31, i32 23, i32 28, i32 6, i32 17, i32 19, i32 26, i32 15, i32 25, i32 12, i32 18, i32 27>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_mem_mask3(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_mem_mask3(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [2,2,27,1,7,1,0,27,10,5,4,20,30,16,28,16,18,21,25,24,31,23,28,6,17,19,26,15,25,12,18,27] sched: [8:0.50]
-; CHECK-NEXT:    movl $1452798329, %eax # imm = 0x5697F179
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,2,27,1,7,1,0,27,10,5,4,20,30,16,28,16,18,21,25,24,31,23,28,6,17,19,26,15,25,12,18,27] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm2, %zmm0 {%k1} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 27, i32 1, i32 7, i32 1, i32 0, i32 27, i32 10, i32 5, i32 4, i32 20, i32 30, i32 16, i32 28, i32 16, i32 18, i32 21, i32 25, i32 24, i32 31, i32 23, i32 28, i32 6, i32 17, i32 19, i32 26, i32 15, i32 25, i32 12, i32 18, i32 27>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_mem_mask3(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_mem_mask3(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,2,27,1,7,1,0,27,10,5,4,20,30,16,28,16,18,21,25,24,31,23,28,6,17,19,26,15,25,12,18,27] sched: [8:0.50]
-; CHECK-NEXT:    movl $1452798329, %eax # imm = 0x5697F179
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermw (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [13:2.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [2,2,27,1,7,1,0,27,10,5,4,20,30,16,28,16,18,21,25,24,31,23,28,6,17,19,26,15,25,12,18,27] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermw (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [13:2.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 27, i32 1, i32 7, i32 1, i32 0, i32 27, i32 10, i32 5, i32 4, i32 20, i32 30, i32 16, i32 28, i32 16, i32 18, i32 21, i32 25, i32 24, i32 31, i32 23, i32 28, i32 6, i32 17, i32 19, i32 26, i32 15, i32 25, i32 12, i32 18, i32 27>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
@@ -551,82 +551,88 @@ define <8 x i32> @test_8xi32_perm_mask0(<8 x i32> %vec) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 4, i32 2, i32 0, i32 6, i32 7, i32 2, i32 3, i32 6>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,2,0,6,7,2,3,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $-53, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [4,2,0,6,7,2,3,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 4, i32 2, i32 0, i32 6, i32 7, i32 2, i32 3, i32 6>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mask0(<8 x i32> %vec) {
+define <8 x i32> @test_masked_z_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,2,0,6,7,2,3,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $-53, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,2,0,6,7,2,3,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 4, i32 2, i32 0, i32 6, i32 7, i32 2, i32 3, i32 6>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,5,1,2,6,0,0,3] sched: [7:0.50]
-; CHECK-NEXT:    movb $-89, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,5,1,2,6,0,0,3] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 5, i32 1, i32 2, i32 6, i32 0, i32 0, i32 3>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mask1(<8 x i32> %vec) {
+define <8 x i32> @test_masked_z_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,5,1,2,6,0,0,3] sched: [7:0.50]
-; CHECK-NEXT:    movb $-89, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,5,1,2,6,0,0,3] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 5, i32 1, i32 2, i32 6, i32 0, i32 0, i32 3>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,6,5,5,1,7,3,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [3,6,5,5,1,7,3,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 6, i32 5, i32 5, i32 1, i32 7, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mask2(<8 x i32> %vec) {
+define <8 x i32> @test_masked_z_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [3,6,5,5,1,7,3,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,6,5,5,1,7,3,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 6, i32 5, i32 5, i32 1, i32 7, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test_8xi32_perm_mask3(<8 x i32> %vec) {
@@ -638,30 +644,32 @@ define <8 x i32> @test_8xi32_perm_mask3(<8 x i32> %vec) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 0, i32 3, i32 1, i32 0, i32 4, i32 5, i32 0>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,0,3,1,0,4,5,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $47, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm3 = [3,0,3,1,0,4,5,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 0, i32 3, i32 1, i32 0, i32 4, i32 5, i32 0>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mask3(<8 x i32> %vec) {
+define <8 x i32> @test_masked_z_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [3,0,3,1,0,4,5,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $47, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,0,3,1,0,4,5,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 0, i32 3, i32 1, i32 0, i32 4, i32 5, i32 0>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
@@ -674,87 +682,93 @@ define <8 x i32> @test_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 7, i32 4, i32 3, i32 5, i32 2, i32 0, i32 5>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [3,7,4,3,5,2,0,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,7,4,3,5,2,0,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 7, i32 4, i32 3, i32 5, i32 2, i32 0, i32 5>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
+define <8 x i32> @test_masked_z_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [3,7,4,3,5,2,0,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [3,7,4,3,5,2,0,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 7, i32 4, i32 3, i32 5, i32 2, i32 0, i32 5>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,6,1,7,6,7,6,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $89, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,6,1,7,6,7,6,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 4, i32 6, i32 1, i32 7, i32 6, i32 7, i32 6, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mem_mask1(<8 x i32>* %vp) {
+define <8 x i32> @test_masked_z_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [4,6,1,7,6,7,6,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $89, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,6,1,7,6,7,6,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 4, i32 6, i32 1, i32 7, i32 6, i32 7, i32 6, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [6,4,6,1,6,3,6,3] sched: [7:0.50]
-; CHECK-NEXT:    movb $98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [6,4,6,1,6,3,6,3] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 6, i32 4, i32 6, i32 1, i32 6, i32 3, i32 6, i32 3>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mem_mask2(<8 x i32>* %vp) {
+define <8 x i32> @test_masked_z_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [6,4,6,1,6,3,6,3] sched: [7:0.50]
-; CHECK-NEXT:    movb $98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [6,4,6,1,6,3,6,3] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 6, i32 4, i32 6, i32 1, i32 6, i32 3, i32 6, i32 3>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
@@ -768,35 +782,37 @@ define <8 x i32> @test_8xi32_perm_mem_mask3(<8 x i32>* %vp) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 6, i32 0, i32 0, i32 7, i32 3, i32 7, i32 7, i32 5>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_masked_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test_masked_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [6,0,0,7,3,7,7,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-58, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [6,0,0,7,3,7,7,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 6, i32 0, i32 0, i32 7, i32 3, i32 7, i32 7, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_masked_z_8xi32_perm_mem_mask3(<8 x i32>* %vp) {
+define <8 x i32> @test_masked_z_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [6,0,0,7,3,7,7,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-58, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [6,0,0,7,3,7,7,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 6, i32 0, i32 0, i32 7, i32 3, i32 7, i32 7, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_perm_mask0(<16 x i32> %vec) {
+define <16 x i32> @test_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_perm_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [14,12,11,6,4,1,6,9,14,14,6,1,12,11,0,7] sched: [8:0.50]
@@ -805,88 +821,88 @@ define <16 x i32> @test_16xi32_perm_mask0(<16 x i32> %vec) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 14, i32 12, i32 11, i32 6, i32 4, i32 1, i32 6, i32 9, i32 14, i32 14, i32 6, i32 1, i32 12, i32 11, i32 0, i32 7>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [14,12,11,6,4,1,6,9,14,14,6,1,12,11,0,7] sched: [8:0.50]
-; CHECK-NEXT:    movw $-28063, %ax # imm = 0x9261
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [14,12,11,6,4,1,6,9,14,14,6,1,12,11,0,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 14, i32 12, i32 11, i32 6, i32 4, i32 1, i32 6, i32 9, i32 14, i32 14, i32 6, i32 1, i32 12, i32 11, i32 0, i32 7>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mask0(<16 x i32> %vec) {
+define <16 x i32> @test_masked_z_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [14,12,11,6,4,1,6,9,14,14,6,1,12,11,0,7] sched: [8:0.50]
-; CHECK-NEXT:    movw $-28063, %ax # imm = 0x9261
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [14,12,11,6,4,1,6,9,14,14,6,1,12,11,0,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 14, i32 12, i32 11, i32 6, i32 4, i32 1, i32 6, i32 9, i32 14, i32 14, i32 6, i32 1, i32 12, i32 11, i32 0, i32 7>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [10,0,14,15,11,1,1,5,0,5,0,15,13,1,14,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $14154, %ax # imm = 0x374A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [10,0,14,15,11,1,1,5,0,5,0,15,13,1,14,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 10, i32 0, i32 14, i32 15, i32 11, i32 1, i32 1, i32 5, i32 0, i32 5, i32 0, i32 15, i32 13, i32 1, i32 14, i32 3>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mask1(<16 x i32> %vec) {
+define <16 x i32> @test_masked_z_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [10,0,14,15,11,1,1,5,0,5,0,15,13,1,14,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $14154, %ax # imm = 0x374A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [10,0,14,15,11,1,1,5,0,5,0,15,13,1,14,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 10, i32 0, i32 14, i32 15, i32 11, i32 1, i32 1, i32 5, i32 0, i32 5, i32 0, i32 15, i32 13, i32 1, i32 14, i32 3>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [3,10,15,1,0,5,0,9,13,2,1,5,15,2,15,5] sched: [8:0.50]
-; CHECK-NEXT:    movw $6126, %ax # imm = 0x17EE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [3,10,15,1,0,5,0,9,13,2,1,5,15,2,15,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 10, i32 15, i32 1, i32 0, i32 5, i32 0, i32 9, i32 13, i32 2, i32 1, i32 5, i32 15, i32 2, i32 15, i32 5>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mask2(<16 x i32> %vec) {
+define <16 x i32> @test_masked_z_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [3,10,15,1,0,5,0,9,13,2,1,5,15,2,15,5] sched: [8:0.50]
-; CHECK-NEXT:    movw $6126, %ax # imm = 0x17EE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [3,10,15,1,0,5,0,9,13,2,1,5,15,2,15,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 10, i32 15, i32 1, i32 0, i32 5, i32 0, i32 9, i32 13, i32 2, i32 1, i32 5, i32 15, i32 2, i32 15, i32 5>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test_16xi32_perm_mask3(<16 x i32> %vec) {
@@ -898,32 +914,32 @@ define <16 x i32> @test_16xi32_perm_mask3(<16 x i32> %vec) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 7, i32 4, i32 14, i32 15, i32 10, i32 2, i32 15, i32 1, i32 9, i32 2, i32 14, i32 15, i32 12, i32 5, i32 3, i32 12>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [7,4,14,15,10,2,15,1,9,2,14,15,12,5,3,12] sched: [8:0.50]
-; CHECK-NEXT:    movw $-11837, %ax # imm = 0xD1C3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [7,4,14,15,10,2,15,1,9,2,14,15,12,5,3,12] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 7, i32 4, i32 14, i32 15, i32 10, i32 2, i32 15, i32 1, i32 9, i32 2, i32 14, i32 15, i32 12, i32 5, i32 3, i32 12>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mask3(<16 x i32> %vec) {
+define <16 x i32> @test_masked_z_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [7,4,14,15,10,2,15,1,9,2,14,15,12,5,3,12] sched: [8:0.50]
-; CHECK-NEXT:    movw $-11837, %ax # imm = 0xD1C3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [7,4,14,15,10,2,15,1,9,2,14,15,12,5,3,12] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 7, i32 4, i32 14, i32 15, i32 10, i32 2, i32 15, i32 1, i32 9, i32 2, i32 14, i32 15, i32 12, i32 5, i32 3, i32 12>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
@@ -936,93 +952,93 @@ define <16 x i32> @test_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 1, i32 6, i32 8, i32 11, i32 2, i32 6, i32 10, i32 1, i32 7, i32 5, i32 15, i32 0, i32 6, i32 6>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [0,1,1,6,8,11,2,6,10,1,7,5,15,0,6,6] sched: [8:0.50]
-; CHECK-NEXT:    movw $19075, %ax # imm = 0x4A83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,1,1,6,8,11,2,6,10,1,7,5,15,0,6,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 1, i32 6, i32 8, i32 11, i32 2, i32 6, i32 10, i32 1, i32 7, i32 5, i32 15, i32 0, i32 6, i32 6>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
+define <16 x i32> @test_masked_z_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm0 = [0,1,1,6,8,11,2,6,10,1,7,5,15,0,6,6] sched: [8:0.50]
-; CHECK-NEXT:    movw $19075, %ax # imm = 0x4A83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [0,1,1,6,8,11,2,6,10,1,7,5,15,0,6,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 1, i32 6, i32 8, i32 11, i32 2, i32 6, i32 10, i32 1, i32 7, i32 5, i32 15, i32 0, i32 6, i32 6>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [11,5,3,4,7,15,12,4,8,11,12,7,6,12,6,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $27511, %ax # imm = 0x6B77
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [11,5,3,4,7,15,12,4,8,11,12,7,6,12,6,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 11, i32 5, i32 3, i32 4, i32 7, i32 15, i32 12, i32 4, i32 8, i32 11, i32 12, i32 7, i32 6, i32 12, i32 6, i32 3>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mem_mask1(<16 x i32>* %vp) {
+define <16 x i32> @test_masked_z_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm0 = [11,5,3,4,7,15,12,4,8,11,12,7,6,12,6,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $27511, %ax # imm = 0x6B77
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [11,5,3,4,7,15,12,4,8,11,12,7,6,12,6,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 11, i32 5, i32 3, i32 4, i32 7, i32 15, i32 12, i32 4, i32 8, i32 11, i32 12, i32 7, i32 6, i32 12, i32 6, i32 3>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [7,14,2,7,10,7,3,0,11,9,0,4,12,10,8,2] sched: [8:0.50]
-; CHECK-NEXT:    movw $3032, %ax # imm = 0xBD8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [7,14,2,7,10,7,3,0,11,9,0,4,12,10,8,2] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 7, i32 14, i32 2, i32 7, i32 10, i32 7, i32 3, i32 0, i32 11, i32 9, i32 0, i32 4, i32 12, i32 10, i32 8, i32 2>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mem_mask2(<16 x i32>* %vp) {
+define <16 x i32> @test_masked_z_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm0 = [7,14,2,7,10,7,3,0,11,9,0,4,12,10,8,2] sched: [8:0.50]
-; CHECK-NEXT:    movw $3032, %ax # imm = 0xBD8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [7,14,2,7,10,7,3,0,11,9,0,4,12,10,8,2] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 7, i32 14, i32 2, i32 7, i32 10, i32 7, i32 3, i32 0, i32 11, i32 9, i32 0, i32 4, i32 12, i32 10, i32 8, i32 2>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -1036,33 +1052,33 @@ define <16 x i32> @test_16xi32_perm_mem_mask3(<16 x i32>* %vp) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 11, i32 7, i32 10, i32 12, i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_masked_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test_masked_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [11,7,10,12,3,12,4,15,1,14,0,4,8,9,6,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $8666, %ax # imm = 0x21DA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [11,7,10,12,3,12,4,15,1,14,0,4,8,9,6,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 11, i32 7, i32 10, i32 12, i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_masked_z_16xi32_perm_mem_mask3(<16 x i32>* %vp) {
+define <16 x i32> @test_masked_z_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm0 = [11,7,10,12,3,12,4,15,1,14,0,4,8,9,6,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $8666, %ax # imm = 0x21DA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [11,7,10,12,3,12,4,15,1,14,0,4,8,9,6,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 11, i32 7, i32 10, i32 12, i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -1074,76 +1090,82 @@ define <4 x i64> @test_4xi64_perm_mask0(<4 x i64> %vec) {
   %res = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mask0(<4 x i64> %vec, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mask0(<4 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,0,3,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mask0(<4 x i64> %vec) {
+define <4 x i64> @test_masked_z_4xi64_perm_mask0(<4 x i64> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,0,3,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mask1(<4 x i64> %vec, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mask1(<4 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[1,2,0,3] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mask1(<4 x i64> %vec) {
+define <4 x i64> @test_masked_z_4xi64_perm_mask1(<4 x i64> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,0,3] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mask2(<4 x i64> %vec, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mask2(<4 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,2,2,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mask2(<4 x i64> %vec) {
+define <4 x i64> @test_masked_z_4xi64_perm_mask2(<4 x i64> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,2,2,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_4xi64_perm_mask3(<4 x i64> %vec) {
@@ -1154,28 +1176,30 @@ define <4 x i64> @test_4xi64_perm_mask3(<4 x i64> %vec) {
   %res = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 3>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mask3(<4 x i64> %vec, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mask3(<4 x i64> %vec, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 {%k1} = ymm0[2,1,3,3] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 3>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mask3(<4 x i64> %vec) {
+define <4 x i64> @test_masked_z_4xi64_perm_mask3(<4 x i64> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[2,1,3,3] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 3>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_4xi64_perm_mem_mask0(<4 x i64>* %vp) {
@@ -1187,81 +1211,87 @@ define <4 x i64> @test_4xi64_perm_mem_mask0(<4 x i64>* %vp) {
   %res = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 0>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mem_mask0(<4 x i64>* %vp, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mem_mask0(<4 x i64>* %vp, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = mem[2,1,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mem_mask0(<4 x i64>* %vp) {
+define <4 x i64> @test_masked_z_4xi64_perm_mem_mask0(<4 x i64>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = mem[2,1,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_4xi64_perm_mem_mask1(<4 x i64>* %vp, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mem_mask1(<4 x i64>* %vp, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = mem[2,1,1,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 1, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mem_mask1(<4 x i64>* %vp) {
+define <4 x i64> @test_masked_z_4xi64_perm_mem_mask1(<4 x i64>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = mem[2,1,1,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 1, i32 1, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_4xi64_perm_mem_mask2(<4 x i64>* %vp, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mem_mask2(<4 x i64>* %vp, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = mem[0,1,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mem_mask2(<4 x i64>* %vp) {
+define <4 x i64> @test_masked_z_4xi64_perm_mem_mask2(<4 x i64>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
@@ -1274,29 +1304,31 @@ define <4 x i64> @test_4xi64_perm_mem_mask3(<4 x i64>* %vp) {
   %res = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_masked_4xi64_perm_mem_mask3(<4 x i64>* %vp, <4 x i64> %vec2) {
+define <4 x i64> @test_masked_4xi64_perm_mem_mask3(<4 x i64>* %vp, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xi64_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = mem[2,0,1,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec2
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_masked_z_4xi64_perm_mem_mask3(<4 x i64>* %vp) {
+define <4 x i64> @test_masked_z_4xi64_perm_mem_mask3(<4 x i64>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi64_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = mem[2,0,1,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i64>, <4 x i64>* %vp
   %shuf = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
@@ -1309,80 +1341,86 @@ define <8 x i64> @test_8xi64_perm_mask0(<8 x i64> %vec) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 4, i32 7, i32 6, i32 5, i32 5, i32 1, i32 6>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mask0(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mask0(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,4,7,6,5,5,1,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,4,7,6,5,5,1,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 4, i32 7, i32 6, i32 5, i32 5, i32 1, i32 6>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mask0(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_mask0(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,4,7,6,5,5,1,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,4,7,6,5,5,1,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 4, i32 7, i32 6, i32 5, i32 5, i32 1, i32 6>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_imm_mask1(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mask1(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-122, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[1,0,1,1,5,4,5,5] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 1, i32 5, i32 4, i32 5, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mask1(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mask1(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-122, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[1,0,1,1,5,4,5,5] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 1, i32 5, i32 4, i32 5, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mask2(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mask2(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,3,7,3,3,5,4,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $17, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [1,3,7,3,3,5,4,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 3, i32 7, i32 3, i32 3, i32 5, i32 4, i32 1>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mask2(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_mask2(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,3,7,3,3,5,4,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $17, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,3,7,3,3,5,4,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 3, i32 7, i32 3, i32 3, i32 5, i32 4, i32 1>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 define <8 x i64> @test_8xi64_perm_imm_mask3(<8 x i64> %vec) {
@@ -1393,78 +1431,84 @@ define <8 x i64> @test_8xi64_perm_imm_mask3(<8 x i64> %vec) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 1, i32 3, i32 1, i32 7, i32 5, i32 7, i32 5>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_imm_mask3(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mask3(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-35, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,1,3,1,7,5,7,5] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 1, i32 3, i32 1, i32 7, i32 5, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mask3(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mask3(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-35, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[3,1,3,1,7,5,7,5] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 1, i32 3, i32 1, i32 7, i32 5, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mask4(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mask4(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [6,3,1,1,7,4,0,3] sched: [8:0.50]
-; CHECK-NEXT:    movb $-81, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [6,3,1,1,7,4,0,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 6, i32 3, i32 1, i32 1, i32 7, i32 4, i32 0, i32 3>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mask4(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_mask4(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [6,3,1,1,7,4,0,3] sched: [8:0.50]
-; CHECK-NEXT:    movb $-81, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [6,3,1,1,7,4,0,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 6, i32 3, i32 1, i32 1, i32 7, i32 4, i32 0, i32 3>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_imm_mask5(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mask5(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-67, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[0,0,0,0,4,4,4,4] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mask5(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mask5(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-67, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,0,0,4,4,4,4] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 define <8 x i64> @test_8xi64_perm_mask6(<8 x i64> %vec) {
@@ -1476,54 +1520,58 @@ define <8 x i64> @test_8xi64_perm_mask6(<8 x i64> %vec) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 4, i32 4, i32 5, i32 4, i32 2, i32 7>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mask6(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mask6(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,1,4,4,5,4,2,7] sched: [8:0.50]
-; CHECK-NEXT:    movb $-86, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [5,1,4,4,5,4,2,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 4, i32 4, i32 5, i32 4, i32 2, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mask6(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_mask6(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [5,1,4,4,5,4,2,7] sched: [8:0.50]
-; CHECK-NEXT:    movb $-86, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,1,4,4,5,4,2,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 4, i32 4, i32 5, i32 4, i32 2, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_imm_mask7(<8 x i64> %vec, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mask7(<8 x i64> %vec, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,3,3,3,7,7,7,7] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 7, i32 7, i32 7, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mask7(<8 x i64> %vec) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mask7(<8 x i64> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,3,3,7,7,7,7] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 7, i32 7, i32 7, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 define <8 x i64> @test_8xi64_perm_mem_mask0(<8 x i64>* %vp) {
@@ -1536,85 +1584,91 @@ define <8 x i64> @test_8xi64_perm_mem_mask0(<8 x i64>* %vp) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 6, i32 5, i32 7, i32 3, i32 7, i32 3>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mem_mask0(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mem_mask0(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [5,1,6,5,7,3,7,3] sched: [8:0.50]
-; CHECK-NEXT:    movb $-108, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,1,6,5,7,3,7,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 6, i32 5, i32 7, i32 3, i32 7, i32 3>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mem_mask0(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_mem_mask0(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [5,1,6,5,7,3,7,3] sched: [8:0.50]
-; CHECK-NEXT:    movb $-108, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [5,1,6,5,7,3,7,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 1, i32 6, i32 5, i32 7, i32 3, i32 7, i32 3>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask1(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask1(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $125, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = mem[1,1,1,0,5,5,5,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 0, i32 5, i32 5, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask1(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask1(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $125, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = mem[1,1,1,0,5,5,5,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 0, i32 5, i32 5, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_8xi64_perm_mem_mask2(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mem_mask2(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,2,1,4,1,1,5,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $-77, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,1,4,1,1,5,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 2, i32 1, i32 4, i32 1, i32 1, i32 5, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mem_mask2(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_mem_mask2(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,2,1,4,1,1,5,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $-77, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,2,1,4,1,1,5,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 2, i32 1, i32 4, i32 1, i32 1, i32 5, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
@@ -1627,83 +1681,89 @@ define <8 x i64> @test_8xi64_perm_imm_mem_mask3(<8 x i64>* %vp) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 1, i32 5, i32 7, i32 5, i32 5>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask3(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask3(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $55, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = mem[1,3,1,1,5,7,5,5] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 1, i32 5, i32 7, i32 5, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask3(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask3(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $55, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = mem[1,3,1,1,5,7,5,5] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 1, i32 5, i32 7, i32 5, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_8xi64_perm_mem_mask4(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mem_mask4(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [5,0,7,0,3,5,0,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $68, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,0,7,0,3,5,0,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 0, i32 7, i32 0, i32 3, i32 5, i32 0, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mem_mask4(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_mem_mask4(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [5,0,7,0,3,5,0,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $68, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [5,0,7,0,3,5,0,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 5, i32 0, i32 7, i32 0, i32 3, i32 5, i32 0, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask5(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask5(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = mem[3,1,0,0,7,5,4,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 1, i32 0, i32 0, i32 7, i32 5, i32 4, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask5(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask5(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = mem[3,1,0,0,7,5,4,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 1, i32 0, i32 0, i32 7, i32 5, i32 4, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
@@ -1717,57 +1777,61 @@ define <8 x i64> @test_8xi64_perm_mem_mask6(<8 x i64>* %vp) {
   %res = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 6, i32 3, i32 7, i32 3, i32 0, i32 3, i32 6>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_masked_8xi64_perm_mem_mask6(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_mem_mask6(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,6,3,7,3,0,3,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $42, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,6,3,7,3,0,3,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 6, i32 3, i32 7, i32 3, i32 0, i32 3, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_mem_mask6(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_mem_mask6(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,6,3,7,3,0,3,6] sched: [8:0.50]
-; CHECK-NEXT:    movb $42, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermq (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,6,3,7,3,0,3,6] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermq (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 6, i32 3, i32 7, i32 3, i32 0, i32 3, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask7(<8 x i64>* %vp, <8 x i64> %vec2) {
+define <8 x i64> @test_masked_8xi64_perm_imm_mem_mask7(<8 x i64>* %vp, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xi64_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = mem[3,0,0,1,7,4,4,5] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 0, i32 0, i32 1, i32 7, i32 4, i32 4, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec2
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask7(<8 x i64>* %vp) {
+define <8 x i64> @test_masked_z_8xi64_perm_imm_mem_mask7(<8 x i64>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi64_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = mem[3,0,0,1,7,4,4,5] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i64>, <8 x i64>* %vp
   %shuf = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 3, i32 0, i32 0, i32 1, i32 7, i32 4, i32 4, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
@@ -1780,82 +1844,88 @@ define <8 x float> @test_8xfloat_perm_mask0(<8 x float> %vec) {
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 3, i32 4, i32 2, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mask0(<8 x float> %vec, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mask0(<8 x float> %vec, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [3,4,2,4,1,2,3,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $33, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [3,4,2,4,1,2,3,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 3, i32 4, i32 2, i32 4, i32 1, i32 2, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mask0(<8 x float> %vec) {
+define <8 x float> @test_masked_z_8xfloat_perm_mask0(<8 x float> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [3,4,2,4,1,2,3,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $33, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [3,4,2,4,1,2,3,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 3, i32 4, i32 2, i32 4, i32 1, i32 2, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mask1(<8 x float> %vec, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mask1(<8 x float> %vec, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [4,2,1,0,6,0,5,1] sched: [7:0.50]
-; CHECK-NEXT:    movb $-34, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [4,2,1,0,6,0,5,1] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 4, i32 2, i32 1, i32 0, i32 6, i32 0, i32 5, i32 1>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mask1(<8 x float> %vec) {
+define <8 x float> @test_masked_z_8xfloat_perm_mask1(<8 x float> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [4,2,1,0,6,0,5,1] sched: [7:0.50]
-; CHECK-NEXT:    movb $-34, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [4,2,1,0,6,0,5,1] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 4, i32 2, i32 1, i32 0, i32 6, i32 0, i32 5, i32 1>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mask2(<8 x float> %vec, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mask2(<8 x float> %vec, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,5,5,4,6,0,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-18, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [2,5,5,5,4,6,0,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 2, i32 5, i32 5, i32 5, i32 4, i32 6, i32 0, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mask2(<8 x float> %vec) {
+define <8 x float> @test_masked_z_8xfloat_perm_mask2(<8 x float> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [2,5,5,5,4,6,0,5] sched: [7:0.50]
-; CHECK-NEXT:    movb $-18, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,5,5,4,6,0,5] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 2, i32 5, i32 5, i32 5, i32 4, i32 6, i32 0, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_perm_mask3(<8 x float> %vec) {
@@ -1867,30 +1937,32 @@ define <8 x float> @test_8xfloat_perm_mask3(<8 x float> %vec) {
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 5, i32 2, i32 5, i32 5, i32 5, i32 1, i32 6>
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mask3(<8 x float> %vec, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mask3(<8 x float> %vec, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [0,5,2,5,5,5,1,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm3 = [0,5,2,5,5,5,1,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm3, %ymm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 5, i32 2, i32 5, i32 5, i32 5, i32 1, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mask3(<8 x float> %vec) {
+define <8 x float> @test_masked_z_8xfloat_perm_mask3(<8 x float> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [0,5,2,5,5,5,1,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [0,5,2,5,5,5,1,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %ymm0, %ymm2, %ymm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 5, i32 2, i32 5, i32 5, i32 5, i32 1, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_perm_mem_mask0(<8 x float>* %vp) {
@@ -1903,91 +1975,97 @@ define <8 x float> @test_8xfloat_perm_mem_mask0(<8 x float>* %vp) {
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 2, i32 1, i32 6, i32 4, i32 2, i32 4, i32 0>
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mem_mask0(<8 x float>* %vp, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mem_mask0(<8 x float>* %vp, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [5,2,1,6,4,2,4,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $61, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [5,2,1,6,4,2,4,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 2, i32 1, i32 6, i32 4, i32 2, i32 4, i32 0>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mem_mask0(<8 x float>* %vp) {
+define <8 x float> @test_masked_z_8xfloat_perm_mem_mask0(<8 x float>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5,2,1,6,4,2,4,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $61, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [5,2,1,6,4,2,4,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 2, i32 1, i32 6, i32 4, i32 2, i32 4, i32 0>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_8xfloat_perm_mem_mask1(<8 x float>* %vp, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mem_mask1(<8 x float>* %vp, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,7,4,0,6,6,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $-124, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [1,3,7,4,0,6,6,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 7, i32 4, i32 0, i32 6, i32 6, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mem_mask1(<8 x float>* %vp) {
+define <8 x float> @test_masked_z_8xfloat_perm_mem_mask1(<8 x float>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [1,3,7,4,0,6,6,6] sched: [7:0.50]
-; CHECK-NEXT:    movb $-124, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,7,4,0,6,6,6] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 7, i32 4, i32 0, i32 6, i32 6, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_8xfloat_perm_mem_mask2(<8 x float>* %vp, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mem_mask2(<8 x float>* %vp, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [4,5,1,5,6,6,2,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $-84, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [4,5,1,5,6,6,2,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 1, i32 5, i32 6, i32 6, i32 2, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mem_mask2(<8 x float>* %vp) {
+define <8 x float> @test_masked_z_8xfloat_perm_mem_mask2(<8 x float>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [4,5,1,5,6,6,2,4] sched: [7:0.50]
-; CHECK-NEXT:    movb $-84, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [4,5,1,5,6,6,2,4] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 1, i32 5, i32 6, i32 6, i32 2, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_perm_mem_mask3(<8 x float>* %vp) {
+define <8 x float> @test_8xfloat_perm_mem_mask3(<8 x float>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5,7,0,6,4,2,3,0] sched: [7:0.50]
@@ -1997,31 +2075,33 @@ define <8 x float> @test_8xfloat_perm_mem_mask3(<8 x float>* %vp) {
   %res = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 7, i32 0, i32 6, i32 4, i32 2, i32 3, i32 0>
   ret <8 x float> %res
 }
-define <8 x float> @test_masked_8xfloat_perm_mem_mask3(<8 x float>* %vp, <8 x float> %vec2) {
+define <8 x float> @test_masked_8xfloat_perm_mem_mask3(<8 x float>* %vp, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_8xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [5,7,0,6,4,2,3,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $60, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [5,7,0,6,4,2,3,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm2, %ymm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 7, i32 0, i32 6, i32 4, i32 2, i32 3, i32 0>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec2
   ret <8 x float> %res
 }
 
-define <8 x float> @test_masked_z_8xfloat_perm_mem_mask3(<8 x float>* %vp) {
+define <8 x float> @test_masked_z_8xfloat_perm_mem_mask3(<8 x float>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_8xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5,7,0,6,4,2,3,0] sched: [7:0.50]
-; CHECK-NEXT:    movb $60, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %ymm0, %ymm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [5,7,0,6,4,2,3,0] sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %ymm1, %ymm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 5, i32 7, i32 0, i32 6, i32 4, i32 2, i32 3, i32 0>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -2034,88 +2114,88 @@ define <16 x float> @test_16xfloat_perm_mask0(<16 x float> %vec) {
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 7, i32 5, i32 13, i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7>
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mask0(<16 x float> %vec, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mask0(<16 x float> %vec, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7] sched: [8:0.50]
-; CHECK-NEXT:    movw $14423, %ax # imm = 0x3857
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 7, i32 5, i32 13, i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mask0(<16 x float> %vec) {
+define <16 x float> @test_masked_z_16xfloat_perm_mask0(<16 x float> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7] sched: [8:0.50]
-; CHECK-NEXT:    movw $14423, %ax # imm = 0x3857
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 7, i32 5, i32 13, i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mask1(<16 x float> %vec, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mask1(<16 x float> %vec, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $-22757, %ax # imm = 0xA71B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 11, i32 10, i32 4, i32 10, i32 4, i32 5, i32 8, i32 11, i32 2, i32 0, i32 10, i32 0, i32 0, i32 3, i32 10, i32 1>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mask1(<16 x float> %vec) {
+define <16 x float> @test_masked_z_16xfloat_perm_mask1(<16 x float> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $-22757, %ax # imm = 0xA71B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 11, i32 10, i32 4, i32 10, i32 4, i32 5, i32 8, i32 11, i32 2, i32 0, i32 10, i32 0, i32 0, i32 3, i32 10, i32 1>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mask2(<16 x float> %vec, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mask2(<16 x float> %vec, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11] sched: [8:0.50]
-; CHECK-NEXT:    movw $-22227, %ax # imm = 0xA92D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 15, i32 6, i32 14, i32 3, i32 6, i32 5, i32 2, i32 5, i32 15, i32 11, i32 6, i32 6, i32 4, i32 8, i32 11>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mask2(<16 x float> %vec) {
+define <16 x float> @test_masked_z_16xfloat_perm_mask2(<16 x float> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11] sched: [8:0.50]
-; CHECK-NEXT:    movw $-22227, %ax # imm = 0xA92D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 15, i32 6, i32 14, i32 3, i32 6, i32 5, i32 2, i32 5, i32 15, i32 11, i32 6, i32 6, i32 4, i32 8, i32 11>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_perm_mask3(<16 x float> %vec) {
@@ -2127,32 +2207,32 @@ define <16 x float> @test_16xfloat_perm_mask3(<16 x float> %vec) {
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 7, i32 0, i32 14, i32 6, i32 6, i32 0, i32 2, i32 13, i32 8, i32 11, i32 2, i32 5, i32 13, i32 13, i32 3>
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mask3(<16 x float> %vec, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mask3(<16 x float> %vec, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $32420, %ax # imm = 0x7EA4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 7, i32 0, i32 14, i32 6, i32 6, i32 0, i32 2, i32 13, i32 8, i32 11, i32 2, i32 5, i32 13, i32 13, i32 3>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mask3(<16 x float> %vec) {
+define <16 x float> @test_masked_z_16xfloat_perm_mask3(<16 x float> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3] sched: [8:0.50]
-; CHECK-NEXT:    movw $32420, %ax # imm = 0x7EA4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 7, i32 0, i32 14, i32 6, i32 6, i32 0, i32 2, i32 13, i32 8, i32 11, i32 2, i32 5, i32 13, i32 13, i32 3>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
@@ -2165,93 +2245,93 @@ define <16 x float> @test_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 2, i32 1, i32 14, i32 9, i32 9, i32 7, i32 2, i32 9, i32 4, i32 12, i32 11, i32 0, i32 14, i32 0, i32 1>
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $1441, %ax # imm = 0x5A1
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 2, i32 1, i32 14, i32 9, i32 9, i32 7, i32 2, i32 9, i32 4, i32 12, i32 11, i32 0, i32 14, i32 0, i32 1>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
+define <16 x float> @test_masked_z_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1] sched: [8:0.50]
-; CHECK-NEXT:    movw $1441, %ax # imm = 0x5A1
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 2, i32 1, i32 14, i32 9, i32 9, i32 7, i32 2, i32 9, i32 4, i32 12, i32 11, i32 0, i32 14, i32 0, i32 1>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_16xfloat_perm_mem_mask1(<16 x float>* %vp, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mem_mask1(<16 x float>* %vp, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4] sched: [8:0.50]
-; CHECK-NEXT:    movw $-12684, %ax # imm = 0xCE74
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 4, i32 2, i32 3, i32 5, i32 11, i32 6, i32 4, i32 7, i32 6, i32 4, i32 14, i32 8, i32 15, i32 12, i32 9, i32 4>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mem_mask1(<16 x float>* %vp) {
+define <16 x float> @test_masked_z_16xfloat_perm_mem_mask1(<16 x float>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4] sched: [8:0.50]
-; CHECK-NEXT:    movw $-12684, %ax # imm = 0xCE74
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 4, i32 2, i32 3, i32 5, i32 11, i32 6, i32 4, i32 7, i32 6, i32 4, i32 14, i32 8, i32 15, i32 12, i32 9, i32 4>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5] sched: [8:0.50]
-; CHECK-NEXT:    movw $11066, %ax # imm = 0x2B3A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 7, i32 11, i32 6, i32 7, i32 0, i32 11, i32 0, i32 10, i32 9, i32 12, i32 4, i32 10, i32 3, i32 8, i32 5>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mem_mask2(<16 x float>* %vp) {
+define <16 x float> @test_masked_z_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5] sched: [8:0.50]
-; CHECK-NEXT:    movw $11066, %ax # imm = 0x2B3A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 10, i32 7, i32 11, i32 6, i32 7, i32 0, i32 11, i32 0, i32 10, i32 9, i32 12, i32 4, i32 10, i32 3, i32 8, i32 5>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -2265,33 +2345,33 @@ define <16 x float> @test_16xfloat_perm_mem_mask3(<16 x float>* %vp) {
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 15, i32 3, i32 9, i32 5, i32 15, i32 14, i32 9, i32 11, i32 10, i32 5, i32 14, i32 14, i32 5, i32 11, i32 0>
   ret <16 x float> %res
 }
-define <16 x float> @test_masked_16xfloat_perm_mem_mask3(<16 x float>* %vp, <16 x float> %vec2) {
+define <16 x float> @test_masked_16xfloat_perm_mem_mask3(<16 x float>* %vp, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0] sched: [8:0.50]
-; CHECK-NEXT:    movw $-13916, %ax # imm = 0xC9A4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 15, i32 3, i32 9, i32 5, i32 15, i32 14, i32 9, i32 11, i32 10, i32 5, i32 14, i32 14, i32 5, i32 11, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
 
-define <16 x float> @test_masked_z_16xfloat_perm_mem_mask3(<16 x float>* %vp) {
+define <16 x float> @test_masked_z_16xfloat_perm_mem_mask3(<16 x float>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0] sched: [8:0.50]
-; CHECK-NEXT:    movw $-13916, %ax # imm = 0xC9A4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 15, i32 3, i32 9, i32 5, i32 15, i32 14, i32 9, i32 11, i32 10, i32 5, i32 14, i32 14, i32 5, i32 11, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -2303,76 +2383,82 @@ define <4 x double> @test_4xdouble_perm_mask0(<4 x double> %vec) {
   %res = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 2>
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mask0(<4 x double> %vec, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mask0(<4 x double> %vec, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[2,1,3,2] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mask0(<4 x double> %vec) {
+define <4 x double> @test_masked_z_4xdouble_perm_mask0(<4 x double> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[2,1,3,2] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 2, i32 1, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mask1(<4 x double> %vec, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mask1(<4 x double> %vec, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[3,0,0,0] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mask1(<4 x double> %vec) {
+define <4 x double> @test_masked_z_4xdouble_perm_mask1(<4 x double> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[3,0,0,0] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mask2(<4 x double> %vec, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mask2(<4 x double> %vec, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[0,3,3,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 3, i32 3, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mask2(<4 x double> %vec) {
+define <4 x double> @test_masked_z_4xdouble_perm_mask2(<4 x double> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0,3,3,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 3, i32 3, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_perm_mask3(<4 x double> %vec) {
@@ -2383,28 +2469,30 @@ define <4 x double> @test_4xdouble_perm_mask3(<4 x double> %vec) {
   %res = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 2>
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mask3(<4 x double> %vec, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mask3(<4 x double> %vec, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 {%k1} = ymm0[3,3,3,2] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mask3(<4 x double> %vec) {
+define <4 x double> @test_masked_z_4xdouble_perm_mask3(<4 x double> %vec, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[3,3,3,2] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_perm_mem_mask0(<4 x double>* %vp) {
@@ -2416,81 +2504,87 @@ define <4 x double> @test_4xdouble_perm_mem_mask0(<4 x double>* %vp) {
   %res = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 0>
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mem_mask0(<4 x double>* %vp, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mem_mask0(<4 x double>* %vp, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = mem[0,0,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mem_mask0(<4 x double>* %vp) {
+define <4 x double> @test_masked_z_4xdouble_perm_mem_mask0(<4 x double>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = mem[0,0,2,0] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_4xdouble_perm_mem_mask1(<4 x double>* %vp, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mem_mask1(<4 x double>* %vp, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = mem[0,2,3,2] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 2, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mem_mask1(<4 x double>* %vp) {
+define <4 x double> @test_masked_z_4xdouble_perm_mem_mask1(<4 x double>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = mem[0,2,3,2] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 2, i32 3, i32 2>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_4xdouble_perm_mem_mask2(<4 x double>* %vp, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mem_mask2(<4 x double>* %vp, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = mem[3,1,1,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 1, i32 1, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mem_mask2(<4 x double>* %vp) {
+define <4 x double> @test_masked_z_4xdouble_perm_mem_mask2(<4 x double>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = mem[3,1,1,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 1, i32 1, i32 1>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -2503,29 +2597,31 @@ define <4 x double> @test_4xdouble_perm_mem_mask3(<4 x double>* %vp) {
   %res = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 2>
   ret <4 x double> %res
 }
-define <4 x double> @test_masked_4xdouble_perm_mem_mask3(<4 x double>* %vp, <4 x double> %vec2) {
+define <4 x double> @test_masked_4xdouble_perm_mem_mask3(<4 x double>* %vp, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_4xdouble_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = mem[3,2,3,2] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 2>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec2
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec2
   ret <4 x double> %res
 }
 
-define <4 x double> @test_masked_z_4xdouble_perm_mem_mask3(<4 x double>* %vp) {
+define <4 x double> @test_masked_z_4xdouble_perm_mem_mask3(<4 x double>* %vp, <4 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_4xdouble_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = mem[3,2,3,2] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x double>, <4 x double>* %vp
   %shuf = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 2>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -2538,80 +2634,86 @@ define <8 x double> @test_8xdouble_perm_mask0(<8 x double> %vec) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 5, i32 7, i32 4, i32 2, i32 7, i32 4, i32 3, i32 4>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mask0(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mask0(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [5,7,4,2,7,4,3,4] sched: [8:0.50]
-; CHECK-NEXT:    movb $-115, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [5,7,4,2,7,4,3,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 5, i32 7, i32 4, i32 2, i32 7, i32 4, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mask0(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_mask0(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [5,7,4,2,7,4,3,4] sched: [8:0.50]
-; CHECK-NEXT:    movb $-115, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [5,7,4,2,7,4,3,4] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 5, i32 7, i32 4, i32 2, i32 7, i32 4, i32 3, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,0,0,2,7,4,4,6] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 0, i32 0, i32 2, i32 7, i32 4, i32 4, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mask1(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,0,0,2,7,4,4,6] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 0, i32 0, i32 2, i32 7, i32 4, i32 4, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mask2(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mask2(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [7,5,5,5,3,5,1,7] sched: [8:0.50]
-; CHECK-NEXT:    movb $49, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [7,5,5,5,3,5,1,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 5, i32 1, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mask2(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_mask2(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [7,5,5,5,3,5,1,7] sched: [8:0.50]
-; CHECK-NEXT:    movb $49, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [7,5,5,5,3,5,1,7] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 5, i32 1, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_perm_imm_mask3(<8 x double> %vec) {
@@ -2622,78 +2724,84 @@ define <8 x double> @test_8xdouble_perm_imm_mask3(<8 x double> %vec) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 1, i32 3, i32 3, i32 0, i32 5, i32 7, i32 7, i32 4>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-57, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[1,3,3,0,5,7,7,4] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 1, i32 3, i32 3, i32 0, i32 5, i32 7, i32 7, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mask3(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-57, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1,3,3,0,5,7,7,4] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 1, i32 3, i32 3, i32 0, i32 5, i32 7, i32 7, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mask4(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mask4(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [3,5,3,4,6,5,7,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $-54, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [3,5,3,4,6,5,7,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 5, i32 3, i32 4, i32 6, i32 5, i32 7, i32 1>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mask4(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_mask4(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [3,5,3,4,6,5,7,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $-54, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [3,5,3,4,6,5,7,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 5, i32 3, i32 4, i32 6, i32 5, i32 7, i32 1>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-41, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,3,2,3,7,7,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mask5(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-41, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,2,3,7,7,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_perm_mask6(<8 x double> %vec) {
@@ -2705,54 +2813,58 @@ define <8 x double> @test_8xdouble_perm_mask6(<8 x double> %vec) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 7, i32 6, i32 4, i32 0, i32 0, i32 0, i32 2>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mask6(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mask6(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [2,7,6,4,0,0,0,2] sched: [8:0.50]
-; CHECK-NEXT:    movb $-65, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [2,7,6,4,0,0,0,2] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm2, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1} # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 7, i32 6, i32 4, i32 0, i32 0, i32 0, i32 2>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mask6(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_mask6(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [2,7,6,4,0,0,0,2] sched: [8:0.50]
-; CHECK-NEXT:    movb $-65, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0 {%k1} {z} # sched: [3:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [2,7,6,4,0,0,0,2] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z} # sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 7, i32 6, i32 4, i32 0, i32 0, i32 0, i32 2>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $40, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,1,3,2,7,5,7,6] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 1, i32 3, i32 2, i32 7, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mask7(<8 x double> %vec) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $40, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,1,3,2,7,5,7,6] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 3, i32 1, i32 3, i32 2, i32 7, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_perm_mem_mask0(<8 x double>* %vp) {
@@ -2765,85 +2877,91 @@ define <8 x double> @test_8xdouble_perm_mem_mask0(<8 x double>* %vp) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 3, i32 4, i32 0, i32 4, i32 2, i32 0, i32 1>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [0,3,4,0,4,2,0,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $99, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [0,3,4,0,4,2,0,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 3, i32 4, i32 0, i32 4, i32 2, i32 0, i32 1>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mem_mask0(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm0 = [0,3,4,0,4,2,0,1] sched: [8:0.50]
-; CHECK-NEXT:    movb $99, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [0,3,4,0,4,2,0,1] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 3, i32 4, i32 0, i32 4, i32 2, i32 0, i32 1>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-32, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[0,2,0,3,4,6,4,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 2, i32 0, i32 3, i32 4, i32 6, i32 4, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-32, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[0,2,0,3,4,6,4,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 2, i32 0, i32 3, i32 4, i32 6, i32 4, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_8xdouble_perm_mem_mask2(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mem_mask2(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [6,7,2,7,7,6,2,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [6,7,2,7,7,6,2,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 6, i32 7, i32 2, i32 7, i32 7, i32 6, i32 2, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mem_mask2(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_mem_mask2(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm0 = [6,7,2,7,7,6,2,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [6,7,2,7,7,6,2,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 6, i32 7, i32 2, i32 7, i32 7, i32 6, i32 2, i32 5>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -2856,83 +2974,89 @@ define <8 x double> @test_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 0, i32 6, i32 5, i32 5, i32 4>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $119, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[2,1,1,0,6,5,5,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 0, i32 6, i32 5, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $119, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[2,1,1,0,6,5,5,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 0, i32 6, i32 5, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [1,1,3,5,6,0,6,0] sched: [8:0.50]
-; CHECK-NEXT:    movb $-45, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [1,1,3,5,6,0,6,0] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 1, i32 1, i32 3, i32 5, i32 6, i32 0, i32 6, i32 0>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mem_mask4(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm0 = [1,1,3,5,6,0,6,0] sched: [8:0.50]
-; CHECK-NEXT:    movb $-45, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [1,1,3,5,6,0,6,0] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 1, i32 1, i32 3, i32 5, i32 6, i32 0, i32 6, i32 0>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $33, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[2,2,2,3,6,6,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 3, i32 6, i32 6, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $33, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[2,2,2,3,6,6,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 3, i32 6, i32 6, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -2946,57 +3070,61 @@ define <8 x double> @test_8xdouble_perm_mem_mask6(<8 x double>* %vp) {
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 4, i32 0, i32 4, i32 6, i32 1, i32 2, i32 5>
   ret <8 x double> %res
 }
-define <8 x double> @test_masked_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [2,4,0,4,6,1,2,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $-75, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [2,4,0,4,6,1,2,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 4, i32 0, i32 4, i32 6, i32 1, i32 2, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_mem_mask6(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm0 = [2,4,0,4,6,1,2,5] sched: [8:0.50]
-; CHECK-NEXT:    movb $-75, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpermpd (%rdi), %zmm0, %zmm0 {%k1} {z} # sched: [10:1.00]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [2,4,0,4,6,1,2,5] sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z} # sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 2, i32 4, i32 0, i32 4, i32 6, i32 1, i32 2, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, <8 x double> %vec2) {
+define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $84, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[0,3,2,0,4,7,6,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 3, i32 2, i32 0, i32 4, i32 7, i32 6, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec2
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec2
   ret <8 x double> %res
 }
 
-define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp) {
+define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, <8 x i64> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $84, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[0,3,2,0,4,7,6,4] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 3, i32 2, i32 0, i32 4, i32 7, i32 6, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -3008,82 +3136,82 @@ define <16 x i8> @test_16xi8_perm_mask0(<16 x i8> %vec) {
   %res = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mask0(<16 x i8> %vec, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mask0(<16 x i8> %vec, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-10197, %ax # imm = 0xD82B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mask0(<16 x i8> %vec) {
+define <16 x i8> @test_masked_z_16xi8_perm_mask0(<16 x i8> %vec, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-10197, %ax # imm = 0xD82B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 8, i32 6, i32 12, i32 4, i32 7, i32 9, i32 14, i32 8, i32 4, i32 12, i32 9, i32 4, i32 14, i32 15, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mask1(<16 x i8> %vec, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mask1(<16 x i8> %vec, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-15864, %ax # imm = 0xC208
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 4, i32 11, i32 14, i32 10, i32 7, i32 1, i32 6, i32 9, i32 14, i32 15, i32 7, i32 13, i32 4, i32 12, i32 8, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mask1(<16 x i8> %vec) {
+define <16 x i8> @test_masked_z_16xi8_perm_mask1(<16 x i8> %vec, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-15864, %ax # imm = 0xC208
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 4, i32 11, i32 14, i32 10, i32 7, i32 1, i32 6, i32 9, i32 14, i32 15, i32 7, i32 13, i32 4, i32 12, i32 8, i32 0>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mask2(<16 x i8> %vec, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mask2(<16 x i8> %vec, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27562, %ax # imm = 0x6BAA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 11, i32 6, i32 13, i32 10, i32 0, i32 7, i32 13, i32 3, i32 5, i32 13, i32 3, i32 9, i32 3, i32 15, i32 12, i32 7>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mask2(<16 x i8> %vec) {
+define <16 x i8> @test_masked_z_16xi8_perm_mask2(<16 x i8> %vec, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27562, %ax # imm = 0x6BAA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 11, i32 6, i32 13, i32 10, i32 0, i32 7, i32 13, i32 3, i32 5, i32 13, i32 3, i32 9, i32 3, i32 15, i32 12, i32 7>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 define <16 x i8> @test_16xi8_perm_mask3(<16 x i8> %vec) {
@@ -3094,30 +3222,30 @@ define <16 x i8> @test_16xi8_perm_mask3(<16 x i8> %vec) {
   %res = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mask3(<16 x i8> %vec, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mask3(<16 x i8> %vec, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $16968, %ax # imm = 0x4248
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mask3(<16 x i8> %vec) {
+define <16 x i8> @test_masked_z_16xi8_perm_mask3(<16 x i8> %vec, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $16968, %ax # imm = 0x4248
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 1, i32 5, i32 8, i32 14, i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9, i32 9, i32 7, i32 9, i32 6>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 define <16 x i8> @test_16xi8_perm_mem_mask0(<16 x i8>* %vp) {
@@ -3130,93 +3258,93 @@ define <16 x i8> @test_16xi8_perm_mem_mask0(<16 x i8>* %vp) {
   %res = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mem_mask0(<16 x i8>* %vp, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mem_mask0(<16 x i8>* %vp, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
-; CHECK-NEXT:    movw $-27811, %ax # imm = 0x935D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm1[9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm2 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm2[9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mem_mask0(<16 x i8>* %vp) {
+define <16 x i8> @test_masked_z_16xi8_perm_mem_mask0(<16 x i8>* %vp, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0 # sched: [6:0.50]
-; CHECK-NEXT:    movw $-27811, %ax # imm = 0x935D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm1[9,10,7,1,12,14,14,13,14,14,8,6,11,4,12,13] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 10, i32 7, i32 1, i32 12, i32 14, i32 14, i32 13, i32 14, i32 14, i32 8, i32 6, i32 11, i32 4, i32 12, i32 13>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_16xi8_perm_mem_mask1(<16 x i8>* %vp, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mem_mask1(<16 x i8>* %vp, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
-; CHECK-NEXT:    movw $19027, %ax # imm = 0x4A53
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm1[14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm2 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm2[14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 14, i32 9, i32 15, i32 9, i32 7, i32 10, i32 15, i32 14, i32 12, i32 1, i32 9, i32 7, i32 10, i32 13, i32 3, i32 11>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mem_mask1(<16 x i8>* %vp) {
+define <16 x i8> @test_masked_z_16xi8_perm_mem_mask1(<16 x i8>* %vp, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0 # sched: [6:0.50]
-; CHECK-NEXT:    movw $19027, %ax # imm = 0x4A53
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm1[14,9,15,9,7,10,15,14,12,1,9,7,10,13,3,11] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 14, i32 9, i32 15, i32 9, i32 7, i32 10, i32 15, i32 14, i32 12, i32 1, i32 9, i32 7, i32 10, i32 13, i32 3, i32 11>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_16xi8_perm_mem_mask2(<16 x i8>* %vp, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mem_mask2(<16 x i8>* %vp, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
-; CHECK-NEXT:    movw $12412, %ax # imm = 0x307C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm1[1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm2 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm2[1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 1, i32 3, i32 12, i32 5, i32 13, i32 1, i32 2, i32 11, i32 0, i32 9, i32 14, i32 8, i32 10, i32 0, i32 10, i32 9>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mem_mask2(<16 x i8>* %vp) {
+define <16 x i8> @test_masked_z_16xi8_perm_mem_mask2(<16 x i8>* %vp, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0 # sched: [6:0.50]
-; CHECK-NEXT:    movw $12412, %ax # imm = 0x307C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm1[1,3,12,5,13,1,2,11,0,9,14,8,10,0,10,9] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 1, i32 3, i32 12, i32 5, i32 13, i32 1, i32 2, i32 11, i32 0, i32 9, i32 14, i32 8, i32 10, i32 0, i32 10, i32 9>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 
@@ -3230,33 +3358,33 @@ define <16 x i8> @test_16xi8_perm_mem_mask3(<16 x i8>* %vp) {
   %res = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
   ret <16 x i8> %res
 }
-define <16 x i8> @test_masked_16xi8_perm_mem_mask3(<16 x i8>* %vp, <16 x i8> %vec2) {
+define <16 x i8> @test_masked_16xi8_perm_mem_mask3(<16 x i8>* %vp, <16 x i8> %vec2, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_16xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
-; CHECK-NEXT:    movw $12238, %ax # imm = 0x2FCE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm1[9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm2 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm3, %xmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} = xmm2[9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i8> %shuf, <16 x i8> %vec2
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> %vec2
   ret <16 x i8> %res
 }
 
-define <16 x i8> @test_masked_z_16xi8_perm_mem_mask3(<16 x i8>* %vp) {
+define <16 x i8> @test_masked_z_16xi8_perm_mem_mask3(<16 x i8>* %vp, <16 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %xmm0 # sched: [6:0.50]
-; CHECK-NEXT:    movw $12238, %ax # imm = 0x2FCE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm0[9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 # sched: [6:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 {%k1} {z} = xmm1[9,6,5,15,0,0,15,2,1,3,12,14,0,6,1,4] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i8>, <16 x i8>* %vp
   %shuf = shufflevector <16 x i8> %vec, <16 x i8> undef, <16 x i32> <i32 9, i32 6, i32 5, i32 15, i32 0, i32 0, i32 15, i32 2, i32 1, i32 3, i32 12, i32 14, i32 0, i32 6, i32 1, i32 4>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i8> %shuf, <16 x i8> zeroinitializer
+  %cmp = icmp eq <16 x i8> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i8> %shuf, <16 x i8> zeroinitializer
   ret <16 x i8> %res
 }
 
@@ -3268,82 +3396,82 @@ define <32 x i8> @test_32xi8_perm_mask0(<32 x i8> %vec) {
   %res = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 8, i32 0, i32 1, i32 15, i32 3, i32 5, i32 11, i32 13, i32 14, i32 2, i32 10, i32 15, i32 0, i32 10, i32 13, i32 5, i32 20, i32 25, i32 23, i32 18, i32 23, i32 22, i32 25, i32 24, i32 20, i32 21, i32 29, i32 20, i32 24, i32 16, i32 27, i32 21>
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mask0(<32 x i8> %vec, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mask0(<32 x i8> %vec, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $948454498, %eax # imm = 0x38884462
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 {%k1} = ymm0[8,0,1,15,3,5,11,13,14,2,10,15,0,10,13,5,20,25,23,18,23,22,25,24,20,21,29,20,24,16,27,21] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 8, i32 0, i32 1, i32 15, i32 3, i32 5, i32 11, i32 13, i32 14, i32 2, i32 10, i32 15, i32 0, i32 10, i32 13, i32 5, i32 20, i32 25, i32 23, i32 18, i32 23, i32 22, i32 25, i32 24, i32 20, i32 21, i32 29, i32 20, i32 24, i32 16, i32 27, i32 21>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mask0(<32 x i8> %vec) {
+define <32 x i8> @test_masked_z_32xi8_perm_mask0(<32 x i8> %vec, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $948454498, %eax # imm = 0x38884462
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[8,0,1,15,3,5,11,13,14,2,10,15,0,10,13,5,20,25,23,18,23,22,25,24,20,21,29,20,24,16,27,21] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 8, i32 0, i32 1, i32 15, i32 3, i32 5, i32 11, i32 13, i32 14, i32 2, i32 10, i32 15, i32 0, i32 10, i32 13, i32 5, i32 20, i32 25, i32 23, i32 18, i32 23, i32 22, i32 25, i32 24, i32 20, i32 21, i32 29, i32 20, i32 24, i32 16, i32 27, i32 21>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mask1(<32 x i8> %vec, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mask1(<32 x i8> %vec, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1516442487, %eax # imm = 0xA59CEC89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 {%k1} = ymm0[0,4,3,15,5,4,5,15,10,9,11,6,6,10,0,3,21,19,26,22,30,25,22,22,27,22,26,16,23,20,18,24] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 0, i32 4, i32 3, i32 15, i32 5, i32 4, i32 5, i32 15, i32 10, i32 9, i32 11, i32 6, i32 6, i32 10, i32 0, i32 3, i32 21, i32 19, i32 26, i32 22, i32 30, i32 25, i32 22, i32 22, i32 27, i32 22, i32 26, i32 16, i32 23, i32 20, i32 18, i32 24>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mask1(<32 x i8> %vec) {
+define <32 x i8> @test_masked_z_32xi8_perm_mask1(<32 x i8> %vec, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1516442487, %eax # imm = 0xA59CEC89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[0,4,3,15,5,4,5,15,10,9,11,6,6,10,0,3,21,19,26,22,30,25,22,22,27,22,26,16,23,20,18,24] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 0, i32 4, i32 3, i32 15, i32 5, i32 4, i32 5, i32 15, i32 10, i32 9, i32 11, i32 6, i32 6, i32 10, i32 0, i32 3, i32 21, i32 19, i32 26, i32 22, i32 30, i32 25, i32 22, i32 22, i32 27, i32 22, i32 26, i32 16, i32 23, i32 20, i32 18, i32 24>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mask2(<32 x i8> %vec, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mask2(<32 x i8> %vec, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1504501134, %eax # imm = 0x59ACDD8E
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 {%k1} = ymm0[7,8,12,14,7,4,7,12,14,12,3,15,10,1,11,15,22,26,21,19,27,16,29,24,17,17,26,29,20,31,17,29] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 7, i32 8, i32 12, i32 14, i32 7, i32 4, i32 7, i32 12, i32 14, i32 12, i32 3, i32 15, i32 10, i32 1, i32 11, i32 15, i32 22, i32 26, i32 21, i32 19, i32 27, i32 16, i32 29, i32 24, i32 17, i32 17, i32 26, i32 29, i32 20, i32 31, i32 17, i32 29>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mask2(<32 x i8> %vec) {
+define <32 x i8> @test_masked_z_32xi8_perm_mask2(<32 x i8> %vec, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1504501134, %eax # imm = 0x59ACDD8E
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[7,8,12,14,7,4,7,12,14,12,3,15,10,1,11,15,22,26,21,19,27,16,29,24,17,17,26,29,20,31,17,29] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 7, i32 8, i32 12, i32 14, i32 7, i32 4, i32 7, i32 12, i32 14, i32 12, i32 3, i32 15, i32 10, i32 1, i32 11, i32 15, i32 22, i32 26, i32 21, i32 19, i32 27, i32 16, i32 29, i32 24, i32 17, i32 17, i32 26, i32 29, i32 20, i32 31, i32 17, i32 29>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 define <32 x i8> @test_32xi8_perm_mask3(<32 x i8> %vec) {
@@ -3354,30 +3482,30 @@ define <32 x i8> @test_32xi8_perm_mask3(<32 x i8> %vec) {
   %res = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 6, i32 1, i32 4, i32 7, i32 12, i32 13, i32 2, i32 8, i32 10, i32 5, i32 13, i32 4, i32 0, i32 0, i32 10, i32 8, i32 31, i32 31, i32 30, i32 16, i32 27, i32 27, i32 26, i32 27, i32 30, i32 26, i32 21, i32 24, i32 19, i32 25, i32 16, i32 18>
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mask3(<32 x i8> %vec, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mask3(<32 x i8> %vec, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $774459490, %eax # imm = 0x2E295062
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm1 {%k1} = ymm0[6,1,4,7,12,13,2,8,10,5,13,4,0,0,10,8,31,31,30,16,27,27,26,27,30,26,21,24,19,25,16,18] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 6, i32 1, i32 4, i32 7, i32 12, i32 13, i32 2, i32 8, i32 10, i32 5, i32 13, i32 4, i32 0, i32 0, i32 10, i32 8, i32 31, i32 31, i32 30, i32 16, i32 27, i32 27, i32 26, i32 27, i32 30, i32 26, i32 21, i32 24, i32 19, i32 25, i32 16, i32 18>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mask3(<32 x i8> %vec) {
+define <32 x i8> @test_masked_z_32xi8_perm_mask3(<32 x i8> %vec, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $774459490, %eax # imm = 0x2E295062
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[6,1,4,7,12,13,2,8,10,5,13,4,0,0,10,8,31,31,30,16,27,27,26,27,30,26,21,24,19,25,16,18] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 6, i32 1, i32 4, i32 7, i32 12, i32 13, i32 2, i32 8, i32 10, i32 5, i32 13, i32 4, i32 0, i32 0, i32 10, i32 8, i32 31, i32 31, i32 30, i32 16, i32 27, i32 27, i32 26, i32 27, i32 30, i32 26, i32 21, i32 24, i32 19, i32 25, i32 16, i32 18>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 define <32 x i8> @test_32xi8_perm_mem_mask0(<32 x i8>* %vp) {
@@ -3390,93 +3518,93 @@ define <32 x i8> @test_32xi8_perm_mem_mask0(<32 x i8>* %vp) {
   %res = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 9, i32 0, i32 2, i32 15, i32 4, i32 6, i32 8, i32 4, i32 7, i32 3, i32 0, i32 2, i32 8, i32 1, i32 6, i32 5, i32 22, i32 17, i32 30, i32 23, i32 29, i32 31, i32 21, i32 23, i32 27, i32 22, i32 20, i32 27, i32 30, i32 30, i32 26, i32 22>
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mem_mask0(<32 x i8>* %vp, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mem_mask0(<32 x i8>* %vp, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
-; CHECK-NEXT:    movl $1431978123, %eax # imm = 0x555A408B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm1[9,0,2,15,4,6,8,4,7,3,0,2,8,1,6,5,22,17,30,23,29,31,21,23,27,22,20,27,30,30,26,22] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm2 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm2[9,0,2,15,4,6,8,4,7,3,0,2,8,1,6,5,22,17,30,23,29,31,21,23,27,22,20,27,30,30,26,22] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 9, i32 0, i32 2, i32 15, i32 4, i32 6, i32 8, i32 4, i32 7, i32 3, i32 0, i32 2, i32 8, i32 1, i32 6, i32 5, i32 22, i32 17, i32 30, i32 23, i32 29, i32 31, i32 21, i32 23, i32 27, i32 22, i32 20, i32 27, i32 30, i32 30, i32 26, i32 22>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mem_mask0(<32 x i8>* %vp) {
+define <32 x i8> @test_masked_z_32xi8_perm_mem_mask0(<32 x i8>* %vp, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0 # sched: [7:0.50]
-; CHECK-NEXT:    movl $1431978123, %eax # imm = 0x555A408B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[9,0,2,15,4,6,8,4,7,3,0,2,8,1,6,5,22,17,30,23,29,31,21,23,27,22,20,27,30,30,26,22] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm1[9,0,2,15,4,6,8,4,7,3,0,2,8,1,6,5,22,17,30,23,29,31,21,23,27,22,20,27,30,30,26,22] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 9, i32 0, i32 2, i32 15, i32 4, i32 6, i32 8, i32 4, i32 7, i32 3, i32 0, i32 2, i32 8, i32 1, i32 6, i32 5, i32 22, i32 17, i32 30, i32 23, i32 29, i32 31, i32 21, i32 23, i32 27, i32 22, i32 20, i32 27, i32 30, i32 30, i32 26, i32 22>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_32xi8_perm_mem_mask1(<32 x i8>* %vp, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mem_mask1(<32 x i8>* %vp, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
-; CHECK-NEXT:    movl $-903561653, %eax # imm = 0xCA24BE4B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm1[15,10,1,1,11,0,0,6,8,7,7,9,10,6,5,15,20,28,22,21,17,29,27,30,23,26,17,22,19,16,31,19] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm2 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm2[15,10,1,1,11,0,0,6,8,7,7,9,10,6,5,15,20,28,22,21,17,29,27,30,23,26,17,22,19,16,31,19] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 15, i32 10, i32 1, i32 1, i32 11, i32 0, i32 0, i32 6, i32 8, i32 7, i32 7, i32 9, i32 10, i32 6, i32 5, i32 15, i32 20, i32 28, i32 22, i32 21, i32 17, i32 29, i32 27, i32 30, i32 23, i32 26, i32 17, i32 22, i32 19, i32 16, i32 31, i32 19>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mem_mask1(<32 x i8>* %vp) {
+define <32 x i8> @test_masked_z_32xi8_perm_mem_mask1(<32 x i8>* %vp, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0 # sched: [7:0.50]
-; CHECK-NEXT:    movl $-903561653, %eax # imm = 0xCA24BE4B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[15,10,1,1,11,0,0,6,8,7,7,9,10,6,5,15,20,28,22,21,17,29,27,30,23,26,17,22,19,16,31,19] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm1[15,10,1,1,11,0,0,6,8,7,7,9,10,6,5,15,20,28,22,21,17,29,27,30,23,26,17,22,19,16,31,19] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 15, i32 10, i32 1, i32 1, i32 11, i32 0, i32 0, i32 6, i32 8, i32 7, i32 7, i32 9, i32 10, i32 6, i32 5, i32 15, i32 20, i32 28, i32 22, i32 21, i32 17, i32 29, i32 27, i32 30, i32 23, i32 26, i32 17, i32 22, i32 19, i32 16, i32 31, i32 19>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_32xi8_perm_mem_mask2(<32 x i8>* %vp, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mem_mask2(<32 x i8>* %vp, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
-; CHECK-NEXT:    movl $-1209035774, %eax # imm = 0xB7EF9402
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm1[2,3,6,8,2,15,15,2,6,10,14,7,14,5,7,7,26,19,25,19,21,31,30,29,16,18,20,28,29,25,27,28] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm2 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm2[2,3,6,8,2,15,15,2,6,10,14,7,14,5,7,7,26,19,25,19,21,31,30,29,16,18,20,28,29,25,27,28] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 2, i32 3, i32 6, i32 8, i32 2, i32 15, i32 15, i32 2, i32 6, i32 10, i32 14, i32 7, i32 14, i32 5, i32 7, i32 7, i32 26, i32 19, i32 25, i32 19, i32 21, i32 31, i32 30, i32 29, i32 16, i32 18, i32 20, i32 28, i32 29, i32 25, i32 27, i32 28>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mem_mask2(<32 x i8>* %vp) {
+define <32 x i8> @test_masked_z_32xi8_perm_mem_mask2(<32 x i8>* %vp, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0 # sched: [7:0.50]
-; CHECK-NEXT:    movl $-1209035774, %eax # imm = 0xB7EF9402
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,6,8,2,15,15,2,6,10,14,7,14,5,7,7,26,19,25,19,21,31,30,29,16,18,20,28,29,25,27,28] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm1[2,3,6,8,2,15,15,2,6,10,14,7,14,5,7,7,26,19,25,19,21,31,30,29,16,18,20,28,29,25,27,28] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 2, i32 3, i32 6, i32 8, i32 2, i32 15, i32 15, i32 2, i32 6, i32 10, i32 14, i32 7, i32 14, i32 5, i32 7, i32 7, i32 26, i32 19, i32 25, i32 19, i32 21, i32 31, i32 30, i32 29, i32 16, i32 18, i32 20, i32 28, i32 29, i32 25, i32 27, i32 28>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 
@@ -3490,33 +3618,33 @@ define <32 x i8> @test_32xi8_perm_mem_mask3(<32 x i8>* %vp) {
   %res = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 1, i32 1, i32 13, i32 0, i32 3, i32 0, i32 0, i32 13, i32 5, i32 2, i32 2, i32 10, i32 15, i32 8, i32 14, i32 8, i32 25, i32 26, i32 28, i32 28, i32 31, i32 27, i32 30, i32 19, i32 24, i32 25, i32 29, i32 23, i32 28, i32 22, i32 25, i32 29>
   ret <32 x i8> %res
 }
-define <32 x i8> @test_masked_32xi8_perm_mem_mask3(<32 x i8>* %vp, <32 x i8> %vec2) {
+define <32 x i8> @test_masked_32xi8_perm_mem_mask3(<32 x i8>* %vp, <32 x i8> %vec2, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_32xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
-; CHECK-NEXT:    movl $1452798329, %eax # imm = 0x5697F179
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm1[1,1,13,0,3,0,0,13,5,2,2,10,15,8,14,8,25,26,28,28,31,27,30,19,24,25,29,23,28,22,25,29] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm2 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm3, %ymm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} = ymm2[1,1,13,0,3,0,0,13,5,2,2,10,15,8,14,8,25,26,28,28,31,27,30,19,24,25,29,23,28,22,25,29] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 1, i32 1, i32 13, i32 0, i32 3, i32 0, i32 0, i32 13, i32 5, i32 2, i32 2, i32 10, i32 15, i32 8, i32 14, i32 8, i32 25, i32 26, i32 28, i32 28, i32 31, i32 27, i32 30, i32 19, i32 24, i32 25, i32 29, i32 23, i32 28, i32 22, i32 25, i32 29>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> %vec2
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> %vec2
   ret <32 x i8> %res
 }
 
-define <32 x i8> @test_masked_z_32xi8_perm_mem_mask3(<32 x i8>* %vp) {
+define <32 x i8> @test_masked_z_32xi8_perm_mem_mask3(<32 x i8>* %vp, <32 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm0 # sched: [7:0.50]
-; CHECK-NEXT:    movl $1452798329, %eax # imm = 0x5697F179
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[1,1,13,0,3,0,0,13,5,2,2,10,15,8,14,8,25,26,28,28,31,27,30,19,24,25,29,23,28,22,25,29] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm1 # sched: [7:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %ymm2, %ymm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm1[1,1,13,0,3,0,0,13,5,2,2,10,15,8,14,8,25,26,28,28,31,27,30,19,24,25,29,23,28,22,25,29] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i8>, <32 x i8>* %vp
   %shuf = shufflevector <32 x i8> %vec, <32 x i8> undef, <32 x i32> <i32 1, i32 1, i32 13, i32 0, i32 3, i32 0, i32 0, i32 13, i32 5, i32 2, i32 2, i32 10, i32 15, i32 8, i32 14, i32 8, i32 25, i32 26, i32 28, i32 28, i32 31, i32 27, i32 30, i32 19, i32 24, i32 25, i32 29, i32 23, i32 28, i32 22, i32 25, i32 29>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i8> %shuf, <32 x i8> zeroinitializer
+  %cmp = icmp eq <32 x i8> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i8> %shuf, <32 x i8> zeroinitializer
   ret <32 x i8> %res
 }
 
@@ -3528,82 +3656,82 @@ define <64 x i8> @test_64xi8_perm_mask0(<64 x i8> %vec) {
   %res = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 8, i32 4, i32 1, i32 13, i32 15, i32 4, i32 6, i32 12, i32 0, i32 10, i32 2, i32 4, i32 13, i32 0, i32 0, i32 6, i32 23, i32 29, i32 27, i32 26, i32 18, i32 31, i32 22, i32 25, i32 22, i32 16, i32 23, i32 18, i32 16, i32 25, i32 26, i32 17, i32 40, i32 37, i32 38, i32 44, i32 39, i32 46, i32 41, i32 39, i32 42, i32 37, i32 33, i32 42, i32 41, i32 44, i32 34, i32 46, i32 60, i32 62, i32 61, i32 58, i32 60, i32 56, i32 60, i32 51, i32 60, i32 55, i32 60, i32 55, i32 60, i32 49, i32 48, i32 62>
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mask0(<64 x i8> %vec, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mask0(<64 x i8> %vec, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $3680399704764602881, %rax # imm = 0x3313680829F25A01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm1 {%k1} = zmm0[8,4,1,13,15,4,6,12,0,10,2,4,13,0,0,6,23,29,27,26,18,31,22,25,22,16,23,18,16,25,26,17,40,37,38,44,39,46,41,39,42,37,33,42,41,44,34,46,60,62,61,58,60,56,60,51,60,55,60,55,60,49,48,62] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 8, i32 4, i32 1, i32 13, i32 15, i32 4, i32 6, i32 12, i32 0, i32 10, i32 2, i32 4, i32 13, i32 0, i32 0, i32 6, i32 23, i32 29, i32 27, i32 26, i32 18, i32 31, i32 22, i32 25, i32 22, i32 16, i32 23, i32 18, i32 16, i32 25, i32 26, i32 17, i32 40, i32 37, i32 38, i32 44, i32 39, i32 46, i32 41, i32 39, i32 42, i32 37, i32 33, i32 42, i32 41, i32 44, i32 34, i32 46, i32 60, i32 62, i32 61, i32 58, i32 60, i32 56, i32 60, i32 51, i32 60, i32 55, i32 60, i32 55, i32 60, i32 49, i32 48, i32 62>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mask0(<64 x i8> %vec) {
+define <64 x i8> @test_masked_z_64xi8_perm_mask0(<64 x i8> %vec, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $3680399704764602881, %rax # imm = 0x3313680829F25A01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[8,4,1,13,15,4,6,12,0,10,2,4,13,0,0,6,23,29,27,26,18,31,22,25,22,16,23,18,16,25,26,17,40,37,38,44,39,46,41,39,42,37,33,42,41,44,34,46,60,62,61,58,60,56,60,51,60,55,60,55,60,49,48,62] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 8, i32 4, i32 1, i32 13, i32 15, i32 4, i32 6, i32 12, i32 0, i32 10, i32 2, i32 4, i32 13, i32 0, i32 0, i32 6, i32 23, i32 29, i32 27, i32 26, i32 18, i32 31, i32 22, i32 25, i32 22, i32 16, i32 23, i32 18, i32 16, i32 25, i32 26, i32 17, i32 40, i32 37, i32 38, i32 44, i32 39, i32 46, i32 41, i32 39, i32 42, i32 37, i32 33, i32 42, i32 41, i32 44, i32 34, i32 46, i32 60, i32 62, i32 61, i32 58, i32 60, i32 56, i32 60, i32 51, i32 60, i32 55, i32 60, i32 55, i32 60, i32 49, i32 48, i32 62>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mask1(<64 x i8> %vec, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mask1(<64 x i8> %vec, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $3029806472256067585, %rax # imm = 0x2A0C08EF15009801
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm1 {%k1} = zmm0[7,14,15,10,9,3,1,13,14,12,11,6,4,1,6,9,30,30,22,17,28,27,16,23,26,16,30,31,27,17,17,21,32,37,32,47,45,33,46,35,35,42,47,33,32,37,32,41,61,50,49,53,63,50,63,53,55,52,62,63,58,50,63,49] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 7, i32 14, i32 15, i32 10, i32 9, i32 3, i32 1, i32 13, i32 14, i32 12, i32 11, i32 6, i32 4, i32 1, i32 6, i32 9, i32 30, i32 30, i32 22, i32 17, i32 28, i32 27, i32 16, i32 23, i32 26, i32 16, i32 30, i32 31, i32 27, i32 17, i32 17, i32 21, i32 32, i32 37, i32 32, i32 47, i32 45, i32 33, i32 46, i32 35, i32 35, i32 42, i32 47, i32 33, i32 32, i32 37, i32 32, i32 41, i32 61, i32 50, i32 49, i32 53, i32 63, i32 50, i32 63, i32 53, i32 55, i32 52, i32 62, i32 63, i32 58, i32 50, i32 63, i32 49>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mask1(<64 x i8> %vec) {
+define <64 x i8> @test_masked_z_64xi8_perm_mask1(<64 x i8> %vec, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $3029806472256067585, %rax # imm = 0x2A0C08EF15009801
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[7,14,15,10,9,3,1,13,14,12,11,6,4,1,6,9,30,30,22,17,28,27,16,23,26,16,30,31,27,17,17,21,32,37,32,47,45,33,46,35,35,42,47,33,32,37,32,41,61,50,49,53,63,50,63,53,55,52,62,63,58,50,63,49] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 7, i32 14, i32 15, i32 10, i32 9, i32 3, i32 1, i32 13, i32 14, i32 12, i32 11, i32 6, i32 4, i32 1, i32 6, i32 9, i32 30, i32 30, i32 22, i32 17, i32 28, i32 27, i32 16, i32 23, i32 26, i32 16, i32 30, i32 31, i32 27, i32 17, i32 17, i32 21, i32 32, i32 37, i32 32, i32 47, i32 45, i32 33, i32 46, i32 35, i32 35, i32 42, i32 47, i32 33, i32 32, i32 37, i32 32, i32 41, i32 61, i32 50, i32 49, i32 53, i32 63, i32 50, i32 63, i32 53, i32 55, i32 52, i32 62, i32 63, i32 58, i32 50, i32 63, i32 49>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mask2(<64 x i8> %vec, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mask2(<64 x i8> %vec, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $1110016799796225, %rax # imm = 0x3F18DED0BEC01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm1 {%k1} = zmm0[9,2,14,15,12,5,3,12,4,6,0,2,0,1,1,6,24,27,18,22,26,17,23,21,31,16,22,22,27,21,19,20,39,47,44,36,40,43,44,39,38,44,38,35,39,46,34,39,58,55,51,48,59,57,48,52,60,58,56,50,59,55,58,60] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 9, i32 2, i32 14, i32 15, i32 12, i32 5, i32 3, i32 12, i32 4, i32 6, i32 0, i32 2, i32 0, i32 1, i32 1, i32 6, i32 24, i32 27, i32 18, i32 22, i32 26, i32 17, i32 23, i32 21, i32 31, i32 16, i32 22, i32 22, i32 27, i32 21, i32 19, i32 20, i32 39, i32 47, i32 44, i32 36, i32 40, i32 43, i32 44, i32 39, i32 38, i32 44, i32 38, i32 35, i32 39, i32 46, i32 34, i32 39, i32 58, i32 55, i32 51, i32 48, i32 59, i32 57, i32 48, i32 52, i32 60, i32 58, i32 56, i32 50, i32 59, i32 55, i32 58, i32 60>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mask2(<64 x i8> %vec) {
+define <64 x i8> @test_masked_z_64xi8_perm_mask2(<64 x i8> %vec, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $1110016799796225, %rax # imm = 0x3F18DED0BEC01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[9,2,14,15,12,5,3,12,4,6,0,2,0,1,1,6,24,27,18,22,26,17,23,21,31,16,22,22,27,21,19,20,39,47,44,36,40,43,44,39,38,44,38,35,39,46,34,39,58,55,51,48,59,57,48,52,60,58,56,50,59,55,58,60] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 9, i32 2, i32 14, i32 15, i32 12, i32 5, i32 3, i32 12, i32 4, i32 6, i32 0, i32 2, i32 0, i32 1, i32 1, i32 6, i32 24, i32 27, i32 18, i32 22, i32 26, i32 17, i32 23, i32 21, i32 31, i32 16, i32 22, i32 22, i32 27, i32 21, i32 19, i32 20, i32 39, i32 47, i32 44, i32 36, i32 40, i32 43, i32 44, i32 39, i32 38, i32 44, i32 38, i32 35, i32 39, i32 46, i32 34, i32 39, i32 58, i32 55, i32 51, i32 48, i32 59, i32 57, i32 48, i32 52, i32 60, i32 58, i32 56, i32 50, i32 59, i32 55, i32 58, i32 60>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 define <64 x i8> @test_64xi8_perm_mask3(<64 x i8> %vec) {
@@ -3614,30 +3742,30 @@ define <64 x i8> @test_64xi8_perm_mask3(<64 x i8> %vec) {
   %res = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1, i32 4, i32 4, i32 12, i32 14, i32 25, i32 16, i32 28, i32 20, i32 21, i32 24, i32 19, i32 30, i32 18, i32 22, i32 20, i32 24, i32 25, i32 26, i32 24, i32 22, i32 42, i32 38, i32 44, i32 44, i32 36, i32 37, i32 42, i32 34, i32 43, i32 38, i32 41, i32 34, i32 42, i32 37, i32 39, i32 38, i32 55, i32 59, i32 53, i32 58, i32 48, i32 52, i32 59, i32 48, i32 57, i32 48, i32 55, i32 62, i32 48, i32 56, i32 49, i32 61>
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mask3(<64 x i8> %vec, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mask3(<64 x i8> %vec, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $839183534234450945, %rax # imm = 0xBA560FA6B66BC01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm1 {%k1} = zmm0[3,12,4,15,1,14,0,4,8,9,6,1,4,4,12,14,25,16,28,20,21,24,19,30,18,22,20,24,25,26,24,22,42,38,44,44,36,37,42,34,43,38,41,34,42,37,39,38,55,59,53,58,48,52,59,48,57,48,55,62,48,56,49,61] sched: [8:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1, i32 4, i32 4, i32 12, i32 14, i32 25, i32 16, i32 28, i32 20, i32 21, i32 24, i32 19, i32 30, i32 18, i32 22, i32 20, i32 24, i32 25, i32 26, i32 24, i32 22, i32 42, i32 38, i32 44, i32 44, i32 36, i32 37, i32 42, i32 34, i32 43, i32 38, i32 41, i32 34, i32 42, i32 37, i32 39, i32 38, i32 55, i32 59, i32 53, i32 58, i32 48, i32 52, i32 59, i32 48, i32 57, i32 48, i32 55, i32 62, i32 48, i32 56, i32 49, i32 61>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mask3(<64 x i8> %vec) {
+define <64 x i8> @test_masked_z_64xi8_perm_mask3(<64 x i8> %vec, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movabsq $839183534234450945, %rax # imm = 0xBA560FA6B66BC01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[3,12,4,15,1,14,0,4,8,9,6,1,4,4,12,14,25,16,28,20,21,24,19,30,18,22,20,24,25,26,24,22,42,38,44,44,36,37,42,34,43,38,41,34,42,37,39,38,55,59,53,58,48,52,59,48,57,48,55,62,48,56,49,61] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 3, i32 12, i32 4, i32 15, i32 1, i32 14, i32 0, i32 4, i32 8, i32 9, i32 6, i32 1, i32 4, i32 4, i32 12, i32 14, i32 25, i32 16, i32 28, i32 20, i32 21, i32 24, i32 19, i32 30, i32 18, i32 22, i32 20, i32 24, i32 25, i32 26, i32 24, i32 22, i32 42, i32 38, i32 44, i32 44, i32 36, i32 37, i32 42, i32 34, i32 43, i32 38, i32 41, i32 34, i32 42, i32 37, i32 39, i32 38, i32 55, i32 59, i32 53, i32 58, i32 48, i32 52, i32 59, i32 48, i32 57, i32 48, i32 55, i32 62, i32 48, i32 56, i32 49, i32 61>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 define <64 x i8> @test_64xi8_perm_mem_mask0(<64 x i8>* %vp) {
@@ -3650,93 +3778,93 @@ define <64 x i8> @test_64xi8_perm_mem_mask0(<64 x i8>* %vp) {
   %res = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 0, i32 9, i32 15, i32 13, i32 11, i32 11, i32 3, i32 12, i32 4, i32 1, i32 7, i32 5, i32 2, i32 6, i32 14, i32 6, i32 23, i32 27, i32 24, i32 18, i32 30, i32 23, i32 28, i32 22, i32 28, i32 22, i32 19, i32 19, i32 31, i32 25, i32 16, i32 22, i32 35, i32 33, i32 34, i32 32, i32 42, i32 34, i32 41, i32 41, i32 43, i32 40, i32 36, i32 46, i32 37, i32 39, i32 42, i32 40, i32 63, i32 63, i32 62, i32 62, i32 57, i32 55, i32 59, i32 51, i32 52, i32 48, i32 50, i32 48, i32 58, i32 50, i32 60, i32 58>
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mem_mask0(<64 x i8>* %vp, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mem_mask0(<64 x i8>* %vp, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3164984076108002305, %rax # imm = 0x2BEC483F982F7401
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm1[0,9,15,13,11,11,3,12,4,1,7,5,2,6,14,6,23,27,24,18,30,23,28,22,28,22,19,19,31,25,16,22,35,33,34,32,42,34,41,41,43,40,36,46,37,39,42,40,63,63,62,62,57,55,59,51,52,48,50,48,58,50,60,58] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm2[0,9,15,13,11,11,3,12,4,1,7,5,2,6,14,6,23,27,24,18,30,23,28,22,28,22,19,19,31,25,16,22,35,33,34,32,42,34,41,41,43,40,36,46,37,39,42,40,63,63,62,62,57,55,59,51,52,48,50,48,58,50,60,58] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 0, i32 9, i32 15, i32 13, i32 11, i32 11, i32 3, i32 12, i32 4, i32 1, i32 7, i32 5, i32 2, i32 6, i32 14, i32 6, i32 23, i32 27, i32 24, i32 18, i32 30, i32 23, i32 28, i32 22, i32 28, i32 22, i32 19, i32 19, i32 31, i32 25, i32 16, i32 22, i32 35, i32 33, i32 34, i32 32, i32 42, i32 34, i32 41, i32 41, i32 43, i32 40, i32 36, i32 46, i32 37, i32 39, i32 42, i32 40, i32 63, i32 63, i32 62, i32 62, i32 57, i32 55, i32 59, i32 51, i32 52, i32 48, i32 50, i32 48, i32 58, i32 50, i32 60, i32 58>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mem_mask0(<64 x i8>* %vp) {
+define <64 x i8> @test_masked_z_64xi8_perm_mem_mask0(<64 x i8>* %vp, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3164984076108002305, %rax # imm = 0x2BEC483F982F7401
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[0,9,15,13,11,11,3,12,4,1,7,5,2,6,14,6,23,27,24,18,30,23,28,22,28,22,19,19,31,25,16,22,35,33,34,32,42,34,41,41,43,40,36,46,37,39,42,40,63,63,62,62,57,55,59,51,52,48,50,48,58,50,60,58] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm1[0,9,15,13,11,11,3,12,4,1,7,5,2,6,14,6,23,27,24,18,30,23,28,22,28,22,19,19,31,25,16,22,35,33,34,32,42,34,41,41,43,40,36,46,37,39,42,40,63,63,62,62,57,55,59,51,52,48,50,48,58,50,60,58] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 0, i32 9, i32 15, i32 13, i32 11, i32 11, i32 3, i32 12, i32 4, i32 1, i32 7, i32 5, i32 2, i32 6, i32 14, i32 6, i32 23, i32 27, i32 24, i32 18, i32 30, i32 23, i32 28, i32 22, i32 28, i32 22, i32 19, i32 19, i32 31, i32 25, i32 16, i32 22, i32 35, i32 33, i32 34, i32 32, i32 42, i32 34, i32 41, i32 41, i32 43, i32 40, i32 36, i32 46, i32 37, i32 39, i32 42, i32 40, i32 63, i32 63, i32 62, i32 62, i32 57, i32 55, i32 59, i32 51, i32 52, i32 48, i32 50, i32 48, i32 58, i32 50, i32 60, i32 58>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_64xi8_perm_mem_mask1(<64 x i8>* %vp, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mem_mask1(<64 x i8>* %vp, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3421658227176024577, %rax # imm = 0x2F7C2C07659EAA01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm1[15,6,14,7,5,1,14,12,5,7,5,0,0,5,3,8,19,19,26,27,20,29,20,21,27,16,30,17,23,27,16,28,47,39,33,33,33,44,38,46,39,33,38,44,45,32,34,39,50,61,62,53,54,56,52,56,51,52,55,57,56,52,51,49] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm2[15,6,14,7,5,1,14,12,5,7,5,0,0,5,3,8,19,19,26,27,20,29,20,21,27,16,30,17,23,27,16,28,47,39,33,33,33,44,38,46,39,33,38,44,45,32,34,39,50,61,62,53,54,56,52,56,51,52,55,57,56,52,51,49] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 15, i32 6, i32 14, i32 7, i32 5, i32 1, i32 14, i32 12, i32 5, i32 7, i32 5, i32 0, i32 0, i32 5, i32 3, i32 8, i32 19, i32 19, i32 26, i32 27, i32 20, i32 29, i32 20, i32 21, i32 27, i32 16, i32 30, i32 17, i32 23, i32 27, i32 16, i32 28, i32 47, i32 39, i32 33, i32 33, i32 33, i32 44, i32 38, i32 46, i32 39, i32 33, i32 38, i32 44, i32 45, i32 32, i32 34, i32 39, i32 50, i32 61, i32 62, i32 53, i32 54, i32 56, i32 52, i32 56, i32 51, i32 52, i32 55, i32 57, i32 56, i32 52, i32 51, i32 49>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mem_mask1(<64 x i8>* %vp) {
+define <64 x i8> @test_masked_z_64xi8_perm_mem_mask1(<64 x i8>* %vp, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3421658227176024577, %rax # imm = 0x2F7C2C07659EAA01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[15,6,14,7,5,1,14,12,5,7,5,0,0,5,3,8,19,19,26,27,20,29,20,21,27,16,30,17,23,27,16,28,47,39,33,33,33,44,38,46,39,33,38,44,45,32,34,39,50,61,62,53,54,56,52,56,51,52,55,57,56,52,51,49] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm1[15,6,14,7,5,1,14,12,5,7,5,0,0,5,3,8,19,19,26,27,20,29,20,21,27,16,30,17,23,27,16,28,47,39,33,33,33,44,38,46,39,33,38,44,45,32,34,39,50,61,62,53,54,56,52,56,51,52,55,57,56,52,51,49] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 15, i32 6, i32 14, i32 7, i32 5, i32 1, i32 14, i32 12, i32 5, i32 7, i32 5, i32 0, i32 0, i32 5, i32 3, i32 8, i32 19, i32 19, i32 26, i32 27, i32 20, i32 29, i32 20, i32 21, i32 27, i32 16, i32 30, i32 17, i32 23, i32 27, i32 16, i32 28, i32 47, i32 39, i32 33, i32 33, i32 33, i32 44, i32 38, i32 46, i32 39, i32 33, i32 38, i32 44, i32 45, i32 32, i32 34, i32 39, i32 50, i32 61, i32 62, i32 53, i32 54, i32 56, i32 52, i32 56, i32 51, i32 52, i32 55, i32 57, i32 56, i32 52, i32 51, i32 49>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_64xi8_perm_mem_mask2(<64 x i8>* %vp, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mem_mask2(<64 x i8>* %vp, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3085252902658394625, %rax # imm = 0x2AD1052B29324A01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm1[12,1,11,3,4,11,10,11,8,13,1,10,1,11,5,10,27,26,19,29,19,24,26,19,26,20,18,28,24,21,25,16,34,38,47,40,33,44,44,44,41,43,35,43,45,44,37,41,58,62,49,61,56,53,55,48,51,58,58,55,63,55,53,61] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm2[12,1,11,3,4,11,10,11,8,13,1,10,1,11,5,10,27,26,19,29,19,24,26,19,26,20,18,28,24,21,25,16,34,38,47,40,33,44,44,44,41,43,35,43,45,44,37,41,58,62,49,61,56,53,55,48,51,58,58,55,63,55,53,61] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 12, i32 1, i32 11, i32 3, i32 4, i32 11, i32 10, i32 11, i32 8, i32 13, i32 1, i32 10, i32 1, i32 11, i32 5, i32 10, i32 27, i32 26, i32 19, i32 29, i32 19, i32 24, i32 26, i32 19, i32 26, i32 20, i32 18, i32 28, i32 24, i32 21, i32 25, i32 16, i32 34, i32 38, i32 47, i32 40, i32 33, i32 44, i32 44, i32 44, i32 41, i32 43, i32 35, i32 43, i32 45, i32 44, i32 37, i32 41, i32 58, i32 62, i32 49, i32 61, i32 56, i32 53, i32 55, i32 48, i32 51, i32 58, i32 58, i32 55, i32 63, i32 55, i32 53, i32 61>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mem_mask2(<64 x i8>* %vp) {
+define <64 x i8> @test_masked_z_64xi8_perm_mem_mask2(<64 x i8>* %vp, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $3085252902658394625, %rax # imm = 0x2AD1052B29324A01
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[12,1,11,3,4,11,10,11,8,13,1,10,1,11,5,10,27,26,19,29,19,24,26,19,26,20,18,28,24,21,25,16,34,38,47,40,33,44,44,44,41,43,35,43,45,44,37,41,58,62,49,61,56,53,55,48,51,58,58,55,63,55,53,61] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm1[12,1,11,3,4,11,10,11,8,13,1,10,1,11,5,10,27,26,19,29,19,24,26,19,26,20,18,28,24,21,25,16,34,38,47,40,33,44,44,44,41,43,35,43,45,44,37,41,58,62,49,61,56,53,55,48,51,58,58,55,63,55,53,61] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 12, i32 1, i32 11, i32 3, i32 4, i32 11, i32 10, i32 11, i32 8, i32 13, i32 1, i32 10, i32 1, i32 11, i32 5, i32 10, i32 27, i32 26, i32 19, i32 29, i32 19, i32 24, i32 26, i32 19, i32 26, i32 20, i32 18, i32 28, i32 24, i32 21, i32 25, i32 16, i32 34, i32 38, i32 47, i32 40, i32 33, i32 44, i32 44, i32 44, i32 41, i32 43, i32 35, i32 43, i32 45, i32 44, i32 37, i32 41, i32 58, i32 62, i32 49, i32 61, i32 56, i32 53, i32 55, i32 48, i32 51, i32 58, i32 58, i32 55, i32 63, i32 55, i32 53, i32 61>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 
@@ -3750,33 +3878,33 @@ define <64 x i8> @test_64xi8_perm_mem_mask3(<64 x i8>* %vp) {
   %res = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7, i32 11, i32 10, i32 4, i32 10, i32 20, i32 21, i32 24, i32 27, i32 18, i32 16, i32 26, i32 16, i32 16, i32 19, i32 26, i32 17, i32 16, i32 31, i32 22, i32 30, i32 35, i32 38, i32 37, i32 34, i32 37, i32 47, i32 43, i32 38, i32 38, i32 36, i32 40, i32 43, i32 42, i32 39, i32 32, i32 46, i32 54, i32 54, i32 48, i32 50, i32 61, i32 56, i32 59, i32 50, i32 53, i32 61, i32 61, i32 51, i32 48, i32 60, i32 50, i32 60>
   ret <64 x i8> %res
 }
-define <64 x i8> @test_masked_64xi8_perm_mem_mask3(<64 x i8>* %vp, <64 x i8> %vec2) {
+define <64 x i8> @test_masked_64xi8_perm_mem_mask3(<64 x i8>* %vp, <64 x i8> %vec2, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_64xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $29622951609754113, %rax # imm = 0x693DEAE3E5E201
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm1[4,9,11,13,12,6,0,0,11,15,5,7,11,10,4,10,20,21,24,27,18,16,26,16,16,19,26,17,16,31,22,30,35,38,37,34,37,47,43,38,38,36,40,43,42,39,32,46,54,54,48,50,61,56,59,50,53,61,61,51,48,60,50,60] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} = zmm2[4,9,11,13,12,6,0,0,11,15,5,7,11,10,4,10,20,21,24,27,18,16,26,16,16,19,26,17,16,31,22,30,35,38,37,34,37,47,43,38,38,36,40,43,42,39,32,46,54,54,48,50,61,56,59,50,53,61,61,51,48,60,50,60] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7, i32 11, i32 10, i32 4, i32 10, i32 20, i32 21, i32 24, i32 27, i32 18, i32 16, i32 26, i32 16, i32 16, i32 19, i32 26, i32 17, i32 16, i32 31, i32 22, i32 30, i32 35, i32 38, i32 37, i32 34, i32 37, i32 47, i32 43, i32 38, i32 38, i32 36, i32 40, i32 43, i32 42, i32 39, i32 32, i32 46, i32 54, i32 54, i32 48, i32 50, i32 61, i32 56, i32 59, i32 50, i32 53, i32 61, i32 61, i32 51, i32 48, i32 60, i32 50, i32 60>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> %vec2
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> %vec2
   ret <64 x i8> %res
 }
 
-define <64 x i8> @test_masked_z_64xi8_perm_mem_mask3(<64 x i8>* %vp) {
+define <64 x i8> @test_masked_z_64xi8_perm_mem_mask3(<64 x i8>* %vp, <64 x i8> %mask) {
 ; CHECK-LABEL: test_masked_z_64xi8_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0 # sched: [8:0.50]
-; CHECK-NEXT:    movabsq $29622951609754113, %rax # imm = 0x693DEAE3E5E201
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovq %rax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[4,9,11,13,12,6,0,0,11,15,5,7,11,10,4,10,20,21,24,27,18,16,26,16,16,19,26,17,16,31,22,30,35,38,37,34,37,47,43,38,38,36,40,43,42,39,32,46,54,54,48,50,61,56,59,50,53,61,61,51,48,60,50,60] sched: [8:1.00]
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1 # sched: [8:0.50]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqb %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm1[4,9,11,13,12,6,0,0,11,15,5,7,11,10,4,10,20,21,24,27,18,16,26,16,16,19,26,17,16,31,22,30,35,38,37,34,37,47,43,38,38,36,40,43,42,39,32,46,54,54,48,50,61,56,59,50,53,61,61,51,48,60,50,60] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <64 x i8>, <64 x i8>* %vp
   %shuf = shufflevector <64 x i8> %vec, <64 x i8> undef, <64 x i32> <i32 4, i32 9, i32 11, i32 13, i32 12, i32 6, i32 0, i32 0, i32 11, i32 15, i32 5, i32 7, i32 11, i32 10, i32 4, i32 10, i32 20, i32 21, i32 24, i32 27, i32 18, i32 16, i32 26, i32 16, i32 16, i32 19, i32 26, i32 17, i32 16, i32 31, i32 22, i32 30, i32 35, i32 38, i32 37, i32 34, i32 37, i32 47, i32 43, i32 38, i32 38, i32 36, i32 40, i32 43, i32 42, i32 39, i32 32, i32 46, i32 54, i32 54, i32 48, i32 50, i32 61, i32 56, i32 59, i32 50, i32 53, i32 61, i32 61, i32 51, i32 48, i32 60, i32 50, i32 60>
-  %res = select <64 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <64 x i8> %shuf, <64 x i8> zeroinitializer
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %shuf, <64 x i8> zeroinitializer
   ret <64 x i8> %res
 }
 
@@ -3788,76 +3916,82 @@ define <8 x i16> @test_8xi16_perm_high_mask0(<8 x i16> %vec) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 7, i32 6>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mask0(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mask0(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,6,5,7,6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mask0(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mask0(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,2,3,6,5,7,6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_low_mask1(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mask1(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $43, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[0,3,0,0,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 3, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mask1(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mask1(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $43, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = xmm0[0,3,0,0,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 3, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mask2(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mask2(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $20, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,5,4,4,5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 4, i32 4, i32 5>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mask2(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mask2(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $20, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,2,3,5,4,4,5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 4, i32 4, i32 5>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 define <8 x i16> @test_8xi16_perm_low_mask3(<8 x i16> %vec) {
@@ -3868,76 +4002,82 @@ define <8 x i16> @test_8xi16_perm_low_mask3(<8 x i16> %vec) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_low_mask3(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mask3(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-20, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[2,1,1,1,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mask3(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mask3(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-20, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = xmm0[2,1,1,1,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 2, i32 1, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mask4(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mask4(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-104, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,5,5,7,6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mask4(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mask4(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-104, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,2,3,5,5,7,6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 7, i32 6>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_low_mask5(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mask5(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[3,3,2,1,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 3, i32 3, i32 2, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mask5(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mask5(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = xmm0[3,3,2,1,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 3, i32 3, i32 2, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 define <8 x i16> @test_8xi16_perm_high_mask6(<8 x i16> %vec) {
@@ -3948,52 +4088,56 @@ define <8 x i16> @test_8xi16_perm_high_mask6(<8 x i16> %vec) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 5>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mask6(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mask6(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $117, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,6,5,6,5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mask6(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mask6(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $117, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1,2,3,6,5,6,5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_low_mask7(<8 x i16> %vec, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mask7(<8 x i16> %vec, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $39, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[1,0,2,0,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mask7(<8 x i16> %vec) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mask7(<8 x i16> %vec, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $39, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = xmm0[1,0,2,0,4,5,6,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 define <8 x i16> @test_8xi16_perm_high_mem_mask0(<8 x i16>* %vp) {
@@ -4005,81 +4149,87 @@ define <8 x i16> @test_8xi16_perm_high_mem_mask0(<8 x i16>* %vp) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 4, i32 6>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mem_mask0(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mem_mask0(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-83, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} = mem[0,1,2,3,7,7,4,6] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 4, i32 6>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask0(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask0(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-83, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = mem[0,1,2,3,7,7,4,6] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 4, i32 6>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_8xi16_perm_low_mem_mask1(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mem_mask1(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-108, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} = mem[1,3,3,2,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask1(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask1(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-108, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = mem[1,3,3,2,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_8xi16_perm_high_mem_mask2(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mem_mask2(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-58, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} = mem[0,1,2,3,6,6,5,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 6, i32 5, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask2(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask2(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-58, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = mem[0,1,2,3,6,6,5,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 6, i32 5, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
@@ -4092,81 +4242,87 @@ define <8 x i16> @test_8xi16_perm_low_mem_mask3(<8 x i16>* %vp) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 3, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_low_mem_mask3(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mem_mask3(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $74, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} = mem[3,1,2,0,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 3, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask3(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask3(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $74, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = mem[3,1,2,0,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 3, i32 1, i32 2, i32 0, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_8xi16_perm_high_mem_mask4(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mem_mask4(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-81, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} = mem[0,1,2,3,7,6,7,5] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask4(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask4(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-81, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = mem[0,1,2,3,7,6,7,5] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_8xi16_perm_low_mem_mask5(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mem_mask5(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $53, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} = mem[2,1,3,2,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 2, i32 1, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask5(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask5(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $53, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = mem[2,1,3,2,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 2, i32 1, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
@@ -4179,55 +4335,59 @@ define <8 x i16> @test_8xi16_perm_high_mem_mask6(<8 x i16>* %vp) {
   %res = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 4, i32 4>
   ret <8 x i16> %res
 }
-define <8 x i16> @test_masked_8xi16_perm_high_mem_mask6(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_high_mem_mask6(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-121, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} = mem[0,1,2,3,7,4,4,4] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 4, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask6(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_high_mem_mask6(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-121, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 {%k1} {z} = mem[0,1,2,3,7,4,4,4] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 4, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_8xi16_perm_low_mem_mask7(<8 x i16>* %vp, <8 x i16> %vec2) {
+define <8 x i16> @test_masked_8xi16_perm_low_mem_mask7(<8 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_8xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $87, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} = mem[0,3,3,1,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 3, i32 3, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> %vec2
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> %vec2
   ret <8 x i16> %res
 }
 
-define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask7(<8 x i16>* %vp) {
+define <8 x i16> @test_masked_z_8xi16_perm_low_mem_mask7(<8 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_8xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $87, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 {%k1} {z} = mem[0,3,3,1,4,5,6,7] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i16>, <8 x i16>* %vp
   %shuf = shufflevector <8 x i16> %vec, <8 x i16> undef, <8 x i32> <i32 0, i32 3, i32 3, i32 1, i32 4, i32 5, i32 6, i32 7>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x i16> %shuf, <8 x i16> zeroinitializer
+  %cmp = icmp eq <8 x i16> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i16> %shuf, <8 x i16> zeroinitializer
   ret <8 x i16> %res
 }
 
@@ -4239,82 +4399,82 @@ define <16 x i16> @test_16xi16_perm_high_mask0(<16 x i16> %vec) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 14, i32 12>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mask0(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mask0(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3495, %ax # imm = 0xF259
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 {%k1} = ymm0[0,1,2,3,4,4,6,4,8,9,10,11,12,12,14,12]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 14, i32 12>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mask0(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mask0(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3495, %ax # imm = 0xF259
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1,2,3,4,4,6,4,8,9,10,11,12,12,14,12]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 14, i32 12>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_low_mask1(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mask1(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-11903, %ax # imm = 0xD181
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 {%k1} = ymm0[0,2,3,2,4,5,6,7,8,10,11,10,12,13,14,15]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 2, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 8, i32 10, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mask1(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mask1(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-11903, %ax # imm = 0xD181
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = ymm0[0,2,3,2,4,5,6,7,8,10,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 2, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 8, i32 10, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mask2(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mask2(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-14510, %ax # imm = 0xC752
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 {%k1} = ymm0[0,1,2,3,7,5,5,5,8,9,10,11,15,13,13,13]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 5, i32 5, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 13, i32 13, i32 13>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mask2(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mask2(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-14510, %ax # imm = 0xC752
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1,2,3,7,5,5,5,8,9,10,11,15,13,13,13]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 5, i32 5, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 13, i32 13, i32 13>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 define <16 x i16> @test_16xi16_perm_low_mask3(<16 x i16> %vec) {
@@ -4325,82 +4485,82 @@ define <16 x i16> @test_16xi16_perm_low_mask3(<16 x i16> %vec) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_low_mask3(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mask3(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-16563, %ax # imm = 0xBF4D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 {%k1} = ymm0[3,2,3,2,4,5,6,7,11,10,11,10,12,13,14,15]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mask3(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mask3(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-16563, %ax # imm = 0xBF4D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = ymm0[3,2,3,2,4,5,6,7,11,10,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mask4(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mask4(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $12298, %ax # imm = 0x300A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 {%k1} = ymm0[0,1,2,3,6,7,4,7,8,9,10,11,14,15,12,15]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mask4(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mask4(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $12298, %ax # imm = 0x300A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1,2,3,6,7,4,7,8,9,10,11,14,15,12,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_low_mask5(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mask5(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-29565, %ax # imm = 0x8C83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 {%k1} = ymm0[3,3,3,0,4,5,6,7,11,11,11,8,12,13,14,15]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 11, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mask5(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mask5(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-29565, %ax # imm = 0x8C83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = ymm0[3,3,3,0,4,5,6,7,11,11,11,8,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 11, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 define <16 x i16> @test_16xi16_perm_high_mask6(<16 x i16> %vec) {
@@ -4411,56 +4571,56 @@ define <16 x i16> @test_16xi16_perm_high_mask6(<16 x i16> %vec) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15, i32 14, i32 13>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mask6(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mask6(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27779, %ax # imm = 0x6C83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 {%k1} = ymm0[0,1,2,3,6,7,6,5,8,9,10,11,14,15,14,13]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15, i32 14, i32 13>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mask6(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mask6(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27779, %ax # imm = 0x6C83
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1,2,3,6,7,6,5,8,9,10,11,14,15,14,13]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15, i32 14, i32 13>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_low_mask7(<16 x i16> %vec, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mask7(<16 x i16> %vec, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3292, %ax # imm = 0xF324
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 {%k1} = ymm0[3,2,1,2,4,5,6,7,11,10,9,10,12,13,14,15]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 9, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mask7(<16 x i16> %vec) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mask7(<16 x i16> %vec, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3292, %ax # imm = 0xF324
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = ymm0[3,2,1,2,4,5,6,7,11,10,9,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 9, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 define <16 x i16> @test_16xi16_perm_high_mem_mask0(<16 x i16>* %vp) {
@@ -4472,87 +4632,87 @@ define <16 x i16> @test_16xi16_perm_high_mem_mask0(<16 x i16>* %vp) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13, i32 14, i32 12, i32 15>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mem_mask0(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mem_mask0(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12838, %ax # imm = 0xCDDA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,5,6,4,7,8,9,10,11,13,14,12,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13, i32 14, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask0(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask0(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12838, %ax # imm = 0xCDDA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,5,6,4,7,8,9,10,11,13,14,12,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13, i32 14, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_low_mem_mask1(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mem_mask1(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $14962, %ax # imm = 0x3A72
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} = mem[1,3,3,0,4,5,6,7,9,11,11,8,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 11, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask1(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask1(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $14962, %ax # imm = 0x3A72
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = mem[1,3,3,0,4,5,6,7,9,11,11,8,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 11, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_high_mem_mask2(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mem_mask2(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $1029, %ax # imm = 0x405
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,5,6,5,6,8,9,10,11,13,14,13,14]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 13, i32 14, i32 13, i32 14>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask2(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask2(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $1029, %ax # imm = 0x405
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,5,6,5,6,8,9,10,11,13,14,13,14]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 13, i32 14, i32 13, i32 14>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
@@ -4565,87 +4725,87 @@ define <16 x i16> @test_16xi16_perm_low_mem_mask3(<16 x i16>* %vp) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_low_mem_mask3(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mem_mask3(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30862, %ax # imm = 0x8772
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} = mem[3,2,3,0,4,5,6,7,11,10,11,8,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask3(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask3(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30862, %ax # imm = 0x8772
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = mem[3,2,3,0,4,5,6,7,11,10,11,8,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_high_mem_mask4(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mem_mask4(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3845, %ax # imm = 0xF0FB
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,7,7,6,7,8,9,10,11,15,15,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 15, i32 15, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask4(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask4(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3845, %ax # imm = 0xF0FB
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,7,7,6,7,8,9,10,11,15,15,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 15, i32 15, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_low_mem_mask5(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mem_mask5(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-20955, %ax # imm = 0xAE25
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} = mem[1,3,3,2,4,5,6,7,9,11,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 9, i32 11, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask5(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask5(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-20955, %ax # imm = 0xAE25
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = mem[1,3,3,2,4,5,6,7,9,11,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 9, i32 11, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
@@ -4658,59 +4818,59 @@ define <16 x i16> @test_16xi16_perm_high_mem_mask6(<16 x i16>* %vp) {
   %res = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 5, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 12, i32 13>
   ret <16 x i16> %res
 }
-define <16 x i16> @test_masked_16xi16_perm_high_mem_mask6(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_high_mem_mask6(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-24190, %ax # imm = 0xA182
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} = mem[0,1,2,3,4,4,4,5,8,9,10,11,12,12,12,13]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 5, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 12, i32 13>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask6(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_high_mem_mask6(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-24190, %ax # imm = 0xA182
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} ymm0 {%k1} {z} = mem[0,1,2,3,4,4,4,5,8,9,10,11,12,12,12,13]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 5, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 12, i32 13>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_16xi16_perm_low_mem_mask7(<16 x i16>* %vp, <16 x i16> %vec2) {
+define <16 x i16> @test_masked_16xi16_perm_low_mem_mask7(<16 x i16>* %vp, <16 x i16> %vec2, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-24392, %ax # imm = 0xA0B8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} = mem[3,1,3,2,4,5,6,7,11,9,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 9, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> %vec2
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> %vec2
   ret <16 x i16> %res
 }
 
-define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask7(<16 x i16>* %vp) {
+define <16 x i16> @test_masked_z_16xi16_perm_low_mem_mask7(<16 x i16>* %vp, <16 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-24392, %ax # imm = 0xA0B8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} ymm0 {%k1} {z} = mem[3,1,3,2,4,5,6,7,11,9,11,10,12,13,14,15]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 11, i32 9, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 
@@ -4722,82 +4882,82 @@ define <32 x i16> @test_32xi16_perm_high_mask0(<32 x i16> %vec) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 12, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 20, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 28>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mask0(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mask0(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1671867126, %eax # imm = 0x63A6AAF6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,4,5,6,4,8,9,10,11,12,13,14,12,16,17,18,19,20,21,22,20,24,25,26,27,28,29,30,28] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 12, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 20, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 28>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mask0(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mask0(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1671867126, %eax # imm = 0x63A6AAF6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,4,5,6,4,8,9,10,11,12,13,14,12,16,17,18,19,20,21,22,20,24,25,26,27,28,29,30,28] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 12, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 20, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 28>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_low_mask1(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mask1(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-514766311, %eax # imm = 0xE1514A19
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 {%k1} = zmm0[2,1,0,0,4,5,6,7,10,9,8,8,12,13,14,15,18,17,16,16,20,21,22,23,26,25,24,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 10, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15, i32 18, i32 17, i32 16, i32 16, i32 20, i32 21, i32 22, i32 23, i32 26, i32 25, i32 24, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mask1(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mask1(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-514766311, %eax # imm = 0xE1514A19
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = zmm0[2,1,0,0,4,5,6,7,10,9,8,8,12,13,14,15,18,17,16,16,20,21,22,23,26,25,24,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 10, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15, i32 18, i32 17, i32 16, i32 16, i32 20, i32 21, i32 22, i32 23, i32 26, i32 25, i32 24, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mask2(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mask2(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $165000787, %eax # imm = 0x9D5B653
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,4,6,4,7,8,9,10,11,12,14,12,15,16,17,18,19,20,22,20,23,24,25,26,27,28,30,28,31] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 14, i32 12, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 22, i32 20, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 30, i32 28, i32 31>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mask2(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mask2(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $165000787, %eax # imm = 0x9D5B653
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,4,6,4,7,8,9,10,11,12,14,12,15,16,17,18,19,20,22,20,23,24,25,26,27,28,30,28,31] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 4, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 14, i32 12, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 22, i32 20, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 30, i32 28, i32 31>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 define <32 x i16> @test_32xi16_perm_low_mask3(<32 x i16> %vec) {
@@ -4808,82 +4968,82 @@ define <32 x i16> @test_32xi16_perm_low_mask3(<32 x i16> %vec) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 3, i32 1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 11, i32 11, i32 9, i32 11, i32 12, i32 13, i32 14, i32 15, i32 19, i32 19, i32 17, i32 19, i32 20, i32 21, i32 22, i32 23, i32 27, i32 27, i32 25, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_low_mask3(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mask3(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1998504075, %eax # imm = 0x771EC08B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 {%k1} = zmm0[3,3,1,3,4,5,6,7,11,11,9,11,12,13,14,15,19,19,17,19,20,21,22,23,27,27,25,27,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 3, i32 1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 11, i32 11, i32 9, i32 11, i32 12, i32 13, i32 14, i32 15, i32 19, i32 19, i32 17, i32 19, i32 20, i32 21, i32 22, i32 23, i32 27, i32 27, i32 25, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mask3(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mask3(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1998504075, %eax # imm = 0x771EC08B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,1,3,4,5,6,7,11,11,9,11,12,13,14,15,19,19,17,19,20,21,22,23,27,27,25,27,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 3, i32 1, i32 3, i32 4, i32 5, i32 6, i32 7, i32 11, i32 11, i32 9, i32 11, i32 12, i32 13, i32 14, i32 15, i32 19, i32 19, i32 17, i32 19, i32 20, i32 21, i32 22, i32 23, i32 27, i32 27, i32 25, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mask4(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mask4(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-730778639, %eax # imm = 0xD47133F1
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,7,7,5,6,8,9,10,11,15,15,13,14,16,17,18,19,23,23,21,22,24,25,26,27,31,31,29,30] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 15, i32 15, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 23, i32 23, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 31, i32 31, i32 29, i32 30>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mask4(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mask4(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-730778639, %eax # imm = 0xD47133F1
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,7,7,5,6,8,9,10,11,15,15,13,14,16,17,18,19,23,23,21,22,24,25,26,27,31,31,29,30] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 15, i32 15, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 23, i32 23, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 31, i32 31, i32 29, i32 30>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_low_mask5(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mask5(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $544659762, %eax # imm = 0x2076D932
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 {%k1} = zmm0[2,1,1,0,4,5,6,7,10,9,9,8,12,13,14,15,18,17,17,16,20,21,22,23,26,25,25,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 1, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7, i32 10, i32 9, i32 9, i32 8, i32 12, i32 13, i32 14, i32 15, i32 18, i32 17, i32 17, i32 16, i32 20, i32 21, i32 22, i32 23, i32 26, i32 25, i32 25, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mask5(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mask5(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $544659762, %eax # imm = 0x2076D932
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = zmm0[2,1,1,0,4,5,6,7,10,9,9,8,12,13,14,15,18,17,17,16,20,21,22,23,26,25,25,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 1, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7, i32 10, i32 9, i32 9, i32 8, i32 12, i32 13, i32 14, i32 15, i32 18, i32 17, i32 17, i32 16, i32 20, i32 21, i32 22, i32 23, i32 26, i32 25, i32 25, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 define <32 x i16> @test_32xi16_perm_high_mask6(<32 x i16> %vec) {
@@ -4894,56 +5054,56 @@ define <32 x i16> @test_32xi16_perm_high_mask6(<32 x i16> %vec) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 20, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 28, i32 28, i32 29, i32 30>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mask6(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mask6(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1243446456, %eax # imm = 0xB5E28348
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,4,4,5,6,8,9,10,11,12,12,13,14,16,17,18,19,20,20,21,22,24,25,26,27,28,28,29,30] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 20, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 28, i32 28, i32 29, i32 30>
-  %res = select <32 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mask6(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mask6(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1243446456, %eax # imm = 0xB5E28348
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,4,4,5,6,8,9,10,11,12,12,13,14,16,17,18,19,20,20,21,22,24,25,26,27,28,28,29,30] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 20, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 28, i32 28, i32 29, i32 30>
-  %res = select <32 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_low_mask7(<32 x i16> %vec, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mask7(<32 x i16> %vec, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1409246810, %eax # imm = 0x53FF665A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 {%k1} = zmm0[3,0,3,0,4,5,6,7,11,8,11,8,12,13,14,15,19,16,19,16,20,21,22,23,27,24,27,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 0, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 8, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 16, i32 19, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 24, i32 27, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mask7(<32 x i16> %vec) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mask7(<32 x i16> %vec, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1409246810, %eax # imm = 0x53FF665A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = zmm0[3,0,3,0,4,5,6,7,11,8,11,8,12,13,14,15,19,16,19,16,20,21,22,23,27,24,27,24,28,29,30,31] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 0, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 8, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 16, i32 19, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 24, i32 27, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 define <32 x i16> @test_32xi16_perm_high_mem_mask0(<32 x i16>* %vp) {
@@ -4955,87 +5115,87 @@ define <32 x i16> @test_32xi16_perm_high_mem_mask0(<32 x i16>* %vp) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 15, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 23, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 31, i32 28, i32 29, i32 30>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mem_mask0(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mem_mask0(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1911488810, %eax # imm = 0x8E10FED6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,7,4,5,6,8,9,10,11,15,12,13,14,16,17,18,19,23,20,21,22,24,25,26,27,31,28,29,30] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 15, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 23, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 31, i32 28, i32 29, i32 30>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask0(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask0(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1911488810, %eax # imm = 0x8E10FED6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,7,4,5,6,8,9,10,11,15,12,13,14,16,17,18,19,23,20,21,22,24,25,26,27,31,28,29,30] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 11, i32 15, i32 12, i32 13, i32 14, i32 16, i32 17, i32 18, i32 19, i32 23, i32 20, i32 21, i32 22, i32 24, i32 25, i32 26, i32 27, i32 31, i32 28, i32 29, i32 30>
-  %res = select <32 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_low_mem_mask1(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mem_mask1(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1098876619, %eax # imm = 0xBE807935
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} = mem[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15,17,17,19,19,20,21,22,23,25,25,27,27,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 1, i32 1, i32 3, i32 3, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 11, i32 11, i32 12, i32 13, i32 14, i32 15, i32 17, i32 17, i32 19, i32 19, i32 20, i32 21, i32 22, i32 23, i32 25, i32 25, i32 27, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask1(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask1(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1098876619, %eax # imm = 0xBE807935
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = mem[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15,17,17,19,19,20,21,22,23,25,25,27,27,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 1, i32 1, i32 3, i32 3, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 11, i32 11, i32 12, i32 13, i32 14, i32 15, i32 17, i32 17, i32 19, i32 19, i32 20, i32 21, i32 22, i32 23, i32 25, i32 25, i32 27, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_high_mem_mask2(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mem_mask2(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1583892148, %eax # imm = 0xA197B94C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,7,6,4,8,9,10,11,12,15,14,12,16,17,18,19,20,23,22,20,24,25,26,27,28,31,30,28] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 15, i32 14, i32 12, i32 16, i32 17, i32 18, i32 19, i32 20, i32 23, i32 22, i32 20, i32 24, i32 25, i32 26, i32 27, i32 28, i32 31, i32 30, i32 28>
-  %res = select <32 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask2(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask2(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1583892148, %eax # imm = 0xA197B94C
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,4,7,6,4,8,9,10,11,12,15,14,12,16,17,18,19,20,23,22,20,24,25,26,27,28,31,30,28] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 7, i32 6, i32 4, i32 8, i32 9, i32 10, i32 11, i32 12, i32 15, i32 14, i32 12, i32 16, i32 17, i32 18, i32 19, i32 20, i32 23, i32 22, i32 20, i32 24, i32 25, i32 26, i32 27, i32 28, i32 31, i32 30, i32 28>
-  %res = select <32 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
@@ -5048,89 +5208,89 @@ define <32 x i16> @test_32xi16_perm_low_mem_mask3(<32 x i16>* %vp) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7, i32 10, i32 10, i32 8, i32 11, i32 12, i32 13, i32 14, i32 15, i32 18, i32 18, i32 16, i32 19, i32 20, i32 21, i32 22, i32 23, i32 26, i32 26, i32 24, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_low_mem_mask3(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mem_mask3(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-216128444, %eax # imm = 0xF31E2444
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} = mem[2,2,0,3,4,5,6,7,10,10,8,11,12,13,14,15,18,18,16,19,20,21,22,23,26,26,24,27,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7, i32 10, i32 10, i32 8, i32 11, i32 12, i32 13, i32 14, i32 15, i32 18, i32 18, i32 16, i32 19, i32 20, i32 21, i32 22, i32 23, i32 26, i32 26, i32 24, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask3(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask3(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-216128444, %eax # imm = 0xF31E2444
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = mem[2,2,0,3,4,5,6,7,10,10,8,11,12,13,14,15,18,18,16,19,20,21,22,23,26,26,24,27,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 2, i32 2, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7, i32 10, i32 10, i32 8, i32 11, i32 12, i32 13, i32 14, i32 15, i32 18, i32 18, i32 16, i32 19, i32 20, i32 21, i32 22, i32 23, i32 26, i32 26, i32 24, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_high_mem_mask4(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mem_mask4(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1480468153, %eax # imm = 0x583E26B9
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,7,4,6,5,8,9,10,11,15,12,14,13,16,17,18,19,23,20,22,21,24,25,26,27,31,28,30,29] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 12, i32 14, i32 13, i32 16, i32 17, i32 18, i32 19, i32 23, i32 20, i32 22, i32 21, i32 24, i32 25, i32 26, i32 27, i32 31, i32 28, i32 30, i32 29>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask4(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask4(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $1480468153, %eax # imm = 0x583E26B9
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,7,4,6,5,8,9,10,11,15,12,14,13,16,17,18,19,23,20,22,21,24,25,26,27,31,28,30,29] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 4, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 12, i32 14, i32 13, i32 16, i32 17, i32 18, i32 19, i32 23, i32 20, i32 22, i32 21, i32 24, i32 25, i32 26, i32 27, i32 31, i32 28, i32 30, i32 29>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_low_mem_mask5(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mem_mask5(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = mem[0,0,2,3,4,4,6,7,8,8,10,11,12,12,14,15] sched: [8:1.00]
-; CHECK-NEXT:    movl $-1778617447, %eax # imm = 0x95FC7399
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = mem[0,0,2,3,4,4,6,7,8,8,10,11,12,12,14,15] sched: [8:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqu16 %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 16, i32 17, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 24, i32 25, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask5(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask5(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = mem[0,0,2,3,4,4,6,7,8,8,10,11,12,12,14,15] sched: [8:1.00]
-; CHECK-NEXT:    movl $-1778617447, %eax # imm = 0x95FC7399
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
-; CHECK-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = mem[0,0,2,3,4,4,6,7,8,8,10,11,12,12,14,15] sched: [8:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm0, %k1 # sched: [3:1.00]
+; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 16, i32 17, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 24, i32 25, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
@@ -5143,59 +5303,59 @@ define <32 x i16> @test_32xi16_perm_high_mem_mask6(<32 x i16>* %vp) {
   %res = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 6, i32 8, i32 9, i32 10, i32 11, i32 14, i32 13, i32 14, i32 14, i32 16, i32 17, i32 18, i32 19, i32 22, i32 21, i32 22, i32 22, i32 24, i32 25, i32 26, i32 27, i32 30, i32 29, i32 30, i32 30>
   ret <32 x i16> %res
 }
-define <32 x i16> @test_masked_32xi16_perm_high_mem_mask6(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_high_mem_mask6(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $355619267, %eax # imm = 0x153251C3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,6,5,6,6,8,9,10,11,14,13,14,14,16,17,18,19,22,21,22,22,24,25,26,27,30,29,30,30] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 6, i32 8, i32 9, i32 10, i32 11, i32 14, i32 13, i32 14, i32 14, i32 16, i32 17, i32 18, i32 19, i32 22, i32 21, i32 22, i32 22, i32 24, i32 25, i32 26, i32 27, i32 30, i32 29, i32 30, i32 30>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask6(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_high_mem_mask6(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_high_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $355619267, %eax # imm = 0x153251C3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufhw {{.*#+}} zmm0 {%k1} {z} = mem[0,1,2,3,6,5,6,6,8,9,10,11,14,13,14,14,16,17,18,19,22,21,22,22,24,25,26,27,30,29,30,30] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 6, i32 6, i32 8, i32 9, i32 10, i32 11, i32 14, i32 13, i32 14, i32 14, i32 16, i32 17, i32 18, i32 19, i32 22, i32 21, i32 22, i32 22, i32 24, i32 25, i32 26, i32 27, i32 30, i32 29, i32 30, i32 30>
-  %res = select <32 x i1> <i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_32xi16_perm_low_mem_mask7(<32 x i16>* %vp, <32 x i16> %vec2) {
+define <32 x i16> @test_masked_32xi16_perm_low_mem_mask7(<32 x i16>* %vp, <32 x i16> %vec2, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_32xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1890659259, %eax # imm = 0x8F4ED445
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} = mem[3,1,3,0,4,5,6,7,11,9,11,8,12,13,14,15,19,17,19,16,20,21,22,23,27,25,27,24,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 1, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 9, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 17, i32 19, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 25, i32 27, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> %vec2
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> %vec2
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask7(<32 x i16>* %vp) {
+define <32 x i16> @test_masked_z_32xi16_perm_low_mem_mask7(<32 x i16>* %vp, <32 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_32xi16_perm_low_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-1890659259, %eax # imm = 0x8F4ED445
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshuflw {{.*#+}} zmm0 {%k1} {z} = mem[3,1,3,0,4,5,6,7,11,9,11,8,12,13,14,15,19,17,19,16,20,21,22,23,27,25,27,24,28,29,30,31] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <32 x i16>, <32 x i16>* %vp
   %shuf = shufflevector <32 x i16> %vec, <32 x i16> undef, <32 x i32> <i32 3, i32 1, i32 3, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 9, i32 11, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 17, i32 19, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 25, i32 27, i32 24, i32 28, i32 29, i32 30, i32 31>
-  %res = select <32 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <32 x i16> %shuf, <32 x i16> zeroinitializer
+  %cmp = icmp eq <32 x i16> %mask, zeroinitializer
+  %res = select <32 x i1> %cmp, <32 x i16> %shuf, <32 x i16> zeroinitializer
   ret <32 x i16> %res
 }
 
@@ -5207,76 +5367,82 @@ define <4 x i32> @test_4xi32_perm_mask0(<4 x i32> %vec) {
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 3, i32 0>
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mask0(<4 x i32> %vec, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mask0(<4 x i32> %vec, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[2,3,3,0] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 3, i32 0>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mask0(<4 x i32> %vec) {
+define <4 x i32> @test_masked_z_4xi32_perm_mask0(<4 x i32> %vec, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = xmm0[2,3,3,0] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 3, i32 0>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mask1(<4 x i32> %vec, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mask1(<4 x i32> %vec, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[1,0,2,0] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mask1(<4 x i32> %vec) {
+define <4 x i32> @test_masked_z_4xi32_perm_mask1(<4 x i32> %vec, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = xmm0[1,0,2,0] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 2, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mask2(<4 x i32> %vec, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mask2(<4 x i32> %vec, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[3,0,1,0] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 3, i32 0, i32 1, i32 0>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mask2(<4 x i32> %vec) {
+define <4 x i32> @test_masked_z_4xi32_perm_mask2(<4 x i32> %vec, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = xmm0[3,0,1,0] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 3, i32 0, i32 1, i32 0>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 define <4 x i32> @test_4xi32_perm_mask3(<4 x i32> %vec) {
@@ -5287,28 +5453,30 @@ define <4 x i32> @test_4xi32_perm_mask3(<4 x i32> %vec) {
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 0, i32 3>
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mask3(<4 x i32> %vec, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mask3(<4 x i32> %vec, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[1,1,0,3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 0, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mask3(<4 x i32> %vec) {
+define <4 x i32> @test_masked_z_4xi32_perm_mask3(<4 x i32> %vec, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = xmm0[1,1,0,3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 0, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 define <4 x i32> @test_4xi32_perm_mem_mask0(<4 x i32>* %vp) {
@@ -5320,81 +5488,87 @@ define <4 x i32> @test_4xi32_perm_mem_mask0(<4 x i32>* %vp) {
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mem_mask0(<4 x i32>* %vp, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mem_mask0(<4 x i32>* %vp, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} = mem[0,1,3,3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mem_mask0(<4 x i32>* %vp) {
+define <4 x i32> @test_masked_z_4xi32_perm_mem_mask0(<4 x i32>* %vp, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = mem[0,1,3,3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_4xi32_perm_mem_mask1(<4 x i32>* %vp, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mem_mask1(<4 x i32>* %vp, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} = mem[2,2,3,1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 1>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mem_mask1(<4 x i32>* %vp) {
+define <4 x i32> @test_masked_z_4xi32_perm_mem_mask1(<4 x i32>* %vp, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = mem[2,2,3,1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 1>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_4xi32_perm_mem_mask2(<4 x i32>* %vp, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mem_mask2(<4 x i32>* %vp, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} = mem[0,3,0,1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 3, i32 0, i32 1>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mem_mask2(<4 x i32>* %vp) {
+define <4 x i32> @test_masked_z_4xi32_perm_mem_mask2(<4 x i32>* %vp, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = mem[0,3,0,1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 3, i32 0, i32 1>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 
@@ -5407,29 +5581,31 @@ define <4 x i32> @test_4xi32_perm_mem_mask3(<4 x i32>* %vp) {
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
   ret <4 x i32> %res
 }
-define <4 x i32> @test_masked_4xi32_perm_mem_mask3(<4 x i32>* %vp, <4 x i32> %vec2) {
+define <4 x i32> @test_masked_4xi32_perm_mem_mask3(<4 x i32>* %vp, <4 x i32> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_4xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} = mem[1,0,1,0] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x i32> %shuf, <4 x i32> %vec2
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> %vec2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @test_masked_z_4xi32_perm_mem_mask3(<4 x i32>* %vp) {
+define <4 x i32> @test_masked_z_4xi32_perm_mem_mask3(<4 x i32>* %vp, <4 x i32> %mask) {
 ; CHECK-LABEL: test_masked_z_4xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 {%k1} {z} = mem[1,0,1,0] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <4 x i32>, <4 x i32>* %vp
   %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i32> %shuf, <4 x i32> zeroinitializer
   ret <4 x i32> %res
 }
 
@@ -5441,76 +5617,82 @@ define <8 x i32> @test2_8xi32_perm_mask0(<8 x i32> %vec) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 0, i32 6, i32 7, i32 5, i32 4>
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-99, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 {%k1} = ymm0[2,3,1,0,6,7,5,4] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 0, i32 6, i32 7, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mask0(<8 x i32> %vec) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mask0(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-99, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = ymm0[2,3,1,0,6,7,5,4] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 1, i32 0, i32 6, i32 7, i32 5, i32 4>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-90, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 {%k1} = ymm0[0,3,3,3,4,7,7,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 3, i32 3, i32 3, i32 4, i32 7, i32 7, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mask1(<8 x i32> %vec) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mask1(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-90, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = ymm0[0,3,3,3,4,7,7,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 3, i32 3, i32 3, i32 4, i32 7, i32 7, i32 7>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 {%k1} = ymm0[1,2,0,3,5,6,4,7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 0, i32 3, i32 5, i32 6, i32 4, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mask2(<8 x i32> %vec) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mask2(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,2,0,3,5,6,4,7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 0, i32 3, i32 5, i32 6, i32 4, i32 7>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test2_8xi32_perm_mask3(<8 x i32> %vec) {
@@ -5521,28 +5703,30 @@ define <8 x i32> @test2_8xi32_perm_mask3(<8 x i32> %vec) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 0, i32 5, i32 7, i32 5, i32 4>
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 {%k1} = ymm0[1,3,1,0,5,7,5,4] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 # sched: [1:0.25]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 0, i32 5, i32 7, i32 5, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mask3(<8 x i32> %vec) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mask3(<8 x i32> %vec, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,3,1,0,5,7,5,4] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 3, i32 1, i32 0, i32 5, i32 7, i32 5, i32 4>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test2_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
@@ -5554,81 +5738,87 @@ define <8 x i32> @test2_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 5, i32 4, i32 6, i32 4>
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-25, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} = mem[1,0,2,0,5,4,6,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 5, i32 4, i32 6, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask0(<8 x i32>* %vp) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask0(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-25, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = mem[1,0,2,0,5,4,6,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 5, i32 4, i32 6, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-97, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} = mem[0,3,2,0,4,7,6,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 3, i32 2, i32 0, i32 4, i32 7, i32 6, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask1(<8 x i32>* %vp) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask1(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-97, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = mem[0,3,2,0,4,7,6,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 3, i32 2, i32 0, i32 4, i32 7, i32 6, i32 4>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $73, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} = mem[3,2,3,1,7,6,7,5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 3, i32 1, i32 7, i32 6, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask2(<8 x i32>* %vp) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask2(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $73, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = mem[3,2,3,1,7,6,7,5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 3, i32 1, i32 7, i32 6, i32 7, i32 5>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
@@ -5641,29 +5831,31 @@ define <8 x i32> @test2_8xi32_perm_mem_mask3(<8 x i32>* %vp) {
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 4, i32 4>
   ret <8 x i32> %res
 }
-define <8 x i32> @test2_masked_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %vec2) {
+define <8 x i32> @test2_masked_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_8xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} = mem[3,2,0,0,7,6,4,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 4, i32 4>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec2
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec2
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask3(<8 x i32>* %vp) {
+define <8 x i32> @test2_masked_z_8xi32_perm_mem_mask3(<8 x i32>* %vp, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_8xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 {%k1} {z} = mem[3,2,0,0,7,6,4,4] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <8 x i32>, <8 x i32>* %vp
   %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 4, i32 4>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
@@ -5675,82 +5867,82 @@ define <16 x i32> @test2_16xi32_perm_mask0(<16 x i32> %vec) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 0, i32 7, i32 5, i32 7, i32 4, i32 11, i32 9, i32 11, i32 8, i32 15, i32 13, i32 15, i32 12>
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $18453, %ax # imm = 0x4815
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 {%k1} = zmm0[3,1,3,0,7,5,7,4,11,9,11,8,15,13,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 0, i32 7, i32 5, i32 7, i32 4, i32 11, i32 9, i32 11, i32 8, i32 15, i32 13, i32 15, i32 12>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mask0(<16 x i32> %vec) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mask0(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $18453, %ax # imm = 0x4815
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,1,3,0,7,5,7,4,11,9,11,8,15,13,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 3, i32 0, i32 7, i32 5, i32 7, i32 4, i32 11, i32 9, i32 11, i32 8, i32 15, i32 13, i32 15, i32 12>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $11142, %ax # imm = 0x2B86
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 {%k1} = zmm0[2,0,3,0,6,4,7,4,10,8,11,8,14,12,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 2, i32 0, i32 3, i32 0, i32 6, i32 4, i32 7, i32 4, i32 10, i32 8, i32 11, i32 8, i32 14, i32 12, i32 15, i32 12>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mask1(<16 x i32> %vec) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mask1(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $11142, %ax # imm = 0x2B86
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,0,3,0,6,4,7,4,10,8,11,8,14,12,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 2, i32 0, i32 3, i32 0, i32 6, i32 4, i32 7, i32 4, i32 10, i32 8, i32 11, i32 8, i32 14, i32 12, i32 15, i32 12>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $15610, %ax # imm = 0x3CFA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 {%k1} = zmm0[1,3,3,0,5,7,7,4,9,11,11,8,13,15,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 0, i32 5, i32 7, i32 7, i32 4, i32 9, i32 11, i32 11, i32 8, i32 13, i32 15, i32 15, i32 12>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mask2(<16 x i32> %vec) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mask2(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $15610, %ax # imm = 0x3CFA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[1,3,3,0,5,7,7,4,9,11,11,8,13,15,15,12] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 3, i32 3, i32 0, i32 5, i32 7, i32 7, i32 4, i32 9, i32 11, i32 11, i32 8, i32 13, i32 15, i32 15, i32 12>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test2_16xi32_perm_mask3(<16 x i32> %vec) {
@@ -5761,30 +5953,30 @@ define <16 x i32> @test2_16xi32_perm_mask3(<16 x i32> %vec) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 0, i32 3, i32 7, i32 6, i32 4, i32 7, i32 11, i32 10, i32 8, i32 11, i32 15, i32 14, i32 12, i32 15>
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $14814, %ax # imm = 0x39DE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 {%k1} = zmm0[3,2,0,3,7,6,4,7,11,10,8,11,15,14,12,15] sched: [1:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 0, i32 3, i32 7, i32 6, i32 4, i32 7, i32 11, i32 10, i32 8, i32 11, i32 15, i32 14, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mask3(<16 x i32> %vec) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mask3(<16 x i32> %vec, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $14814, %ax # imm = 0x39DE
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,0,3,7,6,4,7,11,10,8,11,15,14,12,15] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 0, i32 3, i32 7, i32 6, i32 4, i32 7, i32 11, i32 10, i32 8, i32 11, i32 15, i32 14, i32 12, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test2_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
@@ -5796,87 +5988,87 @@ define <16 x i32> @test2_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 1, i32 3, i32 5, i32 4, i32 5, i32 7, i32 9, i32 8, i32 9, i32 11, i32 13, i32 12, i32 13, i32 15>
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $7334, %ax # imm = 0x1CA6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = mem[1,0,1,3,5,4,5,7,9,8,9,11,13,12,13,15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 1, i32 3, i32 5, i32 4, i32 5, i32 7, i32 9, i32 8, i32 9, i32 11, i32 13, i32 12, i32 13, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask0(<16 x i32>* %vp) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask0(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $7334, %ax # imm = 0x1CA6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = mem[1,0,1,3,5,4,5,7,9,8,9,11,13,12,13,15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 1, i32 3, i32 5, i32 4, i32 5, i32 7, i32 9, i32 8, i32 9, i32 11, i32 13, i32 12, i32 13, i32 15>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-25463, %ax # imm = 0x9C89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = mem[1,0,0,2,5,4,4,6,9,8,8,10,13,12,12,14] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 0, i32 2, i32 5, i32 4, i32 4, i32 6, i32 9, i32 8, i32 8, i32 10, i32 13, i32 12, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask1(<16 x i32>* %vp) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask1(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-25463, %ax # imm = 0x9C89
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = mem[1,0,0,2,5,4,4,6,9,8,8,10,13,12,12,14] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 0, i32 2, i32 5, i32 4, i32 4, i32 6, i32 9, i32 8, i32 8, i32 10, i32 13, i32 12, i32 12, i32 14>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-14529, %ax # imm = 0xC73F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = mem[2,0,1,2,6,4,5,6,10,8,9,10,14,12,13,14] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 2, i32 0, i32 1, i32 2, i32 6, i32 4, i32 5, i32 6, i32 10, i32 8, i32 9, i32 10, i32 14, i32 12, i32 13, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask2(<16 x i32>* %vp) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask2(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-14529, %ax # imm = 0xC73F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = mem[2,0,1,2,6,4,5,6,10,8,9,10,14,12,13,14] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 2, i32 0, i32 1, i32 2, i32 6, i32 4, i32 5, i32 6, i32 10, i32 8, i32 9, i32 10, i32 14, i32 12, i32 13, i32 14>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -5889,31 +6081,31 @@ define <16 x i32> @test2_16xi32_perm_mem_mask3(<16 x i32>* %vp) {
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 1, i32 1, i32 7, i32 5, i32 5, i32 5, i32 11, i32 9, i32 9, i32 9, i32 15, i32 13, i32 13, i32 13>
   ret <16 x i32> %res
 }
-define <16 x i32> @test2_masked_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %vec2) {
+define <16 x i32> @test2_masked_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_16xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-21392, %ax # imm = 0xAC70
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = mem[3,1,1,1,7,5,5,5,11,9,9,9,15,13,13,13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 1, i32 1, i32 7, i32 5, i32 5, i32 5, i32 11, i32 9, i32 9, i32 9, i32 15, i32 13, i32 13, i32 13>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> %vec2
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask3(<16 x i32>* %vp) {
+define <16 x i32> @test2_masked_z_16xi32_perm_mem_mask3(<16 x i32>* %vp, <16 x i32> %mask) {
 ; CHECK-LABEL: test2_masked_z_16xi32_perm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-21392, %ax # imm = 0xAC70
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = mem[3,1,1,1,7,5,5,5,11,9,9,9,15,13,13,13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec = load <16 x i32>, <16 x i32>* %vp
   %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 3, i32 1, i32 1, i32 1, i32 7, i32 5, i32 5, i32 5, i32 11, i32 9, i32 9, i32 9, i32 15, i32 13, i32 13, i32 13>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -5925,79 +6117,85 @@ define <8 x float> @test2_8xfloat_shuff_mask0(<8 x float> %vec1, <8 x float> %ve
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
 }
-define <8 x float> @test2_8xfloat_masked_shuff_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test2_8xfloat_masked_shuff_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-41, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test2_8xfloat_zero_masked_shuff_mask0(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test2_8xfloat_zero_masked_shuff_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-41, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test2_8xfloat_masked_shuff_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test2_8xfloat_masked_shuff_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-63, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test2_8xfloat_zero_masked_shuff_mask1(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test2_8xfloat_zero_masked_shuff_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-63, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test2_8xfloat_masked_shuff_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test2_8xfloat_masked_shuff_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $107, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test2_8xfloat_zero_masked_shuff_mask2(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test2_8xfloat_zero_masked_shuff_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $107, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test2_8xfloat_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2) {
@@ -6008,29 +6206,31 @@ define <8 x float> @test2_8xfloat_shuff_mask3(<8 x float> %vec1, <8 x float> %ve
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
 }
-define <8 x float> @test2_8xfloat_masked_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test2_8xfloat_masked_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test2_8xfloat_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $66, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $66, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
@@ -6042,87 +6242,93 @@ define <8 x float> @test_8xfloat_shuff_mem_mask0(<8 x float> %vec1, <8 x float>*
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $-24, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $-24, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_shuff_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_shuff_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_shuff_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_shuff_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-50, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-50, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -6135,35 +6341,37 @@ define <8 x float> @test_8xfloat_shuff_mem_mask3(<8 x float> %vec1, <8 x float>*
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_shuff_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_shuff_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-26, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-26, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <16 x float> @test_16xfloat_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_shuff_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[6,7,0,1],zmm1[2,3,6,7] sched: [3:1.00]
@@ -6171,80 +6379,82 @@ define <16 x float> @test_16xfloat_shuff_mask0(<16 x float> %vec1, <16 x float> 
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-11480, %ax # imm = 0xD328
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[12,13,14,15,0,1,2,3],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-11480, %ax # imm = 0xD328
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[12,13,14,15,0,1,2,3],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-21749, %ax # imm = 0xAB0B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[0,1,2,3,8,9,10,11],zmm1[0,1,2,3,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mask1(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-21749, %ax # imm = 0xAB0B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,8,9,10,11],zmm1[0,1,2,3,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $75, %ax # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[12,13,14,15,4,5,6,7],zmm1[0,1,2,3,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mask2(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $75, %ax # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[12,13,14,15,4,5,6,7],zmm1[0,1,2,3,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2) {
@@ -6255,30 +6465,30 @@ define <16 x float> @test_16xfloat_shuff_mask3(<16 x float> %vec1, <16 x float> 
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $32347, %ax # imm = 0x7E5B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[8,9,10,11,12,13,14,15],zmm1[0,1,2,3,8,9,10,11] sched: [3:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $32347, %ax # imm = 0x7E5B
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[8,9,10,11,12,13,14,15],zmm1[0,1,2,3,8,9,10,11] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
@@ -6290,90 +6500,90 @@ define <16 x float> @test_16xfloat_shuff_mem_mask0(<16 x float> %vec1, <16 x flo
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-19232, %ax # imm = 0xB4E0
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[12,13,14,15,8,9,10,11],mem[8,9,10,11,4,5,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-19232, %ax # imm = 0xB4E0
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[12,13,14,15,8,9,10,11],mem[8,9,10,11,4,5,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_shuff_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-29660, %ax # imm = 0x8C24
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,4,5,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-29660, %ax # imm = 0x8C24
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,4,5,6,7] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_shuff_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12160, %ax # imm = 0xD080
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,0,1,2,3],mem[8,9,10,11,8,9,10,11] sched: [10:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12160, %ax # imm = 0xD080
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3,0,1,2,3],mem[8,9,10,11,8,9,10,11] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -6386,32 +6596,32 @@ define <16 x float> @test_16xfloat_shuff_mem_mask3(<16 x float> %vec1, <16 x flo
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_shuff_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_shuff_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30129, %ax # imm = 0x8A4F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[4,5,6,7,0,1,2,3],mem[12,13,14,15,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30129, %ax # imm = 0x8A4F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,0,1,2,3],mem[12,13,14,15,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -6423,79 +6633,85 @@ define <4 x double> @test_4xdouble_shuff_mask0(<4 x double> %vec1, <4 x double> 
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mask0(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mask1(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mask2(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2) {
@@ -6506,29 +6722,31 @@ define <4 x double> @test_4xdouble_shuff_mask3(<4 x double> %vec1, <4 x double> 
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
@@ -6540,87 +6758,93 @@ define <4 x double> @test_4xdouble_shuff_mem_mask0(<4 x double> %vec1, <4 x doub
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_shuff_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_shuff_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -6633,31 +6857,33 @@ define <4 x double> @test_4xdouble_shuff_mem_mask3(<4 x double> %vec1, <4 x doub
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_shuff_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_shuff_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -6669,76 +6895,82 @@ define <8 x double> @test_8xdouble_shuff_mask0(<8 x double> %vec1, <8 x double> 
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 2, i32 3, i32 14, i32 15, i32 8, i32 9>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $62, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} = zmm0[6,7,2,3],zmm1[6,7,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 2, i32 3, i32 14, i32 15, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mask0(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $62, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[6,7,2,3],zmm1[6,7,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 2, i32 3, i32 14, i32 15, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-70, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} = zmm0[0,1,4,5],zmm1[0,1,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mask1(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-70, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,4,5],zmm1[0,1,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $30, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} = zmm0[6,7,4,5],zmm1[4,5,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 12, i32 13, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mask2(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $30, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[6,7,4,5],zmm1[4,5,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 12, i32 13, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_shuff_mask3(<8 x double> %vec1, <8 x double> %vec2) {
@@ -6749,28 +6981,30 @@ define <8 x double> @test_8xdouble_shuff_mask3(<8 x double> %vec1, <8 x double> 
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 10, i32 11>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $56, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} = zmm0[4,5,4,5],zmm1[4,5,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mask3(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $56, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,4,5],zmm1[4,5,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_shuff_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
@@ -6782,84 +7016,90 @@ define <8 x double> @test_8xdouble_shuff_mem_mask0(<8 x double> %vec1, <8 x doub
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 0, i32 1, i32 8, i32 9, i32 8, i32 9>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $95, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[6,7,0,1],mem[0,1,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 0, i32 1, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $95, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[6,7,0,1],mem[0,1,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 0, i32 1, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_shuff_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[6,7,6,7],mem[0,1,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[6,7,6,7],mem[0,1,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 6, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_shuff_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3],mem[0,1,4,5] sched: [10:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 12, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,3],mem[0,1,4,5] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 12, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -6872,30 +7112,32 @@ define <8 x double> @test_8xdouble_shuff_mem_mask3(<8 x double> %vec1, <8 x doub
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 12, i32 13, i32 8, i32 9>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_shuff_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_shuff_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[2,3,0,1],mem[4,5,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 12, i32 13, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[2,3,0,1],mem[4,5,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 12, i32 13, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -6907,79 +7149,85 @@ define <8 x i32> @test_8xi32_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2) {
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $26, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $26, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mask1(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mask1(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mask1(<8 x i32> %vec1, <8 x i32> %vec2) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mask1(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $-4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mask2(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mask2(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $51, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mask2(<8 x i32> %vec1, <8 x i32> %vec2) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mask2(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $51, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test_8xi32_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2) {
@@ -6990,29 +7238,31 @@ define <8 x i32> @test_8xi32_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2) {
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $92, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $92, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 define <8 x i32> @test_8xi32_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p) {
@@ -7024,87 +7274,93 @@ define <8 x i32> @test_8xi32_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p)
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_masked_shuff_mem_mask1(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mem_mask1(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-104, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask1(<8 x i32> %vec1, <8 x i32>* %vec2p) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask1(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $-104, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_masked_shuff_mem_mask2(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mem_mask2(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $113, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask2(<8 x i32> %vec1, <8 x i32>* %vec2p) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask2(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $113, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
@@ -7117,31 +7373,33 @@ define <8 x i32> @test_8xi32_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p)
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x i32> %res
 }
-define <8 x i32> @test_8xi32_masked_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3) {
+define <8 x i32> @test_8xi32_masked_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $45, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> %vec3
   ret <8 x i32> %res
 }
 
-define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p) {
+define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xi32_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $45, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %shuf = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i32> %shuf, <8 x i32> zeroinitializer
   ret <8 x i32> %res
 }
 
@@ -7153,82 +7411,82 @@ define <16 x i32> @test_16xi32_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2) {
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $2995, %ax # imm = 0xBB3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[4,5,6,7,4,5,6,7],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $2995, %ax # imm = 0xBB3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,4,5,6,7],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mask1(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mask1(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $18408, %ax # imm = 0x47E8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[8,9,10,11,8,9,10,11],zmm1[8,9,10,11,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mask1(<16 x i32> %vec1, <16 x i32> %vec2) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mask1(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $18408, %ax # imm = 0x47E8
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[8,9,10,11,8,9,10,11],zmm1[8,9,10,11,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mask2(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mask2(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $15737, %ax # imm = 0x3D79
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[4,5,6,7,8,9,10,11],zmm1[0,1,2,3,0,1,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mask2(<16 x i32> %vec1, <16 x i32> %vec2) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mask2(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $15737, %ax # imm = 0x3D79
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,8,9,10,11],zmm1[0,1,2,3,0,1,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test_16xi32_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2) {
@@ -7239,30 +7497,30 @@ define <16 x i32> @test_16xi32_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2) {
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[4,5,6,7,0,1,2,3],zmm1[8,9,10,11,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-3073, %ax # imm = 0xF3FF
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,0,1,2,3],zmm1[8,9,10,11,4,5,6,7] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 define <16 x i32> @test_16xi32_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p) {
@@ -7274,90 +7532,90 @@ define <16 x i32> @test_16xi32_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %ve
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 16, i32 17, i32 18, i32 19>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-8166, %ax # imm = 0xE01A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,0,1,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 16, i32 17, i32 18, i32 19>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-8166, %ax # imm = 0xE01A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,0,1,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 16, i32 17, i32 18, i32 19>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_masked_shuff_mem_mask1(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mem_mask1(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-28302, %ax # imm = 0x9172
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[4,5,6,7,4,5,6,7],mem[0,1,2,3,8,9,10,11] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask1(<16 x i32> %vec1, <16 x i32>* %vec2p) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask1(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-28302, %ax # imm = 0x9172
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,4,5,6,7],mem[0,1,2,3,8,9,10,11] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_masked_shuff_mem_mask2(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mem_mask2(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27158, %ax # imm = 0x6A16
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[4,5,6,7,8,9,10,11],mem[12,13,14,15,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask2(<16 x i32> %vec1, <16 x i32>* %vec2p) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask2(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $27158, %ax # imm = 0x6A16
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,8,9,10,11],mem[12,13,14,15,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -7370,32 +7628,32 @@ define <16 x i32> @test_16xi32_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %ve
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i32> %res
 }
-define <16 x i32> @test_16xi32_masked_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3) {
+define <16 x i32> @test_16xi32_masked_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $26363, %ax # imm = 0x66FB
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[4,5,6,7,4,5,6,7],mem[4,5,6,7,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> %vec3
   ret <16 x i32> %res
 }
 
-define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %vec2p) {
+define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xi32_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $26363, %ax # imm = 0x66FB
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,6,7,4,5,6,7],mem[4,5,6,7,12,13,14,15] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %shuf = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i32> %shuf, <16 x i32> zeroinitializer
   ret <16 x i32> %res
 }
 
@@ -7407,79 +7665,85 @@ define <4 x i64> @test_4xi64_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2) {
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mask1(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mask1(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mask1(<4 x i64> %vec1, <4 x i64> %vec2) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mask1(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mask2(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mask2(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mask2(<4 x i64> %vec1, <4 x i64> %vec2) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mask2(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_4xi64_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2) {
@@ -7490,29 +7754,31 @@ define <4 x i64> @test_4xi64_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2) {
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm2, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3] sched: [3:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 define <4 x i64> @test_4xi64_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p) {
@@ -7524,87 +7790,93 @@ define <4 x i64> @test_4xi64_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p)
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 0>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_masked_shuff_mem_mask1(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mem_mask1(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask1(<4 x i64> %vec1, <4 x i64>* %vec2p) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask1(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_masked_shuff_mem_mask2(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mem_mask2(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask2(<4 x i64> %vec1, <4 x i64>* %vec2p) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask2(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
@@ -7617,31 +7889,33 @@ define <4 x i64> @test_4xi64_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p)
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x i64> %res
 }
-define <4 x i64> @test_4xi64_masked_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3) {
+define <4 x i64> @test_4xi64_masked_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vpblendmq %ymm0, %ymm1, %ymm0 {%k1} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> %vec3
   ret <4 x i64> %res
 }
 
-define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p) {
+define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xi64_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3] sched: [10:1.00]
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z} # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %shuf = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x i64> %shuf, <4 x i64> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x i64> %shuf, <4 x i64> zeroinitializer
   ret <4 x i64> %res
 }
 
@@ -7653,76 +7927,82 @@ define <8 x i64> @test_8xi64_shuff_mask0(<8 x i64> %vec1, <8 x i64> %vec2) {
   %res = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 12, i32 13>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mask0(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mask0(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-15, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} = zmm0[4,5,4,5],zmm1[4,5,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 12, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mask0(<8 x i64> %vec1, <8 x i64> %vec2) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mask0(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-15, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,4,5],zmm1[4,5,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 4, i32 5, i32 4, i32 5, i32 12, i32 13, i32 12, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mask1(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mask1(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-17, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} = zmm0[6,7,4,5],zmm1[2,3,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 10, i32 11, i32 12, i32 13>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mask1(<8 x i64> %vec1, <8 x i64> %vec2) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mask1(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-17, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[6,7,4,5],zmm1[2,3,4,5] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 6, i32 7, i32 4, i32 5, i32 10, i32 11, i32 12, i32 13>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mask2(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mask2(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-24, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} = zmm0[0,1,4,5],zmm1[0,1,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mask2(<8 x i64> %vec1, <8 x i64> %vec2) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mask2(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-24, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,4,5],zmm1[0,1,0,1] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 define <8 x i64> @test_8xi64_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2) {
@@ -7733,28 +8013,30 @@ define <8 x i64> @test_8xi64_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2) {
   %res = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 6, i32 7, i32 12, i32 13, i32 10, i32 11>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} = zmm0[2,3,6,7],zmm1[4,5,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 6, i32 7, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mask3(<8 x i64> %vec1, <8 x i64> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[2,3,6,7],zmm1[4,5,2,3] sched: [3:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 6, i32 7, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 define <8 x i64> @test_8xi64_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p) {
@@ -7766,84 +8048,90 @@ define <8 x i64> @test_8xi64_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p)
   %res = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 12, i32 13, i32 10, i32 11>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[2,3,2,3],mem[4,5,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask0(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[2,3,2,3],mem[4,5,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 12, i32 13, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_masked_shuff_mem_mask1(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mem_mask1(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[2,3,0,1],mem[0,1,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask1(<8 x i64> %vec1, <8 x i64>* %vec2p) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask1(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[2,3,0,1],mem[0,1,0,1] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 8, i32 9, i32 8, i32 9>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_masked_shuff_mem_mask2(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mem_mask2(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $42, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[4,5,0,1],mem[2,3,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 10, i32 11, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask2(<8 x i64> %vec1, <8 x i64>* %vec2p) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask2(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $42, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[4,5,0,1],mem[2,3,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 10, i32 11, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
@@ -7856,30 +8144,32 @@ define <8 x i64> @test_8xi64_shuff_mem_mask3(<8 x i64> %vec1, <8 x i64>* %vec2p)
   %res = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 14, i32 15, i32 10, i32 11>
   ret <8 x i64> %res
 }
-define <8 x i64> @test_8xi64_masked_shuff_mem_mask3(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3) {
+define <8 x i64> @test_8xi64_masked_shuff_mem_mask3(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[2,3,0,1],mem[6,7,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 14, i32 15, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> %vec3
   ret <8 x i64> %res
 }
 
-define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask3(<8 x i64> %vec1, <8 x i64>* %vec2p) {
+define <8 x i64> @test_8xi64_zero_masked_shuff_mem_mask3(<8 x i64> %vec1, <8 x i64>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xi64_zero_masked_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[2,3,0,1],mem[6,7,2,3] sched: [10:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x i64>, <8 x i64>* %vec2p
   %shuf = shufflevector <8 x i64> %vec1, <8 x i64> %vec2, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 14, i32 15, i32 10, i32 11>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i64> %shuf, <8 x i64> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x i64> %shuf, <8 x i64> zeroinitializer
   ret <8 x i64> %res
 }
 
@@ -7891,76 +8181,82 @@ define <4 x float> @test_4xfloat_unpack_low_mask0(<4 x float> %vec1, <4 x float>
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask0(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask1(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask2(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 define <4 x float> @test_4xfloat_unpack_low_mask3(<4 x float> %vec1, <4 x float> %vec2) {
@@ -7971,28 +8267,30 @@ define <4 x float> @test_4xfloat_unpack_low_mask3(<4 x float> %vec1, <4 x float>
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask3(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 define <4 x float> @test_4xfloat_unpack_low_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p) {
@@ -8004,84 +8302,90 @@ define <4 x float> @test_4xfloat_unpack_low_mem_mask0(<4 x float> %vec1, <4 x fl
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $8, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 0, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
@@ -8094,30 +8398,32 @@ define <4 x float> @test_4xfloat_unpack_low_mem_mask3(<4 x float> %vec1, <4 x fl
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_low_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_low_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0],xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
@@ -8129,76 +8435,82 @@ define <8 x float> @test_8xfloat_unpack_low_mask0(<8 x float> %vec1, <8 x float>
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $122, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask0(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $122, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-107, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask1(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-107, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-25, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask2(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-25, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_unpack_low_mask3(<8 x float> %vec1, <8 x float> %vec2) {
@@ -8209,28 +8521,30 @@ define <8 x float> @test_8xfloat_unpack_low_mask3(<8 x float> %vec1, <8 x float>
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-127, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask3(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-127, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_unpack_low_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
@@ -8242,84 +8556,90 @@ define <8 x float> @test_8xfloat_unpack_low_mem_mask0(<8 x float> %vec1, <8 x fl
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $72, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $72, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-98, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -8332,30 +8652,32 @@ define <8 x float> @test_8xfloat_unpack_low_mem_mask3(<8 x float> %vec1, <8 x fl
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_low_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_low_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $64, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 4, i32 12, i32 5, i32 13>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -8367,82 +8689,82 @@ define <16 x float> @test_16xfloat_unpack_low_mask0(<16 x float> %vec1, <16 x fl
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-5916, %ax # imm = 0xE8E4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-5916, %ax # imm = 0xE8E4
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-1130, %ax # imm = 0xFB96
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-1130, %ax # imm = 0xFB96
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12439, %ax # imm = 0xCF69
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12439, %ax # imm = 0xCF69
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2) {
@@ -8453,30 +8775,30 @@ define <16 x float> @test_16xfloat_unpack_low_mask3(<16 x float> %vec1, <16 x fl
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-6413, %ax # imm = 0xE6F3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-6413, %ax # imm = 0xE6F3
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
@@ -8488,90 +8810,90 @@ define <16 x float> @test_16xfloat_unpack_low_mem_mask0(<16 x float> %vec1, <16 
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $20326, %ax # imm = 0x4F66
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $20326, %ax # imm = 0x4F66
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-17707, %ax # imm = 0xBAD5
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-17707, %ax # imm = 0xBAD5
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-6631, %ax # imm = 0xE619
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-6631, %ax # imm = 0xE619
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -8584,32 +8906,32 @@ define <16 x float> @test_16xfloat_unpack_low_mem_mask3(<16 x float> %vec1, <16 
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-20711, %ax # imm = 0xAF19
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-20711, %ax # imm = 0xAF19
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -8621,52 +8943,56 @@ define <2 x double> @test_2xdouble_unpack_low_mask0(<2 x double> %vec1, <2 x dou
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_low_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_low_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_low_mask0(<2 x double> %vec1, <2 x double> %vec2) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_low_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_low_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_low_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 {%k1} = xmm0[0],xmm1[0] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_low_mask1(<2 x double> %vec1, <2 x double> %vec2) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_low_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm1[0] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 define <2 x double> @test_2xdouble_unpack_low_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p) {
@@ -8678,57 +9004,61 @@ define <2 x double> @test_2xdouble_unpack_low_mem_mask0(<2 x double> %vec1, <2 x
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0] sched: [7:1.00]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0] sched: [7:1.00]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 
@@ -8740,76 +9070,82 @@ define <4 x double> @test_4xdouble_unpack_low_mask0(<4 x double> %vec1, <4 x dou
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask0(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask1(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask2(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_unpack_low_mask3(<4 x double> %vec1, <4 x double> %vec2) {
@@ -8820,28 +9156,30 @@ define <4 x double> @test_4xdouble_unpack_low_mask3(<4 x double> %vec1, <4 x dou
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm2 {%k1} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask3(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_unpack_low_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
@@ -8853,84 +9191,90 @@ define <4 x double> @test_4xdouble_unpack_low_mem_mask0(<4 x double> %vec1, <4 x
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $7, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $7, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -8943,30 +9287,32 @@ define <4 x double> @test_4xdouble_unpack_low_mem_mask3(<4 x double> %vec1, <4 x
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_low_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm1 {%k1} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_low_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 {%k1} {z} = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -8978,76 +9324,82 @@ define <8 x double> @test_8xdouble_unpack_low_mask0(<8 x double> %vec1, <8 x dou
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-73, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-73, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $102, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $102, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-46, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-46, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2) {
@@ -9058,28 +9410,30 @@ define <8 x double> @test_8xdouble_unpack_low_mask3(<8 x double> %vec1, <8 x dou
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-86, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-86, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
@@ -9091,84 +9445,90 @@ define <8 x double> @test_8xdouble_unpack_low_mem_mask0(<8 x double> %vec1, <8 x
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $126, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $126, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-35, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-35, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -9181,30 +9541,32 @@ define <8 x double> @test_8xdouble_unpack_low_mem_mask3(<8 x double> %vec1, <8 x
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $62, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $62, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  %res = select <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -9216,76 +9578,82 @@ define <4 x float> @test_4xfloat_unpack_high_mask0(<4 x float> %vec1, <4 x float
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm2 {%k1} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask0(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask0(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm2 {%k1} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask1(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask1(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm2 {%k1} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask2(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask2(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $3, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 define <4 x float> @test_4xfloat_unpack_high_mask3(<4 x float> %vec1, <4 x float> %vec2) {
@@ -9296,28 +9664,30 @@ define <4 x float> @test_4xfloat_unpack_high_mask3(<4 x float> %vec1, <4 x float
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $7, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm2 {%k1} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask3(<4 x float> %vec1, <4 x float> %vec2) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mask3(<4 x float> %vec1, <4 x float> %vec2, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $7, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 define <4 x float> @test_4xfloat_unpack_high_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p) {
@@ -9329,84 +9699,90 @@ define <4 x float> @test_4xfloat_unpack_high_mem_mask0(<4 x float> %vec1, <4 x f
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm1 {%k1} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask0(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $4, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm1 {%k1} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask1(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm1 {%k1} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask2(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
@@ -9419,30 +9795,32 @@ define <4 x float> @test_4xfloat_unpack_high_mem_mask3(<4 x float> %vec1, <4 x f
   %res = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   ret <4 x float> %res
 }
-define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3) {
+define <4 x float> @test_4xfloat_masked_unpack_high_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x float> %vec3, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm1 {%k1} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> %vec3
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> %vec3
   ret <4 x float> %res
 }
 
-define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p) {
+define <4 x float> @test_4xfloat_zero_masked_unpack_high_mem_mask3(<4 x float> %vec1, <4 x float>* %vec2p, <4 x i32> %mask) {
 ; CHECK-LABEL: test_4xfloat_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $5, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} xmm0 {%k1} {z} = xmm0[2],mem[2],xmm0[3],mem[3] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x float>, <4 x float>* %vec2p
   %shuf = shufflevector <4 x float> %vec1, <4 x float> %vec2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x float> %shuf, <4 x float> zeroinitializer
+  %cmp = icmp eq <4 x i32> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x float> %shuf, <4 x float> zeroinitializer
   ret <4 x float> %res
 }
 
@@ -9454,76 +9832,82 @@ define <8 x float> @test_8xfloat_unpack_high_mask0(<8 x float> %vec1, <8 x float
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $21, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm2 {%k1} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask0(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask0(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $21, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm2 {%k1} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask1(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask1(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $82, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-126, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm2 {%k1} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask2(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask2(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-126, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_unpack_high_mask3(<8 x float> %vec1, <8 x float> %vec2) {
@@ -9534,28 +9918,30 @@ define <8 x float> @test_8xfloat_unpack_high_mask3(<8 x float> %vec1, <8 x float
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-19, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm2 {%k1} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask3(<8 x float> %vec1, <8 x float> %vec2) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mask3(<8 x float> %vec1, <8 x float> %vec2, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-19, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 define <8 x float> @test_8xfloat_unpack_high_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
@@ -9567,84 +9953,90 @@ define <8 x float> @test_8xfloat_unpack_high_mem_mask0(<8 x float> %vec1, <8 x f
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $28, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $28, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-115, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask1(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-115, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-76, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask2(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-76, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -9657,30 +10049,32 @@ define <8 x float> @test_8xfloat_unpack_high_mem_mask3(<8 x float> %vec1, <8 x f
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
   ret <8 x float> %res
 }
-define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3) {
+define <8 x float> @test_8xfloat_masked_unpack_high_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x float> %vec3, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm1 {%k1} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %vec3
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> %vec3
   ret <8 x float> %res
 }
 
-define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p) {
+define <8 x float> @test_8xfloat_zero_masked_unpack_high_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p, <8 x i32> %mask) {
 ; CHECK-LABEL: test_8xfloat_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-116, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} ymm0 {%k1} {z} = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %shuf = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 2, i32 10, i32 3, i32 11, i32 6, i32 14, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x float> %shuf, <8 x float> zeroinitializer
+  %cmp = icmp eq <8 x i32> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x float> %shuf, <8 x float> zeroinitializer
   ret <8 x float> %res
 }
 
@@ -9692,82 +10086,82 @@ define <16 x float> @test_16xfloat_unpack_high_mask0(<16 x float> %vec1, <16 x f
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12160, %ax # imm = 0xD080
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-12160, %ax # imm = 0xD080
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30129, %ax # imm = 0x8A4F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-30129, %ax # imm = 0x8A4F
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-2371, %ax # imm = 0xF6BD
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-2371, %ax # imm = 0xF6BD
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2) {
@@ -9778,30 +10172,30 @@ define <16 x float> @test_16xfloat_unpack_high_mask3(<16 x float> %vec1, <16 x f
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-26006, %ax # imm = 0x9A6A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-26006, %ax # imm = 0x9A6A
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 define <16 x float> @test_16xfloat_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
@@ -9813,90 +10207,90 @@ define <16 x float> @test_16xfloat_unpack_high_mem_mask0(<16 x float> %vec1, <16
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-27027, %ax # imm = 0x966D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-27027, %ax # imm = 0x966D
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $29162, %ax # imm = 0x71EA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $29162, %ax # imm = 0x71EA
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-26458, %ax # imm = 0x98A6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-26458, %ax # imm = 0x98A6
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -9909,32 +10303,32 @@ define <16 x float> @test_16xfloat_unpack_high_mem_mask3(<16 x float> %vec1, <16
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   ret <16 x float> %res
 }
-define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3) {
+define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $25225, %ax # imm = 0x6289
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec3
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> %vec3
   ret <16 x float> %res
 }
 
-define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
+define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x i32> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $25225, %ax # imm = 0x6289
-; CHECK-NEXT:    # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %shuf = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
-  %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
+  %cmp = icmp eq <16 x i32> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x float> %shuf, <16 x float> zeroinitializer
   ret <16 x float> %res
 }
 
@@ -9946,52 +10340,56 @@ define <2 x double> @test_2xdouble_unpack_high_mask0(<2 x double> %vec1, <2 x do
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_high_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_high_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_high_mask0(<2 x double> %vec1, <2 x double> %vec2) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_high_mask0(<2 x double> %vec1, <2 x double> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_high_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_high_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm4, %xmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm2 {%k1} = xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_high_mask1(<2 x double> %vec1, <2 x double> %vec2) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_high_mask1(<2 x double> %vec1, <2 x double> %vec2, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 define <2 x double> @test_2xdouble_unpack_high_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p) {
@@ -10003,57 +10401,61 @@ define <2 x double> @test_2xdouble_unpack_high_mem_mask0(<2 x double> %vec1, <2 
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
   ret <2 x double> %res
 }
-define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm1 {%k1} = xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask0(<2 x double> %vec1, <2 x double>* %vec2p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 1, i1 0>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3) {
+define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x double> %vec3, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm1 {%k1} = xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> %vec3
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> %vec3
   ret <2 x double> %res
 }
 
-define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p) {
+define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask1(<2 x double> %vec1, <2 x double>* %vec2p, <2 x i64> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $2, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],mem[1] sched: [7:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <2 x double>, <2 x double>* %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
-  %res = select <2 x i1> <i1 0, i1 1>, <2 x double> %shuf, <2 x double> zeroinitializer
+  %cmp = icmp eq <2 x i64> %mask, zeroinitializer
+  %res = select <2 x i1> %cmp, <2 x double> %shuf, <2 x double> zeroinitializer
   ret <2 x double> %res
 }
 
@@ -10065,76 +10467,82 @@ define <4 x double> @test_4xdouble_unpack_high_mask0(<4 x double> %vec1, <4 x do
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $9, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask0(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask0(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $9, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask1(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask1(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $14, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask2(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask2(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $6, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_unpack_high_mask3(<4 x double> %vec1, <4 x double> %vec2) {
@@ -10145,28 +10553,30 @@ define <4 x double> @test_4xdouble_unpack_high_mask3(<4 x double> %vec1, <4 x do
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm4, %ymm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm2 {%k1} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask3(<4 x double> %vec1, <4 x double> %vec2) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mask3(<4 x double> %vec1, <4 x double> %vec2, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $1, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 0, i1 0>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 define <4 x double> @test_4xdouble_unpack_high_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
@@ -10178,84 +10588,90 @@ define <4 x double> @test_4xdouble_unpack_high_mem_mask0(<4 x double> %vec1, <4 
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $11, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask1(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $12, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask2(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $13, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -10268,30 +10684,32 @@ define <4 x double> @test_4xdouble_unpack_high_mem_mask3(<4 x double> %vec1, <4 
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x double> %res
 }
-define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3) {
+define <4 x double> @test_4xdouble_masked_unpack_high_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x double> %vec3, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm1 {%k1} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 # sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> %vec3
   ret <4 x double> %res
 }
 
-define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p) {
+define <4 x double> @test_4xdouble_zero_masked_unpack_high_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p, <4 x i64> %mask) {
 ; CHECK-LABEL: test_4xdouble_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $10, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %ymm2, %ymm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> zeroinitializer
+  %cmp = icmp eq <4 x i64> %mask, zeroinitializer
+  %res = select <4 x i1> %cmp, <4 x double> %shuf, <4 x double> zeroinitializer
   ret <4 x double> %res
 }
 
@@ -10303,76 +10721,82 @@ define <8 x double> @test_8xdouble_unpack_high_mask0(<8 x double> %vec1, <8 x do
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-27, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-27, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-21, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-21, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-118, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-118, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2) {
@@ -10383,28 +10807,30 @@ define <8 x double> @test_8xdouble_unpack_high_mask3(<8 x double> %vec1, <8 x do
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $100, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm4, %zmm3, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $100, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7] sched: [1:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 define <8 x double> @test_8xdouble_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
@@ -10416,84 +10842,90 @@ define <8 x double> @test_8xdouble_unpack_high_mem_mask0(<8 x double> %vec1, <8 
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-76, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-76, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $71, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $71, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-49, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-49, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 
@@ -10506,30 +10938,32 @@ define <8 x double> @test_8xdouble_unpack_high_mem_mask3(<8 x double> %vec1, <8 
   %res = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x double> %res
 }
-define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3) {
+define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-40, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm2, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> %vec3
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> %vec3
   ret <8 x double> %res
 }
 
-define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p) {
+define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x i64> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movb $-40, %al # sched: [1:0.25]
-; CHECK-NEXT:    kmovd %eax, %k1 # sched: [1:1.00]
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # sched: [1:0.33]
+; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7] sched: [8:1.00]
 ; CHECK-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <8 x double>, <8 x double>* %vec2p
   %shuf = shufflevector <8 x double> %vec1, <8 x double> %vec2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-  %res = select <8 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1>, <8 x double> %shuf, <8 x double> zeroinitializer
+  %cmp = icmp eq <8 x i64> %mask, zeroinitializer
+  %res = select <8 x i1> %cmp, <8 x double> %shuf, <8 x double> zeroinitializer
   ret <8 x double> %res
 }
 

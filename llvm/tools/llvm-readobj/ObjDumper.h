@@ -58,9 +58,6 @@ public:
   virtual void printMipsReginfo() { }
   virtual void printMipsOptions() { }
 
-  // Only implemented for AMDGPU ELF at this time.
-  virtual void printAMDGPUCodeObjectMetadata() {}
-
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }
   virtual void printCOFFExports() { }

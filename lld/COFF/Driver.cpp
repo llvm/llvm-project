@@ -547,7 +547,7 @@ static void parseModuleDefs(StringRef Path) {
   }
 }
 
-// Get a sorted list of symbols not to automatically export
+// Get a set of symbols not to automatically export
 // when exporting all global symbols for MinGW.
 static StringSet<> getExportExcludeSymbols() {
   if (Config->Machine == I386)
@@ -555,7 +555,7 @@ static StringSet<> getExportExcludeSymbols() {
         "__NULL_IMPORT_DESCRIPTOR",
         "__pei386_runtime_relocator",
         "_do_pseudo_reloc",
-       "_impure_ptr",
+        "_impure_ptr",
         "__impure_ptr",
         "__fmode",
         "_environ",

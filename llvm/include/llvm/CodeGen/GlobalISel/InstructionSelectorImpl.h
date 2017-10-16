@@ -209,6 +209,25 @@ bool InstructionSelector::executeMatchTable(
           return false;
       break;
     }
+    case GIM_CheckNonAtomic: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckNonAtomic(MIs[" << InsnID
+                   << "])\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert((State.MIs[InsnID]->getOpcode() == TargetOpcode::G_LOAD ||
+              State.MIs[InsnID]->getOpcode() == TargetOpcode::G_STORE) &&
+             "Expected G_LOAD/G_STORE");
+
+      if (!State.MIs[InsnID]->hasOneMemOperand())
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+
+      for (const auto &MMO : State.MIs[InsnID]->memoperands())
+        if (MMO->getOrdering() != AtomicOrdering::NotAtomic)
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+      break;
+    }
 
     case GIM_CheckType: {
       int64_t InsnID = MatchTable[CurrentIdx++];
@@ -254,12 +273,14 @@ bool InstructionSelector::executeMatchTable(
                    << "), ComplexPredicateID=" << ComplexPredicateID << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       // FIXME: Use std::invoke() when it's available.
-      if (!(State.Renderers[RendererID] =
-                (ISel.*MatcherInfo.ComplexPredicates[ComplexPredicateID])(
-                    State.MIs[InsnID]->getOperand(OpIdx)))) {
+      ComplexRendererFn Renderer =
+          (ISel.*MatcherInfo.ComplexPredicates[ComplexPredicateID])(
+              State.MIs[InsnID]->getOperand(OpIdx));
+      if (Renderer.hasValue())
+        State.Renderers[RendererID] = Renderer.getValue();
+      else
         if (handleReject() == RejectAndGiveUp)
           return false;
-      }
       break;
     }
 
@@ -453,9 +474,21 @@ bool InstructionSelector::executeMatchTable(
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RendererID = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      State.Renderers[RendererID](OutMIs[InsnID]);
+      for (const auto &RenderOpFn : State.Renderers[RendererID])
+        RenderOpFn(OutMIs[InsnID]);
       DEBUG(dbgs() << CurrentIdx << ": GIR_ComplexRenderer(OutMIs[" << InsnID
                    << "], " << RendererID << ")\n");
+      break;
+    }
+    case GIR_ComplexSubOperandRenderer: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t RendererID = MatchTable[CurrentIdx++];
+      int64_t RenderOpID = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+      State.Renderers[RendererID][RenderOpID](OutMIs[InsnID]);
+      DEBUG(dbgs() << CurrentIdx << ": GIR_ComplexSubOperandRenderer(OutMIs["
+                   << InsnID << "], " << RendererID << ", " << RenderOpID
+                   << ")\n");
       break;
     }
 

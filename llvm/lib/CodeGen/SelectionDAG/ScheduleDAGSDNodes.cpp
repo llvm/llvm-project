@@ -651,7 +651,7 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
 
 void ScheduleDAGSDNodes::dumpNode(const SUnit *SU) const {
   // Cannot completely remove virtual function even in release mode.
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (!SU->getNode()) {
     dbgs() << "PHYS REG COPY\n";
     return;
@@ -671,7 +671,7 @@ void ScheduleDAGSDNodes::dumpNode(const SUnit *SU) const {
 #endif
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScheduleDAGSDNodes::dumpSchedule() const {
   for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
     if (SUnit *SU = Sequence[i])

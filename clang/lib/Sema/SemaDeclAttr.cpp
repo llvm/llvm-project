@@ -4385,7 +4385,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &Attrs, CallingConv &CC,
 static bool isValidSwiftContextType(QualType type) {
   if (!type->hasPointerRepresentation())
     return type->isDependentType();
-  return type->getPointeeType().getAddressSpace() == 0;
+  return type->getPointeeType().getAddressSpace() == LangAS::Default;
 }
 
 /// Pointers and references in the default address space.
@@ -4397,7 +4397,7 @@ static bool isValidSwiftIndirectResultType(QualType type) {
   } else {
     return type->isDependentType();
   }
-  return type.getAddressSpace() == 0;
+  return type.getAddressSpace() == LangAS::Default;
 }
 
 /// Pointers and references to pointers in the default address space.

@@ -16,14 +16,14 @@
 #ifndef LLVM_CLANG_BASIC_ADDRESSSPACES_H
 #define LLVM_CLANG_BASIC_ADDRESSSPACES_H
 
-namespace clang {
+#include <assert.h>
 
-namespace LangAS {
+namespace clang {
 
 /// \brief Defines the address space values used by the address space qualifier
 /// of QualType.
 ///
-enum ID {
+enum class LangAS : unsigned {
   // The default value 0 is the value used in QualType for the the situation
   // where there is no address space qualifier.
   Default = 0,
@@ -51,9 +51,24 @@ enum ID {
 
 /// The type of a lookup table which maps from language-specific address spaces
 /// to target-specific ones.
-typedef unsigned Map[FirstTargetAddressSpace];
+typedef unsigned LangASMap[(unsigned)LangAS::FirstTargetAddressSpace];
+
+/// \return whether \p AS is a target-specific address space rather than a
+/// clang AST address space
+inline bool isTargetAddressSpace(LangAS AS) {
+  return (unsigned)AS >= (unsigned)LangAS::FirstTargetAddressSpace;
 }
 
+inline unsigned toTargetAddressSpace(LangAS AS) {
+  assert(isTargetAddressSpace(AS));
+  return (unsigned)AS - (unsigned)LangAS::FirstTargetAddressSpace;
 }
+
+inline LangAS getLangASFromTargetAS(unsigned TargetAS) {
+  return static_cast<LangAS>((TargetAS) +
+                             (unsigned)LangAS::FirstTargetAddressSpace);
+}
+
+} // namespace clang
 
 #endif

@@ -525,8 +525,8 @@ static void removeImageAccessQualifier(std::string& TyName) {
 // for example in clGetKernelArgInfo() implementation between the address
 // spaces with targets without unique mapping to the OpenCL address spaces
 // (basically all single AS CPUs).
-static unsigned ArgInfoAddressSpace(unsigned LangAS) {
-  switch (LangAS) {
+static unsigned ArgInfoAddressSpace(LangAS AS) {
+  switch (AS) {
   case LangAS::opencl_global:   return 1;
   case LangAS::opencl_constant: return 2;
   case LangAS::opencl_local:    return 3;

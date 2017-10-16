@@ -986,7 +986,7 @@ bool RegBankSelect::MappingCost::operator==(const MappingCost &Cost) const {
          LocalFreq == Cost.LocalFreq;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegBankSelect::MappingCost::dump() const {
   print(dbgs());
   dbgs() << '\n';

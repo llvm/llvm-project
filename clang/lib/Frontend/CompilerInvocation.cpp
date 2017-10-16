@@ -2138,6 +2138,12 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     && Opts.OpenCLVersion >= 200);
   Opts.BlocksRuntimeOptional = Args.hasArg(OPT_fblocks_runtime_optional);
   Opts.CoroutinesTS = Args.hasArg(OPT_fcoroutines_ts);
+  
+  // Enable [[]] attributes in C++11 by default.
+  Opts.DoubleSquareBracketAttributes =
+      Args.hasFlag(OPT_fdouble_square_bracket_attributes,
+                   OPT_fno_double_square_bracket_attributes, Opts.CPlusPlus11);
+
   Opts.ModulesTS = Args.hasArg(OPT_fmodules_ts);
   Opts.Modules = Args.hasArg(OPT_fmodules) || Opts.ModulesTS;
   Opts.ModulesStrictDeclUse = Args.hasArg(OPT_fmodules_strict_decluse);

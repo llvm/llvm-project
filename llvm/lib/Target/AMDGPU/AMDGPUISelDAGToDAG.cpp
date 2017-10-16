@@ -1712,7 +1712,7 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
 
   MachineSDNode *CmpSwap = nullptr;
   if (Subtarget->hasAddr64()) {
-    SDValue SRsrc, VAddr, SOffset, Offset, GLC, SLC;
+    SDValue SRsrc, VAddr, SOffset, Offset, SLC;
 
     if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset, SLC)) {
       unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :

@@ -7332,8 +7332,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // This includes arrays of objects with address space qualifiers, but not
   // automatic variables that point to other address spaces.
   // ISO/IEC TR 18037 S5.1.2
-  if (!getLangOpts().OpenCL
-      && NewVD->hasLocalStorage() && T.getAddressSpace() != 0) {
+  if (!getLangOpts().OpenCL && NewVD->hasLocalStorage() &&
+      T.getAddressSpace() != LangAS::Default) {
     Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 0;
     NewVD->setInvalidDecl();
     return;
@@ -8833,7 +8833,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().OpenCL) {
     // OpenCL v1.1 s6.5: Using an address space qualifier in a function return
     // type declaration will generate a compilation error.
-    unsigned AddressSpace = NewFD->getReturnType().getAddressSpace();
+    LangAS AddressSpace = NewFD->getReturnType().getAddressSpace();
     if (AddressSpace != LangAS::Default) {
       Diag(NewFD->getLocation(),
            diag::err_opencl_return_value_with_address_space);

@@ -408,6 +408,13 @@ def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
   "Hardware automatically inserts waitcnt before barrier"
 >;
 
+def FeatureCodeObjectV3 : SubtargetFeature <
+  "code-object-v3",
+  "CodeObjectV3",
+  "true",
+  "Generate code object version 3"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",

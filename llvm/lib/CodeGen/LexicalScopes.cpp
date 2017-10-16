@@ -317,7 +317,7 @@ bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
   return Result;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LexicalScope::dump(unsigned Indent) const {
   raw_ostream &err = dbgs();
   err.indent(Indent);

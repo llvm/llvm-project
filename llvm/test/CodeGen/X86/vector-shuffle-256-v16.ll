@@ -4022,33 +4022,45 @@ define <16 x i16> @PR24935(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %shuffle
 }
 
-define <16 x i16> @PR34369(<16 x i16> %vec) {
+define <16 x i16> @PR34369(<16 x i16> %vec, <16 x i16> %mask) {
 ; AVX1-LABEL: PR34369:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[6,7,0,1,0,1],zero,zero,xmm0[10,11],zero,zero,zero,zero,xmm0[4,5]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[14,15,0,1],zero,zero,xmm1[0,1,2,3,4,5,8,9,8,9]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm2[8,9,10,11,4,5,10,11,8,9,10,11,4,5,4,5]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[6,7,0,1,0,1,6,7,10,11,4,5,4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3],xmm0[4,5,6],xmm3[7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[14,15,0,1,12,13,0,1,2,3,4,5,8,9,8,9]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR34369:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <255,255,u,u,0,0,255,255,u,u,255,255,u,u,u,u,255,255,255,255,255,255,u,u,255,255,u,u,u,u,255,255>
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[6,7,0,1,0,1],zero,zero,ymm0[10,11],zero,zero,zero,zero,ymm0[4,5,30,31,16,17],zero,zero,ymm0[16,17,18,19,20,21,24,25,24,25]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[2,3,0,1]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[8,9,10,11,4,5,10,11,8,9,10,11,4,5,4,5]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[6,7,0,1,0,1,u,u,10,11,4,5,4,5,u,u,30,31,16,17,28,29,16,17,18,19,20,21,24,25,24,25]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,0,0,255,255,255,255,255,255,0,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpblendvb %ymm3, %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR34369:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm1 = [3,0,0,13,5,2,2,10,15,8,14,8,9,10,12,12]
-; AVX512VL-NEXT:    movw $-1129, %ax # imm = 0xFB97
-; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,0,0,13,5,2,2,10,15,8,14,8,9,10,12,12]
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpeqw %ymm3, %ymm1, %k1
+; AVX512VL-NEXT:    vpermw %ymm0, %ymm2, %ymm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <16 x i32> <i32 3, i32 0, i32 0, i32 13, i32 5, i32 2, i32 2, i32 10, i32 15, i32 8, i32 14, i32 8, i32 9, i32 10, i32 12, i32 12>
-  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1>, <16 x i16> %shuf, <16 x i16> zeroinitializer
+  %cmp = icmp eq <16 x i16> %mask, zeroinitializer
+  %res = select <16 x i1> %cmp, <16 x i16> %shuf, <16 x i16> zeroinitializer
   ret <16 x i16> %res
 }
 

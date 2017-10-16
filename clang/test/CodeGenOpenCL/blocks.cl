@@ -50,3 +50,5 @@ void foo(){
 // COMMON:  %[[block:.*]] = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)*, i32 }> addrspace(4)*
 // COMMON:  %[[block_capture_addr:.*]] = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 }>, <{ i32, i32, i8 addrspace(4)*, i32 }> addrspace(4)* %[[block]], i32 0, i32 3
 // COMMON:  %[[block_capture:.*]] = load i32, i32 addrspace(4)* %[[block_capture_addr]]
+
+// COMMON-NOT: define{{.*}}@__foo_block_invoke_kernel

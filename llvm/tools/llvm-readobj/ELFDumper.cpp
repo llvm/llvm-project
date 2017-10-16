@@ -34,6 +34,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/StackMapParser.h"
+#include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
@@ -155,8 +156,6 @@ public:
   void printMipsABIFlags() override;
   void printMipsReginfo() override;
   void printMipsOptions() override;
-
-  void printAMDGPUCodeObjectMetadata() override;
 
   void printStackMap() const override;
 
@@ -2353,36 +2352,6 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printAMDGPUCodeObjectMetadata() {
-  const Elf_Shdr *Shdr = findSectionByName(*Obj, ".note");
-  if (!Shdr) {
-    W.startLine() << "There is no .note section in the file.\n";
-    return;
-  }
-  ArrayRef<uint8_t> Sec = unwrapOrError(Obj->getSectionContents(Shdr));
-
-  const uint32_t CodeObjectMetadataNoteType = 10;
-  for (auto I = reinterpret_cast<const Elf_Word *>(&Sec[0]),
-       E = I + Sec.size()/4; I != E;) {
-    uint32_t NameSZ = I[0];
-    uint32_t DescSZ = I[1];
-    uint32_t Type = I[2];
-    I += 3;
-
-    StringRef Name;
-    if (NameSZ) {
-      Name = StringRef(reinterpret_cast<const char *>(I), NameSZ - 1);
-      I += alignTo<4>(NameSZ)/4;
-    }
-
-    if (Name == "AMD" && Type == CodeObjectMetadataNoteType) {
-      StringRef Desc(reinterpret_cast<const char *>(I), DescSZ);
-      W.printString(Desc);
-    }
-    I += alignTo<4>(DescSZ)/4;
-  }
-}
-
 template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   const Elf_Shdr *StackMapSection = nullptr;
   for (const auto &Sec : unwrapOrError(Obj->sections())) {
@@ -3393,7 +3362,7 @@ static std::string getGNUNoteTypeName(const uint32_t NT) {
   std::string string;
   raw_string_ostream OS(string);
   OS << format("Unknown note type (0x%08x)", NT);
-  return string;
+  return OS.str();
 }
 
 static std::string getFreeBSDNoteTypeName(const uint32_t NT) {
@@ -3421,7 +3390,30 @@ static std::string getFreeBSDNoteTypeName(const uint32_t NT) {
   std::string string;
   raw_string_ostream OS(string);
   OS << format("Unknown note type (0x%08x)", NT);
-  return string;
+  return OS.str();
+}
+
+static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
+  static const struct {
+    uint32_t ID;
+    const char *Name;
+  } Notes[] = {
+    {ELF::NT_AMD_AMDGPU_HSA_METADATA,
+     "NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)"},
+    {ELF::NT_AMD_AMDGPU_ISA,
+     "NT_AMD_AMDGPU_ISA (ISA Version)"},
+    {ELF::NT_AMD_AMDGPU_PAL_METADATA,
+     "NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)"}
+  };
+
+  for (const auto &Note : Notes)
+    if (Note.ID == NT)
+      return std::string(Note.Name);
+
+  std::string string;
+  raw_string_ostream OS(string);
+  OS << format("Unknown note type (0x%08x)", NT);
+  return OS.str();
 }
 
 template <typename ELFT>
@@ -3464,6 +3456,39 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
   OS << '\n';
 }
 
+template <typename ELFT>
+static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
+                            ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words,
+                            size_t Size) {
+  switch (NoteType) {
+  default:
+    return;
+    case ELF::NT_AMD_AMDGPU_HSA_METADATA:
+      OS << "    HSA Metadata:\n"
+         << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
+      break;
+    case ELF::NT_AMD_AMDGPU_ISA:
+      OS << "    ISA Version:\n"
+         << "        "
+         << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
+      break;
+    case ELF::NT_AMD_AMDGPU_PAL_METADATA:
+      const uint32_t *PALMetadataBegin = reinterpret_cast<const uint32_t *>(Words.data());
+      const uint32_t *PALMetadataEnd = PALMetadataBegin + Size;
+      std::vector<uint32_t> PALMetadata(PALMetadataBegin, PALMetadataEnd);
+      std::string PALMetadataString;
+      auto Error = AMDGPU::PALMD::toString(PALMetadata, PALMetadataString);
+      OS << "    PAL Metadata:\n";
+      if (Error) {
+        OS << "        Invalid";
+        return;
+      }
+      OS << PALMetadataString;
+      break;
+  }
+  OS.flush();
+}
+
 template <class ELFT>
 void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
@@ -3504,6 +3529,9 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
         printGNUNote<ELFT>(OS, Type, Descriptor, DescriptorSize);
       } else if (Name == "FreeBSD") {
         OS << getFreeBSDNoteTypeName(Type) << '\n';
+      } else if (Name == "AMD") {
+        OS << getAMDGPUNoteTypeName(Type) << '\n';
+        printAMDGPUNote<ELFT>(OS, Type, Descriptor, DescriptorSize);
       } else {
         OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
       }

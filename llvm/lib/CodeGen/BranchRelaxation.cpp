@@ -138,7 +138,7 @@ void BranchRelaxation::verify() {
 #endif
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void BranchRelaxation::dumpBBs() {
   for (auto &MBB : *MF) {

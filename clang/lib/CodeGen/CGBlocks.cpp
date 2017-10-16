@@ -309,10 +309,12 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   if (CGM.getLangOpts().OpenCL) {
     // The header is basically 'struct { int; int; generic void *;
     // custom_fields; }'. Assert that struct is packed.
-    auto GenPtrAlign = CharUnits::fromQuantity(
-        CGM.getTarget().getPointerAlign(LangAS::opencl_generic) / 8);
-    auto GenPtrSize = CharUnits::fromQuantity(
-        CGM.getTarget().getPointerWidth(LangAS::opencl_generic) / 8);
+    auto GenericAS =
+        CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic);
+    auto GenPtrAlign =
+        CharUnits::fromQuantity(CGM.getTarget().getPointerAlign(GenericAS) / 8);
+    auto GenPtrSize =
+        CharUnits::fromQuantity(CGM.getTarget().getPointerWidth(GenericAS) / 8);
     assert(CGM.getIntSize() <= GenPtrSize);
     assert(CGM.getIntAlign() <= GenPtrAlign);
     assert((2 * CGM.getIntSize()).isMultipleOf(GenPtrAlign));
@@ -738,16 +740,27 @@ void CodeGenFunction::destroyBlockInfos(CGBlockInfo *head) {
 }
 
 /// Emit a block literal expression in the current function.
-llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
+llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr,
+                                               llvm::Function **InvokeF) {
   // If the block has no captures, we won't have a pre-computed
   // layout for it.
   if (!blockExpr->getBlockDecl()->hasCaptures()) {
-    if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr))
+    // The block literal is emitted as a global variable, and the block invoke
+    // function has to be extracted from its initializer.
+    if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr)) {
+      if (InvokeF) {
+        auto *GV = cast<llvm::GlobalVariable>(
+            cast<llvm::Constant>(Block)->stripPointerCasts());
+        auto *BlockInit = cast<llvm::ConstantStruct>(GV->getInitializer());
+        *InvokeF = cast<llvm::Function>(
+            BlockInit->getAggregateElement(2)->stripPointerCasts());
+      }
       return Block;
+    }
     CGBlockInfo blockInfo(blockExpr->getBlockDecl(), CurFn->getName());
     computeBlockInfo(CGM, this, blockInfo);
     blockInfo.BlockExpression = blockExpr;
-    return EmitBlockLiteral(blockInfo);
+    return EmitBlockLiteral(blockInfo, InvokeF);
   }
 
   // Find the block info for this block and take ownership of it.
@@ -756,21 +769,26 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
                                          blockExpr->getBlockDecl()));
 
   blockInfo->BlockExpression = blockExpr;
-  return EmitBlockLiteral(*blockInfo);
+  return EmitBlockLiteral(*blockInfo, InvokeF);
 }
 
-llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
+llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo,
+                                               llvm::Function **InvokeF) {
   bool IsOpenCL = CGM.getContext().getLangOpts().OpenCL;
   auto GenVoidPtrTy =
       IsOpenCL ? CGM.getOpenCLRuntime().getGenericVoidPointerType() : VoidPtrTy;
-  unsigned GenVoidPtrAddr = IsOpenCL ? LangAS::opencl_generic : LangAS::Default;
+  LangAS GenVoidPtrAddr = IsOpenCL ? LangAS::opencl_generic : LangAS::Default;
   auto GenVoidPtrSize = CharUnits::fromQuantity(
-      CGM.getTarget().getPointerWidth(GenVoidPtrAddr) / 8);
+      CGM.getTarget().getPointerWidth(
+          CGM.getContext().getTargetAddressSpace(GenVoidPtrAddr)) /
+      8);
   // Using the computed layout, generate the actual block function.
   bool isLambdaConv = blockInfo.getBlockDecl()->isConversionFromLambda();
-  llvm::Constant *blockFn = CodeGenFunction(CGM, true).GenerateBlockFunction(
+  auto *InvokeFn = CodeGenFunction(CGM, true).GenerateBlockFunction(
       CurGD, blockInfo, LocalDeclMap, isLambdaConv, blockInfo.CanBeGlobal);
-  blockFn = llvm::ConstantExpr::getPointerCast(blockFn, GenVoidPtrTy);
+  if (InvokeF)
+    *InvokeF = InvokeFn;
+  auto *blockFn = llvm::ConstantExpr::getPointerCast(InvokeFn, GenVoidPtrTy);
 
   // If there is nothing to capture, we can emit this as a global block.
   if (blockInfo.CanBeGlobal)

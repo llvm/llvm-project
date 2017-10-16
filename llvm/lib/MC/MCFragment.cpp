@@ -306,7 +306,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
 
 } // end namespace llvm
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCFragment::dump() const {
   raw_ostream &OS = errs();
 

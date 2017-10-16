@@ -832,6 +832,7 @@ private:
   bool subtargetHasRegister(const MCRegisterInfo &MRI, unsigned RegNo) const;
   bool ParseDirectiveAMDGPUHsaKernel();
 
+  bool ParseDirectiveISAVersion();
   bool ParseDirectiveHSAMetadata();
   bool ParseDirectivePALMetadata();
 
@@ -2452,7 +2453,38 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
   return false;
 }
 
+bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
+  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn) {
+    return Error(getParser().getTok().getLoc(),
+                 ".amd_amdgpu_isa directive is not available on non-amdgcn "
+                 "architectures");
+  }
+
+  auto ISAVersionStringFromASM = getLexer().getTok().getStringContents();
+
+  std::string ISAVersionStringFromSTI;
+  raw_string_ostream ISAVersionStreamFromSTI(ISAVersionStringFromSTI);
+  IsaInfo::streamIsaVersion(&getSTI(), ISAVersionStreamFromSTI);
+
+  if (ISAVersionStringFromASM != ISAVersionStreamFromSTI.str()) {
+    return Error(getParser().getTok().getLoc(),
+                 ".amd_amdgpu_isa directive does not match triple and/or mcpu "
+                 "arguments specified through the command line");
+  }
+
+  getTargetStreamer().EmitISAVersion(ISAVersionStreamFromSTI.str());
+  Lex();
+
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
+  if (getSTI().getTargetTriple().getOS() != Triple::AMDHSA) {
+    return Error(getParser().getTok().getLoc(),
+                 (Twine(HSAMD::AssemblerDirectiveBegin) + Twine(" directive is "
+                 "not available on non-amdhsa OSes")).str());
+  }
+
   std::string HSAMetadataString;
   raw_string_ostream YamlStream(HSAMetadataString);
 
@@ -2484,7 +2516,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 
   if (getLexer().is(AsmToken::Eof) && !FoundEnd) {
     return TokError(Twine("expected directive ") +
-                    Twine(HSAMD::AssemblerDirectiveEnd) + Twine("not found"));
+                    Twine(HSAMD::AssemblerDirectiveEnd) + Twine(" not found"));
   }
 
   YamlStream.flush();
@@ -2496,6 +2528,12 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 }
 
 bool AMDGPUAsmParser::ParseDirectivePALMetadata() {
+  if (getSTI().getTargetTriple().getOS() != Triple::AMDPAL) {
+    return Error(getParser().getTok().getLoc(),
+                 (Twine(PALMD::AssemblerDirective) + Twine(" directive is "
+                 "not available on non-amdpal OSes")).str());
+  }
+
   PALMD::Metadata PALMetadata;
   for (;;) {
     uint32_t Value;
@@ -2526,6 +2564,9 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".amdgpu_hsa_kernel")
     return ParseDirectiveAMDGPUHsaKernel();
+
+  if (IDVal == ".amd_amdgpu_isa")
+    return ParseDirectiveISAVersion();
 
   if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
     return ParseDirectiveHSAMetadata();

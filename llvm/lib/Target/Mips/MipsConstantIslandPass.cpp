@@ -425,7 +425,7 @@ bool MipsConstantIslands::isOffsetInRange
                          U.getMaxDisp(), U.NegOk);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void MipsConstantIslands::dumpBBs() {
   for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
