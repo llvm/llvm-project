@@ -789,14 +789,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   }
 }
 
-// Compute known bits from a shift operator, including those with a
-// non-constant shift amount. Known is the outputs of this function. Known2 is a
-// pre-allocated temporary with the/ same bit width as Known. KZF and KOF are
-// operator-specific functors that, given the known-zero or known-one bits
-// respectively, and a shift amount, compute the implied known-zero or known-one
-// bits of the shift operator's result respectively for that shift amount. The
-// results from calling KZF and KOF are conservatively combined for all
-// permitted shift amounts.
+/// Compute known bits from a shift operator, including those with a
+/// non-constant shift amount. Known is the output of this function. Known2 is a
+/// pre-allocated temporary with the same bit width as Known. KZF and KOF are
+/// operator-specific functors that, given the known-zero or known-one bits
+/// respectively, and a shift amount, compute the implied known-zero or
+/// known-one bits of the shift operator's result respectively for that shift
+/// amount. The results from calling KZF and KOF are conservatively combined for
+/// all permitted shift amounts.
 static void computeKnownBitsFromShiftOperator(
     const Operator *I, KnownBits &Known, KnownBits &Known2,
     unsigned Depth, const Query &Q,
@@ -847,8 +847,7 @@ static void computeKnownBitsFromShiftOperator(
   // Early exit if we can't constrain any well-defined shift amount.
   if (!(ShiftAmtKZ & (PowerOf2Ceil(BitWidth) - 1)) &&
       !(ShiftAmtKO & (PowerOf2Ceil(BitWidth) - 1))) {
-    ShifterOperandIsNonZero =
-        isKnownNonZero(I->getOperand(1), Depth + 1, Q);
+    ShifterOperandIsNonZero = isKnownNonZero(I->getOperand(1), Depth + 1, Q);
     if (!*ShifterOperandIsNonZero)
       return;
   }
@@ -1095,7 +1094,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
     break;
   }
   case Instruction::LShr: {
-    // (ushr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
+    // (lshr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
     auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
       APInt KZResult = KnownZero.lshr(ShiftAmt);
       // High bits known zero.

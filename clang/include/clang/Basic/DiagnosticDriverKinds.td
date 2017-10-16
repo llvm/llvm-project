@@ -330,4 +330,8 @@ def warn_drv_msvc_not_found : Warning<
   "unable to find a Visual Studio installation; "
   "try running Clang from a developer command prompt">,
   InGroup<DiagGroup<"msvc-not-found">>;
+
+def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
+  "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
+  InGroup<OptionIgnored>;
 }

@@ -3235,9 +3235,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   if (CallConv == CallingConv::X86_RegCall ||
       Fn->hasFnAttribute("no_caller_saved_registers")) {
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (const auto &Pair : make_range(MRI.livein_begin(), MRI.livein_end()))
-      MF.getRegInfo().disableCalleeSavedRegister(Pair.first);
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    for (std::pair<unsigned, unsigned> Pair : MRI.liveins())
+      MRI.disableCalleeSavedRegister(Pair.first);
   }
 
   return Chain;

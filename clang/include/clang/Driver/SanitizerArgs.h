@@ -44,6 +44,8 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  // True if cross-dso CFI support if provided by the system (i.e. Android).
+  bool ImplicitCfiRuntime = false;
 
  public:
   /// Parses the sanitizer arguments from an argument list.

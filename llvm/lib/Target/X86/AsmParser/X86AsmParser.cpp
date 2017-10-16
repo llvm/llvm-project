@@ -2366,7 +2366,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // Hack: we could have something like
     //    "lock; cmpxchg16b $1" or "lock\0A\09incl" or "lock/incl"
     while (Name.startswith(";") || Name.startswith("\n") ||
-           Name.startswith("\t") or Name.startswith("/")) {
+           Name.startswith("\t") || Name.startswith("/")) {
       Name = Parser.getTok().getString();
       Parser.Lex(); // go to next prefix or instr
     }

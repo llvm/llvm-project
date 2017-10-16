@@ -546,6 +546,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     OPT_fuse_register_sized_bitfield_access);
   Opts.RelaxedAliasing = Args.hasArg(OPT_relaxed_aliasing);
   Opts.StructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa);
+  Opts.FineGrainedBitfieldAccesses =
+      Args.hasFlag(OPT_ffine_grained_bitfield_accesses,
+                   OPT_fno_fine_grained_bitfield_accesses, false);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
   Opts.MergeAllConstants = !Args.hasArg(OPT_fno_merge_all_constants);
   Opts.NoCommon = Args.hasArg(OPT_fno_common);
@@ -2762,6 +2765,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   auto Arch = T.getArch();
   if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
+  }
+
+  // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
+  if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
+      !Res.getLangOpts()->Sanitize.empty()) {
+    Res.getCodeGenOpts().FineGrainedBitfieldAccesses = false;
+    Diags.Report(diag::warn_drv_fine_grained_bitfield_accesses_ignored);
   }
   return Success;
 }

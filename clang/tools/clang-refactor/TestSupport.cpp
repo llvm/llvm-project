@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestSupport.h"
+#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
@@ -106,7 +107,7 @@ bool printRewrittenSources(const tooling::AtomicChanges &Changes,
 }
 
 class TestRefactoringResultConsumer final
-    : public tooling::RefactoringResultConsumer {
+    : public ClangRefactorToolConsumerInterface {
 public:
   TestRefactoringResultConsumer(const TestSelectionRangesInFile &TestRanges)
       : TestRanges(TestRanges) {
@@ -182,10 +183,15 @@ bool TestRefactoringResultConsumer::handleAllResults() {
       std::string ErrorMessage;
       bool HasResult = !!Result;
       if (!HasResult) {
-        // FIXME: Handle diagnostic error as well.
-        handleAllErrors(Result.takeError(), [&](StringError &Err) {
-          ErrorMessage = Err.getMessage();
-        });
+        handleAllErrors(
+            Result.takeError(),
+            [&](StringError &Err) { ErrorMessage = Err.getMessage(); },
+            [&](DiagnosticError &Err) {
+              const PartialDiagnosticAt &Diag = Err.getDiagnostic();
+              llvm::SmallString<100> DiagText;
+              Diag.second.EmitToString(getDiags(), DiagText);
+              ErrorMessage = DiagText.str().str();
+            });
       }
       if (!CanonicalResult && !CanonicalErrorMessage) {
         if (HasResult)
@@ -248,7 +254,7 @@ bool TestRefactoringResultConsumer::handleAllResults() {
   return Failed;
 }
 
-std::unique_ptr<tooling::RefactoringResultConsumer>
+std::unique_ptr<ClangRefactorToolConsumerInterface>
 TestSelectionRangesInFile::createConsumer() const {
   return llvm::make_unique<TestRefactoringResultConsumer>(*this);
 }

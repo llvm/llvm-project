@@ -297,11 +297,11 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
   }
 
   // Print the live ins.
-  for (auto I = RegInfo.livein_begin(), E = RegInfo.livein_end(); I != E; ++I) {
+  for (std::pair<unsigned, unsigned> LI : RegInfo.liveins()) {
     yaml::MachineFunctionLiveIn LiveIn;
-    printReg(I->first, LiveIn.Register, TRI);
-    if (I->second)
-      printReg(I->second, LiveIn.VirtualRegister, TRI);
+    printReg(LI.first, LiveIn.Register, TRI);
+    if (LI.second)
+      printReg(LI.second, LiveIn.VirtualRegister, TRI);
     MF.LiveIns.push_back(LiveIn);
   }
 

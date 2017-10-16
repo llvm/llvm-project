@@ -2069,9 +2069,8 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
 
   // If the bits shifted out are known zero, compare the unshifted value:
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
-  Constant *ShiftedCmpRHS = ConstantInt::get(ShrTy, C << ShAmtVal);
   if (Shr->isExact())
-    return new ICmpInst(Pred, X, ShiftedCmpRHS);
+    return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, C << ShAmtVal));
 
   if (Shr->hasOneUse()) {
     // Canonicalize the shift into an 'and':
@@ -2079,7 +2078,7 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
     APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
     Constant *Mask = ConstantInt::get(ShrTy, Val);
     Value *And = Builder.CreateAnd(X, Mask, Shr->getName() + ".mask");
-    return new ICmpInst(Pred, And, ShiftedCmpRHS);
+    return new ICmpInst(Pred, And, ConstantInt::get(ShrTy, C << ShAmtVal));
   }
 
   return nullptr;

@@ -6,6 +6,9 @@
 // CFI-icall is not implemented in thinlto mode => ".cfi" suffixes are missing
 // in sanstats output.
 
+// FIXME: %t.stats must be transferred from device to host for this to work on Android.
+// XFAIL: android
+
 struct ABase {};
 
 struct A : ABase {
