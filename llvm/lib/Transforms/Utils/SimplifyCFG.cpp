@@ -4446,38 +4446,28 @@ static PHINode *FindPHIForConditionForwarding(ConstantInt *CaseValue,
 
 /// Try to forward the condition of a switch instruction to a phi node
 /// dominated by the switch, if that would mean that some of the destination
-/// blocks of the switch can be folded away.
-/// Returns true if a change is made.
+/// blocks of the switch can be folded away. Return true if a change is made.
 static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   typedef DenseMap<PHINode *, SmallVector<int, 4>> ForwardingNodesMap;
   ForwardingNodesMap ForwardingNodes;
 
-  for (auto Case : SI->cases()) {
+  for (auto &Case : SI->cases()) {
     ConstantInt *CaseValue = Case.getCaseValue();
     BasicBlock *CaseDest = Case.getCaseSuccessor();
-
-    int PhiIndex;
-    PHINode *PHI =
-        FindPHIForConditionForwarding(CaseValue, CaseDest, &PhiIndex);
-    if (!PHI)
-      continue;
-
-    ForwardingNodes[PHI].push_back(PhiIndex);
+    int PhiIdx;
+    if (auto *Phi = FindPHIForConditionForwarding(CaseValue, CaseDest, &PhiIdx))
+      ForwardingNodes[Phi].push_back(PhiIdx);
   }
 
   bool Changed = false;
-
-  for (ForwardingNodesMap::iterator I = ForwardingNodes.begin(),
-                                    E = ForwardingNodes.end();
-       I != E; ++I) {
-    PHINode *Phi = I->first;
-    SmallVectorImpl<int> &Indexes = I->second;
-
+  for (auto &ForwardingNode : ForwardingNodes) {
+    PHINode *Phi = ForwardingNode.first;
+    SmallVectorImpl<int> &Indexes = ForwardingNode.second;
     if (Indexes.size() < 2)
       continue;
 
-    for (size_t I = 0, E = Indexes.size(); I != E; ++I)
-      Phi->setIncomingValue(Indexes[I], SI->getCondition());
+    for (int Index : Indexes)
+      Phi->setIncomingValue(Index, SI->getCondition());
     Changed = true;
   }
 

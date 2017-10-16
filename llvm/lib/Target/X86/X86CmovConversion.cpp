@@ -294,6 +294,9 @@ bool X86CmovConverterPass::collectCmovCandidates(
     bool SkipGroup = false;
 
     for (auto &I : *MBB) {
+      // Skip debug instructions.
+      if (I.isDebugValue())
+        continue;
       X86::CondCode CC = X86::getCondFromCMovOpc(I.getOpcode());
       // Check if we found a X86::CMOVrr instruction.
       if (CC != X86::COND_INVALID && (IncludeLoads || !I.mayLoad())) {
@@ -431,6 +434,9 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
       // Clear physical registers Def map.
       RegDefMaps[PhyRegType].clear();
       for (MachineInstr &MI : *MBB) {
+        // Skip debug instructions.
+        if (MI.isDebugValue())
+          continue;
         unsigned MIDepth = 0;
         unsigned MIDepthOpt = 0;
         bool IsCMOV = CmovInstructions.count(&MI);
@@ -589,10 +595,35 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
   return false;
 }
 
+/// Given /p First CMOV instruction and /p Last CMOV instruction representing a
+/// group of CMOV instructions, which may contain debug instructions in between,
+/// move all debug instructions to after the last CMOV instruction, making the
+/// CMOV group consecutive.
+static void packCmovGroup(MachineInstr *First, MachineInstr *Last) {
+  assert(X86::getCondFromCMovOpc(Last->getOpcode()) != X86::COND_INVALID &&
+         "Last instruction in a CMOV group must be a CMOV instruction");
+
+  SmallVector<MachineInstr *, 2> DBGInstructions;
+  for (auto I = First->getIterator(), E = Last->getIterator(); I != E; I++) {
+    if (I->isDebugValue())
+      DBGInstructions.push_back(&*I);
+  }
+
+  // Splice the debug instruction after the cmov group.
+  MachineBasicBlock *MBB = First->getParent();
+  for (auto *MI : DBGInstructions)
+    MBB->insertAfter(Last, MI->removeFromParent());
+}
+
 void X86CmovConverterPass::convertCmovInstsToBranches(
     SmallVectorImpl<MachineInstr *> &Group) const {
   assert(!Group.empty() && "No CMOV instructions to convert");
   ++NumOfOptimizedCmovGroups;
+
+  // If the CMOV group is not packed, e.g., there are debug instructions between
+  // first CMOV and last CMOV, then pack the group and make the CMOV instruction
+  // consecutive by moving the debug instructions to after the last CMOV. 
+  packCmovGroup(Group.front(), Group.back());
 
   // To convert a CMOVcc instruction, we actually have to insert the diamond
   // control-flow pattern.  The incoming instruction knows the destination vreg

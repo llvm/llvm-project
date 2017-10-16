@@ -244,7 +244,31 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
+    case GIM_CheckPointerToAny: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t SizeInBits = MatchTable[CurrentIdx++];
 
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs[" << InsnID
+                   << "]->getOperand(" << OpIdx
+                   << "), SizeInBits=" << SizeInBits << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      // iPTR must be looked up in the target.
+      if (SizeInBits == 0) {
+        MachineFunction *MF = State.MIs[InsnID]->getParent()->getParent();
+        SizeInBits = MF->getDataLayout().getPointerSizeInBits(0);
+      }
+
+      assert(SizeInBits != 0 && "Pointer size must be known");
+
+      const LLT &Ty = MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg());
+      if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckRegBankForClass: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
@@ -273,12 +297,14 @@ bool InstructionSelector::executeMatchTable(
                    << "), ComplexPredicateID=" << ComplexPredicateID << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       // FIXME: Use std::invoke() when it's available.
-      if (!(State.Renderers[RendererID] =
-                (ISel.*MatcherInfo.ComplexPredicates[ComplexPredicateID])(
-                    State.MIs[InsnID]->getOperand(OpIdx)))) {
+      ComplexRendererFn Renderer =
+          (ISel.*MatcherInfo.ComplexPredicates[ComplexPredicateID])(
+              State.MIs[InsnID]->getOperand(OpIdx));
+      if (Renderer.hasValue())
+        State.Renderers[RendererID] = Renderer.getValue();
+      else
         if (handleReject() == RejectAndGiveUp)
           return false;
-      }
       break;
     }
 
@@ -472,9 +498,21 @@ bool InstructionSelector::executeMatchTable(
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RendererID = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      State.Renderers[RendererID](OutMIs[InsnID]);
+      for (const auto &RenderOpFn : State.Renderers[RendererID])
+        RenderOpFn(OutMIs[InsnID]);
       DEBUG(dbgs() << CurrentIdx << ": GIR_ComplexRenderer(OutMIs[" << InsnID
                    << "], " << RendererID << ")\n");
+      break;
+    }
+    case GIR_ComplexSubOperandRenderer: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t RendererID = MatchTable[CurrentIdx++];
+      int64_t RenderOpID = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+      State.Renderers[RendererID][RenderOpID](OutMIs[InsnID]);
+      DEBUG(dbgs() << CurrentIdx << ": GIR_ComplexSubOperandRenderer(OutMIs["
+                   << InsnID << "], " << RendererID << ", " << RenderOpID
+                   << ")\n");
       break;
     }
 

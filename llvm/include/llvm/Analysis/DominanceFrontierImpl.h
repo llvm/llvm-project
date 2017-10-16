@@ -148,7 +148,7 @@ void DominanceFrontierBase<BlockT, IsPostDom>::print(raw_ostream &OS) const {
   }
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
   print(dbgs());

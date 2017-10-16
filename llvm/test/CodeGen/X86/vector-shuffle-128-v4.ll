@@ -2168,17 +2168,11 @@ define <4 x i32> @insert_mem_lo_v4i32(<2 x i32>* %ptr, <4 x i32> %b) {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: insert_mem_lo_v4i32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_mem_lo_v4i32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[2,3]
-; AVX512VL-NEXT:    retq
+; AVX2OR512VL-LABEL: insert_mem_lo_v4i32:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX2OR512VL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX2OR512VL-NEXT:    retq
   %a = load <2 x i32>, <2 x i32>* %ptr
   %v = shufflevector <2 x i32> %a, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
@@ -2210,17 +2204,11 @@ define <4 x i32> @insert_mem_hi_v4i32(<2 x i32>* %ptr, <4 x i32> %b) {
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: insert_mem_hi_v4i32:
-; AVX1OR2:       # BB#0:
-; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1OR2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_mem_hi_v4i32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: insert_mem_hi_v4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
   %a = load <2 x i32>, <2 x i32>* %ptr
   %v = shufflevector <2 x i32> %a, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 4, i32 5, i32 0, i32 1>

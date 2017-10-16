@@ -86,7 +86,7 @@ void Option::print(raw_ostream &O) const {
   O << ">\n";
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Option::dump() const { print(dbgs()); }
 #endif
 

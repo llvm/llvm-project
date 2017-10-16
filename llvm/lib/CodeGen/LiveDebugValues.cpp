@@ -160,7 +160,7 @@ private:
     /// dominates MBB.
     bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump() const { MI.dump(); }
 #endif
 

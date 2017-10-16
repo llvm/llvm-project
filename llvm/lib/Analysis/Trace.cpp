@@ -44,7 +44,7 @@ void Trace::print(raw_ostream &O) const {
   O << "; Trace parent function: \n" << *F;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Debugger convenience method; writes trace to standard error
 /// output stream.
 LLVM_DUMP_METHOD void Trace::dump() const {

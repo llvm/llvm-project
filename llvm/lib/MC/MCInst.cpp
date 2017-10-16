@@ -35,7 +35,7 @@ void MCOperand::print(raw_ostream &OS) const {
   OS << ">";
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCOperand::dump() const {
   print(dbgs());
   dbgs() << "\n";
@@ -66,7 +66,7 @@ void MCInst::dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer,
   OS << ">";
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCInst::dump() const {
   print(dbgs());
   dbgs() << "\n";

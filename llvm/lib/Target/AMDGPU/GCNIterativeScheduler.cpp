@@ -52,7 +52,7 @@ static inline MachineInstr *getMachineInstr(const SUnit &SU) {
   return SU.getInstr();
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 static void printRegion(raw_ostream &OS,
                         MachineBasicBlock::iterator Begin,

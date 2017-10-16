@@ -169,7 +169,7 @@ namespace {
     // Shuffle live registers to match the expectations of successor blocks.
     void finishBlockStack();
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dumpStack() const {
       dbgs() << "Stack contents:";
       for (unsigned i = 0; i != StackTop; ++i) {

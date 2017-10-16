@@ -260,6 +260,7 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default: return false;
   case PPC::EXTSW:
+  case PPC::EXTSW_32:
   case PPC::EXTSW_32_64:
     SrcReg = MI.getOperand(1).getReg();
     DstReg = MI.getOperand(0).getReg();
@@ -2102,4 +2103,242 @@ PPCInstrInfo::updatedRC(const TargetRegisterClass *RC) const {
 
 int PPCInstrInfo::getRecordFormOpcode(unsigned Opcode) {
   return PPC::getRecordFormOpcode(Opcode);
+}
+
+// This function returns true if the machine instruction
+// always outputs a value by sign-extending a 32 bit value,
+// i.e. 0 to 31-th bits are same as 32-th bit.
+static bool isSignExtendingOp(const MachineInstr &MI) {
+  int Opcode = MI.getOpcode();
+  if (Opcode == PPC::LI     || Opcode == PPC::LI8     ||
+      Opcode == PPC::LIS    || Opcode == PPC::LIS8    ||
+      Opcode == PPC::SRAW   || Opcode == PPC::SRAWo   ||
+      Opcode == PPC::SRAWI  || Opcode == PPC::SRAWIo  ||
+      Opcode == PPC::LWA    || Opcode == PPC::LWAX    ||
+      Opcode == PPC::LWA_32 || Opcode == PPC::LWAX_32 ||
+      Opcode == PPC::LHA    || Opcode == PPC::LHAX    ||
+      Opcode == PPC::LHA8   || Opcode == PPC::LHAX8   ||
+      Opcode == PPC::LBZ    || Opcode == PPC::LBZX    ||
+      Opcode == PPC::LBZ8   || Opcode == PPC::LBZX8   ||
+      Opcode == PPC::LBZU   || Opcode == PPC::LBZUX   ||
+      Opcode == PPC::LBZU8  || Opcode == PPC::LBZUX8  ||
+      Opcode == PPC::LHZ    || Opcode == PPC::LHZX    ||
+      Opcode == PPC::LHZ8   || Opcode == PPC::LHZX8   ||
+      Opcode == PPC::LHZU   || Opcode == PPC::LHZUX   ||
+      Opcode == PPC::LHZU8  || Opcode == PPC::LHZUX8  ||
+      Opcode == PPC::EXTSB  || Opcode == PPC::EXTSBo  ||
+      Opcode == PPC::EXTSH  || Opcode == PPC::EXTSHo  ||
+      Opcode == PPC::EXTSB8 || Opcode == PPC::EXTSH8  ||
+      Opcode == PPC::EXTSW  || Opcode == PPC::EXTSWo  ||
+      Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
+      Opcode == PPC::EXTSB8_32_64)
+    return true;
+
+  if (Opcode == PPC::RLDICL && MI.getOperand(3).getImm() >= 33)
+    return true;
+
+  if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINMo ||
+       Opcode == PPC::RLWNM  || Opcode == PPC::RLWNMo) &&
+      MI.getOperand(3).getImm() > 0 &&
+      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
+    return true;
+
+  return false;
+}
+
+// This function returns true if the machine instruction
+// always outputs zeros in higher 32 bits.
+static bool isZeroExtendingOp(const MachineInstr &MI) {
+  int Opcode = MI.getOpcode();
+  // The 16-bit immediate is sign-extended in li/lis.
+  // If the most significant bit is zero, all higher bits are zero.
+  if (Opcode == PPC::LI  || Opcode == PPC::LI8 ||
+      Opcode == PPC::LIS || Opcode == PPC::LIS8) {
+    int64_t Imm = MI.getOperand(1).getImm();
+    if (((uint64_t)Imm & ~0x7FFFuLL) == 0)
+      return true;
+  }
+
+  // We have some variations of rotate-and-mask instructions
+  // that clear higher 32-bits.
+  if ((Opcode == PPC::RLDICL || Opcode == PPC::RLDICLo ||
+       Opcode == PPC::RLDCL  || Opcode == PPC::RLDCLo  ||
+       Opcode == PPC::RLDICL_32_64) &&
+      MI.getOperand(3).getImm() >= 32)
+    return true;
+
+  if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDICo) &&
+      MI.getOperand(3).getImm() >= 32 &&
+      MI.getOperand(3).getImm() <= 63 - MI.getOperand(2).getImm())
+    return true;
+
+  if ((Opcode == PPC::RLWINM  || Opcode == PPC::RLWINMo ||
+       Opcode == PPC::RLWNM   || Opcode == PPC::RLWNMo  ||
+       Opcode == PPC::RLWINM8 || Opcode == PPC::RLWNM8) &&
+      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
+    return true;
+
+  // There are other instructions that clear higher 32-bits.
+  if (Opcode == PPC::CNTLZW  || Opcode == PPC::CNTLZWo ||
+      Opcode == PPC::CNTTZW  || Opcode == PPC::CNTTZWo ||
+      Opcode == PPC::CNTLZW8 || Opcode == PPC::CNTTZW8 ||
+      Opcode == PPC::CNTLZD  || Opcode == PPC::CNTLZDo ||
+      Opcode == PPC::CNTTZD  || Opcode == PPC::CNTTZDo ||
+      Opcode == PPC::POPCNTD || Opcode == PPC::POPCNTW ||
+      Opcode == PPC::SLW     || Opcode == PPC::SLWo    ||
+      Opcode == PPC::SRW     || Opcode == PPC::SRWo    ||
+      Opcode == PPC::SLW8    || Opcode == PPC::SRW8    ||
+      Opcode == PPC::SLWI    || Opcode == PPC::SLWIo   ||
+      Opcode == PPC::SRWI    || Opcode == PPC::SRWIo   ||
+      Opcode == PPC::LWZ     || Opcode == PPC::LWZX    ||
+      Opcode == PPC::LWZU    || Opcode == PPC::LWZUX   ||
+      Opcode == PPC::LWBRX   || Opcode == PPC::LHBRX   ||
+      Opcode == PPC::LHZ     || Opcode == PPC::LHZX    ||
+      Opcode == PPC::LHZU    || Opcode == PPC::LHZUX   ||
+      Opcode == PPC::LBZ     || Opcode == PPC::LBZX    ||
+      Opcode == PPC::LBZU    || Opcode == PPC::LBZUX   ||
+      Opcode == PPC::LWZ8    || Opcode == PPC::LWZX8   ||
+      Opcode == PPC::LWZU8   || Opcode == PPC::LWZUX8  ||
+      Opcode == PPC::LWBRX8  || Opcode == PPC::LHBRX8  ||
+      Opcode == PPC::LHZ8    || Opcode == PPC::LHZX8   ||
+      Opcode == PPC::LHZU8   || Opcode == PPC::LHZUX8  ||
+      Opcode == PPC::LBZ8    || Opcode == PPC::LBZX8   ||
+      Opcode == PPC::LBZU8   || Opcode == PPC::LBZUX8  ||
+      Opcode == PPC::ANDIo   || Opcode == PPC::ANDISo  ||
+      Opcode == PPC::ROTRWI  || Opcode == PPC::ROTRWIo ||
+      Opcode == PPC::EXTLWI  || Opcode == PPC::EXTLWIo ||
+      Opcode == PPC::MFVSRWZ)
+    return true;
+
+  return false;
+}
+
+// We limit the max depth to track incoming values of PHIs or binary ops
+// (e.g. AND) to avoid exsessive cost.
+const unsigned MAX_DEPTH = 1;
+
+bool
+PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
+                                   const unsigned Depth) const {
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  switch (MI.getOpcode()) {
+  case PPC::COPY: {
+    unsigned SrcReg = MI.getOperand(1).getReg();
+
+    // In both ELFv1 and v2 ABI, method parameters and the return value
+    // are sign- or zero-extended.
+    if (MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+      // We check the ZExt/SExt flags for a method parameter.
+      if (MI.getParent()->getBasicBlock() ==
+          &MF->getFunction()->getEntryBlock()) {
+        unsigned VReg = MI.getOperand(0).getReg();
+        if (MF->getRegInfo().isLiveIn(VReg))
+          return SignExt ? FuncInfo->isLiveInSExt(VReg) :
+                           FuncInfo->isLiveInZExt(VReg);
+      }
+
+      // For a method return value, we check the ZExt/SExt flags in attribute.
+      // We assume the following code sequence for method call.
+      //   ADJCALLSTACKDOWN 32, %R1<imp-def,dead>, %R1<imp-use>
+      //   BL8_NOP <ga:@func>,...
+      //   ADJCALLSTACKUP 32, 0, %R1<imp-def,dead>, %R1<imp-use>
+      //   %vreg5<def> = COPY %X3; G8RC:%vreg5
+      if (SrcReg == PPC::X3) {
+        const MachineBasicBlock *MBB = MI.getParent();
+        MachineBasicBlock::const_instr_iterator II =
+          MachineBasicBlock::const_instr_iterator(&MI);
+        if (II != MBB->instr_begin() &&
+            (--II)->getOpcode() == PPC::ADJCALLSTACKUP) {
+          const MachineInstr &CallMI = *(--II);
+          if (CallMI.isCall() && CallMI.getOperand(0).isGlobal()) {
+            const Function *CalleeFn =
+              dyn_cast<Function>(CallMI.getOperand(0).getGlobal());
+            const IntegerType *IntTy =
+              dyn_cast<IntegerType>(CalleeFn->getReturnType());
+            const AttributeSet &Attrs =
+              CalleeFn->getAttributes().getRetAttributes();
+            if (IntTy && IntTy->getBitWidth() <= 32)
+              return Attrs.hasAttribute(SignExt ? Attribute::SExt :
+                                                  Attribute::ZExt);
+          }
+        }
+      }
+    }
+
+    // If this is a copy from another register, we recursively check source.
+    if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+      return false;
+    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+    if (SrcMI != NULL)
+      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+
+    return false;
+  }
+
+  case PPC::ANDIo:
+  case PPC::ANDISo:
+  case PPC::ORI:
+  case PPC::ORIS:
+  case PPC::XORI:
+  case PPC::XORIS:
+  case PPC::ANDIo8:
+  case PPC::ANDISo8:
+  case PPC::ORI8:
+  case PPC::ORIS8:
+  case PPC::XORI8:
+  case PPC::XORIS8: {
+    // logical operation with 16-bit immediate does not change the upper bits.
+    // So, we track the operand register as we do for register copy.
+    unsigned SrcReg = MI.getOperand(1).getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+      return false;
+    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+    if (SrcMI != NULL)
+      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+
+    return false;
+  }
+
+  // If all incoming values are sign-/zero-extended,
+  // the output of AND, OR, ISEL or PHI is also sign-/zero-extended.
+  case PPC::AND:
+  case PPC::AND8:
+  case PPC::OR:
+  case PPC::OR8:
+  case PPC::ISEL:
+  case PPC::PHI: {
+    if (Depth >= MAX_DEPTH)
+      return false;
+
+    // The input registers for PHI are operand 1, 3, ...
+    // The input registers for others are operand 1 and 2.
+    unsigned E = 3, D = 1;
+    if (MI.getOpcode() == PPC::PHI) {
+      E = MI.getNumOperands();
+      D = 2;
+    }
+
+    for (unsigned I = 1; I != E; I += D) {
+      if (MI.getOperand(I).isReg()) {
+        unsigned SrcReg = MI.getOperand(I).getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+          return false;
+        const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+        if (SrcMI == NULL || !isSignOrZeroExtended(*SrcMI, SignExt, Depth+1))
+          return false;
+      }
+      else
+        return false;
+    }
+    return true;
+  }
+
+  default:
+    return SignExt?isSignExtendingOp(MI):
+                   isZeroExtendingOp(MI);
+  }
+  return false;
 }
