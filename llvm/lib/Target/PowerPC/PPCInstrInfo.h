@@ -293,6 +293,21 @@ public:
   }
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);
+
+  bool isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
+                            const unsigned PhiDepth) const;
+
+  /// Return true if the output of the instruction is always a sign-extended,
+  /// i.e. 0 to 31-th bits are same as 32-th bit.
+  bool isSignExtended(const MachineInstr &MI, const unsigned depth = 0) const {
+    return isSignOrZeroExtended(MI, true, depth);
+  }
+
+  /// Return true if the output of the instruction is always zero-extended,
+  /// i.e. 0 to 31-th bits are all zeros
+  bool isZeroExtended(const MachineInstr &MI, const unsigned depth = 0) const {
+   return isSignOrZeroExtended(MI, false, depth);
+  }
 };
 
 }

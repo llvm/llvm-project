@@ -31,6 +31,14 @@ using namespace lld::elf;
 
 SymbolTable *elf::Symtab;
 
+static InputFile *getFirstElf() {
+  if (!ObjectFiles.empty())
+    return ObjectFiles[0];
+  if (!SharedFiles.empty())
+    return SharedFiles[0];
+  return nullptr;
+}
+
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
@@ -48,15 +56,12 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
   if (!Config->Emulation.empty())
     error(toString(F) + " is incompatible with " + Config->Emulation);
   else
-    error(toString(F) + " is incompatible with " + toString(Config->FirstElf));
+    error(toString(F) + " is incompatible with " + toString(getFirstElf()));
   return false;
 }
 
 // Add symbols in File to the symbol table.
 template <class ELFT> void SymbolTable::addFile(InputFile *File) {
-  if (!Config->FirstElf && isa<ELFFileBase<ELFT>>(File))
-    Config->FirstElf = File;
-
   if (!isCompatible<ELFT>(File))
     return;
 
@@ -235,13 +240,13 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
     Name = Name.take_front(Pos);
 
   auto P = Symtab.insert(
-      {CachedHashStringRef(Name), SymIndex((int)SymVector.size(), false)});
+      {CachedHashStringRef(Name), SymIndex{(int)SymVector.size(), false}});
   SymIndex &V = P.first->second;
   bool IsNew = P.second;
 
   if (V.Idx == -1) {
     IsNew = true;
-    V = SymIndex((int)SymVector.size(), true);
+    V = SymIndex{(int)SymVector.size(), true};
   }
 
   Symbol *Sym;

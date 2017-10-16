@@ -66,6 +66,32 @@ private:
 
   ComplexRendererFn selectArithImmed(MachineOperand &Root) const;
 
+  ComplexRendererFn selectAddrModeUnscaled(MachineOperand &Root,
+                                           unsigned Size) const;
+
+  ComplexRendererFn selectAddrModeUnscaled8(MachineOperand &Root) const {
+    return selectAddrModeUnscaled(Root, 1);
+  }
+  ComplexRendererFn selectAddrModeUnscaled16(MachineOperand &Root) const {
+    return selectAddrModeUnscaled(Root, 2);
+  }
+  ComplexRendererFn selectAddrModeUnscaled32(MachineOperand &Root) const {
+    return selectAddrModeUnscaled(Root, 4);
+  }
+  ComplexRendererFn selectAddrModeUnscaled64(MachineOperand &Root) const {
+    return selectAddrModeUnscaled(Root, 8);
+  }
+  ComplexRendererFn selectAddrModeUnscaled128(MachineOperand &Root) const {
+    return selectAddrModeUnscaled(Root, 16);
+  }
+
+  ComplexRendererFn selectAddrModeIndexed(MachineOperand &Root,
+                                          unsigned Size) const;
+  template <int Width>
+  ComplexRendererFn selectAddrModeIndexed(MachineOperand &Root) const {
+    return selectAddrModeIndexed(Root, Width / 8);
+  }
+
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;
@@ -1389,6 +1415,105 @@ AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Immed); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(ShVal); },
+  }};
+}
+
+/// Select a "register plus unscaled signed 9-bit immediate" address.  This
+/// should only match when there is an offset that is not valid for a scaled
+/// immediate addressing mode.  The "Size" argument is the size in bytes of the
+/// memory reference, which is needed here to know what is valid for a scaled
+/// immediate.
+InstructionSelector::ComplexRendererFn
+AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
+                                                   unsigned Size) const {
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  if (!Root.isReg())
+    return None;
+
+  if (!isBaseWithConstantOffset(Root, MRI))
+    return None;
+
+  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+  if (!RootDef)
+    return None;
+
+  MachineOperand &OffImm = RootDef->getOperand(2);
+  if (!OffImm.isReg())
+    return None;
+  MachineInstr *RHS = MRI.getVRegDef(OffImm.getReg());
+  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
+    return None;
+  int64_t RHSC;
+  MachineOperand &RHSOp1 = RHS->getOperand(1);
+  if (!RHSOp1.isCImm() || RHSOp1.getCImm()->getBitWidth() > 64)
+    return None;
+  RHSC = RHSOp1.getCImm()->getSExtValue();
+
+  // If the offset is valid as a scaled immediate, don't match here.
+  if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Log2_32(Size)))
+    return None;
+  if (RHSC >= -256 && RHSC < 256) {
+    MachineOperand &Base = RootDef->getOperand(1);
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(Base); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
+    }};
+  }
+  return None;
+}
+
+/// Select a "register plus scaled unsigned 12-bit immediate" address.  The
+/// "Size" argument is the size in bytes of the memory reference, which
+/// determines the scale.
+InstructionSelector::ComplexRendererFn
+AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
+                                                  unsigned Size) const {
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  if (!Root.isReg())
+    return None;
+
+  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+  if (!RootDef)
+    return None;
+
+  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+    }};
+  }
+
+  if (isBaseWithConstantOffset(Root, MRI)) {
+    MachineOperand &LHS = RootDef->getOperand(1);
+    MachineOperand &RHS = RootDef->getOperand(2);
+    MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
+    MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
+    if (LHSDef && RHSDef) {
+      int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
+      unsigned Scale = Log2_32(Size);
+      if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
+        if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+          LHSDef = MRI.getVRegDef(LHSDef->getOperand(1).getReg());
+        return {{
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
+        }};
+      }
+    }
+  }
+
+  // Before falling back to our general case, check if the unscaled
+  // instructions can handle this. If so, that's preferable.
+  if (selectAddrModeUnscaled(Root, Size).hasValue())
+    return None;
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
   }};
 }
 
