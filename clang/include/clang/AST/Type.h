@@ -328,9 +328,11 @@ public:
   }
 
   bool hasAddressSpace() const { return Mask & AddressSpaceMask; }
-  unsigned getAddressSpace() const { return Mask >> AddressSpaceShift; }
+  LangAS getAddressSpace() const {
+    return static_cast<LangAS>(Mask >> AddressSpaceShift);
+  }
   bool hasTargetSpecificAddressSpace() const {
-    return getAddressSpace() >= LangAS::FirstTargetAddressSpace;
+    return isTargetAddressSpace(getAddressSpace());
   }
   /// Get the address space attribute value to be printed by diagnostics.
   unsigned getAddressSpaceAttributePrintValue() const {
@@ -338,22 +340,22 @@ public:
     // This function is not supposed to be used with language specific
     // address spaces. If that happens, the diagnostic message should consider
     // printing the QualType instead of the address space value.
-    assert(Addr == 0 || hasTargetSpecificAddressSpace());
-    if (Addr)
-      return Addr - LangAS::FirstTargetAddressSpace;
+    assert(Addr == LangAS::Default || hasTargetSpecificAddressSpace());
+    if (Addr != LangAS::Default)
+      return toTargetAddressSpace(Addr);
     // TODO: The diagnostic messages where Addr may be 0 should be fixed
     // since it cannot differentiate the situation where 0 denotes the default
     // address space or user specified __attribute__((address_space(0))).
     return 0;
   }
-  void setAddressSpace(unsigned space) {
-    assert(space <= MaxAddressSpace);
+  void setAddressSpace(LangAS space) {
+    assert((unsigned)space <= MaxAddressSpace);
     Mask = (Mask & ~AddressSpaceMask)
          | (((uint32_t) space) << AddressSpaceShift);
   }
-  void removeAddressSpace() { setAddressSpace(0); }
-  void addAddressSpace(unsigned space) {
-    assert(space);
+  void removeAddressSpace() { setAddressSpace(LangAS::Default); }
+  void addAddressSpace(LangAS space) {
+    assert(space != LangAS::Default);
     setAddressSpace(space);
   }
 
@@ -1005,7 +1007,7 @@ public:
   }
 
   /// Return the address space of this type.
-  inline unsigned getAddressSpace() const;
+  inline LangAS getAddressSpace() const;
 
   /// Returns gc attribute of this type.
   inline Qualifiers::GC getObjCGCAttr() const;
@@ -1230,7 +1232,7 @@ public:
   }
 
   bool hasAddressSpace() const { return Quals.hasAddressSpace(); }
-  unsigned getAddressSpace() const { return Quals.getAddressSpace(); }
+  LangAS getAddressSpace() const { return Quals.getAddressSpace(); }
 
   const Type *getBaseType() const { return BaseType; }
 
@@ -5654,7 +5656,7 @@ inline void QualType::removeLocalCVRQualifiers(unsigned Mask) {
 }
 
 /// Return the address space of this type.
-inline unsigned QualType::getAddressSpace() const {
+inline LangAS QualType::getAddressSpace() const {
   return getQualifiers().getAddressSpace();
 }
 
