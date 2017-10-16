@@ -43,6 +43,12 @@ void X86IntelInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if (TSFlags & X86II::LOCK)
     OS << "\tlock\n";
 
+  unsigned Flags = MI->getFlags();
+  if (Flags & X86::IP_HAS_REPEAT_NE)
+    OS << "\trepne\n";
+  else if (Flags & X86::IP_HAS_REPEAT)
+    OS << "\trep\n";
+
   printInstruction(MI, OS);
 
   // Next always print the annotation.

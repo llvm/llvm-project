@@ -599,6 +599,12 @@ unsigned BreakableBlockComment::getLineLengthAfterSplitBefore(
   }
 }
 
+bool BreakableBlockComment::introducesBreakBefore(unsigned LineIndex) const {
+  // A break is introduced when we want delimiters on newline.
+  return LineIndex == 0 && DelimitersOnNewline &&
+         Lines[0].substr(1).find_first_not_of(Blanks) != StringRef::npos;
+}
+
 void BreakableBlockComment::replaceWhitespaceBefore(
     unsigned LineIndex, unsigned PreviousEndColumn, unsigned ColumnLimit,
     Split SplitBefore, WhitespaceManager &Whitespaces) {

@@ -2407,6 +2407,57 @@ TEST_F(FormatTestComments, BlockCommentsAtEndOfLine) {
                    getLLVMStyleWithColumns(15)));
 }
 
+TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
+  EXPECT_EQ("a = f(/* long\n"
+            "         long\n"
+            "       */\n"
+            "      a);",
+            format("a = f(/* long long */ a);", getLLVMStyleWithColumns(15)));
+
+  EXPECT_EQ("a = f(/* long\n"
+            "         long\n"
+            "       */\n"
+            "      a);",
+            format("a = f(/* long\n"
+                   "         long\n"
+                   "       */a);",
+                   getLLVMStyleWithColumns(15)));
+
+  EXPECT_EQ("a = f(/* long\n"
+            "         long\n"
+            "       */\n"
+            "      a);",
+            format("a = f(/* long\n"
+                   "         long\n"
+                   "       */ a);",
+                   getLLVMStyleWithColumns(15)));
+
+  EXPECT_EQ("a = f(/* long\n"
+            "         long\n"
+            "       */\n"
+            "      (1 + 1));",
+            format("a = f(/* long\n"
+                   "         long\n"
+                   "       */ (1 + 1));",
+                   getLLVMStyleWithColumns(15)));
+
+  EXPECT_EQ(
+      "a = f(a,\n"
+      "      /* long\n"
+      "         long\n"
+      "       */\n"
+      "      b);",
+      format("a = f(a, /* long long */ b);", getLLVMStyleWithColumns(15)));
+
+  EXPECT_EQ(
+      "a = f(a,\n"
+      "      /* long\n"
+      "         long\n"
+      "       */\n"
+      "      (1 + 1));",
+      format("a = f(a, /* long long */ (1 + 1));", getLLVMStyleWithColumns(15)));
+}
+
 TEST_F(FormatTestComments, IndentLineCommentsInStartOfBlockAtEndOfFile) {
   verifyFormat("{\n"
                "  // a\n"
@@ -2804,6 +2855,22 @@ TEST_F(FormatTestComments, NoCrush_Bug34236) {
 " *       c     d*/",
           getLLVMStyleWithColumns(80)));
   // clang-format on
+}
+
+TEST_F(FormatTestComments, NonTrailingBlockComments) {
+  verifyFormat("const /** comment comment */ A = B;",
+               getLLVMStyleWithColumns(40));
+
+  verifyFormat("const /** comment comment comment */ A =\n"
+               "    B;",
+               getLLVMStyleWithColumns(40));
+
+  EXPECT_EQ("const /** comment comment comment\n"
+            "         comment */\n"
+            "    A = B;",
+            format("const /** comment comment comment comment */\n"
+                   "    A = B;",
+                   getLLVMStyleWithColumns(40)));
 }
 } // end namespace
 } // end namespace format

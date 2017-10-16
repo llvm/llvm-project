@@ -1222,6 +1222,20 @@ def immZExtRange2To64 : PatLeaf<(imm), [{
          (N->getZExtValue() <= 64);
 }]>;
 
+def ORiPred  : PatLeaf<(imm), [{
+  return isUInt<16>(N->getZExtValue()) && !isInt<16>(N->getSExtValue());
+}], LO16>;
+
+def LUiPred : PatLeaf<(imm), [{
+  int64_t Val = N->getSExtValue();
+  return !isInt<16>(Val) && isInt<32>(Val) && !(Val & 0xffff);
+}]>;
+
+def LUiORiPred  : PatLeaf<(imm), [{
+  int64_t SVal = N->getSExtValue();
+  return isInt<32>(SVal) && (SVal & 0xffff);
+}]>;
+
 // Mips Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
 def addr :
@@ -2716,15 +2730,20 @@ multiclass MaterializeImms<ValueType VT, Register ZEROReg,
                            Instruction ADDiuOp, Instruction LUiOp,
                            Instruction ORiOp> {
 
-// Small immediates
-def : MipsPat<(VT immSExt16:$imm), (ADDiuOp ZEROReg, imm:$imm)>;
-def : MipsPat<(VT immZExt16:$imm), (ORiOp ZEROReg, imm:$imm)>;
-
-// Bits 32-16 set, sign/zero extended.
-def : MipsPat<(VT immSExt32Low16Zero:$imm), (LUiOp (HI16 imm:$imm))>;
+// Constant synthesis previously relied on the ordering of the patterns below.
+// By making the predicates they use non-overlapping, the patterns were
+// reordered so that the effect of the newly introduced predicates can be
+// observed.
 
 // Arbitrary immediates
-def : MipsPat<(VT immSExt32:$imm), (ORiOp (LUiOp (HI16 imm:$imm)), (LO16 imm:$imm))>;
+def : MipsPat<(VT LUiORiPred:$imm), (ORiOp (LUiOp (HI16 imm:$imm)), (LO16 imm:$imm))>;
+
+// Bits 32-16 set, sign/zero extended.
+def : MipsPat<(VT LUiPred:$imm), (LUiOp (HI16 imm:$imm))>;
+
+// Small immediates
+def : MipsPat<(VT ORiPred:$imm), (ORiOp ZEROReg, imm:$imm)>;
+def : MipsPat<(VT immSExt16:$imm), (ADDiuOp ZEROReg, imm:$imm)>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in
