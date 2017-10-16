@@ -12,6 +12,9 @@
 // Tests that shadow is read-only most of the time.
 // REQUIRES: cxxabi
 
+// Uses private API that is not available on Android.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdio.h>
