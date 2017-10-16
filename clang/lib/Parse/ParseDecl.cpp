@@ -1562,7 +1562,7 @@ void Parser::DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs) {
 void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
                                      unsigned DiagID) {
   for (AttributeList *Attr = Attrs.getList(); Attr; Attr = Attr->getNext()) {
-    if (!Attr->isCXX11Attribute())
+    if (!Attr->isCXX11Attribute() && !Attr->isC2xAttribute())
       continue;
     if (Attr->getKind() == AttributeList::UnknownAttribute)
       Diag(Attr->getLoc(), diag::warn_unknown_attribute_ignored)
@@ -2925,7 +2925,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     case tok::l_square:
     case tok::kw_alignas:
-      if (!getLangOpts().CPlusPlus11 || !isCXX11AttributeSpecifier())
+      if (!standardAttributesAllowed() || !isCXX11AttributeSpecifier())
         goto DoneWithDeclSpec;
 
       ProhibitAttributes(attrs);
@@ -3778,7 +3778,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 /// semicolon.
 ///
 ///       struct-declaration:
-///         specifier-qualifier-list struct-declarator-list
+/// [C2x]   attributes-specifier-seq[opt]
+///           specifier-qualifier-list struct-declarator-list
 /// [GNU]   __extension__ struct-declaration
 /// [GNU]   specifier-qualifier-list
 ///       struct-declarator-list:
@@ -3801,6 +3802,11 @@ void Parser::ParseStructDeclaration(
     ConsumeToken();
     return ParseStructDeclaration(DS, FieldsCallback);
   }
+
+  // Parse leading attributes.
+  ParsedAttributesWithRange Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(Attrs);
+  DS.takeAttributesFrom(Attrs);
 
   // Parse the common specifier-qualifiers-list piece.
   ParseSpecifierQualifierList(DS);
@@ -4412,11 +4418,12 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     ParsedAttributesWithRange attrs(AttrFactory);
     MaybeParseGNUAttributes(attrs);
     ProhibitAttributes(attrs); // GNU-style attributes are prohibited.
-    if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
-                                  ? diag::warn_cxx14_compat_ns_enum_attribute
-                                  : diag::ext_ns_enum_attribute)
-        << 1 /*enumerator*/;
+    if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+      if (getLangOpts().CPlusPlus)
+        Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+                                    ? diag::warn_cxx14_compat_ns_enum_attribute
+                                    : diag::ext_ns_enum_attribute)
+            << 1 /*enumerator*/;
       ParseCXX11Attributes(attrs);
     }
 
@@ -5025,7 +5032,7 @@ void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
     bool IdentifierRequired,
     Optional<llvm::function_ref<void()>> CodeCompletionHandler) {
-  if (getLangOpts().CPlusPlus11 && (AttrReqs & AR_CXX11AttributesParsed) &&
+  if (standardAttributesAllowed() && (AttrReqs & AR_CXX11AttributesParsed) &&
       isCXX11AttributeSpecifier()) {
     ParsedAttributesWithRange attrs(AttrFactory);
     ParseCXX11Attributes(attrs);
@@ -5962,7 +5969,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   SmallVector<SourceRange, 2> DynamicExceptionRanges;
   ExprResult NoexceptExpr;
   CachedTokens *ExceptionSpecTokens = nullptr;
-  ParsedAttributes FnAttrs(AttrFactory);
+  ParsedAttributesWithRange FnAttrs(AttrFactory);
   TypeResult TrailingReturnType;
 
   /* LocalEndLoc is the end location for the local FunctionTypeLoc.
@@ -5983,6 +5990,11 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     RParenLoc = Tracker.getCloseLocation();
     LocalEndLoc = RParenLoc;
     EndLoc = RParenLoc;
+
+    // If there are attributes following the identifier list, parse them and 
+    // prohibit them.
+    MaybeParseCXX11Attributes(FnAttrs);
+    ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren))
       ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, 
@@ -6089,6 +6101,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
         TrailingReturnType = ParseTrailingReturnType(Range);
         EndLoc = Range.getEnd();
       }
+    } else if (standardAttributesAllowed()) {
+      MaybeParseCXX11Attributes(FnAttrs);
     }
   }
 

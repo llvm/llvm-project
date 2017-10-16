@@ -108,7 +108,7 @@ void GCOVFile::print(raw_ostream &OS) const {
     FPtr->print(OS);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFile content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFile::dump() const {
   print(dbgs());
@@ -356,7 +356,7 @@ void GCOVFunction::print(raw_ostream &OS) const {
     Block->print(OS);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFunction content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFunction::dump() const {
   print(dbgs());
@@ -434,7 +434,7 @@ void GCOVBlock::print(raw_ostream &OS) const {
   }
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVBlock::dump() const {
   print(dbgs());

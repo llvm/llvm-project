@@ -612,7 +612,7 @@ static ConstantAddress tryEmitGlobalCompoundLiteral(CodeGenModule &CGM,
           CGM.getAddrOfConstantCompoundLiteralIfEmitted(E))
     return ConstantAddress(Addr, Align);
 
-  unsigned addressSpace = E->getType().getAddressSpace();
+  LangAS addressSpace = E->getType().getAddressSpace();
 
   ConstantEmitter emitter(CGM, CGF);
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
@@ -725,8 +725,8 @@ public:
     case CK_AddressSpaceConversion: {
       auto C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
       if (!C) return nullptr;
-      unsigned destAS = E->getType()->getPointeeType().getAddressSpace();
-      unsigned srcAS = subExpr->getType()->getPointeeType().getAddressSpace();
+      LangAS destAS = E->getType()->getPointeeType().getAddressSpace();
+      LangAS srcAS = subExpr->getType()->getPointeeType().getAddressSpace();
       llvm::Type *destTy = ConvertType(E->getType());
       return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, srcAS,
                                                              destAS, destTy);
@@ -1184,14 +1184,14 @@ llvm::Constant *ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
 }
 
 llvm::Constant *ConstantEmitter::tryEmitForInitializer(const Expr *E,
-                                                       unsigned destAddrSpace,
+                                                       LangAS destAddrSpace,
                                                        QualType destType) {
   initializeNonAbstract(destAddrSpace);
   return markIfFailed(tryEmitPrivateForMemory(E, destType));
 }
 
 llvm::Constant *ConstantEmitter::emitForInitializer(const APValue &value,
-                                                    unsigned destAddrSpace,
+                                                    LangAS destAddrSpace,
                                                     QualType destType) {
   initializeNonAbstract(destAddrSpace);
   auto C = tryEmitPrivateForMemory(value, destType);

@@ -3140,7 +3140,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
           // Treat this argument as _Nonnull as we want to show a warning if
           // NULL is passed into it.
           CheckNonNullArgument(*this, ValArg, DRE->getLocStart());
-          unsigned AS = 0;
+          LangAS AS = LangAS::Default;
           // Keep address space of non-atomic pointer type.
           if (const PointerType *PtrTy =
                   ValArg->getType()->getAs<PointerType>()) {

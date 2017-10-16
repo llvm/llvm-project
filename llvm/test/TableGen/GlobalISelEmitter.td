@@ -31,6 +31,12 @@ def complex : Operand<i32>, ComplexPattern<i32, 2, "SelectComplexPattern", []> {
 def gi_complex :
     GIComplexOperandMatcher<s32, "selectComplexPattern">,
     GIComplexPatternEquiv<complex>;
+def complex_rr : Operand<i32>, ComplexPattern<i32, 2, "SelectComplexPatternRR", []> {
+  let MIOperandInfo = (ops GPR32, GPR32);
+}
+def gi_complex_rr :
+    GIComplexOperandMatcher<s32, "selectComplexPatternRR">,
+    GIComplexPatternEquiv<complex_rr>;
 
 def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def Z : OperandWithDefaultOps <i32, (ops R0)>;
@@ -56,6 +62,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, APIntImmPredicateFns, APFloatImmPredicateFns, {
 // CHECK-NEXT:      nullptr, // GICP_Invalid
 // CHECK-NEXT:      &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
+// CHECK-NEXT:      &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
 // CHECK-NEXT:    }})
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
@@ -107,6 +114,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GICP_Invalid,
 // CHECK-NEXT:    GICP_gi_complex,
+// CHECK-NEXT:    GICP_gi_complex_rr,
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: // PatFrag predicates.
@@ -180,9 +188,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  // Label 0: @[[LABEL]]
 
 def INSN3 : I<(outs GPR32:$dst),
-              (ins GPR32Op:$src1, complex:$src2, GPR32:$src3, complex:$src4, complex:$src5), []>;
-def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4, complex:$src5)),
-          (INSN3 GPR32:$src1, complex:$src2, GPR32:$src3, complex:$src4, complex:$src5)>;
+              (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$src3, complex:$src4, i32imm:$src5a, i32imm:$src5b), []>;
+def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
+                               (select GPR32:$src3,
+                                       complex:$src4,
+                                       (complex i32imm:$src5a, i32imm:$src5b))),
+          (INSN3 GPR32:$src1, GPR32:$src2b, GPR32:$src2a, GPR32:$src3,
+                 complex:$src4, i32imm:$src5a, i32imm:$src5b)>;
 
 //===- Test a pattern with multiple ComplexPattern operands. --------------===//
 //
@@ -198,9 +210,9 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 // CHECK-NEXT:    // MIs[0] src1
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    // MIs[0] src2
+// CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
+// CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex_rr,
 // CHECK-NEXT:    // MIs[0] Operand 3
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_SELECT,
@@ -212,18 +224,20 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 // CHECK-NEXT:    // MIs[1] src4
 // CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/1, /*Op*/2, /*Renderer*/1, GICP_gi_complex,
-// CHECK-NEXT:    // MIs[1] src5
+// CHECK-NEXT:    // MIs[1] Operand 3
 // CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/1, /*Op*/3, /*Renderer*/2, GICP_gi_complex,
 // CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, (select:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, complex:{ *:[i32] }:$src5))  =>  (INSN3:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, complex:{ *:[i32] }:$src5)
+// CHECK-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, (complex_rr:{ *:[i32] } GPR32:{ *:[i32] }:$src2a, GPR32:{ *:[i32] }:$src2b), (select:{ *:[i32] } GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, (complex:{ *:[i32] } i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b)))  =>  (INSN3:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2b, GPR32:{ *:[i32] }:$src2a, GPR32:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src4, i32imm:{ *:[i32] }:$src5a, i32imm:{ *:[i32] }:$src5b)
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN3,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
+// CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // src2b
+// CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src2a
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src3
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
-// CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/2,
+// CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/2, /*SubOperand*/0, // src5a
+// CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/2, /*SubOperand*/1, // src5b
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,

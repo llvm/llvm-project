@@ -100,7 +100,7 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
   return makeUniqueName(V, UniqueName);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // dump - print out the symbol table
 //
 LLVM_DUMP_METHOD void ValueSymbolTable::dump() const {

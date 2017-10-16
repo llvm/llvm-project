@@ -61,7 +61,7 @@ void Arg::print(raw_ostream& O) const {
   O << "]>\n";
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Arg::dump() const { print(dbgs()); }
 #endif
 

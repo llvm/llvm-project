@@ -447,7 +447,7 @@ public:
   /// isAlwaysTrue - Return true if this is a noop predicate.
   bool isAlwaysTrue() const;
 
-  bool isImmediatePattern() const { return !getImmCode().empty(); }
+  bool isImmediatePattern() const { return hasImmCode(); }
 
   /// getImmediatePredicateCode - Return the code that evaluates this pattern if
   /// this is an immediate predicate.  It is an error to call this on a
@@ -511,6 +511,8 @@ public:
   Record *getScalarMemoryVT() const;
 
 private:
+  bool hasPredCode() const;
+  bool hasImmCode() const;
   std::string getPredCode() const;
   std::string getImmCode() const;
   bool immCodeUsesAPInt() const;

@@ -109,7 +109,7 @@ void CallGraph::print(raw_ostream &OS) const {
     CN->print(OS);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
 #endif
 
@@ -178,7 +178,7 @@ void CallGraphNode::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CallGraphNode::dump() const { print(dbgs()); }
 #endif
 
@@ -292,7 +292,7 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
   G->print(OS);
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif

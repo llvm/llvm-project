@@ -99,7 +99,7 @@ DebugLoc DebugLoc::appendInlinedAt(DebugLoc DL, DILocation *InlinedAt,
   return Last;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugLoc::dump() const {
   if (!Loc)
     return;

@@ -76,7 +76,7 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
   }
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void llvm::dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                               const TargetRegisterInfo *TRI) {

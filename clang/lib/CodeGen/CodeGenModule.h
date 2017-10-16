@@ -735,7 +735,7 @@ public:
   ///
   /// For languages without explicit address spaces, if D has default address
   /// space, target-specific global or constant address space may be returned.
-  unsigned GetGlobalVarAddressSpace(const VarDecl *D);
+  LangAS GetGlobalVarAddressSpace(const VarDecl *D);
 
   /// Return the llvm::Constant for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
