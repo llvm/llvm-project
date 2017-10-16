@@ -51,6 +51,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::ValuesIn(std::vector<Case>({
         // basic classes
         {"a::Foo f;", "b::Bar f;", "", ""},
+        {"::a::Foo f;", "::b::Bar f;", "", ""},
         {"void f(a::Foo f) {}", "void f(b::Bar f) {}", "", ""},
         {"void f(a::Foo *f) {}", "void f(b::Bar *f) {}", "", ""},
         {"a::Foo f() { return a::Foo(); }", "b::Bar f() { return b::Bar(); }",

@@ -1497,7 +1497,11 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
       unsigned Scale = Log2_32(Size);
       if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
         if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
-          LHSDef = MRI.getVRegDef(LHSDef->getOperand(1).getReg());
+          return {{
+              [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+              [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
+          }};
+
         return {{
             [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },

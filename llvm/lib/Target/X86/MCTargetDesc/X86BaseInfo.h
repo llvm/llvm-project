@@ -51,6 +51,16 @@ namespace X86 {
     TO_ZERO = 3,
     CUR_DIRECTION = 4
   };
+
+  /// The constants to describe instr prefixes if there are
+  enum IPREFIXES {
+    IP_NO_PREFIX = 0,
+    IP_HAS_OP_SIZE = 1,
+    IP_HAS_AD_SIZE = 2,
+    IP_HAS_REPEAT_NE = 4,
+    IP_HAS_REPEAT = 8,
+    IP_HAS_LOCK = 16
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that
