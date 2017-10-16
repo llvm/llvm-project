@@ -424,7 +424,7 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,
                                  const TargetRegisterInfo *TRI) {

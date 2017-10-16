@@ -131,7 +131,7 @@ const TargetRegisterClass *const HexagonSplitDoubleRegs::DoubleRC =
 INITIALIZE_PASS(HexagonSplitDoubleRegs, "hexagon-split-double",
   "Hexagon Split Double Registers", false, false)
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
       const USet &Part, const TargetRegisterInfo &TRI) {
   dbgs() << '{';

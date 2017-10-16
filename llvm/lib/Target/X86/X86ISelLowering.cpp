@@ -1140,7 +1140,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v8f32, Legal);
 
-    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
+    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i8,  Legal);
       setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i16, Legal);
       setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i8,   Legal);
@@ -1244,18 +1244,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v2i64, Custom);
       setOperationAction(ISD::SIGN_EXTEND,      MVT::v4i32, Custom);
       setOperationAction(ISD::SIGN_EXTEND,      MVT::v2i64, Custom);
-
-      // FIXME. This commands are available on SSE/AVX2, add relevant patterns.
-      setLoadExtAction(ISD::EXTLOAD, MVT::v8i32, MVT::v8i8,  Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v8i32, MVT::v8i16, Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i8,  Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i16, Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i8,  Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i16, Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i32, Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i8,  Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i16, Legal);
-      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i32, Legal);
     }
 
     setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
@@ -1515,13 +1503,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::XOR,  VT, MVT::v8i64);
     }
 
-    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
+    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
-      if (Subtarget.hasVLX()) {
-        // FIXME. This commands are available on SSE/AVX2, add relevant patterns.
-        setLoadExtAction(ExtType, MVT::v16i16, MVT::v16i8, Legal);
-        setLoadExtAction(ExtType, MVT::v8i16,  MVT::v8i8,  Legal);
-      }
     }
   }
 
@@ -14077,15 +14060,15 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
       ISD::isBuildVectorOfConstantSDNodes(Op.getOperand(2).getNode()))
     return SDValue();
 
-  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
-  // with patterns on the mask registers on AVX-512.
-  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
-    return Op;
-
   // Try to lower this to a blend-style vector shuffle. This can handle all
   // constant condition cases.
   if (SDValue BlendOp = lowerVSELECTtoVectorShuffle(Op, Subtarget, DAG))
     return BlendOp;
+
+  // If this VSELECT has a vector if i1 as a mask, it will be directly matched
+  // with patterns on the mask registers on AVX-512.
+  if (Op->getOperand(0).getValueType().getScalarSizeInBits() == 1)
+    return Op;
 
   // Variable blends are only legal from SSE4.1 onward.
   if (!Subtarget.hasSSE41())
@@ -18439,6 +18422,12 @@ static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
   if (Ext == ISD::SEXTLOAD && RegSz >= 256)
     loadRegZize = 128;
 
+  // If we don't have BWI we won't be able to create the shuffle needed for
+  // v8i8->v8i64.
+  if (Ext == ISD::EXTLOAD && !Subtarget.hasBWI() && RegVT == MVT::v8i64 &&
+      MemVT == MVT::v8i8)
+    loadRegZize = 128;
+
   // Represent our vector as a sequence of elements which are the
   // largest scalar that we can load.
   EVT LoadUnitVecVT = EVT::getVectorVT(
@@ -18503,6 +18492,13 @@ static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Shuff = DAG.getSignExtendVectorInReg(SlicedVec, dl, RegVT);
     DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), TF);
     return Shuff;
+  }
+
+  if (Ext == ISD::EXTLOAD && !Subtarget.hasBWI() && RegVT == MVT::v8i64 &&
+      MemVT == MVT::v8i8) {
+    SDValue Sext = getExtendInVec(X86ISD::VZEXT, dl, RegVT, SlicedVec, DAG);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), TF);
+    return Sext;
   }
 
   // Redistribute the loaded elements into the different locations.

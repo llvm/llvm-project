@@ -904,7 +904,6 @@ let RecomputePerFunction = 1 in {
                             "MF->getFunction()->optForSize()">;
 }
 
-def FastBTMem    : Predicate<"!Subtarget->isBTMemSlow()">;
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
 def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps()">;
 def HasFastMem32 : Predicate<"!Subtarget->isUnalignedMem32Slow()">;
@@ -1672,25 +1671,20 @@ def BT64rr : RI<0xA3, MRMDestReg, (outs), (ins GR64:$src1, GR64:$src2),
 // Unlike with the register+register form, the memory+register form of the
 // bt instruction does not ignore the high bits of the index. From ISel's
 // perspective, this is pretty bizarre. Make these instructions disassembly
-// only for now.
+// only for now. These instructions are also slow on modern CPUs so that's
+// another reason to avoid generating them.
 
 let mayLoad = 1, hasSideEffects = 0, SchedRW = [WriteALULd] in {
   def BT16mr : I<0xA3, MRMDestMem, (outs), (ins i16mem:$src1, GR16:$src2),
                  "bt{w}\t{$src2, $src1|$src1, $src2}",
-  //               [(X86bt (loadi16 addr:$src1), GR16:$src2),
-  //                (implicit EFLAGS)]
                  [], IIC_BT_MR
-                 >, OpSize16, TB, Requires<[FastBTMem]>, NotMemoryFoldable;
+                 >, OpSize16, TB, NotMemoryFoldable;
   def BT32mr : I<0xA3, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
                  "bt{l}\t{$src2, $src1|$src1, $src2}",
-  //               [(X86bt (loadi32 addr:$src1), GR32:$src2),
-  //                (implicit EFLAGS)]
                  [], IIC_BT_MR
-                 >, OpSize32, TB, Requires<[FastBTMem]>, NotMemoryFoldable;
+                 >, OpSize32, TB, NotMemoryFoldable;
   def BT64mr : RI<0xA3, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
                  "bt{q}\t{$src2, $src1|$src1, $src2}",
-  //               [(X86bt (loadi64 addr:$src1), GR64:$src2),
-  //                (implicit EFLAGS)]
                   [], IIC_BT_MR
                   >, TB, NotMemoryFoldable;
 }
@@ -1710,9 +1704,8 @@ def BT64ri8 : RIi8<0xBA, MRM4r, (outs), (ins GR64:$src1, i64i8imm:$src2),
                 IIC_BT_RI>, TB;
 } // SchedRW
 
-// Note that these instructions don't need FastBTMem because that
-// only applies when the other operand is in a register. When it's
-// an immediate, bt is still fast.
+// Note that these instructions aren't slow because that only applies when the
+// other operand is in a register. When it's an immediate, bt is still fast.
 let SchedRW = [WriteALU] in {
 def BT16mi8 : Ii8<0xBA, MRM4m, (outs), (ins i16mem:$src1, i16i8imm:$src2),
                 "bt{w}\t{$src2, $src1|$src1, $src2}",

@@ -520,6 +520,14 @@ public:
   /// operand should be the node itself.
   void setLoopID(MDNode *LoopID) const;
 
+  /// Add llvm.loop.unroll.disable to this loop's loop id metadata.
+  ///
+  /// Remove existing unroll metadata and add unroll disable metadata to
+  /// indicate the loop has already been unrolled.  This prevents a loop
+  /// from being unrolled more than is directed by a pragma if the loop
+  /// unrolling pass is run more than once (which it generally is).
+  void setLoopAlreadyUnrolled();
+
   /// Return true if no exit block for the loop has a predecessor that is
   /// outside the loop.
   bool hasDedicatedExits() const;

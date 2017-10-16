@@ -100,6 +100,8 @@ public:
     AS_GNU,
     /// [[...]]
     AS_CXX11,
+    /// [[...]]
+    AS_C2x,
     /// __declspec(...)
     AS_Declspec,
     /// [uuid("...")] class Foo
@@ -377,6 +379,9 @@ public:
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
   bool isCXX11Attribute() const {
     return SyntaxUsed == AS_CXX11 || isAlignasAttribute();
+  }
+  bool isC2xAttribute() const {
+    return SyntaxUsed == AS_C2x;
   }
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;

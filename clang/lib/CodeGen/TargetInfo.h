@@ -236,11 +236,11 @@ public:
   /// other than OpenCL and CUDA.
   /// If \p D is nullptr, returns the default target favored address space
   /// for global variable.
-  virtual unsigned getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                            const VarDecl *D) const;
+  virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                          const VarDecl *D) const;
 
   /// Get the AST address space for alloca.
-  virtual unsigned getASTAllocaAddressSpace() const { return LangAS::Default; }
+  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.
@@ -249,9 +249,8 @@ public:
   /// \param DestTy is the destination LLVM pointer type.
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, unsigned SrcAddr,
-                                            unsigned DestAddr,
-                                            llvm::Type *DestTy,
+                                            llvm::Value *V, LangAS SrcAddr,
+                                            LangAS DestAddr, llvm::Type *DestTy,
                                             bool IsNonNull = false) const;
 
   /// Perform address space cast of a constant expression of pointer type.
@@ -259,9 +258,10 @@ public:
   /// \param SrcAddr is the language address space of \p V.
   /// \param DestAddr is the targeted language address space.
   /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *
-  performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *V, unsigned SrcAddr,
-                       unsigned DestAddr, llvm::Type *DestTy) const;
+  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
+                                               llvm::Constant *V,
+                                               LangAS SrcAddr, LangAS DestAddr,
+                                               llvm::Type *DestTy) const;
 
   /// Get the syncscope used in LLVM IR.
   virtual llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,

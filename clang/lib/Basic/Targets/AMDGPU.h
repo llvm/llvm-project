@@ -258,7 +258,7 @@ public:
     }
   }
 
-  LangAS::ID getOpenCLTypeAddrSpace(const Type *T) const override {
+  LangAS getOpenCLTypeAddrSpace(const Type *T) const override {
     auto BT = dyn_cast<BuiltinType>(T);
 
     if (!BT)
@@ -279,8 +279,8 @@ public:
     }
   }
 
-  llvm::Optional<unsigned> getConstantAddressSpace() const override {
-    return LangAS::FirstTargetAddressSpace + AS.Constant;
+  llvm::Optional<LangAS> getConstantAddressSpace() const override {
+    return getLangASFromTargetAS(AS.Constant);
   }
 
   /// \returns Target specific vtbl ptr address space.
@@ -318,7 +318,7 @@ public:
   // In amdgcn target the null pointer in global, constant, and generic
   // address space has value 0 but in private and local address space has
   // value ~0.
-  uint64_t getNullPointerValue(unsigned AS) const override {
+  uint64_t getNullPointerValue(LangAS AS) const override {
     return AS == LangAS::opencl_local ? ~0 : 0;
   }
 };

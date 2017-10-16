@@ -133,7 +133,7 @@ struct SuspendCrossingInfo {
 };
 } // end anonymous namespace
 
-#ifdef LLVM_ENABLE_DUMP
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(StringRef Label,
                                                 BitVector const &BV) const {
   dbgs() << Label << ":";

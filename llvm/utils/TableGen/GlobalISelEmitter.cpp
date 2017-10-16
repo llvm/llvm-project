@@ -203,7 +203,12 @@ std::string explainOperator(Record *Operator) {
   if (Operator->isSubClassOf("Intrinsic"))
     return (" (Operator is an Intrinsic, " + Operator->getName() + ")").str();
 
-  return " (Operator not understood)";
+  if (Operator->isSubClassOf("ComplexPattern"))
+    return (" (Operator is an unmapped ComplexPattern, " + Operator->getName() +
+            ")")
+        .str();
+
+  return (" (Operator " + Operator->getName() + " not understood)").str();
 }
 
 /// Helper function to let the emitter report skip reason error messages.
@@ -514,10 +519,17 @@ class RuleMatcher {
 
   ArrayRef<SMLoc> SrcLoc;
 
+  typedef std::tuple<Record *, unsigned, unsigned>
+      DefinedComplexPatternSubOperand;
+  typedef StringMap<DefinedComplexPatternSubOperand>
+      DefinedComplexPatternSubOperandMap;
+  /// A map of Symbolic Names to ComplexPattern sub-operands.
+  DefinedComplexPatternSubOperandMap ComplexSubOperands;
+
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc)
       : Matchers(), Actions(), InsnVariableIDs(), DefinedOperands(),
-        NextInsnVarID(0), SrcLoc(SrcLoc) {}
+        NextInsnVarID(0), SrcLoc(SrcLoc), ComplexSubOperands() {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -546,6 +558,20 @@ public:
   }
 
   void defineOperand(StringRef SymbolicName, OperandMatcher &OM);
+
+  void defineComplexSubOperand(StringRef SymbolicName, Record *ComplexPattern,
+                               unsigned RendererID, unsigned SubOperandID) {
+    assert(ComplexSubOperands.count(SymbolicName) == 0 && "Already defined");
+    ComplexSubOperands[SymbolicName] =
+        std::make_tuple(ComplexPattern, RendererID, SubOperandID);
+  }
+  Optional<DefinedComplexPatternSubOperand>
+  getComplexSubOperand(StringRef SymbolicName) const {
+    const auto &I = ComplexSubOperands.find(SymbolicName);
+    if (I == ComplexSubOperands.end())
+      return None;
+    return I->second;
+  }
 
   const InstructionMatcher &getInstructionMatcher(StringRef SymbolicName) const;
   const OperandMatcher &getOperandMatcher(StringRef Name) const;
@@ -1540,6 +1566,9 @@ private:
   /// The renderer number. This must be unique within a rule since it's used to
   /// identify a temporary variable to hold the renderer function.
   unsigned RendererID;
+  /// When provided, this is the suboperand of the ComplexPattern operand to
+  /// render. Otherwise all the suboperands will be rendered.
+  Optional<unsigned> SubOperand;
 
   unsigned getNumOperands() const {
     return TheDef.getValueAsDag("Operands")->getNumArgs();
@@ -1547,19 +1576,26 @@ private:
 
 public:
   RenderComplexPatternOperand(unsigned InsnID, const Record &TheDef,
-                              StringRef SymbolicName, unsigned RendererID)
+                              StringRef SymbolicName, unsigned RendererID,
+                              Optional<unsigned> SubOperand = None)
       : OperandRenderer(OR_ComplexPattern), InsnID(InsnID), TheDef(TheDef),
-        SymbolicName(SymbolicName), RendererID(RendererID) {}
+        SymbolicName(SymbolicName), RendererID(RendererID),
+        SubOperand(SubOperand) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_ComplexPattern;
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_ComplexRenderer")
+    Table << MatchTable::Opcode(SubOperand.hasValue() ? "GIR_ComplexSubOperandRenderer"
+                                                      : "GIR_ComplexRenderer")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("RendererID")
-          << MatchTable::IntValue(RendererID) << MatchTable::LineBreak;
+          << MatchTable::IntValue(RendererID);
+    if (SubOperand.hasValue())
+      Table << MatchTable::Comment("SubOperand")
+            << MatchTable::IntValue(SubOperand.getValue());
+    Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
 
@@ -2028,11 +2064,12 @@ private:
   Record *findNodeEquiv(Record *N) const;
 
   Error importRulePredicates(RuleMatcher &M, ArrayRef<Predicate> Predicates);
-  Expected<InstructionMatcher &>
-  createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
-                               const TreePatternNode *Src,
-                               unsigned &TempOpIdx) const;
-  Error importChildMatcher(InstructionMatcher &InsnMatcher,
+  Expected<InstructionMatcher &> createAndImportSelDAGMatcher(
+      RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
+      const TreePatternNode *Src, unsigned &TempOpIdx) const;
+  Error importComplexPatternOperandMatcher(OperandMatcher &OM, Record *R,
+                                           unsigned &TempOpIdx) const;
+  Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode *SrcChild, unsigned OpIdx,
                            unsigned &TempOpIdx) const;
   Expected<BuildMIAction &>
@@ -2096,10 +2133,9 @@ GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
-Expected<InstructionMatcher &>
-GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
-                                                const TreePatternNode *Src,
-                                                unsigned &TempOpIdx) const {
+Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
+    RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
+    const TreePatternNode *Src, unsigned &TempOpIdx) const {
   Record *SrcGIEquivOrNull = nullptr;
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
@@ -2196,8 +2232,8 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
         return failedImport("Expected IntInit containing instrinsic ID)");
       }
 
-      if (auto Error =
-              importChildMatcher(InsnMatcher, SrcChild, OpIdx++, TempOpIdx))
+      if (auto Error = importChildMatcher(Rule, InsnMatcher, SrcChild, OpIdx++,
+                                          TempOpIdx))
         return std::move(Error);
     }
   }
@@ -2205,7 +2241,20 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
   return InsnMatcher;
 }
 
-Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
+Error GlobalISelEmitter::importComplexPatternOperandMatcher(
+    OperandMatcher &OM, Record *R, unsigned &TempOpIdx) const {
+  const auto &ComplexPattern = ComplexPatternEquivs.find(R);
+  if (ComplexPattern == ComplexPatternEquivs.end())
+    return failedImport("SelectionDAG ComplexPattern (" + R->getName() +
+                        ") not mapped to GlobalISel");
+
+  OM.addPredicate<ComplexPatternOperandMatcher>(OM, *ComplexPattern->second);
+  TempOpIdx++;
+  return Error::success();
+}
+
+Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
+                                            InstructionMatcher &InsnMatcher,
                                             const TreePatternNode *SrcChild,
                                             unsigned OpIdx,
                                             unsigned &TempOpIdx) const {
@@ -2238,6 +2287,26 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 
   // Check for nested instructions.
   if (!SrcChild->isLeaf()) {
+    if (SrcChild->getOperator()->isSubClassOf("ComplexPattern")) {
+      // When a ComplexPattern is used as an operator, it should do the same
+      // thing as when used as a leaf. However, the children of the operator
+      // name the sub-operands that make up the complex operand and we must
+      // prepare to reference them in the renderer too.
+      unsigned RendererID = TempOpIdx;
+      if (auto Error = importComplexPatternOperandMatcher(
+              OM, SrcChild->getOperator(), TempOpIdx))
+        return Error;
+
+      for (unsigned i = 0, e = SrcChild->getNumChildren(); i != e; ++i) {
+        auto *SubOperand = SrcChild->getChild(i);
+        if (!SubOperand->getName().empty())
+          Rule.defineComplexSubOperand(SubOperand->getName(),
+                                       SrcChild->getOperator(), RendererID, i);
+      }
+
+      return Error::success();
+    }
+
     auto MaybeInsnOperand = OM.addPredicate<InstructionOperandMatcher>(
         InsnMatcher.getRuleMatcher(), SrcChild->getName());
     if (!MaybeInsnOperand.hasValue()) {
@@ -2250,7 +2319,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
     // Map the node to a gMIR instruction.
     InstructionOperandMatcher &InsnOperand = **MaybeInsnOperand;
     auto InsnMatcherOrError = createAndImportSelDAGMatcher(
-        InsnOperand.getInsnMatcher(), SrcChild, TempOpIdx);
+        Rule, InsnOperand.getInsnMatcher(), SrcChild, TempOpIdx);
     if (auto Error = InsnMatcherOrError.takeError())
       return Error;
 
@@ -2283,17 +2352,8 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
     }
 
     // Check for ComplexPattern's.
-    if (ChildRec->isSubClassOf("ComplexPattern")) {
-      const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
-      if (ComplexPattern == ComplexPatternEquivs.end())
-        return failedImport("SelectionDAG ComplexPattern (" +
-                            ChildRec->getName() + ") not mapped to GlobalISel");
-
-      OM.addPredicate<ComplexPatternOperandMatcher>(OM,
-                                                    *ComplexPattern->second);
-      TempOpIdx++;
-      return Error::success();
-    }
+    if (ChildRec->isSubClassOf("ComplexPattern"))
+      return importComplexPatternOperandMatcher(OM, ChildRec, TempOpIdx);
 
     if (ChildRec->isSubClassOf("ImmLeaf")) {
       return failedImport(
@@ -2313,6 +2373,14 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
   if (DstChild->getTransformFn() != nullptr) {
     return failedImport("Dst pattern child has transform fn " +
                         DstChild->getTransformFn()->getName());
+  }
+
+  const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
+  if (SubOperand.hasValue()) {
+    DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
+        0, *std::get<0>(*SubOperand), DstChild->getName(),
+        std::get<1>(*SubOperand), std::get<2>(*SubOperand));
+    return Error::success();
   }
 
   if (!DstChild->isLeaf()) {
@@ -2552,7 +2620,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
   unsigned TempOpIdx = 0;
   auto InsnMatcherOrError =
-      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
+      createAndImportSelDAGMatcher(M, InsnMatcherTemp, Src, TempOpIdx);
   if (auto Error = InsnMatcherOrError.takeError())
     return std::move(Error);
   InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
