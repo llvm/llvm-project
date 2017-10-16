@@ -423,18 +423,17 @@ llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &
   return llvm::ConstantPointerNull::get(T);
 }
 
-unsigned TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                                     const VarDecl *D) const {
+LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
          !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
          "Address space agnostic languages only");
-  return D ? D->getType().getAddressSpace()
-           : static_cast<unsigned>(LangAS::Default);
+  return D ? D->getType().getAddressSpace() : LangAS::Default;
 }
 
 llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
-    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, unsigned SrcAddr,
-    unsigned DestAddr, llvm::Type *DestTy, bool isNonNull) const {
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
+    LangAS DestAddr, llvm::Type *DestTy, bool isNonNull) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
   if (auto *C = dyn_cast<llvm::Constant>(Src))
@@ -444,7 +443,7 @@ llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
 
 llvm::Constant *
 TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        unsigned SrcAddr, unsigned DestAddr,
+                                        LangAS SrcAddr, LangAS DestAddr,
                                         llvm::Type *DestTy) const {
   // Since target may map different address spaces in AST to the same address
   // space, an address space conversion may end up as a bitcast.
@@ -7611,12 +7610,12 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  unsigned getASTAllocaAddressSpace() const override {
-    return LangAS::FirstTargetAddressSpace +
-           getABIInfo().getDataLayout().getAllocaAddrSpace();
+  LangAS getASTAllocaAddressSpace() const override {
+    return getLangASFromTargetAS(
+        getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
-  unsigned getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                    const VarDecl *D) const override;
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override;
   llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
                                          llvm::LLVMContext &C) const override;
   llvm::Function *
@@ -7707,21 +7706,19 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-unsigned
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
          !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
          "Address space agnostic languages only");
-  unsigned DefaultGlobalAS =
-      LangAS::FirstTargetAddressSpace +
-      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+  LangAS DefaultGlobalAS = getLangASFromTargetAS(
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_global));
   if (!D)
     return DefaultGlobalAS;
 
-  unsigned AddrSpace = D->getType().getAddressSpace();
-  assert(AddrSpace == LangAS::Default ||
-         AddrSpace >= LangAS::FirstTargetAddressSpace);
+  LangAS AddrSpace = D->getType().getAddressSpace();
+  assert(AddrSpace == LangAS::Default || isTargetAddressSpace(AddrSpace));
   if (AddrSpace != LangAS::Default)
     return AddrSpace;
 
