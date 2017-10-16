@@ -16,7 +16,7 @@ _DllMainCRTStartup@12:
 _foobar:
   ret
 
-# Test specifying -export-all-symbols, on an object file that contains axi
+# Test specifying -export-all-symbols, on an object file that contains
 # dllexport directive for some of the symbols.
 
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj

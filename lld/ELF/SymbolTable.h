@@ -103,9 +103,8 @@ private:
   void assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId);
 
   struct SymIndex {
-    SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
-    int Idx : 31;
-    unsigned Traced : 1;
+    int32_t Idx : 31;
+    uint32_t Traced : 1;
   };
 
   // The order the global symbols are in is not defined. We can use an arbitrary

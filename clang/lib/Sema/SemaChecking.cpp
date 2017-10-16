@@ -8556,19 +8556,71 @@ bool IsSameFloatAfterCast(const APValue &value,
 
 void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC);
 
-bool IsZero(Sema &S, Expr *E) {
+bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
   if (const DeclRefExpr *DR =
       dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
     if (isa<EnumConstantDecl>(DR->getDecl()))
-      return false;
+      return true;
 
   // Suppress cases where the '0' value is expanded from a macro.
   if (E->getLocStart().isMacroID())
-    return false;
+    return true;
 
-  llvm::APSInt Value;
-  return E->isIntegerConstantExpr(Value, S.Context) && Value == 0;
+  return false;
+}
+
+bool isNonBooleanIntegerValue(Expr *E) {
+  return !E->isKnownToHaveBooleanValue() && E->getType()->isIntegerType();
+}
+
+bool isNonBooleanUnsignedValue(Expr *E) {
+  // We are checking that the expression is not known to have boolean value,
+  // is an integer type; and is either unsigned after implicit casts,
+  // or was unsigned before implicit casts.
+  return isNonBooleanIntegerValue(E) &&
+         (!E->getType()->isSignedIntegerType() ||
+          !E->IgnoreParenImpCasts()->getType()->isSignedIntegerType());
+}
+
+enum class LimitType {
+  Max, // e.g. 32767 for short
+  Min  // e.g. -32768 for short
+};
+
+/// Checks whether Expr 'Constant' may be the
+/// std::numeric_limits<>::max() or std::numeric_limits<>::min()
+/// of the Expr 'Other'. If true, then returns the limit type (min or max).
+/// The Value is the evaluation of Constant
+llvm::Optional<LimitType> IsTypeLimit(Sema &S, Expr *Constant, Expr *Other,
+                                      const llvm::APSInt &Value) {
+  if (IsEnumConstOrFromMacro(S, Constant))
+    return llvm::Optional<LimitType>();
+
+  if (isNonBooleanUnsignedValue(Other) && Value == 0)
+    return LimitType::Min;
+
+  // TODO: Investigate using GetExprRange() to get tighter bounds
+  // on the bit ranges.
+  QualType OtherT = Other->IgnoreParenImpCasts()->getType();
+  if (const auto *AT = OtherT->getAs<AtomicType>())
+    OtherT = AT->getValueType();
+
+  IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
+
+  if (llvm::APSInt::isSameValue(
+          llvm::APSInt::getMaxValue(OtherRange.Width,
+                                    OtherT->isUnsignedIntegerType()),
+          Value))
+    return LimitType::Max;
+
+  if (llvm::APSInt::isSameValue(
+          llvm::APSInt::getMinValue(OtherRange.Width,
+                                    OtherT->isUnsignedIntegerType()),
+          Value))
+    return LimitType::Min;
+
+  return llvm::Optional<LimitType>();
 }
 
 bool HasEnumType(Expr *E) {
@@ -8583,63 +8635,60 @@ bool HasEnumType(Expr *E) {
   return E->getType()->isEnumeralType();
 }
 
-bool isNonBooleanUnsignedValue(Expr *E) {
-  // We are checking that the expression is not known to have boolean value,
-  // is an integer type; and is either unsigned after implicit casts,
-  // or was unsigned before implicit casts.
-  return !E->isKnownToHaveBooleanValue() && E->getType()->isIntegerType() &&
-         (!E->getType()->isSignedIntegerType() ||
-          !E->IgnoreParenImpCasts()->getType()->isSignedIntegerType());
-}
-
-bool CheckTautologicalComparisonWithZero(Sema &S, BinaryOperator *E) {
-  // Disable warning in template instantiations.
-  if (S.inTemplateInstantiation())
+bool CheckTautologicalComparison(Sema &S, BinaryOperator *E, Expr *Constant,
+                                 Expr *Other, const llvm::APSInt &Value,
+                                 bool RhsConstant) {
+  // Disable warning in template instantiations
+  // and only analyze <, >, <= and >= operations.
+  if (S.inTemplateInstantiation() || !E->isRelationalOp())
     return false;
-
-  // bool values are handled by DiagnoseOutOfRangeComparison().
 
   BinaryOperatorKind Op = E->getOpcode();
-  if (E->isValueDependent())
+
+  QualType OType = Other->IgnoreParenImpCasts()->getType();
+
+  llvm::Optional<LimitType> ValueType; // Which limit (min/max) is the constant?
+
+  if (!(isNonBooleanIntegerValue(Other) &&
+        (ValueType = IsTypeLimit(S, Constant, Other, Value))))
     return false;
 
-  Expr *LHS = E->getLHS();
-  Expr *RHS = E->getRHS();
+  bool ConstIsLowerBound = (Op == BO_LT || Op == BO_LE) ^ RhsConstant;
+  bool ResultWhenConstEqualsOther = (Op == BO_LE || Op == BO_GE);
+  bool ResultWhenConstNeOther =
+      ConstIsLowerBound ^ (ValueType == LimitType::Max);
+  if (ResultWhenConstEqualsOther != ResultWhenConstNeOther)
+    return false; // The comparison is not tautological.
 
-  bool Match = true;
+  const bool Result = ResultWhenConstEqualsOther;
 
-  if (Op == BO_LT && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
-    S.Diag(E->getOperatorLoc(),
-           HasEnumType(LHS) ? diag::warn_lunsigned_enum_always_true_comparison
-                            : diag::warn_lunsigned_always_true_comparison)
-        << "< 0" << false << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_GE && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
-    S.Diag(E->getOperatorLoc(),
-           HasEnumType(LHS) ? diag::warn_lunsigned_enum_always_true_comparison
-                            : diag::warn_lunsigned_always_true_comparison)
-        << ">= 0" << true << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_GT && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
-    S.Diag(E->getOperatorLoc(),
-           HasEnumType(RHS) ? diag::warn_runsigned_enum_always_true_comparison
-                            : diag::warn_runsigned_always_true_comparison)
-        << "0 >" << false << LHS->getSourceRange() << RHS->getSourceRange();
-  } else if (Op == BO_LE && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
-    S.Diag(E->getOperatorLoc(),
-           HasEnumType(RHS) ? diag::warn_runsigned_enum_always_true_comparison
-                            : diag::warn_runsigned_always_true_comparison)
-        << "0 <=" << true << LHS->getSourceRange() << RHS->getSourceRange();
-  } else
-    Match = false;
+  unsigned Diag = (isNonBooleanUnsignedValue(Other) && Value == 0)
+                      ? (HasEnumType(Other)
+                             ? diag::warn_unsigned_enum_always_true_comparison
+                             : diag::warn_unsigned_always_true_comparison)
+                      : diag::warn_tautological_constant_compare;
 
-  return Match;
+  // Should be enough for uint128 (39 decimal digits)
+  SmallString<64> PrettySourceValue;
+  llvm::raw_svector_ostream OS(PrettySourceValue);
+  OS << Value;
+
+  S.Diag(E->getOperatorLoc(), Diag)
+      << RhsConstant << OType << E->getOpcodeStr() << OS.str() << Result
+      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+
+  return true;
 }
 
-void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
+bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
                                   Expr *Other, const llvm::APSInt &Value,
                                   bool RhsConstant) {
   // Disable warning in template instantiations.
   if (S.inTemplateInstantiation())
-    return;
+    return false;
+
+  Constant = Constant->IgnoreParenImpCasts();
+  Other = Other->IgnoreParenImpCasts();
 
   // TODO: Investigate using GetExprRange() to get tighter bounds
   // on the bit ranges.
@@ -8650,10 +8699,6 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
   unsigned OtherWidth = OtherRange.Width;
 
   bool OtherIsBooleanType = Other->isKnownToHaveBooleanValue();
-
-  // 0 values are handled later by CheckTautologicalComparisonWithZero().
-  if ((Value == 0) && (!OtherIsBooleanType))
-    return;
 
   BinaryOperatorKind op = E->getOpcode();
   bool IsTrue = true;
@@ -8670,7 +8715,7 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
     QualType CommonT = E->getLHS()->getType();
 
     if (S.Context.hasSameUnqualifiedType(OtherT, ConstantT))
-      return;
+      return false;
     assert((OtherT->isIntegerType() && ConstantT->isIntegerType()) &&
            "comparison with non-integer type");
 
@@ -8685,38 +8730,38 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
         // Check that the constant is representable in type OtherT.
         if (ConstantSigned) {
           if (OtherWidth >= Value.getMinSignedBits())
-            return;
+            return false;
         } else { // !ConstantSigned
           if (OtherWidth >= Value.getActiveBits() + 1)
-            return;
+            return false;
         }
       } else { // !OtherSigned
                // Check that the constant is representable in type OtherT.
         // Negative values are out of range.
         if (ConstantSigned) {
           if (Value.isNonNegative() && OtherWidth >= Value.getActiveBits())
-            return;
+            return false;
         } else { // !ConstantSigned
           if (OtherWidth >= Value.getActiveBits())
-            return;
+            return false;
         }
       }
     } else { // !CommonSigned
       if (OtherRange.NonNegative) {
         if (OtherWidth >= Value.getActiveBits())
-          return;
+          return false;
       } else { // OtherSigned
         assert(!ConstantSigned &&
                "Two signed types converted to unsigned types.");
         // Check to see if the constant is representable in OtherT.
         if (OtherWidth > Value.getActiveBits())
-          return;
+          return false;
         // Check to see if the constant is equivalent to a negative value
         // cast to CommonT.
         if (S.Context.getIntWidth(ConstantT) ==
                 S.Context.getIntWidth(CommonT) &&
             Value.isNegative() && Value.getMinSignedBits() <= OtherWidth)
-          return;
+          return false;
         // The constant value rests between values that OtherT can represent
         // after conversion.  Relational comparison still works, but equality
         // comparisons will be tautological.
@@ -8729,7 +8774,7 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
     if (op == BO_EQ || op == BO_NE) {
       IsTrue = op == BO_NE;
     } else if (EqualityOnly) {
-      return;
+      return false;
     } else if (RhsConstant) {
       if (op == BO_GT || op == BO_GE)
         IsTrue = !PositiveConstant;
@@ -8817,7 +8862,7 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
     } else if (CmpRes == ATrue) {
       IsTrue = true;
     } else {
-      return;
+      return false;
     }
   }
 
@@ -8840,6 +8885,8 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
         << OS.str() << LiteralOrBoolConstant
         << OtherT << (OtherIsBooleanType && !OtherT->isBooleanType()) << IsTrue
         << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
+
+   return true;
 }
 
 /// Analyze the operands of the given comparison.  Implements the
@@ -8865,44 +8912,48 @@ void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   if (E->isValueDependent())
     return AnalyzeImpConvsInComparison(S, E);
 
-  Expr *LHS = E->getLHS()->IgnoreParenImpCasts();
-  Expr *RHS = E->getRHS()->IgnoreParenImpCasts();
-  
-  bool IsComparisonConstant = false;
-  
-  // Check whether an integer constant comparison results in a value
-  // of 'true' or 'false'.
+  Expr *LHS = E->getLHS();
+  Expr *RHS = E->getRHS();
+
   if (T->isIntegralType(S.Context)) {
     llvm::APSInt RHSValue;
-    bool IsRHSIntegralLiteral = 
-      RHS->isIntegerConstantExpr(RHSValue, S.Context);
     llvm::APSInt LHSValue;
-    bool IsLHSIntegralLiteral = 
-      LHS->isIntegerConstantExpr(LHSValue, S.Context);
-    if (IsRHSIntegralLiteral && !IsLHSIntegralLiteral)
-        DiagnoseOutOfRangeComparison(S, E, RHS, LHS, RHSValue, true);
-    else if (!IsRHSIntegralLiteral && IsLHSIntegralLiteral)
-      DiagnoseOutOfRangeComparison(S, E, LHS, RHS, LHSValue, false);
-    else
-      IsComparisonConstant = 
-        (IsRHSIntegralLiteral && IsLHSIntegralLiteral);
-  } else if (!T->hasUnsignedIntegerRepresentation())
-      IsComparisonConstant = E->isIntegerConstantExpr(S.Context);
 
-  // We don't care about value-dependent expressions or expressions
-  // whose result is a constant.
-  if (IsComparisonConstant)
-    return AnalyzeImpConvsInComparison(S, E);
+    bool IsRHSIntegralLiteral = RHS->isIntegerConstantExpr(RHSValue, S.Context);
+    bool IsLHSIntegralLiteral = LHS->isIntegerConstantExpr(LHSValue, S.Context);
 
-  // If this is a tautological comparison, suppress -Wsign-compare.
-  if (CheckTautologicalComparisonWithZero(S, E))
-    return AnalyzeImpConvsInComparison(S, E);
+    // We don't care about expressions whose result is a constant.
+    if (IsRHSIntegralLiteral && IsLHSIntegralLiteral)
+      return AnalyzeImpConvsInComparison(S, E);
 
-  // We don't do anything special if this isn't an unsigned integral
-  // comparison:  we're only interested in integral comparisons, and
-  // signed comparisons only happen in cases we don't care to warn about.
-  if (!T->hasUnsignedIntegerRepresentation())
+    // We only care about expressions where just one side is literal
+    if (IsRHSIntegralLiteral ^ IsLHSIntegralLiteral) {
+      // Is the constant on the RHS or LHS?
+      const bool RhsConstant = IsRHSIntegralLiteral;
+      Expr *Const = RhsConstant ? RHS : LHS;
+      Expr *Other = RhsConstant ? LHS : RHS;
+      const llvm::APSInt &Value = RhsConstant ? RHSValue : LHSValue;
+
+      // Check whether an integer constant comparison results in a value
+      // of 'true' or 'false'.
+
+      if (CheckTautologicalComparison(S, E, Const, Other, Value, RhsConstant))
+        return AnalyzeImpConvsInComparison(S, E);
+
+      if (DiagnoseOutOfRangeComparison(S, E, Const, Other, Value, RhsConstant))
+        return AnalyzeImpConvsInComparison(S, E);
+    }
+  }
+
+  if (!T->hasUnsignedIntegerRepresentation()) {
+    // We don't do anything special if this isn't an unsigned integral
+    // comparison:  we're only interested in integral comparisons, and
+    // signed comparisons only happen in cases we don't care to warn about.
     return AnalyzeImpConvsInComparison(S, E);
+  }
+
+  LHS = LHS->IgnoreParenImpCasts();
+  RHS = RHS->IgnoreParenImpCasts();
 
   // Check to see if one of the (unmodified) operands is of different
   // signedness.

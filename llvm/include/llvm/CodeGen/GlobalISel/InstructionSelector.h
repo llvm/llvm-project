@@ -117,6 +117,11 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected type
   GIM_CheckType,
+  /// Check the type of a pointer to any address space.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - SizeInBits - The size of the pointer value in bits.
+  GIM_CheckPointerToAny,
   /// Check the register bank for the specified operand
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
@@ -291,7 +296,7 @@ public:
     const I64ImmediatePredicateFn *I64ImmPredicateFns;
     const APIntImmediatePredicateFn *APIntImmPredicateFns;
     const APFloatImmediatePredicateFn *APFloatImmPredicateFns;
-    const std::vector<ComplexMatcherMemFn> ComplexPredicates;
+    const ComplexMatcherMemFn *ComplexPredicates;
   };
 
 protected:
@@ -335,6 +340,12 @@ protected:
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                          const MachineRegisterInfo &MRI) const;
+
+  /// Return true if the specified operand is a G_GEP with a G_CONSTANT on the
+  /// right-hand side. GlobalISel's separation of pointer and integer types
+  /// means that we don't need to worry about G_OR with equivalent semantics.
+  bool isBaseWithConstantOffset(const MachineOperand &Root,
+                                const MachineRegisterInfo &MRI) const;
 
   bool isObviouslySafeToFold(MachineInstr &MI) const;
 };
