@@ -715,6 +715,18 @@ public:
   virtual unsigned countRendererFns() const { return 0; }
 };
 
+// Specialize OperandMatcher::addPredicate() to refrain from adding redundant
+// predicates.
+template <>
+template <class Kind, class... Args>
+Optional<Kind *>
+PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
+  if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
+    return None;
+  Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
+  return static_cast<Kind *>(Predicates.back().get());
+}
+
 template <>
 std::string
 PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
@@ -1065,18 +1077,6 @@ public:
     return false;
   }
 };
-
-// Specialize OperandMatcher::addPredicate() to refrain from adding redundant
-// predicates.
-template <>
-template <class Kind, class... Args>
-Optional<Kind *>
-PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
-  if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
-    return None;
-  Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
-  return static_cast<Kind *>(Predicates.back().get());
-}
 
 unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {
   return Operand.getAllocatedTemporariesBaseID();
