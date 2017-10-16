@@ -786,13 +786,14 @@ class C_COND_FM_MM<bits <2> fmt, bits<4> c> : CEQS_FM_MM<fmt> {
 }
 
 class BC1F_FM_MM<bits<5> tf> : MMArch {
+  bits<3> fcc;
   bits<16> offset;
 
   bits<32> Inst;
 
   let Inst{31-26} = 0x10;
   let Inst{25-21} = tf;
-  let Inst{20-18} = 0x0; // cc
+  let Inst{20-18} = fcc; // cc
   let Inst{17-16} = 0x0;
   let Inst{15-0}  = offset;
 }

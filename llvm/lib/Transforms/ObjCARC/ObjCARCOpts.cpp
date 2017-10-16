@@ -808,9 +808,14 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
     // If Arg is a PHI, and one or more incoming values to the
     // PHI are null, and the call is control-equivalent to the PHI, and there
-    // are no relevant side effects between the PHI and the call, the call
-    // could be pushed up to just those paths with non-null incoming values.
-    // For now, don't bother splitting critical edges for this.
+    // are no relevant side effects between the PHI and the call, and the call
+    // is not a release that doesn't have the clang.imprecise_release tag, the
+    // call could be pushed up to just those paths with non-null incoming
+    // values. For now, don't bother splitting critical edges for this.
+    if (Class == ARCInstKind::Release &&
+        !Inst->getMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease)))
+      continue;
+
     SmallVector<std::pair<Instruction *, const Value *>, 4> Worklist;
     Worklist.push_back(std::make_pair(Inst, Arg));
     do {

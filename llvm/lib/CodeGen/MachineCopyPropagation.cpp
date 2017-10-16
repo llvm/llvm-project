@@ -286,7 +286,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // it's no longer available for copy propagation.
       RegList &DestList = SrcMap[Src];
       if (!is_contained(DestList, Def))
-        DestList.push_back(Def);
+          DestList.push_back(Def);
 
       continue;
     }

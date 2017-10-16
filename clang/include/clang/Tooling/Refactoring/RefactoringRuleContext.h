@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_RULE_CONTEXT_H
 #define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_RULE_CONTEXT_H
 
+#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/SourceManager.h"
 
 namespace clang {
@@ -50,6 +51,17 @@ public:
 
   void setASTContext(ASTContext &Context) { AST = &Context; }
 
+  /// Creates an llvm::Error value that contains a diagnostic.
+  ///
+  /// The errors should not outlive the context.
+  llvm::Error createDiagnosticError(SourceLocation Loc, unsigned DiagID) {
+    return DiagnosticError::create(Loc, PartialDiagnostic(DiagID, DiagStorage));
+  }
+
+  llvm::Error createDiagnosticError(unsigned DiagID) {
+    return createDiagnosticError(SourceLocation(), DiagID);
+  }
+
 private:
   /// The source manager for the translation unit / file on which a refactoring
   /// action might operate on.
@@ -60,6 +72,8 @@ private:
   /// An optional AST for the translation unit on which a refactoring action
   /// might operate on.
   ASTContext *AST = nullptr;
+  /// The allocator for diagnostics.
+  PartialDiagnostic::StorageAllocator DiagStorage;
 };
 
 } // end namespace tooling

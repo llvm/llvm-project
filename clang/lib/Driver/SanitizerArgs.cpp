@@ -171,19 +171,23 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 }
 
 bool SanitizerArgs::needsUbsanRt() const {
-  return ((Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
-          CoverageFeatures) &&
-         !Sanitizers.has(Address) && !Sanitizers.has(Memory) &&
-         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) &&
-         !Sanitizers.has(Leak) && !CfiCrossDso;
+  // All of these include ubsan.
+  if (needsAsanRt() || needsMsanRt() || needsTsanRt() || needsDfsanRt() ||
+      needsLsanRt() || needsCfiDiagRt())
+    return false;
+
+  return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
+         CoverageFeatures;
 }
 
 bool SanitizerArgs::needsCfiRt() const {
-  return !(Sanitizers.Mask & CFI & ~TrapSanitizers.Mask) && CfiCrossDso;
+  return !(Sanitizers.Mask & CFI & ~TrapSanitizers.Mask) && CfiCrossDso &&
+         !ImplicitCfiRuntime;
 }
 
 bool SanitizerArgs::needsCfiDiagRt() const {
-  return (Sanitizers.Mask & CFI & ~TrapSanitizers.Mask) && CfiCrossDso;
+  return (Sanitizers.Mask & CFI & ~TrapSanitizers.Mask) && CfiCrossDso &&
+         !ImplicitCfiRuntime;
 }
 
 bool SanitizerArgs::requiresPIE() const {
@@ -614,6 +618,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
                    TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
                        TC.getTriple().isOSDarwin());
+
+  ImplicitCfiRuntime = TC.getTriple().isAndroid();
 
   if (AllAddedKinds & Address) {
     NeedPIE |= TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia();

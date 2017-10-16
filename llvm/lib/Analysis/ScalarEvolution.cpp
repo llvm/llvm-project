@@ -9725,11 +9725,11 @@ const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta, const SCEV *Step,
   return getUDivExpr(Delta, Step);
 }
 
-const SCEV *ScalarEvolution::computeMaxBECount(const SCEV *Start,
-                                               const SCEV *Stride,
-                                               const SCEV *End,
-                                               unsigned BitWidth,
-                                               bool IsSigned) {
+const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
+                                                    const SCEV *Stride,
+                                                    const SCEV *End,
+                                                    unsigned BitWidth,
+                                                    bool IsSigned) {
 
   assert(!isKnownNonPositive(Stride) &&
          "Stride is expected strictly positive!");
@@ -9861,7 +9861,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // bound of the loop (RHS), and the fact that IV does not overflow (which is
   // checked above).
   if (!isLoopInvariant(RHS, L)) {
-    const SCEV *MaxBECount = computeMaxBECount(
+    const SCEV *MaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
     return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
                      false /*MaxOrZero*/, Predicates);
@@ -9898,8 +9898,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     MaxBECount = BECountIfBackedgeTaken;
     MaxOrZero = true;
   } else {
-    MaxBECount = computeMaxBECount(Start, Stride, RHS,
-                                   getTypeSizeInBits(LHS->getType()), IsSigned);
+    MaxBECount = computeMaxBECountForLT(
+        Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
   }
 
   if (isa<SCEVCouldNotCompute>(MaxBECount) &&

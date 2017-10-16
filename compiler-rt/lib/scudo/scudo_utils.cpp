@@ -13,8 +13,6 @@
 
 #include "scudo_utils.h"
 
-#include "sanitizer_common/sanitizer_posix.h"
-
 #include <stdarg.h>
 #if defined(__x86_64__) || defined(__i386__)
 # include <cpuid.h>
@@ -23,6 +21,8 @@
 # if SANITIZER_ANDROID && __ANDROID_API__ < 18
 // getauxval() was introduced with API level 18 on Android. Emulate it using
 // /proc/self/auxv for lower API levels.
+#  include "sanitizer_common/sanitizer_posix.h"
+
 #  include <fcntl.h>
 
 #  define AT_HWCAP 16

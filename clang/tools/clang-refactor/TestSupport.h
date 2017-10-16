@@ -16,9 +16,9 @@
 #ifndef LLVM_CLANG_TOOLS_CLANG_REFACTOR_TEST_SUPPORT_H
 #define LLVM_CLANG_TOOLS_CLANG_REFACTOR_TEST_SUPPORT_H
 
+#include "ToolRefactoringResultConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -65,7 +65,7 @@ struct TestSelectionRangesInFile {
   bool foreachRange(const SourceManager &SM,
                     llvm::function_ref<void(SourceRange)> Callback) const;
 
-  std::unique_ptr<tooling::RefactoringResultConsumer> createConsumer() const;
+  std::unique_ptr<ClangRefactorToolConsumerInterface> createConsumer() const;
 
   void dump(llvm::raw_ostream &OS) const;
 };

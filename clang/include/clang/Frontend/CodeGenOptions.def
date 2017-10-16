@@ -179,6 +179,7 @@ CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
 CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
+CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
 CODEGENOPT(StrictVTablePointers, 1, 0) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report is enabled.

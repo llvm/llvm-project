@@ -2044,7 +2044,7 @@ def AnyX86Interrupt : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
   let Subjects = SubjectList<[HasFunctionProto]>;
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
-  let Documentation = [AnyX86InterruptDocs];
+  let Documentation = [Undocumented];
 }
 
 def AnyX86NoCallerSavedRegisters : InheritableAttr,
