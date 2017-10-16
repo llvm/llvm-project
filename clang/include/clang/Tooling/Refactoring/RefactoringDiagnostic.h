@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_CORE_REFACTORINGSTARTDIAGNOSTIC_H
-#define LLVM_CLANG_TOOLING_CORE_REFACTORINGSTARTDIAGNOSTIC_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGDIAGNOSTIC_H
+#define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/PartialDiagnostic.h"
 
 namespace clang {
 namespace diag {
@@ -26,4 +27,4 @@ enum {
 } // end namespace diag
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_CORE_REFACTORINGSTARTDIAGNOSTIC_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGDIAGNOSTIC_H

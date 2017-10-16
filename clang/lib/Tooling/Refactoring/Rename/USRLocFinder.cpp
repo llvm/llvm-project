@@ -194,6 +194,12 @@ public:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
     const NamedDecl *Decl = Expr->getFoundDecl();
+    // Get the underlying declaration of the shadow declaration introduced by a
+    // using declaration.
+    if (auto* UsingShadow = llvm::dyn_cast<UsingShadowDecl>(Decl)) {
+      Decl = UsingShadow->getTargetDecl();
+    }
+
     if (isInUSRSet(Decl)) {
       RenameInfo Info = {Expr->getSourceRange().getBegin(),
                          Expr->getSourceRange().getEnd(),
@@ -452,6 +458,23 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
               RenameInfo.FromDecl,
               NewName.startswith("::") ? NewName.str()
                                        : ("::" + NewName).str());
+        } else {
+          // This fixes the case where type `T` is a parameter inside a function
+          // type (e.g. `std::function<void(T)>`) and the DeclContext of `T`
+          // becomes the translation unit. As a workaround, we simply use
+          // fully-qualified name here for all references whose `DeclContext` is
+          // the translation unit and ignore the possible existence of
+          // using-decls (in the global scope) that can shorten the replaced
+          // name.
+          llvm::StringRef ActualName = Lexer::getSourceText(
+              CharSourceRange::getTokenRange(
+                  SourceRange(RenameInfo.Begin, RenameInfo.End)),
+              SM, TranslationUnitDecl->getASTContext().getLangOpts());
+          // Add the leading "::" back if the name written in the code contains
+          // it.
+          if (ActualName.startswith("::") && !NewName.startswith("::")) {
+            ReplacedName = "::" + NewName.str();
+          }
         }
       }
       // If the NewName contains leading "::", add it back.

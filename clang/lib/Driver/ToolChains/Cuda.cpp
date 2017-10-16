@@ -87,8 +87,7 @@ CudaInstallationDetector::CudaInstallationDetector(
     LibDevicePath = InstallPath + "/nvvm/libdevice";
 
     auto &FS = D.getVFS();
-    if (!(FS.exists(IncludePath) && FS.exists(BinPath) &&
-          FS.exists(LibDevicePath)))
+    if (!(FS.exists(IncludePath) && FS.exists(BinPath)))
       continue;
 
     // On Linux, we have both lib and lib64 directories, and we need to choose
@@ -167,17 +166,9 @@ CudaInstallationDetector::CudaInstallationDetector(
       }
     }
 
-    // This code prevents IsValid from being set when
-    // no libdevice has been found.
-    bool allEmpty = true;
-    std::string LibDeviceFile;
-    for (auto key : LibDeviceMap.keys()) {
-      LibDeviceFile = LibDeviceMap.lookup(key);
-      if (!LibDeviceFile.empty())
-        allEmpty = false;
-    }
-
-    if (allEmpty)
+    // Check that we have found at least one libdevice that we can link in if
+    // -nocudalib hasn't been specified.
+    if (LibDeviceMap.empty() && !Args.hasArg(options::OPT_nocudalib))
       continue;
 
     IsValid = true;

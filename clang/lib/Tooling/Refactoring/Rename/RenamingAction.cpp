@@ -23,6 +23,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
@@ -49,11 +50,9 @@ public:
       return Selection.takeError();
     const NamedDecl *ND =
         getNamedDeclAt(Context.getASTContext(), Selection->getBegin());
-    if (!ND) {
-      // FIXME: Use a diagnostic.
-      return llvm::make_error<StringError>("no symbol selected",
-                                           llvm::inconvertibleErrorCode());
-    }
+    if (!ND)
+      return Context.createDiagnosticError(
+          Selection->getBegin(), diag::err_refactor_selection_no_symbol);
     return getCanonicalSymbolDeclaration(ND);
   }
 };
