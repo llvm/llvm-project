@@ -13,6 +13,17 @@
 
 let Component = "Refactoring" in {
 
+let CategoryName = "Refactoring Invocation Issue" in {
+
+def err_refactor_no_selection : Error<"refactoring action can't be initiated "
+  "without a selection">;
+def err_refactor_selection_no_symbol : Error<"there is no symbol at the given "
+  "location">;
+
+}
+
+// On github swift-clang only; to be upstreamed:
+
 let CategoryName = "Rename Issue" in {
 def err_rename_builtin_function : Error<"%0 is a builtin function that "
   "cannot be renamed">;

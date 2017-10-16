@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Core/RefactoringDiagnostic.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactor/IndexerQuery.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"

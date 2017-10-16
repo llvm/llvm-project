@@ -19,7 +19,7 @@
 #include "clang/AST/DependentASTVisitor.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/Core/RefactoringDiagnostic.h"
+#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
 
