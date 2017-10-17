@@ -135,6 +135,7 @@ public:
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);
     SM.reset();
+    FM.reset();
     return AsmPrinter::doInitialization(M);
   }
 

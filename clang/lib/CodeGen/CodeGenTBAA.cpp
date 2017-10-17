@@ -309,3 +309,11 @@ llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
 TBAAAccessInfo CodeGenTBAA::getMayAliasAccessInfo() {
   return TBAAAccessInfo(getChar());
 }
+
+TBAAAccessInfo CodeGenTBAA::mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
+                                                 TBAAAccessInfo TargetInfo) {
+  TBAAAccessInfo MayAliasInfo = getMayAliasAccessInfo();
+  if (SourceInfo == MayAliasInfo || TargetInfo == MayAliasInfo)
+    return MayAliasInfo;
+  return TargetInfo;
+}

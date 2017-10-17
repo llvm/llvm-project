@@ -37,8 +37,8 @@ define <2 x i64> @test_aesdec(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKYLAKE-LABEL: test_aesdec:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aesdec:
 ; BTVER2:       # BB#0:
@@ -86,8 +86,8 @@ define <2 x i64> @test_aesdeclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; SKYLAKE-LABEL: test_aesdeclast:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aesdeclast:
 ; BTVER2:       # BB#0:
@@ -135,8 +135,8 @@ define <2 x i64> @test_aesenc(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKYLAKE-LABEL: test_aesenc:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aesenc:
 ; BTVER2:       # BB#0:
@@ -184,8 +184,8 @@ define <2 x i64> @test_aesenclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; SKYLAKE-LABEL: test_aesenclast:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aesenclast:
 ; BTVER2:       # BB#0:
@@ -237,9 +237,9 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ; SKYLAKE-LABEL: test_aesimc:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesimc %xmm0, %xmm0 # sched: [8:2.00]
-; SKYLAKE-NEXT:    vaesimc (%rdi), %xmm1 # sched: [8:2.00]
-; SKYLAKE-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaesimc (%rdi), %xmm1 # sched: [14:2.00]
+; SKYLAKE-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aesimc:
 ; BTVER2:       # BB#0:
@@ -294,9 +294,9 @@ define <2 x i64> @test_aeskeygenassist(<2 x i64> %a0, <2 x i64> *%a1) {
 ; SKYLAKE-LABEL: test_aeskeygenassist:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [20:6.00]
-; SKYLAKE-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [19:6.00]
-; SKYLAKE-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [25:6.00]
+; SKYLAKE-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_aeskeygenassist:
 ; BTVER2:       # BB#0:
