@@ -330,9 +330,9 @@ void *use[] = {
 // CHECK-NOERRNO: declare double @ldexp(double, i32) [[NUWRN]]
 // CHECK-NOERRNO: declare float @ldexpf(float, i32) [[NUWRN]]
 // CHECK-NOERRNO: declare x86_fp80 @ldexpl(x86_fp80, i32) [[NUWRN]]
-// CHECK-NOERRNO: declare double @nan(i8*) [[NUW:#[0-9]+]]
-// CHECK-NOERRNO: declare float @nanf(i8*) [[NUW]]
-// CHECK-NOERRNO: declare x86_fp80 @nanl(i8*) [[NUW]]
+// CHECK-NOERRNO: declare double @nan(i8*) [[NUWRO:#[0-9]+]]
+// CHECK-NOERRNO: declare float @nanf(i8*) [[NUWRO]]
+// CHECK-NOERRNO: declare x86_fp80 @nanl(i8*) [[NUWRO]]
 // CHECK-NOERRNO: declare double @pow(double, double) [[NUWRN]]
 // CHECK-NOERRNO: declare float @powf(float, float) [[NUWRN]]
 // CHECK-NOERRNO: declare x86_fp80 @powl(x86_fp80, x86_fp80) [[NUWRN]]
@@ -539,9 +539,9 @@ void *use[] = {
 // CHECK-ERRNO: declare double @fabs(double) [[NUWRN]]
 // CHECK-ERRNO: declare float @fabsf(float) [[NUWRN]]
 // CHECK-ERRNO: declare x86_fp80 @fabsl(x86_fp80) [[NUWRN]]
-// CHECK-ERRNO: declare double @nan(i8*) [[NUW:#[0-9]+]]
-// CHECK-ERRNO: declare float @nanf(i8*) [[NUW]]
-// CHECK-ERRNO: declare x86_fp80 @nanl(i8*) [[NUW]]
+// CHECK-ERRNO: declare double @nan(i8*) [[NUWRO:#[0-9]+]]
+// CHECK-ERRNO: declare float @nanf(i8*) [[NUWRO]]
+// CHECK-ERRNO: declare x86_fp80 @nanl(i8*) [[NUWRO]]
 // CHECK-ERRNO: declare double @ceil(double) [[NUWRN]]
 // CHECK-ERRNO: declare float @ceilf(float) [[NUWRN]]
 // CHECK-ERRNO: declare x86_fp80 @ceill(x86_fp80) [[NUWRN]]
@@ -615,11 +615,7 @@ void *use[] = {
 // CHECK-ERRNO: declare <2 x float> @ctanhf(<2 x float>) [[NUWRN]]
 
 // CHECK-NOERRNO: attributes [[NUWRN]] = { nounwind readnone{{.*}} }
-// CHECK-NOERRNO: attributes [[NUW]] = { nounwind
-// CHECK-NOERRNO-NOT: readnone
-// CHECK-NOERRNO-SAME: {{.*}} }
+// CHECK-NOERRNO: attributes [[NUWRO]] = { nounwind readonly{{.*}} }
 
-// CHECK-ERRNO: attributes [[NUW]] = { nounwind
-// CHECK-ERRNO-NOT: readnone
-// CHECK-ERRNO-SAME: {{.*}} }
 // CHECK-ERRNO: attributes [[NUWRN]] = { nounwind readnone{{.*}} }
+// CHECK-ERRNO: attributes [[NUWRO]] = { nounwind readonly{{.*}} }

@@ -9,6 +9,9 @@
   next:
     ret void
   }
+  define void @bitcast128() {
+    ret void
+  }
 ...
 
 ---
@@ -83,4 +86,27 @@ body: |
     %14(s32) = G_BITCAST %10
     %15(<4 x s8>) = G_BITCAST %0
     %16(<2 x s16>) = G_BITCAST %0
+...
+
+---
+name:            bitcast128
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _}
+  - { id: 1, class: _}
+  - { id: 2, class: _}
+  - { id: 3, class: _}
+body:             |
+  bb.1:
+    liveins: %x0, %x1
+    ; CHECK-LABEL: bitcast128
+    ; This is legal and shouldn't be changed.
+    ; CHECK: %2(<2 x s64>) = G_BITCAST %3(s128)
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x1
+    %3(s128) = G_MERGE_VALUES %0(s64), %1(s64)
+    %2(<2 x s64>) = G_BITCAST %3(s128)
+    %q0 = COPY %2(<2 x s64>)
+    RET_ReallyLR implicit %q0
+
 ...

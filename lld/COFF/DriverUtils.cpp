@@ -423,7 +423,8 @@ createMemoryBufferForManifestRes(size_t ManifestSize) {
           sizeof(object::WinResHeaderPrefix) + sizeof(object::WinResIDs) +
           sizeof(object::WinResHeaderSuffix) + ManifestSize,
       object::WIN_RES_DATA_ALIGNMENT);
-  return MemoryBuffer::getNewMemBuffer(ResSize);
+  return MemoryBuffer::getNewMemBuffer(ResSize,
+                                       Config->OutputFile + ".manifest.res");
 }
 
 static void writeResFileHeader(char *&Buf) {
@@ -638,10 +639,8 @@ void checkFailIfMismatch(StringRef Arg) {
   Config->MustMatch[K] = V;
 }
 
-// Convert Windows resource files (.res files) to a .obj file
-// using cvtres.exe.
-std::unique_ptr<MemoryBuffer>
-convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
+// Convert Windows resource files (.res files) to a .obj file.
+MemoryBufferRef convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
   object::WindowsResourceParser Parser;
 
   for (MemoryBufferRef MB : MBs) {
@@ -657,7 +656,10 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
       llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
   if (!E)
     fatal(errorToErrorCode(E.takeError()), "failed to write .res to COFF");
-  return std::move(E.get());
+
+  MemoryBufferRef MBRef = **E;
+  make<std::unique_ptr<MemoryBuffer>>(std::move(*E)); // take ownership
+  return MBRef;
 }
 
 // Run MSVC link.exe for given in-memory object files.

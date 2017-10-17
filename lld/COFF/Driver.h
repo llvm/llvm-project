@@ -169,10 +169,8 @@ void assignExportOrdinals();
 // incompatible objects.
 void checkFailIfMismatch(StringRef Arg);
 
-// Convert Windows resource files (.res files) to a .obj file
-// using cvtres.exe.
-std::unique_ptr<MemoryBuffer>
-convertResToCOFF(const std::vector<MemoryBufferRef> &MBs);
+// Convert Windows resource files (.res files) to a .obj file.
+MemoryBufferRef convertResToCOFF(const std::vector<MemoryBufferRef> &MBs);
 
 void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects);
 
