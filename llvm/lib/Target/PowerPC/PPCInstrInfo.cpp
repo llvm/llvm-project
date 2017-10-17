@@ -2256,6 +2256,8 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
           if (CallMI.isCall() && CallMI.getOperand(0).isGlobal()) {
             const Function *CalleeFn =
               dyn_cast<Function>(CallMI.getOperand(0).getGlobal());
+            if (!CalleeFn)
+              return false;
             const IntegerType *IntTy =
               dyn_cast<IntegerType>(CalleeFn->getReturnType());
             const AttributeSet &Attrs =

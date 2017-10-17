@@ -58,10 +58,16 @@ def FCMP_D32_MM : MMRel, CEQS_FT<"d", AFGR64, II_C_CC_D, MipsFPCmp>,
   bits<3> fcc = 0;
 }
 
-def BC1F_MM : MMRel, BC1F_FT<"bc1f", brtarget_mm, II_BC1F, MIPS_BRANCH_F>,
-              BC1F_FM_MM<0x1c>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
-              BC1F_FM_MM<0x1d>, ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+
+let DecoderNamespace = "MicroMips" in {
+  def BC1F_MM : MMRel, BC1F_FT<"bc1f", brtarget_mm, II_BC1F, MIPS_BRANCH_F>,
+                BC1F_FM_MM<0x1c>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
+                BC1F_FM_MM<0x1d>, ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+
+let isCodeGenOnly = 1 in {
 def CVT_W_S_MM   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
                    ROUND_W_FM_MM<0, 0x24>, ISA_MICROMIPS;
 def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd,

@@ -68,6 +68,14 @@ out: // CHECK: [[@LINE]]|{{ +}}0|
 	return;
 }
 
+void if_else(bool flag) {
+  if (flag) { // CHECK: [[@LINE]]|{{ +}}2|
+    return;   // CHECK: [[@LINE]]|{{ +}}1|
+  } else {    // CHECK: [[@LINE]]|{{ +}}1|
+    return;   // CHECK: [[@LINE]]|{{ +}}1|
+  }           // CHECK: [[@LINE]]|{{ +}}1|
+}
+
 int main() {
   foo(0);
   foo(1);
@@ -75,6 +83,8 @@ int main() {
   for_loop();
   while_loop();
   gotos();
+  if_else(true);
+  if_else(false);
   return 0;
 }
 
@@ -107,3 +117,5 @@ int main() {
 // MARKER-NEXT: Highlighted line 67, 1 -> ?
 // MARKER-NEXT: Highlighted line 68, 1 -> 8
 // MARKER-NEXT: Highlighted line 69, 1 -> 2
+// MARKER-NEXT: Marker at 72:7 = 2
+// MARKER-NEXT: Highlighted line 77, 1 -> 2

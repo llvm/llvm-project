@@ -6293,7 +6293,6 @@ ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   BackedgeTakenInfo Result =
       computeBackedgeTakenCount(L, /*AllowPredicates=*/true);
 
-  addToLoopUseLists(Result, L);
   return PredicatedBackedgeTakenCounts.find(L)->second = std::move(Result);
 }
 
@@ -6369,7 +6368,6 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // recusive call to getBackedgeTakenInfo (on a different
   // loop), which would invalidate the iterator computed
   // earlier.
-  addToLoopUseLists(Result, L);
   return BackedgeTakenCounts.find(L)->second = std::move(Result);
 }
 
@@ -6407,14 +6405,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
     if (LoopUsersItr != LoopUsers.end()) {
-      for (auto LoopOrSCEV : LoopUsersItr->second) {
-        if (auto *S = LoopOrSCEV.dyn_cast<const SCEV *>())
-          forgetMemoizedResults(S);
-        else {
-          BackedgeTakenCounts.erase(LoopOrSCEV.get<const Loop *>());
-          PredicatedBackedgeTakenCounts.erase(LoopOrSCEV.get<const Loop *>());
-        }
-      }
+      for (auto *S : LoopUsersItr->second)
+        forgetMemoizedResults(S);
       LoopUsers.erase(LoopUsersItr);
     }
 
@@ -6557,34 +6549,6 @@ bool ScalarEvolution::BackedgeTakenInfo::hasOperand(const SCEV *S,
       return true;
 
   return false;
-}
-
-static void findUsedLoopsInSCEVExpr(const SCEV *S,
-                                    SmallPtrSetImpl<const Loop *> &Result) {
-  struct FindUsedLoops {
-    SmallPtrSetImpl<const Loop *> &LoopsUsed;
-    FindUsedLoops(SmallPtrSetImpl<const Loop *> &LoopsUsed)
-        : LoopsUsed(LoopsUsed) {}
-    bool follow(const SCEV *S) {
-      if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
-        LoopsUsed.insert(AR->getLoop());
-      return true;
-    }
-
-    bool isDone() const { return false; }
-  };
-  FindUsedLoops F(Result);
-  SCEVTraversal<FindUsedLoops>(F).visitAll(S);
-}
-
-void ScalarEvolution::BackedgeTakenInfo::findUsedLoops(
-    ScalarEvolution &SE, SmallPtrSetImpl<const Loop *> &Result) const {
-  if (auto *S = getMax())
-    if (S != SE.getCouldNotCompute())
-      findUsedLoopsInSCEVExpr(S, Result);
-  for (auto &ENT : ExitNotTaken)
-    if (ENT.ExactNotTaken != SE.getCouldNotCompute())
-      findUsedLoopsInSCEVExpr(ENT.ExactNotTaken, Result);
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
@@ -9725,11 +9689,11 @@ const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta, const SCEV *Step,
   return getUDivExpr(Delta, Step);
 }
 
-const SCEV *ScalarEvolution::computeMaxBECount(const SCEV *Start,
-                                               const SCEV *Stride,
-                                               const SCEV *End,
-                                               unsigned BitWidth,
-                                               bool IsSigned) {
+const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
+                                                    const SCEV *Stride,
+                                                    const SCEV *End,
+                                                    unsigned BitWidth,
+                                                    bool IsSigned) {
 
   assert(!isKnownNonPositive(Stride) &&
          "Stride is expected strictly positive!");
@@ -9861,7 +9825,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // bound of the loop (RHS), and the fact that IV does not overflow (which is
   // checked above).
   if (!isLoopInvariant(RHS, L)) {
-    const SCEV *MaxBECount = computeMaxBECount(
+    const SCEV *MaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
     return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
                      false /*MaxOrZero*/, Predicates);
@@ -9898,8 +9862,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     MaxBECount = BECountIfBackedgeTaken;
     MaxOrZero = true;
   } else {
-    MaxBECount = computeMaxBECount(Start, Stride, RHS,
-                                   getTypeSizeInBits(LHS->getType()), IsSigned);
+    MaxBECount = computeMaxBECountForLT(
+        Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
   }
 
   if (isa<SCEVCouldNotCompute>(MaxBECount) &&
@@ -11070,6 +11034,21 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
       ++I;
   }
 
+  auto RemoveSCEVFromBackedgeMap =
+      [S, this](DenseMap<const Loop *, BackedgeTakenInfo> &Map) {
+        for (auto I = Map.begin(), E = Map.end(); I != E;) {
+          BackedgeTakenInfo &BEInfo = I->second;
+          if (BEInfo.hasOperand(S, this)) {
+            BEInfo.clear();
+            Map.erase(I++);
+          } else
+            ++I;
+        }
+      };
+
+  RemoveSCEVFromBackedgeMap(BackedgeTakenCounts);
+  RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
+
   // TODO: There is a suspicion that we only need to do it when there is a
   // SCEVUnknown somewhere inside S. Need to check this.
   if (EraseExitLimit)
@@ -11079,19 +11058,22 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
 }
 
 void ScalarEvolution::addToLoopUseLists(const SCEV *S) {
-  SmallPtrSet<const Loop *, 8> LoopsUsed;
-  findUsedLoopsInSCEVExpr(S, LoopsUsed);
-  for (auto *L : LoopsUsed)
-    LoopUsers[L].push_back({S});
-}
+  struct FindUsedLoops {
+    SmallPtrSet<const Loop *, 8> LoopsUsed;
+    bool follow(const SCEV *S) {
+      if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+        LoopsUsed.insert(AR->getLoop());
+      return true;
+    }
 
-void ScalarEvolution::addToLoopUseLists(
-    const ScalarEvolution::BackedgeTakenInfo &BTI, const Loop *L) {
-  SmallPtrSet<const Loop *, 8> LoopsUsed;
-  BTI.findUsedLoops(*this, LoopsUsed);
+    bool isDone() const { return false; }
+  };
 
-  for (auto *UsedL : LoopsUsed)
-    LoopUsers[UsedL].push_back({L});
+  FindUsedLoops F;
+  SCEVTraversal<FindUsedLoops>(F).visitAll(S);
+
+  for (auto *L : F.LoopsUsed)
+    LoopUsers[L].push_back(S);
 }
 
 void ScalarEvolution::verify() const {

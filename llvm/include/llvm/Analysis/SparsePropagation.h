@@ -23,16 +23,27 @@
 
 namespace llvm {
 
-template <class LatticeVal> class SparseSolver;
+/// A template for translating between LLVM Values and LatticeKeys. Clients must
+/// provide a specialization of LatticeKeyInfo for their LatticeKey type.
+template <class LatticeKey> struct LatticeKeyInfo {
+  // static inline Value *getValueFromLatticeKey(LatticeKey Key);
+  // static inline LatticeKey getLatticeKeyFromValue(Value *V);
+};
+
+template <class LatticeKey, class LatticeVal,
+          class KeyInfo = LatticeKeyInfo<LatticeKey>>
+class SparseSolver;
 
 /// AbstractLatticeFunction - This class is implemented by the dataflow instance
 /// to specify what the lattice values are and how they handle merges etc.  This
 /// gives the client the power to compute lattice values from instructions,
 /// constants, etc.  The current requirement is that lattice values must be
-/// copyable.  At the moment, nothing tries to avoid copying.
-
-
-template <class LatticeVal> class AbstractLatticeFunction {
+/// copyable.  At the moment, nothing tries to avoid copying.  Additionally,
+/// lattice keys must be able to be used as keys of a mapping data structure.
+/// Internally, the generic solver currently uses a DenseMap to map lattice keys
+/// to lattice values.  If the lattice key is a non-standard type, a
+/// specialization of DenseMapInfo must be provided.
+template <class LatticeKey, class LatticeVal> class AbstractLatticeFunction {
 private:
   LatticeVal UndefVal, OverdefinedVal, UntrackedVal;
 
@@ -50,34 +61,20 @@ public:
   LatticeVal getOverdefinedVal() const { return OverdefinedVal; }
   LatticeVal getUntrackedVal()   const { return UntrackedVal; }
 
-  /// IsUntrackedValue - If the specified Value is something that is obviously
-  /// uninteresting to the analysis (and would always return UntrackedVal),
-  /// this function can return true to avoid pointless work.
-  virtual bool IsUntrackedValue(Value *V) { return false; }
+  /// IsUntrackedValue - If the specified LatticeKey is obviously uninteresting
+  /// to the analysis (i.e., it would always return UntrackedVal), this
+  /// function can return true to avoid pointless work.
+  virtual bool IsUntrackedValue(LatticeKey Key) { return false; }
 
-  /// ComputeConstant - Given a constant value, compute and return a lattice
-  /// value corresponding to the specified constant.
-  virtual LatticeVal ComputeConstant(Constant *C) {
-    return getOverdefinedVal(); // always safe
+  /// ComputeLatticeVal - Compute and return a LatticeVal corresponding to the
+  /// given LatticeKey.
+  virtual LatticeVal ComputeLatticeVal(LatticeKey Key) {
+    return getOverdefinedVal();
   }
 
   /// IsSpecialCasedPHI - Given a PHI node, determine whether this PHI node is
   /// one that the we want to handle through ComputeInstructionState.
   virtual bool IsSpecialCasedPHI(PHINode *PN) { return false; }
-
-  /// GetConstant - If the specified lattice value is representable as an LLVM
-  /// constant value, return it.  Otherwise return null.  The returned value
-  /// must be in the same LLVM type as Val.
-  virtual Constant *GetConstant(LatticeVal LV, Value *Val,
-                                SparseSolver<LatticeVal> &SS) {
-    return nullptr;
-  }
-
-  /// ComputeArgument - Given a formal argument value, compute and return a
-  /// lattice value corresponding to the specified argument.
-  virtual LatticeVal ComputeArgument(Argument *I) {
-    return getOverdefinedVal(); // always safe
-  }
 
   /// MergeValues - Compute and return the merge of the two specified lattice
   /// values.  Merging should only move one direction down the lattice to
@@ -86,27 +83,40 @@ public:
     return getOverdefinedVal(); // always safe, never useful.
   }
 
-  /// ComputeInstructionState - Given an instruction and a vector of its operand
-  /// values, compute the result value of the instruction.
-  virtual LatticeVal ComputeInstructionState(Instruction &I,
-                                             SparseSolver<LatticeVal> &SS) {
-    return getOverdefinedVal(); // always safe, never useful.
-  }
+  /// ComputeInstructionState - Compute the LatticeKeys that change as a result
+  /// of executing instruction \p I. Their associated LatticeVals are store in
+  /// \p ChangedValues.
+  virtual void
+  ComputeInstructionState(Instruction &I,
+                          DenseMap<LatticeKey, LatticeVal> &ChangedValues,
+                          SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
-  /// PrintValue - Render the specified lattice value to the specified stream.
-  virtual void PrintValue(LatticeVal V, raw_ostream &OS);
+  /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
+  virtual void PrintLatticeVal(LatticeVal LV, raw_ostream &OS);
+
+  /// PrintLatticeKey - Render the given LatticeKey to the specified stream.
+  virtual void PrintLatticeKey(LatticeKey Key, raw_ostream &OS);
+
+  /// GetValueFromLatticeVal - If the given LatticeVal is representable as an
+  /// LLVM value, return it; otherwise, return nullptr. If a type is given, the
+  /// returned value must have the same type. This function is used by the
+  /// generic solver in attempting to resolve branch and switch conditions.
+  virtual Value *GetValueFromLatticeVal(LatticeVal LV, Type *Ty = nullptr) {
+    return nullptr;
+  }
 };
 
 /// SparseSolver - This class is a general purpose solver for Sparse Conditional
 /// Propagation with a programmable lattice function.
-template <class LatticeVal> class SparseSolver {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+class SparseSolver {
 
   /// LatticeFunc - This is the object that knows the lattice and how to
   /// compute transfer functions.
-  AbstractLatticeFunction<LatticeVal> *LatticeFunc;
+  AbstractLatticeFunction<LatticeKey, LatticeVal> *LatticeFunc;
 
-  /// ValueState - Holds the lattice state associated with LLVM values.
-  DenseMap<Value *, LatticeVal> ValueState;
+  /// ValueState - Holds the LatticeVals associated with LatticeKeys.
+  DenseMap<LatticeKey, LatticeVal> ValueState;
 
   /// BBExecutable - Holds the basic blocks that are executable.
   SmallPtrSet<BasicBlock *, 16> BBExecutable;
@@ -124,28 +134,29 @@ template <class LatticeVal> class SparseSolver {
   std::set<Edge> KnownFeasibleEdges;
 
 public:
-  explicit SparseSolver(AbstractLatticeFunction<LatticeVal> *Lattice)
+  explicit SparseSolver(
+      AbstractLatticeFunction<LatticeKey, LatticeVal> *Lattice)
       : LatticeFunc(Lattice) {}
   SparseSolver(const SparseSolver &) = delete;
   SparseSolver &operator=(const SparseSolver &) = delete;
 
   /// Solve - Solve for constants and executable blocks.
-  void Solve(Function &F);
+  void Solve();
 
-  void Print(Function &F, raw_ostream &OS) const;
+  void Print(raw_ostream &OS) const;
 
   /// getExistingValueState - Return the LatticeVal object corresponding to the
   /// given value from the ValueState map. If the value is not in the map,
   /// UntrackedVal is returned, unlike the getValueState method.
-  LatticeVal getExistingValueState(Value *V) const {
-    auto I = ValueState.find(V);
+  LatticeVal getExistingValueState(LatticeKey Key) const {
+    auto I = ValueState.find(Key);
     return I != ValueState.end() ? I->second : LatticeFunc->getUntrackedVal();
   }
 
   /// getValueState - Return the LatticeVal object corresponding to the given
   /// value from the ValueState map. If the value is not in the map, its state
   /// is initialized.
-  LatticeVal getValueState(Value *V);
+  LatticeVal getValueState(LatticeKey Key);
 
   /// isEdgeFeasible - Return true if the control flow edge from the 'From'
   /// basic block to the 'To' basic block is currently feasible.  If
@@ -162,14 +173,15 @@ public:
     return BBExecutable.count(BB);
   }
 
-private:
-  /// UpdateState - When the state for some instruction is potentially updated,
-  /// this function notices and adds I to the worklist if needed.
-  void UpdateState(Instruction &Inst, LatticeVal V);
-
   /// MarkBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
   void MarkBlockExecutable(BasicBlock *BB);
+
+private:
+  /// UpdateState - When the state of some LatticeKey is potentially updated to
+  /// the given LatticeVal, this function notices and adds the LLVM value
+  /// corresponding the key to the work list, if needed.
+  void UpdateState(LatticeKey Key, LatticeVal LV);
 
   /// markEdgeExecutable - Mark a basic block as executable, adding it to the BB
   /// work list if it is not already executable.
@@ -189,9 +201,9 @@ private:
 //                  AbstractLatticeFunction Implementation
 //===----------------------------------------------------------------------===//
 
-template <class LatticeVal>
-void AbstractLatticeFunction<LatticeVal>::PrintValue(LatticeVal V,
-                                                     raw_ostream &OS) {
+template <class LatticeKey, class LatticeVal>
+void AbstractLatticeFunction<LatticeKey, LatticeVal>::PrintLatticeVal(
+    LatticeVal V, raw_ostream &OS) {
   if (V == UndefVal)
     OS << "undefined";
   else if (V == OverdefinedVal)
@@ -202,57 +214,59 @@ void AbstractLatticeFunction<LatticeVal>::PrintValue(LatticeVal V,
     OS << "unknown lattice value";
 }
 
+template <class LatticeKey, class LatticeVal>
+void AbstractLatticeFunction<LatticeKey, LatticeVal>::PrintLatticeKey(
+    LatticeKey Key, raw_ostream &OS) {
+  OS << "unknown lattice key";
+}
+
 //===----------------------------------------------------------------------===//
 //                          SparseSolver Implementation
 //===----------------------------------------------------------------------===//
 
-template <class LatticeVal>
-LatticeVal SparseSolver<LatticeVal>::getValueState(Value *V) {
-  auto I = ValueState.find(V);
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+LatticeVal
+SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getValueState(LatticeKey Key) {
+  auto I = ValueState.find(Key);
   if (I != ValueState.end())
     return I->second; // Common case, in the map
 
-  LatticeVal LV;
-  if (LatticeFunc->IsUntrackedValue(V))
+  if (LatticeFunc->IsUntrackedValue(Key))
     return LatticeFunc->getUntrackedVal();
-  else if (Constant *C = dyn_cast<Constant>(V))
-    LV = LatticeFunc->ComputeConstant(C);
-  else if (Argument *A = dyn_cast<Argument>(V))
-    LV = LatticeFunc->ComputeArgument(A);
-  else if (!isa<Instruction>(V))
-    // All other non-instructions are overdefined.
-    LV = LatticeFunc->getOverdefinedVal();
-  else
-    // All instructions are underdefined by default.
-    LV = LatticeFunc->getUndefVal();
+  LatticeVal LV = LatticeFunc->ComputeLatticeVal(Key);
 
   // If this value is untracked, don't add it to the map.
   if (LV == LatticeFunc->getUntrackedVal())
     return LV;
-  return ValueState[V] = LV;
+  return ValueState[Key] = LV;
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::UpdateState(Instruction &Inst, LatticeVal V) {
-  auto I = ValueState.find(&Inst);
-  if (I != ValueState.end() && I->second == V)
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::UpdateState(LatticeKey Key,
+                                                                LatticeVal LV) {
+  auto I = ValueState.find(Key);
+  if (I != ValueState.end() && I->second == LV)
     return; // No change.
 
-  // An update.  Visit uses of I.
-  ValueState[&Inst] = V;
-  ValueWorkList.push_back(&Inst);
+  // Update the state of the given LatticeKey and add its corresponding LLVM
+  // value to the work list.
+  ValueState[Key] = LV;
+  if (Value *V = KeyInfo::getValueFromLatticeKey(Key))
+    ValueWorkList.push_back(V);
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::MarkBlockExecutable(BasicBlock *BB) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::MarkBlockExecutable(
+    BasicBlock *BB) {
+  if (!BBExecutable.insert(BB).second)
+    return;
   DEBUG(dbgs() << "Marking Block Executable: " << BB->getName() << "\n");
-  BBExecutable.insert(BB);  // Basic block is executable!
   BBWorkList.push_back(BB); // Add the block to the work list!
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::markEdgeExecutable(BasicBlock *Source,
-                                                  BasicBlock *Dest) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::markEdgeExecutable(
+    BasicBlock *Source, BasicBlock *Dest) {
   if (!KnownFeasibleEdges.insert(Edge(Source, Dest)).second)
     return; // This edge is already known to be executable!
 
@@ -270,8 +284,8 @@ void SparseSolver<LatticeVal>::markEdgeExecutable(BasicBlock *Source,
   }
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::getFeasibleSuccessors(
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     TerminatorInst &TI, SmallVectorImpl<bool> &Succs, bool AggressiveUndef) {
   Succs.resize(TI.getNumSuccessors());
   if (TI.getNumSuccessors() == 0)
@@ -285,9 +299,11 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
 
     LatticeVal BCValue;
     if (AggressiveUndef)
-      BCValue = getValueState(BI->getCondition());
+      BCValue =
+          getValueState(KeyInfo::getLatticeKeyFromValue(BI->getCondition()));
     else
-      BCValue = getExistingValueState(BI->getCondition());
+      BCValue = getExistingValueState(
+          KeyInfo::getLatticeKeyFromValue(BI->getCondition()));
 
     if (BCValue == LatticeFunc->getOverdefinedVal() ||
         BCValue == LatticeFunc->getUntrackedVal()) {
@@ -300,7 +316,9 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
     if (BCValue == LatticeFunc->getUndefVal())
       return;
 
-    Constant *C = LatticeFunc->GetConstant(BCValue, BI->getCondition(), *this);
+    Constant *C =
+        dyn_cast_or_null<Constant>(LatticeFunc->GetValueFromLatticeVal(
+            BCValue, BI->getCondition()->getType()));
     if (!C || !isa<ConstantInt>(C)) {
       // Non-constant values can go either way.
       Succs[0] = Succs[1] = true;
@@ -312,10 +330,8 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
     return;
   }
 
-  if (isa<InvokeInst>(TI)) {
-    // Invoke instructions successors are always executable.
-    // TODO: Could ask the lattice function if the value can throw.
-    Succs[0] = Succs[1] = true;
+  if (TI.isExceptional()) {
+    Succs.assign(Succs.size(), true);
     return;
   }
 
@@ -327,9 +343,10 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
   SwitchInst &SI = cast<SwitchInst>(TI);
   LatticeVal SCValue;
   if (AggressiveUndef)
-    SCValue = getValueState(SI.getCondition());
+    SCValue = getValueState(KeyInfo::getLatticeKeyFromValue(SI.getCondition()));
   else
-    SCValue = getExistingValueState(SI.getCondition());
+    SCValue = getExistingValueState(
+        KeyInfo::getLatticeKeyFromValue(SI.getCondition()));
 
   if (SCValue == LatticeFunc->getOverdefinedVal() ||
       SCValue == LatticeFunc->getUntrackedVal()) {
@@ -342,7 +359,8 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
   if (SCValue == LatticeFunc->getUndefVal())
     return;
 
-  Constant *C = LatticeFunc->GetConstant(SCValue, SI.getCondition(), *this);
+  Constant *C = dyn_cast_or_null<Constant>(LatticeFunc->GetValueFromLatticeVal(
+      SCValue, SI.getCondition()->getType()));
   if (!C || !isa<ConstantInt>(C)) {
     // All destinations are executable!
     Succs.assign(TI.getNumSuccessors(), true);
@@ -352,9 +370,9 @@ void SparseSolver<LatticeVal>::getFeasibleSuccessors(
   Succs[Case.getSuccessorIndex()] = true;
 }
 
-template <class LatticeVal>
-bool SparseSolver<LatticeVal>::isEdgeFeasible(BasicBlock *From, BasicBlock *To,
-                                              bool AggressiveUndef) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+bool SparseSolver<LatticeKey, LatticeVal, KeyInfo>::isEdgeFeasible(
+    BasicBlock *From, BasicBlock *To, bool AggressiveUndef) {
   SmallVector<bool, 16> SuccFeasible;
   TerminatorInst *TI = From->getTerminator();
   getFeasibleSuccessors(*TI, SuccFeasible, AggressiveUndef);
@@ -366,8 +384,9 @@ bool SparseSolver<LatticeVal>::isEdgeFeasible(BasicBlock *From, BasicBlock *To,
   return false;
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::visitTerminatorInst(TerminatorInst &TI) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitTerminatorInst(
+    TerminatorInst &TI) {
   SmallVector<bool, 16> SuccFeasible;
   getFeasibleSuccessors(TI, SuccFeasible, true);
 
@@ -379,19 +398,22 @@ void SparseSolver<LatticeVal>::visitTerminatorInst(TerminatorInst &TI) {
       markEdgeExecutable(BB, TI.getSuccessor(i));
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::visitPHINode(PHINode &PN) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitPHINode(PHINode &PN) {
   // The lattice function may store more information on a PHINode than could be
   // computed from its incoming values.  For example, SSI form stores its sigma
   // functions as PHINodes with a single incoming value.
   if (LatticeFunc->IsSpecialCasedPHI(&PN)) {
-    LatticeVal IV = LatticeFunc->ComputeInstructionState(PN, *this);
-    if (IV != LatticeFunc->getUntrackedVal())
-      UpdateState(PN, IV);
+    DenseMap<LatticeKey, LatticeVal> ChangedValues;
+    LatticeFunc->ComputeInstructionState(PN, ChangedValues, *this);
+    for (auto &ChangedValue : ChangedValues)
+      if (ChangedValue.second != LatticeFunc->getUntrackedVal())
+        UpdateState(ChangedValue.first, ChangedValue.second);
     return;
   }
 
-  LatticeVal PNIV = getValueState(&PN);
+  LatticeKey Key = KeyInfo::getLatticeKeyFromValue(&PN);
+  LatticeVal PNIV = getValueState(Key);
   LatticeVal Overdefined = LatticeFunc->getOverdefinedVal();
 
   // If this value is already overdefined (common) just return.
@@ -401,7 +423,7 @@ void SparseSolver<LatticeVal>::visitPHINode(PHINode &PN) {
   // Super-extra-high-degree PHI nodes are unlikely to ever be interesting,
   // and slow us down a lot.  Just mark them overdefined.
   if (PN.getNumIncomingValues() > 64) {
-    UpdateState(PN, Overdefined);
+    UpdateState(Key, Overdefined);
     return;
   }
 
@@ -414,7 +436,8 @@ void SparseSolver<LatticeVal>::visitPHINode(PHINode &PN) {
       continue;
 
     // Merge in this value.
-    LatticeVal OpVal = getValueState(PN.getIncomingValue(i));
+    LatticeVal OpVal =
+        getValueState(KeyInfo::getLatticeKeyFromValue(PN.getIncomingValue(i)));
     if (OpVal != PNIV)
       PNIV = LatticeFunc->MergeValues(PNIV, OpVal);
 
@@ -423,11 +446,11 @@ void SparseSolver<LatticeVal>::visitPHINode(PHINode &PN) {
   }
 
   // Update the PHI with the compute value, which is the merge of the inputs.
-  UpdateState(PN, PNIV);
+  UpdateState(Key, PNIV);
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::visitInst(Instruction &I) {
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitInst(Instruction &I) {
   // PHIs are handled by the propagation logic, they are never passed into the
   // transfer functions.
   if (PHINode *PN = dyn_cast<PHINode>(&I))
@@ -435,17 +458,18 @@ void SparseSolver<LatticeVal>::visitInst(Instruction &I) {
 
   // Otherwise, ask the transfer function what the result is.  If this is
   // something that we care about, remember it.
-  LatticeVal IV = LatticeFunc->ComputeInstructionState(I, *this);
-  if (IV != LatticeFunc->getUntrackedVal())
-    UpdateState(I, IV);
+  DenseMap<LatticeKey, LatticeVal> ChangedValues;
+  LatticeFunc->ComputeInstructionState(I, ChangedValues, *this);
+  for (auto &ChangedValue : ChangedValues)
+    if (ChangedValue.second != LatticeFunc->getUntrackedVal())
+      UpdateState(ChangedValue.first, ChangedValue.second);
 
   if (TerminatorInst *TI = dyn_cast<TerminatorInst>(&I))
     visitTerminatorInst(*TI);
 }
 
-template <class LatticeVal> void SparseSolver<LatticeVal>::Solve(Function &F) {
-  MarkBlockExecutable(&F.getEntryBlock());
-
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::Solve() {
   // Process the work lists until they are empty!
   while (!BBWorkList.empty() || !ValueWorkList.empty()) {
     // Process the value work list.
@@ -478,22 +502,24 @@ template <class LatticeVal> void SparseSolver<LatticeVal>::Solve(Function &F) {
   }
 }
 
-template <class LatticeVal>
-void SparseSolver<LatticeVal>::Print(Function &F, raw_ostream &OS) const {
-  OS << "\nFUNCTION: " << F.getName() << "\n";
-  for (auto &BB : F) {
-    if (!BBExecutable.count(&BB))
-      OS << "INFEASIBLE: ";
-    OS << "\t";
-    if (BB.hasName())
-      OS << BB.getName() << ":\n";
-    else
-      OS << "; anon bb\n";
-    for (auto &I : BB) {
-      LatticeFunc->PrintValue(getExistingValueState(&I), OS);
-      OS << I << "\n";
-    }
+template <class LatticeKey, class LatticeVal, class KeyInfo>
+void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::Print(
+    raw_ostream &OS) const {
+  if (ValueState.empty())
+    return;
 
+  LatticeKey Key;
+  LatticeVal LV;
+
+  OS << "ValueState:\n";
+  for (auto &Entry : ValueState) {
+    std::tie(Key, LV) = Entry;
+    if (LV == LatticeFunc->getUntrackedVal())
+      continue;
+    OS << "\t";
+    LatticeFunc->PrintLatticeVal(LV, OS);
+    OS << ": ";
+    LatticeFunc->PrintLatticeKey(Key, OS);
     OS << "\n";
   }
 }

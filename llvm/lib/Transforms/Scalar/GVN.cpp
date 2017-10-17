@@ -38,7 +38,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -1049,32 +1048,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // backwards through predecessors if needed.
   BasicBlock *LoadBB = LI->getParent();
   BasicBlock *TmpBB = LoadBB;
-  bool IsSafeToSpeculativelyExecute = isSafeToSpeculativelyExecute(LI);
 
-  // Check that there is no implicit control flow instructions above our load in
-  // its block. If there is an instruction that doesn't always pass the
-  // execution to the following instruction, then moving through it may become
-  // invalid. For example:
-  //
-  // int arr[LEN];
-  // int index = ???;
-  // ...
-  // guard(0 <= index && index < LEN);
-  // use(arr[index]);
-  //
-  // It is illegal to move the array access to any point above the guard,
-  // because if the index is out of bounds we should deoptimize rather than
-  // access the array.
-  // Check that there is no guard in this block above our intruction.
-  if (!IsSafeToSpeculativelyExecute) {
-    auto It = FirstImplicitControlFlowInsts.find(TmpBB);
-    if (It != FirstImplicitControlFlowInsts.end()) {
-      assert(It->second->getParent() == TmpBB &&
-             "Implicit control flow map broken?");
-      if (OI->dominates(It->second, LI))
-        return false;
-    }
-  }
   while (TmpBB->getSinglePredecessor()) {
     TmpBB = TmpBB->getSinglePredecessor();
     if (TmpBB == LoadBB) // Infinite (unreachable) loop.
@@ -1088,11 +1062,6 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     // above this block would be adding the load to execution paths along
     // which it was not previously executed.
     if (TmpBB->getTerminator()->getNumSuccessors() != 1)
-      return false;
-
-    // Check that there is no implicit control flow in a block above.
-    if (!IsSafeToSpeculativelyExecute &&
-        FirstImplicitControlFlowInsts.count(TmpBB))
       return false;
   }
 
@@ -2014,8 +1983,6 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   TLI = &RunTLI;
   VN.setAliasAnalysis(&RunAA);
   MD = RunMD;
-  OrderedInstructions OrderedInstrs(DT);
-  OI = &OrderedInstrs;
   VN.setMemDep(MD);
   ORE = RunORE;
 
@@ -2105,9 +2072,6 @@ bool GVN::processBlock(BasicBlock *BB) {
       DEBUG(verifyRemoved(*I));
       (*I)->eraseFromParent();
     }
-
-    if (!InstrsToErase.empty())
-      OI->invalidateBlock(BB);
     InstrsToErase.clear();
 
     if (AtStart)
@@ -2303,7 +2267,6 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     MD->removeInstruction(CurInst);
   DEBUG(verifyRemoved(CurInst));
   CurInst->eraseFromParent();
-  OI->invalidateBlock(CurrentBlock);
   ++NumGVNInstr;
 
   return true;
@@ -2370,7 +2333,6 @@ bool GVN::iterateOnFunction(Function &F) {
   // RPOT walks the graph in its constructor and will not be invalidated during
   // processBlock.
   ReversePostOrderTraversal<Function *> RPOT(&F);
-  fillImplicitControlFlowInfo(RPOT);
   for (BasicBlock *BB : RPOT)
     Changed |= processBlock(BB);
 
@@ -2382,45 +2344,6 @@ void GVN::cleanupGlobalSets() {
   LeaderTable.clear();
   BlockRPONumber.clear();
   TableAllocator.Reset();
-  FirstImplicitControlFlowInsts.clear();
-}
-
-void
-GVN::fillImplicitControlFlowInfo(ReversePostOrderTraversal<Function *> &RPOT) {
-  auto MayNotTransferExecutionToSuccessor = [&](const Instruction *I) {
-    // If a block's instruction doesn't always pass the control to its successor
-    // instruction, mark the block as having implicit control flow. We use them
-    // to avoid wrong assumptions of sort "if A is executed and B post-dominates
-    // A, then B is also executed". This is not true is there is an implicit
-    // control flow instruction (e.g. a guard) between them.
-    //
-    // TODO: Currently, isGuaranteedToTransferExecutionToSuccessor returns false
-    // for volatile stores and loads because they can trap. The discussion on
-    // whether or not it is correct is still ongoing. We might want to get rid
-    // of this logic in the future. Anyways, trapping instructions shouldn't
-    // introduce implicit control flow, so we explicitly allow them here. This
-    // must be removed once isGuaranteedToTransferExecutionToSuccessor is fixed.
-    if (isGuaranteedToTransferExecutionToSuccessor(I))
-      return false;
-    if (isa<LoadInst>(I)) {
-      assert(cast<LoadInst>(I)->isVolatile() &&
-             "Non-volatile load should transfer execution to successor!");
-      return false;
-    }
-    if (isa<StoreInst>(I)) {
-      assert(cast<StoreInst>(I)->isVolatile() &&
-             "Non-volatile store should transfer execution to successor!");
-      return false;
-    }
-    return true;
-  };
-
-  for (BasicBlock *BB : RPOT)
-    for (auto &I : *BB)
-      if (MayNotTransferExecutionToSuccessor(&I)) {
-        FirstImplicitControlFlowInsts[BB] = &I;
-        break;
-      }
 }
 
 /// Verify that the specified instruction does not occur in our

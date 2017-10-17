@@ -30,10 +30,10 @@ define <4 x float> @test_vcvtph2ps_128(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; SKYLAKE-LABEL: test_vcvtph2ps_128:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [4:0.50]
+; SKYLAKE-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [9:0.50]
 ; SKYLAKE-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [5:1.00]
 ; SKYLAKE-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_vcvtph2ps_128:
 ; BTVER2:       # BB#0:
@@ -80,10 +80,10 @@ define <8 x float> @test_vcvtph2ps_256(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; SKYLAKE-LABEL: test_vcvtph2ps_256:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [4:0.50]
+; SKYLAKE-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [10:0.50]
 ; SKYLAKE-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_vcvtph2ps_256:
 ; BTVER2:       # BB#0:
@@ -128,8 +128,8 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; SKYLAKE-LABEL: test_vcvtps2ph_128:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [5:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [6:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_vcvtps2ph_128:
 ; BTVER2:       # BB#0:
@@ -175,9 +175,9 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; SKYLAKE-LABEL: test_vcvtps2ph_256:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [7:1.00]
-; SKYLAKE-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
+; SKYLAKE-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [8:1.00]
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_vcvtps2ph_256:
 ; BTVER2:       # BB#0:

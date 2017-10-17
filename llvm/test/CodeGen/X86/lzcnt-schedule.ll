@@ -25,11 +25,11 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_ctlz_i16:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    lzcntw (%rsi), %cx # sched: [3:1.00]
+; SKYLAKE-NEXT:    lzcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i16:
 ; BTVER2:       # BB#0:
@@ -71,10 +71,10 @@ define i32 @test_ctlz_i32(i32 %a0, i32 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_ctlz_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    lzcntl (%rsi), %ecx # sched: [3:1.00]
+; SKYLAKE-NEXT:    lzcntl (%rsi), %ecx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    lzcntl %edi, %eax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i32:
 ; BTVER2:       # BB#0:
@@ -114,10 +114,10 @@ define i64 @test_ctlz_i64(i64 %a0, i64 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_ctlz_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    lzcntq (%rsi), %rcx # sched: [3:1.00]
+; SKYLAKE-NEXT:    lzcntq (%rsi), %rcx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    lzcntq %rdi, %rax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i64:
 ; BTVER2:       # BB#0:
