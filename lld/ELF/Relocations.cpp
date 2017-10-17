@@ -304,8 +304,14 @@ static RelType getMipsPairType(RelType Type, bool IsLocal) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
-    // I don't know why these relocations had to be defined like this,
-    // but they are handled differently when they refer to local symbols.
+    // In case of global symbol, the R_MIPS_GOT16 relocation does not
+    // have a pair. Each global symbol has a unique entry in the GOT
+    // and a corresponding instruction with help of the R_MIPS_GOT16
+    // relocation loads an address of the symbol. In case of local
+    // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
+    // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
+    // relocations handle low 16 bits of the address. That allows
+    // to allocate only one GOT entry for every 64 KBytes of local data.
     return IsLocal ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MICROMIPS_GOT16:
     return IsLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
