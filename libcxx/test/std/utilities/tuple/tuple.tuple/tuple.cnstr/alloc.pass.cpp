@@ -102,6 +102,8 @@ int main()
         using T = NonDefaultConstructible<>;
         T v(42);
         std::tuple<T, T> t(v, v);
+        (void)t;
         std::tuple<T, T> t2(42, 42);
+        (void)t2;
     }
 }

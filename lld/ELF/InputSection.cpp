@@ -488,6 +488,8 @@ static uint64_t getARMStaticBase(const SymbolBody &Body) {
 static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
                                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
+  case R_INVALID:
+    return 0;
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA(A);
@@ -613,8 +615,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     // lld and .tbss is not referenced, it gets reclaimed and we don't
     // create a TLS program header. Therefore, we resolve this
     // statically to zero.
-    if (Body.isTls() && (Body.isLazy() || Body.isUndefined()) &&
-        Body.symbol()->isWeak())
+    if (Body.isTls() && Body.isUndefWeak())
       return 0;
     if (Target->TcbSize)
       return Body.getVA(A) + alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
@@ -661,7 +662,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
-    RelExpr Expr = Target->getRelExpr(Type, Sym, *File, BufLoc);
+    RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {

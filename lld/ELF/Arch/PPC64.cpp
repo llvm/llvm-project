@@ -39,7 +39,7 @@ namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -83,10 +83,8 @@ PPC64::PPC64() {
 }
 
 RelExpr PPC64::getRelExpr(RelType Type, const SymbolBody &S,
-                          const InputFile &File, const uint8_t *Loc) const {
+                          const uint8_t *Loc) const {
   switch (Type) {
-  default:
-    return R_ABS;
   case R_PPC64_TOC16:
   case R_PPC64_TOC16_DS:
   case R_PPC64_TOC16_HA:
@@ -98,6 +96,8 @@ RelExpr PPC64::getRelExpr(RelType Type, const SymbolBody &S,
     return R_PPC_TOC;
   case R_PPC64_REL24:
     return R_PPC_PLT_OPD;
+  default:
+    return R_ABS;
   }
 }
 

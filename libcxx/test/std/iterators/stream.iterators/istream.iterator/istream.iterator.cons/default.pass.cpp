@@ -32,6 +32,7 @@ template <typename T, bool isTrivial = std::is_trivially_default_constructible_v
 struct test_trivial {
 void operator ()() const {
     constexpr std::istream_iterator<T> it;
+    (void)it;
     }
 };
 
@@ -50,6 +51,7 @@ int main()
     assert(it == T());
 #if TEST_STD_VER >= 11
     constexpr T it2;
+    (void)it2;
 #endif
     }
 

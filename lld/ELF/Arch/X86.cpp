@@ -24,7 +24,7 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
@@ -63,8 +63,10 @@ X86::X86() {
   TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
+static bool hasBaseReg(uint8_t ModRM) { return (ModRM & 0xc7) != 0x5; }
+
 RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
-                        const InputFile &File, const uint8_t *Loc) const {
+                        const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
   case R_386_16:
@@ -122,13 +124,7 @@ RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
     // instruction. That means a ModRM byte is at Loc[-1]. By taking a look at
     // the byte, we can determine whether the instruction is register-relative
     // (i.e. it was generated for foo@GOT(%reg)) or absolute (i.e. foo@GOT).
-    if ((Loc[-1] & 0xc7) != 0x5)
-      return R_GOT_FROM_END;
-    if (Config->Pic)
-      error(toString(&File) + ": relocation " + toString(Type) + " against '" +
-            S.getName() +
-            "' without base register can not be used when PIC enabled");
-    return R_GOT;
+    return hasBaseReg(Loc[-1]) ? R_GOT_FROM_END : R_GOT;
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
@@ -140,8 +136,7 @@ RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(toString(&File) + ": unknown relocation type: " + toString(Type));
-    return R_HINT;
+    return R_INVALID;
   }
 }
 
@@ -234,8 +229,6 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
 int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   switch (Type) {
-  default:
-    return 0;
   case R_386_8:
   case R_386_PC8:
     return SignExtend64<8>(*Buf);
@@ -252,6 +245,8 @@ int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   case R_386_TLS_LDO_32:
   case R_386_TLS_LE:
     return SignExtend64<32>(read32le(Buf));
+  default:
+    return 0;
   }
 }
 
@@ -286,9 +281,31 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     checkInt<17>(Loc, Val, Type);
     write16le(Loc, Val);
     break;
-  default:
+  case R_386_32:
+  case R_386_GLOB_DAT:
+  case R_386_GOT32:
+  case R_386_GOT32X:
+  case R_386_GOTOFF:
+  case R_386_GOTPC:
+  case R_386_PC32:
+  case R_386_PLT32:
+  case R_386_RELATIVE:
+  case R_386_TLS_DTPMOD32:
+  case R_386_TLS_DTPOFF32:
+  case R_386_TLS_GD:
+  case R_386_TLS_GOTIE:
+  case R_386_TLS_IE:
+  case R_386_TLS_LDM:
+  case R_386_TLS_LDO_32:
+  case R_386_TLS_LE:
+  case R_386_TLS_LE_32:
+  case R_386_TLS_TPOFF:
+  case R_386_TLS_TPOFF32:
     checkInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
+    break;
+  default:
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 

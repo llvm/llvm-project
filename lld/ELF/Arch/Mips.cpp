@@ -28,7 +28,7 @@ namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S, const InputFile &File,
+  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   bool isPicRel(RelType Type) const override;
@@ -71,11 +71,11 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
 
 template <class ELFT>
 RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const SymbolBody &S,
-                               const InputFile &File,
                                const uint8_t *Loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     Type &= 0xff;
+
   switch (Type) {
   case R_MIPS_JALR:
   case R_MICROMIPS_JALR:
@@ -174,9 +174,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const SymbolBody &S,
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    error("do not know how to handle relocation '" + toString(Type) + "' (" +
-          Twine(Type) + ")");
-    return R_HINT;
+    return R_INVALID;
   }
 }
 
@@ -353,8 +351,6 @@ template <class ELFT>
 int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
-  default:
-    return 0;
   case R_MIPS_32:
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
@@ -417,6 +413,8 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
     return SignExtend64<25>(readShuffle<E>(Buf) << 2);
   case R_MICROMIPS_PC26_S1:
     return SignExtend64<27>(readShuffle<E>(Buf) << 1);
+  default:
+    return 0;
   }
 }
 
@@ -453,20 +451,24 @@ calculateMipsRelChain(uint8_t *Loc, RelType Type, uint64_t Val) {
 template <class ELFT>
 void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   const endianness E = ELFT::TargetEndianness;
+
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
   if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16 ||
       Type == R_MIPS_TLS_DTPREL32 || Type == R_MIPS_TLS_DTPREL64 ||
       Type == R_MICROMIPS_TLS_DTPREL_HI16 ||
-      Type == R_MICROMIPS_TLS_DTPREL_LO16)
+      Type == R_MICROMIPS_TLS_DTPREL_LO16) {
     Val -= 0x8000;
-  else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16 ||
-           Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64 ||
-           Type == R_MICROMIPS_TLS_TPREL_HI16 ||
-           Type == R_MICROMIPS_TLS_TPREL_LO16)
+  } else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16 ||
+             Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64 ||
+             Type == R_MICROMIPS_TLS_TPREL_HI16 ||
+             Type == R_MICROMIPS_TLS_TPREL_LO16) {
     Val -= 0x7000;
+  }
+
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
+
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:

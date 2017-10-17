@@ -65,10 +65,23 @@ ptr:
   .quad temp
   .size ptr, 8
 
+# R_AMDGPU_RELATIVE64:
+  .type temp2, @object
+  .local temp2
+  .size temp2, 4
+
+  .type ptr2, @object
+  .globl ptr2
+  .size ptr2, 8
+  .p2align 3
+ptr2:
+  .quad temp2
+
 # The relocation for local_var{0, 1, 2} and var should be resolved by the
 # linker.
 # CHECK: Relocations [
 # CHECK: .rela.dyn {
+# CHECK-NEXT: R_AMDGPU_RELATIVE64 - 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var0 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var1 0x0
 # CHECK-NEXT: R_AMDGPU_ABS64 common_var2 0x0

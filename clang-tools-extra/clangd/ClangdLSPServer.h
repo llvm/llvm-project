@@ -48,32 +48,24 @@ private:
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override;
 
   // Implement ProtocolCallbacks.
-  void onInitialize(StringRef ID, InitializeParams IP,
-                    JSONOutput &Out) override;
-  void onShutdown(JSONOutput &Out) override;
-  void onDocumentDidOpen(DidOpenTextDocumentParams Params,
-                         JSONOutput &Out) override;
-  void onDocumentDidChange(DidChangeTextDocumentParams Params,
-                           JSONOutput &Out) override;
-  void onDocumentDidClose(DidCloseTextDocumentParams Params,
-                          JSONOutput &Out) override;
-  void onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams Params,
-                                  StringRef ID, JSONOutput &Out) override;
-  void onDocumentRangeFormatting(DocumentRangeFormattingParams Params,
-                                 StringRef ID, JSONOutput &Out) override;
-  void onDocumentFormatting(DocumentFormattingParams Params, StringRef ID,
-                            JSONOutput &Out) override;
-  void onCodeAction(CodeActionParams Params, StringRef ID,
-                    JSONOutput &Out) override;
-  void onCompletion(TextDocumentPositionParams Params, StringRef ID,
-                    JSONOutput &Out) override;
-  void onSignatureHelp(TextDocumentPositionParams Params, StringRef ID,
-                       JSONOutput &Out) override;
-  void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
-                        JSONOutput &Out) override;
-  void onSwitchSourceHeader(TextDocumentIdentifier Params, StringRef ID,
-                            JSONOutput &Out) override;
-  void onFileEvent(const DidChangeWatchedFilesParams &Params) override;
+  void onInitialize(Ctx C, InitializeParams &Params) override;
+  void onShutdown(Ctx C, ShutdownParams &Params) override;
+  void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) override;
+  void onDocumentDidChange(Ctx C, DidChangeTextDocumentParams &Params) override;
+  void onDocumentDidClose(Ctx C, DidCloseTextDocumentParams &Params) override;
+  void
+  onDocumentOnTypeFormatting(Ctx C,
+                             DocumentOnTypeFormattingParams &Params) override;
+  void
+  onDocumentRangeFormatting(Ctx C,
+                            DocumentRangeFormattingParams &Params) override;
+  void onDocumentFormatting(Ctx C, DocumentFormattingParams &Params) override;
+  void onCodeAction(Ctx C, CodeActionParams &Params) override;
+  void onCompletion(Ctx C, TextDocumentPositionParams &Params) override;
+  void onSignatureHelp(Ctx C, TextDocumentPositionParams &Params) override;
+  void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) override;
+  void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) override;
+  void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) override;
 
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);
