@@ -916,7 +916,8 @@ void CodeGenModule::EmitExplicitCastExprType(const ExplicitCastExpr *E,
 /// EmitPointerWithAlignment - Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
 Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
-                                                  LValueBaseInfo *BaseInfo) {
+                                                  LValueBaseInfo *BaseInfo,
+                                                  TBAAAccessInfo *TBAAInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(E->getType()->isPointerType() ||
          E->getType()->isObjCObjectPointerType());
@@ -936,20 +937,30 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
         if (PtrTy->getPointeeType()->isVoidType())
           break;
 
-        LValueBaseInfo InnerInfo;
-        Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), &InnerInfo);
-        if (BaseInfo) *BaseInfo = InnerInfo;
+        LValueBaseInfo InnerBaseInfo;
+        TBAAAccessInfo InnerTBAAInfo;
+        Address Addr = EmitPointerWithAlignment(CE->getSubExpr(),
+                                                &InnerBaseInfo,
+                                                &InnerTBAAInfo);
+        if (BaseInfo) *BaseInfo = InnerBaseInfo;
+        if (TBAAInfo) *TBAAInfo = InnerTBAAInfo;
 
-        // If this is an explicit bitcast, and the source l-value is
-        // opaque, honor the alignment of the casted-to type.
-        if (isa<ExplicitCastExpr>(CE) &&
-            InnerInfo.getAlignmentSource() != AlignmentSource::Decl) {
-          LValueBaseInfo ExpInfo;
+        if (isa<ExplicitCastExpr>(CE)) {
+          LValueBaseInfo TargetTypeBaseInfo;
+          TBAAAccessInfo TargetTypeTBAAInfo;
           CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(),
-                                                           &ExpInfo);
-          if (BaseInfo)
-            BaseInfo->mergeForCast(ExpInfo);
-          Addr = Address(Addr.getPointer(), Align);
+                                                           &TargetTypeBaseInfo,
+                                                           &TargetTypeTBAAInfo);
+          if (TBAAInfo)
+            *TBAAInfo = CGM.mergeTBAAInfoForCast(*TBAAInfo,
+                                                 TargetTypeTBAAInfo);
+          // If the source l-value is opaque, honor the alignment of the
+          // casted-to type.
+          if (InnerBaseInfo.getAlignmentSource() != AlignmentSource::Decl) {
+            if (BaseInfo)
+              BaseInfo->mergeForCast(TargetTypeBaseInfo);
+            Addr = Address(Addr.getPointer(), Align);
+          }
         }
 
         if (SanOpts.has(SanitizerKind::CFIUnrelatedCast) &&
@@ -969,12 +980,13 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
 
     // Array-to-pointer decay.
     case CK_ArrayToPointerDecay:
-      return EmitArrayToPointerDecay(CE->getSubExpr(), BaseInfo);
+      return EmitArrayToPointerDecay(CE->getSubExpr(), BaseInfo, TBAAInfo);
 
     // Derived-to-base conversions.
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo);
+      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo,
+                                              TBAAInfo);
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
       return GetAddressOfBaseClass(Addr, Derived,
                                    CE->path_begin(), CE->path_end(),
@@ -994,6 +1006,7 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
     if (UO->getOpcode() == UO_AddrOf) {
       LValue LV = EmitLValue(UO->getSubExpr());
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
+      if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
       return LV.getAddress();
     }
   }
@@ -1001,7 +1014,8 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
   // TODO: conditional operators, comma.
 
   // Otherwise, use the alignment of the type.
-  CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
+  CharUnits Align = getNaturalPointeeTypeAlignment(E->getType(), BaseInfo,
+                                                   TBAAInfo);
   return Address(EmitScalarExpr(E), Align);
 }
 
@@ -2447,8 +2461,10 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
     assert(!T.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
 
     LValueBaseInfo BaseInfo;
-    Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo);
-    LValue LV = MakeAddrLValue(Addr, T, BaseInfo, CGM.getTBAAAccessInfo(T));
+    TBAAAccessInfo TBAAInfo;
+    Address Addr = EmitPointerWithAlignment(E->getSubExpr(), &BaseInfo,
+                                            &TBAAInfo);
+    LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
 
     // We should not generate __weak write barrier on indirect reference
@@ -3048,7 +3064,8 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 }
 
 Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
-                                                 LValueBaseInfo *BaseInfo) {
+                                                 LValueBaseInfo *BaseInfo,
+                                                 TBAAAccessInfo *TBAAInfo) {
   assert(E->getType()->isArrayType() &&
          "Array to pointer decay must have array source type!");
 
@@ -3056,6 +3073,7 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
   LValue LV = EmitLValue(E);
   Address Addr = LV.getAddress();
   if (BaseInfo) *BaseInfo = LV.getBaseInfo();
+  if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
 
   // If the array type was an incomplete type, we need to make sure
   // the decay ends up being the right type.
@@ -3195,9 +3213,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue LHS = EmitLValue(E->getBase());
     auto *Idx = EmitIdxAfterBase(/*Promote*/false);
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
-    return LValue::MakeVectorElt(LHS.getAddress(), Idx,
-                                 E->getBase()->getType(),
-                                 LHS.getBaseInfo());
+    return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
+                                 LHS.getBaseInfo(), TBAAAccessInfo());
   }
 
   // All the other cases basically behave like simple offsetting.
@@ -3216,13 +3233,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   }
 
   LValueBaseInfo BaseInfo;
+  TBAAAccessInfo TBAAInfo;
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
            getContext().getAsVariableArrayType(E->getType())) {
     // The base must be a pointer, which is not an aggregate.  Emit
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     // The element count here is the total number of non-VLA elements.
@@ -3246,7 +3264,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // Indexing over an interface, as in "NSString *P; P[4];"
 
     // Emit the base pointer.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     CharUnits InterfaceSize = getContext().getTypeSizeInChars(OIT);
@@ -3294,19 +3312,17 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
         E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
+    TBAAInfo = CGM.getTBAAAccessInfo(E->getType());
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
-    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
+    Addr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
                                  SignedIndices, E->getExprLoc());
   }
 
-  LValue LV = MakeAddrLValue(Addr, E->getType(), BaseInfo,
-                             CGM.getTBAAAccessInfo(E->getType()));
-
-  // TODO: Preserve/extend path TBAA metadata?
+  LValue LV = MakeAddrLValue(Addr, E->getType(), BaseInfo, TBAAInfo);
 
   if (getLangOpts().ObjC1 &&
       getLangOpts().getGC() != LangOptions::NonGC) {
@@ -3321,8 +3337,6 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
                                        TBAAAccessInfo &TBAAInfo,
                                        QualType BaseTy, QualType ElTy,
                                        bool IsLowerBound) {
-  TBAAInfo = CGF.CGM.getTBAAAccessInfo(ElTy);
-
   LValue BaseLVal;
   if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
     BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
@@ -3352,7 +3366,7 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
     BaseInfo.mergeForCast(TypeInfo);
     return Address(CGF.Builder.CreateLoad(BaseLVal.getAddress()), Align);
   }
-  return CGF.EmitPointerWithAlignment(Base, &BaseInfo);
+  return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
 }
 
 LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
@@ -3518,10 +3532,10 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     // If it is a pointer to a vector, emit the address and form an lvalue with
     // it.
     LValueBaseInfo BaseInfo;
-    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo);
+    TBAAAccessInfo TBAAInfo;
+    Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
     const PointerType *PT = E->getBase()->getType()->getAs<PointerType>();
-    Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo,
-                          CGM.getTBAAAccessInfo(PT->getPointeeType()));
+    Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo, TBAAInfo);
     Base.getQuals().removeObjCGCAttr();
   } else if (E->getBase()->isGLValue()) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
@@ -3552,7 +3566,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
-                                    Base.getBaseInfo());
+                                    Base.getBaseInfo(), TBAAAccessInfo());
   }
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
 
@@ -3563,7 +3577,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     CElts.push_back(BaseElts->getAggregateElement(Indices[i]));
   llvm::Constant *CV = llvm::ConstantVector::get(CElts);
   return LValue::MakeExtVectorElt(Base.getExtVectorAddress(), CV, type,
-                                  Base.getBaseInfo());
+                                  Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
@@ -3577,7 +3591,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   LValue BaseLV;
   if (E->isArrow()) {
     LValueBaseInfo BaseInfo;
-    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo);
+    TBAAAccessInfo TBAAInfo;
+    Address Addr = EmitPointerWithAlignment(BaseExpr, &BaseInfo, &TBAAInfo);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
     bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
@@ -3587,8 +3602,7 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
       SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
-    BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo,
-                            CGM.getTBAAAccessInfo(PtrTy));
+    BaseLV = MakeAddrLValue(Addr, PtrTy, BaseInfo, TBAAInfo);
   } else
     BaseLV = EmitCheckedLValue(BaseExpr, TCK_MemberAccess);
 
@@ -3665,15 +3679,6 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
 LValue CodeGenFunction::EmitLValueForField(LValue base,
                                            const FieldDecl *field) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
-  AlignmentSource fieldAlignSource =
-    getFieldAlignmentSource(BaseInfo.getAlignmentSource());
-  LValueBaseInfo FieldBaseInfo(fieldAlignSource, BaseInfo.getMayAlias());
-
-  QualType type = field->getType();
-  const RecordDecl *rec = field->getParent();
-  if (rec->isUnion() || rec->hasAttr<MayAliasAttr>() || type->isVectorType())
-    FieldBaseInfo.setMayAlias(true);
-  bool mayAlias = FieldBaseInfo.getMayAlias();
 
   if (field->isBitField()) {
     const CGRecordLayout &RL =
@@ -3693,19 +3698,55 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
 
     QualType fieldType =
       field->getType().withCVRQualifiers(base.getVRQualifiers());
-    return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo);
+    // TODO: Support TBAA for bit fields.
+    LValueBaseInfo FieldBaseInfo(BaseInfo.getAlignmentSource(), false);
+    return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo,
+                                TBAAAccessInfo());
+  }
+
+  // Fields of may-alias structures are may-alias themselves.
+  // FIXME: this should get propagated down through anonymous structs
+  // and unions.
+  QualType FieldType = field->getType();
+  const RecordDecl *rec = field->getParent();
+  AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
+  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource), false);
+  TBAAAccessInfo FieldTBAAInfo;
+  if (BaseInfo.getMayAlias() || rec->hasAttr<MayAliasAttr>() ||
+          FieldType->isVectorType()) {
+    FieldBaseInfo.setMayAlias(true);
+    FieldTBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  } else if (rec->isUnion()) {
+    // TODO: Support TBAA for unions.
+    FieldBaseInfo.setMayAlias(true);
+    FieldTBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  } else {
+    // If no base type been assigned for the base access, then try to generate
+    // one for this base lvalue.
+    FieldTBAAInfo = base.getTBAAInfo();
+    if (!FieldTBAAInfo.BaseType) {
+        FieldTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
+        assert(!FieldTBAAInfo.Offset &&
+               "Nonzero offset for an access with no base type!");
+    }
+
+    // Adjust offset to be relative to the base type.
+    const ASTRecordLayout &Layout =
+        getContext().getASTRecordLayout(field->getParent());
+    unsigned CharWidth = getContext().getCharWidth();
+    if (FieldTBAAInfo.BaseType)
+      FieldTBAAInfo.Offset +=
+          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
+
+    // Update the final access type.
+    FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
   }
 
   Address addr = base.getAddress();
   unsigned cvr = base.getVRQualifiers();
-  bool TBAAPath = CGM.getCodeGenOpts().StructPathTBAA;
   if (rec->isUnion()) {
     // For unions, there is no pointer adjustment.
-    assert(!type->isReferenceType() && "union has reference member");
-    // TODO: handle path-aware TBAA for union.
-    TBAAPath = false;
-
-    const auto FieldType = field->getType();
+    assert(!FieldType->isReferenceType() && "union has reference member");
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
@@ -3717,24 +3758,17 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     addr = emitAddrOfFieldStorage(*this, addr, field);
 
     // If this is a reference field, load the reference right now.
-    if (const ReferenceType *refType = type->getAs<ReferenceType>()) {
+    if (const ReferenceType *refType = FieldType->getAs<ReferenceType>()) {
       llvm::LoadInst *load = Builder.CreateLoad(addr, "ref");
       if (cvr & Qualifiers::Volatile) load->setVolatile(true);
 
-      // Loading the reference will disable path-aware TBAA.
-      TBAAPath = false;
-      TBAAAccessInfo TBAAInfo = mayAlias ? CGM.getTBAAMayAliasAccessInfo() :
-                                           CGM.getTBAAAccessInfo(type);
-      CGM.DecorateInstructionWithTBAA(load, TBAAInfo);
+      CGM.DecorateInstructionWithTBAA(load, FieldTBAAInfo);
 
-      mayAlias = false;
-      type = refType->getPointeeType();
-
-      CharUnits alignment =
-        getNaturalTypeAlignment(type, &FieldBaseInfo, /* TBAAInfo= */ nullptr,
-                                /* forPointeeType= */ true);
-      FieldBaseInfo.setMayAlias(false);
-      addr = Address(load, alignment);
+      FieldType = refType->getPointeeType();
+      CharUnits Align = getNaturalTypeAlignment(FieldType, &FieldBaseInfo,
+                                                &FieldTBAAInfo,
+                                                /* forPointeeType= */ true);
+      addr = Address(load, Align);
 
       // Qualifiers on the struct don't apply to the referencee, and
       // we'll pick up CVR from the actual type later, so reset these
@@ -3747,45 +3781,14 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // for both unions and structs.  A union needs a bitcast, a struct element
   // will need a bitcast if the LLVM type laid out doesn't match the desired
   // type.
-  addr = Builder.CreateElementBitCast(addr,
-                                      CGM.getTypes().ConvertTypeForMem(type),
-                                      field->getName());
+  addr = Builder.CreateElementBitCast(
+      addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
 
-  LValue LV = MakeAddrLValue(addr, type, FieldBaseInfo,
-                             CGM.getTBAAAccessInfo(type));
+  LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(cvr);
-
-  // Fields of may_alias structs act like 'char' for TBAA purposes.
-  // FIXME: this should get propagated down through anonymous structs
-  // and unions.
-  if (mayAlias) {
-    LV.setTBAAInfo(CGM.getTBAAMayAliasAccessInfo());
-  } else if (TBAAPath) {
-    // If no base type been assigned for the base access, then try to generate
-    // one for this base lvalue.
-    TBAAAccessInfo TBAAInfo = base.getTBAAInfo();
-    if (!TBAAInfo.BaseType) {
-        TBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
-        assert(!TBAAInfo.Offset &&
-               "Nonzero offset for an access with no base type!");
-    }
-
-    // Adjust offset to be relative to the base type.
-    const ASTRecordLayout &Layout =
-        getContext().getASTRecordLayout(field->getParent());
-    unsigned CharWidth = getContext().getCharWidth();
-    if (TBAAInfo.BaseType)
-      TBAAInfo.Offset +=
-          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
-
-    // Update the final access type.
-    TBAAInfo.AccessType = LV.getTBAAInfo().AccessType;
-
-    LV.setTBAAInfo(TBAAInfo);
-  }
 
   // __weak attribute on a field is ignored.
   if (LV.getQuals().getObjCGCAttr() == Qualifiers::Weak)

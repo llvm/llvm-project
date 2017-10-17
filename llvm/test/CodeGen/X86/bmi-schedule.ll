@@ -29,10 +29,10 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    notl %edi # sched: [1:0.25]
-; SKYLAKE-NEXT:    andw (%rdx), %di # sched: [1:0.50]
+; SKYLAKE-NEXT:    andw (%rdx), %di # sched: [6:0.50]
 ; SKYLAKE-NEXT:    addl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andn_i16:
 ; BTVER2:       # BB#0:
@@ -77,9 +77,9 @@ define i32 @test_andn_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; SKYLAKE-LABEL: test_andn_i32:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    andnl %esi, %edi, %ecx # sched: [1:0.50]
-; SKYLAKE-NEXT:    andnl (%rdx), %edi, %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    andnl (%rdx), %edi, %eax # sched: [6:0.50]
 ; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andn_i32:
 ; BTVER2:       # BB#0:
@@ -120,9 +120,9 @@ define i64 @test_andn_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; SKYLAKE-LABEL: test_andn_i64:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    andnq %rsi, %rdi, %rcx # sched: [1:0.50]
-; SKYLAKE-NEXT:    andnq (%rdx), %rdi, %rax # sched: [1:0.50]
+; SKYLAKE-NEXT:    andnq (%rdx), %rdi, %rax # sched: [6:0.50]
 ; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andn_i64:
 ; BTVER2:       # BB#0:
@@ -162,10 +162,10 @@ define i32 @test_bextr_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; SKYLAKE-LABEL: test_bextr_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    bextrl %edi, (%rdx), %ecx # sched: [2:0.50]
+; SKYLAKE-NEXT:    bextrl %edi, (%rdx), %ecx # sched: [7:0.50]
 ; SKYLAKE-NEXT:    bextrl %edi, %esi, %eax # sched: [2:0.50]
 ; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_bextr_i32:
 ; BTVER2:       # BB#0:
@@ -205,10 +205,10 @@ define i64 @test_bextr_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; SKYLAKE-LABEL: test_bextr_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    bextrq %rdi, (%rdx), %rcx # sched: [2:0.50]
+; SKYLAKE-NEXT:    bextrq %rdi, (%rdx), %rcx # sched: [7:0.50]
 ; SKYLAKE-NEXT:    bextrq %rdi, %rsi, %rax # sched: [2:0.50]
 ; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_bextr_i64:
 ; BTVER2:       # BB#0:
@@ -248,10 +248,10 @@ define i32 @test_blsi_i32(i32 %a0, i32 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsi_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsil (%rsi), %ecx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsil (%rsi), %ecx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsil %edi, %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsi_i32:
 ; BTVER2:       # BB#0:
@@ -292,10 +292,10 @@ define i64 @test_blsi_i64(i64 %a0, i64 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsi_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsiq (%rsi), %rcx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsiq (%rsi), %rcx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsiq %rdi, %rax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsi_i64:
 ; BTVER2:       # BB#0:
@@ -336,10 +336,10 @@ define i32 @test_blsmsk_i32(i32 %a0, i32 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsmsk_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsmskl (%rsi), %ecx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsmskl (%rsi), %ecx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsmskl %edi, %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsmsk_i32:
 ; BTVER2:       # BB#0:
@@ -380,10 +380,10 @@ define i64 @test_blsmsk_i64(i64 %a0, i64 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsmsk_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsmskq (%rsi), %rcx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsmskq (%rsi), %rcx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsmskq %rdi, %rax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsmsk_i64:
 ; BTVER2:       # BB#0:
@@ -424,10 +424,10 @@ define i32 @test_blsr_i32(i32 %a0, i32 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsr_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsrl (%rsi), %ecx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsrl (%rsi), %ecx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsrl %edi, %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsr_i32:
 ; BTVER2:       # BB#0:
@@ -468,10 +468,10 @@ define i64 @test_blsr_i64(i64 %a0, i64 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_blsr_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    blsrq (%rsi), %rcx # sched: [1:0.50]
+; SKYLAKE-NEXT:    blsrq (%rsi), %rcx # sched: [6:0.50]
 ; SKYLAKE-NEXT:    blsrq %rdi, %rax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blsr_i64:
 ; BTVER2:       # BB#0:
@@ -514,11 +514,11 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_cttz_i16:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    tzcntw (%rsi), %cx # sched: [3:1.00]
+; SKYLAKE-NEXT:    tzcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    tzcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cttz_i16:
 ; BTVER2:       # BB#0:
@@ -560,10 +560,10 @@ define i32 @test_cttz_i32(i32 %a0, i32 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_cttz_i32:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    tzcntl (%rsi), %ecx # sched: [3:1.00]
+; SKYLAKE-NEXT:    tzcntl (%rsi), %ecx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    tzcntl %edi, %eax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cttz_i32:
 ; BTVER2:       # BB#0:
@@ -603,10 +603,10 @@ define i64 @test_cttz_i64(i64 %a0, i64 *%a1) {
 ;
 ; SKYLAKE-LABEL: test_cttz_i64:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    tzcntq (%rsi), %rcx # sched: [3:1.00]
+; SKYLAKE-NEXT:    tzcntq (%rsi), %rcx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    tzcntq %rdi, %rax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cttz_i64:
 ; BTVER2:       # BB#0:
