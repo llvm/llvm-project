@@ -184,36 +184,30 @@
 
 #ifdef __LITTLE_ENDIAN__
 #if __LITTLE_ENDIAN__
-#define _LIBCPP_LITTLE_ENDIAN 1
-#define _LIBCPP_BIG_ENDIAN    0
+#define _LIBCPP_LITTLE_ENDIAN
 #endif  // __LITTLE_ENDIAN__
 #endif  // __LITTLE_ENDIAN__
 
 #ifdef __BIG_ENDIAN__
 #if __BIG_ENDIAN__
-#define _LIBCPP_LITTLE_ENDIAN 0
-#define _LIBCPP_BIG_ENDIAN    1
+#define _LIBCPP_BIG_ENDIAN
 #endif  // __BIG_ENDIAN__
 #endif  // __BIG_ENDIAN__
 
 #ifdef __BYTE_ORDER__
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define _LIBCPP_LITTLE_ENDIAN 1
-#define _LIBCPP_BIG_ENDIAN 0
+#define _LIBCPP_LITTLE_ENDIAN
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define _LIBCPP_LITTLE_ENDIAN 0
-#define _LIBCPP_BIG_ENDIAN 1
+#define _LIBCPP_BIG_ENDIAN
 #endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #endif // __BYTE_ORDER__
 
 #ifdef __FreeBSD__
 # include <sys/endian.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
-#   define _LIBCPP_LITTLE_ENDIAN 1
-#   define _LIBCPP_BIG_ENDIAN    0
+#   define _LIBCPP_LITTLE_ENDIAN
 # else  // _BYTE_ORDER == _LITTLE_ENDIAN
-#   define _LIBCPP_LITTLE_ENDIAN 0
-#   define _LIBCPP_BIG_ENDIAN    1
+#   define _LIBCPP_BIG_ENDIAN
 # endif  // _BYTE_ORDER == _LITTLE_ENDIAN
 # ifndef __LONG_LONG_SUPPORTED
 #  define _LIBCPP_HAS_NO_LONG_LONG
@@ -223,19 +217,16 @@
 #ifdef __NetBSD__
 # include <sys/endian.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
-#   define _LIBCPP_LITTLE_ENDIAN 1
-#   define _LIBCPP_BIG_ENDIAN    0
+#   define _LIBCPP_LITTLE_ENDIAN
 # else  // _BYTE_ORDER == _LITTLE_ENDIAN
-#   define _LIBCPP_LITTLE_ENDIAN 0
-#   define _LIBCPP_BIG_ENDIAN    1
+#   define _LIBCPP_BIG_ENDIAN
 # endif  // _BYTE_ORDER == _LITTLE_ENDIAN
 # define _LIBCPP_HAS_QUICK_EXIT
 #endif  // __NetBSD__
 
 #if defined(_WIN32)
 #  define _LIBCPP_WIN32API
-#  define _LIBCPP_LITTLE_ENDIAN 1
-#  define _LIBCPP_BIG_ENDIAN    0
+#  define _LIBCPP_LITTLE_ENDIAN
 #  define _LIBCPP_SHORT_WCHAR   1
 // Both MinGW and native MSVC provide a "MSVC"-like enviroment
 #  define _LIBCPP_MSVCRT_LIKE
@@ -265,11 +256,9 @@
 #ifdef __sun__
 # include <sys/isa_defs.h>
 # ifdef _LITTLE_ENDIAN
-#   define _LIBCPP_LITTLE_ENDIAN 1
-#   define _LIBCPP_BIG_ENDIAN    0
+#   define _LIBCPP_LITTLE_ENDIAN
 # else
-#   define _LIBCPP_LITTLE_ENDIAN 0
-#   define _LIBCPP_BIG_ENDIAN    1
+#   define _LIBCPP_BIG_ENDIAN
 # endif
 #endif // __sun__
 
@@ -290,18 +279,16 @@
 # define _LIBCPP_USING_DEV_RANDOM
 #endif
 
-#if !defined(_LIBCPP_LITTLE_ENDIAN) || !defined(_LIBCPP_BIG_ENDIAN)
+#if !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
 # include <endian.h>
 # if __BYTE_ORDER == __LITTLE_ENDIAN
-#  define _LIBCPP_LITTLE_ENDIAN 1
-#  define _LIBCPP_BIG_ENDIAN    0
+#  define _LIBCPP_LITTLE_ENDIAN
 # elif __BYTE_ORDER == __BIG_ENDIAN
-#  define _LIBCPP_LITTLE_ENDIAN 0
-#  define _LIBCPP_BIG_ENDIAN    1
+#  define _LIBCPP_BIG_ENDIAN
 # else  // __BYTE_ORDER == __BIG_ENDIAN
 #  error unable to determine endian
 # endif
-#endif  // !defined(_LIBCPP_LITTLE_ENDIAN) || !defined(_LIBCPP_BIG_ENDIAN)
+#endif  // !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
 
 #if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))

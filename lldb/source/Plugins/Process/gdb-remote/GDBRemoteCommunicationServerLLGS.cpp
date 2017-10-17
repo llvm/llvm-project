@@ -523,16 +523,16 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
 
   // Ensure we can get info on the given thread.
   uint32_t thread_idx = 0;
-  for (NativeThreadProtocolSP thread_sp;
-       (thread_sp = process.GetThreadAtIndex(thread_idx)) != nullptr;
+  for (NativeThreadProtocol *thread;
+       (thread = process.GetThreadAtIndex(thread_idx)) != nullptr;
        ++thread_idx) {
 
-    lldb::tid_t tid = thread_sp->GetID();
+    lldb::tid_t tid = thread->GetID();
 
     // Grab the reason this thread stopped.
     struct ThreadStopInfo tid_stop_info;
     std::string description;
-    if (!thread_sp->GetStopReason(tid_stop_info, description))
+    if (!thread->GetStopReason(tid_stop_info, description))
       return nullptr;
 
     const int signum = tid_stop_info.details.signal.signo;
@@ -548,7 +548,7 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
     threads_array_sp->AppendObject(thread_obj_sp);
 
     if (!abridged) {
-      if (JSONObject::SP registers_sp = GetRegistersAsJSON(*thread_sp))
+      if (JSONObject::SP registers_sp = GetRegistersAsJSON(*thread))
         thread_obj_sp->SetObject("registers", registers_sp);
     }
 
@@ -556,7 +556,7 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
     if (signum != 0)
       thread_obj_sp->SetObject("signal", std::make_shared<JSONNumber>(signum));
 
-    const std::string thread_name = thread_sp->GetName();
+    const std::string thread_name = thread->GetName();
     if (!thread_name.empty())
       thread_obj_sp->SetObject("name",
                                std::make_shared<JSONString>(thread_name));
@@ -604,14 +604,14 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
            m_debugged_process_up->GetID(), tid);
 
   // Ensure we can get info on the given thread.
-  NativeThreadProtocolSP thread_sp(m_debugged_process_up->GetThreadByID(tid));
-  if (!thread_sp)
+  NativeThreadProtocol *thread = m_debugged_process_up->GetThreadByID(tid);
+  if (!thread)
     return SendErrorResponse(51);
 
   // Grab the reason this thread stopped.
   struct ThreadStopInfo tid_stop_info;
   std::string description;
-  if (!thread_sp->GetStopReason(tid_stop_info, description))
+  if (!thread->GetStopReason(tid_stop_info, description))
     return SendErrorResponse(52);
 
   // FIXME implement register handling for exec'd inferiors.
@@ -638,7 +638,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   response.Printf("thread:%" PRIx64 ";", tid);
 
   // Include the thread name if there is one.
-  const std::string thread_name = thread_sp->GetName();
+  const std::string thread_name = thread->GetName();
   if (!thread_name.empty()) {
     size_t thread_name_len = thread_name.length();
 
@@ -665,15 +665,13 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     response.PutCString("threads:");
 
     uint32_t thread_index = 0;
-    NativeThreadProtocolSP listed_thread_sp;
-    for (listed_thread_sp =
-             m_debugged_process_up->GetThreadAtIndex(thread_index);
-         listed_thread_sp; ++thread_index,
-        listed_thread_sp = m_debugged_process_up->GetThreadAtIndex(
-            thread_index)) {
+    NativeThreadProtocol *listed_thread;
+    for (listed_thread = m_debugged_process_up->GetThreadAtIndex(thread_index);
+         listed_thread; ++thread_index,
+        listed_thread = m_debugged_process_up->GetThreadAtIndex(thread_index)) {
       if (thread_index > 0)
         response.PutChar(',');
-      response.Printf("%" PRIx64, listed_thread_sp->GetID());
+      response.Printf("%" PRIx64, listed_thread->GetID());
     }
     response.PutChar(';');
 
@@ -701,10 +699,10 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     uint32_t i = 0;
     response.PutCString("thread-pcs");
     char delimiter = ':';
-    for (NativeThreadProtocolSP thread_sp;
-         (thread_sp = m_debugged_process_up->GetThreadAtIndex(i)) != nullptr;
+    for (NativeThreadProtocol *thread;
+         (thread = m_debugged_process_up->GetThreadAtIndex(i)) != nullptr;
          ++i) {
-      NativeRegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+      NativeRegisterContextSP reg_ctx_sp = thread->GetRegisterContext();
       if (!reg_ctx_sp)
         continue;
 
@@ -739,7 +737,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   //
 
   // Grab the register context.
-  NativeRegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+  NativeRegisterContextSP reg_ctx_sp = thread->GetRegisterContext();
   if (reg_ctx_sp) {
     // Expedite all registers in the first register set (i.e. should be GPRs)
     // that are not contained in other registers.
@@ -1316,12 +1314,12 @@ GDBRemoteCommunicationServerLLGS::Handle_qC(StringExtractorGDBRemote &packet) {
   lldb::tid_t tid = m_debugged_process_up->GetCurrentThreadID();
   SetCurrentThreadID(tid);
 
-  NativeThreadProtocolSP thread_sp = m_debugged_process_up->GetCurrentThread();
-  if (!thread_sp)
+  NativeThreadProtocol *thread = m_debugged_process_up->GetCurrentThread();
+  if (!thread)
     return SendErrorResponse(69);
 
   StreamString response;
-  response.Printf("QC%" PRIx64, thread_sp->GetID());
+  response.Printf("QC%" PRIx64, thread->GetID());
 
   return SendPacketNoLock(response.GetString());
 }
@@ -1692,12 +1690,12 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     return SendErrorResponse(68);
 
   // Ensure we have a thread.
-  NativeThreadProtocolSP thread_sp(m_debugged_process_up->GetThreadAtIndex(0));
-  if (!thread_sp)
+  NativeThreadProtocol *thread = m_debugged_process_up->GetThreadAtIndex(0);
+  if (!thread)
     return SendErrorResponse(69);
 
   // Get the register context for the first thread.
-  NativeRegisterContextSP reg_context_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
   if (!reg_context_sp)
     return SendErrorResponse(69);
 
@@ -1908,18 +1906,17 @@ GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
   response.PutChar('m');
 
   LLDB_LOG(log, "starting thread iteration");
-  NativeThreadProtocolSP thread_sp;
+  NativeThreadProtocol *thread;
   uint32_t thread_index;
   for (thread_index = 0,
-      thread_sp = m_debugged_process_up->GetThreadAtIndex(thread_index);
-       thread_sp; ++thread_index,
-      thread_sp = m_debugged_process_up->GetThreadAtIndex(thread_index)) {
-    LLDB_LOG(log, "iterated thread {0}({1}, tid={2})", thread_index,
-             thread_sp ? "is not null" : "null",
-             thread_sp ? thread_sp->GetID() : LLDB_INVALID_THREAD_ID);
+      thread = m_debugged_process_up->GetThreadAtIndex(thread_index);
+       thread; ++thread_index,
+      thread = m_debugged_process_up->GetThreadAtIndex(thread_index)) {
+    LLDB_LOG(log, "iterated thread {0}(tid={2})", thread_index,
+             thread->GetID());
     if (thread_index > 0)
       response.PutChar(',');
-    response.Printf("%" PRIx64, thread_sp->GetID());
+    response.Printf("%" PRIx64, thread->GetID());
   }
 
   LLDB_LOG(log, "finished thread iteration");
@@ -1951,22 +1948,19 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
   }
 
   // Get the thread to use.
-  NativeThreadProtocolSP thread_sp = GetThreadFromSuffix(packet);
-  if (!thread_sp) {
-    if (log)
-      log->Printf(
-          "GDBRemoteCommunicationServerLLGS::%s failed, no thread available",
-          __FUNCTION__);
+  NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
+  if (!thread) {
+    LLDB_LOG(log, "failed, no thread available");
     return SendErrorResponse(0x15);
   }
 
   // Get the thread's register context.
-  NativeRegisterContextSP reg_context_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
   if (!reg_context_sp) {
     LLDB_LOG(
         log,
         "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread_sp->GetID());
+        m_debugged_process_up->GetID(), thread->GetID());
     return SendErrorResponse(0x15);
   }
 
@@ -2063,8 +2057,8 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   size_t reg_size = packet.GetHexBytesAvail(reg_bytes);
 
   // Get the thread to use.
-  NativeThreadProtocolSP thread_sp = GetThreadFromSuffix(packet);
-  if (!thread_sp) {
+  NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
+  if (!thread) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, no thread "
                   "available (thread index 0)",
@@ -2073,13 +2067,13 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   }
 
   // Get the thread's register context.
-  NativeRegisterContextSP reg_context_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
   if (!reg_context_sp) {
     if (log)
       log->Printf(
           "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64 " tid %" PRIu64
           " failed, no register context available for the thread",
-          __FUNCTION__, m_debugged_process_up->GetID(), thread_sp->GetID());
+          __FUNCTION__, m_debugged_process_up->GetID(), thread->GetID());
     return SendErrorResponse(0x15);
   }
 
@@ -2177,8 +2171,8 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
   if (tid != LLDB_INVALID_THREAD_ID && tid != 0) {
-    NativeThreadProtocolSP thread_sp(m_debugged_process_up->GetThreadByID(tid));
-    if (!thread_sp) {
+    NativeThreadProtocol *thread = m_debugged_process_up->GetThreadByID(tid);
+    if (!thread) {
       if (log)
         log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, tid %" PRIu64
                     " not found",
@@ -2739,8 +2733,8 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
 
   // Double check that we have such a thread.
   // TODO investigate: on MacOSX we might need to do an UpdateThreads () here.
-  NativeThreadProtocolSP thread_sp = m_debugged_process_up->GetThreadByID(tid);
-  if (!thread_sp || thread_sp->GetID() != tid)
+  NativeThreadProtocol *thread = m_debugged_process_up->GetThreadByID(tid);
+  if (!thread)
     return SendErrorResponse(0x33);
 
   // Create the step action for the given thread.
@@ -2865,8 +2859,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   packet.SetFilePos(strlen("QSaveRegisterState"));
 
   // Get the thread to use.
-  NativeThreadProtocolSP thread_sp = GetThreadFromSuffix(packet);
-  if (!thread_sp) {
+  NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
+  if (!thread) {
     if (m_thread_suffix_supported)
       return SendIllFormedResponse(
           packet, "No thread specified in QSaveRegisterState packet");
@@ -2876,12 +2870,12 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   }
 
   // Grab the register context for the thread.
-  NativeRegisterContextSP reg_context_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
   if (!reg_context_sp) {
     LLDB_LOG(
         log,
         "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread_sp->GetID());
+        m_debugged_process_up->GetID(), thread->GetID());
     return SendErrorResponse(0x15);
   }
 
@@ -2930,8 +2924,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   }
 
   // Get the thread to use.
-  NativeThreadProtocolSP thread_sp = GetThreadFromSuffix(packet);
-  if (!thread_sp) {
+  NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
+  if (!thread) {
     if (m_thread_suffix_supported)
       return SendIllFormedResponse(
           packet, "No thread specified in QRestoreRegisterState packet");
@@ -2941,12 +2935,12 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   }
 
   // Grab the register context for the thread.
-  NativeRegisterContextSP reg_context_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
   if (!reg_context_sp) {
     LLDB_LOG(
         log,
         "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread_sp->GetID());
+        m_debugged_process_up->GetID(), thread->GetID());
     return SendErrorResponse(0x15);
   }
 
@@ -3219,14 +3213,12 @@ void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {
   }
 }
 
-NativeThreadProtocolSP GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
+NativeThreadProtocol *GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
     StringExtractorGDBRemote &packet) {
-  NativeThreadProtocolSP thread_sp;
-
   // We have no thread if we don't have a process.
   if (!m_debugged_process_up ||
       m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID)
-    return thread_sp;
+    return nullptr;
 
   // If the client hasn't asked for thread suffix support, there will not be a
   // thread suffix.
@@ -3234,7 +3226,7 @@ NativeThreadProtocolSP GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
   if (!m_thread_suffix_supported) {
     const lldb::tid_t current_tid = GetCurrentThreadID();
     if (current_tid == LLDB_INVALID_THREAD_ID)
-      return thread_sp;
+      return nullptr;
     else if (current_tid == 0) {
       // Pick a thread.
       return m_debugged_process_up->GetThreadAtIndex(0);
@@ -3251,11 +3243,11 @@ NativeThreadProtocolSP GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
                   "error: expected ';' prior to start of thread suffix: packet "
                   "contents = '%s'",
                   __FUNCTION__, packet.GetStringRef().c_str());
-    return thread_sp;
+    return nullptr;
   }
 
   if (!packet.GetBytesLeft())
-    return thread_sp;
+    return nullptr;
 
   // Parse out thread: portion.
   if (strncmp(packet.Peek(), "thread:", strlen("thread:")) != 0) {
@@ -3264,14 +3256,14 @@ NativeThreadProtocolSP GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix(
                   "error: expected 'thread:' but not found, packet contents = "
                   "'%s'",
                   __FUNCTION__, packet.GetStringRef().c_str());
-    return thread_sp;
+    return nullptr;
   }
   packet.SetFilePos(packet.GetFilePos() + strlen("thread:"));
   const lldb::tid_t tid = packet.GetHexMaxU64(false, 0);
   if (tid != 0)
     return m_debugged_process_up->GetThreadByID(tid);
 
-  return thread_sp;
+  return nullptr;
 }
 
 lldb::tid_t GDBRemoteCommunicationServerLLGS::GetCurrentThreadID() const {

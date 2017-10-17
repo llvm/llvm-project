@@ -5,7 +5,6 @@ include "llvm/Option/OptParser.td"
 class F<string name>: Flag<["--", "-"], name>;
 class J<string name>: Joined<["--", "-"], name>;
 class S<string name>: Separate<["--", "-"], name>;
-class JS<string name>: JoinedOrSeparate<["--", "-"], name>;
 
 multiclass Eq<string name> {
   def "": Separate<["--", "-"], name>;

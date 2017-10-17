@@ -234,7 +234,7 @@ private:
 
   void HandleInferiorState_Stopped(NativeProcessProtocol *process);
 
-  NativeThreadProtocolSP GetThreadFromSuffix(StringExtractorGDBRemote &packet);
+  NativeThreadProtocol *GetThreadFromSuffix(StringExtractorGDBRemote &packet);
 
   uint32_t GetNextSavedRegistersID();
 

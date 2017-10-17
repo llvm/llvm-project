@@ -930,11 +930,10 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
       if (OutputSections[I] == LastRW->FirstSec)
         break;
 
-    for (; I < OutputSections.size(); ++I) {
-      if (OutputSections[I]->Type != SHT_NOBITS)
-        continue;
-      break;
-    }
+    for (; I < OutputSections.size(); ++I)
+      if (OutputSections[I]->Type == SHT_NOBITS)
+        break;
+
     if (ElfSym::Edata1)
       ElfSym::Edata1->Section = OutputSections[I - 1];
     if (ElfSym::Edata2)

@@ -10,6 +10,9 @@
 #ifndef liblldb_NativeProcessProtocol_h_
 #define liblldb_NativeProcessProtocol_h_
 
+#include "NativeBreakpointList.h"
+#include "NativeThreadProtocol.h"
+#include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Status.h"
@@ -22,9 +25,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
-
-#include "NativeBreakpointList.h"
-#include "NativeWatchpointList.h"
 
 namespace lldb_private {
 class MemoryRegionInfo;
@@ -166,15 +166,15 @@ public:
   //----------------------------------------------------------------------
   // Access to threads
   //----------------------------------------------------------------------
-  NativeThreadProtocolSP GetThreadAtIndex(uint32_t idx);
+  NativeThreadProtocol *GetThreadAtIndex(uint32_t idx);
 
-  NativeThreadProtocolSP GetThreadByID(lldb::tid_t tid);
+  NativeThreadProtocol *GetThreadByID(lldb::tid_t tid);
 
   void SetCurrentThreadID(lldb::tid_t tid) { m_current_thread_id = tid; }
 
   lldb::tid_t GetCurrentThreadID() { return m_current_thread_id; }
 
-  NativeThreadProtocolSP GetCurrentThread() {
+  NativeThreadProtocol *GetCurrentThread() {
     return GetThreadByID(m_current_thread_id);
   }
 
@@ -401,7 +401,7 @@ public:
 protected:
   lldb::pid_t m_pid;
 
-  std::vector<NativeThreadProtocolSP> m_threads;
+  std::vector<std::unique_ptr<NativeThreadProtocol>> m_threads;
   lldb::tid_t m_current_thread_id = LLDB_INVALID_THREAD_ID;
   mutable std::recursive_mutex m_threads_mutex;
 
@@ -461,7 +461,7 @@ protected:
   // -----------------------------------------------------------
   void NotifyDidExec();
 
-  NativeThreadProtocolSP GetThreadByIDUnlocked(lldb::tid_t tid);
+  NativeThreadProtocol *GetThreadByIDUnlocked(lldb::tid_t tid);
 
   // -----------------------------------------------------------
   // Static helper methods for derived classes.

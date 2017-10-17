@@ -110,8 +110,6 @@ private:
   WatchpointIndexMap m_hw_break_index_map;
   std::unique_ptr<SingleStepWorkaround> m_step_workaround;
 };
-
-typedef std::shared_ptr<NativeThreadLinux> NativeThreadLinuxSP;
 } // namespace process_linux
 } // namespace lldb_private
 
