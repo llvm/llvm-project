@@ -289,14 +289,14 @@ enum ThrowState {
 
 static bool isThrowCaught(const CXXThrowExpr *Throw,
                           const CXXCatchStmt *Catch) {
+  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
+  if (!CaughtType)
+    return true;
   const Type *ThrowType = nullptr;
   if (Throw->getSubExpr())
     ThrowType = Throw->getSubExpr()->getType().getTypePtrOrNull();
   if (!ThrowType)
     return false;
-  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
-  if (!CaughtType)
-    return true;
   if (ThrowType->isReferenceType())
     ThrowType = ThrowType->castAs<ReferenceType>()
                     ->getPointeeType()
@@ -361,8 +361,7 @@ static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
   SmallVector<CFGBlock *, 16> Stack;
   Stack.push_back(&BodyCFG->getEntry());
   while (!Stack.empty()) {
-    CFGBlock *CurBlock = Stack.back();
-    Stack.pop_back();
+    CFGBlock *CurBlock = Stack.pop_back_val();
 
     unsigned ID = CurBlock->getBlockID();
     ThrowState CurState = States[ID];

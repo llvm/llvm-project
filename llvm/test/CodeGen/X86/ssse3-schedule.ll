@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=broadwell | FileCheck %s --check-prefix=CHECK --check-prefix=BROADWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx | FileCheck %s --check-prefix=CHECK --check-prefix=SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
@@ -46,6 +47,13 @@ define <16 x i8> @test_pabsb(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-NEXT:    vpabsb (%rdi), %xmm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_pabsb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpabsb %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpabsb (%rdi), %xmm1 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_pabsb:
 ; SKYLAKE:       # BB#0:
@@ -119,6 +127,13 @@ define <4 x i32> @test_pabsd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pabsd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpabsd %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpabsd (%rdi), %xmm1 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pabsd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpabsd %xmm0, %xmm0 # sched: [1:0.50]
@@ -191,6 +206,13 @@ define <8 x i16> @test_pabsw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pabsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpabsw %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpabsw (%rdi), %xmm1 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pabsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpabsw %xmm0, %xmm0 # sched: [1:0.50]
@@ -262,6 +284,12 @@ define <8 x i16> @test_palignr(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vpalignr {{.*#+}} xmm0 = mem[14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13] sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_palignr:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5] sched: [1:1.00]
+; BROADWELL-NEXT:    vpalignr {{.*#+}} xmm0 = mem[14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13] sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_palignr:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5] sched: [1:1.00]
@@ -321,6 +349,12 @@ define <4 x i32> @test_phaddd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-NEXT:    vphaddd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    vphaddd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_phaddd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphaddd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphaddd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_phaddd:
 ; SKYLAKE:       # BB#0:
@@ -383,6 +417,12 @@ define <8 x i16> @test_phaddsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vphaddsw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phaddsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphaddsw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphaddsw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phaddsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vphaddsw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
@@ -443,6 +483,12 @@ define <8 x i16> @test_phaddw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vphaddw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    vphaddw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_phaddw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphaddw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphaddw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_phaddw:
 ; SKYLAKE:       # BB#0:
@@ -505,6 +551,12 @@ define <4 x i32> @test_phsubd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-NEXT:    vphsubd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phsubd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphsubd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphsubd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phsubd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vphsubd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
@@ -565,6 +617,12 @@ define <8 x i16> @test_phsubsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vphsubsw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    vphsubsw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_phsubsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphsubsw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphsubsw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_phsubsw:
 ; SKYLAKE:       # BB#0:
@@ -627,6 +685,12 @@ define <8 x i16> @test_phsubw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vphsubw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phsubw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vphsubw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    vphsubw (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phsubw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vphsubw %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
@@ -687,6 +751,12 @@ define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; HASWELL-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_pmaddubsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmaddubsw:
 ; SKYLAKE:       # BB#0:
@@ -750,6 +820,12 @@ define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmulhrsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmulhrsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
@@ -810,6 +886,12 @@ define <16 x i8> @test_pshufb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    vpshufb %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vpshufb (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_pshufb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpshufb %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    vpshufb (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_pshufb:
 ; SKYLAKE:       # BB#0:
@@ -876,6 +958,12 @@ define <16 x i8> @test_psignb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    vpsignb (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psignb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpsignb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpsignb (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psignb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpsignb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -941,6 +1029,12 @@ define <4 x i32> @test_psignd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-NEXT:    vpsignd (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psignd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpsignd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpsignd (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psignd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vpsignd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -1005,6 +1099,12 @@ define <8 x i16> @test_psignw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-NEXT:    vpsignw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpsignw (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_psignw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vpsignw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    vpsignw (%rdi), %xmm0, %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_psignw:
 ; SKYLAKE:       # BB#0:

@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=broadwell | FileCheck %s --check-prefix=CHECK --check-prefix=BROADWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx | FileCheck %s --check-prefix=CHECK --check-prefix=SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
@@ -40,6 +41,12 @@ define <2 x double> @test_addsubpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ; HASWELL-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_addsubpd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_addsubpd:
 ; SKYLAKE:       # BB#0:
@@ -102,6 +109,12 @@ define <4 x float> @test_addsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; HASWELL-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_addsubps:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_addsubps:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
@@ -162,6 +175,12 @@ define <2 x double> @test_haddpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ; HASWELL-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_haddpd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_haddpd:
 ; SKYLAKE:       # BB#0:
@@ -224,6 +243,12 @@ define <4 x float> @test_haddps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ; HASWELL-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_haddps:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_haddps:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [6:2.00]
@@ -284,6 +309,12 @@ define <2 x double> @test_hsubpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ; HASWELL-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_hsubpd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_hsubpd:
 ; SKYLAKE:       # BB#0:
@@ -346,6 +377,12 @@ define <4 x float> @test_hsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ; HASWELL-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_hsubps:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [5:2.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_hsubps:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [6:2.00]
@@ -403,6 +440,11 @@ define <16 x i8> @test_lddqu(i8* %a0) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vlddqu (%rdi), %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_lddqu:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vlddqu (%rdi), %xmm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_lddqu:
 ; SKYLAKE:       # BB#0:
@@ -463,6 +505,13 @@ define void @test_monitor(i8* %a0, i32 %a1, i32 %a2) {
 ; HASWELL-NEXT:    movl %esi, %ecx # sched: [1:0.25]
 ; HASWELL-NEXT:    monitor # sched: [100:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_monitor:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
+; BROADWELL-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; BROADWELL-NEXT:    monitor # sched: [100:0.25]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_monitor:
 ; SKYLAKE:       # BB#0:
@@ -532,6 +581,13 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ; HASWELL-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [1:0.50]
 ; HASWELL-NEXT:    vsubpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_movddup:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:1.00]
+; BROADWELL-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [1:0.50]
+; BROADWELL-NEXT:    vsubpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_movddup:
 ; SKYLAKE:       # BB#0:
@@ -604,6 +660,13 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movshdup:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
+; BROADWELL-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [1:0.50]
+; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movshdup:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
@@ -675,6 +738,13 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movsldup:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
+; BROADWELL-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [1:0.50]
+; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movsldup:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
@@ -744,6 +814,13 @@ define void @test_mwait(i32 %a0, i32 %a1) {
 ; HASWELL-NEXT:    movl %esi, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    mwait # sched: [20:2.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_mwait:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movl %edi, %ecx # sched: [1:0.25]
+; BROADWELL-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; BROADWELL-NEXT:    mwait # sched: [20:2.50]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_mwait:
 ; SKYLAKE:       # BB#0:

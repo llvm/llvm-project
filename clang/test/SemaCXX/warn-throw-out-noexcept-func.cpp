@@ -239,10 +239,27 @@ void n_ShouldNotDiag() noexcept {
   } catch (const S &s) {
   }
 }
-void o_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
+// As seen in p34973, this should not throw the warning.  If there is an active
+// exception, catch(...) catches everything. 
+void o_ShouldNotDiag() noexcept {
+  try {
+    throw;
+  } catch (...) {
+  }
+}
+
+void p_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw; //expected-warning {{has a non-throwing exception specification but}}
-  } catch (...) {
+  } catch (int){
+  }
+}
+
+void q_ShouldNotDiag() noexcept {
+  try {
+    throw;
+  } catch (int){
+  } catch (...){
   }
 }
 

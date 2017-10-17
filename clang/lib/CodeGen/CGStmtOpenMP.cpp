@@ -501,9 +501,10 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     llvm::Value *CallArg;
     auto I = LocalAddrs.find(Arg);
     if (I != LocalAddrs.end()) {
-      LValue LV =
-          WrapperCGF.MakeAddrLValue(I->second.second, Arg->getType(),
-                                    AlignmentSource::Decl);
+      LValue LV = WrapperCGF.MakeAddrLValue(
+          I->second.second,
+          I->second.first ? I->second.first->getType() : Arg->getType(),
+          AlignmentSource::Decl);
       CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
     } else {
       auto EI = VLASizes.find(Arg);
@@ -516,7 +517,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
         CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
       }
     }
-    CallArgs.emplace_back(CallArg);
+    CallArgs.emplace_back(WrapperCGF.EmitFromMemory(CallArg, Arg->getType()));
   }
   CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, S.getLocStart(),
                                                   F, CallArgs);

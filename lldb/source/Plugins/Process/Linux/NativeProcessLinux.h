@@ -102,7 +102,7 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
-  NativeThreadLinuxSP GetThreadByID(lldb::tid_t id);
+  NativeThreadLinux *GetThreadByID(lldb::tid_t id);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const override {
@@ -203,7 +203,7 @@ private:
 
   bool StopTrackingThread(lldb::tid_t thread_id);
 
-  NativeThreadLinuxSP AddThread(lldb::tid_t thread_id);
+  NativeThreadLinux &AddThread(lldb::tid_t thread_id);
 
   Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
 
