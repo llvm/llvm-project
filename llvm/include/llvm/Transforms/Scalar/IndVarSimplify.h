@@ -15,17 +15,20 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_INDVARSIMPLIFY_H
 #define LLVM_TRANSFORMS_SCALAR_INDVARSIMPLIFY_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+
+class Loop;
+class LPMUpdater;
 
 class IndVarSimplifyPass : public PassInfoMixin<IndVarSimplifyPass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_INDVARSIMPLIFY_H

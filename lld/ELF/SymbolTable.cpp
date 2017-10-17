@@ -240,13 +240,13 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
     Name = Name.take_front(Pos);
 
   auto P = Symtab.insert(
-      {CachedHashStringRef(Name), SymIndex{(int)SymVector.size(), false}});
+      {CachedHashStringRef(Name), SymIndex((int)SymVector.size(), false)});
   SymIndex &V = P.first->second;
   bool IsNew = P.second;
 
   if (V.Idx == -1) {
     IsNew = true;
-    V = SymIndex{(int)SymVector.size(), true};
+    V = SymIndex((int)SymVector.size(), true);
   }
 
   Symbol *Sym;

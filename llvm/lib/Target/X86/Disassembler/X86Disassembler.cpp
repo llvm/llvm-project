@@ -74,6 +74,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86DisassemblerDecoder.h"
 #include "llvm/MC/MCContext.h"
@@ -232,7 +233,24 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
     return Fail;
   } else {
     Size = InternalInstr.length;
-    return (!translateInstruction(Instr, InternalInstr, this)) ? Success : Fail;
+    bool Ret = translateInstruction(Instr, InternalInstr, this);
+    if (!Ret) {
+      unsigned Flags = X86::IP_NO_PREFIX;
+      if (InternalInstr.hasAdSize)
+        Flags |= X86::IP_HAS_AD_SIZE;
+      if (!InternalInstr.mandatoryPrefix) {
+        if (InternalInstr.hasOpSize)
+          Flags |= X86::IP_HAS_OP_SIZE;
+        if (InternalInstr.repeatPrefix == 0xf2)
+          Flags |= X86::IP_HAS_REPEAT_NE;
+        else if (InternalInstr.repeatPrefix == 0xf3 &&
+                 // It should not be 'pause' f3 90
+                 InternalInstr.opcode != 0x90)
+          Flags |= X86::IP_HAS_REPEAT;
+      }
+      Instr.setFlags(Flags);
+    }
+    return (!Ret) ? Success : Fail;
   }
 }
 
@@ -315,12 +333,12 @@ static bool translateSrcIndex(MCInst &mcInst, InternalInstruction &insn) {
   unsigned baseRegNo;
 
   if (insn.mode == MODE_64BIT)
-    baseRegNo = insn.prefixPresent[0x67] ? X86::ESI : X86::RSI;
+    baseRegNo = insn.hasAdSize ? X86::ESI : X86::RSI;
   else if (insn.mode == MODE_32BIT)
-    baseRegNo = insn.prefixPresent[0x67] ? X86::SI : X86::ESI;
+    baseRegNo = insn.hasAdSize ? X86::SI : X86::ESI;
   else {
     assert(insn.mode == MODE_16BIT);
-    baseRegNo = insn.prefixPresent[0x67] ? X86::ESI : X86::SI;
+    baseRegNo = insn.hasAdSize ? X86::ESI : X86::SI;
   }
   MCOperand baseReg = MCOperand::createReg(baseRegNo);
   mcInst.addOperand(baseReg);
@@ -340,12 +358,12 @@ static bool translateDstIndex(MCInst &mcInst, InternalInstruction &insn) {
   unsigned baseRegNo;
 
   if (insn.mode == MODE_64BIT)
-    baseRegNo = insn.prefixPresent[0x67] ? X86::EDI : X86::RDI;
+    baseRegNo = insn.hasAdSize ? X86::EDI : X86::RDI;
   else if (insn.mode == MODE_32BIT)
-    baseRegNo = insn.prefixPresent[0x67] ? X86::DI : X86::EDI;
+    baseRegNo = insn.hasAdSize ? X86::DI : X86::EDI;
   else {
     assert(insn.mode == MODE_16BIT);
-    baseRegNo = insn.prefixPresent[0x67] ? X86::EDI : X86::DI;
+    baseRegNo = insn.hasAdSize ? X86::EDI : X86::DI;
   }
   MCOperand baseReg = MCOperand::createReg(baseRegNo);
   mcInst.addOperand(baseReg);

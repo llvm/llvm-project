@@ -842,6 +842,10 @@ public:
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
 
+  ArrayRef<std::pair<unsigned, unsigned>> liveins() const {
+    return LiveIns;
+  }
+
   bool isLiveIn(unsigned Reg) const;
 
   /// getLiveInPhysReg - If VReg is a live-in virtual register, return the

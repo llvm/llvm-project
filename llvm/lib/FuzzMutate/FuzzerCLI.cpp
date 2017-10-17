@@ -47,7 +47,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
       Args.push_back("-O0");
     } else if (Opt.startswith("O")) {
       Args.push_back("-" + Opt.str());
-    } else if (Triple::getArchTypeForLLVMName(Opt)) {
+    } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {
       errs() << ExecName << ": Unknown option: " << Opt << ".\n";

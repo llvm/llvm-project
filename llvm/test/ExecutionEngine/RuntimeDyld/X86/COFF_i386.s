@@ -49,11 +49,6 @@ __imp__ExitProcess:
 	.long "_ExitProcess@4"			// IMAGE_REL_I386_DIR32
 # rtdyld-check: *{4}__imp__ExitProcess = 0xffffffff
 
-	.global string
-	.align 1
-string:
-	.asciz "Hello World!\n"
-
 	.global relocations
 relocations:
 rel5:
@@ -63,8 +58,8 @@ rel6:
 # rtdyld-check: *{2}rel6 = 1
 	.secidx __imp__OutputDebugStringA	// IMAGE_REL_I386_SECTION
 rel7:
-# rtdyld-check: *{4}rel7 = relocations - section_addr(COFF_i386.s.tmp.obj, .data)
-	.secrel32 relocations			// IMAGE_REL_I386_SECREL
+# rtdyld-check: *{4}rel7 = string - section_addr(COFF_i386.s.tmp.obj, .data)
+	.secrel32 string			// IMAGE_REL_I386_SECREL
 
 # Test that addends work.
 rel8:
@@ -79,3 +74,12 @@ rel10:
 rel11:
 # rtdyld-check: *{4}rel11 = string - section_addr(COFF_i386.s.tmp.obj, .data) + 1
 	.long string@SECREL32+1			// IMAGE_REL_I386_SECREL
+
+# We explicitly add padding to put string outside of the 16bit address space
+# (absolute and as an offset from .data), so that relocations involving
+# 32bit addresses / offsets are not accidentally truncated to 16 bits.
+	.space 65536
+	.global string
+	.align 1
+string:
+	.asciz "Hello World!\n"

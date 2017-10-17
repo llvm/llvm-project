@@ -1,0 +1,5 @@
+RUN: llvm-mc %S/Inputs/crlf.s -as-lex | FileCheck %s
+There should only be two end of statements.
+CHECK: EndOfStatement
+CHECK: EndOfStatement
+CHECK-NOT: EndOfStatement

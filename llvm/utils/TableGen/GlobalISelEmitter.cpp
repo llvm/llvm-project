@@ -978,26 +978,7 @@ public:
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
   Error addTypeCheckPredicate(const TypeSetByHwMode &VTy,
-                              bool OperandIsAPointer) {
-    if (!VTy.isMachineValueType())
-      return failedImport("unsupported typeset");
-
-    if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
-      addPredicate<PointerToAnyOperandMatcher>(0);
-      return Error::success();
-    }
-
-    auto OpTyOrNone = MVTToLLT(VTy.getMachineValueType().SimpleTy);
-    if (!OpTyOrNone)
-      return failedImport("unsupported type");
-
-    if (OperandIsAPointer)
-      addPredicate<PointerToAnyOperandMatcher>(
-          OpTyOrNone->get().getSizeInBits());
-    else
-      addPredicate<LLTOperandMatcher>(*OpTyOrNone);
-    return Error::success();
-  }
+                              bool OperandIsAPointer);
 
   /// Emit MatchTable opcodes to capture instructions into the MIs table.
   void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
@@ -1076,6 +1057,27 @@ PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
     return None;
   Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
   return static_cast<Kind *>(Predicates.back().get());
+}
+
+Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
+                                                     bool OperandIsAPointer) {
+  if (!VTy.isMachineValueType())
+    return failedImport("unsupported typeset");
+
+  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
+    addPredicate<PointerToAnyOperandMatcher>(0);
+    return Error::success();
+  }
+
+  auto OpTyOrNone = MVTToLLT(VTy.getMachineValueType().SimpleTy);
+  if (!OpTyOrNone)
+    return failedImport("unsupported type");
+
+  if (OperandIsAPointer)
+    addPredicate<PointerToAnyOperandMatcher>(OpTyOrNone->get().getSizeInBits());
+  else
+    addPredicate<LLTOperandMatcher>(*OpTyOrNone);
+  return Error::success();
 }
 
 unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {

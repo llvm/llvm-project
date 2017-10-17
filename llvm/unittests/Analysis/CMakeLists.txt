@@ -22,6 +22,7 @@ add_llvm_unittest(AnalysisTests
   OrderedBasicBlockTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
+  SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
   TBAATest.cpp
   UnrollAnalyzer.cpp
