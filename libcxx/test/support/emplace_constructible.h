@@ -7,7 +7,7 @@
 template <class T>
 struct EmplaceConstructible {
   T value;
-  explicit EmplaceConstructible(T value) : value(value) {}
+  explicit EmplaceConstructible(T xvalue) : value(xvalue) {}
   EmplaceConstructible(EmplaceConstructible const&) = delete;
 };
 
@@ -15,7 +15,7 @@ template <class T>
 struct EmplaceConstructibleAndMoveInsertable {
   int copied = 0;
   T value;
-  explicit EmplaceConstructibleAndMoveInsertable(T value) : value(value) {}
+  explicit EmplaceConstructibleAndMoveInsertable(T xvalue) : value(xvalue) {}
 
   EmplaceConstructibleAndMoveInsertable(
       EmplaceConstructibleAndMoveInsertable&& Other)
@@ -27,7 +27,7 @@ struct EmplaceConstructibleAndMoveable {
   int copied = 0;
   int assigned = 0;
   T value;
-  explicit EmplaceConstructibleAndMoveable(T value) noexcept : value(value) {}
+  explicit EmplaceConstructibleAndMoveable(T xvalue) noexcept : value(xvalue) {}
 
   EmplaceConstructibleAndMoveable(EmplaceConstructibleAndMoveable&& Other)
       noexcept : copied(Other.copied + 1),
