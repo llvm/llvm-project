@@ -1434,6 +1434,9 @@ LANGBUILTIN(__builtin_load_halff, "fhC*", "nc", ALL_OCLC_LANGUAGES)
 BUILTIN(__builtin_os_log_format_buffer_size, "zcC*.", "p:0:nut")
 BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
 
+// OpenMP 4.0
+LANGBUILTIN(omp_is_initial_device, "i", "nc", OMP_LANG)
+
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")
 
