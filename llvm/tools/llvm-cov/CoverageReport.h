@@ -47,6 +47,9 @@ public:
   /// Render file reports for every unique file in the coverage mapping.
   void renderFileReports(raw_ostream &OS) const;
 
+  /// Render file reports for the files specified in \p Files.
+  void renderFileReports(raw_ostream &OS, ArrayRef<std::string> Files) const;
+
   /// Render file reports for the files specified in \p Files and the functions
   /// in \p Filters.
   void renderFileReports(raw_ostream &OS, ArrayRef<std::string> Files,

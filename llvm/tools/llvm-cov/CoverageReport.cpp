@@ -364,7 +364,12 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
   std::vector<std::string> UniqueSourceFiles;
   for (StringRef SF : Coverage.getUniqueSourceFiles())
     UniqueSourceFiles.emplace_back(SF.str());
-  renderFileReports(OS, UniqueSourceFiles, CoverageFiltersMatchAll());
+  renderFileReports(OS, UniqueSourceFiles);
+}
+
+void CoverageReport::renderFileReports(
+    raw_ostream &OS, ArrayRef<std::string> Files) const {
+  renderFileReports(OS, Files, CoverageFiltersMatchAll());
 }
 
 void CoverageReport::renderFileReports(
