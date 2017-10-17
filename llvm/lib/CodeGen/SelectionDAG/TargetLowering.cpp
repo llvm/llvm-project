@@ -469,7 +469,7 @@ TargetLowering::SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
     }
     NewOps.push_back(User->getOperand(i));
   }
-  TLO.DAG.UpdateNodeOperands(User, NewOps);
+  User = TLO.DAG.UpdateNodeOperands(User, NewOps);
   // Op has less users now, so we may be able to perform additional combines
   // with it.
   DCI.AddToWorklist(Op.getNode());

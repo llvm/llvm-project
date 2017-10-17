@@ -1949,7 +1949,8 @@ public:
                                     TBAAAccessInfo *TBAAInfo = nullptr,
                                     bool forPointeeType = false);
   CharUnits getNaturalPointeeTypeAlignment(QualType T,
-                                           LValueBaseInfo *BaseInfo = nullptr);
+                                           LValueBaseInfo *BaseInfo = nullptr,
+                                           TBAAAccessInfo *TBAAInfo = nullptr);
 
   Address EmitLoadOfReference(Address Ref, const ReferenceType *RefTy,
                               LValueBaseInfo *BaseInfo = nullptr,
@@ -3091,13 +3092,6 @@ public:
 
   llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
                                 SourceLocation Loc, LValueBaseInfo BaseInfo,
-                                bool isNontemporal = false) {
-    return EmitLoadOfScalar(Addr, Volatile, Ty, Loc, BaseInfo,
-                            CGM.getTBAAAccessInfo(Ty), isNontemporal);
-  }
-
-  llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
-                                SourceLocation Loc, LValueBaseInfo BaseInfo,
                                 TBAAAccessInfo TBAAInfo,
                                 bool isNontemporal = false);
 
@@ -3115,13 +3109,6 @@ public:
                          AlignmentSource Source = AlignmentSource::Type,
                          bool isInit = false, bool isNontemporal = false) {
     EmitStoreOfScalar(Value, Addr, Volatile, Ty, LValueBaseInfo(Source, false),
-                      CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal);
-  }
-
-  void EmitStoreOfScalar(llvm::Value *Value, Address Addr,
-                         bool Volatile, QualType Ty, LValueBaseInfo BaseInfo,
-                         bool isInit = false, bool isNontemporal = false) {
-    EmitStoreOfScalar(Value, Addr, Volatile, Ty, BaseInfo,
                       CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal);
   }
 
@@ -3198,7 +3185,8 @@ public:
   RValue EmitRValueForField(LValue LV, const FieldDecl *FD, SourceLocation Loc);
 
   Address EmitArrayToPointerDecay(const Expr *Array,
-                                  LValueBaseInfo *BaseInfo = nullptr);
+                                  LValueBaseInfo *BaseInfo = nullptr,
+                                  TBAAAccessInfo *TBAAInfo = nullptr);
 
   class ConstantEmission {
     llvm::PointerIntPair<llvm::Constant*, 1, bool> ValueAndIsReference;
@@ -3920,7 +3908,8 @@ public:
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
   Address EmitPointerWithAlignment(const Expr *Addr,
-                                   LValueBaseInfo *BaseInfo = nullptr);
+                                   LValueBaseInfo *BaseInfo = nullptr,
+                                   TBAAAccessInfo *TBAAInfo = nullptr);
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 

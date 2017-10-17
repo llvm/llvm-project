@@ -1,4 +1,4 @@
-RUN: printf '\r\n\r\n' | llvm-mc -as-lex | FileCheck %s
+RUN: llvm-mc %S/Inputs/crlf.s -as-lex | FileCheck %s
 There should only be two end of statements.
 CHECK: EndOfStatement
 CHECK: EndOfStatement

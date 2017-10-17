@@ -758,6 +758,22 @@ struct CounterCoverageMappingBuilder
     handleFileExit(getEnd(S));
   }
 
+  /// Determine whether the final deferred region emitted in \p Body should be
+  /// discarded.
+  static bool discardFinalDeferredRegionInDecl(Stmt *Body) {
+    if (auto *CS = dyn_cast<CompoundStmt>(Body)) {
+      Stmt *LastStmt = CS->body_back();
+      if (auto *IfElse = dyn_cast<IfStmt>(LastStmt)) {
+        if (auto *Else = dyn_cast_or_null<CompoundStmt>(IfElse->getElse()))
+          LastStmt = Else->body_back();
+        else
+          LastStmt = IfElse->getElse();
+      }
+      return dyn_cast_or_null<ReturnStmt>(LastStmt);
+    }
+    return false;
+  }
+
   void VisitDecl(const Decl *D) {
     assert(!DeferredRegion && "Deferred region never completed");
 
@@ -770,14 +786,14 @@ struct CounterCoverageMappingBuilder
     Counter ExitCount = propagateCounts(getRegionCounter(Body), Body);
     assert(RegionStack.empty() && "Regions entered but never exited");
 
-    // Special case: if the last statement is a return, throw away the
-    // deferred region. This allows the closing brace to have a count.
-    if (auto *CS = dyn_cast_or_null<CompoundStmt>(Body))
-      if (dyn_cast_or_null<ReturnStmt>(CS->body_back()))
+    if (DeferredRegion) {
+      // Complete (or discard) any deferred regions introduced by the last
+      // statement.
+      if (discardFinalDeferredRegionInDecl(Body))
         DeferredRegion = None;
-
-    // Complete any deferred regions introduced by the last statement.
-    popRegions(completeDeferred(ExitCount, getEnd(Body)));
+      else
+        popRegions(completeDeferred(ExitCount, getEnd(Body)));
+    }
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {
@@ -1083,16 +1099,18 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
-    extendRegion(E);
-    Visit(E->getLHS());
+    extendRegion(E->getLHS());
+    propagateCounts(getRegion().getCounter(), E->getLHS());
+    handleFileExit(getEnd(E->getLHS()));
 
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
-    extendRegion(E);
-    Visit(E->getLHS());
+    extendRegion(E->getLHS());
+    propagateCounts(getRegion().getCounter(), E->getLHS());
+    handleFileExit(getEnd(E->getLHS()));
 
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());

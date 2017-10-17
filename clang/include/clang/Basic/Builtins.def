@@ -1008,9 +1008,9 @@ LIBBUILTIN(modf, "ddd*", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(modff, "fff*", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(modfl, "LdLdLd*", "fn", "math.h", ALL_LANGUAGES)
 
-LIBBUILTIN(nan,  "dcC*", "fn", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(nanf, "fcC*", "fn", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(nanl, "LdcC*", "fn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(nan,  "dcC*", "fUn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(nanf, "fcC*", "fUn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(nanl, "LdcC*", "fUn", "math.h", ALL_LANGUAGES)
 
 LIBBUILTIN(pow, "ddd", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(powf, "fff", "fne", "math.h", ALL_LANGUAGES)

@@ -18,7 +18,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -28,7 +27,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -158,11 +156,7 @@ private:
   AssumptionCache *AC;
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE;
-  // Maps a block to the topmost instruction with implicit control flow in it.
-  DenseMap<const BasicBlock *, const Instruction *>
-      FirstImplicitControlFlowInsts;
 
-  OrderedInstructions *OI;
   ValueTable VN;
 
   /// A mapping from value numbers to lists of Value*'s that
@@ -274,7 +268,6 @@ private:
                                  BasicBlock *Curr, unsigned int ValNo);
   Value *findLeader(const BasicBlock *BB, uint32_t num);
   void cleanupGlobalSets();
-  void fillImplicitControlFlowInfo(ReversePostOrderTraversal<Function *> &RPOT);
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);

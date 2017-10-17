@@ -209,7 +209,7 @@ public:
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_SECREL Value: " << RE.Addend
                    << '\n');
-      writeBytesUnaligned(RE.Addend, Target, 2);
+      writeBytesUnaligned(RE.Addend, Target, 4);
       break;
     default:
       llvm_unreachable("unsupported relocation type");

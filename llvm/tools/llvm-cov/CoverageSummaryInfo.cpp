@@ -43,23 +43,15 @@ LineCoverageStats::LineCoverageStats(
   if (!Mapped)
     return;
 
-  // Pick the max count among regions which start and end on this line, to
-  // avoid erroneously using the wrapped count, and to avoid picking region
-  // counts which come from deferred regions.
-  if (LineSegments.size() > 1) {
-    for (unsigned I = 0; I < LineSegments.size() - 1; ++I) {
-      if (!LineSegments[I]->IsGapRegion)
-        ExecutionCount = std::max(ExecutionCount, LineSegments[I]->Count);
-    }
+  // Pick the max count from the non-gap, region entry segments. If there
+  // aren't any, use the wrapped count.
+  if (!MinRegionCount) {
+    ExecutionCount = WrappedSegment->Count;
     return;
   }
-
-  // If a non-gap region starts here, use its count. Otherwise use the wrapped
-  // count.
-  if (MinRegionCount == 1)
-    ExecutionCount = LineSegments[0]->Count;
-  else
-    ExecutionCount = WrappedSegment->Count;
+  for (const auto *LS : LineSegments)
+    if (isStartOfRegion(LS))
+      ExecutionCount = std::max(ExecutionCount, LS->Count);
 }
 
 LineCoverageIterator &LineCoverageIterator::operator++() {
