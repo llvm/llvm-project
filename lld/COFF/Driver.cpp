@@ -113,16 +113,15 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
                              bool WholeArchive) {
   MemoryBufferRef MBRef = takeBuffer(std::move(MB));
+  FilePaths.push_back(MBRef.getBufferIdentifier());
 
   // File type is detected by contents, not by file extension.
-  file_magic Magic = identify_magic(MBRef.getBuffer());
-  if (Magic == file_magic::windows_resource) {
+  switch (identify_magic(MBRef.getBuffer())) {
+  case file_magic::windows_resource:
     Resources.push_back(MBRef);
-    return;
-  }
+    break;
 
-  FilePaths.push_back(MBRef.getBufferIdentifier());
-  if (Magic == file_magic::archive) {
+  case file_magic::archive:
     if (WholeArchive) {
       std::unique_ptr<Archive> File =
           check(Archive::create(MBRef),
@@ -133,19 +132,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
       return;
     }
     Symtab->addFile(make<ArchiveFile>(MBRef));
-    return;
-  }
+    break;
 
-  if (Magic == file_magic::bitcode) {
+  case file_magic::bitcode:
     Symtab->addFile(make<BitcodeFile>(MBRef));
-    return;
-  }
+    break;
 
-  if (Magic == file_magic::coff_cl_gl_object)
+  case file_magic::coff_cl_gl_object:
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
-  else
+    break;
+
+  default:
     Symtab->addFile(make<ObjFile>(MBRef));
+    break;
+  }
 }
 
 void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
@@ -544,6 +545,63 @@ static void parseModuleDefs(StringRef Path) {
     E2.Private = E1.Private;
     E2.Constant = E1.Constant;
     Config->Exports.push_back(E2);
+  }
+}
+
+// Get a set of symbols not to automatically export
+// when exporting all global symbols for MinGW.
+static StringSet<> getExportExcludeSymbols() {
+  if (Config->Machine == I386)
+    return {
+        "__NULL_IMPORT_DESCRIPTOR",
+        "__pei386_runtime_relocator",
+        "_do_pseudo_reloc",
+        "_impure_ptr",
+        "__impure_ptr",
+        "__fmode",
+        "_environ",
+        "___dso_handle",
+        // These are the MinGW names that differ from the standard
+        // ones (lacking an extra underscore).
+        "_DllMain@12",
+        "_DllEntryPoint@12",
+        "_DllMainCRTStartup@12",
+    };
+
+  return {
+      "_NULL_IMPORT_DESCRIPTOR",
+      "_pei386_runtime_relocator",
+      "do_pseudo_reloc",
+      "impure_ptr",
+      "_impure_ptr",
+      "_fmode",
+      "environ",
+      "__dso_handle",
+      // These are the MinGW names that differ from the standard
+      // ones (lacking an extra underscore).
+      "DllMain",
+      "DllEntryPoint",
+      "DllMainCRTStartup",
+  };
+}
+
+// This is MinGW specific.
+static void writeDefFile(StringRef Name) {
+  std::error_code EC;
+  raw_fd_ostream OS(Name, EC, sys::fs::F_None);
+  if (EC)
+    fatal("cannot open " + Name + ": " + EC.message());
+
+  OS << "EXPORTS\n";
+  for (Export &E : Config->Exports) {
+    OS << "    " << E.ExportName << " "
+       << "@" << E.Ordinal;
+    if (auto *Def = dyn_cast_or_null<Defined>(E.Sym)) {
+      if (Def && Def->getChunk() &&
+          !(Def->getChunk()->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+        OS << " DATA";
+    }
+    OS << "\n";
   }
 }
 
@@ -1021,7 +1079,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // WindowsResource to convert resource files to a regular COFF file,
   // then link the resulting file normally.
   if (!Resources.empty())
-    addBuffer(convertResToCOFF(Resources), false);
+    Symtab->addFile(make<ObjFile>(convertResToCOFF(Resources)));
 
   if (Tar)
     Tar->append("response.txt",
@@ -1197,6 +1255,25 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       return;
   }
 
+  // In MinGW, all symbols are automatically exported if no symbols
+  // are chosen to be exported.
+  if (Config->DLL && ((Config->MinGW && Config->Exports.empty()) ||
+                      Args.hasArg(OPT_export_all_symbols))) {
+    StringSet<> ExcludeSymbols = getExportExcludeSymbols();
+
+    Symtab->forEachSymbol([=](Symbol *S) {
+      auto *Def = dyn_cast<Defined>(S->body());
+      if (!Def || !Def->isLive() || !Def->getChunk())
+        return;
+      if (ExcludeSymbols.count(Def->getName()))
+        return;
+      Export E;
+      E.Name = Def->getName();
+      E.Sym = Def;
+      Config->Exports.push_back(E);
+    });
+  }
+
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file.
   if (!Config->Exports.empty() || Config->DLL) {
@@ -1204,6 +1281,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     createImportLibrary(/*AsLib=*/false);
     assignExportOrdinals();
   }
+
+  // Handle /output-def (MinGW specific).
+  if (auto *Arg = Args.getLastArg(OPT_output_def))
+    writeDefFile(Arg->getValue());
 
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {

@@ -57,7 +57,6 @@ public:
   virtual bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const;
 
   virtual RelExpr getRelExpr(RelType Type, const SymbolBody &S,
-                             const InputFile &File,
                              const uint8_t *Loc) const = 0;
 
   virtual void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const = 0;

@@ -13,7 +13,7 @@
 
 #include "Filesystem.h"
 #include "Config.h"
-#include "Threads.h"
+#include "lld/Common/Threads.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -38,7 +38,7 @@ using namespace lld::elf;
 // This function spawns a background thread to call unlink.
 // The calling thread returns almost immediately.
 void elf::unlinkAsync(StringRef Path) {
-  if (!Config->Threads || !sys::fs::exists(Config->OutputFile) ||
+  if (!ThreadsEnabled || !sys::fs::exists(Config->OutputFile) ||
       !sys::fs::is_regular_file(Config->OutputFile))
     return;
 
