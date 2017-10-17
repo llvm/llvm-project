@@ -4878,6 +4878,23 @@ Example (assuming 64-bit pointers):
     !0 = !{ i64 0, i64 256 }
     !1 = !{ i64 -1, i64 -1 }
 
+'``callees``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^
+
+``callees`` metadata may be attached to indirect call sites. If ``callees``
+metadata is attached to a call site, and any callee is not among the set of
+functions provided by the metadata, the behavior is undefined. The intent of
+this metadata is to facilitate optimizations such as indirect-call promotion.
+For example, in the code below, the call instruction may only target the
+``add`` or ``sub`` functions:
+
+.. code-block:: llvm
+
+    %result = call i64 %binop(i64 %x, i64 %y), !callees !0
+
+    ...
+    !0 = !{i64 (i64, i64)* @add, i64 (i64, i64)* @sub}
+
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

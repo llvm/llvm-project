@@ -32,7 +32,7 @@ public:
 } // namespace
 
 AMDGPU::AMDGPU() {
-  RelativeRel = R_AMDGPU_REL64;
+  RelativeRel = R_AMDGPU_RELATIVE64;
   GotRel = R_AMDGPU_ABS64;
   GotEntrySize = 8;
 }

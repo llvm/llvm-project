@@ -1,4 +1,4 @@
-//===-- LoopIdiomRecognize.cpp - Loop idiom recognition -------------------===//
+//===- LoopIdiomRecognize.cpp - Loop idiom recognition --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -38,32 +38,64 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-idiom"
@@ -80,7 +112,7 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
 namespace {
 
 class LoopIdiomRecognize {
-  Loop *CurLoop;
+  Loop *CurLoop = nullptr;
   AliasAnalysis *AA;
   DominatorTree *DT;
   LoopInfo *LI;
@@ -96,20 +128,21 @@ public:
                               TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI,
                               const DataLayout *DL)
-      : CurLoop(nullptr), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI),
-        DL(DL) {}
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL) {}
 
   bool runOnLoop(Loop *L);
 
 private:
-  typedef SmallVector<StoreInst *, 8> StoreList;
-  typedef MapVector<Value *, StoreList> StoreListMap;
+  using StoreList = SmallVector<StoreInst *, 8>;
+  using StoreListMap = MapVector<Value *, StoreList>;
+
   StoreListMap StoreRefsForMemset;
   StoreListMap StoreRefsForMemsetPattern;
   StoreList StoreRefsForMemcpy;
   bool HasMemset;
   bool HasMemsetPattern;
   bool HasMemcpy;
+
   /// Return code for isLegalStore()
   enum LegalStoreKind {
     None = 0,
@@ -164,6 +197,7 @@ private:
 class LoopIdiomRecognizeLegacyPass : public LoopPass {
 public:
   static char ID;
+
   explicit LoopIdiomRecognizeLegacyPass() : LoopPass(ID) {
     initializeLoopIdiomRecognizeLegacyPassPass(
         *PassRegistry::getPassRegistry());
@@ -190,14 +224,16 @@ public:
 
   /// This transformation requires natural loop information & requires that
   /// loop preheaders be inserted into the CFG.
-  ///
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
+
+char LoopIdiomRecognizeLegacyPass::ID = 0;
 
 PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
@@ -211,7 +247,6 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   return getLoopPassPreservedAnalyses();
 }
 
-char LoopIdiomRecognizeLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopIdiomRecognizeLegacyPass, "loop-idiom",
                       "Recognize loop idioms", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
@@ -354,7 +389,6 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
 
 LoopIdiomRecognize::LegalStoreKind
 LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
-
   // Don't touch volatile stores.
   if (SI->isVolatile())
     return LegalStoreKind::None;
@@ -1488,7 +1522,7 @@ static CallInst *createCTLZIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 ///   PhiX = PHI [InitX, DefX]
 ///   CntInst = CntPhi + 1
 ///   DefX = PhiX >> 1
-//    LOOP_BODY
+///   LOOP_BODY
 ///   Br: loop if (DefX != 0)
 /// Use(CntPhi) or Use(CntInst)
 ///

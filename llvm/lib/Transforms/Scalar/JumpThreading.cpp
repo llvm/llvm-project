@@ -648,8 +648,6 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
     return true;
   }
 
-  PredValueInfoTy LHSVals, RHSVals;
-
   // Handle some boolean conditions.
   if (I->getType()->getPrimitiveSizeInBits() == 1) {
     assert(Preference == WantInteger && "One-bit non-integer type?");
@@ -657,6 +655,8 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessors(
     // X & false -> false
     if (I->getOpcode() == Instruction::Or ||
         I->getOpcode() == Instruction::And) {
+      PredValueInfoTy LHSVals, RHSVals;
+
       ComputeValueKnownInPredecessors(I->getOperand(0), BB, LHSVals,
                                       WantInteger, CxtI);
       ComputeValueKnownInPredecessors(I->getOperand(1), BB, RHSVals,

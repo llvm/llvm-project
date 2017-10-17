@@ -29,7 +29,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1263,10 +1262,6 @@ private:
 
     /// Invalidate this result and free associated memory.
     void clear();
-
-    /// Insert all loops referred to by this BackedgeTakenCount into \p Result.
-    void findUsedLoops(ScalarEvolution &SE,
-                       SmallPtrSetImpl<const Loop *> &Result) const;
   };
 
   /// Cache the backedge-taken count of the loops for this function as they
@@ -1776,20 +1771,14 @@ private:
   /// Find all of the loops transitively used in \p S, and update \c LoopUsers
   /// accordingly.
   void addToLoopUseLists(const SCEV *S);
-  void addToLoopUseLists(const BackedgeTakenInfo &BTI, const Loop *L);
 
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
 
-  /// This maps loops to a list of entities that (transitively) use said loop.
-  /// A SCEV expression in the vector corresponding to a loop denotes that the
-  /// SCEV expression transitively uses said loop.  A loop (LA) in the vector
-  /// corresponding to another loop (LB) denotes that LB is used in one of the
-  /// cached trip counts for LA.
-  DenseMap<const Loop *,
-           SmallVector<PointerUnion<const SCEV *, const Loop *>, 4>>
-      LoopUsers;
+  /// This maps loops to a list of SCEV expressions that (transitively) use said
+  /// loop.
+  DenseMap<const Loop *, SmallVector<const SCEV *, 4>> LoopUsers;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.

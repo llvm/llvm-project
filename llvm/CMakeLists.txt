@@ -804,7 +804,7 @@ endif()
 if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
   # On FreeBSD, /usr/local/* is not used by default. In order to build LLVM
   # with libxml2, iconv.h, etc., we must add /usr/local paths.
-  include_directories("/usr/local/include")
+  include_directories(SYSTEM "/usr/local/include")
   link_directories("/usr/local/lib")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
 

@@ -841,8 +841,9 @@ public:
   livein_iterator livein_begin() const { return LiveIns.begin(); }
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
-  iterator_range<livein_iterator> liveins() const {
-    return make_range(livein_begin(), livein_end());
+
+  ArrayRef<std::pair<unsigned, unsigned>> liveins() const {
+    return LiveIns;
   }
 
   bool isLiveIn(unsigned Reg) const;
