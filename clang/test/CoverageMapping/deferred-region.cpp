@@ -31,9 +31,26 @@ void baz() { // CHECK: [[@LINE]]:12 -> [[@LINE+2]]:2
 // CHECK-LABEL: _Z3mazv:
 void maz() {
   if (true)
-    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> 36:3 = (#0 - #1)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+2]]:3 = (#0 - #1)
 
   return; // CHECK-NOT: Gap
+}
+
+// CHECK-LABEL: _Z4maazv:
+void maaz() {
+  if (true)
+    return; // CHECK: Gap,File 0, [[@LINE]]:11
+  else
+    return; // CHECK-NOT: Gap,File 0, [[@LINE]]
+}
+
+// CHECK-LABEL: _Z5maaazv:
+void maaaz() {
+  if (true) {
+    return;
+  } else {  // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE]]:10
+    return; // CHECK-NOT: Gap,File 0, [[@LINE]]
+  }
 }
 
 // CHECK-LABEL: _Z3bari:
@@ -158,6 +175,9 @@ int main() {
   foo(1);
   fooo(0);
   fooo(1);
+  maz();
+  maaz();
+  maaaz();
   baz();
   bar(0);
   bar(1);
