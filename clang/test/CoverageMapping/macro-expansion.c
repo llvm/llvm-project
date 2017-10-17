@@ -23,10 +23,12 @@
 // CHECK-NEXT: Expansion,File 4, [[@LINE+2]]:20 -> [[@LINE+2]]:22 = (#0 + #8)
 // CHECK-NEXT: File 4, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = (#0 + #8)
 #define M3(x) do { M2(x); } while (0)
-// CHECK-NEXT: File 5, [[@LINE+2]]:15 -> [[@LINE+2]]:27 = #0
+// CHECK-NEXT: File 5, [[@LINE+3]]:15 -> [[@LINE+3]]:27 = #0
+// CHECK-NEXT: File 5, [[@LINE+2]]:16 -> [[@LINE+2]]:19 = #0
 // CHECK-NEXT: File 5, [[@LINE+1]]:23 -> [[@LINE+1]]:26 = #12
 #define M4(x) ((x) && (x))
-// CHECK-NEXT: File 6, [[@LINE+2]]:15 -> [[@LINE+2]]:27 = #0
+// CHECK-NEXT: File 6, [[@LINE+3]]:15 -> [[@LINE+3]]:27 = #0
+// CHECK-NEXT: File 6, [[@LINE+2]]:16 -> [[@LINE+2]]:19 = #0
 // CHECK-NEXT: File 6, [[@LINE+1]]:23 -> [[@LINE+1]]:26 = #14
 #define M5(x) ((x) || (x))
 // CHECK-NEXT: File 7, [[@LINE+1]]:15 -> [[@LINE+1]]:26 = #0
