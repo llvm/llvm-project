@@ -19,7 +19,7 @@ namespace llgs_tests {
 
 Expected<ProcessInfo> ProcessInfo::Create(StringRef response) {
   ProcessInfo process_info;
-  auto elements_or_error = SplitPairList("ProcessInfo", response);
+  auto elements_or_error = SplitUniquePairList("ProcessInfo", response);
   if (!elements_or_error)
     return elements_or_error.takeError();
 
@@ -140,21 +140,36 @@ const U64Map &StopReply::GetThreadPcs() const { return m_thread_pcs; }
 
 Expected<StopReply> StopReply::Create(StringRef response,
                                       llvm::support::endianness endian) {
+  if (response.size() < 3 || !response.consume_front("T"))
+    return make_parsing_error("StopReply: Invalid packet");
+
   StopReply stop_reply;
 
-  auto elements_or_error = SplitPairList("StopReply", response);
-  if (auto split_error = elements_or_error.takeError()) {
-    return std::move(split_error);
-  }
+  StringRef signal = response.take_front(2);
+  response = response.drop_front(2);
+  if (!llvm::to_integer(signal, stop_reply.m_signal, 16))
+    return make_parsing_error("StopReply: stop signal");
 
-  auto elements = *elements_or_error;
-  stop_reply.m_name = elements["name"];
-  stop_reply.m_reason = elements["reason"];
+  auto elements = SplitPairList(response);
+  for (StringRef field :
+       {"name", "reason", "thread", "threads", "thread-pcs"}) {
+    // This will insert an empty field if there is none. In the future, we
+    // should probably differentiate between these fields not being present and
+    // them being empty, but right now no tests depends on this.
+    if (elements.insert({field, {""}}).first->second.size() != 1)
+      return make_parsing_error(
+          "StopReply: got multiple responses for the {0} field", field);
+  }
+  stop_reply.m_name = elements["name"][0];
+  stop_reply.m_reason = elements["reason"][0];
+
+  if (!llvm::to_integer(elements["thread"][0], stop_reply.m_thread, 16))
+    return make_parsing_error("StopReply: thread");
 
   SmallVector<StringRef, 20> threads;
   SmallVector<StringRef, 20> pcs;
-  elements["threads"].split(threads, ',');
-  elements["thread-pcs"].split(pcs, ',');
+  elements["threads"][0].split(threads, ',');
+  elements["thread-pcs"][0].split(pcs, ',');
   if (threads.size() != pcs.size())
     return make_parsing_error("StopReply: thread/PC count mismatch");
 
@@ -171,17 +186,16 @@ Expected<StopReply> StopReply::Create(StringRef response,
 
   for (auto i = elements.begin(); i != elements.end(); i++) {
     StringRef key = i->getKey();
-    StringRef val = i->getValue();
-    if (key.size() >= 9 && key[0] == 'T' && key.substr(3, 6) == "thread") {
-      if (val.getAsInteger(16, stop_reply.m_thread))
-        return make_parsing_error("StopReply: thread id");
-      if (key.substr(1, 2).getAsInteger(16, stop_reply.m_signal))
-        return make_parsing_error("StopReply: stop signal");
-    } else if (key.size() == 2) {
+    const auto &val = i->getValue();
+    if (key.size() == 2) {
       unsigned int reg;
-      if (!key.getAsInteger(16, reg)) {
-        stop_reply.m_registers[reg] = val.str();
-      }
+      if (key.getAsInteger(16, reg))
+        continue;
+      if (val.size() != 1)
+        return make_parsing_error(
+            "StopReply: multiple entries for register field [{0:x}]", reg);
+
+      stop_reply.m_registers[reg] = val[0].str();
     }
   }
 
@@ -189,7 +203,8 @@ Expected<StopReply> StopReply::Create(StringRef response,
 }
 
 //====== Globals ===============================================================
-Expected<StringMap<StringRef>> SplitPairList(StringRef caller, StringRef str) {
+Expected<StringMap<StringRef>> SplitUniquePairList(StringRef caller,
+                                                   StringRef str) {
   SmallVector<StringRef, 20> elements;
   str.split(elements, ';');
 
@@ -199,7 +214,20 @@ Expected<StringMap<StringRef>> SplitPairList(StringRef caller, StringRef str) {
     if (pairs.count(pair.first))
       return make_parsing_error("{0}: Duplicate Key: {1}", caller, pair.first);
 
-    pairs.insert(s.split(':'));
+    pairs.insert(pair);
+  }
+
+  return pairs;
+}
+
+StringMap<SmallVector<StringRef, 2>> SplitPairList(StringRef str) {
+  SmallVector<StringRef, 20> elements;
+  str.split(elements, ';');
+
+  StringMap<SmallVector<StringRef, 2>> pairs;
+  for (StringRef s : elements) {
+    std::pair<StringRef, StringRef> pair = s.split(':');
+    pairs[pair.first].push_back(pair.second);
   }
 
   return pairs;

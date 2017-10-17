@@ -5439,7 +5439,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // First, transform the values such that they start at zero and ascend.
   int64_t Base = Values[0];
   for (auto &V : Values)
-    V -= Base;
+    V -= (uint64_t)(Base);
 
   // Now we have signed numbers that have been shifted so that, given enough
   // precision, there are no negative values. Since the rest of the transform

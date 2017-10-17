@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -verify %s
 
 void f(int n) {
   switch (n) {

@@ -338,6 +338,27 @@ public:
     return true;
   }
 
+  /// ConsumeAnyToken - Dispatch to the right Consume* method based on the
+  /// current token type.  This should only be used in cases where the type of
+  /// the token really isn't known, e.g. in error recovery.
+  SourceLocation ConsumeAnyToken(bool ConsumeCodeCompletionTok = false) {
+    if (isTokenParen())
+      return ConsumeParen();
+    if (isTokenBracket())
+      return ConsumeBracket();
+    if (isTokenBrace())
+      return ConsumeBrace();
+    if (isTokenStringLiteral())
+      return ConsumeStringToken();
+    if (Tok.is(tok::code_completion))
+      return ConsumeCodeCompletionTok ? ConsumeCodeCompletionToken()
+                                      : handleUnexpectedCodeCompletionToken();
+    if (Tok.isAnnotation())
+      return ConsumeAnnotationToken();
+    return ConsumeToken();
+  }
+
+
   SourceLocation getEndOfPreviousToken() {
     return PP.getLocForEndOfToken(PrevTokLocation);
   }
@@ -386,26 +407,6 @@ private:
       PP.EnterToken(Consumed);
       PP.Lex(Tok);
       PP.EnterToken(Next);
-  }
-
-  /// ConsumeAnyToken - Dispatch to the right Consume* method based on the
-  /// current token type.  This should only be used in cases where the type of
-  /// the token really isn't known, e.g. in error recovery.
-  SourceLocation ConsumeAnyToken(bool ConsumeCodeCompletionTok = false) {
-    if (isTokenParen())
-      return ConsumeParen();
-    if (isTokenBracket())
-      return ConsumeBracket();
-    if (isTokenBrace())
-      return ConsumeBrace();
-    if (isTokenStringLiteral())
-      return ConsumeStringToken();
-    if (Tok.is(tok::code_completion))
-      return ConsumeCodeCompletionTok ? ConsumeCodeCompletionToken()
-                                      : handleUnexpectedCodeCompletionToken();
-    if (Tok.isAnnotation())
-      return ConsumeAnnotationToken();
-    return ConsumeToken();
   }
 
   SourceLocation ConsumeAnnotationToken() {
