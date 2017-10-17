@@ -89,7 +89,10 @@ private:
 
 // Common functions for parsing packet data.
 llvm::Expected<llvm::StringMap<llvm::StringRef>>
-SplitPairList(llvm::StringRef caller, llvm::StringRef s);
+SplitUniquePairList(llvm::StringRef caller, llvm::StringRef s);
+
+llvm::StringMap<llvm::SmallVector<llvm::StringRef, 2>>
+SplitPairList(llvm::StringRef s);
 
 template <typename... Args>
 llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {

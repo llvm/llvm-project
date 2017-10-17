@@ -47,8 +47,8 @@ struct EmplaceConstructibleMoveableAndAssignable {
   int copied = 0;
   int assigned = 0;
   T value;
-  explicit EmplaceConstructibleMoveableAndAssignable(T value) noexcept
-      : value(value) {}
+  explicit EmplaceConstructibleMoveableAndAssignable(T xvalue) noexcept
+      : value(xvalue) {}
 
   EmplaceConstructibleMoveableAndAssignable(
       EmplaceConstructibleMoveableAndAssignable&& Other) noexcept

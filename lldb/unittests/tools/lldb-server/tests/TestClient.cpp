@@ -15,6 +15,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
 #include <future>
@@ -28,6 +29,12 @@ using namespace llvm;
 namespace llgs_tests {
 void TestClient::Initialize() { HostInfo::Initialize(); }
 
+bool TestClient::IsDebugServer() {
+  return sys::path::filename(LLDB_SERVER).contains("debugserver");
+}
+
+bool TestClient::IsLldbServer() { return !IsDebugServer(); }
+
 TestClient::TestClient(const std::string &test_name,
                        const std::string &test_case_name)
     : m_test_name(test_name), m_test_case_name(test_case_name),
@@ -39,13 +46,16 @@ bool TestClient::StartDebugger() {
   const ArchSpec &arch_spec = HostInfo::GetArchitecture();
   Args args;
   args.AppendArgument(LLDB_SERVER);
-  args.AppendArgument("gdbserver");
-  args.AppendArgument("--log-channels=gdb-remote packets");
+  if (IsLldbServer()) {
+    args.AppendArgument("gdbserver");
+    args.AppendArgument("--log-channels=gdb-remote packets");
+  } else {
+    args.AppendArgument("--log-flags=0x800000");
+  }
   args.AppendArgument("--reverse-connect");
   std::string log_file_name = GenerateLogFileName(arch_spec);
-  if (log_file_name.size()) {
+  if (log_file_name.size())
     args.AppendArgument("--log-file=" + log_file_name);
-  }
 
   Status error;
   TCPSocket listen_socket(true, false);
@@ -83,7 +93,11 @@ bool TestClient::StartDebugger() {
 
 bool TestClient::StopDebugger() {
   std::string response;
-  return SendMessage("k", response, PacketResult::ErrorDisconnected);
+  // Debugserver (non-conformingly?) sends a reply to the k packet instead of
+  // simply closing the connection.
+  PacketResult result =
+      IsDebugServer() ? PacketResult::Success : PacketResult::ErrorDisconnected;
+  return SendMessage("k", response, result);
 }
 
 bool TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
@@ -192,7 +206,7 @@ unsigned int TestClient::GetPcRegisterId() {
       return UINT_MAX;
     }
 
-    auto elements_or_error = SplitPairList("GetPcRegisterId", response);
+    auto elements_or_error = SplitUniquePairList("GetPcRegisterId", response);
     if (auto split_error = elements_or_error.takeError()) {
       GTEST_LOG_(ERROR) << "GetPcRegisterId: Error splitting response: "
                         << response;

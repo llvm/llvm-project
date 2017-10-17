@@ -22,6 +22,9 @@ class TestClient
     : public lldb_private::process_gdb_remote::GDBRemoteCommunicationClient {
 public:
   static void Initialize();
+  static bool IsDebugServer();
+  static bool IsLldbServer();
+
   TestClient(const std::string &test_name, const std::string &test_case_name);
   virtual ~TestClient();
   LLVM_NODISCARD bool StartDebugger();

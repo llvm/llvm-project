@@ -7,7 +7,12 @@ endfunction()
 
 add_lldb_test_executable(thread_inferior inferior/thread_inferior.cpp)
 
-add_definitions(-DLLDB_SERVER="$<TARGET_FILE:lldb-server>")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_definitions(-DLLDB_SERVER="$<TARGET_FILE:debugserver>")
+else()
+  add_definitions(-DLLDB_SERVER="$<TARGET_FILE:lldb-server>")
+endif()
+
 add_definitions(-DTHREAD_INFERIOR="${CMAKE_CURRENT_BINARY_DIR}/thread_inferior")
 add_subdirectory(tests)
 add_dependencies(LLDBServerTests thread_inferior)
