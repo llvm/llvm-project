@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -generate-gnu-dwarf-pub-sections -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 
 ; Generated from:
 
@@ -17,7 +17,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 191846) (llvm/trunk 191866)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !5, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 191846) (llvm/trunk 191866)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !5, globals: !2, imports: !2, gnuPubnames: true)
 !1 = !DIFile(filename: "foo.c", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
