@@ -2998,7 +2998,7 @@ static bool isArgVariadic(const Record &R, StringRef AttrName) {
   return createArgument(R, AttrName)->isVariadic();
 }
 
-static void emitArgInfo(const Record &R, std::stringstream &OS) {
+static void emitArgInfo(const Record &R, raw_ostream &OS) {
   // This function will count the number of arguments specified for the
   // attribute and emit the number of required arguments followed by the
   // number of optional arguments.
@@ -3471,7 +3471,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // another mapping. At the same time, generate the AttrInfoMap object
   // contents. Due to the reliance on generated code, use separate streams so
   // that code will not be interleaved.
-  std::stringstream SS;
+  std::string Buffer;
+  raw_string_ostream SS {Buffer};
   for (auto I = Attrs.begin(), E = Attrs.end(); I != E; ++I) {
     // TODO: If the attribute's kind appears in the list of duplicates, that is
     // because it is a target-specific attribute that appears multiple times.

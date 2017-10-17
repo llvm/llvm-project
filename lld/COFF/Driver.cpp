@@ -113,16 +113,15 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
                              bool WholeArchive) {
   MemoryBufferRef MBRef = takeBuffer(std::move(MB));
+  FilePaths.push_back(MBRef.getBufferIdentifier());
 
   // File type is detected by contents, not by file extension.
-  file_magic Magic = identify_magic(MBRef.getBuffer());
-  if (Magic == file_magic::windows_resource) {
+  switch (identify_magic(MBRef.getBuffer())) {
+  case file_magic::windows_resource:
     Resources.push_back(MBRef);
-    return;
-  }
+    break;
 
-  FilePaths.push_back(MBRef.getBufferIdentifier());
-  if (Magic == file_magic::archive) {
+  case file_magic::archive:
     if (WholeArchive) {
       std::unique_ptr<Archive> File =
           check(Archive::create(MBRef),
@@ -133,19 +132,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
       return;
     }
     Symtab->addFile(make<ArchiveFile>(MBRef));
-    return;
-  }
+    break;
 
-  if (Magic == file_magic::bitcode) {
+  case file_magic::bitcode:
     Symtab->addFile(make<BitcodeFile>(MBRef));
-    return;
-  }
+    break;
 
-  if (Magic == file_magic::coff_cl_gl_object)
+  case file_magic::coff_cl_gl_object:
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
-  else
+    break;
+
+  default:
     Symtab->addFile(make<ObjFile>(MBRef));
+    break;
+  }
 }
 
 void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
@@ -1078,7 +1079,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // WindowsResource to convert resource files to a regular COFF file,
   // then link the resulting file normally.
   if (!Resources.empty())
-    addBuffer(convertResToCOFF(Resources), false);
+    Symtab->addFile(make<ObjFile>(convertResToCOFF(Resources)));
 
   if (Tar)
     Tar->append("response.txt",
