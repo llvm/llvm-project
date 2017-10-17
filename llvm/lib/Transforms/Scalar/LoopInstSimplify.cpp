@@ -12,22 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/User.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <algorithm>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-instsimplify"
@@ -45,7 +56,7 @@ static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   // The bit we are stealing from the pointer represents whether this basic
   // block is the header of a subloop, in which case we only process its phis.
-  typedef PointerIntPair<BasicBlock *, 1> WorklistItem;
+  using WorklistItem = PointerIntPair<BasicBlock *, 1>;
   SmallVector<WorklistItem, 16> VisitStack;
   SmallPtrSet<BasicBlock *, 32> Visited;
 
@@ -151,9 +162,11 @@ static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
 }
 
 namespace {
+
 class LoopInstSimplifyLegacyPass : public LoopPass {
 public:
   static char ID; // Pass ID, replacement for typeid
+
   LoopInstSimplifyLegacyPass() : LoopPass(ID) {
     initializeLoopInstSimplifyLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -181,7 +194,8 @@ public:
     getLoopAnalysisUsage(AU);
   }
 };
-}
+
+} // end anonymous namespace
 
 PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
@@ -195,6 +209,7 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
 }
 
 char LoopInstSimplifyLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(LoopInstSimplifyLegacyPass, "loop-instsimplify",
                       "Simplify instructions in loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

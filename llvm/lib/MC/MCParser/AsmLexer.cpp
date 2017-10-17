@@ -606,8 +606,16 @@ AsmToken AsmLexer::LexToken() {
       return LexToken(); // Ignore whitespace.
     else
       return AsmToken(AsmToken::Space, StringRef(TokStart, CurPtr - TokStart));
+  case '\r': {
+    IsAtStartOfLine = true;
+    IsAtStartOfStatement = true;
+    // If this is a CR followed by LF, treat that as one token.
+    if (CurPtr != CurBuf.end() && *CurPtr == '\n')
+      ++CurPtr;
+    return AsmToken(AsmToken::EndOfStatement,
+                    StringRef(TokStart, CurPtr - TokStart));
+  }
   case '\n':
-  case '\r':
     IsAtStartOfLine = true;
     IsAtStartOfStatement = true;
     return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 1));
