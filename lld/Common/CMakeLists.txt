@@ -18,6 +18,9 @@ add_lld_library(lldCommon
   Support
   Target
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   DEPENDS
   ${tablegen_deps}
   )
