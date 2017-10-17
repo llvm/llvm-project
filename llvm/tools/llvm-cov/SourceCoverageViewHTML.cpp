@@ -589,9 +589,9 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
   std::string Count = "";
   if (Line.isMapped())
-    Count = tag("pre", formatCount(Line.ExecutionCount));
+    Count = tag("pre", formatCount(Line.getExecutionCount()));
   std::string CoverageClass =
-      (Line.ExecutionCount > 0) ? "covered-line" : "uncovered-line";
+      (Line.getExecutionCount() > 0) ? "covered-line" : "uncovered-line";
   OS << tag("td", Count, CoverageClass);
 }
 

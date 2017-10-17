@@ -15,6 +15,8 @@
 #ifndef LLVM_COV_COVERAGESUMMARYINFO_H
 #define LLVM_COV_COVERAGESUMMARYINFO_H
 
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -137,18 +139,91 @@ public:
 };
 
 /// \brief Coverage statistics for a single line.
-struct LineCoverageStats {
+class LineCoverageStats {
   uint64_t ExecutionCount;
   bool HasMultipleRegions;
   bool Mapped;
+  unsigned Line;
+  ArrayRef<const coverage::CoverageSegment *> LineSegments;
+  const coverage::CoverageSegment *WrappedSegment;
 
+  friend class LineCoverageIterator;
+  LineCoverageStats() = default;
+
+public:
   LineCoverageStats(ArrayRef<const coverage::CoverageSegment *> LineSegments,
-                    const coverage::CoverageSegment *WrappedSegment);
+                    const coverage::CoverageSegment *WrappedSegment,
+                    unsigned Line);
+
+  uint64_t getExecutionCount() const { return ExecutionCount; }
+
+  bool hasMultipleRegions() const { return HasMultipleRegions; }
 
   bool isMapped() const { return Mapped; }
 
-  bool hasMultipleRegions() const { return HasMultipleRegions; }
+  unsigned getLine() const { return Line; }
+
+  ArrayRef<const coverage::CoverageSegment *> getLineSegments() const {
+    return LineSegments;
+  }
+
+  const coverage::CoverageSegment *getWrappedSegment() const {
+    return WrappedSegment;
+  }
 };
+
+/// Iterates over LineCoverageStats for each line described by a CoverageData
+/// object.
+class LineCoverageIterator
+    : public iterator_facade_base<
+          LineCoverageIterator, std::forward_iterator_tag, LineCoverageStats> {
+public:
+  LineCoverageIterator(const coverage::CoverageData &CD)
+      : LineCoverageIterator(CD, CD.begin()->Line) {}
+
+  LineCoverageIterator(const coverage::CoverageData &CD, unsigned Line)
+      : CD(CD), WrappedSegment(nullptr), Next(CD.begin()), Ended(false),
+        Line(Line), Segments(), Stats() {
+    this->operator++();
+  }
+
+  LineCoverageIterator &operator=(const LineCoverageIterator &R) = default;
+
+  bool operator==(const LineCoverageIterator &R) const {
+    return &CD == &R.CD && Next == R.Next && Ended == R.Ended;
+  }
+
+  const LineCoverageStats &operator*() const { return Stats; }
+
+  LineCoverageStats &operator*() { return Stats; }
+
+  LineCoverageIterator &operator++();
+
+  LineCoverageIterator getEnd() const {
+    auto EndIt = *this;
+    EndIt.Next = CD.end();
+    EndIt.Ended = true;
+    return EndIt;
+  }
+
+private:
+  const coverage::CoverageData &CD;
+  const coverage::CoverageSegment *WrappedSegment;
+  std::vector<coverage::CoverageSegment>::const_iterator Next;
+  bool Ended;
+  unsigned Line;
+  SmallVector<const coverage::CoverageSegment *, 4> Segments;
+  LineCoverageStats Stats;
+};
+
+/// Get a range of LineCoverageStats for each line described by a CoverageData
+/// object.
+static inline iterator_range<LineCoverageIterator>
+getLineCoverageStats(const coverage::CoverageData &CD) {
+  auto Begin = LineCoverageIterator(CD);
+  auto End = Begin.getEnd();
+  return make_range(Begin, End);
+}
 
 /// \brief A summary of function's code coverage.
 struct FunctionCoverageSummary {
