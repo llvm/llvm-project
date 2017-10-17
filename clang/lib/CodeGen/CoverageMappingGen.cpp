@@ -1083,16 +1083,18 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
-    extendRegion(E);
-    Visit(E->getLHS());
+    extendRegion(E->getLHS());
+    propagateCounts(getRegion().getCounter(), E->getLHS());
+    handleFileExit(getEnd(E->getLHS()));
 
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
-    extendRegion(E);
-    Visit(E->getLHS());
+    extendRegion(E->getLHS());
+    propagateCounts(getRegion().getCounter(), E->getLHS());
+    handleFileExit(getEnd(E->getLHS()));
 
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
