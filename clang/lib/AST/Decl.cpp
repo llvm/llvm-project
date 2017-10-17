@@ -3056,7 +3056,8 @@ SourceRange FunctionDecl::getExceptionSpecSourceRange() const {
 const Attr *FunctionDecl::getUnusedResultAttr() const {
   QualType RetType = getReturnType();
   if (RetType->isRecordType()) {
-    if (const CXXRecordDecl *Ret = RetType->getAsCXXRecordDecl()) {
+    if (const auto *Ret =
+            dyn_cast_or_null<RecordDecl>(RetType->getAsTagDecl())) {
       if (const auto *R = Ret->getAttr<WarnUnusedResultAttr>())
         return R;
     }

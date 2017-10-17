@@ -674,6 +674,17 @@ public:
     const value_type* data() const _NOEXCEPT
         {return _VSTD::__to_raw_pointer(this->__begin_);}
 
+#ifdef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
+    void __emplace_back(const value_type& __x) { push_back(__x); }
+#else
+    template <class _Arg>
+    _LIBCPP_INLINE_VISIBILITY
+    void __emplace_back(_Arg&& __arg) {
+      emplace_back(_VSTD::forward<_Arg>(__arg));
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY void push_back(const_reference __x);
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1128,7 +1139,7 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first,
     __get_db()->__insert_c(this);
 #endif
     for (; __first != __last; ++__first)
-        push_back(*__first);
+        __emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>
@@ -1145,7 +1156,7 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, c
     __get_db()->__insert_c(this);
 #endif
     for (; __first != __last; ++__first)
-        push_back(*__first);
+        __emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>
@@ -1365,7 +1376,7 @@ vector<_Tp, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
     clear();
     for (; __first != __last; ++__first)
-        push_back(*__first);
+        __emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>

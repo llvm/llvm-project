@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=broadwell | FileCheck %s --check-prefix=CHECK --check-prefix=BROADWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1 | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
@@ -33,6 +34,12 @@ define <2 x i64> @test_aesdec(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_aesdec:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_aesdec:
 ; SKYLAKE:       # BB#0:
@@ -83,6 +90,12 @@ define <2 x i64> @test_aesdeclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; HASWELL-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_aesdeclast:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_aesdeclast:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
@@ -132,6 +145,12 @@ define <2 x i64> @test_aesenc(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_aesenc:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_aesenc:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
@@ -180,6 +199,12 @@ define <2 x i64> @test_aesenclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; HASWELL-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_aesenclast:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_aesenclast:
 ; SKYLAKE:       # BB#0:
@@ -233,6 +258,13 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ; HASWELL-NEXT:    vaesimc (%rdi), %xmm1 # sched: [14:2.00]
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_aesimc:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaesimc %xmm0, %xmm0 # sched: [14:2.00]
+; BROADWELL-NEXT:    vaesimc (%rdi), %xmm1 # sched: [14:2.00]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_aesimc:
 ; SKYLAKE:       # BB#0:
@@ -290,6 +322,13 @@ define <2 x i64> @test_aeskeygenassist(<2 x i64> %a0, <2 x i64> *%a1) {
 ; HASWELL-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [28:7.00]
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_aeskeygenassist:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [29:7.00]
+; BROADWELL-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [28:7.00]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKYLAKE-LABEL: test_aeskeygenassist:
 ; SKYLAKE:       # BB#0:
