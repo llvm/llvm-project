@@ -71,7 +71,7 @@ out: // CHECK: [[@LINE]]|{{ +}}0|
 void if_else(bool flag) {
   if (flag) { // CHECK: [[@LINE]]|{{ +}}2|
     return;   // CHECK: [[@LINE]]|{{ +}}1|
-  } else {    // CHECK: [[@LINE]]|{{ +}}2|
+  } else {    // CHECK: [[@LINE]]|{{ +}}1|
     return;   // CHECK: [[@LINE]]|{{ +}}1|
   }           // CHECK: [[@LINE]]|{{ +}}1|
 }
