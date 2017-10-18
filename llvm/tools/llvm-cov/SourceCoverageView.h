@@ -179,8 +179,7 @@ protected:
 
   /// \brief Render a source line with highlighting.
   virtual void renderLine(raw_ostream &OS, LineRef L,
-                          const coverage::CoverageSegment *WrappedSegment,
-                          CoverageSegmentArray Segments, unsigned ExpansionCol,
+                          const LineCoverageStats &LCS, unsigned ExpansionCol,
                           unsigned ViewDepth) = 0;
 
   /// \brief Render the line's execution count column.
@@ -192,15 +191,14 @@ protected:
 
   /// \brief Render all the region's execution counts on a line.
   virtual void renderRegionMarkers(raw_ostream &OS,
-                                   CoverageSegmentArray Segments,
+                                   const LineCoverageStats &Line,
                                    unsigned ViewDepth) = 0;
 
   /// \brief Render the site of an expansion.
-  virtual void
-  renderExpansionSite(raw_ostream &OS, LineRef L,
-                      const coverage::CoverageSegment *WrappedSegment,
-                      CoverageSegmentArray Segments, unsigned ExpansionCol,
-                      unsigned ViewDepth) = 0;
+  virtual void renderExpansionSite(raw_ostream &OS, LineRef L,
+                                   const LineCoverageStats &LCS,
+                                   unsigned ExpansionCol,
+                                   unsigned ViewDepth) = 0;
 
   /// \brief Render an expansion view and any nested views.
   virtual void renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
