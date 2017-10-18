@@ -225,3 +225,108 @@ static void dump(const SelectedASTNode &Node, llvm::raw_ostream &OS,
 }
 
 void SelectedASTNode::dump(llvm::raw_ostream &OS) const { ::dump(*this, OS); }
+
+/// Returns true if the given node has any direct children with the following
+/// selection kind.
+///
+/// Note: The direct children also include children of direct children with the
+/// "None" selection kind.
+static bool hasAnyDirectChildrenWithKind(const SelectedASTNode &Node,
+                                         SourceSelectionKind Kind) {
+  assert(Kind != SourceSelectionKind::None && "invalid predicate!");
+  for (const auto &Child : Node.Children) {
+    if (Child.SelectionKind == Kind)
+      return true;
+    if (Child.SelectionKind == SourceSelectionKind::None)
+      return hasAnyDirectChildrenWithKind(Child, Kind);
+  }
+  return false;
+}
+
+namespace {
+struct SelectedNodeWithParents {
+  SelectedNodeWithParents(SelectedNodeWithParents &&) = default;
+  SelectedNodeWithParents &operator=(SelectedNodeWithParents &&) = default;
+  SelectedASTNode::ReferenceType Node;
+  llvm::SmallVector<SelectedASTNode::ReferenceType, 8> Parents;
+};
+} // end anonymous namespace
+
+/// Finds the set of bottom-most selected AST nodes that are in the selection
+/// tree with the specified selection kind.
+///
+/// For example, given the following selection tree:
+///
+/// FunctionDecl "f" contains-selection
+///   CompoundStmt contains-selection [#1]
+///     CallExpr inside
+///     ImplicitCastExpr inside
+///       DeclRefExpr inside
+///     IntegerLiteral inside
+///     IntegerLiteral inside
+/// FunctionDecl "f2" contains-selection
+///   CompoundStmt contains-selection [#2]
+///     CallExpr inside
+///     ImplicitCastExpr inside
+///       DeclRefExpr inside
+///     IntegerLiteral inside
+///     IntegerLiteral inside
+///
+/// This function will find references to nodes #1 and #2 when searching for the
+/// \c ContainsSelection kind.
+static void findDeepestWithKind(
+    const SelectedASTNode &ASTSelection,
+    llvm::SmallVectorImpl<SelectedNodeWithParents> &MatchingNodes,
+    SourceSelectionKind Kind,
+    llvm::SmallVectorImpl<SelectedASTNode::ReferenceType> &ParentStack) {
+  if (!hasAnyDirectChildrenWithKind(ASTSelection, Kind)) {
+    // This node is the bottom-most.
+    MatchingNodes.push_back(SelectedNodeWithParents{
+        std::cref(ASTSelection), {ParentStack.begin(), ParentStack.end()}});
+    return;
+  }
+  // Search in the children.
+  ParentStack.push_back(std::cref(ASTSelection));
+  for (const auto &Child : ASTSelection.Children)
+    findDeepestWithKind(Child, MatchingNodes, Kind, ParentStack);
+  ParentStack.pop_back();
+}
+
+static void findDeepestWithKind(
+    const SelectedASTNode &ASTSelection,
+    llvm::SmallVectorImpl<SelectedNodeWithParents> &MatchingNodes,
+    SourceSelectionKind Kind) {
+  llvm::SmallVector<SelectedASTNode::ReferenceType, 16> ParentStack;
+  findDeepestWithKind(ASTSelection, MatchingNodes, Kind, ParentStack);
+}
+
+Optional<CodeRangeASTSelection>
+CodeRangeASTSelection::create(SourceRange SelectionRange,
+                              const SelectedASTNode &ASTSelection) {
+  // Code range is selected when the selection range is not empty.
+  if (SelectionRange.getBegin() == SelectionRange.getEnd())
+    return None;
+  llvm::SmallVector<SelectedNodeWithParents, 4> ContainSelection;
+  findDeepestWithKind(ASTSelection, ContainSelection,
+                      SourceSelectionKind::ContainsSelection);
+  // We are looking for a selection in one body of code, so let's focus on
+  // one matching result.
+  if (ContainSelection.size() != 1)
+    return None;
+  SelectedNodeWithParents &Selected = ContainSelection[0];
+  if (!Selected.Node.get().Node.get<Stmt>())
+    return None;
+  const Stmt *CodeRangeStmt = Selected.Node.get().Node.get<Stmt>();
+  if (!isa<CompoundStmt>(CodeRangeStmt)) {
+    // FIXME (Alex L): Canonicalize.
+    return CodeRangeASTSelection(Selected.Node, Selected.Parents,
+                                 /*AreChildrenSelected=*/false);
+  }
+  // FIXME (Alex L): Tweak selection rules for compound statements, see:
+  // https://github.com/apple/swift-clang/blob/swift-4.1-branch/lib/Tooling/
+  // Refactor/ASTSlice.cpp#L513
+  // The user selected multiple statements in a compound statement.
+  Selected.Parents.push_back(Selected.Node);
+  return CodeRangeASTSelection(Selected.Node, Selected.Parents,
+                               /*AreChildrenSelected=*/true);
+}

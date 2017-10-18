@@ -54,18 +54,24 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HEXAGON_ARCH__", "62");
   }
 
-  if (hasFeature("hvx")) {
+  if (hasFeature("hvx-length64b")) {
     Builder.defineMacro("__HVX__");
-    if (hasFeature("hvx-double"))
-      Builder.defineMacro("__HVXDBL__");
+    Builder.defineMacro("__HVX_ARCH__", HVXVersion);
+    Builder.defineMacro("__HVX_LENGTH__", "64");
+  }
+
+  if (hasFeature("hvx-length128b")) {
+    Builder.defineMacro("__HVX__");
+    Builder.defineMacro("__HVX_ARCH__", HVXVersion);
+    Builder.defineMacro("__HVX_LENGTH__", "128");
+    // FIXME: This macro is deprecated.
+    Builder.defineMacro("__HVXDBL__");
   }
 }
 
 bool HexagonTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  // Default for v60: -hvx, -hvx-double.
-  Features["hvx"] = false;
   Features["hvx-double"] = false;
   Features["long-calls"] = false;
 
@@ -75,33 +81,21 @@ bool HexagonTargetInfo::initFeatureMap(
 bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   for (auto &F : Features) {
-    if (F == "+hvx")
+    if (F == "+hvx-length64b")
+      HasHVX = HasHVX64B = true;
+    else if (F == "+hvx-length128b")
+      HasHVX = HasHVX128B = true;
+    else if (F.find("+hvxv") != std::string::npos) {
       HasHVX = true;
-    else if (F == "-hvx")
-      HasHVX = HasHVXDouble = false;
-    else if (F == "+hvx-double")
-      HasHVX = HasHVXDouble = true;
-    else if (F == "-hvx-double")
-      HasHVXDouble = false;
-
-    if (F == "+long-calls")
+      HVXVersion = F.substr(std::string("+hvxv").length());
+    } else if (F == "-hvx")
+      HasHVX = HasHVX64B = HasHVX128B = false;
+    else if (F == "+long-calls")
       UseLongCalls = true;
     else if (F == "-long-calls")
       UseLongCalls = false;
   }
   return true;
-}
-
-void HexagonTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
-                                          StringRef Name, bool Enabled) const {
-  if (Enabled) {
-    if (Name == "hvx-double")
-      Features["hvx"] = true;
-  } else {
-    if (Name == "hvx")
-      Features["hvx-double"] = false;
-  }
-  Features[Name] = Enabled;
 }
 
 const char *const HexagonTargetInfo::GCCRegNames[] = {
@@ -138,7 +132,8 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("hexagon", true)
       .Case("hvx", HasHVX)
-      .Case("hvx-double", HasHVXDouble)
+      .Case("hvx-length64b", HasHVX64B)
+      .Case("hvx-length128b", HasHVX128B)
       .Case("long-calls", UseLongCalls)
       .Default(false);
 }

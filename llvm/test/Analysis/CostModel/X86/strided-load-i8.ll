@@ -41,9 +41,9 @@ define void @load_i8_stride3() {
 ;CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %1 = load
 ;CHECK: Found an estimated cost of 3 for VF 8 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 8 for VF 16 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 20 for VF 32 For instruction:   %1 = load
-;CHECK: Found an estimated cost of 39 for VF 64 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 13 for VF 16 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 16 for VF 32 For instruction:   %1 = load
+;CHECK: Found an estimated cost of 25 for VF 64 For instruction:   %1 = load
 entry:
   br label %for.body
 

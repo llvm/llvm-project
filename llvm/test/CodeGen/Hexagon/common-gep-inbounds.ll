@@ -17,4 +17,4 @@ entry:
   ret i16 %a
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

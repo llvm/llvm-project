@@ -37,10 +37,10 @@ namespace fuzzing {
 
 struct stable_test {
 	uint8_t key;
-	uint8_t payload;
+	size_t payload;
 	
 	stable_test(uint8_t k) : key(k), payload(0) {}
-	stable_test(uint8_t k, uint8_t p) : key(k), payload(p) {}
+	stable_test(uint8_t k, size_t p) : key(k), payload(p) {}
 	};
 
 void swap(stable_test &lhs, stable_test &rhs)

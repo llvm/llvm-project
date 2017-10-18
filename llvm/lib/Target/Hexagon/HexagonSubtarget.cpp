@@ -53,14 +53,6 @@ static cl::opt<bool> EnableIEEERndNear("enable-hexagon-ieee-rnd-near",
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
-static cl::opt<bool> EnableHexagonHVXDouble("enable-hexagon-hvx-double",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Double Vector eXtensions"));
-
-static cl::opt<bool> EnableHexagonHVX("enable-hexagon-hvx",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Vector eXtensions"));
-
 static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(false));
 
@@ -112,12 +104,12 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  static std::map<StringRef, HexagonArchEnum> CpuTable {
-    { "hexagonv4", V4 },
-    { "hexagonv5", V5 },
-    { "hexagonv55", V55 },
-    { "hexagonv60", V60 },
-    { "hexagonv62", V62 },
+  static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
+      {"hexagonv4", Hexagon::ArchEnum::V4},
+      {"hexagonv5", Hexagon::ArchEnum::V5},
+      {"hexagonv55", Hexagon::ArchEnum::V55},
+      {"hexagonv60", Hexagon::ArchEnum::V60},
+      {"hexagonv62", Hexagon::ArchEnum::V62},
   };
 
   auto FoundIt = CpuTable.find(CPUString);
@@ -126,8 +118,8 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   else
     llvm_unreachable("Unrecognized Hexagon processor version");
 
-  UseHVXOps = false;
-  UseHVXDblOps = false;
+  UseHVX128BOps = false;
+  UseHVX64BOps = false;
   UseLongCalls = false;
 
   UseMemOps = DisableMemOps ? false : EnableMemOps;
@@ -136,10 +128,6 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   ParseSubtargetFeatures(CPUString, FS);
 
-  if (EnableHexagonHVX.getPosition())
-    UseHVXOps = EnableHexagonHVX;
-  if (EnableHexagonHVXDouble.getPosition())
-    UseHVXDblOps = EnableHexagonHVXDouble;
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
 

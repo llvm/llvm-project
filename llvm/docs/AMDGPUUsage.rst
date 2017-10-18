@@ -84,38 +84,38 @@ names from both the *Processor* and *Alternative Processor* can be used.
                 Processor   Triple       APU   Support Products
                             Architecture
      ========== =========== ============ ===== ======= ==================
-     **R600** [AMD-R6xx]_
+     **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
      --------------------------------------------------------------------
      r600                   r600         dGPU
      r630                   r600         dGPU
      rs880                  r600         dGPU
      rv670                  r600         dGPU
-     **R700** [AMD-R7xx]_
+     **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
      --------------------------------------------------------------------
      rv710                  r600         dGPU
      rv730                  r600         dGPU
      rv770                  r600         dGPU
-     **Evergreen** [AMD-Evergreen]_
+     **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
      --------------------------------------------------------------------
      cedar                  r600         dGPU
      redwood                r600         dGPU
      sumo                   r600         dGPU
      juniper                r600         dGPU
      cypress                r600         dGPU
-     **Northern Islands** [AMD-Cayman-Trinity]_
+     **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
      --------------------------------------------------------------------
      barts                  r600         dGPU
      turks                  r600         dGPU
      caicos                 r600         dGPU
      cayman                 r600         dGPU
-     **GCN GFX6 (Southern Islands (SI))** [AMD-Souther-Islands]_
+     **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
      --------------------------------------------------------------------
      gfx600     - tahiti    amdgcn       dGPU
      gfx601     - pitcairn  amdgcn       dGPU
                 - verde
                 - oland
                 - hainan
-     **GCN GFX7 (Sea Islands (CI))** [AMD-Sea-Islands]_
+     **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
      --------------------------------------------------------------------
      gfx700     - bonaire   amdgcn       dGPU          - Radeon HD 7790
                                                        - Radeon HD 8770
@@ -148,7 +148,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                        - A4-5100
                                                        - A6-5200
                                                        - A4 Pro-3340B
-     **GCN GFX8 (Volcanic Islands (VI))** [AMD-Volcanic-Islands]_
+     **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
      --------------------------------------------------------------------
      gfx800     - iceland   amdgcn       dGPU          - FirePro S7150
                                                        - FirePro S7100
@@ -189,7 +189,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
      \          - polaris11 amdgcn       dGPU  ROCm    - Radeon RX 460
      gfx804                 amdgcn       dGPU          Same as gfx803
      gfx810     - stoney    amdgcn       APU
-     **GCN GFX9** [AMD-Vega]_
+     **GCN GFX9** [AMD-GCN-GFX9]_
      --------------------------------------------------------------------
      gfx900                 amdgcn       dGPU          - Radeon Vega
                                                          Frontier Edition
@@ -1208,7 +1208,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            registers used by
                                                            each work-item for
                                                            GFX6-GFX9
-     "MaxFlatWorkgroupSize"       integer                  Maximum flat
+     "MaxFlatWorkGroupSize"       integer                  Maximum flat
                                                            work-group size
                                                            supported by the
                                                            kernel in work-items.
@@ -1451,7 +1451,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      then additional space must
                                                      be added to this value for
                                                      the call stack.
-     95:64   4 bytes MaxFlatWorkgroupSize            Maximum flat work-group
+     95:64   4 bytes MaxFlatWorkGroupSize            Maximum flat work-group
                                                      size supported by the
                                                      kernel in work-items.
      96      1 bit   IsDynamicCallStack              Indicates if the generated
@@ -3530,8 +3530,7 @@ It supports AMDGCN GFX6-GFX8.
 This section describes general syntax for instructions and operands. For more
 information about instructions, their semantics and supported combinations of
 operands, refer to one of instruction set architecture manuals
-[AMD-Souther-Islands]_, [AMD-Sea-Islands]_, [AMD-Volcanic-Islands]_ and
-[AMD-Vega]_.
+[AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_ and [AMD-GCN-GFX9]_.
 
 An instruction has the following syntax (register operands are normally
 comma-separated while extra operands are space-separated):
@@ -3847,14 +3846,14 @@ Here is an example of a minimal amd_kernel_code_t specification:
 Additional Documentation
 ========================
 
-.. [AMD-R6xx] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
-.. [AMD-R7xx] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
-.. [AMD-Evergreen] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
-.. [AMD-Cayman-Trinity] `AMD Cayman/Trinity shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_HD_6900_Series_Instruction_Set_Architecture.pdf>`__
-.. [AMD-Souther-Islands] `AMD Southern Islands Series ISA <http://developer.amd.com/wordpress/media/2012/12/AMD_Southern_Islands_Instruction_Set_Architecture.pdf>`__
-.. [AMD-Sea-Islands] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
-.. [AMD-Volcanic-Islands] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
-.. [AMD-Vega] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
+.. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
+.. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
+.. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
+.. [AMD-RADEON-HD-6000] `AMD Cayman/Trinity shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_HD_6900_Series_Instruction_Set_Architecture.pdf>`__
+.. [AMD-GCN-GFX6] `AMD Southern Islands Series ISA <http://developer.amd.com/wordpress/media/2012/12/AMD_Southern_Islands_Instruction_Set_Architecture.pdf>`__
+.. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
+.. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
+.. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
 .. [AMD-OpenCL_Programming-Guide]  `AMD Accelerated Parallel Processing OpenCL Programming Guide <http://developer.amd.com/download/AMD_Accelerated_Parallel_Processing_OpenCL_Programming_Guide.pdf>`_
 .. [AMD-APP-SDK] `AMD Accelerated Parallel Processing APP SDK Documentation <http://developer.amd.com/tools/heterogeneous-computing/amd-accelerated-parallel-processing-app-sdk/documentation/>`__
 .. [AMD-ROCm] `ROCm: Open Platform for Development, Discovery and Education Around GPU Computing <http://gpuopen.com/compute-product/rocm/>`__

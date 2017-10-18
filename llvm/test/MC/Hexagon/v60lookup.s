@@ -1,5 +1,5 @@
-#RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj %s | \
-#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -d - | \
+#RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
+#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -mhvx -d - | \
 #RUN: FileCheck %s
 
                     V31.b = vlut32(V29.b, V15.b, R1)

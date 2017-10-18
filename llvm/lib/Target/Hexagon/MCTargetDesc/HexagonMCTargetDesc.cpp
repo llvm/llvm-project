@@ -288,7 +288,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
-  if (X->getFeatureBits()[Hexagon::ExtensionHVXDbl]) {
+  if (X->getFeatureBits()[Hexagon::ExtensionHVX128B]) {
     llvm::FeatureBitset Features = X->getFeatureBits();
     X->setFeatureBits(Features.set(Hexagon::ExtensionHVX));
   }

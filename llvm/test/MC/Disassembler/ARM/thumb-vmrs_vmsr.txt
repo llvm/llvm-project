@@ -121,3 +121,37 @@
 # ERROR-NOVFP: invalid instruction encoding
 # ERROR-NOVFP: invalid instruction encoding
 
+        [0x0b,0xbf]
+        [0xf7,0xee,0x10,0x4a]
+        [0xf6,0xee,0x10,0x5a]
+        [0xe1,0xee,0x10,0x0a]
+        [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V7A: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V7A: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7A: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V7A: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7A: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V7M: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V7M: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V7M: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V7M: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V7M: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V8A: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V8A: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8A: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8A: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8A: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# CHECK-V8M: itete eq                      @ encoding: [0x0b,0xbf]
+# CHECK-V8M: vmrseq  r4, mvfr0             @ encoding: [0xf7,0xee,0x10,0x4a]
+# CHECK-V8M: vmrsne  r5, mvfr1             @ encoding: [0xf6,0xee,0x10,0x5a]
+# CHECK-V8M: vmsreq  fpscr, r0             @ encoding: [0xe1,0xee,0x10,0x0a]
+# CHECK-V8M: vmsrne  fpsid, r2             @ encoding: [0xe0,0xee,0x10,0x2a]
+
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding
+# ERROR-NOVFP: invalid instruction encoding

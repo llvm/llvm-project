@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-hexagon-hvx < %s \
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s \
 ; RUN:    | FileCheck %s
 
 ; Check that the store to Q6VecPredResult does not get expanded into multiple

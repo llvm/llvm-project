@@ -20,7 +20,8 @@ the `Guideline Support Library <https://github.com/isocpp/CppCoreGuidelines/blob
 All checks are purely type based and not (yet) flow sensitive.
 
 The following examples will demonstrate the correct and incorrect initializations
-of owners, assignment is handled the same way.
+of owners, assignment is handled the same way. Note that both ``new`` and 
+``malloc()``-like resource functions are considered to produce resources.
 
 .. code-block:: c++
 
@@ -69,6 +70,33 @@ argument get called with either a ``gsl::owner<T*>`` or a newly created resource
   expects_owner(Owner); // Good
   expects_owner(new int(42)); // Good as well, recognized created resource
 
+  // Port legacy code for better resource-safety
+  gsl::owner<FILE*> File = fopen("my_file.txt", "rw+");
+  FILE* BadFile = fopen("another_file.txt", "w"); // Bad, warned
+
+  // ... use the file
+
+  fclose(File); // Ok, File is annotated as 'owner<>'
+  fclose(BadFile); // BadFile is not an 'owner<>', will be warned
+
+
+Options
+-------
+
+.. option:: LegacyResourceProducers
+
+   Semicolon-separated list of fully qualified names of legacy functions that create
+   resources but cannot introduce ``gsl::owner<>``.
+   Defaults to ``::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile``.
+
+
+.. option:: LegacyResourceConsumers
+
+   Semicolon-separated list of fully qualified names of legacy functions expecting
+   resource owners as pointer arguments but cannot introduce ``gsl::owner<>``.
+   Defaults to ``::free;::realloc;::freopen;::fclose``.
+
+
 Limitations
 -----------
 
@@ -82,7 +110,8 @@ Using ``gsl::owner<T*>`` in a typedef or alias is not handled correctly.
 The ``gsl::owner<T*>`` is declared as a templated type alias.
 In template functions and classes, like in the example below, the information
 of the type aliases gets lost. Therefore using ``gsl::owner<T*>`` in a heavy templated
-code base might lead to false positives.
+code base might lead to false positives. 
+This limitation results in ``std::vector<gsl::owner<T*>>`` not being diagnosed correctly.
 
 .. code-block:: c++
 

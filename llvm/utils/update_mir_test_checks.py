@@ -33,19 +33,19 @@ TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?[= ](\S+)')
 CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
-FUNC_NAME_RE = re.compile(r' *name: *(?P<func>[A-Za-z0-9_.]+)')
+FUNC_NAME_RE = re.compile(r' *name: *(?P<func>[A-Za-z0-9_.-]+)')
 BODY_BEGIN_RE = re.compile(r' *body: *\|')
 BASIC_BLOCK_RE = re.compile(r' *bb\.[0-9]+.*:$')
 VREG_RE = re.compile(r'(%[0-9]+)(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?')
 VREG_DEF_RE = re.compile(
     r'^ *(?P<vregs>{0}(?:, {0})*) '
     r'= (?P<opcode>[A-Zt][A-Za-z0-9_]+)'.format(VREG_RE.pattern))
-PREFIX_DATA_RE = re.compile(r'^ *(;|bb.[0-9].*: *$|[a-z]+: |$)')
+PREFIX_DATA_RE = re.compile(r'^ *(;|bb.[0-9].*: *$|[a-z]+:( |$)|$)')
 
 MIR_FUNC_RE = re.compile(
     r'^---$'
     r'\n'
-    r'^ *name: *(?P<func>[A-Za-z0-9_.]+)$'
+    r'^ *name: *(?P<func>[A-Za-z0-9_.-]+)$'
     r'.*?'
     r'^ *body: *\|\n'
     r'(?P<body>.*?)\n'
@@ -266,10 +266,13 @@ def mangle_vreg(opcode, current_names):
                 INSERT_VECTOR_ELT='IVEC',
                 EXTRACT_VECTOR_ELT='EVEC',
                 SHUFFLE_VECTOR='SHUF').get(base, base)
+    # Avoid ambiguity when opcodes end in numbers
+    if len(base.rstrip('0123456789')) < len(base):
+        base += '_'
 
     i = 0
     for name in current_names:
-        if name.startswith(base):
+        if name.rstrip('0123456789') == base:
             i += 1
     if i:
         return '{}{}'.format(base, i)
@@ -308,7 +311,7 @@ def update_test_file(llc, test, remove_common_prefixes=False, verbose=False):
             warn('No triple found: skipping file', test_file=test)
             return
 
-        build_function_body_dictionary(test, raw_tool_output, '',
+        build_function_body_dictionary(test, raw_tool_output,
                                        triple_in_cmd or triple_in_ir,
                                        prefixes, func_dict, verbose)
 

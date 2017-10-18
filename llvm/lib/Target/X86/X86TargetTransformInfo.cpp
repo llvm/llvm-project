@@ -2617,8 +2617,8 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
     { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
     { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
     { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
-    { 3, MVT::v16i8, 18},  //(load 48i8 and) deinterleave into 3 x 16i8
-    { 3, MVT::v32i8, 42 }, //(load 96i8 and) deinterleave into 3 x 32i8
+    { 3, MVT::v16i8, 11},  //(load 48i8 and) deinterleave into 3 x 16i8
+    { 3, MVT::v32i8, 13},  //(load 96i8 and) deinterleave into 3 x 32i8
 
     { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
     { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
@@ -2631,14 +2631,14 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
     { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
     { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
     { 3, MVT::v8i8,  11 }, //interleave 3 x 8i8  into 24i8 (and store)
-    { 3, MVT::v16i8, 17 }, //interleave 3 x 16i8 into 48i8 (and store)
-    { 3, MVT::v32i8, 32 }, //interleave 3 x 32i8 into 96i8 (and store)
+    { 3, MVT::v16i8, 11 }, //interleave 3 x 16i8 into 48i8 (and store)
+    { 3, MVT::v32i8, 13 }, //interleave 3 x 32i8 into 96i8 (and store)
 
     { 4, MVT::v2i8,  12 }, //interleave 4 x 2i8  into 8i8 (and store)
     { 4, MVT::v4i8,  9 },  //interleave 4 x 4i8  into 16i8 (and store)
-    { 4, MVT::v8i8,  16 }, //interleave 4 x 8i8  into 32i8 (and store)
-    { 4, MVT::v16i8, 20 }, //interleave 4 x 16i8 into 64i8 (and store)
-    { 4, MVT::v32i8, 40 }  //interleave 4 x 32i8 into 128i8 (and store)
+    { 4, MVT::v8i8,  10 }, //interleave 4 x 8i8  into 32i8 (and store)
+    { 4, MVT::v16i8, 10 }, //interleave 4 x 16i8 into 64i8 (and store)
+    { 4, MVT::v32i8, 12 }  //interleave 4 x 32i8 into 128i8 (and store)
   };
 
   if (Opcode == Instruction::Load) {
@@ -2684,7 +2684,27 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
   unsigned MemOpCost =
       getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace);
 
+  unsigned VF = VecTy->getVectorNumElements() / Factor;
+  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+
   if (Opcode == Instruction::Load) {
+    // The tables (AVX512InterleavedLoadTbl and AVX512InterleavedStoreTbl)
+    // contain the cost of the optimized shuffle sequence that the
+    // X86InterleavedAccess pass will generate.
+    // The cost of loads and stores are computed separately from the table.
+
+    // X86InterleavedAccess support only the following interleaved-access group.
+    static const CostTblEntry AVX512InterleavedLoadTbl[] = {
+        {3, MVT::v16i8, 12}, //(load 48i8 and) deinterleave into 3 x 16i8
+        {3, MVT::v32i8, 14}, //(load 96i8 and) deinterleave into 3 x 32i8
+        {3, MVT::v64i8, 22}, //(load 96i8 and) deinterleave into 3 x 32i8
+    };
+
+    if (const auto *Entry =
+            CostTableLookup(AVX512InterleavedLoadTbl, Factor, VT))
+      return NumOfMemOps * MemOpCost + Entry->Cost;
+    //If an entry does not exist, fallback to the default implementation.
+
     // Kind of shuffle depends on number of loaded values.
     // If we load the entire data in one register, we can use a 1-src shuffle.
     // Otherwise, we'll merge 2 sources in each operation.
@@ -2727,6 +2747,22 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
   // Store.
   assert(Opcode == Instruction::Store &&
          "Expected Store Instruction at this  point");
+  // X86InterleavedAccess support only the following interleaved-access group.
+  static const CostTblEntry AVX512InterleavedStoreTbl[] = {
+      {3, MVT::v16i8, 12}, // interleave 3 x 16i8 into 48i8 (and store)
+      {3, MVT::v32i8, 14}, // interleave 3 x 32i8 into 96i8 (and store)
+      {3, MVT::v64i8, 26}, // interleave 3 x 64i8 into 96i8 (and store)
+
+      {4, MVT::v8i8, 10},  // interleave 4 x 8i8  into 32i8  (and store)
+      {4, MVT::v16i8, 11}, // interleave 4 x 16i8 into 64i8  (and store)
+      {4, MVT::v32i8, 14}, // interleave 4 x 32i8 into 128i8 (and store)
+      {4, MVT::v64i8, 24}  // interleave 4 x 32i8 into 256i8 (and store)
+  };
+
+  if (const auto *Entry =
+          CostTableLookup(AVX512InterleavedStoreTbl, Factor, VT))
+    return NumOfMemOps * MemOpCost + Entry->Cost;
+  //If an entry does not exist, fallback to the default implementation.
 
   // There is no strided stores meanwhile. And store can't be folded in
   // shuffle.

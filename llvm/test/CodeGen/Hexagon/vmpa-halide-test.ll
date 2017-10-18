@@ -133,8 +133,8 @@ destructor_block:                                 ; preds = %"for testOne.s0.x.x
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vmpabuuv(<32 x i32>, <32 x i32>) #1
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
-attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 
 !5 = !{!6, !6, i64 0}
 !6 = !{!"inputOne", !7}

@@ -6070,7 +6070,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
         char *buffer;
         if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
 #if 0 // Useful for debugging.
-	  outs() << "xar member: " << member_name << " extracted\n";
+          outs() << "xar member: " << member_name << " extracted\n";
 #endif
           // Set the XarMemberName we want to see printed in the header.
           std::string OldXarMemberName;
@@ -6087,7 +6087,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
           // See if this is could be a xar file (nested).
           if (member_size >= sizeof(struct xar_header)) {
 #if 0 // Useful for debugging.
-	    outs() << "could be a xar file: " << member_name << "\n";
+            outs() << "could be a xar file: " << member_name << "\n";
 #endif
             memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
             if (sys::IsLittleEndianHost)
