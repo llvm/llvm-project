@@ -186,6 +186,8 @@ void SourceCoverageViewText::renderRegionMarkers(raw_ostream &OS,
   for (const auto *S : Segments) {
     if (!S->IsRegionEntry)
       continue;
+    if (S->Count == Line.getExecutionCount())
+      continue;
     // Skip to the new region.
     if (S->Col > PrevColumn)
       OS.indent(S->Col - PrevColumn);
