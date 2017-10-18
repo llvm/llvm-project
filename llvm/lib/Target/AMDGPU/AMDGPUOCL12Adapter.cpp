@@ -78,7 +78,8 @@ static bool isNonDefaultAddrSpacePtr(Type *Ty, AMDGPUAS AMDGPUASI) {
 static bool hasNonDefaultAddrSpaceArg(const Function *F, AMDGPUAS AMDGPUASI) {
 
   for (const Argument &AI: F->args())
-    if (isNonDefaultAddrSpacePtr(AI.getType(), AMDGPUASI))
+    if (!AI.hasStructRetAttr() &&
+        isNonDefaultAddrSpacePtr(AI.getType(), AMDGPUASI))
       return true;
   return false;
 }
@@ -224,6 +225,7 @@ static bool findAndDefineBuiltinCalls(Module &M) {
     if (!F.empty() || F.use_empty() || !F.getName().startswith("_Z") ||
         !hasNonDefaultAddrSpaceArg(&F, AMDGPUASI))
       continue;
+    // These functions should not be modified.
     if (F.getName().find("async_work_group", 0) == StringRef::npos &&
         F.getName().find("prefetch", 0) == StringRef::npos) {
       isModified = true;
