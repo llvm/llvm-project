@@ -154,7 +154,7 @@ bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
   return true;
 }
 
-#ifdef CLANG_ENABLE_OBJC_REWRITER
+#if CLANG_ENABLE_OBJC_REWRITER
 
 std::unique_ptr<ASTConsumer>
 RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {

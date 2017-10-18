@@ -67,5 +67,5 @@ llvm::createRISCVELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
                                  bool Is64Bit) {
   return createELFObjectWriter(
       llvm::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit), OS,
-      /*IsLittleEndian=*/false);
+      /*IsLittleEndian=*/true);
 }

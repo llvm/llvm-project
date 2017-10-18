@@ -60,5 +60,5 @@ b23:                                              ; preds = %b21
 
 declare i32 @llvm.hexagon.A2.sath(i32) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone }

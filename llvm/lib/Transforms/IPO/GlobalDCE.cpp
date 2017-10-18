@@ -115,7 +115,7 @@ void GlobalDCEPass::UpdateGVDependencies(GlobalValue &GV) {
     ComputeDependencies(User, Deps);
   Deps.erase(&GV); // Remove self-reference.
   for (GlobalValue *GVU : Deps) {
-    GVDependencies.insert(std::make_pair(GVU, &GV));
+    GVDependencies[GVU].insert(&GV);
   }
 }
 
@@ -199,8 +199,8 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
                                            AliveGlobals.end()};
   while (!NewLiveGVs.empty()) {
     GlobalValue *LGV = NewLiveGVs.pop_back_val();
-    for (auto &&GVD : make_range(GVDependencies.equal_range(LGV)))
-      MarkLive(*GVD.second, &NewLiveGVs);
+    for (auto *GVD : GVDependencies[LGV])
+      MarkLive(*GVD, &NewLiveGVs);
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop

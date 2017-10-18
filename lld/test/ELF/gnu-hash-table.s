@@ -71,7 +71,7 @@
 # I386-NEXT:     ]
 # I386-NEXT:     Address:
 # I386-NEXT:     Offset:
-# I386-NEXT:     Size: 44
+# I386-NEXT:     Size: 32
 # I386-NEXT:     Link:
 # I386-NEXT:     Info: 0
 # I386-NEXT:     AddressAlignment: 4
@@ -85,6 +85,11 @@
 # I386:        }
 # I386:        Symbol {
 # I386:          Name: baz@
+# I386:          Binding: Global
+# I386:          Section: Undefined
+# I386:        }
+# I386:        Symbol {
+# I386:          Name: xyz@
 # I386:          Binding: Global
 # I386:          Section: Undefined
 # I386:        }
@@ -103,20 +108,15 @@
 # I386:          Binding: Global
 # I386:          Section: .text
 # I386:        }
-# I386:        Symbol {
-# I386:          Name: xyz@
-# I386:          Binding: Global
-# I386:          Section: Undefined
-# I386:        }
 # I386:      ]
 # I386:      GnuHashTable {
-# I386-NEXT:   Num Buckets: 3
-# I386-NEXT:   First Hashed Symbol Index: 3
+# I386-NEXT:   Num Buckets: 1
+# I386-NEXT:   First Hashed Symbol Index: 4
 # I386-NEXT:   Num Mask Words: 1
 # I386-NEXT:   Shift Count: 5
-# I386-NEXT:   Bloom Filter: [0x14010A20]
-# I386-NEXT:   Buckets: [3, 0, 5]
-# I386-NEXT:   Values: [0xB8860BA, 0xB887389, 0xB88C171]
+# I386-NEXT:   Bloom Filter: [0x14000220]
+# I386-NEXT:   Buckets: [4]
+# I386-NEXT:   Values: [0xB8860BA, 0xB887389]
 # I386-NEXT: }
 
 # X86_64:      Format: ELF64-x86-64
@@ -130,7 +130,7 @@
 # X86_64-NEXT:     ]
 # X86_64-NEXT:     Address:
 # X86_64-NEXT:     Offset:
-# X86_64-NEXT:     Size: 48
+# X86_64-NEXT:     Size: 36
 # X86_64-NEXT:     Link:
 # X86_64-NEXT:     Info: 0
 # X86_64-NEXT:     AddressAlignment: 8
@@ -149,6 +149,11 @@
 # X86_64:          Section: Undefined
 # X86_64:        }
 # X86_64:        Symbol {
+# X86_64:          Name: xyz@
+# X86_64:          Binding: Global
+# X86_64:          Section: Undefined
+# X86_64:        }
+# X86_64:        Symbol {
 # X86_64:          Name: zed@
 # X86_64:          Binding: Weak
 # X86_64:          Section: Undefined
@@ -163,20 +168,15 @@
 # X86_64:          Binding: Global
 # X86_64:          Section: .text
 # X86_64:        }
-# X86_64:        Symbol {
-# X86_64:          Name: xyz@
-# X86_64:          Binding: Global
-# X86_64:          Section: Undefined
-# X86_64:        }
 # X86_64:      ]
 # X86_64:      GnuHashTable {
-# X86_64-NEXT:   Num Buckets: 3
-# X86_64-NEXT:   First Hashed Symbol Index: 3
+# X86_64-NEXT:   Num Buckets: 1
+# X86_64-NEXT:   First Hashed Symbol Index: 4
 # X86_64-NEXT:   Num Mask Words: 1
 # X86_64-NEXT:   Shift Count: 6
-# X86_64-NEXT:   Bloom Filter: [0x401000000004224]
-# X86_64-NEXT:   Buckets: [3, 0, 5]
-# X86_64-NEXT:   Values: [0xB8860BA, 0xB887389, 0xB88C171]
+# X86_64-NEXT:   Bloom Filter: [0x400000000004204]
+# X86_64-NEXT:   Buckets: [4]
+# X86_64-NEXT:   Values: [0xB8860BA, 0xB887389]
 # X86_64-NEXT: }
 
 # PPC64:      Format: ELF64-ppc64
@@ -190,7 +190,7 @@
 # PPC64-NEXT:     ]
 # PPC64-NEXT:     Address:
 # PPC64-NEXT:     Offset:
-# PPC64-NEXT:     Size: 48
+# PPC64-NEXT:     Size: 36
 # PPC64-NEXT:     Link:
 # PPC64-NEXT:     Info: 0
 # PPC64-NEXT:     AddressAlignment: 8
@@ -209,6 +209,11 @@
 # PPC64:          Section: Undefined
 # PPC64:        }
 # PPC64:        Symbol {
+# PPC64:          Name: xyz@
+# PPC64:          Binding: Global
+# PPC64:          Section: Undefined
+# PPC64:        }
+# PPC64:        Symbol {
 # PPC64:          Name: zed@
 # PPC64:          Binding: Weak
 # PPC64:          Section: Undefined
@@ -223,20 +228,15 @@
 # PPC64:          Binding: Global
 # PPC64:          Section: .text
 # PPC64:        }
-# PPC64:        Symbol {
-# PPC64:          Name: xyz@
-# PPC64:          Binding: Global
-# PPC64:          Section: Undefined
-# PPC64:        }
 # PPC64:      ]
 # PPC64:      GnuHashTable {
-# PPC64-NEXT:   Num Buckets: 3
-# PPC64-NEXT:   First Hashed Symbol Index: 3
+# PPC64-NEXT:   Num Buckets: 1
+# PPC64-NEXT:   First Hashed Symbol Index: 4
 # PPC64-NEXT:   Num Mask Words: 1
 # PPC64-NEXT:   Shift Count: 6
-# PPC64-NEXT:   Bloom Filter: [0x401000000004224]
-# PPC64-NEXT:   Buckets: [3, 0, 5]
-# PPC64-NEXT:   Values: [0xB8860BA, 0xB887389, 0xB88C171]
+# PPC64-NEXT:   Bloom Filter: [0x400000000004204]
+# PPC64-NEXT:   Buckets: [4]
+# PPC64-NEXT:   Values: [0xB8860BA, 0xB887389]
 # PPC64-NEXT: }
 
 .globl foo,bar,baz

@@ -156,7 +156,7 @@ declare <32 x i32> @llvm.hexagon.V6.vmpahb.acc(<32 x i32>, <32 x i32>, i32) #0
 declare <32 x i32> @llvm.hexagon.V6.vmpyhsat.acc(<32 x i32>, <16 x i32>, i32) #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 
 !1 = !{!2, !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}

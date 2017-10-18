@@ -27,4 +27,4 @@ b0:
 declare i32 @printf(i8*, ...) #0
 declare void @VarVec1(i8*, i32, ...) #0
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }

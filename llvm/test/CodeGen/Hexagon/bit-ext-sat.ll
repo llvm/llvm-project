@@ -53,5 +53,5 @@ declare i32 @llvm.hexagon.A2.sath(i32) #1
 declare i32 @llvm.hexagon.A2.satub(i32) #1
 declare i32 @llvm.hexagon.A2.satuh(i32) #1
 
-attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone }

@@ -82,7 +82,7 @@ declare i64 @llvm.hexagon.A2.addp(i64, i64) #1
 declare i64 @llvm.hexagon.A2.subp(i64, i64) #1
 declare i64 @llvm.hexagon.A2.combinew(i32, i32) #1
 
-attributes #0 = { nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0}

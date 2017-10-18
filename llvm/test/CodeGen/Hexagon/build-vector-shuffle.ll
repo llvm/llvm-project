@@ -17,5 +17,5 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vshuffh(<16 x i32>) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

@@ -216,25 +216,33 @@ let Namespace = "Hexagon" in {
 
 // HVX types
 
-def VecI1   : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v512i1, v1024i1, v512i1]>;
-def VecI8   : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v64i8,  v128i8,  v64i8]>;
-def VecI16  : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v32i16, v64i16,  v32i16]>;
-def VecI32  : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v16i32, v32i32,  v16i32]>;
-def VecI64  : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v8i64,  v16i64,  v8i64]>;
-def VecPI8  : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v128i8, v256i8,  v128i8]>;
-def VecPI16 : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v64i16, v128i16, v64i16]>;
-def VecPI32 : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v32i32, v64i32,  v32i32]>;
-def VecPI64 : ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
-                                [v16i64, v32i64,  v16i64]>;
-
+def VecI1
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v512i1, v512i1,    v1024i1, v1024i1,   v512i1]>;
+def VecI8
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v64i8,  v64i8,     v128i8,  v128i8,    v64i8]>;
+def VecI16
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v32i16, v32i16,    v64i16,  v64i16,    v32i16]>;
+def VecI32
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v16i32, v16i32,    v32i32,  v32i32,    v16i32]>;
+def VecI64
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v8i64,  v8i64,     v16i64,  v16i64,    v8i64]>;
+def VecPI8
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v128i8, v128i8,    v256i8,  v256i8,    v128i8]>;
+def VecPI16
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v64i16, v64i16,    v128i16, v128i16,   v64i16]>;
+def VecPI32
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v32i32, v32i32,    v64i32,  v64i32,    v32i32]>;
+def VecPI64
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v16i64, v16i64,    v32i64,  v32i64,    v16i64]>;
 
 // Register classes.
 //

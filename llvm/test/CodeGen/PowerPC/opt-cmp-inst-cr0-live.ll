@@ -78,3 +78,24 @@ if.end:
 }
 
 declare void @exit(i32 signext)
+
+; Since %v1 and %v2 are zero-extended 32-bit values, %1 is also zero-extended.
+; In this case, we want to use ORo instead of OR + CMPLWI.
+
+; CHECK-LABEL: fn5
+define zeroext i32 @fn5(i32* %p1, i32* %p2) {
+; CHECK: ORo
+; CHECK-NOT: CMP
+; CHECK: BCC
+  %v1 = load i32, i32* %p1
+  %v2 = load i32, i32* %p2
+  %1 = or i32 %v1, %v2
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %foo, label %bar
+
+foo:
+  ret i32 1
+
+bar:
+  ret i32 0
+}

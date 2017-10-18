@@ -20,7 +20,7 @@
 ; GFX700:       NumVGPRs:                4
 ; GFX800:       NumVGPRs:                6
 ; GFX900:       NumVGPRs:                6
-; CHECK:        MaxFlatWorkgroupSize:    256
+; CHECK:        MaxFlatWorkGroupSize:    256
 define amdgpu_kernel void @test(
     half addrspace(1)* %r,
     half addrspace(1)* %a,

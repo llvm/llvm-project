@@ -236,6 +236,10 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     break;
   }
 
+  IntPtrType = (Triple.isOSDarwin() || Triple.getOS() == llvm::Triple::OpenBSD)
+                   ? SignedLong
+                   : SignedInt;
+
   // Cache arch related info.
   setArchInfo();
 

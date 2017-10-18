@@ -51,4 +51,4 @@ b23:                                              ; preds = %b0
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv5" "target-features"="-hvx,-long-calls" }
