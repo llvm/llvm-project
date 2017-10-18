@@ -35,7 +35,7 @@ private:
   SmallPtrSet<GlobalValue*, 32> AliveGlobals;
 
   /// Global -> Global that uses this global.
-  std::unordered_multimap<GlobalValue *, GlobalValue *> GVDependencies;
+  DenseMap<GlobalValue *, SmallPtrSet<GlobalValue *, 4>> GVDependencies;
 
   /// Constant -> Globals that use this global cache.
   std::unordered_map<Constant *, SmallPtrSet<GlobalValue *, 8>>

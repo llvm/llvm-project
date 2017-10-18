@@ -192,7 +192,7 @@ def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14CompatPedantic>, DefaultIgnore;
+  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
 def err_escape_too_large : Error<
   "%select{hex|octal}0 escape sequence out of range">;

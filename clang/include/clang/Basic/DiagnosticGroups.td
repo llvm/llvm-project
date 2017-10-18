@@ -32,7 +32,11 @@ def Availability : DiagGroup<"availability">;
 def Section : DiagGroup<"section">;
 def AutoImport : DiagGroup<"auto-import">;
 def CXX14BinaryLiteral : DiagGroup<"c++14-binary-literal">;
+def CXXPre14CompatBinaryLiteral : DiagGroup<"c++98-c++11-compat-binary-literal">;
 def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
+def BinaryLiteral : DiagGroup<"binary-literal", [CXX14BinaryLiteral,
+                                                 CXXPre14CompatBinaryLiteral,
+                                                 GNUBinaryLiteral]>;
 def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer">;
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
@@ -166,7 +170,8 @@ def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 // Warnings for C++1y code which is not compatible with prior C++ standards.
 def CXXPre14Compat : DiagGroup<"c++98-c++11-compat">;
 def CXXPre14CompatPedantic : DiagGroup<"c++98-c++11-compat-pedantic",
-                                       [CXXPre14Compat]>;
+                                       [CXXPre14Compat,
+                                        CXXPre14CompatBinaryLiteral]>;
 def CXXPre17Compat : DiagGroup<"c++98-c++11-c++14-compat">;
 def CXXPre17CompatPedantic : DiagGroup<"c++98-c++11-c++14-compat-pedantic",
                                        [CXXPre17Compat]>;

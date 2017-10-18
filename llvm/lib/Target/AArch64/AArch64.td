@@ -274,14 +274,17 @@ def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    FeaturePerfMon
                                    ]>;
 
+// Note that cyclone does not fuse AES instructions, but newer apple chips do
+// perform the fusion and cyclone is used by default when targetting apple OSes.
 def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    "Cyclone", [
                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                   FeatureArithmeticBccFusion,
+                                   FeatureArithmeticCbzFusion,
                                    FeatureCrypto,
                                    FeatureDisableLatencySchedHeuristic,
                                    FeatureFPARMv8,
-                                   FeatureArithmeticBccFusion,
-                                   FeatureArithmeticCbzFusion,
+                                   FeatureFuseAES,
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeatureSlowMisaligned128Store,
