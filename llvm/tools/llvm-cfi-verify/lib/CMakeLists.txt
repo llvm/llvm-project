@@ -1,9 +1,12 @@
-add_llvm_library(LLVMCFIVerify
+add_library(LLVMCFIVerify
+  STATIC
   FileAnalysis.cpp
-  FileAnalysis.h
+  FileAnalysis.h)
 
-  LINK_COMPONENTS
+llvm_update_compile_flags(LLVMCFIVerify)
+llvm_map_components_to_libnames(libs
   MC
   MCParser
   Object
   Support)
+target_link_libraries(LLVMCFIVerify ${libs})

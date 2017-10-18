@@ -369,7 +369,7 @@ ImplicitNullChecks::isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
   if (!((MI.mayLoad() || MI.mayStore()) && !MI.isPredicable() &&
-        Offset < PageSize))
+        -PageSize < Offset && Offset < PageSize))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.

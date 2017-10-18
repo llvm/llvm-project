@@ -18,12 +18,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <cassert>
+#include <iterator>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -138,7 +155,6 @@ void VPBasicBlock::execute(VPTransformState *State) {
         SingleHPred->getExitBasicBlock() == PrevVPBB &&
         PrevVPBB->getSingleHierarchicalSuccessor()) && /* B */
       !(Replica && getPredecessors().empty())) {       /* C */
-
     NewBB = createEmptyBasicBlock(State->CFG);
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.

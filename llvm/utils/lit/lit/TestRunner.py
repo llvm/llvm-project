@@ -825,6 +825,13 @@ def getTempPaths(test):
     tmpBase = os.path.join(tmpDir, execbase)
     return tmpDir, tmpBase
 
+def colonNormalizePath(path):
+    if kIsWindows:
+        return re.sub(r'^(.):', r'\1', path.replace('\\', '/'))
+    else:
+        assert path[0] == '/'
+        return path[1:]
+
 def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     sourcepath = test.getSourcePath()
     sourcedir = os.path.dirname(sourcepath)
@@ -860,23 +867,15 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/T', tmpDir.replace('\\', '/')),
             ])
 
-    # "%:[STpst]" are paths without colons.
-    if kIsWindows:
-        substitutions.extend([
-                ('%:s', re.sub(r'^(.):', r'\1', sourcepath)),
-                ('%:S', re.sub(r'^(.):', r'\1', sourcedir)),
-                ('%:p', re.sub(r'^(.):', r'\1', sourcedir)),
-                ('%:t', re.sub(r'^(.):', r'\1', tmpBase) + '.tmp'),
-                ('%:T', re.sub(r'^(.):', r'\1', tmpDir)),
-                ])
-    else:
-        substitutions.extend([
-                ('%:s', sourcepath),
-                ('%:S', sourcedir),
-                ('%:p', sourcedir),
-                ('%:t', tmpBase + '.tmp'),
-                ('%:T', tmpDir),
-                ])
+    # "%:[STpst]" are normalized paths without colons and without a leading
+    # slash.
+    substitutions.extend([
+            ('%:s', colonNormalizePath(sourcepath)),
+            ('%:S', colonNormalizePath(sourcedir)),
+            ('%:p', colonNormalizePath(sourcedir)),
+            ('%:t', colonNormalizePath(tmpBase + '.tmp')),
+            ('%:T', colonNormalizePath(tmpDir)),
+            ])
     return substitutions
 
 def applySubstitutions(script, substitutions):

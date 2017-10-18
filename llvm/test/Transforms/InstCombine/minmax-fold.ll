@@ -404,8 +404,8 @@ define i32 @clamp_signed3(i32 %x) {
 ; CHECK-LABEL: @clamp_signed3(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 255
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MIN]], i32 15
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[MIN]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp slt i32 %x, 255
@@ -421,8 +421,8 @@ define i32 @clamp_signed4(i32 %x) {
 ; CHECK-LABEL: @clamp_signed4(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 15
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MAX]], i32 255
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[MAX]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp sgt i32 %x, 15
@@ -472,8 +472,8 @@ define i32 @clamp_unsigned3(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned3(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 255
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MIN]], i32 15
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[MIN]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ult i32 %x, 255
@@ -489,8 +489,8 @@ define i32 @clamp_unsigned4(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned4(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 15
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MAX]], i32 255
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[MAX]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ugt i32 %x, 15
@@ -523,8 +523,8 @@ define i32 @clamp_check_for_no_infinite_loop2(i32 %i) {
 ; CHECK-LABEL: @clamp_check_for_no_infinite_loop2(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[I:%.*]], -255
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[I]], i32 -255
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP2]], i32 [[SEL1]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SEL1]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[SEL1]], i32 0
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cmp1 = icmp sgt i32 %i, -255
@@ -687,4 +687,58 @@ define <8 x float> @bitcast_vector_umin(<8 x float> %x, <8 x float> %y) {
   %cmp = icmp slt <8 x i32> %bcx, %bcy
   %sel = select <8 x i1> %cmp, <8 x float> %x, <8 x float> %y
   ret <8 x float> %sel
+}
+
+; Check that we look through cast and recognize min idiom.
+define zeroext i8 @look_through_cast1(i32 %x) {
+; CHECK-LABEL: @look_through_cast1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 511
+; CHECK-NEXT:    [[RES1:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 511
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[RES1]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %cmp1 = icmp slt i32 %x, 511
+  %x_trunc = trunc i32 %x to i8
+  %res = select i1 %cmp1, i8 %x_trunc, i8 255
+  ret i8 %res
+}
+
+; Check that we look through cast but min is not recognized.
+define zeroext i8 @look_through_cast2(i32 %x) {
+; CHECK-LABEL: @look_through_cast2(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 510
+; CHECK-NEXT:    [[X_TRUNC:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP1]], i8 [[X_TRUNC]], i8 -1
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp1 = icmp slt i32 %x, 510
+  %x_trunc = trunc i32 %x to i8
+  %res = select i1 %cmp1, i8 %x_trunc, i8 255
+  ret i8 %res
+}
+
+define <2 x i8> @min_through_cast_vec1(<2 x i32> %x) {
+; CHECK-LABEL: @min_through_cast_vec1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 510, i32 511>
+; CHECK-NEXT:    [[RES1:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 510, i32 511>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[RES1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+  %cmp = icmp slt <2 x i32> %x, <i32 510, i32 511>
+  %x_trunc = trunc <2 x i32> %x to <2 x i8>
+  %res = select <2 x i1> %cmp, <2 x i8> %x_trunc, <2 x i8> <i8 254, i8 255>
+  ret <2 x i8> %res
+}
+
+define <2 x i8> @min_through_cast_vec2(<2 x i32> %x) {
+; CHECK-LABEL: @min_through_cast_vec2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 511, i32 511>
+; CHECK-NEXT:    [[RES1:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 511, i32 511>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[RES1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+  %cmp = icmp slt <2 x i32> %x, <i32 511, i32 511>
+  %x_trunc = trunc <2 x i32> %x to <2 x i8>
+  %res = select <2 x i1> %cmp, <2 x i8> %x_trunc, <2 x i8> <i8 255, i8 255>
+  ret <2 x i8> %res
 }

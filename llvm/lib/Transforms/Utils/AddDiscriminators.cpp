@@ -50,31 +50,45 @@
 //
 // For more details about DWARF discriminators, please visit
 // http://wiki.dwarfstd.org/index.php?title=Path_Discriminators
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "add-discriminators"
 
+// Command line option to disable discriminator generation even in the
+// presence of debug information. This is only needed when debugging
+// debug info generation issues.
+static cl::opt<bool> NoDiscriminators(
+    "no-discriminators", cl::init(false),
+    cl::desc("Disable generation of discriminator information."));
+
 namespace {
+
 // The legacy pass of AddDiscriminators.
 struct AddDiscriminatorsLegacyPass : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
+
   AddDiscriminatorsLegacyPass() : FunctionPass(ID) {
     initializeAddDiscriminatorsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -85,17 +99,11 @@ struct AddDiscriminatorsLegacyPass : public FunctionPass {
 } // end anonymous namespace
 
 char AddDiscriminatorsLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(AddDiscriminatorsLegacyPass, "add-discriminators",
                       "Add DWARF path discriminators", false, false)
 INITIALIZE_PASS_END(AddDiscriminatorsLegacyPass, "add-discriminators",
                     "Add DWARF path discriminators", false, false)
-
-// Command line option to disable discriminator generation even in the
-// presence of debug information. This is only needed when debugging
-// debug info generation issues.
-static cl::opt<bool> NoDiscriminators(
-    "no-discriminators", cl::init(false),
-    cl::desc("Disable generation of discriminator information."));
 
 // Create the legacy AddDiscriminatorsPass.
 FunctionPass *llvm::createAddDiscriminatorsPass() {
@@ -166,11 +174,11 @@ static bool addDiscriminators(Function &F) {
 
   bool Changed = false;
 
-  typedef std::pair<StringRef, unsigned> Location;
-  typedef DenseSet<const BasicBlock *> BBSet;
-  typedef DenseMap<Location, BBSet> LocationBBMap;
-  typedef DenseMap<Location, unsigned> LocationDiscriminatorMap;
-  typedef DenseSet<Location> LocationSet;
+  using Location = std::pair<StringRef, unsigned>;
+  using BBSet = DenseSet<const BasicBlock *>;
+  using LocationBBMap = DenseMap<Location, BBSet>;
+  using LocationDiscriminatorMap = DenseMap<Location, unsigned>;
+  using LocationSet = DenseSet<Location>;
 
   LocationBBMap LBM;
   LocationDiscriminatorMap LDM;
@@ -242,6 +250,7 @@ static bool addDiscriminators(Function &F) {
 bool AddDiscriminatorsLegacyPass::runOnFunction(Function &F) {
   return addDiscriminators(F);
 }
+
 PreservedAnalyses AddDiscriminatorsPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   if (!addDiscriminators(F))

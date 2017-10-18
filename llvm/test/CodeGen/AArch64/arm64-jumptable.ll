@@ -21,7 +21,7 @@ bb3:
   store i32 3, i32* %to
   br label %exit
 bb4:
-  store i32 4, i32* %to
+  store i32 5, i32* %to
   br label %exit
 exit:
   ret void

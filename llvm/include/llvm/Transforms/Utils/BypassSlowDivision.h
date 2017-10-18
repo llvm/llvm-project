@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/BypassSlowDivision.h --------------*- C++ -*-===//
+//===- llvm/Transforms/Utils/BypassSlowDivision.h ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,9 +19,13 @@
 #define LLVM_TRANSFORMS_UTILS_BYPASSSLOWDIVISION_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/Function.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include <cstdint>
 
 namespace llvm {
+
+class BasicBlock;
+class Value;
 
 struct DivRemMapKey {
   bool SignedOp;
@@ -61,6 +65,6 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 bool bypassSlowDivision(
     BasicBlock *BB, const DenseMap<unsigned int, unsigned int> &BypassWidth);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_BYPASSSLOWDIVISION_H
