@@ -12,9 +12,9 @@ entry:
 define void @t2() nounwind ssp {
 entry:
 ; CHECK-LABEL: t2:
+; CHECK: stp xzr, xzr, [sp, #16]
 ; CHECK: strh wzr, [sp, #32]
-; CHECK: stp xzr, xzr, [sp, #8]
-; CHECK: str xzr, [sp, #24]
+; CHECK: str xzr, [sp, #8]
   %buf = alloca [26 x i8], align 1
   %0 = getelementptr inbounds [26 x i8], [26 x i8]* %buf, i32 0, i32 0
   call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 26, i32 1, i1 false)
