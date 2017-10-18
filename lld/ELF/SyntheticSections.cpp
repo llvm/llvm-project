@@ -1608,7 +1608,11 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
-        return S.Symbol->isUndefined() || S.Symbol->isLazy();
+        // Shared symbols that this executable preempts are special. The dynamic
+        // linker has to look them up, so they have to be in the hash table.
+        if (auto *SS = dyn_cast<SharedSymbol>(S.Symbol))
+          return SS->CopyRelSec == nullptr && !SS->NeedsPltAddr;
+        return !S.Symbol->isInCurrentDSO();
       });
   if (Mid == V.end())
     return;

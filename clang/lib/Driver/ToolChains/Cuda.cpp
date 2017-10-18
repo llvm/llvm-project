@@ -542,9 +542,9 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   // flags are not duplicated.
   // Also append the compute capability.
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args){
+    for (Arg *A : Args) {
       bool IsDuplicate = false;
-      for (Arg *DALArg : *DAL){
+      for (Arg *DALArg : *DAL) {
         if (A == DALArg) {
           IsDuplicate = true;
           break;
@@ -555,14 +555,9 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
-    if (Arch.empty()) {
-      // Default compute capability for CUDA toolchain is the
-      // lowest compute capability supported by the installed
-      // CUDA version.
-      DAL->AddJoinedArg(nullptr,
-          Opts.getOption(options::OPT_march_EQ),
-          CudaInstallation.getLowestExistingArch());
-    }
+    if (Arch.empty())
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
+                        CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
 
     return DAL;
   }
