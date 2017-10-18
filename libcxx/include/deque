@@ -1356,7 +1356,6 @@ public:
     iterator insert(const_iterator __p, initializer_list<value_type> __il)
         {return insert(__p, __il.begin(), __il.end());}
 #endif  // _LIBCPP_CXX03_LANG
-
     iterator insert(const_iterator __p, const value_type& __v);
     iterator insert(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIter>
@@ -2224,7 +2223,11 @@ deque<_Tp, _Allocator>::__append(_InpIter __f, _InpIter __l,
                                                    !__is_forward_iterator<_InpIter>::value>::type*)
 {
     for (; __f != __l; ++__f)
+#ifdef _LIBCPP_CXX03_LANG
         push_back(*__f);
+#else
+        emplace_back(*__f);
+#endif
 }
 
 template <class _Tp, class _Allocator>

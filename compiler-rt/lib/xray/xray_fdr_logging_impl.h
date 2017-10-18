@@ -532,7 +532,8 @@ inline bool releaseThreadLocalBuffer(BufferQueue &BQArg) {
   return true;
 }
 
-inline bool prepareBuffer(int (*wall_clock_reader)(clockid_t,
+inline bool prepareBuffer(uint64_t TSC, unsigned char CPU,
+                          int (*wall_clock_reader)(clockid_t,
                                                    struct timespec *),
                           size_t MaxSize) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
@@ -549,6 +550,9 @@ inline bool prepareBuffer(int (*wall_clock_reader)(clockid_t,
       return false;
     }
     setupNewBuffer(wall_clock_reader);
+
+    // Always write the CPU metadata as the first record in the buffer.
+    writeNewCPUIdMetadata(CPU, TSC);
   }
   return true;
 }
@@ -599,6 +603,9 @@ inline bool isLogInitializedAndReady(
     }
 
     setupNewBuffer(wall_clock_reader);
+
+    // Always write the CPU metadata as the first record in the buffer.
+    writeNewCPUIdMetadata(CPU, TSC);
   }
 
   if (TLD.CurrentCPU == std::numeric_limits<uint16_t>::max()) {
@@ -728,7 +735,7 @@ inline void processFunctionHook(
   // bytes in the end of the buffer, we need to write out the EOB, get a new
   // Buffer, set it up properly before doing any further writing.
   size_t MaxSize = FunctionRecSize + 2 * MetadataRecSize;
-  if (!prepareBuffer(wall_clock_reader, MaxSize)) {
+  if (!prepareBuffer(TSC, CPU, wall_clock_reader, MaxSize)) {
     TLD.LocalBQ = nullptr;
     return;
   }

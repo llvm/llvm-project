@@ -90,23 +90,23 @@ bool NativeProcessProtocol::SetExitStatus(WaitStatus status,
   return true;
 }
 
-NativeThreadProtocolSP NativeProcessProtocol::GetThreadAtIndex(uint32_t idx) {
+NativeThreadProtocol *NativeProcessProtocol::GetThreadAtIndex(uint32_t idx) {
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   if (idx < m_threads.size())
-    return m_threads[idx];
-  return NativeThreadProtocolSP();
+    return m_threads[idx].get();
+  return nullptr;
 }
 
-NativeThreadProtocolSP
+NativeThreadProtocol *
 NativeProcessProtocol::GetThreadByIDUnlocked(lldb::tid_t tid) {
-  for (auto thread_sp : m_threads) {
-    if (thread_sp->GetID() == tid)
-      return thread_sp;
+  for (const auto &thread : m_threads) {
+    if (thread->GetID() == tid)
+      return thread.get();
   }
-  return NativeThreadProtocolSP();
+  return nullptr;
 }
 
-NativeThreadProtocolSP NativeProcessProtocol::GetThreadByID(lldb::tid_t tid) {
+NativeThreadProtocol *NativeProcessProtocol::GetThreadByID(lldb::tid_t tid) {
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   return GetThreadByIDUnlocked(tid);
 }
@@ -134,22 +134,18 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // get any thread
-  NativeThreadProtocolSP thread_sp(
+  NativeThreadProtocol *thread(
       const_cast<NativeProcessProtocol *>(this)->GetThreadAtIndex(0));
-  if (!thread_sp) {
-    if (log)
-      log->Warning("NativeProcessProtocol::%s (): failed to find a thread to "
-                   "grab a NativeRegisterContext!",
-                   __FUNCTION__);
+  if (!thread) {
+    LLDB_LOG(log, "failed to find a thread to grab a NativeRegisterContext!");
     return llvm::None;
   }
 
-  NativeRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+  NativeRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
   if (!reg_ctx_sp) {
-    if (log)
-      log->Warning("NativeProcessProtocol::%s (): failed to get a "
-                   "RegisterContextNativeProcess from the first thread!",
-                   __FUNCTION__);
+    LLDB_LOG(
+        log,
+        "failed to get a RegisterContextNativeProcess from the first thread!");
     return llvm::None;
   }
 
@@ -175,7 +171,7 @@ Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
   // for.  If one of the thread watchpoint setting operations fails,
   // back off and remove the watchpoint for all the threads that
   // were successfully set so we get back to a consistent state.
-  std::vector<NativeThreadProtocolSP> watchpoint_established_threads;
+  std::vector<NativeThreadProtocol *> watchpoint_established_threads;
 
   // Tell each thread to set a watchpoint.  In the event that
   // hardware watchpoints are requested but the SetWatchpoint fails,
@@ -184,40 +180,33 @@ Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
   // watchpoints available, some of the threads will fail to set
   // hardware watchpoints while software ones may be available.
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
-  for (auto thread_sp : m_threads) {
-    assert(thread_sp && "thread list should not have a NULL thread!");
-    if (!thread_sp)
-      continue;
+  for (const auto &thread : m_threads) {
+    assert(thread && "thread list should not have a NULL thread!");
 
     Status thread_error =
-        thread_sp->SetWatchpoint(addr, size, watch_flags, hardware);
+        thread->SetWatchpoint(addr, size, watch_flags, hardware);
     if (thread_error.Fail() && hardware) {
       // Try software watchpoints since we failed on hardware watchpoint setting
       // and we may have just run out of hardware watchpoints.
-      thread_error = thread_sp->SetWatchpoint(addr, size, watch_flags, false);
-      if (thread_error.Success()) {
-        if (log)
-          log->Warning(
-              "hardware watchpoint requested but software watchpoint set");
-      }
+      thread_error = thread->SetWatchpoint(addr, size, watch_flags, false);
+      if (thread_error.Success())
+        LLDB_LOG(log,
+                 "hardware watchpoint requested but software watchpoint set");
     }
 
     if (thread_error.Success()) {
       // Remember that we set this watchpoint successfully in
       // case we need to clear it later.
-      watchpoint_established_threads.push_back(thread_sp);
+      watchpoint_established_threads.push_back(thread.get());
     } else {
       // Unset the watchpoint for each thread we successfully
       // set so that we get back to a consistent state of "not
       // set" for the watchpoint.
       for (auto unwatch_thread_sp : watchpoint_established_threads) {
         Status remove_error = unwatch_thread_sp->RemoveWatchpoint(addr);
-        if (remove_error.Fail() && log) {
-          log->Warning("NativeProcessProtocol::%s (): RemoveWatchpoint failed "
-                       "for pid=%" PRIu64 ", tid=%" PRIu64 ": %s",
-                       __FUNCTION__, GetID(), unwatch_thread_sp->GetID(),
-                       remove_error.AsCString());
-        }
+        if (remove_error.Fail())
+          LLDB_LOG(log, "RemoveWatchpoint failed for pid={0}, tid={1}: {2}",
+                   GetID(), unwatch_thread_sp->GetID(), remove_error);
       }
 
       return thread_error;
@@ -233,12 +222,10 @@ Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   Status overall_error;
 
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
-  for (auto thread_sp : m_threads) {
-    assert(thread_sp && "thread list should not have a NULL thread!");
-    if (!thread_sp)
-      continue;
+  for (const auto &thread : m_threads) {
+    assert(thread && "thread list should not have a NULL thread!");
 
-    const Status thread_error = thread_sp->RemoveWatchpoint(addr);
+    const Status thread_error = thread->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
       // Keep track of the first thread error if any threads
       // fail. We want to try to remove the watchpoint from
@@ -277,20 +264,18 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
   // set this hardware breakpoint. If any of the current process threads fails
   // to set this hardware breakpoint then roll back and remove this breakpoint
   // for all the threads that had already set it successfully.
-  std::vector<NativeThreadProtocolSP> breakpoint_established_threads;
+  std::vector<NativeThreadProtocol *> breakpoint_established_threads;
 
   // Request to set a hardware breakpoint for each of current process threads.
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
-  for (auto thread_sp : m_threads) {
-    assert(thread_sp && "thread list should not have a NULL thread!");
-    if (!thread_sp)
-      continue;
+  for (const auto &thread : m_threads) {
+    assert(thread && "thread list should not have a NULL thread!");
 
-    Status thread_error = thread_sp->SetHardwareBreakpoint(addr, size);
+    Status thread_error = thread->SetHardwareBreakpoint(addr, size);
     if (thread_error.Success()) {
       // Remember that we set this breakpoint successfully in
       // case we need to clear it later.
-      breakpoint_established_threads.push_back(thread_sp);
+      breakpoint_established_threads.push_back(thread.get());
     } else {
       // Unset the breakpoint for each thread we successfully
       // set so that we get back to a consistent state of "not
@@ -298,12 +283,10 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
       for (auto rollback_thread_sp : breakpoint_established_threads) {
         Status remove_error =
             rollback_thread_sp->RemoveHardwareBreakpoint(addr);
-        if (remove_error.Fail() && log) {
-          log->Warning("NativeProcessProtocol::%s (): RemoveHardwareBreakpoint"
-                       " failed for pid=%" PRIu64 ", tid=%" PRIu64 ": %s",
-                       __FUNCTION__, GetID(), rollback_thread_sp->GetID(),
-                       remove_error.AsCString());
-        }
+        if (remove_error.Fail())
+          LLDB_LOG(log,
+                   "RemoveHardwareBreakpoint failed for pid={0}, tid={1}: {2}",
+                   GetID(), rollback_thread_sp->GetID(), remove_error);
       }
 
       return thread_error;
@@ -324,12 +307,9 @@ Status NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   Status error;
 
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
-  for (auto thread_sp : m_threads) {
-    assert(thread_sp && "thread list should not have a NULL thread!");
-    if (!thread_sp)
-      continue;
-
-    error = thread_sp->RemoveHardwareBreakpoint(addr);
+  for (const auto &thread : m_threads) {
+    assert(thread && "thread list should not have a NULL thread!");
+    error = thread->RemoveHardwareBreakpoint(addr);
   }
 
   // Also remove from hardware breakpoint map of current process.
