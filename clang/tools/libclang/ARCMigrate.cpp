@@ -34,7 +34,7 @@ struct Remap {
 //===----------------------------------------------------------------------===//
 
 CXRemapping clang_getRemappings(const char *migrate_dir_path) {
-#ifndef CLANG_ENABLE_ARCMT
+#if !CLANG_ENABLE_ARCMT
   llvm::errs() << "error: feature not enabled in this build\n";
   return nullptr;
 #else
@@ -77,7 +77,7 @@ CXRemapping clang_getRemappings(const char *migrate_dir_path) {
 
 CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
                                             unsigned numFiles) {
-#ifndef CLANG_ENABLE_ARCMT
+#if !CLANG_ENABLE_ARCMT
   llvm::errs() << "error: feature not enabled in this build\n";
   return nullptr;
 #else

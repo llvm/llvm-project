@@ -1374,7 +1374,7 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
 
   // Walk up to the containing context. That might also have been instantiated
   // from a template.
-  DeclContext *Context = Entity->getDeclContext();
+  DeclContext *Context = Entity->getLexicalDeclContext();
   if (Context->isFileContext())
     return S.getOwningModule(Entity);
   return getDefiningModule(S, cast<Decl>(Context));

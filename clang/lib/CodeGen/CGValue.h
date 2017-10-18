@@ -230,9 +230,8 @@ class LValue {
   Expr *BaseIvarExp;
 
 private:
-  void Initialize(QualType Type, Qualifiers Quals,
-                  CharUnits Alignment, LValueBaseInfo BaseInfo,
-                  TBAAAccessInfo TBAAInfo = TBAAAccessInfo()) {
+  void Initialize(QualType Type, Qualifiers Quals, CharUnits Alignment,
+                  LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     this->Type = Type;
@@ -381,24 +380,26 @@ public:
   }
 
   static LValue MakeVectorElt(Address vecAddress, llvm::Value *Idx,
-                              QualType type, LValueBaseInfo BaseInfo) {
+                              QualType type, LValueBaseInfo BaseInfo,
+                              TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = VectorElt;
     R.V = vecAddress.getPointer();
     R.VectorIdx = Idx;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 BaseInfo);
+                 BaseInfo, TBAAInfo);
     return R;
   }
 
   static LValue MakeExtVectorElt(Address vecAddress, llvm::Constant *Elts,
-                                 QualType type, LValueBaseInfo BaseInfo) {
+                                 QualType type, LValueBaseInfo BaseInfo,
+                                 TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = ExtVectorElt;
     R.V = vecAddress.getPointer();
     R.VectorElts = Elts;
     R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
-                 BaseInfo);
+                 BaseInfo, TBAAInfo);
     return R;
   }
 
@@ -408,15 +409,15 @@ public:
   /// bit-field refers to.
   /// \param Info - The information describing how to perform the bit-field
   /// access.
-  static LValue MakeBitfield(Address Addr,
-                             const CGBitFieldInfo &Info,
-                             QualType type,
-                             LValueBaseInfo BaseInfo) {
+  static LValue MakeBitfield(Address Addr, const CGBitFieldInfo &Info,
+                             QualType type, LValueBaseInfo BaseInfo,
+                             TBAAAccessInfo TBAAInfo) {
     LValue R;
     R.LVType = BitField;
     R.V = Addr.getPointer();
     R.BitFieldInfo = &Info;
-    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo);
+    R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo,
+                 TBAAInfo);
     return R;
   }
 
@@ -425,7 +426,8 @@ public:
     R.LVType = GlobalReg;
     R.V = Reg.getPointer();
     R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
-                 LValueBaseInfo(AlignmentSource::Decl, false));
+                 LValueBaseInfo(AlignmentSource::Decl, false),
+                 TBAAAccessInfo());
     return R;
   }
 

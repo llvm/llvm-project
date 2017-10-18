@@ -3213,9 +3213,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue LHS = EmitLValue(E->getBase());
     auto *Idx = EmitIdxAfterBase(/*Promote*/false);
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
-    return LValue::MakeVectorElt(LHS.getAddress(), Idx,
-                                 E->getBase()->getType(),
-                                 LHS.getBaseInfo());
+    return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
+                                 LHS.getBaseInfo(), TBAAAccessInfo());
   }
 
   // All the other cases basically behave like simple offsetting.
@@ -3567,7 +3566,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
-                                    Base.getBaseInfo());
+                                    Base.getBaseInfo(), TBAAAccessInfo());
   }
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
 
@@ -3578,7 +3577,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     CElts.push_back(BaseElts->getAggregateElement(Indices[i]));
   llvm::Constant *CV = llvm::ConstantVector::get(CElts);
   return LValue::MakeExtVectorElt(Base.getExtVectorAddress(), CV, type,
-                                  Base.getBaseInfo());
+                                  Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
@@ -3680,15 +3679,6 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
 LValue CodeGenFunction::EmitLValueForField(LValue base,
                                            const FieldDecl *field) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
-  AlignmentSource fieldAlignSource =
-    getFieldAlignmentSource(BaseInfo.getAlignmentSource());
-  LValueBaseInfo FieldBaseInfo(fieldAlignSource, BaseInfo.getMayAlias());
-
-  QualType type = field->getType();
-  const RecordDecl *rec = field->getParent();
-  if (rec->isUnion() || rec->hasAttr<MayAliasAttr>() || type->isVectorType())
-    FieldBaseInfo.setMayAlias(true);
-  bool mayAlias = FieldBaseInfo.getMayAlias();
 
   if (field->isBitField()) {
     const CGRecordLayout &RL =
@@ -3708,19 +3698,55 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
 
     QualType fieldType =
       field->getType().withCVRQualifiers(base.getVRQualifiers());
-    return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo);
+    // TODO: Support TBAA for bit fields.
+    LValueBaseInfo FieldBaseInfo(BaseInfo.getAlignmentSource(), false);
+    return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo,
+                                TBAAAccessInfo());
+  }
+
+  // Fields of may-alias structures are may-alias themselves.
+  // FIXME: this should get propagated down through anonymous structs
+  // and unions.
+  QualType FieldType = field->getType();
+  const RecordDecl *rec = field->getParent();
+  AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
+  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource), false);
+  TBAAAccessInfo FieldTBAAInfo;
+  if (BaseInfo.getMayAlias() || rec->hasAttr<MayAliasAttr>() ||
+          FieldType->isVectorType()) {
+    FieldBaseInfo.setMayAlias(true);
+    FieldTBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  } else if (rec->isUnion()) {
+    // TODO: Support TBAA for unions.
+    FieldBaseInfo.setMayAlias(true);
+    FieldTBAAInfo = CGM.getTBAAMayAliasAccessInfo();
+  } else {
+    // If no base type been assigned for the base access, then try to generate
+    // one for this base lvalue.
+    FieldTBAAInfo = base.getTBAAInfo();
+    if (!FieldTBAAInfo.BaseType) {
+        FieldTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
+        assert(!FieldTBAAInfo.Offset &&
+               "Nonzero offset for an access with no base type!");
+    }
+
+    // Adjust offset to be relative to the base type.
+    const ASTRecordLayout &Layout =
+        getContext().getASTRecordLayout(field->getParent());
+    unsigned CharWidth = getContext().getCharWidth();
+    if (FieldTBAAInfo.BaseType)
+      FieldTBAAInfo.Offset +=
+          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
+
+    // Update the final access type.
+    FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
   }
 
   Address addr = base.getAddress();
   unsigned cvr = base.getVRQualifiers();
-  bool TBAAPath = CGM.getCodeGenOpts().StructPathTBAA;
   if (rec->isUnion()) {
     // For unions, there is no pointer adjustment.
-    assert(!type->isReferenceType() && "union has reference member");
-    // TODO: handle path-aware TBAA for union.
-    TBAAPath = false;
-
-    const auto FieldType = field->getType();
+    assert(!FieldType->isReferenceType() && "union has reference member");
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
@@ -3732,24 +3758,17 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     addr = emitAddrOfFieldStorage(*this, addr, field);
 
     // If this is a reference field, load the reference right now.
-    if (const ReferenceType *refType = type->getAs<ReferenceType>()) {
+    if (const ReferenceType *refType = FieldType->getAs<ReferenceType>()) {
       llvm::LoadInst *load = Builder.CreateLoad(addr, "ref");
       if (cvr & Qualifiers::Volatile) load->setVolatile(true);
 
-      // Loading the reference will disable path-aware TBAA.
-      TBAAPath = false;
-      TBAAAccessInfo TBAAInfo = mayAlias ? CGM.getTBAAMayAliasAccessInfo() :
-                                           CGM.getTBAAAccessInfo(type);
-      CGM.DecorateInstructionWithTBAA(load, TBAAInfo);
+      CGM.DecorateInstructionWithTBAA(load, FieldTBAAInfo);
 
-      mayAlias = false;
-      type = refType->getPointeeType();
-
-      CharUnits alignment =
-        getNaturalTypeAlignment(type, &FieldBaseInfo, /* TBAAInfo= */ nullptr,
-                                /* forPointeeType= */ true);
-      FieldBaseInfo.setMayAlias(false);
-      addr = Address(load, alignment);
+      FieldType = refType->getPointeeType();
+      CharUnits Align = getNaturalTypeAlignment(FieldType, &FieldBaseInfo,
+                                                &FieldTBAAInfo,
+                                                /* forPointeeType= */ true);
+      addr = Address(load, Align);
 
       // Qualifiers on the struct don't apply to the referencee, and
       // we'll pick up CVR from the actual type later, so reset these
@@ -3762,45 +3781,14 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   // for both unions and structs.  A union needs a bitcast, a struct element
   // will need a bitcast if the LLVM type laid out doesn't match the desired
   // type.
-  addr = Builder.CreateElementBitCast(addr,
-                                      CGM.getTypes().ConvertTypeForMem(type),
-                                      field->getName());
+  addr = Builder.CreateElementBitCast(
+      addr, CGM.getTypes().ConvertTypeForMem(FieldType), field->getName());
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
 
-  LValue LV = MakeAddrLValue(addr, type, FieldBaseInfo,
-                             CGM.getTBAAAccessInfo(type));
+  LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(cvr);
-
-  // Fields of may_alias structs act like 'char' for TBAA purposes.
-  // FIXME: this should get propagated down through anonymous structs
-  // and unions.
-  if (mayAlias) {
-    LV.setTBAAInfo(CGM.getTBAAMayAliasAccessInfo());
-  } else if (TBAAPath) {
-    // If no base type been assigned for the base access, then try to generate
-    // one for this base lvalue.
-    TBAAAccessInfo TBAAInfo = base.getTBAAInfo();
-    if (!TBAAInfo.BaseType) {
-        TBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(base.getType());
-        assert(!TBAAInfo.Offset &&
-               "Nonzero offset for an access with no base type!");
-    }
-
-    // Adjust offset to be relative to the base type.
-    const ASTRecordLayout &Layout =
-        getContext().getASTRecordLayout(field->getParent());
-    unsigned CharWidth = getContext().getCharWidth();
-    if (TBAAInfo.BaseType)
-      TBAAInfo.Offset +=
-          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
-
-    // Update the final access type.
-    TBAAInfo.AccessType = LV.getTBAAInfo().AccessType;
-
-    LV.setTBAAInfo(TBAAInfo);
-  }
 
   // __weak attribute on a field is ignored.
   if (LV.getQuals().getObjCGCAttr() == Qualifiers::Weak)

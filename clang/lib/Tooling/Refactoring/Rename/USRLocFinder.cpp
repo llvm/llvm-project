@@ -196,13 +196,46 @@ public:
     const NamedDecl *Decl = Expr->getFoundDecl();
     // Get the underlying declaration of the shadow declaration introduced by a
     // using declaration.
-    if (auto* UsingShadow = llvm::dyn_cast<UsingShadowDecl>(Decl)) {
+    if (auto *UsingShadow = llvm::dyn_cast<UsingShadowDecl>(Decl)) {
       Decl = UsingShadow->getTargetDecl();
     }
 
+    auto BeginLoc = Expr->getLocStart();
+    auto EndLoc = Expr->getLocEnd();
+    // In case of renaming an enum declaration, we have to explicitly handle
+    // unscoped enum constants referenced in expressions (e.g.
+    // "auto r = ns1::ns2::Green" where Green is an enum constant of an unscoped
+    // enum decl "ns1::ns2::Color") as these enum constants cannot be caught by
+    // TypeLoc.
+    if (const auto *T = llvm::dyn_cast<EnumConstantDecl>(Decl)) {
+      // FIXME: Handle the enum constant without prefix qualifiers (`a = Green`)
+      // when renaming an unscoped enum declaration with a new namespace.
+      if (!Expr->hasQualifier())
+        return true;
+
+      if (const auto *ED =
+              llvm::dyn_cast_or_null<EnumDecl>(getClosestAncestorDecl(*T))) {
+        if (ED->isScoped())
+          return true;
+        Decl = ED;
+      }
+      // The current fix would qualify "ns1::ns2::Green" as
+      // "ns1::ns2::Color::Green".
+      //
+      // Get the EndLoc of the replacement by moving 1 character backward (
+      // to exclude the last '::').
+      //
+      //    ns1::ns2::Green;
+      //    ^      ^^
+      // BeginLoc  |EndLoc of the qualifier
+      //           new EndLoc
+      EndLoc = Expr->getQualifierLoc().getEndLoc().getLocWithOffset(-1);
+      assert(EndLoc.isValid() &&
+             "The enum constant should have prefix qualifers.");
+    }
     if (isInUSRSet(Decl)) {
-      RenameInfo Info = {Expr->getSourceRange().getBegin(),
-                         Expr->getSourceRange().getEnd(),
+      RenameInfo Info = {BeginLoc,
+                         EndLoc,
                          Decl,
                          getClosestAncestorDecl(*Expr),
                          Expr->getQualifier(),
@@ -364,10 +397,13 @@ private:
   // Get the supported declaration from a given typeLoc. If the declaration type
   // is not supported, returns nullptr.
   //
-  // FIXME: support more types, e.g. enum, type alias.
+  // FIXME: support more types, e.g. type alias.
   const NamedDecl *getSupportedDeclFromTypeLoc(TypeLoc Loc) {
     if (const auto *RD = Loc.getType()->getAsCXXRecordDecl())
       return RD;
+    if (const auto *ED =
+            llvm::dyn_cast_or_null<EnumDecl>(Loc.getType()->getAsTagDecl()))
+      return ED;
     return nullptr;
   }
 

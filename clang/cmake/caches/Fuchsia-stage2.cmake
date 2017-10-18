@@ -30,8 +30,8 @@ if(APPLE)
 endif()
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -gline-tables-only -DNDEBUG" CACHE STRING "")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -gline-tables-only -DNDEBUG" CACHE STRING "")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -gline-tables-only -DNDEBUG" CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -gline-tables-only -DNDEBUG" CACHE STRING "")
 
 set(LLVM_BUILTIN_TARGETS "x86_64-fuchsia;aarch64-fuchsia" CACHE STRING "")
 foreach(target x86_64;aarch64)

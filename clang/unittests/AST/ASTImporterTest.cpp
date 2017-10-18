@@ -97,6 +97,10 @@ testImport(const std::string &FromCode, Language FromLang,
   llvm::raw_svector_ostream ToNothing(ImportChecker);
   ToCtx.getTranslationUnitDecl()->print(ToNothing);
 
+  // This traverses the AST to catch certain bugs like poorly or not
+  // implemented subtrees.
+  Imported->dump(ToNothing);
+
   return Verifier.match(Imported, AMatcher);
 }
 
@@ -265,6 +269,15 @@ TEST(ImportExpr, ImportParenListExpr) {
                       varDecl(hasInitializer(parenListExpr(has(unaryOperator(
                           hasOperatorName("*"),
                           hasUnaryOperand(cxxThisExpr()))))))))))))))))))))))));
+}
+
+TEST(ImportExpr, ImportSwitch) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(
+      testImport("void declToImport() { int b; switch (b) { case 1: break; } }",
+                 Lang_CXX, "", Lang_CXX, Verifier,
+                 functionDecl(hasBody(compoundStmt(
+                     has(switchStmt(has(compoundStmt(has(caseStmt()))))))))));
 }
 
 TEST(ImportExpr, ImportStmtExpr) {

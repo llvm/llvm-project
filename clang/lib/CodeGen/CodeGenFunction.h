@@ -3092,13 +3092,6 @@ public:
 
   llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
                                 SourceLocation Loc, LValueBaseInfo BaseInfo,
-                                bool isNontemporal = false) {
-    return EmitLoadOfScalar(Addr, Volatile, Ty, Loc, BaseInfo,
-                            CGM.getTBAAAccessInfo(Ty), isNontemporal);
-  }
-
-  llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
-                                SourceLocation Loc, LValueBaseInfo BaseInfo,
                                 TBAAAccessInfo TBAAInfo,
                                 bool isNontemporal = false);
 
@@ -3116,13 +3109,6 @@ public:
                          AlignmentSource Source = AlignmentSource::Type,
                          bool isInit = false, bool isNontemporal = false) {
     EmitStoreOfScalar(Value, Addr, Volatile, Ty, LValueBaseInfo(Source, false),
-                      CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal);
-  }
-
-  void EmitStoreOfScalar(llvm::Value *Value, Address Addr,
-                         bool Volatile, QualType Ty, LValueBaseInfo BaseInfo,
-                         bool isInit = false, bool isNontemporal = false) {
-    EmitStoreOfScalar(Value, Addr, Volatile, Ty, BaseInfo,
                       CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal);
   }
 

@@ -17,7 +17,7 @@ typedef struct once_flag_s {
 #endif
 
 template <class Callable, class... Args>
-void call_once(once_flag &o, Callable func, Args... args) {};
+void call_once(once_flag &o, Callable&& func, Args&&... args) {};
 
 } // namespace std
 
