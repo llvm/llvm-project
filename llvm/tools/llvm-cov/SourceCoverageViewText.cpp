@@ -29,8 +29,7 @@ void CoveragePrinterText::closeViewFile(OwnedStream OS) {
 }
 
 Error CoveragePrinterText::createIndexFile(
-    ArrayRef<std::string> SourceFiles,
-    const coverage::CoverageMapping &Coverage,
+    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
     const CoverageFiltersMatchAll &Filters) {
   auto OSOrErr = createOutputStream("index", "txt", /*InToplevel=*/true);
   if (Error E = OSOrErr.takeError())
