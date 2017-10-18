@@ -10,7 +10,7 @@ using owner = T;
 } // namespace gsl
 
 extern "C" {
-using size_t = unsigned long;
+using size_t = unsigned long long;
 using FILE = int;
 
 void *malloc(size_t ByteCount);
