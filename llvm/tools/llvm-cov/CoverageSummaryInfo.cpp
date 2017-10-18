@@ -17,59 +17,6 @@
 using namespace llvm;
 using namespace coverage;
 
-LineCoverageStats::LineCoverageStats(
-    ArrayRef<const coverage::CoverageSegment *> LineSegments,
-    const coverage::CoverageSegment *WrappedSegment, unsigned Line)
-    : ExecutionCount(0), HasMultipleRegions(false), Mapped(false), Line(Line),
-      LineSegments(LineSegments), WrappedSegment(WrappedSegment) {
-  // Find the minimum number of regions which start in this line.
-  unsigned MinRegionCount = 0;
-  auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
-    return !S->IsGapRegion && S->HasCount && S->IsRegionEntry;
-  };
-  for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)
-    if (isStartOfRegion(LineSegments[I]))
-      ++MinRegionCount;
-
-  bool StartOfSkippedRegion = !LineSegments.empty() &&
-                              !LineSegments.front()->HasCount &&
-                              LineSegments.front()->IsRegionEntry;
-
-  HasMultipleRegions = MinRegionCount > 1;
-  Mapped =
-      !StartOfSkippedRegion &&
-      ((WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0));
-
-  if (!Mapped)
-    return;
-
-  // Pick the max count from the non-gap, region entry segments. If there
-  // aren't any, use the wrapped count.
-  if (!MinRegionCount) {
-    ExecutionCount = WrappedSegment->Count;
-    return;
-  }
-  for (const auto *LS : LineSegments)
-    if (isStartOfRegion(LS))
-      ExecutionCount = std::max(ExecutionCount, LS->Count);
-}
-
-LineCoverageIterator &LineCoverageIterator::operator++() {
-  if (Next == CD.end()) {
-    Stats = LineCoverageStats();
-    Ended = true;
-    return *this;
-  }
-  if (Segments.size())
-    WrappedSegment = Segments.back();
-  Segments.clear();
-  while (Next != CD.end() && Next->Line == Line)
-    Segments.push_back(&*Next++);
-  Stats = LineCoverageStats(Segments, WrappedSegment, Line);
-  ++Line;
-  return *this;
-}
-
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
                              const coverage::FunctionRecord &Function) {
