@@ -468,9 +468,9 @@ void SourceCoverageViewHTML::renderViewDivider(raw_ostream &, unsigned) {
   // The table-based output makes view dividers unnecessary.
 }
 
-void SourceCoverageViewHTML::renderLine(
-    raw_ostream &OS, LineRef L, const coverage::CoverageSegment *WrappedSegment,
-    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned) {
+void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
+                                        const LineCoverageStats &LCS,
+                                        unsigned ExpansionCol, unsigned) {
   StringRef Line = L.Line;
   unsigned LineNo = L.LineNo;
 
@@ -482,6 +482,7 @@ void SourceCoverageViewHTML::renderLine(
   //    at the end of the line. Both are required but may be empty.
 
   SmallVector<std::string, 8> Snippets;
+  CoverageSegmentArray Segments = LCS.getLineSegments();
 
   unsigned LCol = 1;
   auto Snip = [&](unsigned Start, unsigned Len) {
@@ -518,7 +519,7 @@ void SourceCoverageViewHTML::renderLine(
     return S && S->HasCount && S->Count == 0;
   };
 
-  if (CheckIfUncovered(WrappedSegment)) {
+  if (CheckIfUncovered(LCS.getWrappedSegment())) {
     Color = "red";
     if (!Snippets[0].empty())
       Snippets[0] = Highlight(Snippets[0], 1, 1 + Snippets[0].size());
@@ -605,16 +606,17 @@ void SourceCoverageViewHTML::renderLineNumberColumn(raw_ostream &OS,
 }
 
 void SourceCoverageViewHTML::renderRegionMarkers(raw_ostream &,
-                                                 CoverageSegmentArray,
+                                                 const LineCoverageStats &Line,
                                                  unsigned) {
   // Region markers are rendered in-line using tooltips.
 }
 
-void SourceCoverageViewHTML::renderExpansionSite(
-    raw_ostream &OS, LineRef L, const coverage::CoverageSegment *WrappedSegment,
-    CoverageSegmentArray Segments, unsigned ExpansionCol, unsigned ViewDepth) {
+void SourceCoverageViewHTML::renderExpansionSite(raw_ostream &OS, LineRef L,
+                                                 const LineCoverageStats &LCS,
+                                                 unsigned ExpansionCol,
+                                                 unsigned ViewDepth) {
   // Render the line containing the expansion site. No extra formatting needed.
-  renderLine(OS, L, WrappedSegment, Segments, ExpansionCol, ViewDepth);
+  renderLine(OS, L, LCS, ExpansionCol, ViewDepth);
 }
 
 void SourceCoverageViewHTML::renderExpansionView(raw_ostream &OS,
