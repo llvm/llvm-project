@@ -143,6 +143,8 @@ bool X86InterleavedAccessGroup::isSupported() const {
 
   if (isa<LoadInst>(Inst)) {
     WideInstSize = DL.getTypeSizeInBits(Inst->getType());
+    if (cast<LoadInst>(Inst)->getPointerAddressSpace())
+      return false;
   } else
     WideInstSize = DL.getTypeSizeInBits(Shuffles[0]->getType());
 

@@ -59,10 +59,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(&AArch64::FPRRegBank == &RBFPR &&
          "The order in RegBanks is messed up");
 
-  const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
+  const RegisterBank &RBCCR = getRegBank(AArch64::CCRegBankID);
   (void)RBCCR;
-  assert(&AArch64::CCRRegBank == &RBCCR &&
-         "The order in RegBanks is messed up");
+  assert(&AArch64::CCRegBank == &RBCCR && "The order in RegBanks is messed up");
 
   // The GPR register bank is fully defined by all the registers in
   // GR64all + its subclasses.
@@ -229,7 +228,7 @@ const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
   case AArch64::XSeqPairsClassRegClassID:
     return getRegBank(AArch64::GPRRegBankID);
   case AArch64::CCRRegClassID:
-    return getRegBank(AArch64::CCRRegBankID);
+    return getRegBank(AArch64::CCRegBankID);
   default:
     llvm_unreachable("Register class not supported");
   }

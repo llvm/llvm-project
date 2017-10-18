@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=sandybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=ivybridge | FileCheck %s --check-prefix=CHECK --check-prefix=SANDY
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=haswell | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=broadwell | FileCheck %s --check-prefix=CHECK --check-prefix=BROADWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx | FileCheck %s --check-prefix=CHECK --check-prefix=SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
@@ -51,13 +52,21 @@ define i64 @test_cvtpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvtpd2pi:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvtpd2pi (%rdi), %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvtpd2pi %xmm0, %mm1 # sched: [4:1.00]
+; BROADWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvtpd2pi:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvtpd2pi %xmm0, %mm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    cvtpd2pi (%rdi), %mm1 # sched: [5:1.00]
-; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    cvtpd2pi (%rdi), %mm1 # sched: [11:1.00]
+; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtpd2pi:
 ; SKX:       # BB#0:
@@ -127,12 +136,19 @@ define <2 x double> @test_cvtpi2pd(x86_mmx %a0, x86_mmx* %a1) optsize {
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvtpi2pd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [4:1.00]
+; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvtpi2pd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [5:1.00]
+; SKYLAKE-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [10:1.00]
 ; SKYLAKE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtpi2pd:
 ; SKX:       # BB#0:
@@ -198,12 +214,19 @@ define <4 x float> @test_cvtpi2ps(x86_mmx %a0, x86_mmx* %a1, <4 x float> %a2, <4
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvtpi2ps:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [3:1.00]
+; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvtpi2ps:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [6:2.00]
-; SKYLAKE-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [4:1.00]
+; SKYLAKE-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [9:1.00]
 ; SKYLAKE-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtpi2ps:
 ; SKX:       # BB#0:
@@ -274,13 +297,21 @@ define i64 @test_cvtps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; HASWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvtps2pi:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvtps2pi %xmm0, %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [3:1.00]
+; BROADWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvtps2pi:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvtps2pi %xmm0, %mm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [4:0.50]
-; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [9:0.50]
+; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtps2pi:
 ; SKX:       # BB#0:
@@ -355,13 +386,21 @@ define i64 @test_cvttpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvttpd2pi:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvttpd2pi (%rdi), %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvttpd2pi %xmm0, %mm1 # sched: [4:1.00]
+; BROADWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvttpd2pi:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvttpd2pi %xmm0, %mm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    cvttpd2pi (%rdi), %mm1 # sched: [5:1.00]
-; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    cvttpd2pi (%rdi), %mm1 # sched: [11:1.00]
+; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvttpd2pi:
 ; SKX:       # BB#0:
@@ -436,13 +475,21 @@ define i64 @test_cvttps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; HASWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_cvttps2pi:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    cvttps2pi %xmm0, %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [3:1.00]
+; BROADWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_cvttps2pi:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    cvttps2pi %xmm0, %mm0 # sched: [5:1.00]
-; SKYLAKE-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [4:0.50]
-; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [9:0.50]
+; SKYLAKE-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm1, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvttps2pi:
 ; SKX:       # BB#0:
@@ -502,10 +549,15 @@ define void @test_emms() optsize {
 ; HASWELL-NEXT:    emms # sched: [31:10.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_emms:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    emms # sched: [31:10.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_emms:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    emms # sched: [10:4.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_emms:
 ; SKX:       # BB#0:
@@ -552,10 +604,15 @@ define void @test_maskmovq(x86_mmx %a0, x86_mmx %a1, i8* %a2) optsize {
 ; HASWELL-NEXT:    maskmovq %mm1, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_maskmovq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    maskmovq %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_maskmovq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    maskmovq %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovq:
 ; SKX:       # BB#0:
@@ -647,19 +704,33 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ; HASWELL-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    vmovd %edi, %xmm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
+; BROADWELL-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
+; BROADWELL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [1:0.50]
+; BROADWELL-NEXT:    vmovlps %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
+; BROADWELL-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm1, %ecx # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %eax # sched: [1:1.00]
+; BROADWELL-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    vmovd %edi, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; SKYLAKE-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
-; SKYLAKE-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [1:0.50]
+; SKYLAKE-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [5:0.50]
+; SKYLAKE-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKYLAKE-NEXT:    vmovlps %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
-; SKYLAKE-NEXT:    paddd %mm1, %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [6:0.50]
+; SKYLAKE-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
 ; SKYLAKE-NEXT:    movd %mm1, %ecx # sched: [2:1.00]
 ; SKYLAKE-NEXT:    movd %mm0, %eax # sched: [2:1.00]
 ; SKYLAKE-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movd:
 ; SKX:       # BB#0:
@@ -753,12 +824,19 @@ define i64 @test_movdq2q(<2 x i64> %a0) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movdq2q:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movdq2q %xmm0, %mm0 # sched: [2:0.67]
+; BROADWELL-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movdq2q:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movdq2q %xmm0, %mm0 # sched: [2:1.00]
-; SKYLAKE-NEXT:    paddd %mm0, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movdq2q:
 ; SKX:       # BB#0:
@@ -813,10 +891,15 @@ define void @test_movntq(x86_mmx* %a0, x86_mmx %a1) optsize {
 ; HASWELL-NEXT:    movntq %mm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movntq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movntq %mm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movntq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movntq %mm0, (%rdi) # sched: [1:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movntq:
 ; SKX:       # BB#0:
@@ -875,12 +958,19 @@ define void @test_movq(i64 *%a0) {
 ; HASWELL-NEXT:    movq %mm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movq (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movq %mm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movq:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    movq (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    paddd %mm0, %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    movq (%rdi), %mm0 # sched: [5:0.50]
+; SKYLAKE-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
 ; SKYLAKE-NEXT:    movq %mm0, (%rdi) # sched: [1:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movq:
 ; SKX:       # BB#0:
@@ -936,10 +1026,15 @@ define <2 x i64> @test_movq2dq(x86_mmx %a0) optsize {
 ; HASWELL-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_movq2dq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_movq2dq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movq2dq %mm0, %xmm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movq2dq:
 ; SKX:       # BB#0:
@@ -996,12 +1091,19 @@ define i64 @test_pabsb(x86_mmx *%a0) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pabsb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pabsb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pabsb %mm0, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pabsb:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pabsb (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    pabsb %mm0, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pabsb (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    pabsb %mm0, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pabsb:
 ; SKX:       # BB#0:
@@ -1067,12 +1169,19 @@ define i64 @test_pabsd(x86_mmx *%a0) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pabsd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pabsd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pabsd %mm0, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pabsd:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pabsd (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    pabsd %mm0, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pabsd (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    pabsd %mm0, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pabsd:
 ; SKX:       # BB#0:
@@ -1138,12 +1247,19 @@ define i64 @test_pabsw(x86_mmx *%a0) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pabsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pabsw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pabsw %mm0, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pabsw:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pabsw (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    pabsw %mm0, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pabsw (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    pabsw %mm0, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pabsw:
 ; SKX:       # BB#0:
@@ -1209,12 +1325,19 @@ define i64 @test_packssdw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_packssdw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    packssdw %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    packssdw (%rdi), %mm0 # sched: [2:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_packssdw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    packssdw %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    packssdw (%rdi), %mm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    packssdw (%rdi), %mm0 # sched: [7:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_packssdw:
 ; SKX:       # BB#0:
@@ -1280,12 +1403,19 @@ define i64 @test_packsswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_packsswb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    packsswb %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    packsswb (%rdi), %mm0 # sched: [2:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_packsswb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    packsswb %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    packsswb (%rdi), %mm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    packsswb (%rdi), %mm0 # sched: [7:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_packsswb:
 ; SKX:       # BB#0:
@@ -1351,12 +1481,19 @@ define i64 @test_packuswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_packuswb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    packuswb %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    packuswb (%rdi), %mm0 # sched: [2:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_packuswb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    packuswb %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    packuswb (%rdi), %mm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    packuswb (%rdi), %mm0 # sched: [7:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_packuswb:
 ; SKX:       # BB#0:
@@ -1422,12 +1559,19 @@ define i64 @test_paddb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddb:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    paddb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddb (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddb %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    paddb (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddb:
 ; SKX:       # BB#0:
@@ -1493,12 +1637,19 @@ define i64 @test_paddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddd:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    paddd %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddd (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    paddd (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddd:
 ; SKX:       # BB#0:
@@ -1564,12 +1715,19 @@ define i64 @test_paddq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddq %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddq (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddq:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    paddq %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddq (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddq %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    paddq (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddq:
 ; SKX:       # BB#0:
@@ -1635,12 +1793,19 @@ define i64 @test_paddsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddsb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddsb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddsb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddsb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    paddsb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddsb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddsb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddsb:
 ; SKX:       # BB#0:
@@ -1706,12 +1871,19 @@ define i64 @test_paddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddsw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddsw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    paddsw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddsw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddsw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddsw:
 ; SKX:       # BB#0:
@@ -1777,12 +1949,19 @@ define i64 @test_paddusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddusb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddusb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddusb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddusb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    paddusb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddusb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddusb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddusb:
 ; SKX:       # BB#0:
@@ -1848,12 +2027,19 @@ define i64 @test_paddusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddusw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddusw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddusw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddusw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    paddusw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddusw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddusw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddusw:
 ; SKX:       # BB#0:
@@ -1919,12 +2105,19 @@ define i64 @test_paddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_paddw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    paddw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    paddw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_paddw:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    paddw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    paddw (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    paddw %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    paddw (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_paddw:
 ; SKX:       # BB#0:
@@ -1990,12 +2183,19 @@ define i64 @test_palignr(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_palignr:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    palignr $1, %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    palignr $1, (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_palignr:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    palignr $1, %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    palignr $1, (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    palignr $1, (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_palignr:
 ; SKX:       # BB#0:
@@ -2061,12 +2261,19 @@ define i64 @test_pand(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pand:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pand %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    pand (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pand:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pand %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pand (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pand %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    pand (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pand:
 ; SKX:       # BB#0:
@@ -2132,12 +2339,19 @@ define i64 @test_pandn(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pandn:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pandn %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    pandn (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pandn:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pandn %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pandn (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pandn %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    pandn (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pandn:
 ; SKX:       # BB#0:
@@ -2203,12 +2417,19 @@ define i64 @test_pavgb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pavgb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pavgb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pavgb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pavgb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pavgb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pavgb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pavgb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pavgb:
 ; SKX:       # BB#0:
@@ -2274,12 +2495,19 @@ define i64 @test_pavgw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pavgw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pavgw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pavgw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pavgw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pavgw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pavgw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pavgw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pavgw:
 ; SKX:       # BB#0:
@@ -2345,12 +2573,19 @@ define i64 @test_pcmpeqb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpeqb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpeqb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpeqb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpeqb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpeqb:
 ; SKX:       # BB#0:
@@ -2416,12 +2651,19 @@ define i64 @test_pcmpeqd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpeqd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpeqd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpeqd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpeqd %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpeqd:
 ; SKX:       # BB#0:
@@ -2487,12 +2729,19 @@ define i64 @test_pcmpeqw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpeqw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpeqw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpeqw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpeqw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpeqw:
 ; SKX:       # BB#0:
@@ -2558,12 +2807,19 @@ define i64 @test_pcmpgtb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpgtb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpgtb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpgtb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpgtb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpgtb:
 ; SKX:       # BB#0:
@@ -2629,12 +2885,19 @@ define i64 @test_pcmpgtd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpgtd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpgtd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpgtd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpgtd %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpgtd:
 ; SKX:       # BB#0:
@@ -2700,12 +2963,19 @@ define i64 @test_pcmpgtw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pcmpgtw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pcmpgtw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pcmpgtw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pcmpgtw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpgtw:
 ; SKX:       # BB#0:
@@ -2761,10 +3031,15 @@ define i32 @test_pextrw(x86_mmx %a0) optsize {
 ; HASWELL-NEXT:    pextrw $0, %mm0, %eax # sched: [2:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pextrw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pextrw $0, %mm0, %eax # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pextrw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pextrw $0, %mm0, %eax # sched: [3:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pextrw:
 ; SKX:       # BB#0:
@@ -2821,12 +3096,19 @@ define i64 @test_phaddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phaddd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phaddd %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phaddd (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phaddd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phaddd %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phaddd (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phaddd (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phaddd:
 ; SKX:       # BB#0:
@@ -2892,12 +3174,19 @@ define i64 @test_phaddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phaddsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phaddsw %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phaddsw (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phaddsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phaddsw %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phaddsw (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phaddsw (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phaddsw:
 ; SKX:       # BB#0:
@@ -2963,12 +3252,19 @@ define i64 @test_phaddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phaddw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phaddw %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phaddw (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phaddw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phaddw %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phaddw (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phaddw (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phaddw:
 ; SKX:       # BB#0:
@@ -3034,12 +3330,19 @@ define i64 @test_phsubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phsubd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phsubd %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phsubd (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phsubd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phsubd %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phsubd (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phsubd (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phsubd:
 ; SKX:       # BB#0:
@@ -3105,12 +3408,19 @@ define i64 @test_phsubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phsubsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phsubsw %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phsubsw (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phsubsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phsubsw %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phsubsw (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phsubsw (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phsubsw:
 ; SKX:       # BB#0:
@@ -3176,12 +3486,19 @@ define i64 @test_phsubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_phsubw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    phsubw %mm1, %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    phsubw (%rdi), %mm0 # sched: [3:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_phsubw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    phsubw %mm1, %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    phsubw (%rdi), %mm0 # sched: [3:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    phsubw (%rdi), %mm0 # sched: [8:2.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_phsubw:
 ; SKX:       # BB#0:
@@ -3252,13 +3569,21 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pinsrw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:2.00]
+; BROADWELL-NEXT:    movswl (%rsi), %eax # sched: [4:0.50]
+; BROADWELL-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:2.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pinsrw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    movswl (%rsi), %eax # sched: [1:0.50]
+; SKYLAKE-NEXT:    movswl (%rsi), %eax # sched: [5:0.50]
 ; SKYLAKE-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:2.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pinsrw:
 ; SKX:       # BB#0:
@@ -3328,12 +3653,19 @@ define i64 @test_pmaddwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmaddwd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmaddwd %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmaddwd (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmaddwd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmaddwd %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmaddwd (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmaddwd (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaddwd:
 ; SKX:       # BB#0:
@@ -3399,12 +3731,19 @@ define i64 @test_pmaddubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmaddubsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmaddubsw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmaddubsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmaddubsw %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaddubsw:
 ; SKX:       # BB#0:
@@ -3470,12 +3809,19 @@ define i64 @test_pmaxsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmaxsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmaxsw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pmaxsw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmaxsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmaxsw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pmaxsw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmaxsw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaxsw:
 ; SKX:       # BB#0:
@@ -3541,12 +3887,19 @@ define i64 @test_pmaxub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmaxub:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmaxub %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pmaxub (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmaxub:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmaxub %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pmaxub (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmaxub (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaxub:
 ; SKX:       # BB#0:
@@ -3612,12 +3965,19 @@ define i64 @test_pminsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pminsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pminsw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pminsw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pminsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pminsw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pminsw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pminsw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pminsw:
 ; SKX:       # BB#0:
@@ -3683,12 +4043,19 @@ define i64 @test_pminub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pminub:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pminub %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    pminub (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pminub:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pminub %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pminub (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pminub (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pminub:
 ; SKX:       # BB#0:
@@ -3744,10 +4111,15 @@ define i32 @test_pmovmskb(x86_mmx %a0) optsize {
 ; HASWELL-NEXT:    pmovmskb %mm0, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmovmskb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmovmskb %mm0, %eax # sched: [3:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmovmskb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmovmskb %mm0, %eax # sched: [2:1.00]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmovmskb:
 ; SKX:       # BB#0:
@@ -3804,12 +4176,19 @@ define i64 @test_pmulhrsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmulhrsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmulhrsw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmulhrsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmulhrsw %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmulhrsw:
 ; SKX:       # BB#0:
@@ -3875,12 +4254,19 @@ define i64 @test_pmulhw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmulhw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmulhw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmulhw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmulhw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmulhw %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmulhw (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmulhw (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmulhw:
 ; SKX:       # BB#0:
@@ -3946,12 +4332,19 @@ define i64 @test_pmulhuw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmulhuw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmulhuw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmulhuw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmulhuw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmulhuw %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmulhuw (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmulhuw (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmulhuw:
 ; SKX:       # BB#0:
@@ -4017,12 +4410,19 @@ define i64 @test_pmullw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmullw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmullw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmullw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmullw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmullw %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmullw (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmullw (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmullw:
 ; SKX:       # BB#0:
@@ -4088,12 +4488,19 @@ define i64 @test_pmuludq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pmuludq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pmuludq %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    pmuludq (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pmuludq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pmuludq %mm1, %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    pmuludq (%rdi), %mm0 # sched: [4:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pmuludq (%rdi), %mm0 # sched: [9:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmuludq:
 ; SKX:       # BB#0:
@@ -4159,12 +4566,19 @@ define i64 @test_por(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_por:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    por (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_por:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    por %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    por (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    por %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    por (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_por:
 ; SKX:       # BB#0:
@@ -4230,12 +4644,19 @@ define i64 @test_psadbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psadbw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psadbw %mm1, %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    psadbw (%rdi), %mm0 # sched: [5:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psadbw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psadbw %mm1, %mm0 # sched: [3:1.00]
-; SKYLAKE-NEXT:    psadbw (%rdi), %mm0 # sched: [3:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psadbw (%rdi), %mm0 # sched: [8:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psadbw:
 ; SKX:       # BB#0:
@@ -4301,12 +4722,19 @@ define i64 @test_pshufb(x86_mmx %a0, x86_mmx %a1, x86_mmx *%a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pshufb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pshufb %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    pshufb (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pshufb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pshufb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pshufb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pshufb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pshufb:
 ; SKX:       # BB#0:
@@ -4372,12 +4800,19 @@ define i64 @test_pshufw(x86_mmx *%a0) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pshufw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [1:1.00]
+; BROADWELL-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pshufw:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [1:1.00]
+; SKYLAKE-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [6:1.00]
 ; SKYLAKE-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pshufw:
 ; SKX:       # BB#0:
@@ -4443,12 +4878,19 @@ define i64 @test_psignb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psignb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psignb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psignb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psignb:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psignb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psignb (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psignb %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psignb (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psignb:
 ; SKX:       # BB#0:
@@ -4514,12 +4956,19 @@ define i64 @test_psignd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psignd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psignd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psignd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psignd:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psignd %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psignd (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psignd %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psignd (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psignd:
 ; SKX:       # BB#0:
@@ -4585,12 +5034,19 @@ define i64 @test_psignw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psignw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psignw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psignw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psignw:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psignw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psignw (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psignw %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psignw (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psignw:
 ; SKX:       # BB#0:
@@ -4661,13 +5117,21 @@ define i64 @test_pslld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pslld:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pslld %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    pslld (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    pslld $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pslld:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    pslld %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pslld (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    pslld (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    pslld $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pslld:
 ; SKX:       # BB#0:
@@ -4743,13 +5207,21 @@ define i64 @test_psllq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psllq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psllq %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psllq (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psllq $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psllq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psllq %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psllq (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psllq (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psllq $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psllq:
 ; SKX:       # BB#0:
@@ -4825,13 +5297,21 @@ define i64 @test_psllw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psllw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psllw %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psllw (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psllw $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psllw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psllw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psllw (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psllw (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psllw $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psllw:
 ; SKX:       # BB#0:
@@ -4907,13 +5387,21 @@ define i64 @test_psrad(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psrad:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psrad %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrad (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrad $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psrad:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psrad %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psrad (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psrad (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psrad $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psrad:
 ; SKX:       # BB#0:
@@ -4989,13 +5477,21 @@ define i64 @test_psraw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psraw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psraw %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psraw (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psraw $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psraw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psraw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psraw (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psraw (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psraw $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psraw:
 ; SKX:       # BB#0:
@@ -5071,13 +5567,21 @@ define i64 @test_psrld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psrld:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psrld %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrld (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrld $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psrld:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psrld %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psrld (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psrld (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psrld $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psrld:
 ; SKX:       # BB#0:
@@ -5153,13 +5657,21 @@ define i64 @test_psrlq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psrlq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psrlq %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrlq (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrlq $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psrlq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psrlq %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psrlq (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psrlq (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psrlq $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psrlq:
 ; SKX:       # BB#0:
@@ -5235,13 +5747,21 @@ define i64 @test_psrlw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psrlw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psrlw %mm1, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrlw (%rdi), %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    psrlw $7, %mm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psrlw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psrlw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psrlw (%rdi), %mm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    psrlw (%rdi), %mm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    psrlw $7, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psrlw:
 ; SKX:       # BB#0:
@@ -5312,12 +5832,19 @@ define i64 @test_psubb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubb:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psubb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubb (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubb %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psubb (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubb:
 ; SKX:       # BB#0:
@@ -5383,12 +5910,19 @@ define i64 @test_psubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubd %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubd (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubd:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psubd %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubd (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubd %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psubd (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubd:
 ; SKX:       # BB#0:
@@ -5454,12 +5988,19 @@ define i64 @test_psubq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubq %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubq (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubq:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psubq %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubq (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubq %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psubq (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubq:
 ; SKX:       # BB#0:
@@ -5525,12 +6066,19 @@ define i64 @test_psubsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubsb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubsb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubsb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubsb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psubsb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubsb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubsb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubsb:
 ; SKX:       # BB#0:
@@ -5596,12 +6144,19 @@ define i64 @test_psubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubsw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubsw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubsw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubsw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psubsw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubsw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubsw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubsw:
 ; SKX:       # BB#0:
@@ -5667,12 +6222,19 @@ define i64 @test_psubusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubusb:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubusb %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubusb (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubusb:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psubusb %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubusb (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubusb (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubusb:
 ; SKX:       # BB#0:
@@ -5738,12 +6300,19 @@ define i64 @test_psubusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubusw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubusw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubusw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubusw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    psubusw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubusw (%rdi), %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubusw (%rdi), %mm0 # sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubusw:
 ; SKX:       # BB#0:
@@ -5809,12 +6378,19 @@ define i64 @test_psubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_psubw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    psubw %mm1, %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    psubw (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_psubw:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    psubw %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    psubw (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    psubw %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    psubw (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_psubw:
 ; SKX:       # BB#0:
@@ -5880,12 +6456,19 @@ define i64 @test_punpckhbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpckhbw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7] sched: [1:1.00]
+; BROADWELL-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpckhbw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpckhbw:
 ; SKX:       # BB#0:
@@ -5951,12 +6534,19 @@ define i64 @test_punpckhdq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpckhdq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1] sched: [1:1.00]
+; BROADWELL-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpckhdq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpckhdq:
 ; SKX:       # BB#0:
@@ -6022,12 +6612,19 @@ define i64 @test_punpckhwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpckhwd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
+; BROADWELL-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpckhwd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpckhwd:
 ; SKX:       # BB#0:
@@ -6093,12 +6690,19 @@ define i64 @test_punpcklbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpcklbw:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
+; BROADWELL-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpcklbw:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpcklbw:
 ; SKX:       # BB#0:
@@ -6164,12 +6768,19 @@ define i64 @test_punpckldq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpckldq:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0] sched: [1:1.00]
+; BROADWELL-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpckldq:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpckldq:
 ; SKX:       # BB#0:
@@ -6235,12 +6846,19 @@ define i64 @test_punpcklwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_punpcklwd:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1] sched: [1:1.00]
+; BROADWELL-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [1:1.00]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_punpcklwd:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1] sched: [1:1.00]
-; SKYLAKE-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [1:1.00]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [6:1.00]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_punpcklwd:
 ; SKX:       # BB#0:
@@ -6306,12 +6924,19 @@ define i64 @test_pxor(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
+; BROADWELL-LABEL: test_pxor:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    pxor %mm1, %mm0 # sched: [1:0.33]
+; BROADWELL-NEXT:    pxor (%rdi), %mm0 # sched: [1:0.50]
+; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    retq # sched: [2:1.00]
+;
 ; SKYLAKE-LABEL: test_pxor:
 ; SKYLAKE:       # BB#0:
-; SKYLAKE-NEXT:    pxor %mm1, %mm0 # sched: [1:1.00]
-; SKYLAKE-NEXT:    pxor (%rdi), %mm0 # sched: [1:0.50]
-; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.50]
-; SKYLAKE-NEXT:    retq # sched: [2:1.00]
+; SKYLAKE-NEXT:    pxor %mm1, %mm0 # sched: [1:0.50]
+; SKYLAKE-NEXT:    pxor (%rdi), %mm0 # sched: [6:0.50]
+; SKYLAKE-NEXT:    movd %mm0, %rax # sched: [1:0.33]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pxor:
 ; SKX:       # BB#0:

@@ -4083,6 +4083,14 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
                                        Value *TrueVal, Value *FalseVal,
                                        Value *&LHS, Value *&RHS) {
+  assert(!ICmpInst::isEquality(Pred) && "Expected not equality predicate only!");
+
+  // First, check if select has inverse order of what we will check below:
+  if (CmpRHS == FalseVal) {
+    std::swap(TrueVal, FalseVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
   // Assume success. If there's no match, callers should not use these anyway.
   LHS = TrueVal;
   RHS = FalseVal;
@@ -4095,26 +4103,30 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
 
     // (X <s C1) ? C1 : SMIN(X, C2) ==> SMAX(SMIN(X, C2), C1)
     if (match(FalseVal, m_SMin(m_Specific(CmpLHS), m_APInt(C2))) &&
-        C1->slt(*C2) && Pred == CmpInst::ICMP_SLT)
+        C1->slt(*C2) &&
+        (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE))
       return {SPF_SMAX, SPNB_NA, false};
 
     // (X >s C1) ? C1 : SMAX(X, C2) ==> SMIN(SMAX(X, C2), C1)
     if (match(FalseVal, m_SMax(m_Specific(CmpLHS), m_APInt(C2))) &&
-        C1->sgt(*C2) && Pred == CmpInst::ICMP_SGT)
+        C1->sgt(*C2) &&
+        (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE))
       return {SPF_SMIN, SPNB_NA, false};
 
     // (X <u C1) ? C1 : UMIN(X, C2) ==> UMAX(UMIN(X, C2), C1)
     if (match(FalseVal, m_UMin(m_Specific(CmpLHS), m_APInt(C2))) &&
-        C1->ult(*C2) && Pred == CmpInst::ICMP_ULT)
+        C1->ult(*C2) &&
+        (Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_ULE))
       return {SPF_UMAX, SPNB_NA, false};
 
     // (X >u C1) ? C1 : UMAX(X, C2) ==> UMIN(UMAX(X, C2), C1)
     if (match(FalseVal, m_UMax(m_Specific(CmpLHS), m_APInt(C2))) &&
-        C1->ugt(*C2) && Pred == CmpInst::ICMP_UGT)
+        C1->ugt(*C2) &&
+        (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE))
       return {SPF_UMIN, SPNB_NA, false};
   }
 
-  if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
+  if (!CmpInst::isSigned(Pred))
     return {SPF_UNKNOWN, SPNB_NA, false};
 
   // Z = X -nsw Y
@@ -4122,14 +4134,18 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   // (X <s Y) ? 0 : Z ==> (Z <s 0) ? 0 : Z ==> SMAX(Z, 0)
   if (match(TrueVal, m_Zero()) &&
       match(FalseVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
+    return {(Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) ? SPF_SMIN
+                                                                     : SPF_SMAX,
+            SPNB_NA, false};
 
   // Z = X -nsw Y
   // (X >s Y) ? Z : 0 ==> (Z >s 0) ? Z : 0 ==> SMAX(Z, 0)
   // (X <s Y) ? Z : 0 ==> (Z <s 0) ? Z : 0 ==> SMIN(Z, 0)
   if (match(FalseVal, m_Zero()) &&
       match(TrueVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
+    return {(Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) ? SPF_SMAX
+                                                                     : SPF_SMIN,
+            SPNB_NA, false};
 
   if (!match(CmpRHS, m_APInt(C1)))
     return {SPF_UNKNOWN, SPNB_NA, false};
@@ -4141,14 +4157,15 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
     // Is the sign bit set?
     // (X <s 0) ? X : MAXVAL ==> (X >u MAXVAL) ? X : MAXVAL ==> UMAX
     // (X <s 0) ? MAXVAL : X ==> (X >u MAXVAL) ? MAXVAL : X ==> UMIN
-    if (Pred == CmpInst::ICMP_SLT && *C1 == 0 && C2->isMaxSignedValue())
+    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) && *C1 == 0 &&
+        C2->isMaxSignedValue())
       return {CmpLHS == TrueVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
 
     // Is the sign bit clear?
     // (X >s -1) ? MINVAL : X ==> (X <u MINVAL) ? MINVAL : X ==> UMAX
     // (X >s -1) ? X : MINVAL ==> (X <u MINVAL) ? X : MINVAL ==> UMIN
-    if (Pred == CmpInst::ICMP_SGT && C1->isAllOnesValue() &&
-        C2->isMinSignedValue())
+    if ((Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) &&
+        C1->isAllOnesValue() && C2->isMinSignedValue())
       return {CmpLHS == FalseVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
   }
 
@@ -4157,13 +4174,17 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   // (X <s C) ? ~X : ~C ==> (~X >s ~C) ? ~X : ~C ==> SMAX(~X, ~C)
   if (match(TrueVal, m_Not(m_Specific(CmpLHS))) &&
       match(FalseVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMIN : SPF_SMAX, SPNB_NA, false};
+    return {(Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) ? SPF_SMIN
+                                                                     : SPF_SMAX,
+            SPNB_NA, false};
 
   // (X >s C) ? ~C : ~X ==> (~X <s ~C) ? ~C : ~X ==> SMAX(~C, ~X)
   // (X <s C) ? ~C : ~X ==> (~X >s ~C) ? ~C : ~X ==> SMIN(~C, ~X)
   if (match(FalseVal, m_Not(m_Specific(CmpLHS))) &&
       match(TrueVal, m_APInt(C2)) && ~(*C1) == *C2)
-    return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
+    return {(Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) ? SPF_SMAX
+                                                                     : SPF_SMIN,
+            SPNB_NA, false};
 
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
@@ -4299,6 +4320,20 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
+/// Helps to match a select pattern in case of a type mismatch.
+///
+/// The function processes the case when type of true and false values of a
+/// select instruction differs from type of the cmp instruction operands because
+/// of a cast instructon. The function checks if it is legal to move the cast
+/// operation after "select". If yes, it returns the new second value of
+/// "select" (with the assumption that cast is moved):
+/// 1. As operand of cast instruction when both values of "select" are same cast
+/// instructions.
+/// 2. As restored constant (by applying reverse cast operation) when the first
+/// value of the "select" is a cast operation and the second value is a
+/// constant.
+/// NOTE: We return only the new second value because the first value could be
+/// accessed as operand of cast instruction.
 static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
                               Instruction::CastOps *CastOp) {
   auto *Cast1 = dyn_cast<CastInst>(V1);
@@ -4329,7 +4364,33 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
       CastedTo = ConstantExpr::getTrunc(C, SrcTy, true);
     break;
   case Instruction::Trunc:
-    CastedTo = ConstantExpr::getIntegerCast(C, SrcTy, CmpI->isSigned());
+    Constant *CmpConst;
+    if (match(CmpI->getOperand(1), m_Constant(CmpConst))) {
+      // Here we have the following case:
+      //
+      //   %cond = cmp iN %x, CmpConst
+      //   %tr = trunc iN %x to iK
+      //   %narrowsel = select i1 %cond, iK %t, iK C
+      //
+      // We can always move trunc after select operation:
+      //
+      //   %cond = cmp iN %x, CmpConst
+      //   %widesel = select i1 %cond, iN %x, iN CmpConst
+      //   %tr = trunc iN %widesel to iK
+      //
+      // Note that C could be extended in any way because we don't care about
+      // upper bits after truncation. It can't be abs pattern, because it would
+      // look like:
+      //
+      //   select i1 %cond, x, -x.
+      //
+      // So only min/max pattern could be matched. Such match requires widened C
+      // == CmpConst. That is why set widened C = CmpConst, condition trunc
+      // CmpConst == C is checked below.
+      CastedTo = CmpConst;
+    } else {
+      CastedTo = ConstantExpr::getIntegerCast(C, SrcTy, CmpI->isSigned());
+    }
     break;
   case Instruction::FPTrunc:
     CastedTo = ConstantExpr::getFPExtend(C, SrcTy, true);

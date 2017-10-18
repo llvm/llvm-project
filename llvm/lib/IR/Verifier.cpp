@@ -4593,6 +4593,11 @@ void Verifier::verifyFnArgs(const DbgInfoIntrinsic &I) {
 }
 
 void Verifier::verifyCompileUnits() {
+  // When more than one Module is imported into the same context, such as during
+  // an LTO build before linking the modules, ODR type uniquing may cause types
+  // to point to a different CU. This check does not make sense in this case.
+  if (M.getContext().isODRUniquingDebugTypes())
+    return;
   auto *CUs = M.getNamedMetadata("llvm.dbg.cu");
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)

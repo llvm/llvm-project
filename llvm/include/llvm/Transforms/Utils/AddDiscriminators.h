@@ -1,4 +1,4 @@
-//===- AddDiscriminators.h -------------------------------------*- C++ -*-===//
+//===- AddDiscriminators.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,10 +20,13 @@
 
 namespace llvm {
 
+class Function;
+
 class AddDiscriminatorsPass : public PassInfoMixin<AddDiscriminatorsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_ADDDISCRIMINATORS_H

@@ -4756,11 +4756,26 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
           Ops.push_back(Add->getOperand(i));
       const SCEV *Accum = getAddExpr(Ops);
 
+      bool InvariantF = isLoopInvariant(Accum, L);
+
+      if (!InvariantF && Accum->getSCEVType() == scZeroExtend) {
+        const SCEV *Op = dyn_cast<SCEVZeroExtendExpr>(Accum)->getOperand();
+        const SCEVUnknown *Un = dyn_cast<SCEVUnknown>(Op);
+        if (Un && Un->getValue() && isa<Instruction>(Un->getValue()) &&
+            dyn_cast<Instruction>(Un->getValue())->getOpcode() ==
+                Instruction::ICmp) {
+          const SCEV *ICmpSC = evaluateForICmp(cast<ICmpInst>(Un->getValue()));
+          bool IsConstSC = ICmpSC->getSCEVType() == scConstant;
+          Accum =
+              IsConstSC ? getZeroExtendExpr(ICmpSC, Accum->getType()) : Accum;
+          InvariantF = IsConstSC ? true : false;
+        }
+      }
+
       // This is not a valid addrec if the step amount is varying each
       // loop iteration, but is not itself an addrec in this loop.
-      if (isLoopInvariant(Accum, L) ||
-          (isa<SCEVAddRecExpr>(Accum) &&
-           cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
+      if (InvariantF || (isa<SCEVAddRecExpr>(Accum) &&
+                         cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
 
         if (auto BO = MatchBinaryOp(BEValueV, DT)) {
@@ -6442,6 +6457,30 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     LoopWorklist.append(CurrL->begin(), CurrL->end());
   }
 }
+
+
+const SCEV *ScalarEvolution::evaluateForICmp(ICmpInst *IC) {
+  BasicBlock *Latch = nullptr;
+  const Loop *L = LI.getLoopFor(IC->getParent());
+
+  // If compare instruction is same or inverse of the compare in the
+  // branch of the loop latch, then return a constant evolution
+  // node. This shall facilitate computations of loop exit counts
+  // in cases where compare appears in the evolution chain of induction
+  // variables.
+  if (L && (Latch = L->getLoopLatch())) {
+    BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
+    if (BI && BI->isConditional() && BI->getCondition() == IC) {
+      if (BI->getSuccessor(0) != L->getHeader())
+        return getZero(Type::getInt1Ty(getContext()));
+      else
+        return getOne(Type::getInt1Ty(getContext()));
+    }
+  }
+
+  return getUnknown(IC);
+}
+
 
 void ScalarEvolution::forgetValue(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
