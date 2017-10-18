@@ -116,6 +116,7 @@ int main() {
 // MARKER-NEXT: Highlighted line 63, 5 -> 13
 // MARKER-NEXT: Highlighted line 67, 1 -> ?
 // MARKER-NEXT: Highlighted line 68, 1 -> 8
+// MARKER-NEXT: Highlighted line 68, 8 -> ?
 // MARKER-NEXT: Highlighted line 69, 1 -> 2
 // MARKER-NEXT: Marker at 72:7 = 2
 // MARKER-NEXT: Highlighted line 77, 1 -> 2

@@ -506,7 +506,7 @@ void SourceCoverageViewHTML::renderLine(
   //    1 to set the highlight for snippet 2, segment 2 to set the highlight for
   //    snippet 3, and so on.
 
-  Optional<std::string> Color;
+  Optional<StringRef> Color;
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
@@ -528,7 +528,8 @@ void SourceCoverageViewHTML::renderLine(
     const auto *CurSeg = Segments[I];
     if (CurSeg->Col == ExpansionCol)
       Color = "cyan";
-    else if (!CurSeg->IsGapRegion && CheckIfUncovered(CurSeg))
+    else if ((!CurSeg->IsGapRegion || (Color && *Color == "red")) &&
+             CheckIfUncovered(CurSeg))
       Color = "red";
     else
       Color = None;
