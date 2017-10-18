@@ -33,7 +33,6 @@ class APInt;
 class BasicBlock;
 class Constant;
 class Function;
-class GlobalValue;
 class InlineAsm;
 class Instruction;
 class MDNode;
@@ -53,14 +52,14 @@ class Value;
 /// compare those, but this would not work for stripped bitcodes or for those
 /// few symbols without a name.
 class GlobalNumberState {
-  struct Config : ValueMapConfig<GlobalValue *> {
+  struct Config : ValueMapConfig<Value *> {
     enum { FollowRAUW = false };
   };
 
   // Each GlobalValue is mapped to an identifier. The Config ensures when RAUW
   // occurs, the mapping does not change. Tracking changes is unnecessary, and
   // also problematic for weak symbols (which may be overwritten).
-  using ValueNumberMap = ValueMap<GlobalValue *, uint64_t, Config>;
+  using ValueNumberMap = ValueMap<Value *, uint64_t, Config>;
   ValueNumberMap GlobalNumbers;
 
   // The next unused serial number to assign to a global.
@@ -69,7 +68,7 @@ class GlobalNumberState {
 public:
   GlobalNumberState() = default;
 
-  uint64_t getNumber(GlobalValue* Global) {
+  uint64_t getNumber(Value* Global) {
     ValueNumberMap::iterator MapIter;
     bool Inserted;
     std::tie(MapIter, Inserted) = GlobalNumbers.insert({Global, NextNumber});
@@ -220,7 +219,7 @@ protected:
 
   /// Compares two global values by number. Uses the GlobalNumbersState to
   /// identify the same gobals across function calls.
-  int cmpGlobalValues(GlobalValue *L, GlobalValue *R) const;
+  int cmpGlobalValues(Value *L, Value *R) const;
 
   /// Assign or look up previously assigned numbers for the two values, and
   /// return whether the numbers are equal. Numbers are assigned in the order
