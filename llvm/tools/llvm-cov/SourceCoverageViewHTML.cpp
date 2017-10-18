@@ -563,6 +563,8 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
       const auto *CurSeg = Segments[I];
       if (!CurSeg->IsRegionEntry)
         continue;
+      if (CurSeg->Count == LCS.getExecutionCount())
+        continue;
 
       Snippets[I + 1] =
           tag("div", Snippets[I + 1] + tag("span", formatCount(CurSeg->Count),
