@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_ldwrdptrpd
 
-    ; CHECK:      early-clobber %r1, early-clobber %r31r30 = LDRdPtrPd killed %r31r30
-    ; CHECK-NEXT: early-clobber %r0, early-clobber %r31r30 = LDRdPtrPd killed %r31r30
+    ; CHECK:      early-clobber %r1, %r31r30 = LDRdPtrPd killed %r31r30
+    ; CHECK-NEXT: early-clobber %r0, %r31r30 = LDRdPtrPd killed %r31r30
 
     %r1r0, %r31r30 = LDWRdPtrPd %r31r30
 ...

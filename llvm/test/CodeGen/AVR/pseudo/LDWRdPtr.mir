@@ -17,8 +17,8 @@ body: |
 
     ; CHECK-LABEL: test_ldwrdptr
 
-    ; CHECK:                    %r0 = LDRdPtr %r31r30
-    ; CHECK-NEXT: early-clobber %r1 = LDDRdPtrQ %r31r30, 1
+    ; CHECK:      %r0, %r31r30 = LDRdPtrPi %r31r30
+    ; CHECK-NEXT:          %r1 = LDRdPtr %r31r30
 
     %r1r0 = LDWRdPtr %r31r30
 ...

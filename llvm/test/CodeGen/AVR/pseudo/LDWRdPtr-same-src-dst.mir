@@ -18,9 +18,9 @@ body: |
 
     ; CHECK-LABEL: test_ldwrdptr
 
-    ; CHECK:      ld [[SCRATCH:r[0-9]+]], Z
+    ; CHECK:      ld [[SCRATCH:r[0-9]+]], Z+
     ; CHECK-NEXT: push [[SCRATCH]]
-    ; CHECK-NEXT: ldd [[SCRATCH]], Z+1
+    ; CHECK-NEXT: ld [[SCRATCH]], Z
     ; CHECK-NEXT: mov r31, [[SCRATCH]]
     ; CHECK-NEXT: pop r30
 
