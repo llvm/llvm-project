@@ -22,6 +22,21 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
+// FIXME: Copied from 'NoMallocCheck.cpp'. Has to be refactored into 'util' or
+// something like that.
+namespace {
+Matcher<FunctionDecl> hasAnyListedName(const std::string &FunctionNames) {
+  const std::vector<std::string> NameList =
+      utils::options::parseStringList(FunctionNames);
+  return hasAnyName(std::vector<StringRef>(NameList.begin(), NameList.end()));
+}
+} // namespace
+
+void OwningMemoryCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "LegacyResourceProducers", LegacyResourceProducers);
+  Options.store(Opts, "LegacyResourceConsumers", LegacyResourceConsumers);
+}
+
 /// Match common cases, where the owner semantic is relevant, like function
 /// calls, delete expressions and others.
 void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
@@ -30,10 +45,31 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto OwnerDecl = typeAliasTemplateDecl(hasName("::gsl::owner"));
   const auto IsOwnerType = hasType(OwnerDecl);
+
+  const auto LegacyCreatorFunctions = hasAnyListedName(LegacyResourceProducers);
+  const auto LegacyConsumerFunctions =
+      hasAnyListedName(LegacyResourceConsumers);
+
+  // Legacy functions that are use for resource management but cannot be
+  // updated to use `gsl::owner<>`, like standard C memory management.
+  const auto CreatesLegacyOwner =
+      callExpr(callee(functionDecl(LegacyCreatorFunctions)));
+  // C-style functions like `::malloc()` sometimes create owners as void*
+  // which is expected to be cast to the correct type in C++. This case
+  // must be catched explicitly.
+  const auto LegacyOwnerCast =
+      castExpr(hasSourceExpression(CreatesLegacyOwner));
+  // Functions that do manual resource management but cannot be updated to use
+  // owner. Best example is `::free()`.
+  const auto LegacyOwnerConsumers = functionDecl(LegacyConsumerFunctions);
+
   const auto CreatesOwner =
-      anyOf(cxxNewExpr(), callExpr(callee(functionDecl(
-                              returns(qualType(hasDeclaration(OwnerDecl)))))));
-  const auto ConsideredOwner = anyOf(IsOwnerType, CreatesOwner);
+      anyOf(cxxNewExpr(),
+            callExpr(callee(
+                functionDecl(returns(qualType(hasDeclaration(OwnerDecl)))))),
+            CreatesLegacyOwner, LegacyOwnerCast);
+
+  const auto ConsideredOwner = eachOf(IsOwnerType, CreatesOwner);
 
   // Find delete expressions that delete non-owners.
   Finder->addMatcher(
@@ -41,6 +77,21 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
           hasDescendant(
               declRefExpr(unless(ConsideredOwner)).bind("deleted_variable")))
           .bind("delete_expr"),
+      this);
+
+  // Ignoring the implicit casts is vital because the legacy owners do not work
+  // with the 'owner<>' annotation and therefore always implicitly cast to the
+  // legacy type (even 'void *').
+  //
+  // Furthermore, legacy owner functions are assumed to use raw pointers for
+  // resources. This check assumes that all pointer arguments of a legacy
+  // functions shall be 'gsl::owner<>'.
+  Finder->addMatcher(
+      callExpr(
+          allOf(callee(LegacyOwnerConsumers),
+                hasAnyArgument(allOf(unless(ignoringImpCasts(ConsideredOwner)),
+                                     hasType(pointerType())))))
+          .bind("legacy_consumer"),
       this);
 
   // Matching assignment to owners, with the rhs not being an owner nor creating
@@ -133,6 +184,7 @@ void OwningMemoryCheck::check(const MatchFinder::MatchResult &Result) {
 
   bool CheckExecuted = false;
   CheckExecuted |= handleDeletion(Nodes);
+  CheckExecuted |= handleLegacyConsumers(Nodes);
   CheckExecuted |= handleExpectedOwner(Nodes);
   CheckExecuted |= handleAssignmentAndInit(Nodes);
   CheckExecuted |= handleAssignmentFromNewOwner(Nodes);
@@ -163,6 +215,22 @@ bool OwningMemoryCheck::handleDeletion(const BoundNodes &Nodes) {
     diag(Decl->getLocStart(), "variable declared here", DiagnosticIDs::Note)
         << Decl->getSourceRange();
 
+    return true;
+  }
+  return false;
+}
+
+bool OwningMemoryCheck::handleLegacyConsumers(const BoundNodes &Nodes) {
+  // Result of matching for legacy consumer-functions like `::free()`.
+  const auto *LegacyConsumer = Nodes.getNodeAs<CallExpr>("legacy_consumer");
+
+  // FIXME: `freopen` should be handled seperately because it takes the filename
+  // as a pointer, which should not be an owner. The argument that is an owner
+  // is known and the false positive coming from the filename can be avoided.
+  if (LegacyConsumer) {
+    diag(LegacyConsumer->getLocStart(),
+         "calling legacy resource function without passing a 'gsl::owner<>'")
+        << LegacyConsumer->getSourceRange();
     return true;
   }
   return false;
