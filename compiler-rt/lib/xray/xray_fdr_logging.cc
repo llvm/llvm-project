@@ -206,17 +206,17 @@ getTimestamp() XRAY_NEVER_INSTRUMENT {
 void fdrLoggingHandleArg0(int32_t FuncId,
                           XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
   auto TSC_CPU = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(
-      FuncId, Entry, std::get<0>(TSC_CPU), std::get<1>(TSC_CPU), 0,
-      clock_gettime, *BQ);
+  __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
+                                           std::get<1>(TSC_CPU), 0,
+                                           clock_gettime, *BQ);
 }
 
 void fdrLoggingHandleArg1(int32_t FuncId, XRayEntryType Entry,
                           uint64_t Arg) XRAY_NEVER_INSTRUMENT {
   auto TSC_CPU = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(
-      FuncId, Entry, std::get<0>(TSC_CPU), std::get<1>(TSC_CPU), Arg,
-      clock_gettime, *BQ);
+  __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
+                                           std::get<1>(TSC_CPU), Arg,
+                                           clock_gettime, *BQ);
 }
 
 void fdrLoggingHandleCustomEvent(void *Event,
@@ -248,7 +248,7 @@ void fdrLoggingHandleCustomEvent(void *Event,
   //   - The metadata record we're going to write. (16 bytes)
   //   - The additional data we're going to write. Currently, that's the size of
   //   the event we're going to dump into the log as free-form bytes.
-  if (!prepareBuffer(clock_gettime, MetadataRecSize + EventSize)) {
+  if (!prepareBuffer(TSC, CPU, clock_gettime, MetadataRecSize + EventSize)) {
     TLD.LocalBQ = nullptr;
     return;
   }
