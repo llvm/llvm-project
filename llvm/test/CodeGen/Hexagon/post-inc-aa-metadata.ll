@@ -29,7 +29,7 @@ while.end:                                        ; preds = %while.body, %entry
   ret void
 }
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
 
 
 !1 = !{!2, !2, i64 0}

@@ -1291,16 +1291,15 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
 
 static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
                                             bool PerFunction) {
-  // Only perform this analysis when using C++11.  There is no good workflow
-  // for this warning when not using C++11.  There is no good way to silence
-  // the warning (no attribute is available) unless we are using C++11's support
-  // for generalized attributes.  Once could use pragmas to silence the warning,
-  // but as a general solution that is gross and not in the spirit of this
-  // warning.
+  // Only perform this analysis when using [[]] attributes. There is no good
+  // workflow for this warning when not using C++11. There is no good way to
+  // silence the warning (no attribute is available) unless we are using 
+  // [[]] attributes. One could use pragmas to silence the warning, but as a
+  // general solution that is gross and not in the spirit of this warning.
   //
-  // NOTE: This an intermediate solution.  There are on-going discussions on
+  // NOTE: This an intermediate solution. There are on-going discussions on
   // how to properly support this warning outside of C++11 with an annotation.
-  if (!AC.getASTContext().getLangOpts().CPlusPlus11)
+  if (!AC.getASTContext().getLangOpts().DoubleSquareBracketAttributes)
     return;
 
   FallthroughMapper FM(S);

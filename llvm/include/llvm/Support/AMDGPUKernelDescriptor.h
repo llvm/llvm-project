@@ -109,7 +109,7 @@ enum ComputePgmRsrc2 {
 struct KernelDescriptor final {
   uint32_t GroupSegmentFixedSize;
   uint32_t PrivateSegmentFixedSize;
-  uint32_t MaxFlatWorkgroupSize;
+  uint32_t MaxFlatWorkGroupSize;
   uint64_t IsDynamicCallStack : 1;
   uint64_t IsXNACKEnabled : 1;
   uint64_t Reserved0 : 30;

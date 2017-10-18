@@ -1,4 +1,4 @@
-//===-- Local.cpp - Functions to perform local transformations ------------===//
+//===- Local.cpp - Functions to perform local transformations -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,42 +13,74 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <climits>
+#include <cstdint>
+#include <iterator>
+#include <map>
+#include <utility>
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -281,7 +313,6 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 
   return false;
 }
-
 
 //===----------------------------------------------------------------------===//
 //  Local dead code elimination.
@@ -541,7 +572,6 @@ bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
 //  Control Flow Graph Restructuring.
 //
 
-
 /// RemovePredecessorAndSimplify - Like BasicBlock::removePredecessor, this
 /// method is called when we're about to delete Pred as a predecessor of BB.  If
 /// BB contains any PHI nodes, this drops the entries in the PHI nodes for Pred.
@@ -578,12 +608,10 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred) {
   }
 }
 
-
 /// MergeBasicBlockIntoOnlyPred - DestBB is a block with one predecessor and its
 /// predecessor is known to have one successor (DestBB!).  Eliminate the edge
 /// between them, moving the instructions in the predecessor into DestBB and
 /// deleting the predecessor block.
-///
 void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT) {
   // If BB has single-entry PHI nodes, fold them.
   while (PHINode *PN = dyn_cast<PHINode>(DestBB->begin())) {
@@ -602,7 +630,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT) {
   if (DestBB->hasAddressTaken()) {
     BlockAddress *BA = BlockAddress::get(DestBB);
     Constant *Replacement =
-      ConstantInt::get(llvm::Type::getInt32Ty(BA->getContext()), 1);
+      ConstantInt::get(Type::getInt32Ty(BA->getContext()), 1);
     BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(Replacement,
                                                      BA->getType()));
     BA->destroyConstant();
@@ -640,7 +668,6 @@ static bool CanMergeValues(Value *First, Value *Second) {
 /// almost-empty BB ending in an unconditional branch to Succ, into Succ.
 ///
 /// Assumption: Succ is the single successor for BB.
-///
 static bool CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ) {
   assert(*succ_begin(BB) == Succ && "Succ is not successor of BB!");
 
@@ -696,8 +723,8 @@ static bool CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ) {
   return true;
 }
 
-typedef SmallVector<BasicBlock *, 16> PredBlockVector;
-typedef DenseMap<BasicBlock *, Value *> IncomingValueMap;
+using PredBlockVector = SmallVector<BasicBlock *, 16>;
+using IncomingValueMap = DenseMap<BasicBlock *, Value *>;
 
 /// \brief Determines the value to use as the phi node input for a block.
 ///
@@ -927,7 +954,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB) {
 /// nodes in this block. This doesn't try to be clever about PHI nodes
 /// which differ only in the order of the incoming values, but instcombine
 /// orders them so it usually won't matter.
-///
 bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for
@@ -937,9 +963,11 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
     static PHINode *getEmptyKey() {
       return DenseMapInfo<PHINode *>::getEmptyKey();
     }
+
     static PHINode *getTombstoneKey() {
       return DenseMapInfo<PHINode *>::getTombstoneKey();
     }
+
     static unsigned getHashValue(PHINode *PN) {
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
@@ -948,6 +976,7 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
           hash_combine_range(PN->value_op_begin(), PN->value_op_end()),
           hash_combine_range(PN->block_begin(), PN->block_end())));
     }
+
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
       if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
           RHS == getEmptyKey() || RHS == getTombstoneKey())
@@ -984,7 +1013,6 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 /// often possible though. If alignment is important, a more reliable approach
 /// is to simply align all global variables and allocation instructions to
 /// their preferred alignment from the beginning.
-///
 static unsigned enforceKnownAlignment(Value *V, unsigned Align,
                                       unsigned PrefAlign,
                                       const DataLayout &DL) {
@@ -1068,7 +1096,7 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
   // Since we can't guarantee that the original dbg.declare instrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
   // not inserting the same dbg.value intrinsic over and over.
-  llvm::BasicBlock::InstListType::iterator PrevI(I);
+  BasicBlock::InstListType::iterator PrevI(I);
   if (PrevI != I->getParent()->getInstList().begin()) {
     --PrevI;
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(PrevI))
@@ -1488,7 +1516,6 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 
 static bool markAliveBlocks(Function &F,
                             SmallPtrSetImpl<BasicBlock*> &Reachable) {
-
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
@@ -1594,13 +1621,16 @@ static bool markAliveBlocks(Function &F,
         static CatchPadInst *getEmptyKey() {
           return DenseMapInfo<CatchPadInst *>::getEmptyKey();
         }
+
         static CatchPadInst *getTombstoneKey() {
           return DenseMapInfo<CatchPadInst *>::getTombstoneKey();
         }
+
         static unsigned getHashValue(CatchPadInst *CatchPad) {
           return static_cast<unsigned>(hash_combine_range(
               CatchPad->value_op_begin(), CatchPad->value_op_end()));
         }
+
         static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
           if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
               RHS == getEmptyKey() || RHS == getTombstoneKey())
@@ -1910,6 +1940,7 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
 }
 
 namespace {
+
 /// A potential constituent of a bitreverse or bswap expression. See
 /// collectBitParts for a fuller explanation.
 struct BitPart {
@@ -1919,12 +1950,14 @@ struct BitPart {
 
   /// The Value that this is a bitreverse/bswap of.
   Value *Provider;
+
   /// The "provenance" of each bit. Provenance[A] = B means that bit A
   /// in Provider becomes bit B in the result of this expression.
   SmallVector<int8_t, 32> Provenance; // int8_t means max size is i128.
 
   enum { Unset = -1 };
 };
+
 } // end anonymous namespace
 
 /// Analyze the specified subexpression and see if it is capable of providing
@@ -1950,7 +1983,6 @@ struct BitPart {
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
-///
 static const Optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
                 std::map<Value *, Optional<BitPart>> &BPS) {

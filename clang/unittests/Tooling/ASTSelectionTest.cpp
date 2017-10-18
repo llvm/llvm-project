@@ -29,12 +29,16 @@ using FileRange = std::pair<FileLocation, FileLocation>;
 class SelectionFinderVisitor : public TestVisitor<SelectionFinderVisitor> {
   FileLocation Location;
   Optional<FileRange> SelectionRange;
-  llvm::function_ref<void(Optional<SelectedASTNode>)> Consumer;
+  llvm::function_ref<void(SourceRange SelectionRange,
+                          Optional<SelectedASTNode>)>
+      Consumer;
 
 public:
-  SelectionFinderVisitor(
-      FileLocation Location, Optional<FileRange> SelectionRange,
-      llvm::function_ref<void(Optional<SelectedASTNode>)> Consumer)
+  SelectionFinderVisitor(FileLocation Location,
+                         Optional<FileRange> SelectionRange,
+                         llvm::function_ref<void(SourceRange SelectionRange,
+                                                 Optional<SelectedASTNode>)>
+                             Consumer)
       : Location(Location), SelectionRange(SelectionRange), Consumer(Consumer) {
   }
 
@@ -50,18 +54,38 @@ public:
       SourceLocation Loc = Location.translate(SM);
       SelRange = SourceRange(Loc, Loc);
     }
-    Consumer(findSelectedASTNodes(Context, SelRange));
+    Consumer(SelRange, findSelectedASTNodes(Context, SelRange));
     return false;
   }
 };
+
+/// This is a test utility function that computes the AST selection at the
+/// given location with an optional selection range.
+///
+/// A location roughly corresponds to a cursor location in an editor, while
+/// the optional range corresponds to the selection range in an editor.
+void findSelectedASTNodesWithRange(
+    StringRef Source, FileLocation Location, Optional<FileRange> SelectionRange,
+    llvm::function_ref<void(SourceRange SelectionRange,
+                            Optional<SelectedASTNode>)>
+        Consumer,
+    SelectionFinderVisitor::Language Language =
+        SelectionFinderVisitor::Lang_CXX11) {
+  SelectionFinderVisitor Visitor(Location, SelectionRange, Consumer);
+  EXPECT_TRUE(Visitor.runOver(Source, Language));
+}
 
 void findSelectedASTNodes(
     StringRef Source, FileLocation Location, Optional<FileRange> SelectionRange,
     llvm::function_ref<void(Optional<SelectedASTNode>)> Consumer,
     SelectionFinderVisitor::Language Language =
         SelectionFinderVisitor::Lang_CXX11) {
-  SelectionFinderVisitor Visitor(Location, SelectionRange, Consumer);
-  EXPECT_TRUE(Visitor.runOver(Source, Language));
+  findSelectedASTNodesWithRange(
+      Source, Location, SelectionRange,
+      [&](SourceRange, Optional<SelectedASTNode> Selection) {
+        Consumer(std::move(Selection));
+      },
+      Language);
 }
 
 void checkNodeImpl(bool IsTypeMatched, const SelectedASTNode &Node,
@@ -647,6 +671,173 @@ void selectSubscript(NSMutableArray *array, I *i) {
                                SourceSelectionKind::InsideSelection);
       },
       SelectionFinderVisitor::Lang_OBJC);
+}
+
+TEST(ASTSelectionFinder, SimpleCodeRangeASTSelection) {
+  StringRef Source = R"(void f(int x, int y) {
+  int z = x;
+  f(2, 3);
+  if (x == 0) {
+    return;
+  }
+  x = 1;
+  return;
+}
+void f2() {
+  int m = 0;
+}
+)";
+  // No selection range.
+  findSelectedASTNodesWithRange(
+      Source, {2, 2}, None,
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_FALSE(SelectedCode);
+      });
+  findSelectedASTNodesWithRange(
+      Source, {2, 2}, FileRange{{2, 2}, {2, 2}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_FALSE(SelectedCode);
+      });
+  // Range that spans multiple functions is an invalid code range.
+  findSelectedASTNodesWithRange(
+      Source, {2, 2}, FileRange{{7, 2}, {12, 1}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_FALSE(SelectedCode);
+      });
+  // Just 'z = x;':
+  findSelectedASTNodesWithRange(
+      Source, {2, 2}, FileRange{{2, 2}, {2, 13}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<DeclStmt>((*SelectedCode)[0]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 3u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Function 'f' definition.
+        EXPECT_TRUE(isa<FunctionDecl>(Parents[1].get().Node.get<Decl>()));
+        // Function body of function 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[2].get().Node.get<Stmt>()));
+      });
+  // From 'f(2,3)' until just before 'x = 1;':
+  findSelectedASTNodesWithRange(
+      Source, {3, 2}, FileRange{{3, 2}, {7, 1}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 2u);
+        EXPECT_TRUE(isa<CallExpr>((*SelectedCode)[0]));
+        EXPECT_TRUE(isa<IfStmt>((*SelectedCode)[1]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 3u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Function 'f' definition.
+        EXPECT_TRUE(isa<FunctionDecl>(Parents[1].get().Node.get<Decl>()));
+        // Function body of function 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[2].get().Node.get<Stmt>()));
+      });
+  // From 'f(2,3)' until just before ';' in 'x = 1;':
+  findSelectedASTNodesWithRange(
+      Source, {3, 2}, FileRange{{3, 2}, {7, 8}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 3u);
+        EXPECT_TRUE(isa<CallExpr>((*SelectedCode)[0]));
+        EXPECT_TRUE(isa<IfStmt>((*SelectedCode)[1]));
+        EXPECT_TRUE(isa<BinaryOperator>((*SelectedCode)[2]));
+      });
+  // From the middle of 'int z = 3' until the middle of 'x = 1;':
+  findSelectedASTNodesWithRange(
+      Source, {2, 10}, FileRange{{2, 10}, {7, 5}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 4u);
+        EXPECT_TRUE(isa<DeclStmt>((*SelectedCode)[0]));
+        EXPECT_TRUE(isa<CallExpr>((*SelectedCode)[1]));
+        EXPECT_TRUE(isa<IfStmt>((*SelectedCode)[2]));
+        EXPECT_TRUE(isa<BinaryOperator>((*SelectedCode)[3]));
+      });
+}
+
+TEST(ASTSelectionFinder, OutOfBodyCodeRange) {
+  StringRef Source = R"(
+int codeRange = 2 + 3;
+)";
+  // '2+3' expression.
+  findSelectedASTNodesWithRange(
+      Source, {2, 17}, FileRange{{2, 17}, {2, 22}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<BinaryOperator>((*SelectedCode)[0]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 2u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Variable 'codeRange'.
+        EXPECT_TRUE(isa<VarDecl>(Parents[1].get().Node.get<Decl>()));
+      });
+}
+
+TEST(ASTSelectionFinder, SelectVarDeclStmt) {
+  StringRef Source = R"(
+void f() {
+   {
+       int a;
+   }
+}
+)";
+  // 'int a'
+  findSelectedASTNodesWithRange(
+      Source, {4, 8}, FileRange{{4, 8}, {4, 14}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<DeclStmt>((*SelectedCode)[0]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 4u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Function 'f' definition.
+        EXPECT_TRUE(isa<FunctionDecl>(Parents[1].get().Node.get<Decl>()));
+        // Function body of function 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[2].get().Node.get<Stmt>()));
+        // Compound statement in body of 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[3].get().Node.get<Stmt>()));
+      });
 }
 
 } // end anonymous namespace

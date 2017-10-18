@@ -12,11 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -26,25 +30,46 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -62,28 +87,37 @@ bool llvm::InlineFunction(CallInst *CI, InlineFunctionInfo &IFI,
                           AAResults *CalleeAAR, bool InsertLifetime) {
   return InlineFunction(CallSite(CI), IFI, CalleeAAR, InsertLifetime);
 }
+
 bool llvm::InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
                           AAResults *CalleeAAR, bool InsertLifetime) {
   return InlineFunction(CallSite(II), IFI, CalleeAAR, InsertLifetime);
 }
 
 namespace {
+
   /// A class for recording information about inlining a landing pad.
   class LandingPadInliningInfo {
-    BasicBlock *OuterResumeDest; ///< Destination of the invoke's unwind.
-    BasicBlock *InnerResumeDest; ///< Destination for the callee's resume.
-    LandingPadInst *CallerLPad;  ///< LandingPadInst associated with the invoke.
-    PHINode *InnerEHValuesPHI;   ///< PHI for EH values from landingpad insts.
+    /// Destination of the invoke's unwind.
+    BasicBlock *OuterResumeDest;
+
+    /// Destination for the callee's resume.
+    BasicBlock *InnerResumeDest = nullptr;
+
+    /// LandingPadInst associated with the invoke.
+    LandingPadInst *CallerLPad = nullptr;
+
+    /// PHI for EH values from landingpad insts.
+    PHINode *InnerEHValuesPHI = nullptr;
+
     SmallVector<Value*, 8> UnwindDestPHIValues;
 
   public:
     LandingPadInliningInfo(InvokeInst *II)
-      : OuterResumeDest(II->getUnwindDest()), InnerResumeDest(nullptr),
-        CallerLPad(nullptr), InnerEHValuesPHI(nullptr) {
+        : OuterResumeDest(II->getUnwindDest()) {
       // If there are PHI nodes in the unwind destination block, we need to keep
       // track of which values came into them from the invoke before removing
       // the edge from this block.
-      llvm::BasicBlock *InvokeBB = II->getParent();
+      BasicBlock *InvokeBB = II->getParent();
       BasicBlock::iterator I = OuterResumeDest->begin();
       for (; isa<PHINode>(I); ++I) {
         // Save the value to use for this edge.
@@ -126,7 +160,8 @@ namespace {
       }
     }
   };
-} // anonymous namespace
+
+} // end anonymous namespace
 
 /// Get or create a target for the branch from ResumeInsts.
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
@@ -189,7 +224,7 @@ static Value *getParentPad(Value *EHPad) {
   return cast<CatchSwitchInst>(EHPad)->getParentPad();
 }
 
-typedef DenseMap<Instruction *, Value *> UnwindDestMemoTy;
+using UnwindDestMemoTy = DenseMap<Instruction *, Value *>;
 
 /// Helper for getUnwindDestToken that does the descendant-ward part of
 /// the search.
@@ -617,7 +652,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // track of which values came into them from the invoke before removing the
   // edge from this block.
   SmallVector<Value *, 8> UnwindDestPHIValues;
-  llvm::BasicBlock *InvokeBB = II->getParent();
+  BasicBlock *InvokeBB = II->getParent();
   for (Instruction &I : *UnwindDest) {
     // Save the value to use for this edge.
     PHINode *PHI = dyn_cast<PHINode>(&I);
@@ -1359,6 +1394,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     }
   }
 }
+
 /// Update the block frequencies of the caller after a callee has been inlined.
 ///
 /// Each block cloned into the caller has its block frequency scaled by the
@@ -1848,8 +1884,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
         // Check that array size doesn't saturate uint64_t and doesn't
         // overflow when it's multiplied by type size.
-        if (AllocaArraySize != ~0ULL &&
-            UINT64_MAX / AllocaArraySize >= AllocaTypeSize) {
+        if (AllocaArraySize != std::numeric_limits<uint64_t>::max() &&
+            std::numeric_limits<uint64_t>::max() / AllocaArraySize >=
+                AllocaTypeSize) {
           AllocaSize = ConstantInt::get(Type::getInt64Ty(AI->getContext()),
                                         AllocaArraySize * AllocaTypeSize);
         }
@@ -1980,7 +2017,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // match the callee's return type, we also need to change the return type of
     // the intrinsic.
     if (Caller->getReturnType() == TheCall->getType()) {
-      auto NewEnd = remove_if(Returns, [](ReturnInst *RI) {
+      auto NewEnd = llvm::remove_if(Returns, [](ReturnInst *RI) {
         return RI->getParent()->getTerminatingDeoptimizeCall() != nullptr;
       });
       Returns.erase(NewEnd, Returns.end());

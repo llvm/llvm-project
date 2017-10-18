@@ -63,8 +63,7 @@ public:
   
   /// Create a new DeclRefExpr for the referenced variable.
   DeclRefExpr *makeDeclRefExpr(const VarDecl *D,
-                               bool RefersToEnclosingVariableOrCapture = false,
-                               bool GetNonReferenceType = false);
+                               bool RefersToEnclosingVariableOrCapture = false);
   
   /// Create a new UnaryOperator representing a dereference.
   UnaryOperator *makeDereference(const Expr *Arg, QualType Ty);
@@ -82,8 +81,7 @@ public:
   /// DeclRefExpr in the process.
   ImplicitCastExpr *
   makeLvalueToRvalue(const VarDecl *Decl,
-                     bool RefersToEnclosingVariableOrCapture = false,
-                     bool GetNonReferenceType = false);
+                     bool RefersToEnclosingVariableOrCapture = false);
 
   /// Create an implicit cast of the given type.
   ImplicitCastExpr *makeImplicitCast(const Expr *Arg, QualType Ty,
@@ -138,12 +136,10 @@ CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
   return new (C) CompoundStmt(C, Stmts, SourceLocation(), SourceLocation());
 }
 
-DeclRefExpr *ASTMaker::makeDeclRefExpr(const VarDecl *D,
-                                       bool RefersToEnclosingVariableOrCapture,
-                                       bool GetNonReferenceType) {
-  auto Type = D->getType();
-  if (GetNonReferenceType)
-    Type = Type.getNonReferenceType();
+DeclRefExpr *ASTMaker::makeDeclRefExpr(
+    const VarDecl *D,
+    bool RefersToEnclosingVariableOrCapture) {
+  QualType Type = D->getType().getNonReferenceType();
 
   DeclRefExpr *DR = DeclRefExpr::Create(
       C, NestedNameSpecifierLoc(), SourceLocation(), const_cast<VarDecl *>(D),
@@ -162,14 +158,10 @@ ImplicitCastExpr *ASTMaker::makeLvalueToRvalue(const Expr *Arg, QualType Ty) {
 
 ImplicitCastExpr *
 ASTMaker::makeLvalueToRvalue(const VarDecl *Arg,
-                             bool RefersToEnclosingVariableOrCapture,
-                             bool GetNonReferenceType) {
-  auto Type = Arg->getType();
-  if (GetNonReferenceType)
-    Type = Type.getNonReferenceType();
+                             bool RefersToEnclosingVariableOrCapture) {
+  QualType Type = Arg->getType().getNonReferenceType();
   return makeLvalueToRvalue(makeDeclRefExpr(Arg,
-                                            RefersToEnclosingVariableOrCapture,
-                                            GetNonReferenceType),
+                                            RefersToEnclosingVariableOrCapture),
                             Type);
 }
 
@@ -365,12 +357,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
     // Lambda requires callback itself inserted as a first parameter.
     CallArgs.push_back(
         M.makeDeclRefExpr(Callback,
-                          /* RefersToEnclosingVariableOrCapture= */ true,
-                          /* GetNonReferenceType= */ true));
+                          /* RefersToEnclosingVariableOrCapture= */ true));
 
   // All arguments past first two ones are passed to the callback.
   for (unsigned int i = 2; i < D->getNumParams(); i++)
-    CallArgs.push_back(M.makeLvalueToRvalue(D->getParamDecl(i)));
+    CallArgs.push_back(
+        M.makeLvalueToRvalue(D->getParamDecl(i),
+                             /* RefersToEnclosingVariableOrCapture= */ false));
 
   CallExpr *CallbackCall;
   if (isLambdaCall) {
@@ -385,8 +378,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   DeclRefExpr *FlagDecl =
       M.makeDeclRefExpr(Flag,
-                        /* RefersToEnclosingVariableOrCapture=*/true,
-                        /* GetNonReferenceType=*/true);
+                        /* RefersToEnclosingVariableOrCapture=*/true);
 
 
   MemberExpr *Deref = M.makeMemberExpression(FlagDecl, FlagFieldDecl);

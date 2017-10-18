@@ -17,4 +17,4 @@ def GPRRegBank : RegisterBank<"GPR", [GPR64all]>;
 def FPRRegBank : RegisterBank<"FPR", [QQQQ]>;
 
 /// Conditional register: NZCV.
-def CCRRegBank : RegisterBank<"CCR", [CCR]>;
+def CCRegBank : RegisterBank<"CC", [CCR]>;

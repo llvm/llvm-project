@@ -40,6 +40,7 @@ config.have_libxar = @HAVE_LIBXAR@
 config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = @LLVM_ENABLE_FFI@
 config.build_shared_libs = @BUILD_SHARED_LIBS@
+config.link_llvm_dylib = @LLVM_LINK_LLVM_DYLIB@
 config.llvm_libxml2_enabled = "@LLVM_LIBXML2_ENABLED@"
 
 # Support substitution of the tools_dir with user parameters. This is

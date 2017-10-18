@@ -441,7 +441,7 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
 
       GetMergerUnchecked().CompleteType(interface_decl);
     } else {
-      lldbassert(!"No mechanism for completing a type!");
+      lldbassert(0 && "No mechanism for completing a type!");
     }
     return;
   }
@@ -1979,7 +1979,7 @@ clang::QualType ClangASTSource::CopyTypeWithMerger(
     clang::ExternalASTMerger &merger,
     clang::QualType type) {
   if (!merger.HasImporterForOrigin(from_context)) {
-    lldbassert(!"Couldn't find the importer for a source context!");
+    lldbassert(0 && "Couldn't find the importer for a source context!");
     return QualType();
   }
 
@@ -1992,13 +1992,13 @@ clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
     return m_ast_importer_sp->CopyDecl(m_ast_context, &from_context, src_decl);
   } else if (m_merger_up) {
     if (!m_merger_up->HasImporterForOrigin(from_context)) {
-      lldbassert(!"Couldn't find the importer for a source context!");
+      lldbassert(0 && "Couldn't find the importer for a source context!");
       return nullptr;
     }
 
     return m_merger_up->ImporterForOrigin(from_context).Import(src_decl);
   } else {
-    lldbassert("No mechanism for copying a decl!");
+    lldbassert(0 && "No mechanism for copying a decl!");
     return nullptr;
   }
 }
@@ -2043,7 +2043,7 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
         CopyTypeWithMerger(*src_ast->getASTContext(), *m_merger_up,
                  ClangUtil::GetQualType(src_type));
   } else {
-    lldbassert("No mechanism for copying a type!");
+    lldbassert(0 && "No mechanism for copying a type!");
     return CompilerType();
   }
 

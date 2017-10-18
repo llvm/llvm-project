@@ -303,7 +303,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
         clang::QualType::getFromOpaquePtr(parser_type.GetOpaqueQualType()));
     return TypeFromUser(exported_type.getAsOpaquePtr(), &target);
   } else {
-    lldbassert(!"No mechanism for deporting a type!");
+    lldbassert(0 && "No mechanism for deporting a type!");
     return TypeFromUser();
   }
 }
@@ -1916,7 +1916,7 @@ bool ClangExpressionDeclMap::ResolveUnknownTypes() {
             scratch_ast_context->GetMergerUnchecked(),
             var_type).getAsOpaquePtr();
       } else {
-        lldbassert(!"No mechanism to copy a resolved unknown type!");
+        lldbassert(0 && "No mechanism to copy a resolved unknown type!");
         return false;
       }
 

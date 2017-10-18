@@ -59,6 +59,8 @@ struct SelectedASTNode {
   SelectedASTNode &operator=(SelectedASTNode &&) = default;
 
   void dump(llvm::raw_ostream &OS = llvm::errs()) const;
+
+  using ReferenceType = std::reference_wrapper<const SelectedASTNode>;
 };
 
 /// Traverses the given ASTContext and creates a tree of selected AST nodes.
@@ -67,6 +69,70 @@ struct SelectedASTNode {
 /// that corresponds to the TranslationUnitDecl otherwise.
 Optional<SelectedASTNode> findSelectedASTNodes(const ASTContext &Context,
                                                SourceRange SelectionRange);
+
+/// An AST selection value that corresponds to a selection of a set of
+/// statements that belong to one body of code (like one function).
+///
+/// For example, the following selection in the source.
+///
+/// \code
+/// void function() {
+///  // selection begin:
+///  int x = 0;
+///  {
+///     // selection end
+///     x = 1;
+///  }
+///  x = 2;
+/// }
+/// \endcode
+///
+/// Would correspond to a code range selection of statements "int x = 0"
+/// and the entire compound statement that follows it.
+///
+/// A \c CodeRangeASTSelection value stores references to the full
+/// \c SelectedASTNode tree and should not outlive it.
+class CodeRangeASTSelection {
+public:
+  CodeRangeASTSelection(CodeRangeASTSelection &&) = default;
+  CodeRangeASTSelection &operator=(CodeRangeASTSelection &&) = default;
+
+  /// Returns the parent hierarchy (top to bottom) for the selected nodes.
+  ArrayRef<SelectedASTNode::ReferenceType> getParents() { return Parents; }
+
+  /// Returns the number of selected statements.
+  size_t size() const {
+    if (!AreChildrenSelected)
+      return 1;
+    return SelectedNode.get().Children.size();
+  }
+
+  const Stmt *operator[](size_t I) const {
+    if (!AreChildrenSelected) {
+      assert(I == 0 && "Invalid index");
+      return SelectedNode.get().Node.get<Stmt>();
+    }
+    return SelectedNode.get().Children[I].Node.get<Stmt>();
+  }
+
+  static Optional<CodeRangeASTSelection>
+  create(SourceRange SelectionRange, const SelectedASTNode &ASTSelection);
+
+private:
+  CodeRangeASTSelection(SelectedASTNode::ReferenceType SelectedNode,
+                        ArrayRef<SelectedASTNode::ReferenceType> Parents,
+                        bool AreChildrenSelected)
+      : SelectedNode(SelectedNode), Parents(Parents.begin(), Parents.end()),
+        AreChildrenSelected(AreChildrenSelected) {}
+
+  /// The reference to the selected node (or reference to the selected
+  /// child nodes).
+  SelectedASTNode::ReferenceType SelectedNode;
+  /// The parent hierarchy (top to bottom) for the selected noe.
+  llvm::SmallVector<SelectedASTNode::ReferenceType, 8> Parents;
+  /// True only when the children of the selected node are actually selected.
+  bool AreChildrenSelected;
+};
 
 } // end namespace tooling
 } // end namespace clang

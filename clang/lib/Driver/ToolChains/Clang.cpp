@@ -334,7 +334,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
     x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
-    hexagon::getHexagonTargetFeatures(Args, Features);
+    hexagon::getHexagonTargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:

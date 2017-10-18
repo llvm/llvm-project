@@ -34,4 +34,4 @@ return:                                           ; preds = %entry, %if.then
   ret i1 %.sink
 }
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }

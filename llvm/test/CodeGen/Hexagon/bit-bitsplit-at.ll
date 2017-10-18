@@ -30,4 +30,4 @@ b9:                                               ; preds = %b6, %b4
   ret i32 %v10
 }
 
-attributes #0 = { nounwind optsize "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" }
+attributes #0 = { nounwind optsize "target-cpu"="hexagonv60" "target-features"="-hvxv60,-long-calls" }

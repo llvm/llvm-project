@@ -58,6 +58,6 @@ noret:
 
 declare void @trap() #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
 attributes #1 = { nounwind noreturn }
 

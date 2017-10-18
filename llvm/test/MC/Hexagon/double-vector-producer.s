@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv60 -filetype=obj %s | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv60 -mhvx -filetype=obj %s | llvm-objdump -d - | FileCheck %s
 {
   v1:0 = vshuff(v1,v0,r7)
   v2.w = vadd(v13.w,v15.w)

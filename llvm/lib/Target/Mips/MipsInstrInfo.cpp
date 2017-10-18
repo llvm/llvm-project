@@ -218,7 +218,13 @@ MipsInstrInfo::BranchType MipsInstrInfo::analyzeBranch(
   unsigned SecondLastOpc = 0;
   MachineInstr *SecondLastInst = nullptr;
 
-  if (++I != REnd) {
+  // Skip past any debug instruction to see if the second last actual
+  // is a branch.
+  ++I;
+  while (I != REnd && I->isDebugValue())
+    ++I;
+
+  if (I != REnd) {
     SecondLastInst = &*I;
     SecondLastOpc = getAnalyzableBrOpc(SecondLastInst->getOpcode());
 

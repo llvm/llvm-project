@@ -5340,8 +5340,14 @@ static DecodeStatus DecodeForVMRSandVMSR(MCInst &Inst, unsigned Val,
   } else
     Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder));
 
-  Inst.addOperand(MCOperand::createImm(ARMCC::AL));
-  Inst.addOperand(MCOperand::createReg(0));
+  if (featureBits[ARM::ModeThumb]) {
+    Inst.addOperand(MCOperand::createImm(ARMCC::AL));
+    Inst.addOperand(MCOperand::createReg(0));
+  } else {
+    unsigned pred = fieldFromInstruction(Val, 28, 4);
+    if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
 
   return S;
 }
