@@ -253,8 +253,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   if (!L->isNullValue() && R->isNullValue())
     return -1;
 
-  auto GlobalValueL = const_cast<Value *>(dyn_cast<Value>(L));
-  auto GlobalValueR = const_cast<Value *>(dyn_cast<Value>(R));
+  auto GlobalValueL = const_cast<GlobalValue *>(dyn_cast<GlobalValue>(L));
+  auto GlobalValueR = const_cast<GlobalValue *>(dyn_cast<GlobalValue>(R));
   if (GlobalValueL && GlobalValueR) {
     return cmpGlobalValues(GlobalValueL, GlobalValueR);
   }
@@ -383,7 +383,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
   }
 }
 
-int FunctionComparator::cmpGlobalValues(Value *L, Value *R) const {
+int FunctionComparator::cmpGlobalValues(GlobalValue *L, GlobalValue *R) const {
   uint64_t LNumber = GlobalNumbers->getNumber(L);
   uint64_t RNumber = GlobalNumbers->getNumber(R);
   return cmpNumbers(LNumber, RNumber);
