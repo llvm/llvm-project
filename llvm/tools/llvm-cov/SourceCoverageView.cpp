@@ -218,12 +218,11 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
       ExpansionColumn = NextESV->getStartCol();
 
     // Display the source code for the current line.
-    renderLine(OS, {*LI, LI.line_number()}, LCI->getWrappedSegment(),
-               LCI->getLineSegments(), ExpansionColumn, ViewDepth);
+    renderLine(OS, {*LI, LI.line_number()}, *LCI, ExpansionColumn, ViewDepth);
 
     // Show the region markers.
     if (shouldRenderRegionMarkers(LCI->getLineSegments()))
-      renderRegionMarkers(OS, LCI->getLineSegments(), ViewDepth);
+      renderRegionMarkers(OS, *LCI, ViewDepth);
 
     // Show the expansions and instantiations for this line.
     bool RenderedSubView = false;
@@ -235,9 +234,8 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
       // this subview.
       if (RenderedSubView) {
         ExpansionColumn = NextESV->getStartCol();
-        renderExpansionSite(OS, {*LI, LI.line_number()},
-                            LCI->getWrappedSegment(), LCI->getLineSegments(),
-                            ExpansionColumn, ViewDepth);
+        renderExpansionSite(OS, {*LI, LI.line_number()}, *LCI, ExpansionColumn,
+                            ViewDepth);
         renderViewDivider(OS, ViewDepth + 1);
       }
 
