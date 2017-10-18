@@ -384,7 +384,9 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     }
   }
 
-  if (!HalvingSwizzle) {
+  // OpenCL mode requires swizzle length to be in accordance with accepted
+  // sizes. Clang however supports arbitrary lengths for other languages.
+  if (S.getLangOpts().OpenCL && !HalvingSwizzle) {
     unsigned SwizzleLength = CompName->getLength();
 
     if (HexSwizzle)

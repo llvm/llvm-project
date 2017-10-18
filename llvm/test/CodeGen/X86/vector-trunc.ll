@@ -1931,3 +1931,123 @@ entry:
   ret <16 x i8> %1
 }
 
+define void @PR34773(i16* %a0, i8* %a1) {
+; SSE-LABEL: PR34773:
+; SSE:       # BB#0:
+; SSE-NEXT:    movdqu (%rdi), %xmm0
+; SSE-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE-NEXT:    movdqu 48(%rdi), %xmm3
+; SSE-NEXT:    psrlw $8, %xmm1
+; SSE-NEXT:    psrlw $8, %xmm0
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm3
+; SSE-NEXT:    psrlw $8, %xmm2
+; SSE-NEXT:    packuswb %xmm3, %xmm2
+; SSE-NEXT:    movdqu %xmm0, (%rsi)
+; SSE-NEXT:    movdqu %xmm2, 16(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR34773:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrlw $8, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm5, %xmm3, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR34773:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: PR34773:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX512F-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512F-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR34773:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX512VL-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; AVX512VL-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VL-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512VL-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: PR34773:
+; AVX512BW:       # BB#0:
+; AVX512BW-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512BW-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX512BW-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512BW-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: PR34773:
+; AVX512BWVL:       # BB#0:
+; AVX512BWVL-NEXT:    vpsrlw $8, (%rdi), %ymm0
+; AVX512BWVL-NEXT:    vpsrlw $8, 32(%rdi), %ymm1
+; AVX512BWVL-NEXT:    vpmovwb %ymm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovwb %ymm1, 16(%rsi)
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
+  %1  = getelementptr i16, i16* %a0, i64 16
+  %2  = getelementptr i8, i8* %a1, i64 16
+  %3  = bitcast i16* %a0 to <16 x i16>*
+  %4  = bitcast i16* %1 to <16 x i16>*
+  %5  = bitcast i8* %a1 to <16 x i8>*
+  %6  = bitcast i8* %2 to <16 x i8>*
+  %7  = load <16 x i16>, <16 x i16>* %3, align 2
+  %8  = load <16 x i16>, <16 x i16>* %4, align 2
+  %9  = lshr <16 x i16> %7, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %10 = lshr <16 x i16> %8, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %11 = trunc <16 x i16> %9  to <16 x i8>
+  %12 = trunc <16 x i16> %10 to <16 x i8>
+  store <16 x i8> %11, <16 x i8>* %5, align 1
+  store <16 x i8> %12, <16 x i8>* %6, align 1
+  ret void
+}

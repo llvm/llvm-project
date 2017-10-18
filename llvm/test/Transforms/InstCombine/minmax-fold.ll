@@ -688,3 +688,57 @@ define <8 x float> @bitcast_vector_umin(<8 x float> %x, <8 x float> %y) {
   %sel = select <8 x i1> %cmp, <8 x float> %x, <8 x float> %y
   ret <8 x float> %sel
 }
+
+; Check that we look through cast and recognize min idiom.
+define zeroext i8 @look_through_cast1(i32 %x) {
+; CHECK-LABEL: @look_through_cast1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 511
+; CHECK-NEXT:    [[RES1:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 511
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[RES1]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %cmp1 = icmp slt i32 %x, 511
+  %x_trunc = trunc i32 %x to i8
+  %res = select i1 %cmp1, i8 %x_trunc, i8 255
+  ret i8 %res
+}
+
+; Check that we look through cast but min is not recognized.
+define zeroext i8 @look_through_cast2(i32 %x) {
+; CHECK-LABEL: @look_through_cast2(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 510
+; CHECK-NEXT:    [[X_TRUNC:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP1]], i8 [[X_TRUNC]], i8 -1
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp1 = icmp slt i32 %x, 510
+  %x_trunc = trunc i32 %x to i8
+  %res = select i1 %cmp1, i8 %x_trunc, i8 255
+  ret i8 %res
+}
+
+define <2 x i8> @min_through_cast_vec1(<2 x i32> %x) {
+; CHECK-LABEL: @min_through_cast_vec1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 510, i32 511>
+; CHECK-NEXT:    [[RES1:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 510, i32 511>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[RES1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+  %cmp = icmp slt <2 x i32> %x, <i32 510, i32 511>
+  %x_trunc = trunc <2 x i32> %x to <2 x i8>
+  %res = select <2 x i1> %cmp, <2 x i8> %x_trunc, <2 x i8> <i8 254, i8 255>
+  ret <2 x i8> %res
+}
+
+define <2 x i8> @min_through_cast_vec2(<2 x i32> %x) {
+; CHECK-LABEL: @min_through_cast_vec2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 511, i32 511>
+; CHECK-NEXT:    [[RES1:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> <i32 511, i32 511>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[RES1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+  %cmp = icmp slt <2 x i32> %x, <i32 511, i32 511>
+  %x_trunc = trunc <2 x i32> %x to <2 x i8>
+  %res = select <2 x i1> %cmp, <2 x i8> %x_trunc, <2 x i8> <i8 255, i8 255>
+  ret <2 x i8> %res
+}

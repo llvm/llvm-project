@@ -2794,7 +2794,7 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
       GenerateHasAttrSpellingStringSwitch(I->second, OS, Spelling, I->first);
       OS << "}";
     }
-    OS << "\n}\n";
+    OS << "\n} break;\n";
   };
   fn("CXX11", "CXX", CXX);
   fn("C2x", "C", C2x);

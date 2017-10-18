@@ -217,6 +217,8 @@ class LinkerScript final {
   uint64_t advance(uint64_t Size, unsigned Align);
   void output(InputSection *Sec);
 
+  void assignOffsets(OutputSection *Sec);
+
   std::unique_ptr<AddressState> Ctx;
   OutputSection *Aether;
 
@@ -242,7 +244,6 @@ public:
   bool needsInterpSection();
 
   bool shouldKeep(InputSectionBase *S);
-  void assignOffsets(OutputSection *Sec);
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
   void processSectionCommands(OutputSectionFactory &Factory);

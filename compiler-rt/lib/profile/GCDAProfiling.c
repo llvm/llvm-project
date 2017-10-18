@@ -37,6 +37,9 @@
 #ifndef MAP_FILE
 #define MAP_FILE 0
 #endif
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 #endif
 
 #if defined(__FreeBSD__) && defined(__i386__)
@@ -238,17 +241,17 @@ void llvm_gcda_start_file(const char *orig_filename, const char version[4],
 
   /* Try just opening the file. */
   new_file = 0;
-  fd = open(filename, O_RDWR);
+  fd = open(filename, O_RDWR | O_BINARY);
 
   if (fd == -1) {
     /* Try opening the file, creating it if necessary. */
     new_file = 1;
     mode = "w+b";
-    fd = open(filename, O_RDWR | O_CREAT, 0644);
+    fd = open(filename, O_RDWR | O_CREAT | O_BINARY, 0644);
     if (fd == -1) {
       /* Try creating the directories first then opening the file. */
       __llvm_profile_recursive_mkdir(filename);
-      fd = open(filename, O_RDWR | O_CREAT, 0644);
+      fd = open(filename, O_RDWR | O_CREAT | O_BINARY, 0644);
       if (fd == -1) {
         /* Bah! It's hopeless. */
         int errnum = errno;

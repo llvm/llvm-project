@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // This pass implements the Bottom Up SLP vectorizer. It detects consecutive
 // stores that can be put together into vector-stores. Next, it attempts to
 // construct vectorizable tree using the use-def chains. If a profitable tree
@@ -361,14 +362,17 @@ static Value *isOneOf(Value *OpValue, Value *Op) {
 }
 
 namespace {
+
 /// Contains data for the instructions going to be vectorized.
 struct RawInstructionsData {
   /// Main Opcode of the instructions going to be vectorized.
   unsigned Opcode = 0;
+
   /// The list of instructions have some instructions with alternate opcodes.
   bool HasAltOpcodes = false;
 };
-} // namespace
+
+} // end anonymous namespace
 
 /// Checks the list of the vectorized instructions \p VL and returns info about
 /// this list.
@@ -392,19 +396,24 @@ static RawInstructionsData getMainOpcode(ArrayRef<Value *> VL) {
 }
 
 namespace {
+
 /// Main data required for vectorization of instructions.
 struct InstructionsState {
   /// The very first instruction in the list with the main opcode.
   Value *OpValue = nullptr;
+
   /// The main opcode for the list of instructions.
   unsigned Opcode = 0;
+
   /// Some of the instructions in the list have alternate opcodes.
   bool IsAltShuffle = false;
+
   InstructionsState() = default;
   InstructionsState(Value *OpValue, unsigned Opcode, bool IsAltShuffle)
       : OpValue(OpValue), Opcode(Opcode), IsAltShuffle(IsAltShuffle) {}
 };
-} // namespace
+
+} // end anonymous namespace
 
 /// \returns analysis of the Instructions in \p VL described in
 /// InstructionsState, the Opcode that we suppose the whole list 
@@ -973,6 +982,7 @@ private:
     return os;
   }
 #endif
+
   friend struct GraphTraits<BoUpSLP *>;
   friend struct DOTGraphTraits<BoUpSLP *>;
 
@@ -1176,9 +1186,9 @@ private:
 
     /// The ID of the scheduling region. For a new vectorization iteration this
     /// is incremented which "removes" all ScheduleData from the region.
-    int SchedulingRegionID = 1;
     // Make sure that the initial SchedulingRegionID is greater than the
     // initial SchedulingRegionID in ScheduleData (which is 0).
+    int SchedulingRegionID = 1;
   };
 
   /// Attaches the BlockScheduling structures to basic blocks.
@@ -1212,6 +1222,7 @@ private:
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
+
   /// Instruction builder to construct the vectorized tree.
   IRBuilder<> Builder;
 
@@ -4662,6 +4673,7 @@ class HorizontalReduction {
     RK_Max,        /// Maximum reduction data.
     RK_UMax,       /// Unsigned maximum reduction data.
   };
+
   /// Contains info about operation, like its opcode, left and right operands.
   class OperationData {
     /// Opcode of the instruction.
@@ -4672,8 +4684,10 @@ class HorizontalReduction {
 
     /// Right operand of the reduction operation.
     Value *RHS = nullptr;
+
     /// Kind of the reduction operation.
     ReductionKind Kind = RK_None;
+
     /// True if float point min/max reduction has no NaNs.
     bool NoNaN = false;
 
@@ -4725,7 +4739,7 @@ class HorizontalReduction {
 
     /// Construction for reduced values. They are identified by opcode only and
     /// don't have associated LHS/RHS values.
-    explicit OperationData(Value *V) : Kind(RK_None) {
+    explicit OperationData(Value *V) {
       if (auto *I = dyn_cast<Instruction>(V))
         Opcode = I->getOpcode();
     }
@@ -4737,6 +4751,7 @@ class HorizontalReduction {
         : Opcode(Opcode), LHS(LHS), RHS(RHS), Kind(Kind), NoNaN(NoNaN) {
       assert(Kind != RK_None && "One of the reduction operations is expected.");
     }
+
     explicit operator bool() const { return Opcode; }
 
     /// Get the index of the first operand.
@@ -5421,7 +5436,6 @@ private:
 ///  starting from the last insertelement instruction.
 ///
 /// Returns true if it matches
-///
 static bool findBuildVector(InsertElementInst *LastInsertElem,
                             SmallVectorImpl<Value *> &BuildVector,
                             SmallVectorImpl<Value *> &BuildVectorOpds) {
