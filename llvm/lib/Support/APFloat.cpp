@@ -2543,12 +2543,12 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
 }
 
 bool IEEEFloat::convertFromStringSpecials(StringRef str) {
-  if (str.equals("inf") || str.equals("INFINITY")) {
+  if (str.equals("inf") || str.equals("INFINITY") || str.equals("+Inf")) {
     makeInf(false);
     return true;
   }
 
-  if (str.equals("-inf") || str.equals("-INFINITY")) {
+  if (str.equals("-inf") || str.equals("-INFINITY") || str.equals("-Inf")) {
     makeInf(true);
     return true;
   }

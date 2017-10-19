@@ -31,14 +31,20 @@ void SymIntExpr::dumpToStream(raw_ostream &os) const {
   os << '(';
   getLHS()->dumpToStream(os);
   os << ") "
-     << BinaryOperator::getOpcodeStr(getOpcode()) << ' '
-     << getRHS().getZExtValue();
+     << BinaryOperator::getOpcodeStr(getOpcode()) << ' ';
+  if (getRHS().isUnsigned())
+    os << getRHS().getZExtValue();
+  else
+    os << getRHS().getSExtValue();
   if (getRHS().isUnsigned())
     os << 'U';
 }
 
 void IntSymExpr::dumpToStream(raw_ostream &os) const {
-  os << getLHS().getZExtValue();
+  if (getLHS().isUnsigned())
+    os << getLHS().getZExtValue();
+  else
+    os << getLHS().getSExtValue();
   if (getLHS().isUnsigned())
     os << 'U';
   os << ' '

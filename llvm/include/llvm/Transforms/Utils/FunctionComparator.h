@@ -78,6 +78,10 @@ public:
     return MapIter->second;
   }
 
+  void erase(GlobalValue *Global) {
+    GlobalNumbers.erase(Global);
+  }
+
   void clear() {
     GlobalNumbers.clear();
   }
