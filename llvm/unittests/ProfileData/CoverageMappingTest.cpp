@@ -635,6 +635,63 @@ TEST_P(CoverageMappingTest, basic_coverage_iteration) {
   ASSERT_EQ(CoverageSegment(11, 11, false),   Segments[6]);
 }
 
+TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
+  ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}, Err);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+  addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
+  addCMR(Counter::getCounter(2), "file1", 5, 8, 9, 1);
+  addCMR(Counter::getCounter(3), "file1", 10, 10, 11, 11);
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
+
+  unsigned NumLineStats = 0;
+  for (const auto &LCS : getLineCoverageStats(Data)) {
+    ++NumLineStats;
+    (void)LCS;
+  }
+  ASSERT_EQ(11U, NumLineStats);
+
+  LineCoverageIterator LCI{Data};
+
+  ASSERT_EQ(1U, LCI->getLine());
+  ASSERT_EQ(20ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(2U, LCI->getLine());
+  ASSERT_EQ(20ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(3U, LCI->getLine());
+  ASSERT_EQ(20ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(4U, LCI->getLine());
+  ASSERT_EQ(20ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(5U, LCI->getLine());
+  ASSERT_EQ(10ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(6U, LCI->getLine());
+  ASSERT_EQ(10ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(7U, LCI->getLine());
+  ASSERT_EQ(10ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(8U, LCI->getLine());
+  ASSERT_EQ(10ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(9U, LCI->getLine());
+  ASSERT_EQ(10ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(10U, LCI->getLine());
+  ASSERT_EQ(0ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(11U, LCI->getLine());
+  ASSERT_EQ(0ULL, LCI->getExecutionCount());
+  ++LCI;
+  ASSERT_EQ(LCI, LCI.getEnd());
+}
+
 TEST_P(CoverageMappingTest, uncovered_function) {
   startFunction("func", 0x1234);
   addCMR(Counter::getZero(), "file1", 1, 2, 3, 4);
