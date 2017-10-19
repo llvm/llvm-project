@@ -60,7 +60,6 @@ namespace {
     BasicBlock *TrapBB;
 
     BasicBlock *getTrapBB();
-    void emitBranchToTrap(Value *Cmp = nullptr);
     bool instrument(Value *Ptr, Value *Val, const DataLayout &DL);
  };
 }
@@ -89,32 +88,6 @@ BasicBlock *BoundsChecking::getTrapBB() {
   Builder->CreateUnreachable();
 
   return TrapBB;
-}
-
-
-/// emitBranchToTrap - emit a branch instruction to a trap block.
-/// If Cmp is non-null, perform a jump only if its value evaluates to true.
-void BoundsChecking::emitBranchToTrap(Value *Cmp) {
-  // check if the comparison is always false
-  ConstantInt *C = dyn_cast_or_null<ConstantInt>(Cmp);
-  if (C) {
-    ++ChecksSkipped;
-    if (!C->getZExtValue())
-      return;
-    else
-      Cmp = nullptr; // unconditional branch
-  }
-  ++ChecksAdded;
-
-  BasicBlock::iterator Inst = Builder->GetInsertPoint();
-  BasicBlock *OldBB = Inst->getParent();
-  BasicBlock *Cont = OldBB->splitBasicBlock(Inst);
-  OldBB->getTerminator()->eraseFromParent();
-
-  if (Cmp)
-    BranchInst::Create(getTrapBB(), Cont, Cmp, OldBB);
-  else
-    BranchInst::Create(getTrapBB(), OldBB);
 }
 
 
@@ -158,8 +131,32 @@ bool BoundsChecking::instrument(Value *Ptr, Value *InstVal,
     Value *Cmp1 = Builder->CreateICmpSLT(Offset, ConstantInt::get(IntTy, 0));
     Or = Builder->CreateOr(Cmp1, Or);
   }
-  emitBranchToTrap(Or);
 
+  // check if the comparison is always false
+  ConstantInt *C = dyn_cast_or_null<ConstantInt>(Or);
+  if (C) {
+    ++ChecksSkipped;
+    // If non-zero, nothing to do.
+    if (!C->getZExtValue())
+      return true;
+  }
+  ++ChecksAdded;
+
+  BasicBlock::iterator SplitI = Builder->GetInsertPoint();
+  BasicBlock *OldBB = SplitI->getParent();
+  BasicBlock *Cont = OldBB->splitBasicBlock(SplitI);
+  OldBB->getTerminator()->eraseFromParent();
+
+  if (C) {
+    // If we have a constant zero, unconditionally branch.
+    // FIXME: We should really handle this differently to bypass the splitting
+    // the block.
+    BranchInst::Create(getTrapBB(), OldBB);
+    return true;
+  }
+
+  // Create the conditional branch.
+  BranchInst::Create(getTrapBB(), Cont, Or, OldBB);
   return true;
 }
 

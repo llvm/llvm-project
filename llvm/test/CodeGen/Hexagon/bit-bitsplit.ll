@@ -14,4 +14,4 @@ entry:
   ret i32 %and2
 }
 
-attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double" }
+attributes #0 = { norecurse nounwind readonly "target-cpu"="hexagonv60" "target-features"="-hvx" }

@@ -133,10 +133,10 @@ attributes #3 = {"amdgpu-flat-work-group-size"="1024,2048"}
 ; HSAMD: Version: [ 1, 0 ]
 ; HSAMD: Kernels:
 ; HSAMD: - Name:                 min_64_max_64
-; HSAMD:   MaxFlatWorkgroupSize: 64
+; HSAMD:   MaxFlatWorkGroupSize: 64
 ; HSAMD: - Name:                 min_64_max_128
-; HSAMD:   MaxFlatWorkgroupSize: 128
+; HSAMD:   MaxFlatWorkGroupSize: 128
 ; HSAMD: - Name:                 min_128_max_128
-; HSAMD:   MaxFlatWorkgroupSize: 128
+; HSAMD:   MaxFlatWorkGroupSize: 128
 ; HSAMD: - Name:                 min_1024_max_2048
-; HSAMD:   MaxFlatWorkgroupSize: 2048
+; HSAMD:   MaxFlatWorkGroupSize: 2048

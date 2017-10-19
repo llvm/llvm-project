@@ -15,5 +15,5 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" } 
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" } 
 attributes #1 = { nounwind readnone }

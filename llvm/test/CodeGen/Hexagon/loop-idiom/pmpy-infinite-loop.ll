@@ -80,4 +80,4 @@ if.end437:                                        ; preds = %if.then409, %for.bo
   br label %for.body405
 }
 
-attributes #0 = { noinline nounwind "target-cpu"="hexagonv60" "target-features"="-hvx-double,-long-calls" }
+attributes #0 = { noinline nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

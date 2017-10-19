@@ -238,8 +238,8 @@ constexpr char WavefrontSize[] = "WavefrontSize";
 constexpr char NumSGPRs[] = "NumSGPRs";
 /// \brief Key for Kernel::CodeProps::Metadata::mNumVGPRs.
 constexpr char NumVGPRs[] = "NumVGPRs";
-/// \brief Key for Kernel::CodeProps::Metadata::mMaxFlatWorkgroupSize.
-constexpr char MaxFlatWorkgroupSize[] = "MaxFlatWorkgroupSize";
+/// \brief Key for Kernel::CodeProps::Metadata::mMaxFlatWorkGroupSize.
+constexpr char MaxFlatWorkGroupSize[] = "MaxFlatWorkGroupSize";
 /// \brief Key for Kernel::CodeProps::Metadata::mIsDynamicCallStack.
 constexpr char IsDynamicCallStack[] = "IsDynamicCallStack";
 /// \brief Key for Kernel::CodeProps::Metadata::mIsXNACKEnabled.
@@ -268,7 +268,7 @@ struct Metadata final {
   /// \brief Total number of VGPRs used by a workitem. Optional.
   uint16_t mNumVGPRs = 0;
   /// \brief Maximum flat work-group size supported by the kernel. Optional.
-  uint32_t mMaxFlatWorkgroupSize = 0;
+  uint32_t mMaxFlatWorkGroupSize = 0;
   /// \brief True if the generated machine code is using a dynamically sized
   /// call stack. Optional.
   bool mIsDynamicCallStack = false;

@@ -629,6 +629,9 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (!G->isInterposable() && !MergeFunctionsPDI) {
     if (G->hasGlobalUnnamedAddr()) {
+      // G might have been a key in our GlobalNumberState, and it's illegal
+      // to replace a key in ValueMap<GlobalValue *> with a non-global.
+      GlobalNumbers.erase(G);
       // If G's address is not significant, replace it entirely.
       Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
       G->replaceAllUsesWith(BitcastF);

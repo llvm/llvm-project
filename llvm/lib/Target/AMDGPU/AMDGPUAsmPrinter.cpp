@@ -1179,7 +1179,7 @@ AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
   HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
   HSACodeProps.mNumSGPRs = CurrentProgramInfo.NumSGPR;
   HSACodeProps.mNumVGPRs = CurrentProgramInfo.NumVGPR;
-  HSACodeProps.mMaxFlatWorkgroupSize = MFI.getMaxFlatWorkGroupSize();
+  HSACodeProps.mMaxFlatWorkGroupSize = MFI.getMaxFlatWorkGroupSize();
   HSACodeProps.mIsDynamicCallStack = ProgramInfo.DynamicCallStack;
   HSACodeProps.mIsXNACKEnabled = STM.isXNACKEnabled();
 

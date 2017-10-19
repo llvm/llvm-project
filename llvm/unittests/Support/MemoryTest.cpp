@@ -1,6 +1,6 @@
 //===- llvm/unittest/Support/AllocatorTest.cpp - BumpPtrAllocator tests ---===//
 //
-//		       The LLVM Compiler Infrastructure
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -350,16 +350,16 @@ TEST_P(MappedMemoryTest, UnalignedNear) {
 // Note that Memory::MF_WRITE is not supported exclusively across
 // operating systems and architectures and can imply MF_READ|MF_WRITE
 unsigned MemoryFlags[] = {
-			   Memory::MF_READ,
-			   Memory::MF_WRITE,
-			   Memory::MF_READ|Memory::MF_WRITE,
-			   Memory::MF_EXEC,
-			   Memory::MF_READ|Memory::MF_EXEC,
-			   Memory::MF_READ|Memory::MF_WRITE|Memory::MF_EXEC
-			 };
+                           Memory::MF_READ,
+                           Memory::MF_WRITE,
+                           Memory::MF_READ|Memory::MF_WRITE,
+                           Memory::MF_EXEC,
+                           Memory::MF_READ|Memory::MF_EXEC,
+                           Memory::MF_READ|Memory::MF_WRITE|Memory::MF_EXEC
+                         };
 
 INSTANTIATE_TEST_CASE_P(AllocationTests,
-			MappedMemoryTest,
-			::testing::ValuesIn(MemoryFlags),);
+                        MappedMemoryTest,
+                        ::testing::ValuesIn(MemoryFlags),);
 
 }  // anonymous namespace

@@ -22,15 +22,17 @@
 
 namespace llvm {
 
+using namespace coverage;
+
 class CoverageFiltersMatchAll;
 class SourceCoverageView;
 
 /// \brief A view that represents a macro or include expansion.
 struct ExpansionView {
-  coverage::CounterMappingRegion Region;
+  CounterMappingRegion Region;
   std::unique_ptr<SourceCoverageView> View;
 
-  ExpansionView(const coverage::CounterMappingRegion &Region,
+  ExpansionView(const CounterMappingRegion &Region,
                 std::unique_ptr<SourceCoverageView> View)
       : Region(Region), View(std::move(View)) {}
   ExpansionView(ExpansionView &&RHS)
@@ -112,7 +114,7 @@ public:
 
   /// \brief Create an index which lists reports for the given source files.
   virtual Error createIndexFile(ArrayRef<std::string> SourceFiles,
-                                const coverage::CoverageMapping &Coverage,
+                                const CoverageMapping &Coverage,
                                 const CoverageFiltersMatchAll &Filters) = 0;
 
   /// @}
@@ -134,7 +136,7 @@ class SourceCoverageView {
   const CoverageViewOptions &Options;
 
   /// Complete coverage information about the source on display.
-  coverage::CoverageData CoverageInfo;
+  CoverageData CoverageInfo;
 
   /// A container for all expansions (e.g macros) in the source on display.
   std::vector<ExpansionView> ExpansionSubViews;
@@ -154,7 +156,7 @@ protected:
     LineRef(StringRef Line, int64_t LineNo) : Line(Line), LineNo(LineNo) {}
   };
 
-  using CoverageSegmentArray = ArrayRef<const coverage::CoverageSegment *>;
+  using CoverageSegmentArray = ArrayRef<const CoverageSegment *>;
 
   /// @name Rendering Interface
   /// @{
@@ -179,8 +181,7 @@ protected:
 
   /// \brief Render a source line with highlighting.
   virtual void renderLine(raw_ostream &OS, LineRef L,
-                          const coverage::CoverageSegment *WrappedSegment,
-                          CoverageSegmentArray Segments, unsigned ExpansionCol,
+                          const LineCoverageStats &LCS, unsigned ExpansionCol,
                           unsigned ViewDepth) = 0;
 
   /// \brief Render the line's execution count column.
@@ -192,15 +193,14 @@ protected:
 
   /// \brief Render all the region's execution counts on a line.
   virtual void renderRegionMarkers(raw_ostream &OS,
-                                   CoverageSegmentArray Segments,
+                                   const LineCoverageStats &Line,
                                    unsigned ViewDepth) = 0;
 
   /// \brief Render the site of an expansion.
-  virtual void
-  renderExpansionSite(raw_ostream &OS, LineRef L,
-                      const coverage::CoverageSegment *WrappedSegment,
-                      CoverageSegmentArray Segments, unsigned ExpansionCol,
-                      unsigned ViewDepth) = 0;
+  virtual void renderExpansionSite(raw_ostream &OS, LineRef L,
+                                   const LineCoverageStats &LCS,
+                                   unsigned ExpansionCol,
+                                   unsigned ViewDepth) = 0;
 
   /// \brief Render an expansion view and any nested views.
   virtual void renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
@@ -232,15 +232,14 @@ protected:
 
   SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,
-                     coverage::CoverageData &&CoverageInfo)
+                     CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
         CoverageInfo(std::move(CoverageInfo)) {}
 
 public:
   static std::unique_ptr<SourceCoverageView>
   create(StringRef SourceName, const MemoryBuffer &File,
-         const CoverageViewOptions &Options,
-         coverage::CoverageData &&CoverageInfo);
+         const CoverageViewOptions &Options, CoverageData &&CoverageInfo);
 
   virtual ~SourceCoverageView() {}
 
@@ -250,7 +249,7 @@ public:
   const CoverageViewOptions &getOptions() const { return Options; }
 
   /// \brief Add an expansion subview to this view.
-  void addExpansion(const coverage::CounterMappingRegion &Region,
+  void addExpansion(const CounterMappingRegion &Region,
                     std::unique_ptr<SourceCoverageView> View);
 
   /// \brief Add a function instantiation subview to this view.
