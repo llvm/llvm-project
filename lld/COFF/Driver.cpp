@@ -548,42 +548,92 @@ static void parseModuleDefs(StringRef Path) {
   }
 }
 
-// Get a set of symbols not to automatically export
-// when exporting all global symbols for MinGW.
-static StringSet<> getExportExcludeSymbols() {
-  if (Config->Machine == I386)
-    return {
-        "__NULL_IMPORT_DESCRIPTOR",
-        "__pei386_runtime_relocator",
-        "_do_pseudo_reloc",
-        "_impure_ptr",
-        "__impure_ptr",
-        "__fmode",
-        "_environ",
-        "___dso_handle",
-        // These are the MinGW names that differ from the standard
-        // ones (lacking an extra underscore).
-        "_DllMain@12",
-        "_DllEntryPoint@12",
-        "_DllMainCRTStartup@12",
-    };
+// Logic for deciding what symbols to export, when exporting all
+// symbols for MinGW.
+class AutoExporter {
+public:
+  AutoExporter() {
+    if (Config->Machine == I386)
+      ExcludeSymbols = {
+          "__NULL_IMPORT_DESCRIPTOR",
+          "__pei386_runtime_relocator",
+          "_do_pseudo_reloc",
+          "_impure_ptr",
+          "__impure_ptr",
+          "__fmode",
+          "_environ",
+          "___dso_handle",
+          // These are the MinGW names that differ from the standard
+          // ones (lacking an extra underscore).
+          "_DllMain@12",
+          "_DllEntryPoint@12",
+          "_DllMainCRTStartup@12",
+      };
+    else
+      ExcludeSymbols = {
+          "_NULL_IMPORT_DESCRIPTOR",
+          "_pei386_runtime_relocator",
+          "do_pseudo_reloc",
+          "impure_ptr",
+          "_impure_ptr",
+          "_fmode",
+          "environ",
+          "__dso_handle",
+          // These are the MinGW names that differ from the standard
+          // ones (lacking an extra underscore).
+          "DllMain",
+          "DllEntryPoint",
+          "DllMainCRTStartup",
+      };
+  }
 
-  return {
-      "_NULL_IMPORT_DESCRIPTOR",
-      "_pei386_runtime_relocator",
-      "do_pseudo_reloc",
-      "impure_ptr",
-      "_impure_ptr",
-      "_fmode",
-      "environ",
-      "__dso_handle",
-      // These are the MinGW names that differ from the standard
-      // ones (lacking an extra underscore).
-      "DllMain",
-      "DllEntryPoint",
-      "DllMainCRTStartup",
+  StringSet<> ExcludeSymbols;
+  StringSet<> ExcludeLibs = {
+      "libgcc",
+      "libgcc_s",
+      "libstdc++",
+      "libmingw32",
+      "libmingwex",
+      "libg2c",
+      "libsupc++",
+      "libobjc",
+      "libgcj",
+      "libclang_rt.builtins-aarch64",
+      "libclang_rt.builtins-arm",
+      "libclang_rt.builtins-i386",
+      "libclang_rt.builtins-x86_64",
   };
-}
+  StringSet<> ExcludeObjects = {
+      "crt0.o",
+      "crt1.o",
+      "crt1u.o",
+      "crt2.o",
+      "crt2u.o",
+      "dllcrt1.o",
+      "dllcrt2.o",
+      "gcrt0.o",
+      "gcrt1.o",
+      "gcrt2.o",
+      "crtbegin.o",
+      "crtend.o",
+  };
+
+  bool shouldExport(Defined *Sym) const {
+    if (!Sym || !Sym->isLive() || !Sym->getChunk())
+      return false;
+    if (ExcludeSymbols.count(Sym->getName()))
+      return false;
+    StringRef LibName = sys::path::filename(Sym->getFile()->ParentName);
+    // Drop the file extension.
+    LibName = LibName.substr(0, LibName.rfind('.'));
+    if (ExcludeLibs.count(LibName))
+      return false;
+    StringRef FileName = sys::path::filename(Sym->getFile()->getName());
+    if (LibName.empty() && ExcludeObjects.count(FileName))
+      return false;
+    return true;
+  }
+};
 
 // This is MinGW specific.
 static void writeDefFile(StringRef Name) {
@@ -1259,13 +1309,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // are chosen to be exported.
   if (Config->DLL && ((Config->MinGW && Config->Exports.empty()) ||
                       Args.hasArg(OPT_export_all_symbols))) {
-    StringSet<> ExcludeSymbols = getExportExcludeSymbols();
+    AutoExporter Exporter;
 
     Symtab->forEachSymbol([=](Symbol *S) {
       auto *Def = dyn_cast<Defined>(S->body());
-      if (!Def || !Def->isLive() || !Def->getChunk())
-        return;
-      if (ExcludeSymbols.count(Def->getName()))
+      if (!Exporter.shouldExport(Def))
         return;
       Export E;
       E.Name = Def->getName();
