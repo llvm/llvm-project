@@ -849,22 +849,6 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
-TEST(APFloatTest, fromToStringSpecials) {
-  auto roundTrip = [] (const char* str) {
-    return convertToString(convertToDoubleFromString(str), 0, 3).c_str();
-  };
-  EXPECT_STREQ("+Inf", roundTrip("+Inf"));
-  EXPECT_STREQ("+Inf", roundTrip("INFINITY"));
-  EXPECT_STREQ("+Inf", roundTrip("inf"));
-  EXPECT_STREQ("-Inf", roundTrip("-Inf"));
-  EXPECT_STREQ("-Inf", roundTrip("-INFINITY"));
-  EXPECT_STREQ("-Inf", roundTrip("-inf"));
-  EXPECT_STREQ("NaN", roundTrip("NaN"));
-  EXPECT_STREQ("NaN", roundTrip("nan"));
-  EXPECT_STREQ("NaN", roundTrip("-NaN"));
-  EXPECT_STREQ("NaN", roundTrip("-nan"));
-}
-
 TEST(APFloatTest, fromHexadecimalString) {
   EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p0").convertToDouble());
   EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p0").convertToDouble());

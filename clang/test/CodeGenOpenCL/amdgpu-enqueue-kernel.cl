@@ -18,6 +18,12 @@ kernel void test(global char *a, char b, global long *c, long d) {
                  a[0] = b;
                  c[0] = d;
                  });
+  enqueue_kernel(default_queue, flags, ndrange,
+                 ^(local void *lp) {
+                 a[0] = b;
+                 c[0] = d;
+                 ((local int*)lp)[0] = 1;
+                 }, 100);
 }
 
 // CHECK-LABEL: define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }>)
@@ -31,6 +37,9 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK:}
 
 // CHECK-LABEL: define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }>)
+// CHECK-SAME: #[[ATTR]] !kernel_arg_addr_space !{{.*}} !kernel_arg_access_qual !{{.*}} !kernel_arg_type !{{.*}} !kernel_arg_base_type !{{.*}} !kernel_arg_type_qual !{{.*}}
+
+// CHECK-LABEL: define internal amdgpu_kernel void @__test_block_invoke_3_kernel(<{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }>, i8 addrspace(3)*)
 // CHECK-SAME: #[[ATTR]] !kernel_arg_addr_space !{{.*}} !kernel_arg_access_qual !{{.*}} !kernel_arg_type !{{.*}} !kernel_arg_base_type !{{.*}} !kernel_arg_type_qual !{{.*}}
 
 // CHECK: attributes #[[ATTR]] = { nounwind "enqueued-block" }
