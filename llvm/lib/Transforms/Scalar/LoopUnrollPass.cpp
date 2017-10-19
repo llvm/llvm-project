@@ -316,7 +316,7 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
   // to them without checking for overflows, and we already don't want to
   // analyze *massive* trip counts, so we force the max to be reasonably small.
   assert(UnrollMaxIterationsCountToAnalyze <
-             (std::numeric_limits<int>::max() / 2) &&
+             (unsigned)(std::numeric_limits<int>::max() / 2) &&
          "The unroll iterations max is too large!");
 
   // Only analyze inner loops. We can't properly estimate cost of nested loops

@@ -308,13 +308,19 @@ void AMDGPUTargetInfo::setAddressSpaceMap(bool DefaultIsPrivate) {
 
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
-    : TargetInfo(Triple), GPU(isAMDGCN(Triple) ? GK_GFX6 : GK_R600),
+    : TargetInfo(Triple),
+      GPU(isAMDGCN(Triple) ? GK_GFX6 : parseR600Name(Opts.CPU)),
       hasFP64(false), hasFMAF(false), hasLDEXPF(false),
       AS(isGenericZero(Triple)) {
   if (getTriple().getArch() == llvm::Triple::amdgcn) {
     hasFP64 = true;
     hasFMAF = true;
     hasLDEXPF = true;
+  }
+  if (getTriple().getArch() == llvm::Triple::r600) {
+    if (GPU == GK_EVERGREEN_DOUBLE_OPS || GPU == GK_CAYMAN) {
+      hasFMAF = true;
+    }
   }
   auto IsGenericZero = isGenericZero(Triple);
   resetDataLayout(getTriple().getArch() == llvm::Triple::amdgcn
