@@ -76,6 +76,17 @@ std::string computeUsingDeclarationLabel(const FormatToken *UsingTok) {
 void endUsingDeclarationBlock(
     SmallVectorImpl<UsingDeclaration> *UsingDeclarations,
     const SourceManager &SourceMgr, tooling::Replacements *Fixes) {
+  bool BlockAffected = false;
+  for (const UsingDeclaration& Declaration : *UsingDeclarations) {
+    if (Declaration.Line->Affected) {
+      BlockAffected = true;
+      break;
+    }
+  }
+  if (!BlockAffected) {
+    UsingDeclarations->clear();
+    return;
+  }
   SmallVector<UsingDeclaration, 4> SortedUsingDeclarations(
       UsingDeclarations->begin(), UsingDeclarations->end());
   std::stable_sort(SortedUsingDeclarations.begin(),
@@ -122,7 +133,7 @@ tooling::Replacements UsingDeclarationsSorter::analyze(
   tooling::Replacements Fixes;
   SmallVector<UsingDeclaration, 4> UsingDeclarations;
   for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    if (!AnnotatedLines[I]->Affected || AnnotatedLines[I]->InPPDirective ||
+    if (AnnotatedLines[I]->InPPDirective ||
         !AnnotatedLines[I]->startsWith(tok::kw_using) ||
         AnnotatedLines[I]->First->Finalized) {
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);

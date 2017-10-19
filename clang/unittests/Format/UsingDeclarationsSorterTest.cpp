@@ -291,13 +291,41 @@ TEST_F(UsingDeclarationsSorterTest, SupportsClangFormatOff) {
 }
 
 TEST_F(UsingDeclarationsSorterTest, SortsPartialRangeOfUsingDeclarations) {
-  EXPECT_EQ("using b;\n"
-            "using a;\n"
+  // Sorts the whole block of using declarations surrounding the range.
+  EXPECT_EQ("using a;\n"
+            "using b;\n"
             "using c;",
             sortUsingDeclarations("using b;\n"
                                   "using c;\n" // starts at offset 10
                                   "using a;",
                                   {tooling::Range(10, 15)}));
+  EXPECT_EQ("using a;\n"
+            "using b;\n"
+            "using c;\n"
+            "using A = b;",
+            sortUsingDeclarations("using b;\n"
+                                  "using c;\n" // starts at offset 10
+                                  "using a;\n"
+                                  "using A = b;",
+                                  {tooling::Range(10, 15)}));
+
+  EXPECT_EQ("using d;\n"
+            "using c;\n"
+            "\n"
+            "using a;\n"
+            "using b;\n"
+            "\n"
+            "using f;\n"
+            "using e;",
+            sortUsingDeclarations("using d;\n"
+                                  "using c;\n"
+                                  "\n"
+                                  "using b;\n" // starts at offset 19
+                                  "using a;\n"
+                                  "\n"
+                                  "using f;\n"
+                                  "using e;",
+                                  {tooling::Range(19, 1)}));
 }
 
 } // end namespace

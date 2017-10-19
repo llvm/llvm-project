@@ -51,7 +51,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-void getHexagonTargetFeatures(const llvm::opt::ArgList &Args,
+void getHexagonTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                               std::vector<StringRef> &Features);
 
 } // end namespace hexagon.

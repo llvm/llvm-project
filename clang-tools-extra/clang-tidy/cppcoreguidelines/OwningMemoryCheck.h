@@ -24,17 +24,36 @@ namespace cppcoreguidelines {
 class OwningMemoryCheck : public ClangTidyCheck {
 public:
   OwningMemoryCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        LegacyResourceProducers(Options.get(
+            "LegacyResourceProducers", "::malloc;::aligned_alloc;::realloc;"
+                                       "::calloc;::fopen;::freopen;::tmpfile")),
+        LegacyResourceConsumers(Options.get(
+            "LegacyResourceConsumers", "::free;::realloc;::freopen;::fclose")) {
+  }
+
+  /// Make configuration of checker discoverable.
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
   bool handleDeletion(const ast_matchers::BoundNodes &Nodes);
+  bool handleLegacyConsumers(const ast_matchers::BoundNodes &Nodes);
   bool handleExpectedOwner(const ast_matchers::BoundNodes &Nodes);
   bool handleAssignmentAndInit(const ast_matchers::BoundNodes &Nodes);
   bool handleAssignmentFromNewOwner(const ast_matchers::BoundNodes &Nodes);
   bool handleReturnValues(const ast_matchers::BoundNodes &Nodes);
   bool handleOwnerMembers(const ast_matchers::BoundNodes &Nodes);
+
+  /// List of old C-style functions that create resources.
+  /// Defaults to
+  /// `::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile`.
+  const std::string LegacyResourceProducers;
+  /// List of old C-style functions that consume or release resources.
+  /// Defaults to `::free;::realloc;::freopen;::fclose`.
+  const std::string LegacyResourceConsumers;
 };
 
 } // namespace cppcoreguidelines
