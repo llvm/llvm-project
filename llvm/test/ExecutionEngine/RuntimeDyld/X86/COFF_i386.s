@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple i686-windows -filetype obj -o %t.obj %s
-// RUN: llvm-rtdyld -triple i686-windows -dummy-extern _printf=0xfffffffd -dummy-extern _OutputDebugStringA@4=0xfffffffe -dummy-extern _ExitProcess@4=0xffffffff -verify -check=%s %t.obj
+// RUN: llvm-rtdyld -triple i686-windows -dummy-extern _printf=0x7ffffffd -dummy-extern _OutputDebugStringA@4=0x7ffffffe -dummy-extern _ExitProcess@4=0x7fffffff -verify -check=%s %t.obj
 
 	.text
 
@@ -41,13 +41,13 @@ rel4:
 	.align 4
 __imp__OutputDebugStringA:
 	.long "_OutputDebugStringA@4"		// IMAGE_REL_I386_DIR32
-# rtdyld-check: *{4}__imp__OutputDebugStringA = 0xfffffffe
+# rtdyld-check: *{4}__imp__OutputDebugStringA = 0x7ffffffe
 
 	.global __imp__ExitProcess
 	.align 4
 __imp__ExitProcess:
 	.long "_ExitProcess@4"			// IMAGE_REL_I386_DIR32
-# rtdyld-check: *{4}__imp__ExitProcess = 0xffffffff
+# rtdyld-check: *{4}__imp__ExitProcess = 0x7fffffff
 
 	.global relocations
 relocations:

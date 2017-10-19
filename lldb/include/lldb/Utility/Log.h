@@ -96,6 +96,9 @@ public:
     }
   };
 
+
+  static void Initialize();
+
   //------------------------------------------------------------------
   // Static accessors for logging channels
   //------------------------------------------------------------------
@@ -192,6 +195,9 @@ private:
                              const ChannelMap::value_type &entry);
   static uint32_t GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
                            llvm::ArrayRef<const char *> categories);
+
+  static void LockAllChannels();
+  static void UnlockAllChannels();
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;

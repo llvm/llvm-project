@@ -8985,7 +8985,6 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   ArgNames.push_back(llvm::MDString::get(C, "block_literal"));
   for (unsigned I = 1, E = InvokeFT->getNumParams(); I < E; ++I) {
     ArgTys.push_back(InvokeFT->getParamType(I));
-    ArgTys.push_back(BlockTy);
     ArgTypeNames.push_back(llvm::MDString::get(C, "void*"));
     AddressQuals.push_back(llvm::ConstantAsMetadata::get(Builder.getInt32(3)));
     AccessQuals.push_back(llvm::MDString::get(C, "none"));

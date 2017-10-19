@@ -226,4 +226,14 @@ void test(int i) {
   NoLiteral nl2(42);   // no-warning
 }
 }
+
+namespace crash {
+struct a {
+  a(const char *);
+};
+template <typename b>
+void c() {
+  a d(b::e ? "" : "");
+}
+}
 #endif
