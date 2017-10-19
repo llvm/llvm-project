@@ -91,5 +91,5 @@ b22:                                              ; preds = %b22, %b18
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "reciprocal-estimates"="none" "target-cpu"="hexagonv60" "target-features"="+hvx-double" }
+attributes #2 = { nounwind "reciprocal-estimates"="none" "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 attributes #3 = { nobuiltin nounwind }

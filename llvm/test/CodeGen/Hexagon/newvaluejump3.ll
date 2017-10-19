@@ -74,6 +74,6 @@ b24:                                              ; preds = %b20, %b16, %b9, %b2
 }
 
 attributes #0 = { argmemonly nounwind }
-attributes #1 = { nounwind readonly "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double,-long-calls" }
-attributes #2 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double,-long-calls" }
+attributes #1 = { nounwind readonly "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b,-long-calls" }
+attributes #2 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b,-long-calls" }
 

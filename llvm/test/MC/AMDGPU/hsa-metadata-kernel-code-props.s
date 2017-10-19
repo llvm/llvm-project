@@ -13,7 +13,7 @@
 // CHECK:          PrivateSegmentFixedSize: 16
 // CHECK:          KernargSegmentAlign:     16
 // CHECK:          WavefrontSize:           64
-// CHECK:          MaxFlatWorkgroupSize:    256
+// CHECK:          MaxFlatWorkGroupSize:    256
 .amd_amdgpu_hsa_metadata
   Version: [ 1, 0 ]
   Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
@@ -26,5 +26,5 @@
         PrivateSegmentFixedSize: 16
         KernargSegmentAlign:     16
         WavefrontSize:           64
-        MaxFlatWorkgroupSize:    256
+        MaxFlatWorkGroupSize:    256
 .end_amd_amdgpu_hsa_metadata

@@ -18,6 +18,7 @@
 #include "InstPrinter/AVRInstPrinter.h"
 
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -66,9 +67,12 @@ static MCInstPrinter *createAVRMCInstPrinter(const Triple &T,
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
-                                    MCAsmBackend &MAB, raw_pwrite_stream &OS,
-                                    MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
+  return createELFStreamer(Context, std::move(MAB), OS,
+      std::move(Emitter), RelaxAll);
 }
 
 static MCTargetStreamer *

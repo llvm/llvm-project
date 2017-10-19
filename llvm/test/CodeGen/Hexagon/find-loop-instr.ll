@@ -76,4 +76,4 @@ b21:                                              ; preds = %b20, %b19, %b16, %b
   br i1 %v23, label %b13, label %b10
 }
 
-attributes #0 = { norecurse "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { norecurse "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }

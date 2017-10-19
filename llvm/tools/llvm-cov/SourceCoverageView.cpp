@@ -84,10 +84,9 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
 }
 
 unsigned SourceCoverageView::getFirstUncoveredLineNo() {
-  const auto MinSegIt =
-      find_if(CoverageInfo, [](const coverage::CoverageSegment &S) {
-        return S.HasCount && S.Count == 0;
-      });
+  const auto MinSegIt = find_if(CoverageInfo, [](const CoverageSegment &S) {
+    return S.HasCount && S.Count == 0;
+  });
 
   // There is no uncovered line, return zero.
   if (MinSegIt == CoverageInfo.end())
@@ -132,7 +131,7 @@ bool SourceCoverageView::hasSubViews() const {
 std::unique_ptr<SourceCoverageView>
 SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            const CoverageViewOptions &Options,
-                           coverage::CoverageData &&CoverageInfo) {
+                           CoverageData &&CoverageInfo) {
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
     return llvm::make_unique<SourceCoverageViewText>(
@@ -152,7 +151,7 @@ std::string SourceCoverageView::getSourceName() const {
 }
 
 void SourceCoverageView::addExpansion(
-    const coverage::CounterMappingRegion &Region,
+    const CounterMappingRegion &Region,
     std::unique_ptr<SourceCoverageView> View) {
   ExpansionSubViews.emplace_back(Region, std::move(View));
 }
@@ -218,12 +217,11 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
       ExpansionColumn = NextESV->getStartCol();
 
     // Display the source code for the current line.
-    renderLine(OS, {*LI, LI.line_number()}, LCI->getWrappedSegment(),
-               LCI->getLineSegments(), ExpansionColumn, ViewDepth);
+    renderLine(OS, {*LI, LI.line_number()}, *LCI, ExpansionColumn, ViewDepth);
 
     // Show the region markers.
     if (shouldRenderRegionMarkers(LCI->getLineSegments()))
-      renderRegionMarkers(OS, LCI->getLineSegments(), ViewDepth);
+      renderRegionMarkers(OS, *LCI, ViewDepth);
 
     // Show the expansions and instantiations for this line.
     bool RenderedSubView = false;
@@ -235,9 +233,8 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
       // this subview.
       if (RenderedSubView) {
         ExpansionColumn = NextESV->getStartCol();
-        renderExpansionSite(OS, {*LI, LI.line_number()},
-                            LCI->getWrappedSegment(), LCI->getLineSegments(),
-                            ExpansionColumn, ViewDepth);
+        renderExpansionSite(OS, {*LI, LI.line_number()}, *LCI, ExpansionColumn,
+                            ViewDepth);
         renderViewDivider(OS, ViewDepth + 1);
       }
 

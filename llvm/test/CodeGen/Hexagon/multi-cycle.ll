@@ -95,7 +95,7 @@ declare <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vabsdiffh(<16 x i32>, <16 x i32>) #1
 declare <16 x i32> @llvm.hexagon.V6.vabsh(<16 x i32>) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }
 
 !1 = !{!2, !2, i64 0}

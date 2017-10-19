@@ -26219,6 +26219,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26242,7 +26243,7 @@ def V6_vL32b_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32 = vmem($Rt32+#$Ii)",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -26253,13 +26254,15 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_cur_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.cur = vmem($Rt32+#$Ii)",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -26270,13 +26273,15 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_cur_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -26288,13 +26293,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_cur_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -26307,6 +26313,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26314,7 +26321,7 @@ def V6_vL32b_cur_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000101;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -26326,6 +26333,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26333,7 +26341,7 @@ def V6_vL32b_cur_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.cur = vmem($Rx32++#$Ii)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -26344,6 +26352,8 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26351,7 +26361,7 @@ def V6_vL32b_cur_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.cur = vmem($Rx32++$Mu2)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -26361,6 +26371,8 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26368,7 +26380,7 @@ def V6_vL32b_cur_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -26379,13 +26391,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_cur_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -26397,6 +26410,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26404,7 +26418,7 @@ def V6_vL32b_cur_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000100;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -26415,6 +26429,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26422,7 +26437,7 @@ def V6_vL32b_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -26433,13 +26448,14 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -26451,6 +26467,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26458,7 +26475,7 @@ def V6_vL32b_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000011;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -26469,6 +26486,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26476,7 +26494,7 @@ def V6_vL32b_nt_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32 = vmem($Rt32+#$Ii):nt",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -26488,13 +26506,15 @@ let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_cur_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -26506,13 +26526,15 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_cur_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26525,13 +26547,14 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_cur_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26545,6 +26568,7 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26552,7 +26576,7 @@ def V6_vL32b_nt_cur_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000101;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26565,6 +26589,7 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26572,7 +26597,7 @@ def V6_vL32b_nt_cur_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -26584,6 +26609,8 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26591,7 +26618,7 @@ def V6_vL32b_nt_cur_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -26602,6 +26629,8 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26609,7 +26638,7 @@ def V6_vL32b_nt_cur_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26621,13 +26650,14 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_cur_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26640,6 +26670,7 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26647,7 +26678,7 @@ def V6_vL32b_nt_cur_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000100;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26659,6 +26690,7 @@ let isCVLoad = 1;
 let CVINew = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_cur_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26666,7 +26698,7 @@ def V6_vL32b_nt_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26678,13 +26710,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26697,6 +26730,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26704,7 +26738,7 @@ def V6_vL32b_nt_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000011;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26716,6 +26750,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26723,7 +26758,7 @@ def V6_vL32b_nt_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32 = vmem($Rx32++#$Ii):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -26735,6 +26770,8 @@ let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26742,7 +26779,7 @@ def V6_vL32b_nt_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32 = vmem($Rx32++$Mu2):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -26753,6 +26790,8 @@ let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26760,7 +26799,7 @@ def V6_vL32b_nt_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26771,13 +26810,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26789,6 +26829,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26796,7 +26837,7 @@ def V6_vL32b_nt_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000010;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26807,6 +26848,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26814,7 +26856,7 @@ def V6_vL32b_nt_tmp_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -26825,13 +26867,15 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_tmp_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26843,13 +26887,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_tmp_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26862,6 +26907,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26869,7 +26915,7 @@ def V6_vL32b_nt_tmp_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000111;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26881,6 +26927,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26888,7 +26935,7 @@ def V6_vL32b_nt_tmp_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -26899,6 +26946,8 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26906,7 +26955,7 @@ def V6_vL32b_nt_tmp_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -26916,6 +26965,8 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26923,7 +26974,7 @@ def V6_vL32b_nt_tmp_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -26934,13 +26985,14 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_nt_tmp_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -26952,6 +27004,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26959,7 +27012,7 @@ def V6_vL32b_nt_tmp_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000110;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -26970,6 +27023,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
+let BaseOpcode = "V6_vL32b_nt_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26977,7 +27031,7 @@ def V6_vL32b_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32 = vmem($Rx32++#$Ii)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -26988,6 +27042,7 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -26995,7 +27050,7 @@ def V6_vL32b_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32 = vmem($Rx32++$Mu2)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -27005,6 +27060,8 @@ let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
 let isCVLoadable = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27012,7 +27069,7 @@ def V6_vL32b_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27022,13 +27079,14 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27039,6 +27097,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27046,7 +27105,7 @@ def V6_vL32b_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32 = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000010;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27056,6 +27115,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27063,7 +27123,7 @@ def V6_vL32b_tmp_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]> {
+tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -27073,13 +27133,15 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_tmp_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27090,13 +27152,14 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_tmp_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27108,6 +27171,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27115,7 +27179,7 @@ def V6_vL32b_tmp_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000111;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27126,6 +27190,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27133,7 +27198,7 @@ def V6_vL32b_tmp_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]> {
+tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -27143,6 +27208,8 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27150,7 +27217,7 @@ def V6_vL32b_tmp_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]> {
+tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[HasV60T,UseHVX]>, PredRel {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -27159,6 +27226,8 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let isPredicable = 1;
+let BaseOpcode = "V6_vL32b_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27166,7 +27235,7 @@ def V6_vL32b_tmp_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]> {
+tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27176,13 +27245,14 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_ai";
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vL32b_tmp_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27193,6 +27263,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_pi";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -27200,7 +27271,7 @@ def V6_vL32b_tmp_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]> {
+tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[HasV62T,UseHVX]>, PredRel {
 let Inst{10-5} = 0b000110;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27210,6 +27281,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let mayLoad = 1;
+let BaseOpcode = "V6_vL32b_tmp_ppu";
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -28109,7 +28181,7 @@ def V6_vS32b_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++#$Ii) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[HasV60T,UseHVX]> {
+tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[HasV60T,UseHVX]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28126,13 +28198,14 @@ def V6_vS32b_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++$Mu2) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[HasV60T,UseHVX]> {
+tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[HasV60T,UseHVX]>, NewValueRel {
 let Inst{10-5} = 0b000000;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
 let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let mayStore = 1;
+let BaseOpcode = "V6_vS32b_ppu";
 let isNVStorable = 1;
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Rx32 = $Rx32in";

@@ -65,7 +65,7 @@ declare void @llvm.hexagon.Y2.dczeroa(i8* nocapture) #3
 declare void @llvm.hexagon.Y4.l2fetch(i8* nocapture readonly, i32) #2
 declare void @llvm.hexagon.Y5.l2fetch(i8* nocapture readonly, i64) #2
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-long-calls" }
 attributes #1 = { inaccessiblemem_or_argmemonly nounwind }
 attributes #2 = { nounwind }
 attributes #3 = { argmemonly nounwind writeonly }

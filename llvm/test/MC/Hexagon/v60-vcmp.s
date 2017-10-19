@@ -1,5 +1,5 @@
-#RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj %s | \
-#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -d - | \
+#RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
+#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -mhvx -d - | \
 #RUN: FileCheck %s
 
 #CHECK: 1c81f142 { q2 |= vcmp.eq(v17.b{{ *}},{{ *}}v1.b) }

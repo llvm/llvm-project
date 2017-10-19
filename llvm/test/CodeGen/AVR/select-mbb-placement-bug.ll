@@ -8,9 +8,9 @@ define internal fastcc void @loopy() {
 ;
 ; https://github.com/avr-rust/rust/issues/49
 
-; CHECK: LBB0_{{[0-9]+}}:
-; CHECK: LBB0_{{[0-9]+}}:
-; CHECK-NOT: LBB0_{{[0-9]+}}:
+; CHECK-LABEL: LBB0_{{[0-9]+}}
+; CHECK-LABEL: LBB0_{{[0-9]+}}
+; CHECK-NOT: LBB0_{{[0-9]+}}
 start:
   br label %bb7.preheader
 

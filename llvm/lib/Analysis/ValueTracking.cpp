@@ -4365,7 +4365,8 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
     break;
   case Instruction::Trunc:
     Constant *CmpConst;
-    if (match(CmpI->getOperand(1), m_Constant(CmpConst))) {
+    if (match(CmpI->getOperand(1), m_Constant(CmpConst)) &&
+        CmpConst->getType() == SrcTy) {
       // Here we have the following case:
       //
       //   %cond = cmp iN %x, CmpConst

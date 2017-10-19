@@ -25,10 +25,31 @@ include "llvm/Target/Target.td"
 include "HexagonDepArch.td"
 
 // Hexagon ISA Extensions
-def ExtensionHVX: SubtargetFeature<"hvx", "UseHVXOps", "true",
-      "Hexagon HVX instructions">;
-def ExtensionHVXDbl: SubtargetFeature<"hvx-double", "UseHVXDblOps", "true",
-      "Hexagon HVX Double instructions">;
+def ExtensionHVXV60: SubtargetFeature<"hvxv60", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V60", "Hexagon HVX instructions">;
+def ExtensionHVXV62: SubtargetFeature<"hvxv62", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V62", "Hexagon HVX instructions",
+      [ExtensionHVXV60]>;
+def ExtensionHVX: SubtargetFeature<"hvx", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V62", "Hexagon HVX instructions",
+      [ExtensionHVXV60,
+       ExtensionHVXV62]>;
+def ExtensionHVX64B
+    : SubtargetFeature<"hvx-length64b", "UseHVX64BOps", "true",
+                       "Hexagon HVX 64B instructions",
+                        [ExtensionHVXV60, ExtensionHVXV62]>;
+def ExtensionHVX128B
+    : SubtargetFeature<"hvx-length128b", "UseHVX128BOps", "true",
+                       "Hexagon HVX 128B instructions",
+                        [ExtensionHVXV60, ExtensionHVXV62]>;
+
+// This is an alias to ExtensionHVX128B to accept the hvx-double as
+// an acceptable subtarget feature.
+def ExtensionHVXDbl
+    : SubtargetFeature<"hvx-double", "UseHVX128BOps", "true",
+                       "Hexagon HVX 128B instructions",
+                        [ExtensionHVXV60, ExtensionHVXV62]>;
+
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
 
@@ -38,14 +59,21 @@ def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
 
 def UseMEMOP           : Predicate<"HST->useMemOps()">;
 def IEEERndNearV5T     : Predicate<"HST->modeIEEERndNear()">;
-def UseHVXDbl          : Predicate<"HST->useHVXDblOps()">,
-                         AssemblerPredicate<"ExtensionHVXDbl">;
-def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
-def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
-                         AssemblerPredicate<"ExtensionHVX">;
+def UseHVX64B          : Predicate<"HST->useHVX64BOps()">,
+                         AssemblerPredicate<"ExtensionHVX64B">;
+def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
+                         AssemblerPredicate<"ExtensionHVX128B">;
+def UseHVX             : Predicate<"HST->useHVXOps()">,
+                         AssemblerPredicate<"ExtensionHVXV60">;
+def UseHVXV60          : Predicate<"HST->useHVXOps()">,
+                         AssemblerPredicate<"ExtensionHVXV60">;
+def UseHVXV62          : Predicate<"HST->useHVXOps()">,
+                         AssemblerPredicate<"ExtensionHVXV62">;
 
-def Hvx64   : HwMode<"+hvx,-hvx-double">;
-def Hvx128  : HwMode<"+hvx,+hvx-double">;
+def Hvx64     : HwMode<"+hvx-length64b">;
+def Hvx64old  : HwMode<"-hvx-double">;
+def Hvx128    : HwMode<"+hvx-length128b">;
+def Hvx128old : HwMode<"+hvx-double">;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.
@@ -274,9 +302,9 @@ def : Proc<"hexagonv5",  HexagonModelV4,
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV4, ArchV5, ArchV55]>;
 def : Proc<"hexagonv60", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ExtensionHVX]>;
+           [ArchV4, ArchV5, ArchV55, ArchV60]>;
 def : Proc<"hexagonv62", HexagonModelV62,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62, ExtensionHVX]>;
+           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
