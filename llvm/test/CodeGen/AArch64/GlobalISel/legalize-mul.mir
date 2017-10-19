@@ -54,12 +54,11 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
     ; CHECK: [[MUL:%[0-9]+]](s64) = G_MUL [[COPY]], [[COPY1]]
     ; CHECK: [[SMULH:%[0-9]+]](s64) = G_SMULH [[COPY]], [[COPY1]]
-    ; CHECK: [[C2:%[0-9]+]](s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]](s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[C2]]
+    ; CHECK: [[C:%[0-9]+]](s64) = G_CONSTANT i64 0
+    ; CHECK: [[ICMP:%[0-9]+]](s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[C]]
     ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[ICMP]](s32)
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
-
     %2:_(s64), %3:_(s1) = G_SMULO %0, %1
 
 ...

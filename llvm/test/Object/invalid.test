@@ -86,3 +86,6 @@ INVALID-REL-SYM: invalid section offset
 
 RUN: not llvm-readobj -r %p/Inputs/invalid-buffer.elf 2>&1 | FileCheck --check-prefix=INVALID-BUFFER %s
 INVALID-BUFFER: Invalid buffer
+
+RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
+COFF-HEADER: The file was not recognized as a valid object file

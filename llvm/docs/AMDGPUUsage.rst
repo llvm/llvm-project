@@ -1240,7 +1240,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
      =================================== ============== ========= ==============
 
 .. TODO
-   Plan to remove the debug properties metadata.   
+   Plan to remove the debug properties metadata.
 
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
@@ -1431,9 +1431,9 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
   .. table:: Kernel Descriptor for GFX6-GFX9
      :name: amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table
 
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ============================
      Bits    Size    Field Name                      Description
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ============================
      31:0    4 bytes GroupSegmentFixedSize           The amount of fixed local
                                                      address space memory
                                                      required for a work-group
@@ -1461,7 +1461,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      97      1 bit   IsXNACKEnabled                  Indicates if the generated
                                                      machine code is capable of
                                                      suppoting XNACK.
-     127:98  30 bits                                 Reserved. Must be 0.
+     127:98  30 bits                                 Reserved, must be 0.
      191:128 8 bytes KernelCodeEntryByteOffset       Byte offset (possibly
                                                      negative) from base
                                                      address of kernel
@@ -1469,7 +1469,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     383:192 24                                      Reserved. Must be 0.
+     383:192 24                                      Reserved, must be 0.
              bytes
      415:384 4 bytes ComputePgmRsrc1                 Compute Shader (CS)
                                                      program settings used by
@@ -1477,7 +1477,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``COMPUTE_PGM_RSRC1``
                                                      configuration
                                                      register. See
-                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc1_t-gfx6-gfx9-table`.
+                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
      447:416 4 bytes ComputePgmRsrc2                 Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
@@ -1509,16 +1509,16 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      should always be 0.
      457     1 bit   EnableSGPRGridWorkgroupCountZ   Not implemented in CP and
                                                      should always be 0.
-     463:458 6 bits                                  Reserved. Must be 0.
-     511:464 6                                       Reserved. Must be 0.
+     463:458 6 bits                                  Reserved, must be 0.
+     511:464 6                                       Reserved, must be 0.
              bytes
      512     **Total size 64 bytes.**
-     ======= ===================================================================
+     ======= ====================================================================
 
 ..
 
   .. table:: compute_pgm_rsrc1 for GFX6-GFX9
-     :name: amdgpu-amdhsa-compute_pgm_rsrc1_t-gfx6-gfx9-table
+     :name: amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -1529,8 +1529,9 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      specific:
 
                                                      GFX6-9
-                                                       roundup((max-vgpg + 1)
-                                                       / 4) - 1
+                                                       - max_vgpr 1..256
+                                                       - roundup((max_vgpg + 1)
+                                                         / 4) - 1
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.VGPRS``.
@@ -1540,11 +1541,13 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      specific:
 
                                                      GFX6-8
-                                                       roundup((max-sgpg + 1)
-                                                       / 8) - 1
+                                                       - max_sgpr 1..112
+                                                       - roundup((max_sgpg + 1)
+                                                         / 8) - 1
                                                      GFX9
-                                                       roundup((max-sgpg + 1)
-                                                       / 16) - 1
+                                                       - max_sgpr 1..112
+                                                       - roundup((max_sgpg + 1)
+                                                         / 16) - 1
 
                                                      Includes the special SGPRs
                                                      for VCC, Flat Scratch (for
@@ -1628,7 +1631,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      21      1 bit   ENABLE_DX10_CLAMP               Wavefront starts execution
                                                      with DX10 clamp mode
                                                      enabled. Used by the vector
-                                                     ALU to force DX-10 style
+                                                     ALU to force DX10 style
                                                      treatment of NaN's (when
                                                      set, clamp NaN to zero,
                                                      otherwise pass NaN
@@ -1676,29 +1679,25 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.CDBG_USER``.
-     26      1 bit   FP16_OVFL                       GFX6-8:
-                                                       Reserved. Must be 0.
-                                                     GFX9:
-                                                       Wavefront starts
-                                                       execution with specified
-                                                       fp16 overflow mode.
+     26      1 bit   FP16_OVFL                       GFX6-8
+                                                       Reserved, must be 0.
+                                                     GFX9
+                                                       Wavefront starts execution
+                                                       with specified fp16 overflow
+                                                       mode.
 
-                                                       - If 0, then fp16
-                                                         overflow generates
+                                                       - If 0, fp16 overflow generates
                                                          +/-INF values.
-                                                       - If 1, then fp16
-                                                         overflow that is the
-                                                         result of an +/-INF
-                                                         input value or divide
-                                                         by 0 generates a
-                                                         +/-INF, otherwise
-                                                         clamps computed
-                                                         overflow to +/-MAX_FP16
-                                                         as appropriate.
+                                                       - If 1, fp16 overflow that is the
+                                                         result of an +/-INF input value
+                                                         or divide by 0 produces a +/-INF,
+                                                         otherwise clamps computed
+                                                         overflow to +/-MAX_FP16 as
+                                                         appropriate.
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
-     31:27   5 bits                                  Reserved. Must be 0.
+     31:27   5 bits                                  Reserved, must be 0.
      32      **Total size 4 bytes**
      ======= ===================================================================================================================
 
@@ -1855,7 +1854,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit                                   Reserved. Must be 0.
+     31      1 bit                                   Reserved, must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -2245,9 +2244,6 @@ This section describes the mapping of LLVM memory model onto AMDGPU machine code
 .. TODO
    Update when implementation complete.
 
-   Support more relaxed OpenCL memory model to be controlled by environment
-   component of target triple.
-
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
 
@@ -2264,19 +2260,23 @@ additional ``s_waitcnt`` instructions are required to ensure registers are
 defined before being used. These may be able to be combined with the memory
 model ``s_waitcnt`` instructions as described above.
 
-The AMDGPU memory model supports both the HSA [HSA]_ memory model, and the
-OpenCL [OpenCL]_ memory model. The HSA memory model uses a single happens-before
-relation for all address spaces (see :ref:`amdgpu-address-spaces`). The OpenCL
-memory model which has separate happens-before relations for the global and
-local address spaces, and only a fence specifying both global and local address
-space joins the relationships. Since the LLVM ``memfence`` instruction does not
-allow an address space to be specified the OpenCL fence has to convervatively
-assume both local and global address space was specified. However, optimizations
-can often be done to eliminate the additional ``s_waitcnt``instructions when
-there are no intervening corresponding ``ds/flat_load/store/atomic`` memory
-instructions. The code sequences in the table indicate what can be omitted for
-the OpenCL memory. The target triple environment is used to determine if the
-source language is OpenCL (see :ref:`amdgpu-opencl`).
+The AMDGPU backend supports the following memory models:
+
+  HSA Memory Model [HSA]_
+    The HSA memory model uses a single happens-before relation for all address
+    spaces (see :ref:`amdgpu-address-spaces`).
+  OpenCL Memory Model [OpenCL]_
+    The OpenCL memory model which has separate happens-before relations for the
+    global and local address spaces. Only a fence specifying both global and
+    local address space, and seq_cst instructions join the relationships. Since
+    the LLVM ``memfence`` instruction does not allow an address space to be
+    specified the OpenCL fence has to convervatively assume both local and
+    global address space was specified. However, optimizations can often be
+    done to eliminate the additional ``s_waitcnt`` instructions when there are
+    no intervening memory instructions which access the corresponding address
+    space. The code sequences in the table indicate what can be omitted for the
+    OpenCL memory. The target triple environment is used to determine if the
+    source language is OpenCL (see :ref:`amdgpu-opencl`).
 
 ``ds/flat_load/store/atomic`` instructions to local memory are termed LDS
 operations.
@@ -2308,11 +2308,11 @@ For GFX6-GFX9:
   that for GFX7-9 ``flat_load/store/atomic`` instructions can report out of
   vector memory order if they access LDS memory, and out of LDS operation order
   if they access global memory.
-* The vector memory operations access a vector L1 cache shared by all wavefronts
-  on a CU. Therefore, no special action is required for coherence between
-  wavefronts in the same work-group. A ``buffer_wbinvl1_vol`` is required for
-  coherence between waves executing in different work-groups as they may be
-  executing on different CUs.
+* The vector memory operations access a single vector L1 cache shared by all
+  SIMDs a CU. Therefore, no special action is required for coherence between the
+  lanes of a single wavefront, or for coherence between wavefronts in the same
+  work-group. A ``buffer_wbinvl1_vol`` is required for coherence between waves
+  executing in different work-groups as they may be executing on different CUs.
 * The scalar memory operations access a scalar L1 cache shared by all wavefronts
   on a group of CUs. The scalar and vector L1 caches are not coherent. However,
   scalar operations are used in a restricted way so do not impact the memory
@@ -2376,45 +2376,62 @@ future wave that uses the same scratch area, or a function call that creates a
 frame at the same address, respectively. There is no need for a ``s_dcache_inv``
 as all scalar writes are write-before-read in the same thread.
 
-Scratch backing memory (which is used for the private address space) is accessed
-with MTYPE NC_NV (non-coherenent non-volatile). Since the private address space
-is only accessed by a single thread, and is always write-before-read,
-there is never a need to invalidate these entries from the L1 cache. Hence all
-cache invalidates are done as ``*_vol`` to only invalidate the volatile cache
-lines.
+Scratch backing memory (which is used for the private address space)
+is accessed with MTYPE NC_NV (non-coherenent non-volatile). Since the private
+address space is only accessed by a single thread, and is always
+write-before-read, there is never a need to invalidate these entries from the L1
+cache. Hence all cache invalidates are done as ``*_vol`` to only invalidate the
+volatile cache lines.
 
 On dGPU the kernarg backing memory is accessed as UC (uncached) to avoid needing
-to invalidate the L2 cache. This also causes it to be treated as non-volatile
-and so is not invalidated by ``*_vol``. On APU it is accessed as CC (cache
-coherent) and so the L2 cache will coherent with the CPU and other agents.
+to invalidate the L2 cache. This also causes it to be treated as
+non-volatile and so is not invalidated by ``*_vol``. On APU it is accessed as CC
+(cache coherent) and so the L2 cache will coherent with the CPU and other
+agents.
 
   .. table:: AMDHSA Memory Model Code Sequences GFX6-GFX9
      :name: amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table
 
-     ============ ============ ============== ========== =======================
+     ============ ============ ============== ========== ===============================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
                   Ordering     Sync Scope     Address
                                               Space
-     ============ ============ ============== ========== =======================
+     ============ ============ ============== ========== ===============================
      **Non-Atomic**
-     ---------------------------------------------------------------------------
-     load         *none*       *none*         - global   non-volatile
-                                              - generic    1. buffer/global/flat_load
-                                                         volatile
+     -----------------------------------------------------------------------------------
+     load         *none*       *none*         - global   - !volatile & !nontemporal
+                                              - generic
+                                              - private    1. buffer/global/flat_load
+                                              - constant
+                                                         - volatile & !nontemporal
+
                                                            1. buffer/global/flat_load
                                                               glc=1
+
+                                                         - nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              glc=1 slc=1
+
      load         *none*       *none*         - local    1. ds_load
-     store        *none*       *none*         - global   1. buffer/global/flat_store
+     store        *none*       *none*         - global   - !nontemporal
                                               - generic
+                                              - private    1. buffer/global/flat_store
+                                              - constant
+                                                         - nontemporal
+
+                                                           1. buffer/global/flat_stote
+                                                              glc=1 slc=1
+
      store        *none*       *none*         - local    1. ds_store
      **Unordered Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      load atomic  unordered    *any*          *any*      *Same as non-atomic*.
      store atomic unordered    *any*          *any*      *Same as non-atomic*.
      atomicrmw    unordered    *any*          *any*      *Same as monotonic
                                                          atomic*.
      **Monotonic Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      load atomic  monotonic    - singlethread - global   1. buffer/global/flat_load
                                - wavefront    - generic
                                - workgroup
@@ -2440,16 +2457,15 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                - wavefront
                                - workgroup
      **Acquire Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      load atomic  acquire      - singlethread - global   1. buffer/global/ds/flat_load
                                - wavefront    - local
                                               - generic
-     load atomic  acquire      - workgroup    - global   1. buffer/global_load
-     load atomic  acquire      - workgroup    - local    1. ds/flat_load
-                                              - generic  2. s_waitcnt lgkmcnt(0)
+     load atomic  acquire      - workgroup    - global   1. buffer/global/flat_load
+     load atomic  acquire      - workgroup    - local    1. ds_load
+                                                         2. s_waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen before
                                                              any following
                                                              global/generic
@@ -2462,8 +2478,23 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              older than the load
                                                              atomic value being
                                                              acquired.
+     load atomic  acquire      - workgroup    - generic  1. flat_load
+                                                         2. s_waitcnt lgkmcnt(0)
 
-     load atomic  acquire      - agent        - global   1. buffer/global_load
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the load
+                                                             atomic value being
+                                                             acquired.
+     load atomic  acquire      - agent        - global   1. buffer/global/flat_load
                                - system                     glc=1
                                                          2. s_waitcnt vmcnt(0)
 
@@ -2516,12 +2547,11 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
      atomicrmw    acquire      - singlethread - global   1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
-     atomicrmw    acquire      - workgroup    - global   1. buffer/global_atomic
-     atomicrmw    acquire      - workgroup    - local    1. ds/flat_atomic
-                                              - generic  2. waitcnt lgkmcnt(0)
+     atomicrmw    acquire      - workgroup    - global   1. buffer/global/flat_atomic
+     atomicrmw    acquire      - workgroup    - local    1. ds_atomic
+                                                         2. waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen before
                                                              any following
                                                              global/generic
@@ -2535,7 +2565,24 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              atomicrmw value
                                                              being acquired.
 
-     atomicrmw    acquire      - agent        - global   1. buffer/global_atomic
+     atomicrmw    acquire      - workgroup    - generic  1. flat_atomic
+                                                         2. waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen before
+                                                             any following
+                                                             global/generic
+                                                             load/load
+                                                             atomic/store/store
+                                                             atomic/atomicrmw.
+                                                           - Ensures any
+                                                             following global
+                                                             data read is no
+                                                             older than the
+                                                             atomicrmw value
+                                                             being acquired.
+
+     atomicrmw    acquire      - agent        - global   1. buffer/global/flat_atomic
                                - system                  2. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
@@ -2592,9 +2639,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
                                                            - If OpenCL and
                                                              address space is
-                                                             not generic, omit
-                                                             waitcnt. However,
-                                                             since LLVM
+                                                             not generic, omit.
+                                                           - However, since LLVM
                                                              currently has no
                                                              address space on
                                                              the fence need to
@@ -2633,14 +2679,14 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              value read by the
                                                              fence-paired-atomic.
 
-     fence        acquire      - agent        *none*     1. s_waitcnt vmcnt(0) &
-                               - system                     lgkmcnt(0)
+     fence        acquire      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
 
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                             However, since LLVM
+                                                           - However, since LLVM
                                                              currently has no
                                                              address space on
                                                              the fence need to
@@ -2672,7 +2718,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                            - s_waitcnt lgkmcnt(0)
                                                              must happen after
                                                              any preceding
-                                                             group/generic load
+                                                             local/generic load
                                                              atomic/atomicrmw
                                                              with an equal or
                                                              wider sync scope
@@ -2699,8 +2745,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
                                                          2. buffer_wbinvl1_vol
 
-                                                           - Must happen before
-                                                             any following global/generic
+                                                           - Must happen before any
+                                                             following global/generic
                                                              load/load
                                                              atomic/store/store
                                                              atomic/atomicrmw.
@@ -2710,14 +2756,13 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              global data.
 
      **Release Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      store atomic release      - singlethread - global   1. buffer/global/ds/flat_store
                                - wavefront    - local
                                               - generic
      store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
-                                              - generic
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+
+                                                           - If OpenCL, omit.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -2737,8 +2782,29 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
                                                          2. buffer/global/flat_store
      store atomic release      - workgroup    - local    1. ds_store
-     store atomic release      - agent        - global   1. s_waitcnt vmcnt(0) &
-                               - system       - generic     lgkmcnt(0)
+     store atomic release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             store.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             store that is being
+                                                             released.
+
+                                                         2. flat_store
+     store atomic release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
 
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
@@ -2770,7 +2836,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              store.
                                                            - Ensures that all
                                                              memory operations
-                                                             to global have
+                                                             to memory have
                                                              completed before
                                                              performing the
                                                              store that is being
@@ -2781,9 +2847,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                - wavefront    - local
                                               - generic
      atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
-                                              - generic
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+
+                                                           - If OpenCL, omit.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -2803,8 +2868,29 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
                                                          2. buffer/global/flat_atomic
      atomicrmw    release      - workgroup    - local    1. ds_atomic
-     atomicrmw    release      - agent        - global   1. s_waitcnt vmcnt(0) &
-                               - system       - generic     lgkmcnt(0)
+     atomicrmw    release      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)
+
+                                                           - If OpenCL, omit.
+                                                           - Must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
+                                                           - Must happen before
+                                                             the following
+                                                             atomicrmw.
+                                                           - Ensures that all
+                                                             memory operations
+                                                             to local have
+                                                             completed before
+                                                             performing the
+                                                             atomicrmw that is
+                                                             being released.
+
+                                                         2. flat_atomic
+     atomicrmw    release      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
 
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
@@ -2842,23 +2928,29 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              the atomicrmw that
                                                              is being released.
 
-                                                         2. buffer/global/ds/flat_atomic*
+                                                         2. buffer/global/ds/flat_atomic
      fence        release      - singlethread *none*     *none*
                                - wavefront
      fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)
 
                                                            - If OpenCL and
                                                              address space is
-                                                             not generic, omit
-                                                             waitcnt. However,
-                                                             since LLVM
+                                                             not generic, omit.
+                                                           - However, since LLVM
                                                              currently has no
                                                              address space on
                                                              the fence need to
                                                              conservatively
-                                                             always generate
-                                                             (see comment for
-                                                             previous fence).
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -2883,21 +2975,32 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - agent        *none*     1. s_waitcnt vmcnt(0) &
-                               - system                     lgkmcnt(0)
+     fence        release      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
 
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                             However, since LLVM
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit
+                                                             vmcnt(0).
+                                                           - However, since LLVM
                                                              currently has no
                                                              address space on
                                                              the fence need to
                                                              conservatively
-                                                             always generate
-                                                             (see comment for
-                                                             previous fence).
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -2933,21 +3036,20 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              fence-paired-atomic).
                                                            - Ensures that all
                                                              memory operations
-                                                             to global have
+                                                             have
                                                              completed before
                                                              performing the
                                                              following
                                                              fence-paired-atomic.
 
      **Acquire-Release Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
      atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -2965,12 +3067,11 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         2. buffer/global_atomic
+                                                         2. buffer/global/flat_atomic
      atomicrmw    acq_rel      - workgroup    - local    1. ds_atomic
                                                          2. s_waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen before
                                                              any following
                                                              global/generic
@@ -2986,8 +3087,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
      atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -3008,8 +3108,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                          2. flat_atomic
                                                          3. s_waitcnt lgkmcnt(0)
 
-                                                           - If OpenCL, omit
-                                                             waitcnt.
+                                                           - If OpenCL, omit.
                                                            - Must happen before
                                                              any following
                                                              global/generic
@@ -3022,8 +3121,9 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              older than the load
                                                              atomic value being
                                                              acquired.
-     atomicrmw    acq_rel      - agent        - global   1. s_waitcnt vmcnt(0) &
-                               - system                     lgkmcnt(0)
+
+     atomicrmw    acq_rel      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
 
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
@@ -3061,7 +3161,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         2. buffer/global_atomic
+                                                         2. buffer/global/flat_atomic
                                                          3. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
@@ -3085,8 +3185,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - agent        - generic  1. s_waitcnt vmcnt(0) &
-                               - system                     lgkmcnt(0)
+     atomicrmw    acq_rel      - agent        - generic  1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
 
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
@@ -3157,8 +3257,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
 
                                                            - If OpenCL and
                                                              address space is
-                                                             not generic, omit
-                                                             waitcnt. However,
+                                                             not generic, omit.
+                                                           - However,
                                                              since LLVM
                                                              currently has no
                                                              address space on
@@ -3196,8 +3296,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              stronger than
                                                              unordered (this is
                                                              termed the
-                                                             fence-paired-atomic)
-                                                             has completed
+                                                             acquire-fence-paired-atomic
+                                                             ) has completed
                                                              before following
                                                              global memory
                                                              operations. This
@@ -3217,19 +3317,19 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              stronger than
                                                              unordered (this is
                                                              termed the
-                                                             fence-paired-atomic).
-                                                             This satisfies the
+                                                             release-fence-paired-atomic
+                                                             ). This satisfies the
                                                              requirements of
                                                              release.
 
-     fence        acq_rel      - agent        *none*     1. s_waitcnt vmcnt(0) &
-                               - system                     lgkmcnt(0)
+     fence        acq_rel      - agent        *none*     1. s_waitcnt lgkmcnt(0) &
+                               - system                     vmcnt(0)
 
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                             However, since LLVM
+                                                           - However, since LLVM
                                                              currently has no
                                                              address space on
                                                              the fence need to
@@ -3274,8 +3374,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              stronger than
                                                              unordered (this is
                                                              termed the
-                                                             fence-paired-atomic)
-                                                             has completed
+                                                             acquire-fence-paired-atomic
+                                                             ) has completed
                                                              before invalidating
                                                              the cache. This
                                                              satisfies the
@@ -3295,8 +3395,8 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              stronger than
                                                              unordered (this is
                                                              termed the
-                                                             fence-paired-atomic).
-                                                             This satisfies the
+                                                             release-fence-paired-atomic
+                                                             ). This satisfies the
                                                              requirements of
                                                              release.
 
@@ -3317,13 +3417,103 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              acquire.
 
      **Sequential Consistent Atomic**
-     ---------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
-                               - wavefront    - local    load atomic acquire*.
-                               - workgroup    - generic
-     load atomic  seq_cst      - agent        - global   1. s_waitcnt vmcnt(0)
-                               - system       - local
-                                              - generic    - Must happen after
+                               - wavefront    - local    load atomic acquire,
+                                              - generic  except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
+     load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
+                                              - generic
+                                                           - Must
+                                                             happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - Ensures any
+                                                             preceding
+                                                             sequential
+                                                             consistent local
+                                                             memory instructions
+                                                             have completed
+                                                             before executing
+                                                             this sequentially
+                                                             consistent
+                                                             instruction. This
+                                                             prevents reordering
+                                                             a seq_cst store
+                                                             followed by a
+                                                             seq_cst load. (Note
+                                                             that seq_cst is
+                                                             stronger than
+                                                             acquire/release as
+                                                             the reordering of
+                                                             load acquire
+                                                             followed by a store
+                                                             release is
+                                                             prevented by the
+                                                             waitcnt of
+                                                             the release, but
+                                                             there is nothing
+                                                             preventing a store
+                                                             release followed by
+                                                             load acquire from
+                                                             competing out of
+                                                             order.)
+
+                                                         2. *Following
+                                                            instructions same as
+                                                            corresponding load
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
+     load atomic  seq_cst      - workgroup    - local    *Same as corresponding
+                                                         load atomic acquire,
+                                                         except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
+     load atomic  seq_cst      - agent        - global   1. s_waitcnt lgkmcnt(0) &
+                               - system       - generic     vmcnt(0)
+
+                                                           - Could be split into
+                                                             separate s_waitcnt
+                                                             vmcnt(0)
+                                                             and s_waitcnt
+                                                             lgkmcnt(0) to allow
+                                                             them to be
+                                                             independently moved
+                                                             according to the
+                                                             following rules.
+                                                           - waitcnt lgkmcnt(0)
+                                                             must happen after
+                                                             preceding
+                                                             global/generic load
+                                                             atomic/store
+                                                             atomic/atomicrmw
+                                                             with memory
+                                                             ordering of seq_cst
+                                                             and with equal or
+                                                             wider sync scope.
+                                                             (Note that seq_cst
+                                                             fences have their
+                                                             own s_waitcnt
+                                                             lgkmcnt(0) and so do
+                                                             not need to be
+                                                             considered.)
+                                                           - waitcnt vmcnt(0)
+                                                             must happen after
                                                              preceding
                                                              global/generic load
                                                              atomic/store
@@ -3351,7 +3541,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              prevents reordering
                                                              a seq_cst store
                                                              followed by a
-                                                             seq_cst load (Note
+                                                             seq_cst load. (Note
                                                              that seq_cst is
                                                              stronger than
                                                              acquire/release as
@@ -3360,7 +3550,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              followed by a store
                                                              release is
                                                              prevented by the
-                                                             waitcnt vmcnt(0) of
+                                                             waitcnt of
                                                              the release, but
                                                              there is nothing
                                                              preventing a store
@@ -3372,24 +3562,36 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                          2. *Following
                                                             instructions same as
                                                             corresponding load
-                                                            atomic acquire*.
-
+                                                            atomic acquire,
+                                                            except must generated
+                                                            all instructions even
+                                                            for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
-                               - wavefront    - local    store atomic release*.
-                               - workgroup    - generic
+                               - wavefront    - local    store atomic release,
+                               - workgroup    - generic  except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
      store atomic seq_cst      - agent        - global   *Same as corresponding
-                               - system       - generic  store atomic release*.
+                               - system       - generic  store atomic release,
+                                                         except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
-                               - wavefront    - local    atomicrmw acq_rel*.
-                               - workgroup    - generic
+                               - wavefront    - local    atomicrmw acq_rel,
+                               - workgroup    - generic  except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
      atomicrmw    seq_cst      - agent        - global   *Same as corresponding
-                               - system       - generic  atomicrmw acq_rel*.
+                               - system       - generic  atomicrmw acq_rel,
+                                                         except must generated
+                                                         all instructions even
+                                                         for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
-                               - wavefront               fence acq_rel*.
-                               - workgroup
-                               - agent
-                               - system
-     ============ ============ ============== ========== =======================
+                               - wavefront               fence acq_rel,
+                               - workgroup               except must generated
+                               - agent                   all instructions even
+                               - system                  for OpenCL.*
+     ============ ============ ============== ========== ===============================
 
 The memory order also adds the single thread optimization constrains defined in
 table
@@ -3799,7 +4001,7 @@ used.  The default value for all keys is 0, with the following exceptions:
 - *kernel_code_entry_byte_offset* defaults to 256.
 - *wavefront_size* defaults to 6.
 - *kernarg_segment_alignment*, *group_segment_alignment*, and
-  *private_segment_alignment* default to 4.  Note that alignments are specified
+  *private_segment_alignment* default to 4. Note that alignments are specified
   as a power of two, so a value of **n** means an alignment of 2^ **n**.
 
 The *.amd_kernel_code_t* directive must be placed immediately after the

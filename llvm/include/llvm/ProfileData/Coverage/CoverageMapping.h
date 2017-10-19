@@ -594,6 +594,89 @@ public:
   getInstantiationGroups(StringRef Filename) const;
 };
 
+/// Coverage statistics for a single line.
+class LineCoverageStats {
+  uint64_t ExecutionCount;
+  bool HasMultipleRegions;
+  bool Mapped;
+  unsigned Line;
+  ArrayRef<const CoverageSegment *> LineSegments;
+  const CoverageSegment *WrappedSegment;
+
+  friend class LineCoverageIterator;
+  LineCoverageStats() = default;
+
+public:
+  LineCoverageStats(ArrayRef<const CoverageSegment *> LineSegments,
+                    const CoverageSegment *WrappedSegment, unsigned Line);
+
+  uint64_t getExecutionCount() const { return ExecutionCount; }
+
+  bool hasMultipleRegions() const { return HasMultipleRegions; }
+
+  bool isMapped() const { return Mapped; }
+
+  unsigned getLine() const { return Line; }
+
+  ArrayRef<const CoverageSegment *> getLineSegments() const {
+    return LineSegments;
+  }
+
+  const CoverageSegment *getWrappedSegment() const { return WrappedSegment; }
+};
+
+/// An iterator over the \c LineCoverageStats objects for lines described by
+/// a \c CoverageData instance.
+class LineCoverageIterator
+    : public iterator_facade_base<
+          LineCoverageIterator, std::forward_iterator_tag, LineCoverageStats> {
+public:
+  LineCoverageIterator(const CoverageData &CD)
+      : LineCoverageIterator(CD, CD.begin()->Line) {}
+
+  LineCoverageIterator(const CoverageData &CD, unsigned Line)
+      : CD(CD), WrappedSegment(nullptr), Next(CD.begin()), Ended(false),
+        Line(Line), Segments(), Stats() {
+    this->operator++();
+  }
+
+  LineCoverageIterator &operator=(const LineCoverageIterator &R) = default;
+
+  bool operator==(const LineCoverageIterator &R) const {
+    return &CD == &R.CD && Next == R.Next && Ended == R.Ended;
+  }
+
+  const LineCoverageStats &operator*() const { return Stats; }
+
+  LineCoverageStats &operator*() { return Stats; }
+
+  LineCoverageIterator &operator++();
+
+  LineCoverageIterator getEnd() const {
+    auto EndIt = *this;
+    EndIt.Next = CD.end();
+    EndIt.Ended = true;
+    return EndIt;
+  }
+
+private:
+  const CoverageData &CD;
+  const CoverageSegment *WrappedSegment;
+  std::vector<CoverageSegment>::const_iterator Next;
+  bool Ended;
+  unsigned Line;
+  SmallVector<const CoverageSegment *, 4> Segments;
+  LineCoverageStats Stats;
+};
+
+/// Get a \c LineCoverageIterator range for the lines described by \p CD.
+static inline iterator_range<LineCoverageIterator>
+getLineCoverageStats(const coverage::CoverageData &CD) {
+  auto Begin = LineCoverageIterator(CD);
+  auto End = Begin.getEnd();
+  return make_range(Begin, End);
+}
+
 // Profile coverage map has the following layout:
 // [CoverageMapFileHeader]
 // [ArrayStart]
