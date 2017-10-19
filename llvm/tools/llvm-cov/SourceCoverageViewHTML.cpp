@@ -365,8 +365,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
 }
 
 Error CoveragePrinterHTML::createIndexFile(
-    ArrayRef<std::string> SourceFiles,
-    const coverage::CoverageMapping &Coverage,
+    ArrayRef<std::string> SourceFiles, const CoverageMapping &Coverage,
     const CoverageFiltersMatchAll &Filters) {
   // Emit the default stylesheet.
   auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
@@ -515,7 +514,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     return tag("span", Snippet, Color.getValue());
   };
 
-  auto CheckIfUncovered = [](const coverage::CoverageSegment *S) {
+  auto CheckIfUncovered = [](const CoverageSegment *S) {
     return S && S->HasCount && S->Count == 0;
   };
 

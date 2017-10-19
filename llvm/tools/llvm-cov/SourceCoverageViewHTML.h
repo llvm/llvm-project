@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+using namespace coverage;
+
 struct FileCoverageSummary;
 
 /// \brief A coverage printer for html output.

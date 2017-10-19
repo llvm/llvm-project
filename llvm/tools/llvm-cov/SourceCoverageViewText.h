@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+using namespace coverage;
+
 /// \brief A coverage printer for text output.
 class CoveragePrinterText : public CoveragePrinter {
 public:
@@ -27,7 +29,7 @@ public:
   void closeViewFile(OwnedStream OS) override;
 
   Error createIndexFile(ArrayRef<std::string> SourceFiles,
-                        const coverage::CoverageMapping &Coverage,
+                        const CoverageMapping &Coverage,
                         const CoverageFiltersMatchAll &Filters) override;
 
   CoveragePrinterText(const CoverageViewOptions &Opts)
@@ -77,7 +79,7 @@ class SourceCoverageViewText : public SourceCoverageView {
 public:
   SourceCoverageViewText(StringRef SourceName, const MemoryBuffer &File,
                          const CoverageViewOptions &Options,
-                         coverage::CoverageData &&CoverageInfo)
+                         CoverageData &&CoverageInfo)
       : SourceCoverageView(SourceName, File, Options, std::move(CoverageInfo)) {
   }
 };
