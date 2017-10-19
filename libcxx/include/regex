@@ -4064,6 +4064,8 @@ basic_regex<_CharT, _Traits>::__parse_DUP_COUNT(_ForwardIterator __first,
                  __first != __last && ( __val = __traits_.value(*__first, 10)) != -1;
                  ++__first)
             {
+                if (__c >= std::numeric_limits<int>::max() / 10)
+                    __throw_regex_error<regex_constants::error_badbrace>();
                 __c *= 10;
                 __c += __val;
             }

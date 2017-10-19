@@ -189,6 +189,17 @@ int PPCTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
   return PPCTTIImpl::getIntImmCost(Imm, Ty);
 }
 
+unsigned PPCTTIImpl::getUserCost(const User *U,
+                                 ArrayRef<const Value *> Operands) {
+  if (U->getType()->isVectorTy()) {
+    // Instructions that need to be split should cost more.
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, U->getType());
+    return LT.first * BaseT::getUserCost(U, Operands);
+  }
+  
+  return BaseT::getUserCost(U, Operands);
+}
+
 void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   if (ST->getDarwinDirective() == PPC::DIR_A2) {

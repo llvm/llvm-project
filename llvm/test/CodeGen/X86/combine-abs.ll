@@ -23,6 +23,22 @@ define <16 x i16> @combine_v16i16_abs_constant() {
 }
 
 ; fold (abs (abs x)) -> (abs x)
+define i32 @combine_i32_abs_abs(i32 %a) {
+; CHECK-LABEL: combine_i32_abs_abs:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    cmovll %edi, %eax
+; CHECK-NEXT:    retq
+  %n1 = sub i32 zeroinitializer, %a
+  %b1 = icmp slt i32 %a, zeroinitializer
+  %a1 = select i1 %b1, i32 %n1, i32 %a
+  %n2 = sub i32 zeroinitializer, %a1
+  %b2 = icmp sgt i32 %a1, zeroinitializer
+  %a2 = select i1 %b2, i32 %a1, i32 %n2
+  ret i32 %a2
+}
+
 define <8 x i16> @combine_v8i16_abs_abs(<8 x i16> %a) {
 ; CHECK-LABEL: combine_v8i16_abs_abs:
 ; CHECK:       # BB#0:
