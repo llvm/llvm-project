@@ -77,10 +77,10 @@ private:
 class RenameOccurrences final : public SourceChangeRefactoringRule {
 public:
   RenameOccurrences(const NamedDecl *ND, std::string NewName)
-      : Finder(ND), NewName(NewName) {}
+      : Finder(ND), NewName(std::move(NewName)) {}
 
   Expected<AtomicChanges>
-  createSourceReplacements(RefactoringRuleContext &Context) {
+  createSourceReplacements(RefactoringRuleContext &Context) override {
     Expected<SymbolOccurrences> Occurrences =
         Finder.findSymbolOccurrences(Context);
     if (!Occurrences)
