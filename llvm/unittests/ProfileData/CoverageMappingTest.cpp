@@ -647,49 +647,14 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
-  unsigned NumLineStats = 0;
+  unsigned Line = 0;
+  unsigned LineCounts[] = {20, 20, 20, 20, 10, 10, 10, 10, 10, 0, 0};
   for (const auto &LCS : getLineCoverageStats(Data)) {
-    ++NumLineStats;
-    (void)LCS;
+    ASSERT_EQ(Line + 1, LCS.getLine());
+    ASSERT_EQ(LineCounts[Line], LCS.getExecutionCount());
+    ++Line;
   }
-  ASSERT_EQ(11U, NumLineStats);
-
-  LineCoverageIterator LCI{Data};
-
-  ASSERT_EQ(1U, LCI->getLine());
-  ASSERT_EQ(20ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(2U, LCI->getLine());
-  ASSERT_EQ(20ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(3U, LCI->getLine());
-  ASSERT_EQ(20ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(4U, LCI->getLine());
-  ASSERT_EQ(20ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(5U, LCI->getLine());
-  ASSERT_EQ(10ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(6U, LCI->getLine());
-  ASSERT_EQ(10ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(7U, LCI->getLine());
-  ASSERT_EQ(10ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(8U, LCI->getLine());
-  ASSERT_EQ(10ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(9U, LCI->getLine());
-  ASSERT_EQ(10ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(10U, LCI->getLine());
-  ASSERT_EQ(0ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(11U, LCI->getLine());
-  ASSERT_EQ(0ULL, LCI->getExecutionCount());
-  ++LCI;
-  ASSERT_EQ(LCI, LCI.getEnd());
+  ASSERT_EQ(11U, Line);
 }
 
 TEST_P(CoverageMappingTest, uncovered_function) {

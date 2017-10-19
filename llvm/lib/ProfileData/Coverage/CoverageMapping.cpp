@@ -672,13 +672,13 @@ CoverageData CoverageMapping::getCoverageForExpansion(
 }
 
 LineCoverageStats::LineCoverageStats(
-    ArrayRef<const coverage::CoverageSegment *> LineSegments,
-    const coverage::CoverageSegment *WrappedSegment, unsigned Line)
+    ArrayRef<const CoverageSegment *> LineSegments,
+    const CoverageSegment *WrappedSegment, unsigned Line)
     : ExecutionCount(0), HasMultipleRegions(false), Mapped(false), Line(Line),
       LineSegments(LineSegments), WrappedSegment(WrappedSegment) {
   // Find the minimum number of regions which start in this line.
   unsigned MinRegionCount = 0;
-  auto isStartOfRegion = [](const coverage::CoverageSegment *S) {
+  auto isStartOfRegion = [](const CoverageSegment *S) {
     return !S->IsGapRegion && S->HasCount && S->IsRegionEntry;
   };
   for (unsigned I = 0; I < LineSegments.size() && MinRegionCount < 2; ++I)

@@ -1655,12 +1655,14 @@ static Optional<InductiveRangeCheck::Range>
 IntersectRange(ScalarEvolution &SE,
                const Optional<InductiveRangeCheck::Range> &R1,
                const InductiveRangeCheck::Range &R2) {
-  if (!R1.hasValue()) {
-    if (!R2.isEmpty())
-      return R2;
+  if (R2.isEmpty())
     return None;
-  }
+  if (!R1.hasValue())
+    return R2;
   auto &R1Value = R1.getValue();
+  // We never return empty ranges from this function, and R1 is supposed to be
+  // a result of intersection. Thus, R1 is never empty.
+  assert(!R1Value.isEmpty() && "We should never have empty R1!");
 
   // TODO: we could widen the smaller range and have this work; but for now we
   // bail out to keep things simple.

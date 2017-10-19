@@ -572,13 +572,15 @@ public:
   document_iterator() = default;
   document_iterator(std::unique_ptr<Document> &D) : Doc(&D) {}
 
-  bool operator==(const document_iterator &Other) {
+  bool operator==(const document_iterator &Other) const {
     if (isAtEnd() || Other.isAtEnd())
       return isAtEnd() && Other.isAtEnd();
 
     return Doc == Other.Doc;
   }
-  bool operator!=(const document_iterator &Other) { return !(*this == Other); }
+  bool operator!=(const document_iterator &Other) const {
+    return !(*this == Other);
+  }
 
   document_iterator operator++() {
     assert(Doc && "incrementing iterator past the end.");
