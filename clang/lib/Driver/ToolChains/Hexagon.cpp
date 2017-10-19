@@ -28,8 +28,8 @@ using namespace clang;
 using namespace llvm::opt;
 
 // Default hvx-length for various versions.
-static std::string getDefaultHvxLength(const StringRef &Cpu) {
-  return llvm::StringSwitch<std::string>(Cpu)
+static StringRef getDefaultHvxLength(StringRef Cpu) {
+  return llvm::StringSwitch<StringRef>(Cpu)
       .Case("v60", "64b")
       .Case("v62", "64b")
       .Default("128b");
@@ -93,7 +93,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   }
   // Default hvx-length based on Cpu.
   else if (HasHVX)
-    HVXLength = StringRef(getDefaultHvxLength(Cpu));
+    HVXLength = getDefaultHvxLength(Cpu);
 
   if (!HVXLength.empty()) {
     HVXFeature =
