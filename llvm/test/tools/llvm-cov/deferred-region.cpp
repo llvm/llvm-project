@@ -88,34 +88,23 @@ int main() {
   return 0;
 }
 
-// MARKER: Marker at 4:7 = 2
-// MARKER-NEXT: Highlighted line 17, 5 -> 11
+// MARKER: Highlighted line 17, 5 -> 11
 // MARKER-NEXT: Marker at 19:3 = 1
-// MARKER-NEXT: Marker at 19:19 = 2
 // MARKER-NEXT: Marker at 19:27 = 1
-// MARKER-NEXT: Marker at 23:5 = 1
-// MARKER-NEXT: Marker at 23:9 = 1
 // MARKER-NEXT: Highlighted line 24, 7 -> 12
 // MARKER-NEXT: Highlighted line 36, 5 -> 11
-// MARKER-NEXT: Marker at 39:10 = 3
-// MARKER-NEXT: Marker at 43:5 = 1
-// MARKER-NEXT: Marker at 43:12 = 1
 // MARKER-NEXT: Highlighted line 46, 1 -> ?
 // MARKER-NEXT: Highlighted line 47, 1 -> 7
 // MARKER-NEXT: Highlighted line 47, 7 -> 14
 // MARKER-NEXT: Highlighted line 47, 14 -> 21
 // MARKER-NEXT: Highlighted line 47, 21 -> 23
 // MARKER-NEXT: Highlighted line 47, 23 -> 25
-// MARKER-NEXT: Marker at 47:7 = 0
-// MARKER-NEXT: Marker at 47:14 = 0
-// MARKER-NEXT: Marker at 47:23 = 0
 // MARKER-NEXT: Highlighted line 51, 7 -> 20
 // MARKER-NEXT: Marker at 53:5 = 1
-// MARKER-NEXT: Marker at 53:12 = 6
 // MARKER-NEXT: Highlighted line 55, 9 -> 14
 // MARKER-NEXT: Highlighted line 63, 5 -> 13
 // MARKER-NEXT: Highlighted line 67, 1 -> ?
 // MARKER-NEXT: Highlighted line 68, 1 -> 8
+// MARKER-NEXT: Highlighted line 68, 8 -> ?
 // MARKER-NEXT: Highlighted line 69, 1 -> 2
-// MARKER-NEXT: Marker at 72:7 = 2
 // MARKER-NEXT: Highlighted line 77, 1 -> 2

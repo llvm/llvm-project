@@ -41,11 +41,13 @@ VREG_DEF_RE = re.compile(
     r'^ *(?P<vregs>{0}(?:, {0})*) '
     r'= (?P<opcode>[A-Zt][A-Za-z0-9_]+)'.format(VREG_RE.pattern))
 PREFIX_DATA_RE = re.compile(r'^ *(;|bb.[0-9].*: *$|[a-z]+:( |$)|$)')
+VREG_CLASS_RE = re.compile(r'^ *- *{ id: ([0-9]+), class: ([a-z0-9_]+)', re.M)
 
 MIR_FUNC_RE = re.compile(
     r'^---$'
     r'\n'
     r'^ *name: *(?P<func>[A-Za-z0-9_.-]+)$'
+    r'(?:.*?(?P<vregs>^ *registers: *(?:\n *- {[^\n]+$)*))?'
     r'.*?'
     r'^ *body: *\|\n'
     r'(?P<body>.*?)\n'
@@ -190,10 +192,11 @@ def build_function_body_dictionary(test, raw_tool_output, triple, prefixes,
                 warn('Found conflicting asm for prefix: {}'.format(prefix),
                      test_file=test)
             func_dict[prefix][func] = body
+            func_dict[prefix]['{}:vregs'.format(func)] = m.group('vregs')
 
 
 def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
-                            single_bb, verbose=False):
+                            add_vreg_checks, single_bb, verbose=False):
     printed_prefixes = set()
     for run in run_list:
         for prefix in run.prefixes:
@@ -206,14 +209,17 @@ def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
             #     output_lines.append('')
             printed_prefixes.add(prefix)
             log('Adding {} lines for {}'.format(prefix, func_name), verbose)
+            vregs = None
+            if add_vreg_checks:
+                vregs = func_dict[prefix]['{}:vregs'.format(func_name)]
             add_check_lines(test, output_lines, prefix, func_name, single_bb,
-                            func_dict[prefix][func_name].splitlines())
+                            func_dict[prefix][func_name].splitlines(), vregs)
             break
     return output_lines
 
 
 def add_check_lines(test, output_lines, prefix, func_name, single_bb,
-                    func_body):
+                    func_body, vreg_data):
     if single_bb:
         # Don't bother checking the basic block label for a single BB
         func_body.pop(0)
@@ -229,6 +235,12 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
     check = '{:>{}}; {}'.format('', indent, prefix)
 
     output_lines.append('{}-LABEL: name: {}'.format(check, func_name))
+
+    if vreg_data:
+        output_lines.append('{}: registers:'.format(check))
+        for m in VREG_CLASS_RE.finditer(vreg_data):
+            output_lines.append('{}-NEXT: id: {}, class: {}'.format(
+                check, m.group(1), m.group(2)))
 
     vreg_map = {}
     for func_line in func_body:
@@ -287,7 +299,8 @@ def should_add_line_to_output(input_line, prefix_set):
     return True
 
 
-def update_test_file(llc, test, remove_common_prefixes=False, verbose=False):
+def update_test_file(llc, test, remove_common_prefixes=False,
+                     add_vreg_checks=False, verbose=False):
     log('Scanning for RUN lines in test file: {}'.format(test), verbose)
     with open(test) as fd:
         input_lines = [l.rstrip() for l in fd]
@@ -360,15 +373,15 @@ def update_test_file(llc, test, remove_common_prefixes=False, verbose=False):
                     continue
                 state = 'function body'
                 add_checks_for_function(test, output_lines, run_list,
-                                        func_dict, func_name, single_bb=False,
-                                        verbose=verbose)
+                                        func_dict, func_name, add_vreg_checks,
+                                        single_bb=False, verbose=verbose)
         elif state == 'function prefix':
             m = PREFIX_DATA_RE.match(input_line)
             if not m:
                 state = 'function body'
                 add_checks_for_function(test, output_lines, run_list,
-                                        func_dict, func_name, single_bb=True,
-                                        verbose=verbose)
+                                        func_dict, func_name, add_vreg_checks,
+                                        single_bb=True, verbose=verbose)
 
             if should_add_line_to_output(input_line, prefix_set):
                 output_lines.append(input_line)
@@ -395,12 +408,18 @@ def main():
     parser.add_argument('--remove-common-prefixes', action='store_true',
                         help='Remove existing check lines whose prefixes are '
                              'shared between multiple commands')
+    parser.add_argument('--add-vreg-checks', action='store_true',
+                        help='Add checks for the "registers:" block')
     parser.add_argument('tests', nargs='+')
     args = parser.parse_args()
 
     for test in args.tests:
-        update_test_file(args.llc, test, args.remove_common_prefixes,
-                         verbose=args.verbose)
+        try:
+            update_test_file(args.llc, test, args.remove_common_prefixes,
+                             args.add_vreg_checks, verbose=args.verbose)
+        except Exception:
+            warn('Error processing file', test_file=test)
+            raise
 
 
 if __name__ == '__main__':
