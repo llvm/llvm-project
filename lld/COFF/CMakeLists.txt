@@ -17,6 +17,7 @@ add_lld_library(lldCOFF
   LTO.cpp
   MapFile.cpp
   MarkLive.cpp
+  MinGW.cpp
   PDB.cpp
   Strings.cpp
   SymbolTable.cpp
