@@ -427,7 +427,7 @@ class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
 def PS_vloadrw_ai: LDrivv_template<HvxWR, V6_vL32b_ai>,
       Requires<[HasV60T,UseHVX]>;
 def PS_vloadrw_nt_ai: LDrivv_template<HvxWR, V6_vL32b_nt_ai>,
-      Requires<[HasV60T,UseHVXSgl]>;
+      Requires<[HasV60T,UseHVX]>;
 def PS_vloadrwu_ai: LDrivv_template<HvxWR, V6_vL32Ub_ai>,
       Requires<[HasV60T,UseHVX]>;
 

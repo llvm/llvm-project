@@ -41,4 +41,4 @@ return:                                           ; preds = %return.loopexit, %f
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx,-hvx-double" }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="-hvx" }

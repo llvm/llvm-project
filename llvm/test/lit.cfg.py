@@ -185,7 +185,7 @@ if loadable_module:
     config.available_features.add('loadable_module')
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
-if not config.build_shared_libs:
+if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')
 
 # Direct object generation

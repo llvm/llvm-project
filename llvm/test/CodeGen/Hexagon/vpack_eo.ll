@@ -61,8 +61,8 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32>, <16 x i32>) #1
 
-attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
-attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvx,-hvx-double" }
+attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 
 !4 = !{!5, !5, i64 0}
 !5 = !{!"InputOne", !6}

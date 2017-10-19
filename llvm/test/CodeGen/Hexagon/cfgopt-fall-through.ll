@@ -68,4 +68,4 @@ b19:                                              ; preds = %b4
   unreachable
 }
 
-attributes #0 = { nounwind "target-cpu"="hexagonv55" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind "target-cpu"="hexagonv55" "target-features"="-hvx,-long-calls" }

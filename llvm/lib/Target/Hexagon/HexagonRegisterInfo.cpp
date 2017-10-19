@@ -118,11 +118,11 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
   switch (MF->getSubtarget<HexagonSubtarget>().getHexagonArchVersion()) {
-  case HexagonSubtarget::V4:
-  case HexagonSubtarget::V5:
-  case HexagonSubtarget::V55:
-  case HexagonSubtarget::V60:
-  case HexagonSubtarget::V62:
+  case Hexagon::ArchEnum::V4:
+  case Hexagon::ArchEnum::V5:
+  case Hexagon::ArchEnum::V55:
+  case Hexagon::ArchEnum::V60:
+  case Hexagon::ArchEnum::V62:
     return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
   }
 

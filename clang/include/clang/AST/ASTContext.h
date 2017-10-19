@@ -2229,7 +2229,7 @@ public:
   getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
 
   /// \brief Retrieves the default calling convention for the current target.
-  CallingConv getDefaultCallingConvention(bool isVariadic,
+  CallingConv getDefaultCallingConvention(bool IsVariadic,
                                           bool IsCXXMethod) const;
 
   /// \brief Retrieves the "canonical" template name that refers to a

@@ -187,7 +187,7 @@ entry:
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "target-cpu"="hexagonv60" "target-features"="+hvx" }
+attributes #1 = { "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #2 = { nounwind }
 
 !llvm.module.flags = !{!0}

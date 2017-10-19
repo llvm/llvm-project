@@ -10,11 +10,14 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H
 
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
+
+class Function;
+class Loop;
+class LPMUpdater;
 
 /// Loop unroll pass that only does full loop unrolling.
 class LoopFullUnrollPass : public PassInfoMixin<LoopFullUnrollPass> {
@@ -40,6 +43,7 @@ public:
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H

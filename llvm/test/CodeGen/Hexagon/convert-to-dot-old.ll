@@ -103,8 +103,8 @@ declare i32 @llvm.hexagon.S2.asr.r.r.sat(i32, i32) #2
 declare i32 @llvm.hexagon.A2.aslh(i32) #2
 declare void @foo(i16*, i32*, i16*, i16 signext, i16 signext, i16 signext) local_unnamed_addr #3
 
-attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-long-calls" }
 attributes #1 = { argmemonly nounwind }
 attributes #2 = { nounwind readnone }
-attributes #3 = { optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-hvx-double,-long-calls" }
+attributes #3 = { optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-long-calls" }
 attributes #4 = { nounwind optsize }
