@@ -36,3 +36,21 @@ _foobar:
 # CHECK2-DEF: exportfn1 @3
 # CHECK2-DEF: exportfn2 @4
 # CHECK2-DEF: exportfn3 @5
+
+# Test ignoring certain object files and libs.
+
+# RUN: echo -e ".global foobar\n.global DllMainCRTStartup\n.text\nDllMainCRTStartup:\nret\nfoobar:\ncall mingwfunc\ncall crtfunc\nret\n" > %t.main.s
+# RUN: llvm-mc -triple=x86_64-windows-gnu %t.main.s -filetype=obj -o %t.main.obj
+# RUN: mkdir -p %T/libs
+# RUN: echo -e ".global mingwfunc\n.text\nmingwfunc:\nret\n" > %T/libs/mingwfunc.s
+# RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/mingwfunc.s -filetype=obj -o %T/libs/mingwfunc.o
+# RUN: llvm-ar rcs %T/libs/libmingwex.a %T/libs/mingwfunc.o
+# RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %T/libs/crtfunc.s
+# RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/crtfunc.s -filetype=obj -o %T/libs/crt2.o
+# RUN: lld-link -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %T/libs/crt2.o %T/libs/libmingwex.a -output-def:%t.def
+# RUN: echo "EOF" >> %t.def
+# RUN: cat %t.def | FileCheck -check-prefix=CHECK-EXCLUDE %s
+
+# CHECK-EXCLUDE: EXPORTS
+# CHECK-EXCLUDE-NEXT: foobar @1
+# CHECK-EXCLUDE-NEXT: EOF
