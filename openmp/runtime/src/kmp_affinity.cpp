@@ -2,7 +2,6 @@
  * kmp_affinity.cpp -- affinity management
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -24,7 +22,6 @@
 static hierarchy_info machine_hierarchy;
 
 void __kmp_cleanup_hierarchy() { machine_hierarchy.fini(); }
-
 
 void __kmp_get_hierarchy(kmp_uint32 nproc, kmp_bstate_t *thr_bar) {
   kmp_uint32 depth;

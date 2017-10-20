@@ -23,8 +23,15 @@ using namespace llvm::pdb;
 Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
                                 std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
-  if (Type == PDB_ReaderType::Native)
-    return NativeSession::createFromPdb(Path, Session);
+  if (Type == PDB_ReaderType::Native) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
+        MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+                                     /*RequiresNullTerminator=*/false);
+    if (!ErrorOrBuffer)
+      return make_error<GenericError>(generic_error_code::invalid_path, Path);
+
+    return NativeSession::createFromPdb(std::move(*ErrorOrBuffer), Session);
+  }
 
 #if LLVM_ENABLE_DIA_SDK
   return DIASession::createFromPdb(Path, Session);

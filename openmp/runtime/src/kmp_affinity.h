@@ -2,7 +2,6 @@
  * kmp_affinity.h -- header for affinity management
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_AFFINITY_H
 #define KMP_AFFINITY_H

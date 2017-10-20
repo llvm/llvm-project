@@ -573,13 +573,13 @@ class TargetRegisterClass;
                        MipsCCState &State) const;
 
     /// passByValArg - Pass a byval argument in registers or on stack.
-    SDValue passByValArg(SDValue Chain, const SDLoc &DL,
-                         std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-                         SmallVectorImpl<SDValue> &MemOpChains,
-                         SDValue StackPtr, MachineFrameInfo &MFI,
-                         SelectionDAG &DAG, SDValue Arg, unsigned FirstReg,
-                         unsigned LastReg, const ISD::ArgFlagsTy &Flags,
-                         bool isLittle, const CCValAssign &VA) const;
+    void passByValArg(SDValue Chain, const SDLoc &DL,
+                      std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
+                      SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+                      MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
+                      unsigned FirstReg, unsigned LastReg,
+                      const ISD::ArgFlagsTy &Flags, bool isLittle,
+                      const CCValAssign &VA) const;
 
     /// writeVarArgRegs - Write variable function arguments passed in registers
     /// to the stack. Also create a stack frame object for the first variable

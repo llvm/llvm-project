@@ -2,7 +2,6 @@
  * kmp_stub.cpp -- stub versions of user-callable OpenMP RT functions.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include <errno.h>
 #include <limits.h>

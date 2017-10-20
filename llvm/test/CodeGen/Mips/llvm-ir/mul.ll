@@ -268,7 +268,7 @@ entry:
   ; MM64R6:         daddu   $2, $[[T1]], $[[T0]]
   ; MM64R6-DAG:     dmul    $3, $5, $7
 
-  ; MM32:           lw      $25, %call16(__multi3)
+  ; MM32:           lw      $25, %call16(__multi3)($16)
 
   %r = mul i128 %a, %b
   ret i128 %r

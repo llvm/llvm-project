@@ -74,6 +74,8 @@ public:
   void enqueueArchiveMember(const Archive::Child &C, StringRef SymName,
                             StringRef ParentName);
 
+  MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> MB);
+
 private:
   std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro
 
@@ -109,7 +111,6 @@ private:
 
   void invokeMSVC(llvm::opt::InputArgList &Args);
 
-  MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> MB);
   void addBuffer(std::unique_ptr<MemoryBuffer> MB, bool WholeArchive);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
                         StringRef ParentName);

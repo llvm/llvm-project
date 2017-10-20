@@ -2,7 +2,6 @@
  * z_Linux_util.cpp -- platform specific routines.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -1395,7 +1393,6 @@ void __kmp_suspend_uninitialize_thread(kmp_info_t *th) {
     KMP_DEBUG_ASSERT(th->th.th_suspend_init_count == __kmp_fork_count);
   }
 }
-
 
 /* This routine puts the calling thread to sleep after setting the
    sleep bit for the indicated flag variable to true. */

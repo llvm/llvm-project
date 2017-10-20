@@ -5482,21 +5482,28 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   bool IsFakeUnary = false;
   switch(N->getOpcode()) {
   case X86ISD::BLENDI:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeBLENDMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::SHUFP:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeSHUFPMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::INSERTPS:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeINSERTPSMask(cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::EXTRQI:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     if (isa<ConstantSDNode>(N->getOperand(1)) &&
         isa<ConstantSDNode>(N->getOperand(2))) {
       int BitLen = N->getConstantOperandVal(1);
@@ -5506,6 +5513,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     }
     break;
   case X86ISD::INSERTQI:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     if (isa<ConstantSDNode>(N->getOperand(2)) &&
         isa<ConstantSDNode>(N->getOperand(3))) {
       int BitLen = N->getConstantOperandVal(2);
@@ -5515,23 +5524,33 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     }
     break;
   case X86ISD::UNPCKH:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeUNPCKHMask(VT, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::UNPCKL:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeUNPCKLMask(VT, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::MOVHLPS:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeMOVHLPSMask(NumElems, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::MOVLHPS:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeMOVLHPSMask(NumElems, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::PALIGNR:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodePALIGNRMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
@@ -5540,33 +5559,39 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     break;
   case X86ISD::VSHLDQ:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands() - 1);
     DecodePSLLDQMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::VSRLDQ:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands() - 1);
     DecodePSRLDQMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodePSHUFMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::PSHUFHW:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodePSHUFHWMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::PSHUFLW:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodePSHUFLWMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::VZEXT_MOVL:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     DecodeZeroMoveLowMask(VT, Mask);
     IsUnary = true;
     break;
@@ -5590,6 +5615,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMILPV: {
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     IsUnary = true;
     SDValue MaskNode = N->getOperand(1);
     unsigned MaskEltSize = VT.getScalarSizeInBits();
@@ -5605,6 +5631,9 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::PSHUFB: {
+    assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     IsUnary = true;
     SDValue MaskNode = N->getOperand(1);
     SmallVector<uint64_t, 32> RawMask;
@@ -5619,28 +5648,36 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMI:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeVPERMMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = true;
     break;
   case X86ISD::MOVSS:
   case X86ISD::MOVSD:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeScalarMoveMask(VT, /* IsLoad */ false, Mask);
     break;
   case X86ISD::VPERM2X128:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeVPERM2X128Mask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::MOVSLDUP:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     DecodeMOVSLDUPMask(VT, Mask);
     IsUnary = true;
     break;
   case X86ISD::MOVSHDUP:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     DecodeMOVSHDUPMask(VT, Mask);
     IsUnary = true;
     break;
   case X86ISD::MOVDDUP:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     DecodeMOVDDUPMask(VT, Mask);
     IsUnary = true;
     break;
@@ -5649,6 +5686,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     // Not yet implemented
     return false;
   case X86ISD::VPERMIL2: {
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     unsigned MaskEltSize = VT.getScalarSizeInBits();
     SDValue MaskNode = N->getOperand(2);
@@ -5668,6 +5707,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPPERM: {
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     SDValue MaskNode = N->getOperand(2);
     SmallVector<uint64_t, 32> RawMask;
@@ -5682,6 +5723,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMV: {
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     IsUnary = true;
     // Unlike most shuffle nodes, VPERMV's mask operand is operand 0.
     Ops.push_back(N->getOperand(1));
@@ -5699,6 +5741,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMV3: {
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(2).getValueType() == VT && "Unexpected value type");
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(2);
     // Unlike most shuffle nodes, VPERMV3's mask operand is the middle one.
     Ops.push_back(N->getOperand(0));
@@ -5712,6 +5756,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMIV3: {
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(2).getValueType() == VT && "Unexpected value type");
     IsUnary = IsFakeUnary = N->getOperand(1) == N->getOperand(2);
     // Unlike most shuffle nodes, VPERMIV3's mask operand is the first one.
     Ops.push_back(N->getOperand(1));
