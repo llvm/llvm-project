@@ -57,6 +57,8 @@ static inline bool operator<(const DWARFAddressRange &LHS,
   return std::tie(LHS.LowPC, LHS.HighPC) < std::tie(RHS.LowPC, RHS.HighPC);
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);
+
 /// DWARFAddressRangesVector - represents a set of absolute address ranges.
 using DWARFAddressRangesVector = std::vector<DWARFAddressRange>;
 

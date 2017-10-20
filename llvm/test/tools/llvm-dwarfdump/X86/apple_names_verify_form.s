@@ -3,9 +3,9 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .apple_names...
-# CHECK-NEXT:	error: unsupported form; failed to read HashData.
+# CHECK-NEXT:	error: Unsupported form: failed to read HashData.
 
-# This test is meant to verify that the -verify option 
+# This test is meant to verify that the -verify option
 # in llvm-dwarfdump, correctly identifies that Atom[0].form is unsupported.
 # As a result, the hashdata cannot be read.
 
