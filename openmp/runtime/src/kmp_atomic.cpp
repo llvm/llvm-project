@@ -2,7 +2,6 @@
  * kmp_atomic.cpp -- ATOMIC implementation routines
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp_atomic.h"
 #include "kmp.h" // TRUE, asm routines prototypes

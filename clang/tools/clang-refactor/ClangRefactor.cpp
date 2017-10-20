@@ -40,6 +40,11 @@ static cl::OptionCategory CommonRefactorOptions("Refactoring options");
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
                              cl::cat(cl::GeneralCategory),
                              cl::sub(*cl::AllSubCommands));
+
+static cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s"),
+                             cl::cat(cl::GeneralCategory),
+                             cl::sub(*cl::AllSubCommands));
+
 } // end namespace opts
 
 namespace {
@@ -436,13 +441,18 @@ public:
         return true;
       }
 
-      std::error_code EC;
-      llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::F_Text);
-      if (EC) {
-        llvm::errs() << EC.message() << "\n";
-        return true;
+      if (opts::Inplace) {
+        std::error_code EC;
+        llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::F_Text);
+        if (EC) {
+          llvm::errs() << EC.message() << "\n";
+          return true;
+        }
+        OS << *Result;
+        continue;
       }
-      OS << *Result;
+
+      llvm::outs() << *Result;
     }
     return false;
   }

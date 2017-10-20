@@ -44,6 +44,11 @@ const unsigned __tsan_mutex_linker_init      = 1 << 0;
 const unsigned __tsan_mutex_write_reentrant  = 1 << 1;
 // Mutex is read reentrant.
 const unsigned __tsan_mutex_read_reentrant   = 1 << 2;
+// Mutex does not have static storage duration, and must not be used after
+// its destructor runs.  The opposite of __tsan_mutex_linker_init.
+// If this flag is passed to __tsan_mutex_destroy, then the destruction
+// is ignored unless this flag was previously set on the mutex.
+const unsigned __tsan_mutex_not_static       = 1 << 8;
 
 // Mutex operation flags:
 
@@ -70,6 +75,7 @@ void __tsan_mutex_create(void *addr, unsigned flags);
 // Annotate destruction of a mutex.
 // Supported flags:
 //   - __tsan_mutex_linker_init
+//   - __tsan_mutex_not_static
 void __tsan_mutex_destroy(void *addr, unsigned flags);
 
 // Annotate start of lock operation.

@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=+use-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=POST-MISCHED
 
 ; Check the latency for ALU shifted operand variants.
 ;
@@ -60,6 +61,8 @@
 ; CHECK:      Ready
 ; CHECK-NEXT: A57UnitI
 
+; Check that post RA MI scheduler is invoked with +use-misched
+; POST-MISCHED: Before post-MI-sched
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8r-arm-none-eabi"

@@ -468,7 +468,22 @@ define i64 @test_mm_extract_epi64(<2 x i64> %a0) {
   ret i64 %ext
 }
 
-; TODO test_mm_extract_ps
+define i32 @test_mm_extract_ps(<4 x float> %a0) {
+; X32-LABEL: test_mm_extract_ps:
+; X32:       # BB#0:
+; X32-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X32-NEXT:    movd %xmm0, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_extract_ps:
+; X64:       # BB#0:
+; X64-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    retq
+  %ext = extractelement <4 x float> %a0, i32 1
+  %bc = bitcast float %ext to i32
+  ret i32 %bc
+}
 
 define <2 x double> @test_mm_floor_pd(<2 x double> %a0) {
 ; X32-LABEL: test_mm_floor_pd:

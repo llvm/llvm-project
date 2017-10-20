@@ -1,6 +1,6 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
-; CHECK-DAG: r[[BASE:[0-9]+]] += add
+; CHECK-DAG: r[[BASE:[0-9]+]] = add(r1,#1000)
 ; CHECK-DAG: r[[IDX0:[0-9]+]] = add(r2,#5)
 ; CHECK-DAG: r[[IDX1:[0-9]+]] = add(r2,#6)
 ; CHECK-DAG: memw(r0+r[[IDX0]]<<#2) = r3
