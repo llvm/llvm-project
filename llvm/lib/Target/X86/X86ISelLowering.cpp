@@ -188,6 +188,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
   setCondCodeAction(ISD::SETUNE, MVT::f80, Expand);
 
+  // Integer absolute.
+  if (Subtarget.hasCMov()) {
+    setOperationAction(ISD::ABS            , MVT::i16  , Custom);
+    setOperationAction(ISD::ABS            , MVT::i32  , Custom);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::ABS          , MVT::i64  , Custom);
+  }
+
   // Promote all UINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have this
   // operation.
   setOperationAction(ISD::UINT_TO_FP       , MVT::i1   , Promote);
@@ -14588,31 +14596,6 @@ static SDValue LowerSCALAR_TO_VECTOR(SDValue Op, const X86Subtarget &Subtarget,
       OpVT, DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, AnyExt));
 }
 
-// Lower a node with an EXTRACT_SUBVECTOR opcode.  This may result in
-// a simple subregister reference or explicit instructions to grab
-// upper bits of a vector.
-static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
-                                      SelectionDAG &DAG) {
-  SDLoc dl(Op);
-  SDValue In =  Op.getOperand(0);
-  SDValue Idx = Op.getOperand(1);
-  MVT ResVT = Op.getSimpleValueType();
-
-  // When v1i1 is legal a scalarization of a vselect with a vXi1 Cond
-  // would result with: v1i1 = extract_subvector(vXi1, idx).
-  // Lower these into extract_vector_elt which is already selectable.
-  assert(ResVT == MVT::v1i1);
-  assert(Subtarget.hasAVX512() &&
-         "Boolean EXTRACT_SUBVECTOR requires AVX512");
-
-  MVT EltVT = ResVT.getVectorElementType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MVT LegalVT =
-      (TLI.getTypeToTransformTo(*DAG.getContext(), EltVT)).getSimpleVT();
-  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LegalVT, In, Idx);
-  return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, ResVT, Res);
-}
-
 // Lower a node with an INSERT_SUBVECTOR opcode.  This may result in a
 // simple superregister reference or explicit instructions to insert
 // the upper bits of a vector.
@@ -21502,6 +21485,19 @@ static SDValue LowerADD_SUB(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  if (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) {
+    // Since X86 does not have CMOV for 8-bit integer, we don't convert
+    // 8-bit integer abs to NEG and CMOV.
+    SDLoc DL(Op);
+    SDValue N0 = Op.getOperand(0);
+    SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
+                              DAG.getConstant(0, DL, VT), N0);
+    SDValue Ops[] = {N0, Neg, DAG.getConstant(X86::COND_GE, DL, MVT::i8),
+                     SDValue(Neg.getNode(), 1)};
+    return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+  }
+
   assert(Op.getSimpleValueType().is256BitVector() &&
          Op.getSimpleValueType().isInteger() &&
          "Only handle AVX 256-bit vector integer operation");
@@ -24063,7 +24059,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VSELECT:            return LowerVSELECT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:  return LowerINSERT_VECTOR_ELT(Op, DAG);
-  case ISD::EXTRACT_SUBVECTOR:  return LowerEXTRACT_SUBVECTOR(Op,Subtarget,DAG);
   case ISD::INSERT_SUBVECTOR:   return LowerINSERT_SUBVECTOR(Op, Subtarget,DAG);
   case ISD::SCALAR_TO_VECTOR:   return LowerSCALAR_TO_VECTOR(Op, Subtarget,DAG);
   case ISD::ConstantPool:       return LowerConstantPool(Op, DAG);
@@ -32823,38 +32818,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Generate NEG and CMOV for integer abs.
-static SDValue combineIntegerAbs(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-
-  // Since X86 does not have CMOV for 8-bit integer, we don't convert
-  // 8-bit integer abs to NEG and CMOV.
-  if (VT.isInteger() && VT.getSizeInBits() == 8)
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
-
-  // Check pattern of XOR(ADD(X,Y), Y) where Y is SRA(X, size(X)-1)
-  // and change it to SUB and CMOV.
-  if (VT.isInteger() && N->getOpcode() == ISD::XOR &&
-      N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1 &&
-      N1.getOpcode() == ISD::SRA && N1.getOperand(0) == N0.getOperand(0)) {
-    auto *Y1C = dyn_cast<ConstantSDNode>(N1.getOperand(1));
-    if (Y1C && Y1C->getAPIntValue() == VT.getSizeInBits() - 1) {
-      // Generate SUB & CMOV.
-      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
-                                DAG.getConstant(0, DL, VT), N0.getOperand(0));
-      SDValue Ops[] = {N0.getOperand(0), Neg,
-                       DAG.getConstant(X86::COND_GE, DL, MVT::i8),
-                       SDValue(Neg.getNode(), 1)};
-      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
-    }
-  }
-  return SDValue();
-}
-
 /// Try to turn tests against the signbit in the form of:
 ///   XOR(TRUNCATE(SRL(X, size(X)-1)), 1)
 /// into:
@@ -34435,10 +34398,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
     return RV;
-
-  if (Subtarget.hasCMov())
-    if (SDValue RV = combineIntegerAbs(N, DAG))
-      return RV;
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
     return FPLogic;

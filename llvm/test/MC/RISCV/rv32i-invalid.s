@@ -122,6 +122,9 @@ sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 add ra, zero, zero, zero # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
 sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
 
+# Memory operand not formatted correctly
+lw a4, a5, 111 # CHECK: :[[@LINE]]:8: error: immediate must be an integer in the range [-2048, 2047]
+
 # Too few operands
 ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction

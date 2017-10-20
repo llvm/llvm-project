@@ -159,7 +159,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
              cast<MCSymbolRefExpr>(Expr)->getKind() == MCSymbolRefExpr::VK_None) {
     if (Desc.getOpcode() == RISCV::JAL) {
       FixupKind = RISCV::fixup_riscv_jal;
-    } else if (MIFrm == RISCVII::InstFormatSB) {
+    } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
     }
   }

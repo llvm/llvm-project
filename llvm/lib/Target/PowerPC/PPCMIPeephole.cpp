@@ -43,12 +43,12 @@ STATISTIC(NumOptADDLIs, "Number of optimized ADD instruction fed by LI");
 static cl::opt<bool>
     EnableSExtElimination("ppc-eliminate-signext",
                           cl::desc("enable elimination of sign-extensions"),
-                          cl::init(true), cl::Hidden);
+                          cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
     EnableZExtElimination("ppc-eliminate-zeroext",
                           cl::desc("enable elimination of zero-extensions"),
-                          cl::init(true), cl::Hidden);
+                          cl::init(false), cl::Hidden);
 
 namespace llvm {
   void initializePPCMIPeepholePass(PassRegistry&);

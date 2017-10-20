@@ -1,0 +1,22 @@
+# RUN: llc -march=hexagon -run-pass amode-opt %s -o - | FileCheck %s
+
+# This testcase used to crash.
+# CHECK: S2_storerb_io killed %r0, @var_i8, killed %r2
+
+--- |
+  define void @fred() { ret void }
+  @var_i8 = global [10 x i8] zeroinitializer, align 8
+...
+
+---
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %r0
+      %r1 = A2_tfrsi @var_i8
+      %r2 = A2_tfrsi 255
+      S4_storerb_rr killed %r0, killed %r1, 0, killed %r2
+      PS_jmpret %r31, implicit-def %pc
+...
+

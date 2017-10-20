@@ -523,7 +523,7 @@ be at least 4 to indicate at least 8 byte alignment.
 
 The AMDGPU backend code object uses the following ELF note records in the
 ``.note`` section. The *Description* column specifies the layout of the note
-record’s ``desc`` field. All fields are consecutive bytes. Note records with
+record's ``desc`` field. All fields are consecutive bytes. Note records with
 variable size strings have a corresponding ``*_size`` field that specifies the
 number of bytes, including the terminating null character, in the string. The
 string(s) come immediately after the preceding fields.
@@ -673,7 +673,7 @@ Following notations are used for specifying relocation calculations:
 
 **G**
   Represents the offset into the global offset table at which the relocation
-  entry’s symbol will reside during execution.
+  entry's symbol will reside during execution.
 
 **GOT**
   Represents the address of the global offset table.
@@ -1275,7 +1275,7 @@ CPU host program, or from an HSA kernel executing on a GPU.
    for a memory region with the kernarg property for the kernel agent that will
    execute the kernel. It must be at least 16 byte aligned.
 4. Kernel argument values are assigned to the kernel argument memory
-   allocation. The layout is defined in the *HSA Programmer’s Language Reference*
+   allocation. The layout is defined in the *HSA Programmer's Language Reference*
    [HSA]_. For AMDGPU the kernel execution directly accesses the kernel argument
    memory in the same way constant memory is accessed. (Note that the HSA
    specification allows an implementation to copy the kernel argument contents to
@@ -2006,7 +2006,7 @@ SGPR register initial state is defined in
 
                                                     The second SGPR is 32 bit
                                                     byte size of a single
-                                                    work-item’s scratch memory
+                                                    work-item's scratch memory
                                                     usage. CP obtains this from
                                                     the runtime, and it is
                                                     always a multiple of DWORD.
@@ -2106,7 +2106,7 @@ SGPR register initial state is defined in
      then       Work-Group Id Z            1      32 bit work-group id in Z
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _Z)                               wavefront.
-     then       Work-Group Info            1      {first_wave, 14’b0000,
+     then       Work-Group Info            1      {first_wave, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
                 _info)                            threadgroup_size_in_waves[5:0]}
      then       Scratch Wave Offset        1      32 bit byte offset from base
@@ -4063,7 +4063,7 @@ Additional Documentation
 .. [HSA] `Heterogeneous System Architecture (HSA) Foundation <http://www.hsafoundation.com/>`__
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
-.. [YAML] `YAML Ain’t Markup Language (YAML™) Version 1.2 <http://www.yaml.org/spec/1.2/spec.html>`__
+.. [YAML] `YAML Ain't Markup Language (YAML™) Version 1.2 <http://www.yaml.org/spec/1.2/spec.html>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__
 .. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
 .. [AMD-AMDGPU-Compute-Application-Binary-Interface] `AMDGPU Compute Application Binary Interface <https://github.com/RadeonOpenCompute/ROCm-ComputeABI-Doc/blob/master/AMDGPU-ABI.md>`__

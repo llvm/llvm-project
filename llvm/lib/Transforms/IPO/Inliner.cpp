@@ -14,29 +14,60 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "inline"
@@ -63,13 +94,16 @@ static cl::opt<bool>
                                 cl::init(false), cl::Hidden);
 
 namespace {
+
 enum class InlinerFunctionImportStatsOpts {
   No = 0,
   Basic = 1,
   Verbose = 2,
 };
 
-cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
+} // end anonymous namespace
+
+static cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
     "inliner-function-import-stats",
     cl::init(InlinerFunctionImportStatsOpts::No),
     cl::values(clEnumValN(InlinerFunctionImportStatsOpts::Basic, "basic",
@@ -77,10 +111,8 @@ cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
                clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
                           "printing of statistics for each inlined function")),
     cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
-} // namespace
 
-LegacyInlinerBase::LegacyInlinerBase(char &ID)
-    : CallGraphSCCPass(ID), InsertLifetime(true) {}
+LegacyInlinerBase::LegacyInlinerBase(char &ID) : CallGraphSCCPass(ID) {}
 
 LegacyInlinerBase::LegacyInlinerBase(char &ID, bool InsertLifetime)
     : CallGraphSCCPass(ID), InsertLifetime(InsertLifetime) {}
@@ -96,7 +128,7 @@ void LegacyInlinerBase::getAnalysisUsage(AnalysisUsage &AU) const {
   CallGraphSCCPass::getAnalysisUsage(AU);
 }
 
-typedef DenseMap<ArrayType *, std::vector<AllocaInst *>> InlinedArrayAllocasTy;
+using InlinedArrayAllocasTy = DenseMap<ArrayType *, std::vector<AllocaInst *>>;
 
 /// Look at all of the allocas that we inlined through this call site.  If we
 /// have already inlined other allocas through other calls into this function,
@@ -161,7 +193,6 @@ static void mergeInlinedArrayAllocas(
     // function.  Also, AllocasForType can be empty of course!
     bool MergedAwayAlloca = false;
     for (AllocaInst *AvailableAlloca : AllocasForType) {
-
       unsigned Align1 = AI->getAlignment(),
                Align2 = AvailableAlloca->getAlignment();
 
@@ -267,7 +298,6 @@ static bool
 shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
                  int &TotalSecondaryCost,
                  function_ref<InlineCost(CallSite CS)> GetInlineCost) {
-
   // For now we only handle local or inline functions.
   if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
     return false;
@@ -342,6 +372,7 @@ static Optional<InlineCost>
 shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
              OptimizationRemarkEmitter &ORE) {
   using namespace ore;
+
   InlineCost IC = GetInlineCost(CS);
   Instruction *Call = CS.getInstruction();
   Function *Callee = CS.getCalledFunction();
@@ -478,6 +509,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         if (Function *Callee = CS.getCalledFunction())
           if (Callee->isDeclaration()) {
             using namespace ore;
+
             ORE.emit([&]() {
               return OptimizationRemarkMissed(DEBUG_TYPE, "NoDefinition", &I)
                      << NV("Callee", Callee) << " will not be inlined into "
@@ -573,6 +605,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
         // Attempt to inline the function.
         using namespace ore;
+
         if (!InlineCallIfPossible(CS, InlineInfo, InlinedArrayAllocas,
                                   InlineHistoryID, InsertLifetime, AARGetter,
                                   ImportedFunctionsStats)) {
@@ -620,7 +653,6 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
       if (Callee && Callee->use_empty() && Callee->hasLocalLinkage() &&
           // TODO: Can remove if in SCC now.
           !SCCFunctions.count(Callee) &&
-
           // The function may be apparently dead, but if there are indirect
           // callgraph references to the node, we cannot delete it yet, this
           // could invalidate the CGSCC iterator.
@@ -922,6 +954,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       BasicBlock *Block = CS.getParent();
 
       using namespace ore;
+
       if (!InlineFunction(CS, IFI)) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)

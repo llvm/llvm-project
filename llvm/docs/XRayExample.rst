@@ -195,6 +195,70 @@ Given the above two files we can re-build by providing those two files as
 arguments to clang as ``-fxray-always-instrument=always-instrument.txt`` or
 ``-fxray-never-instrument=never-instrument.txt``.
 
+The XRay stack tool
+-------------------
+
+Given a trace, and optionally an instrumentation map, the ``llvm-xray stack``
+command can be used to analyze a call stack graph constructed from the function
+call timeline.
+
+The simplest way to use the command is simply to output the top stacks by call
+count and time spent.
+
+::
+
+  $ llvm-xray stack xray-log.llc.5rqxkU -instr_map ./bin/llc
+
+  Unique Stacks: 3069
+  Top 10 Stacks by leaf sum:
+
+  Sum: 9633790
+  lvl   function                                                            count              sum
+  #0    main                                                                    1         58421550
+  #1    compileModule(char**, llvm::LLVMContext&)                               1         51440360
+  #2    llvm::legacy::PassManagerImpl::run(llvm::Module&)                       1         40535375
+  #3    llvm::FPPassManager::runOnModule(llvm::Module&)                         2         39337525
+  #4    llvm::FPPassManager::runOnFunction(llvm::Function&)                     6         39331465
+  #5    llvm::PMDataManager::verifyPreservedAnalysis(llvm::Pass*)             399         16628590
+  #6    llvm::PMTopLevelManager::findAnalysisPass(void const*)               4584         15155600
+  #7    llvm::PMDataManager::findAnalysisPass(void const*, bool)            32088          9633790
+
+  ..etc..
+
+In the default mode, identical stacks on different threads are independently
+aggregated. In a multithreaded program, you may end up having identical call
+stacks fill your list of top calls.
+
+To address this, you may specify the ``-aggregate-threads`` or
+``-per-thread-stacks`` flags. ``-per-thread-stacks`` treats the thread id as an
+implicit root in each call stack tree, while ``-aggregate-threads`` combines
+identical stacks from all threads.
+
+Flame Graph Generation
+----------------------
+
+The ``llvm-xray stack`` tool may also be used to generate flamegraphs for
+visualizing your instrumented invocations. The tool does not generate the graphs
+themselves, but instead generates a format that can be used with Brendan Gregg's
+FlameGraph tool, currently available on `github
+<https://github.com/brendangregg/FlameGraph>`_.
+
+To generate output for a flamegraph, a few more options are necessary.
+
+- ``-all-stacks`` - Emits all of the stacks instead of just the top stacks.
+- ``-stack-format`` - Choose the flamegraph output format 'flame'.
+- ``-aggregation-type`` - Choose the metric to graph.
+
+You may pipe the command output directly to the flamegraph tool to obtain an
+svg file.
+
+::
+
+  $llvm-xray stack xray-log.llc.5rqxkU -instr_map ./bin/llc -stack-format=flame -aggregation-type=time -all-stacks | \
+  /path/to/FlameGraph/flamegraph.pl > flamegraph.svg
+
+If you open the svg in a browser, mouse events allow exploring the call stacks.
+
 Further Exploration
 -------------------
 

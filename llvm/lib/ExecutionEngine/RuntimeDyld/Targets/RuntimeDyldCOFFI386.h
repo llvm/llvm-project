@@ -144,10 +144,7 @@ public:
               ? Value
               : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(
                     RE.Addend);
-      assert(static_cast<int32_t>(Result) <= INT32_MAX &&
-             "relocation overflow");
-      assert(static_cast<int32_t>(Result) >= INT32_MIN &&
-             "relocation underflow");
+      assert(Result <= UINT32_MAX && "relocation overflow");
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_DIR32"
                    << " TargetSection: " << RE.Sections.SectionA
@@ -161,10 +158,7 @@ public:
       uint64_t Result =
           Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend) -
           Sections[0].getLoadAddress();
-      assert(static_cast<int32_t>(Result) <= INT32_MAX &&
-             "relocation overflow");
-      assert(static_cast<int32_t>(Result) >= INT32_MIN &&
-             "relocation underflow");
+      assert(Result <= UINT32_MAX && "relocation overflow");
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_DIR32NB"
                    << " TargetSection: " << RE.Sections.SectionA
@@ -178,9 +172,9 @@ public:
                             ? Value
                             : Sections[RE.Sections.SectionA].getLoadAddress();
       Result = Result - Section.getLoadAddress() + RE.Addend - 4 - RE.Offset;
-      assert(static_cast<int32_t>(Result) <= INT32_MAX &&
+      assert(static_cast<int64_t>(Result) <= INT32_MAX &&
              "relocation overflow");
-      assert(static_cast<int32_t>(Result) >= INT32_MIN &&
+      assert(static_cast<int64_t>(Result) >= INT32_MIN &&
              "relocation underflow");
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_REL32"
@@ -191,10 +185,8 @@ public:
     }
     case COFF::IMAGE_REL_I386_SECTION:
       // 16-bit section index of the section that contains the target.
-      assert(static_cast<int32_t>(RE.SectionID) <= INT16_MAX &&
+      assert(static_cast<uint32_t>(RE.SectionID) <= UINT16_MAX &&
              "relocation overflow");
-      assert(static_cast<int32_t>(RE.SectionID) >= INT16_MIN &&
-             "relocation underflow");
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_SECTION Value: " << RE.SectionID
                    << '\n');
@@ -202,10 +194,8 @@ public:
       break;
     case COFF::IMAGE_REL_I386_SECREL:
       // 32-bit offset of the target from the beginning of its section.
-      assert(static_cast<int32_t>(RE.Addend) <= INT32_MAX &&
+      assert(static_cast<uint64_t>(RE.Addend) <= UINT32_MAX &&
              "relocation overflow");
-      assert(static_cast<int32_t>(RE.Addend) >= INT32_MIN &&
-             "relocation underflow");
       DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
                    << " RelType: IMAGE_REL_I386_SECREL Value: " << RE.Addend
                    << '\n');
