@@ -315,9 +315,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   for (auto Range : Ranges) {
     if (!Range.valid()) {
       ++NumErrors;
-      error() << format("Invalid address range [0x%08" PRIx64 " - 0x%08" PRIx64
-                        "].\n",
-                        Range.LowPC, Range.HighPC);
+      error() << "Invalid address range " << Range << "\n";
       continue;
     }
 
@@ -325,11 +323,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
     const auto IntersectingRange = RI.insert(Range);
     if (IntersectingRange != RI.Ranges.end()) {
       ++NumErrors;
-      error() << format("DIE has overlapping address ranges: [0x%08" PRIx64
-                        " - 0x%08" PRIx64 "] and [0x%08" PRIx64
-                        " - 0x%08" PRIx64 "].\n",
-                        Range.LowPC, Range.HighPC, IntersectingRange->LowPC,
-                        IntersectingRange->HighPC);
+      error() << "DIE has overlapping address ranges: " << Range << " and "
+              << *IntersectingRange << "\n";
       break;
     }
   }

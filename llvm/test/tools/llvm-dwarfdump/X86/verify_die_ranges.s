@@ -3,7 +3,7 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .debug_info Unit Header Chain...
-# CHECK-NEXT: error: Invalid address range [0x00000007 - 0x00000006].
+# CHECK-NEXT: error: Invalid address range [0x0000000000000007, 0x0000000000000006)
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 12
