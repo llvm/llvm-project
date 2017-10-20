@@ -940,6 +940,12 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
 bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
                                       unsigned &SrcReg2, int &CmpMask,
                                       int &CmpValue) const {
+  // The first operand can be a frame index where we'd normally expect a
+  // register.
+  assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
+  if (!MI.getOperand(1).isReg())
+    return false;
+
   switch (MI.getOpcode()) {
   default:
     break;

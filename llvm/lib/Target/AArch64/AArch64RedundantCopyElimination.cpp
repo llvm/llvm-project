@@ -167,6 +167,9 @@ AArch64RedundantCopyElimination::knownRegValInBlock(
     // CMP is an alias for SUBS with a dead destination register.
     case AArch64::SUBSWri:
     case AArch64::SUBSXri: {
+      // Sometimes the first operand is a FrameIndex. Bail if tht happens.
+      if (!PredI.getOperand(1).isReg())
+        return None;
       MCPhysReg SrcReg = PredI.getOperand(1).getReg();
 
       // Must not be a symbolic immediate.
