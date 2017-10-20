@@ -89,28 +89,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <set>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -153,10 +170,12 @@ namespace {
 class FunctionNode {
   mutable AssertingVH<Function> F;
   FunctionComparator::FunctionHash Hash;
+
 public:
   // Note the hash is recalculated potentially multiple times, but it is cheap.
   FunctionNode(Function *F)
     : F(F), Hash(FunctionComparator::functionHash(*F))  {}
+
   Function *getFunc() const { return F; }
   FunctionComparator::FunctionHash getHash() const { return Hash; }
 
@@ -173,12 +192,12 @@ public:
 /// by considering all pointer types to be equivalent. Once identified,
 /// MergeFunctions will fold them by replacing a call to one to a call to a
 /// bitcast of the other.
-///
 class MergeFunctions : public ModulePass {
 public:
   static char ID;
+
   MergeFunctions()
-    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)), FNodesInTree() {
+    : ModulePass(ID), FnTree(FunctionNodeCmp(&GlobalNumbers)) {
     initializeMergeFunctionsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -189,8 +208,10 @@ private:
   // not need to become larger with another pointer.
   class FunctionNodeCmp {
     GlobalNumberState* GlobalNumbers;
+
   public:
     FunctionNodeCmp(GlobalNumberState* GN) : GlobalNumbers(GN) {}
+
     bool operator()(const FunctionNode &LHS, const FunctionNode &RHS) const {
       // Order first by hashes, then full function comparison.
       if (LHS.getHash() != RHS.getHash())
@@ -199,7 +220,7 @@ private:
       return FCmp.compare() == -1;
     }
   };
-  typedef std::set<FunctionNode, FunctionNodeCmp> FnTreeType;
+  using FnTreeType = std::set<FunctionNode, FunctionNodeCmp>;
 
   GlobalNumberState GlobalNumbers;
 
@@ -207,9 +228,9 @@ private:
   /// analyzed again.
   std::vector<WeakTrackingVH> Deferred;
 
+#ifndef NDEBUG
   /// Checks the rules of order relation introduced among functions set.
   /// Returns true, if sanity check has been passed, and false if failed.
-#ifndef NDEBUG
   bool doSanityCheck(std::vector<WeakTrackingVH> &Worklist);
 #endif
 
@@ -257,6 +278,7 @@ private:
   /// The set of all distinct functions. Use the insert() and remove() methods
   /// to modify it. The map allows efficient lookup and deferring of Functions.
   FnTreeType FnTree;
+
   // Map functions to the iterators of the FunctionNode which contains them
   // in the FnTree. This must be updated carefully whenever the FnTree is
   // modified, i.e. in insert(), remove(), and replaceFunctionInTree(), to avoid
@@ -268,6 +290,7 @@ private:
 } // end anonymous namespace
 
 char MergeFunctions::ID = 0;
+
 INITIALIZE_PASS(MergeFunctions, "mergefunc", "Merge Functions", false, false)
 
 ModulePass *llvm::createMergeFunctionsPass() {
@@ -475,7 +498,6 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
 // parameter debug info, from the entry block.
 void MergeFunctions::eraseInstsUnrelatedToPDI(
     std::vector<Instruction *> &PDIUnrelatedWL) {
-
   DEBUG(dbgs() << " Erasing instructions (in reverse order of appearance in "
                   "entry block) unrelated to parameter debug info from entry "
                   "block: {\n");
@@ -493,7 +515,6 @@ void MergeFunctions::eraseInstsUnrelatedToPDI(
 
 // Reduce G to its entry block.
 void MergeFunctions::eraseTail(Function *G) {
-
   std::vector<BasicBlock *> WorklistBB;
   for (Function::iterator BBI = std::next(G->begin()), BBE = G->end();
        BBI != BBE; ++BBI) {
@@ -518,7 +539,6 @@ void MergeFunctions::eraseTail(Function *G) {
 // PDIUnrelatedWL with such instructions.
 void MergeFunctions::filterInstsUnrelatedToPDI(
     BasicBlock *GEntryBlock, std::vector<Instruction *> &PDIUnrelatedWL) {
-
   std::set<Instruction *> PDIRelated;
   for (BasicBlock::iterator BI = GEntryBlock->begin(), BIE = GEntryBlock->end();
        BI != BIE; ++BI) {
@@ -686,7 +706,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   SmallVector<Value *, 16> Args;
   unsigned i = 0;
   FunctionType *FFTy = F->getFunctionType();
-  for (Argument & AI : H->args()) {
+  for (Argument &AI : H->args()) {
     Args.push_back(createCast(Builder, &AI, FFTy->getParamType(i)));
     ++i;
   }

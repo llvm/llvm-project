@@ -228,7 +228,11 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
   // If the second operand of the compare is an imm, make sure it's in the
   // range specified by the arch.
   if (!secondReg) {
-    int64_t v = MI.getOperand(2).getImm();
+    const MachineOperand &Op2 = MI.getOperand(2);
+    if (!Op2.isImm())
+      return false;
+
+    int64_t v = Op2.getImm();
     bool Valid = false;
 
     switch (MI.getOpcode()) {

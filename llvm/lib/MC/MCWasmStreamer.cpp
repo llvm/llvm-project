@@ -99,6 +99,7 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_Invalid:
   case MCSA_IndirectSymbol:
   case MCSA_Hidden:
+  case MCSA_Protected:
     return false;
 
   case MCSA_Weak:

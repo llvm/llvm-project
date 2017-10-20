@@ -29,17 +29,5 @@ def u64_0Imm : Operand<i64> { let ParserMatchClass = u64_0ImmOperand; }
 def n1ConstOperand : AsmOperandClass { let Name = "n1Const"; }
 def n1Const : Operand<i32> { let ParserMatchClass = n1ConstOperand; }
 
-// This complex pattern exists only to create a machine instruction operand
-// of type "frame index". There doesn't seem to be a way to do that directly
-// in the patterns.
-def AddrFI : ComplexPattern<i32, 1, "SelectAddrFI", [frameindex], []>;
-
-// These complex patterns are not strictly necessary, since global address
-// folding will happen during DAG combining. For distinguishing between GA
-// and GP, pat frags with HexagonCONST32 and HexagonCONST32_GP can be used.
-def AddrGA : ComplexPattern<i32, 1, "SelectAddrGA", [], []>;
-def AddrGP : ComplexPattern<i32, 1, "SelectAddrGP", [], []>;
-
-
 def bblabel : Operand<i32>;
 def bbl     : SDNode<"ISD::BasicBlock", SDTPtrLeaf, [], "BasicBlockSDNode">;

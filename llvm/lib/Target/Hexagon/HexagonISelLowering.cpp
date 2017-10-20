@@ -1967,6 +1967,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, VT, Custom);
   }
 
+  // Extending loads from (native) vectors of i8 into (native) vectors of i16
+  // are legal.
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::SEXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+  setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+  setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+
   // Types natively supported:
   for (MVT NativeVT : {MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v32i1, MVT::v64i1,
                        MVT::v4i8, MVT::v8i8, MVT::v2i16, MVT::v4i16, MVT::v1i32,

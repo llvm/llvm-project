@@ -43,6 +43,9 @@ cl::opt<bool>
 RebalanceOnlyImbalancedTrees("rebalance-only-imbal", cl::Hidden,
   cl::init(false), cl::desc("Rebalance address tree only if it is imbalanced"));
 
+static cl::opt<bool> CheckSingleUse("hexagon-isel-su", cl::Hidden,
+  cl::init(true), cl::desc("Enable checking of SDNode's single-use status"));
+
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
 //===----------------------------------------------------------------------===//
@@ -82,9 +85,18 @@ public:
   // Complex Pattern Selectors.
   inline bool SelectAddrGA(SDValue &N, SDValue &R);
   inline bool SelectAddrGP(SDValue &N, SDValue &R);
-  bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP);
+  inline bool SelectAnyImm(SDValue &N, SDValue &R);
+  inline bool SelectAnyInt(SDValue &N, SDValue &R);
+  bool SelectAnyImmediate(SDValue &N, SDValue &R, uint32_t LogAlign);
+  bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP,
+                           uint32_t LogAlign);
   bool SelectAddrFI(SDValue &N, SDValue &R);
   bool DetectUseSxtw(SDValue &N, SDValue &R);
+
+  inline bool SelectAnyImm0(SDValue &N, SDValue &R);
+  inline bool SelectAnyImm1(SDValue &N, SDValue &R);
+  inline bool SelectAnyImm2(SDValue &N, SDValue &R);
+  inline bool SelectAnyImm3(SDValue &N, SDValue &R);
 
   StringRef getPassName() const override {
     return "Hexagon DAG->DAG Pattern Instruction Selection";
@@ -126,6 +138,7 @@ private:
   bool isAlignedMemNode(const MemSDNode *N) const;
   bool isSmallStackStore(const StoreSDNode *N) const;
   bool isPositiveHalfWord(const SDNode *N) const;
+  bool hasOneUse(const SDNode *N) const;
 
   // DAG preprocessing functions.
   void ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes);
@@ -1250,15 +1263,88 @@ bool HexagonDAGToDAGISel::SelectAddrFI(SDValue &N, SDValue &R) {
 }
 
 inline bool HexagonDAGToDAGISel::SelectAddrGA(SDValue &N, SDValue &R) {
-  return SelectGlobalAddress(N, R, false);
+  return SelectGlobalAddress(N, R, false, 0);
 }
 
 inline bool HexagonDAGToDAGISel::SelectAddrGP(SDValue &N, SDValue &R) {
-  return SelectGlobalAddress(N, R, true);
+  return SelectGlobalAddress(N, R, true, 0);
+}
+
+inline bool HexagonDAGToDAGISel::SelectAnyImm(SDValue &N, SDValue &R) {
+  return SelectAnyImmediate(N, R, 0);
+}
+
+inline bool HexagonDAGToDAGISel::SelectAnyImm0(SDValue &N, SDValue &R) {
+  return SelectAnyImmediate(N, R, 0);
+}
+inline bool HexagonDAGToDAGISel::SelectAnyImm1(SDValue &N, SDValue &R) {
+  return SelectAnyImmediate(N, R, 1);
+}
+inline bool HexagonDAGToDAGISel::SelectAnyImm2(SDValue &N, SDValue &R) {
+  return SelectAnyImmediate(N, R, 2);
+}
+inline bool HexagonDAGToDAGISel::SelectAnyImm3(SDValue &N, SDValue &R) {
+  return SelectAnyImmediate(N, R, 3);
+}
+
+inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
+  EVT T = N.getValueType();
+  if (!T.isInteger() || T.getSizeInBits() != 32 || !isa<ConstantSDNode>(N))
+    return false;
+  R = N;
+  return true;
+}
+
+bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
+                                             uint32_t LogAlign) {
+  auto IsAligned = [LogAlign] (uint64_t V) -> bool {
+    return alignTo(V, 1u << LogAlign) == V;
+  };
+
+  switch (N.getOpcode()) {
+  case ISD::Constant: {
+    if (N.getValueType() != MVT::i32)
+      return false;
+    int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+    if (!IsAligned(V))
+      return false;
+    R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
+    return true;
+  }
+  case HexagonISD::JT:
+  case HexagonISD::CP:
+    // These are assumed to always be aligned at at least 8-byte boundary.
+    if (LogAlign > 3)
+      return false;
+    R = N.getOperand(0);
+    return true;
+  case ISD::ExternalSymbol:
+    // Symbols may be aligned at any boundary.
+    if (LogAlign > 0)
+      return false;
+    R = N;
+    return true;
+  case ISD::BlockAddress:
+    // Block address is always aligned at at least 4-byte boundary.
+    if (LogAlign > 2 || !IsAligned(cast<BlockAddressSDNode>(N)->getOffset()))
+      return false;
+    R = N;
+    return true;
+  }
+
+  if (SelectGlobalAddress(N, R, false, LogAlign) ||
+      SelectGlobalAddress(N, R, true, LogAlign))
+    return true;
+
+  return false;
 }
 
 bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
-                                              bool UseGP) {
+                                              bool UseGP, uint32_t LogAlign) {
+  auto IsAligned = [LogAlign] (uint64_t V) -> bool {
+    return alignTo(V, 1u << LogAlign) == V;
+  };
+
   switch (N.getOpcode()) {
   case ISD::ADD: {
     SDValue N0 = N.getOperand(0);
@@ -1270,6 +1356,9 @@ bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
       return false;
     if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N1)) {
       SDValue Addr = N0.getOperand(0);
+      // For the purpose of alignment, sextvalue and zextvalue are the same.
+      if (!IsAligned(Const->getZExtValue()))
+        return false;
       if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Addr)) {
         if (GA->getOpcode() == ISD::TargetGlobalAddress) {
           uint64_t NewOff = GA->getOffset() + (uint64_t)Const->getSExtValue();
@@ -1281,6 +1370,8 @@ bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
     }
     break;
   }
+  case HexagonISD::CP:
+  case HexagonISD::JT:
   case HexagonISD::CONST32:
     // The operand(0) of CONST32 is TargetGlobalAddress, which is what we
     // want in the instruction.
@@ -1434,7 +1525,8 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
 bool HexagonDAGToDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
   assert(N->getOpcode() == ISD::OR);
   auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  assert(C);
+  if (!C)
+    return false;
 
   // Detect when "or" is used to add an offset to a stack object.
   if (auto *FN = dyn_cast<FrameIndexSDNode>(N->getOperand(0))) {
@@ -1478,6 +1570,10 @@ bool HexagonDAGToDAGISel::isPositiveHalfWord(const SDNode *N) const {
     return VN->getVT().getSizeInBits() <= 16;
   }
   return false;
+}
+
+bool HexagonDAGToDAGISel::hasOneUse(const SDNode *N) const {
+  return !CheckSingleUse || N->hasOneUse();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

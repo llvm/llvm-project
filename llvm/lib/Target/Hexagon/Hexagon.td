@@ -282,7 +282,6 @@ include "HexagonPseudo.td"
 include "HexagonPatterns.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
-include "HexagonIntrinsicsDerived.td"
 include "HexagonMapAsm2IntrinV62.gen.td"
 
 def HexagonInstrInfo : InstrInfo;

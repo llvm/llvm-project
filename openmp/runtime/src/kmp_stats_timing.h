@@ -5,7 +5,6 @@
  * Access to real time clock and timers.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -14,7 +13,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp_os.h"
 #include <limits>
@@ -59,11 +57,11 @@ public:
   tsc_tick_count()
       : my_count(static_cast<int64_t>(__builtin_readcyclecounter())) {}
 #elif KMP_HAVE___RDTSC
-  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())){}
+  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())) {}
 #else
 #error Must have high resolution timer defined
 #endif
-  tsc_tick_count(int64_t value) : my_count(value){}
+  tsc_tick_count(int64_t value) : my_count(value) {}
   int64_t getValue() const { return my_count; }
   tsc_tick_count later(tsc_tick_count const other) const {
     return my_count > other.my_count ? (*this) : other;

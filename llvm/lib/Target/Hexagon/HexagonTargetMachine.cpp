@@ -126,6 +126,7 @@ namespace llvm {
   void initializeHexagonEarlyIfConversionPass(PassRegistry&);
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
+  void initializeHexagonHardwareLoopsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
   void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
@@ -184,6 +185,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
+  initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizePass(PR);
   initializeHexagonVectorLoopCarriedReusePass(PR);
   initializeHexagonNewValueJumpPass(PR);

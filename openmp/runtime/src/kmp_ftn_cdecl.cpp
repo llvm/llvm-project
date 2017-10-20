@@ -2,7 +2,6 @@
  * kmp_ftn_cdecl.cpp -- Fortran __cdecl linkage support for OpenMP.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"

@@ -95,7 +95,8 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
   TargetMachine *Target =
       TheTarget->createTargetMachine(TheTriple.getTriple(), MCPU, FeaturesStr,
                                      Options, RelocModel, CMModel, OptLevel,
-                                     /*JIT*/ true);
+				     /*JIT*/ true);
+  Target->Options.EmulatedTLS = EmulatedTLS;
   assert(Target && "Could not allocate target machine!");
   return Target;
 }
