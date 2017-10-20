@@ -2,7 +2,6 @@
  * kmp_settings.cpp -- Initialize environment variables
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -24,7 +22,7 @@
 #include "kmp_settings.h"
 #include "kmp_str.h"
 #include "kmp_wrapper_getpid.h"
-#include <ctype.h>   // toupper()
+#include <ctype.h> // toupper()
 
 static int __kmp_env_toPrint(char const *name, int flag);
 
@@ -4928,7 +4926,6 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
   if (value) {
     ompc_set_dynamic(__kmp_global.g.g_dynamic);
   }
-
 }
 
 void __kmp_env_initialize(char const *string) {
@@ -4960,7 +4957,7 @@ void __kmp_env_initialize(char const *string) {
     }
   }
 
-// We need to know if blocktime was set when processing OMP_WAIT_POLICY
+  // We need to know if blocktime was set when processing OMP_WAIT_POLICY
   blocktime_str = __kmp_env_blk_var(&block, "KMP_BLOCKTIME");
 
   // Special case. If we parse environment, not a string, process KMP_WARNINGS

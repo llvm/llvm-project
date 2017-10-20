@@ -3,7 +3,6 @@
  * kmp_itt.inl -- Inline functions of ITT Notify.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -12,7 +11,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 // Inline function definitions. This file should be included into kmp_itt.h file
 // for production build (to let compliler inline functions) or into kmp_itt.c
