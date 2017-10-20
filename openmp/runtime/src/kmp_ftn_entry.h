@@ -2,7 +2,6 @@
  * kmp_ftn_entry.h -- Fortran entry linkage support for OpenMP.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef FTN_STDCALL
 #error The support file kmp_ftn_entry.h should not be compiled by itself.
@@ -567,7 +565,6 @@ int FTN_STDCALL xexpand(FTN_IN_FINAL)(void) {
 
 #if OMP_40_ENABLED
 
-
 kmp_proc_bind_t FTN_STDCALL xexpand(FTN_GET_PROC_BIND)(void) {
 #ifdef KMP_STUB
   return __kmps_get_proc_bind();
@@ -1090,7 +1087,6 @@ void FTN_STDCALL FTN_SET_DEFAULTS(char const *str
 }
 
 /* ------------------------------------------------------------------------ */
-
 
 #if OMP_40_ENABLED
 /* returns the status of cancellation */

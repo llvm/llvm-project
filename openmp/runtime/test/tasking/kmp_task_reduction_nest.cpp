@@ -1,5 +1,5 @@
-// RUN: %libomp-compile-and-run
-// RUN: %libomp-compile -DFLG=1 && %libomp-run
+// RUN: %libomp-cxx-compile-and-run
+// RUN: %libomp-cxx-compile -DFLG=1 && %libomp-run
 #include <cstdio>
 #include <cmath>
 #include <cassert>

@@ -2,7 +2,6 @@
  * kmp_global.cpp -- KPTS global variables for runtime support library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -126,7 +124,6 @@ char const *__kmp_barrier_pattern_name[bp_last_bar] = {"linear", "tree",
 
 int __kmp_allThreadsSpecified = 0;
 size_t __kmp_align_alloc = CACHE_LINE;
-
 
 int __kmp_generate_warnings = kmp_warnings_low;
 int __kmp_reserve_warn = 0;
