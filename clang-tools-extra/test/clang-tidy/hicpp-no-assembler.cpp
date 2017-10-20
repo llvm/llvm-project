@@ -9,9 +9,4 @@ static int s asm("spam");
 void f() {
   __asm("mov al, 2");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use inline assembler in safety-critical code [hicpp-no-assembler]
-
-  _asm {
-    mov al, 2;
-    // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: do not use inline assembler in safety-critical code [hicpp-no-assembler]
-  }
 }
