@@ -2,7 +2,6 @@
  * kmp_error.cpp -- KPTS functions for error checking at runtime
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_error.h"

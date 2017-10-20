@@ -339,7 +339,7 @@ LinkerScript::createInputSectionList(OutputSection &OutCmd) {
   return Ret;
 }
 
-void LinkerScript::processSectionCommands(OutputSectionFactory &Factory) {
+void LinkerScript::processSectionCommands() {
   // A symbol can be assigned before any section is mentioned in the linker
   // script. In an DSO, the symbol values are addresses, so the only important
   // section values are:

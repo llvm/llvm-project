@@ -2,7 +2,6 @@
  * kmp_io.cpp -- RTL IO
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include <stdarg.h>
 #include <stddef.h>

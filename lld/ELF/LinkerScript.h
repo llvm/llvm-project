@@ -246,7 +246,7 @@ public:
   bool shouldKeep(InputSectionBase *S);
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
-  void processSectionCommands(OutputSectionFactory &Factory);
+  void processSectionCommands();
 
   // SECTIONS command list.
   std::vector<BaseCommand *> SectionCommands;

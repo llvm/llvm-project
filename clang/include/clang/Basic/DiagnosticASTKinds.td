@@ -127,6 +127,10 @@ def note_constexpr_access_null : Note<
 def note_constexpr_access_past_end : Note<
   "%select{read of|assignment to|increment of|decrement of}0 "
   "dereferenced one-past-the-end pointer is not allowed in a constant expression">;
+def note_constexpr_access_unsized_array : Note<
+  "%select{read of|assignment to|increment of|decrement of}0 "
+  "pointer to element of array without known bound "
+  "is not allowed in a constant expression">;
 def note_constexpr_access_inactive_union_member : Note<
   "%select{read of|assignment to|increment of|decrement of}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
@@ -154,6 +158,11 @@ def note_constexpr_baa_insufficient_alignment : Note<
 def note_constexpr_baa_value_insufficient_alignment : Note<
   "value of the aligned pointer (%0) is not a multiple of the asserted %1 "
   "%plural{1:byte|:bytes}1">;
+def note_constexpr_unsupported_unsized_array : Note<
+  "array-to-pointer decay of array member without known bound is not supported">;
+def note_constexpr_unsized_array_indexed : Note<
+  "indexing of array without known bound is not allowed "
+  "in a constant expression">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,

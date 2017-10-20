@@ -2,7 +2,6 @@
  * kmp_lock.h -- lock header file
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_LOCK_H
 #define KMP_LOCK_H

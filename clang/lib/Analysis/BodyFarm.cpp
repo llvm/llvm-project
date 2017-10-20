@@ -264,11 +264,8 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
 
 static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
                                               const ParmVarDecl *Callback,
-                                              QualType CallbackType,
+                                              CXXRecordDecl *CallbackDecl,
                                               ArrayRef<Expr *> CallArgs) {
-
-  CXXRecordDecl *CallbackDecl = CallbackType->getAsCXXRecordDecl();
-
   assert(CallbackDecl != nullptr);
   assert(CallbackDecl->isLambda());
   FunctionDecl *callOperatorDecl = CallbackDecl->getLambdaCallOperator();
@@ -319,6 +316,9 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   const ParmVarDecl *Flag = D->getParamDecl(0);
   const ParmVarDecl *Callback = D->getParamDecl(1);
   QualType CallbackType = Callback->getType().getNonReferenceType();
+
+  // Nullable pointer, non-null iff function is a CXXRecordDecl.
+  CXXRecordDecl *CallbackRecordDecl = CallbackType->getAsCXXRecordDecl();
   QualType FlagType = Flag->getType().getNonReferenceType();
   auto *FlagRecordDecl = dyn_cast_or_null<RecordDecl>(FlagType->getAsTagDecl());
 
@@ -348,28 +348,58 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
     return nullptr;
   }
 
-  bool isLambdaCall = CallbackType->getAsCXXRecordDecl() &&
-                      CallbackType->getAsCXXRecordDecl()->isLambda();
+  bool isLambdaCall = CallbackRecordDecl && CallbackRecordDecl->isLambda();
+  if (CallbackRecordDecl && !isLambdaCall) {
+    DEBUG(llvm::dbgs() << "Not supported: synthesizing body for functors when "
+                       << "body farming std::call_once, ignoring the call.");
+    return nullptr;
+  }
 
   SmallVector<Expr *, 5> CallArgs;
+  const FunctionProtoType *CallbackFunctionType;
+  if (isLambdaCall) {
 
-  if (isLambdaCall)
     // Lambda requires callback itself inserted as a first parameter.
     CallArgs.push_back(
         M.makeDeclRefExpr(Callback,
                           /* RefersToEnclosingVariableOrCapture= */ true));
+    CallbackFunctionType = CallbackRecordDecl->getLambdaCallOperator()
+                               ->getType()
+                               ->getAs<FunctionProtoType>();
+  } else {
+    CallbackFunctionType =
+        CallbackType->getPointeeType()->getAs<FunctionProtoType>();
+  }
 
-  // All arguments past first two ones are passed to the callback.
-  for (unsigned int i = 2; i < D->getNumParams(); i++)
-    CallArgs.push_back(
-        M.makeLvalueToRvalue(D->getParamDecl(i),
-                             /* RefersToEnclosingVariableOrCapture= */ false));
+  if (!CallbackFunctionType)
+    return nullptr;
+
+  // First two arguments are used for the flag and for the callback.
+  if (D->getNumParams() != CallbackFunctionType->getNumParams() + 2) {
+    DEBUG(llvm::dbgs() << "Number of params of the callback does not match "
+                       << "the number of params passed to std::call_once, "
+                       << "ignoring the call");
+    return nullptr;
+  }
+
+  // All arguments past first two ones are passed to the callback,
+  // and we turn lvalues into rvalues if the argument is not passed by
+  // reference.
+  for (unsigned int ParamIdx = 2; ParamIdx < D->getNumParams(); ParamIdx++) {
+    const ParmVarDecl *PDecl = D->getParamDecl(ParamIdx);
+    Expr *ParamExpr = M.makeDeclRefExpr(PDecl);
+    if (!CallbackFunctionType->getParamType(ParamIdx - 2)->isReferenceType()) {
+      QualType PTy = PDecl->getType().getNonReferenceType();
+      ParamExpr = M.makeLvalueToRvalue(ParamExpr, PTy);
+    }
+    CallArgs.push_back(ParamExpr);
+  }
 
   CallExpr *CallbackCall;
   if (isLambdaCall) {
 
-    CallbackCall =
-        create_call_once_lambda_call(C, M, Callback, CallbackType, CallArgs);
+    CallbackCall = create_call_once_lambda_call(C, M, Callback,
+                                                CallbackRecordDecl, CallArgs);
   } else {
 
     // Function pointer case.

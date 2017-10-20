@@ -3,7 +3,6 @@
  * kmp_debugger.cpp -- debugger support.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -12,7 +11,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_lock.h"

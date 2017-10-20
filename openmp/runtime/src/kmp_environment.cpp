@@ -2,7 +2,6 @@
  * kmp_environment.cpp -- Handle environment variables OS-independently.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 /* We use GetEnvironmentVariable for Windows* OS instead of getenv because the
    act of loading a DLL on Windows* OS makes any user-set environment variables
