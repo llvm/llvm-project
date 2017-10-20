@@ -20,10 +20,11 @@ def RV64         : HwMode<"+64bit">;
 def RV32         : HwMode<"-64bit">;
 
 //===----------------------------------------------------------------------===//
-// Register file, instruction descriptions.
+// Registers, calling conventions, instruction descriptions.
 //===----------------------------------------------------------------------===//
 
 include "RISCVRegisterInfo.td"
+include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
 
 //===----------------------------------------------------------------------===//
@@ -38,7 +39,11 @@ def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 // Define the RISC-V target.
 //===----------------------------------------------------------------------===//
 
-def RISCVInstrInfo : InstrInfo;
+def RISCVInstrInfo : InstrInfo {
+  // TODO: disable guessInstructionProperties when
+  // https://reviews.llvm.org/D37065 lands.
+  let guessInstructionProperties = 1;
+}
 
 def RISCVAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;

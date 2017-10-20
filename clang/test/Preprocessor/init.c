@@ -2446,10 +2446,10 @@
 // ARM-NETBSD:#define __INTMAX_MAX__ 9223372036854775807LL
 // ARM-NETBSD:#define __INTMAX_TYPE__ long long int
 // ARM-NETBSD:#define __INTMAX_WIDTH__ 64
-// ARM-NETBSD:#define __INTPTR_FMTd__ "d"
-// ARM-NETBSD:#define __INTPTR_FMTi__ "i"
-// ARM-NETBSD:#define __INTPTR_MAX__ 2147483647
-// ARM-NETBSD:#define __INTPTR_TYPE__ int
+// ARM-NETBSD:#define __INTPTR_FMTd__ "ld"
+// ARM-NETBSD:#define __INTPTR_FMTi__ "li"
+// ARM-NETBSD:#define __INTPTR_MAX__ 2147483647L
+// ARM-NETBSD:#define __INTPTR_TYPE__ long int
 // ARM-NETBSD:#define __INTPTR_WIDTH__ 32
 // ARM-NETBSD:#define __INT_FAST16_FMTd__ "hd"
 // ARM-NETBSD:#define __INT_FAST16_FMTi__ "hi"
@@ -2541,8 +2541,8 @@
 // ARM-NETBSD:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM-NETBSD:#define __UINTMAX_TYPE__ long long unsigned int
 // ARM-NETBSD:#define __UINTMAX_WIDTH__ 64
-// ARM-NETBSD:#define __UINTPTR_MAX__ 4294967295U
-// ARM-NETBSD:#define __UINTPTR_TYPE__ unsigned int
+// ARM-NETBSD:#define __UINTPTR_MAX__ 4294967295UL
+// ARM-NETBSD:#define __UINTPTR_TYPE__ long unsigned int
 // ARM-NETBSD:#define __UINTPTR_WIDTH__ 32
 // ARM-NETBSD:#define __UINT_FAST16_MAX__ 65535
 // ARM-NETBSD:#define __UINT_FAST16_TYPE__ unsigned short

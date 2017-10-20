@@ -4327,8 +4327,12 @@ basic_regex<_CharT, _Traits>::__parse_decimal_escape(_ForwardIterator __first,
             unsigned __v = *__first - '0';
             for (++__first;
                     __first != __last && '0' <= *__first && *__first <= '9'; ++__first)
+                {
+                if (__v >= std::numeric_limits<unsigned>::max() / 10)
+                    __throw_regex_error<regex_constants::error_backref>();
                 __v = 10 * __v + *__first - '0';
-            if (__v > mark_count())
+                }
+            if (__v == 0 || __v > mark_count())
                 __throw_regex_error<regex_constants::error_backref>();
             __push_back_ref(__v);
         }
@@ -5455,15 +5459,17 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
                     if ('0' <= __fmt_first[1] && __fmt_first[1] <= '9')
                     {
                         ++__fmt_first;
-                        size_t __i = *__fmt_first - '0';
+                        size_t __idx = *__fmt_first - '0';
                         if (__fmt_first + 1 != __fmt_last &&
                             '0' <= __fmt_first[1] && __fmt_first[1] <= '9')
                         {
                             ++__fmt_first;
-                            __i = 10 * __i + *__fmt_first - '0';
+                            if (__idx >= std::numeric_limits<size_t>::max() / 10)
+                                __throw_regex_error<regex_constants::error_escape>();
+                            __idx = 10 * __idx + *__fmt_first - '0';
                         }
-                        __output = _VSTD::copy((*this)[__i].first,
-                                            (*this)[__i].second, __output);
+                        __output = _VSTD::copy((*this)[__idx].first,
+                                            (*this)[__idx].second, __output);
                     }
                     else
                     {
