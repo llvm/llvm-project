@@ -2,7 +2,6 @@
  * kmp_lock.cpp -- lock-related functions
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include <stddef.h>
 #include <atomic>

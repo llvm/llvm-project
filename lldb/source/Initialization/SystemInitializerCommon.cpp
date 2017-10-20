@@ -70,7 +70,7 @@ void SystemInitializerCommon::Initialize() {
 #endif
 
   llvm::EnablePrettyStackTrace();
-  Log::Initialize();
+  InitializeLog();
   HostInfo::Initialize();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);

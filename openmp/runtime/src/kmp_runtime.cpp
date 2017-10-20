@@ -2,7 +2,6 @@
  * kmp_runtime.cpp -- KPTS runtime support library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -1107,15 +1105,15 @@ inline static void propagateFPControl(kmp_team_t *team) {
     __kmp_store_mxcsr(&mxcsr);
     mxcsr &= KMP_X86_MXCSR_MASK;
 
-// There is no point looking at t_fp_control_saved here.
-// If it is TRUE, we still have to update the values if they are different from
-// those we now have.
-// If it is FALSE we didn't save anything yet, but our objective is the same. We
-// have to ensure that the values in the team are the same as those we have.
-// So, this code achieves what we need whether or not t_fp_control_saved is
-// true. By checking whether the value needs updating we avoid unnecessary
-// writes that would put the cache-line into a written state, causing all
-// threads in the team to have to read it again.
+    // There is no point looking at t_fp_control_saved here.
+    // If it is TRUE, we still have to update the values if they are different
+    // from those we now have. If it is FALSE we didn't save anything yet, but
+    // our objective is the same. We have to ensure that the values in the team
+    // are the same as those we have.
+    // So, this code achieves what we need whether or not t_fp_control_saved is
+    // true. By checking whether the value needs updating we avoid unnecessary
+    // writes that would put the cache-line into a written state, causing all
+    // threads in the team to have to read it again.
     KMP_CHECK_UPDATE(team->t.t_x87_fpu_control_word, x87_fpu_control_word);
     KMP_CHECK_UPDATE(team->t.t_mxcsr, mxcsr);
     // Although we don't use this value, other code in the runtime wants to know
@@ -4676,12 +4674,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             place++;
           }
 
-          KA_TRACE(100, ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
-                         "partition = [%d,%d], __kmp_affinity_num_masks: %u\n",
-                         __kmp_gtid_from_thread(team->t.t_threads[f]),
-                         team->t.t_id, f, th->th.th_new_place,
-                         th->th.th_first_place, th->th.th_last_place,
-                         __kmp_affinity_num_masks));
+          KA_TRACE(100,
+                   ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
+                    "partition = [%d,%d], __kmp_affinity_num_masks: %u\n",
+                    __kmp_gtid_from_thread(team->t.t_threads[f]), team->t.t_id,
+                    f, th->th.th_new_place, th->th.th_first_place,
+                    th->th.th_last_place, __kmp_affinity_num_masks));
         }
       } else {
         /* Having uniform space of available computation places I can create
@@ -4689,7 +4687,7 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
            place of each partition. */
         double current = static_cast<double>(masters_place);
         double spacing =
-                (static_cast<double>(n_places + 1) / static_cast<double>(n_th));
+            (static_cast<double>(n_places + 1) / static_cast<double>(n_th));
         int first, last;
         kmp_info_t *th;
 
@@ -4735,12 +4733,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             th->th.th_new_place = place;
             th->th.th_last_place = last;
 
-            KA_TRACE(100, ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
-                           "partition = [%d,%d], spacing = %.4f\n",
-                           __kmp_gtid_from_thread(team->t.t_threads[f]),
-                           team->t.t_id, f, th->th.th_new_place,
-                           th->th.th_first_place, th->th.th_last_place,
-                           spacing));
+            KA_TRACE(100,
+                     ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
+                      "partition = [%d,%d], spacing = %.4f\n",
+                      __kmp_gtid_from_thread(team->t.t_threads[f]),
+                      team->t.t_id, f, th->th.th_new_place,
+                      th->th.th_first_place, th->th.th_last_place, spacing));
           }
         }
       }
@@ -5242,9 +5240,10 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       return team;
     }
 
-/* reap team if it is too small, then loop back and check the next one */
-// not sure if this is wise, but, will be redone during the hot-teams rewrite.
-/* TODO: Use technique to find the right size hot-team, don't reap them */
+    /* reap team if it is too small, then loop back and check the next one */
+    // not sure if this is wise, but, will be redone during the hot-teams
+    // rewrite.
+    /* TODO: Use technique to find the right size hot-team, don't reap them */
     team = __kmp_reap_team(team);
     __kmp_team_pool = team;
   }
@@ -5902,10 +5901,10 @@ static void __kmp_internal_end(void) {
     // 2009-09-08 (lev): Other alive roots found. Why do we kill the monitor??
     KMP_MB(); /* Flush all pending memory write invalidates.  */
 
-// Need to check that monitor was initialized before reaping it. If we are
-// called form __kmp_atfork_child (which sets __kmp_init_parallel = 0), then
-// __kmp_monitor will appear to contain valid data, but it is only valid in the
-// parent process, not the child.
+    // Need to check that monitor was initialized before reaping it. If we are
+    // called form __kmp_atfork_child (which sets __kmp_init_parallel = 0), then
+    // __kmp_monitor will appear to contain valid data, but it is only valid in
+    // the parent process, not the child.
     // New behavior (201008): instead of keying off of the flag
     // __kmp_init_parallel, the monitor thread creation is keyed off
     // of the new flag __kmp_init_monitor.

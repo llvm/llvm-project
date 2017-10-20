@@ -10,6 +10,7 @@
 #include "PDB.h"
 #include "Chunks.h"
 #include "Config.h"
+#include "Driver.h"
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -218,9 +219,16 @@ const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
 
 static Expected<std::unique_ptr<pdb::NativeSession>>
 tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(
+      TSPath, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+  if (!MBOrErr)
+    return errorCodeToError(MBOrErr.getError());
+
   std::unique_ptr<pdb::IPDBSession> ThisSession;
-  if (auto EC =
-          pdb::loadDataForPDB(pdb::PDB_ReaderType::Native, TSPath, ThisSession))
+  if (auto EC = pdb::NativeSession::createFromPdb(
+          MemoryBuffer::getMemBuffer(Driver->takeBuffer(std::move(*MBOrErr)),
+                                     /*RequiresNullTerminator=*/false),
+          ThisSession))
     return std::move(EC);
 
   std::unique_ptr<pdb::NativeSession> NS(

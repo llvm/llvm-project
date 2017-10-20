@@ -2,7 +2,6 @@
  * kmp_csupport.cpp -- kfront linkage support for OpenMP.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "omp.h" /* extern "C" declarations of user-visible routines */
 #include "kmp.h"

@@ -51,6 +51,8 @@ if(${LIBOMP_STANDALONE_BUILD})
   endif()
   set(LIBOMP_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
     "Compiler to use for testing OpenMP library")
+  set(LIBOMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
+    "Compiler to use for testing OpenMP library")
   set(LIBOMP_TEST_OPENMP_FLAG -fopenmp CACHE STRING
     "OpenMP compiler flag to use for testing OpenMP library")
   find_program(LIBOMP_LLVM_LIT_EXECUTABLE
@@ -90,8 +92,10 @@ else()
   # LLVM source tree build, test just-built clang
   if(NOT MSVC)
     set(LIBOMP_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+    set(LIBOMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
   else()
     set(LIBOMP_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
+    set(LIBOMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
   endif()
   set(LIBOMP_TEST_OPENMP_FLAG -fopenmp=libomp)
   set(FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
