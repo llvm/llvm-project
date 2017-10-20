@@ -1,4 +1,4 @@
-//===-- LowerTypeTests.cpp - type metadata lowering pass ------------------===//
+//===- LowerTypeTests.cpp - type metadata lowering pass -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,32 +13,70 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TrailingObjects.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <set>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace lowertypetests;
@@ -206,16 +244,19 @@ struct ByteArrayInfo {
 /// operation involving a map lookup; this data structure helps to reduce the
 /// number of times we need to do this lookup.
 class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
+  friend TrailingObjects;
+
   GlobalObject *GO;
   size_t NTypes;
+
   // For functions: true if this is a definition (either in the merged module or
   // in one of the thinlto modules).
   bool IsDefinition;
+
   // For functions: true if this function is either defined or used in a thinlto
   // module and its jumptable entry needs to be exported to thinlto backends.
   bool IsExported;
 
-  friend TrailingObjects;
   size_t numTrailingObjects(OverloadToken<MDNode *>) const { return NTypes; }
 
 public:
@@ -232,15 +273,19 @@ public:
                             GTM->getTrailingObjects<MDNode *>());
     return GTM;
   }
+
   GlobalObject *getGlobal() const {
     return GO;
   }
+
   bool isDefinition() const {
     return IsDefinition;
   }
+
   bool isExported() const {
     return IsExported;
   }
+
   ArrayRef<MDNode *> types() const {
     return makeArrayRef(getTrailingObjects<MDNode *>(), NTypes);
   }
@@ -354,6 +399,7 @@ class LowerTypeTestsModule {
 public:
   LowerTypeTestsModule(Module &M, ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary);
+
   bool lower();
 
   // Lower the module using the action and summary passed as command line
@@ -389,11 +435,12 @@ struct LowerTypeTests : public ModulePass {
   }
 };
 
-} // anonymous namespace
+} // end anonymous namespace
+
+char LowerTypeTests::ID = 0;
 
 INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
                 false)
-char LowerTypeTests::ID = 0;
 
 ModulePass *
 llvm::createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
@@ -1192,7 +1239,7 @@ void LowerTypeTestsModule::createJumpTable(
   // Luckily, this function does not get any prologue even without the
   // attribute.
   if (OS != Triple::Win32)
-    F->addFnAttr(llvm::Attribute::Naked);
+    F->addFnAttr(Attribute::Naked);
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {
@@ -1401,7 +1448,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsWASM(
 
 void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Globals) {
-  llvm::DenseMap<Metadata *, uint64_t> TypeIdIndices;
+  DenseMap<Metadata *, uint64_t> TypeIdIndices;
   for (unsigned I = 0; I != TypeIds.size(); ++I)
     TypeIdIndices[TypeIds[I]] = I;
 
@@ -1555,8 +1602,8 @@ bool LowerTypeTestsModule::lower() {
   // Equivalence class set containing type identifiers and the globals that
   // reference them. This is used to partition the set of type identifiers in
   // the module into disjoint sets.
-  typedef EquivalenceClasses<PointerUnion<GlobalTypeMember *, Metadata *>>
-      GlobalClassesTy;
+  using GlobalClassesTy =
+      EquivalenceClasses<PointerUnion<GlobalTypeMember *, Metadata *>>;
   GlobalClassesTy GlobalClasses;
 
   // Verify the type metadata and build a few data structures to let us
@@ -1571,7 +1618,7 @@ bool LowerTypeTestsModule::lower() {
     unsigned Index;
     std::vector<GlobalTypeMember *> RefGlobals;
   };
-  llvm::DenseMap<Metadata *, TIInfo> TypeIdInfo;
+  DenseMap<Metadata *, TIInfo> TypeIdInfo;
   unsigned I = 0;
   SmallVector<MDNode *, 2> Types;
 

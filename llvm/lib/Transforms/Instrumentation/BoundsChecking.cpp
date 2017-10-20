@@ -13,18 +13,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include <cstdint>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "bounds-checking"
@@ -36,9 +49,10 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-typedef IRBuilder<TargetFolder> BuilderTy;
+using BuilderTy = IRBuilder<TargetFolder>;
 
 namespace {
+
   struct BoundsChecking : public FunctionPass {
     static char ID;
 
@@ -62,12 +76,13 @@ namespace {
     BasicBlock *getTrapBB();
     bool instrument(Value *Ptr, Value *Val, const DataLayout &DL);
  };
-}
+
+} // end anonymous namespace
 
 char BoundsChecking::ID = 0;
+
 INITIALIZE_PASS(BoundsChecking, "bounds-checking", "Run-time bounds checking",
                 false, false)
-
 
 /// getTrapBB - create a basic block that traps. All overflowing conditions
 /// branch to this block. There's only one trap block per function.
@@ -80,7 +95,7 @@ BasicBlock *BoundsChecking::getTrapBB() {
   TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
   Builder->SetInsertPoint(TrapBB);
 
-  llvm::Value *F = Intrinsic::getDeclaration(Fn->getParent(), Intrinsic::trap);
+  Value *F = Intrinsic::getDeclaration(Fn->getParent(), Intrinsic::trap);
   CallInst *TrapCall = Builder->CreateCall(F, {});
   TrapCall->setDoesNotReturn();
   TrapCall->setDoesNotThrow();
@@ -89,7 +104,6 @@ BasicBlock *BoundsChecking::getTrapBB() {
 
   return TrapBB;
 }
-
 
 /// instrument - adds run-time bounds checks to memory accessing instructions.
 /// Ptr is the pointer that will be read/written, and InstVal is either the
@@ -173,7 +187,7 @@ bool BoundsChecking::runOnFunction(Function &F) {
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
-  std::vector<Instruction*> WorkList;
+  std::vector<Instruction *> WorkList;
   for (inst_iterator i = inst_begin(F), e = inst_end(F); i != e; ++i) {
     Instruction *I = &*i;
     if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<AtomicCmpXchgInst>(I) ||
