@@ -3072,8 +3072,6 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
   // Expressions of array type can't be bitfields or vector elements.
   LValue LV = EmitLValue(E);
   Address Addr = LV.getAddress();
-  if (BaseInfo) *BaseInfo = LV.getBaseInfo();
-  if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
 
   // If the array type was an incomplete type, we need to make sure
   // the decay ends up being the right type.
@@ -3088,7 +3086,15 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     Addr = Builder.CreateStructGEP(Addr, 0, CharUnits::Zero(), "arraydecay");
   }
 
+  // The result of this decay conversion points to an array element within the
+  // base lvalue. However, since TBAA currently does not support representing
+  // accesses to elements of member arrays, we conservatively represent accesses
+  // to the pointee object as if it had no any base lvalue specified.
+  // TODO: Support TBAA for member arrays.
   QualType EltType = E->getType()->castAsArrayTypeUnsafe()->getElementType();
+  if (BaseInfo) *BaseInfo = LV.getBaseInfo();
+  if (TBAAInfo) *TBAAInfo = CGM.getTBAAAccessInfo(EltType);
+
   return Builder.CreateElementBitCast(Addr, ConvertTypeForMem(EltType));
 }
 
