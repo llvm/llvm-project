@@ -2,7 +2,6 @@
  * kmp_barrier.cpp
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -12,13 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "kmp.h"
 #include "kmp_wait_release.h"
 #include "kmp_itt.h"
 #include "kmp_os.h"
 #include "kmp_stats.h"
-
 
 #if KMP_MIC
 #include <immintrin.h>
@@ -87,8 +84,7 @@ static void __kmp_linear_barrier_gather(
     int nproc = this_thr->th.th_team_nproc;
     int i;
     // Don't have to worry about sleep bit here or atomic since team setting
-    kmp_uint64 new_state =
-        team_bar->b_arrived + KMP_BARRIER_STATE_BUMP;
+    kmp_uint64 new_state = team_bar->b_arrived + KMP_BARRIER_STATE_BUMP;
 
     // Collect all the worker team member threads.
     for (i = 1; i < nproc; ++i) {

@@ -1,6 +1,7 @@
 @AUTO_GEN_COMMENT@
 
 config.test_compiler = "@LIBOMP_TEST_COMPILER@"
+config.test_cxx_compiler = "@LIBOMP_TEST_CXX_COMPILER@"
 config.test_filecheck = "@FILECHECK_EXECUTABLE@"
 config.test_openmp_flag = "@LIBOMP_TEST_OPENMP_FLAG@"
 config.test_extra_cflags = "@LIBOMP_TEST_CFLAGS@"

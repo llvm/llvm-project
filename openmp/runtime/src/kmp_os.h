@@ -2,7 +2,6 @@
  * kmp_os.h -- KPTS runtime header file.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_OS_H
 #define KMP_OS_H
@@ -247,9 +245,9 @@ template <> struct traits_t<unsigned long long> {
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwPageSize;
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwPageSize;
 }
 #else
 #define KMP_GET_PAGE_SIZE() getpagesize()
@@ -828,7 +826,6 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #ifndef KMP_USE_BGET
 #define KMP_USE_BGET 1
 #endif
-
 
 // Switches for OSS builds
 #ifndef USE_SYSFS_INFO

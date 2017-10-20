@@ -2,7 +2,6 @@
  * kmp_dispatch.cpp: dynamic scheduling - iteration initialization and dispatch.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 /* Dynamic scheduling initialization and dispatch.
  *
@@ -1978,8 +1976,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
               pr->u.p.parm2) { // compare with K*nproc*(chunk+1), K=2 by default
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
-            init = test_then_add<ST>(
-                RCAST(volatile ST *, &sh->u.s.iteration), (ST)chunkspec);
+            init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
+                                     (ST)chunkspec);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
@@ -2057,8 +2055,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           if ((T)remaining < pr->u.p.parm2) {
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
-            init = test_then_add<ST>(
-                RCAST(volatile ST *, &sh->u.s.iteration), (ST)chunk);
+            init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
+                                     (ST)chunk);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
