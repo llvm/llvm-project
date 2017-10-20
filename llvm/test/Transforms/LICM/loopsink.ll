@@ -282,6 +282,70 @@ define i32 @t5(i32, i32*) #0 !prof !0 {
 
 ;     b1
 ;    /  \
+;   b2  b6
+;  /  \  |
+; b3  b4 |
+;  \  /  |
+;   b5   |
+;    \  /
+;     b7
+; preheader: 1000
+; b2: 15
+; b3: 7
+; b4: 7
+; Regardless of aliasing store in loop this load from constant memory can be sunk.
+; CHECK: t5_const_memory
+; CHECK: .preheader:
+; CHECK-NOT: load i32, i32* @g_const
+; CHECK: .b2:
+; CHECK: load i32, i32* @g_const
+; CHECK: br i1 %c2, label %.b3, label %.b4
+define i32 @t5_const_memory(i32, i32*) #0 !prof !0 {
+  %3 = icmp eq i32 %0, 0
+  br i1 %3, label %.exit, label %.preheader
+
+.preheader:
+  %invariant = load i32, i32* @g_const
+  br label %.b1
+
+.b1:
+  %iv = phi i32 [ %t7, %.b7 ], [ 0, %.preheader ]
+  %c1 = icmp sgt i32 %iv, %0
+  br i1 %c1, label %.b2, label %.b6, !prof !1
+
+.b2:
+  %c2 = icmp sgt i32 %iv, 1
+  br i1 %c2, label %.b3, label %.b4
+
+.b3:
+  %t3 = sub nsw i32 %invariant, %iv
+  br label %.b5
+
+.b4:
+  %t4 = add nsw i32 %invariant, %iv
+  br label %.b5
+
+.b5:
+  %p5 = phi i32 [ %t3, %.b3 ], [ %t4, %.b4 ]
+  %t5 = mul nsw i32 %p5, 5
+  br label %.b7
+
+.b6:
+  %t6 = call i32 @foo()
+  br label %.b7
+
+.b7:
+  %p7 = phi i32 [ %t6, %.b6 ], [ %t5, %.b5 ]
+  %t7 = add nuw nsw i32 %iv, 1
+  %c7 = icmp eq i32 %t7, %p7
+  br i1 %c7, label %.b1, label %.exit, !prof !3
+
+.exit:
+  ret i32 10
+}
+
+;     b1
+;    /  \
 ;   b2  b3
 ;    \  /
 ;     b4
