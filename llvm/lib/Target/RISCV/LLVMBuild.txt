@@ -30,5 +30,6 @@ has_disassembler = 1
 type = Library
 name = RISCVCodeGen
 parent = RISCV
-required_libraries = AsmPrinter Core CodeGen MC RISCVAsmPrinter RISCVDesc RISCVInfo Support Target
+required_libraries = AsmPrinter Core CodeGen MC RISCVAsmPrinter RISCVDesc
+  RISCVInfo SelectionDAG Support Target
 add_to_library_groups = RISCV

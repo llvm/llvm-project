@@ -404,8 +404,8 @@ define i32 @clamp_signed3(i32 %x) {
 ; CHECK-LABEL: @clamp_signed3(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 255
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[MIN]], 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[X]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp slt i32 %x, 255
@@ -421,8 +421,8 @@ define i32 @clamp_signed4(i32 %x) {
 ; CHECK-LABEL: @clamp_signed4(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 15
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[MAX]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp sgt i32 %x, 15
@@ -472,8 +472,8 @@ define i32 @clamp_unsigned3(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned3(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 255
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[MIN]], 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[X]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ult i32 %x, 255
@@ -489,8 +489,8 @@ define i32 @clamp_unsigned4(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned4(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 [[X]], i32 15
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[MAX]], 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ugt i32 %x, 15
@@ -523,8 +523,8 @@ define i32 @clamp_check_for_no_infinite_loop2(i32 %i) {
 ; CHECK-LABEL: @clamp_check_for_no_infinite_loop2(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[I:%.*]], -255
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[I]], i32 -255
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[SEL1]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[SEL1]], i32 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP2]], i32 [[SEL1]], i32 0
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cmp1 = icmp sgt i32 %i, -255

@@ -262,6 +262,8 @@ supports the following subcommands:
   only converts to YAML.
 - ``graph``: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
+- ``stack``: Reconstructs function call stacks from a timeline of function
+  calls in an XRay trace.
 
 These subcommands use various library components found as part of the XRay
 libraries, distributed with the LLVM distribution. These are:
@@ -274,7 +276,7 @@ libraries, distributed with the LLVM distribution. These are:
   associated with edges and vertices.
 - ``llvm/XRay/InstrumentationMap.h``: A convenient tool for analyzing the
   instrumentation map in XRay-instrumented object files and binaries. The
-  ``extract`` subcommand uses this particular library.
+  ``extract`` and ``stack`` subcommands uses this particular library.
 
 Future Work
 ===========
@@ -282,13 +284,17 @@ Future Work
 There are a number of ongoing efforts for expanding the toolset building around
 the XRay instrumentation system.
 
-Trace Analysis
---------------
+Trace Analysis Tools
+--------------------
 
-We have more subcommands and modes that we're thinking of developing, in the
-following forms:
-
-- ``stack``: Reconstruct the function call stacks in a timeline.
+- Work is in progress to integrate with or develop tools to visualize findings
+  from an XRay trace. Particularly, the ``stack`` tool is being expanded to
+  output formats that allow graphing and exploring the duration of time in each
+  call stack.
+- With a large instrumented binary, the size of generated XRay traces can
+  quickly become unwieldy. We are working on integrating pruning techniques and
+  heuristics for the analysis tools to sift through the traces and surface only
+  relevant information.
 
 More Platforms
 --------------
