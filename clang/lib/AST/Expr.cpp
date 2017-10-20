@@ -2298,7 +2298,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
         const DeclRefExpr *DRE =
             dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens());
         if (!(DRE && isa<VarDecl>(DRE->getDecl()) &&
-              cast<VarDecl>(DRE->getDecl())->hasLocalStorage())) {
+              cast<VarDecl>(DRE->getDecl())->hasLocalStorage()) &&
+            !isa<CallExpr>(CE->getSubExpr()->IgnoreParens())) {
           return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc,
                                                           R1, R2, Ctx);
         }

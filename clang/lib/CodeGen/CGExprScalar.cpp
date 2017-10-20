@@ -3120,16 +3120,25 @@ static llvm::Intrinsic::ID GetIntrinsic(IntrinsicType IT,
     return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpequh_p :
                             llvm::Intrinsic::ppc_altivec_vcmpgtsh_p;
   case BuiltinType::UInt:
-  case BuiltinType::ULong:
     return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpequw_p :
                             llvm::Intrinsic::ppc_altivec_vcmpgtuw_p;
   case BuiltinType::Int:
-  case BuiltinType::Long:
     return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpequw_p :
                             llvm::Intrinsic::ppc_altivec_vcmpgtsw_p;
+  case BuiltinType::ULong:
+  case BuiltinType::ULongLong:
+    return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpequd_p :
+                            llvm::Intrinsic::ppc_altivec_vcmpgtud_p;
+  case BuiltinType::Long:
+  case BuiltinType::LongLong:
+    return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpequd_p :
+                            llvm::Intrinsic::ppc_altivec_vcmpgtsd_p;
   case BuiltinType::Float:
     return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_altivec_vcmpeqfp_p :
                             llvm::Intrinsic::ppc_altivec_vcmpgtfp_p;
+  case BuiltinType::Double:
+    return (IT == VCMPEQ) ? llvm::Intrinsic::ppc_vsx_xvcmpeqdp_p :
+                            llvm::Intrinsic::ppc_vsx_xvcmpgtdp_p;
   }
 }
 
