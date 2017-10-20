@@ -58,10 +58,15 @@ let RegAltNameIndices = [ABIRegAltName] in {
 def XLenVT : ValueTypeByHwMode<[RV32, RV64, DefaultMode],
                                [i32,  i64,  i32]>;
 
-// TODO: once codegen is implemented, registers should be listed in an order
-// reflecting the preferred register allocation sequence.
-def GPR : RegisterClass< "RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 0, 31)
+// The order of registers represents the preferred allocation sequence.
+// Registers are listed in the order caller-save, callee-save, specials.
+def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 5, 7),
+    (sequence "X%u", 28, 31),
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27),
+    (sequence "X%u", 0, 4)
   )> {
   let RegInfos = RegInfoByHwMode<
       [RV32,              RV64,              DefaultMode],

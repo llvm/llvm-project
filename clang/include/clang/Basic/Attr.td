@@ -1758,23 +1758,23 @@ def StdCall : InheritableAttr {
 }
 
 def SwiftCall : InheritableAttr {
-  let Spellings = [GCC<"swiftcall">];
+  let Spellings = [GNU<"swiftcall">];
 //  let Subjects = SubjectList<[Function]>;
   let Documentation = [SwiftCallDocs];
 }
 
 def SwiftContext : ParameterABIAttr {
-  let Spellings = [GCC<"swift_context">];
+  let Spellings = [GNU<"swift_context">];
   let Documentation = [SwiftContextDocs];
 }
 
 def SwiftErrorResult : ParameterABIAttr {
-  let Spellings = [GCC<"swift_error_result">];
+  let Spellings = [GNU<"swift_error_result">];
   let Documentation = [SwiftErrorResultDocs];
 }
 
 def SwiftIndirectResult : ParameterABIAttr {
-  let Spellings = [GCC<"swift_indirect_result">];
+  let Spellings = [GNU<"swift_indirect_result">];
   let Documentation = [SwiftIndirectResultDocs];
 }
 
