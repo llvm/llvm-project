@@ -64,31 +64,31 @@ private:
   bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
-  ComplexRendererFn selectArithImmed(MachineOperand &Root) const;
+  ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
-  ComplexRendererFn selectAddrModeUnscaled(MachineOperand &Root,
-                                           unsigned Size) const;
+  ComplexRendererFns selectAddrModeUnscaled(MachineOperand &Root,
+                                            unsigned Size) const;
 
-  ComplexRendererFn selectAddrModeUnscaled8(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeUnscaled8(MachineOperand &Root) const {
     return selectAddrModeUnscaled(Root, 1);
   }
-  ComplexRendererFn selectAddrModeUnscaled16(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeUnscaled16(MachineOperand &Root) const {
     return selectAddrModeUnscaled(Root, 2);
   }
-  ComplexRendererFn selectAddrModeUnscaled32(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeUnscaled32(MachineOperand &Root) const {
     return selectAddrModeUnscaled(Root, 4);
   }
-  ComplexRendererFn selectAddrModeUnscaled64(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeUnscaled64(MachineOperand &Root) const {
     return selectAddrModeUnscaled(Root, 8);
   }
-  ComplexRendererFn selectAddrModeUnscaled128(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeUnscaled128(MachineOperand &Root) const {
     return selectAddrModeUnscaled(Root, 16);
   }
 
-  ComplexRendererFn selectAddrModeIndexed(MachineOperand &Root,
-                                          unsigned Size) const;
+  ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root,
+                                           unsigned Size) const;
   template <int Width>
-  ComplexRendererFn selectAddrModeIndexed(MachineOperand &Root) const {
+  ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root) const {
     return selectAddrModeIndexed(Root, Width / 8);
   }
 
@@ -1373,7 +1373,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 /// SelectArithImmed - Select an immediate value that can be represented as
 /// a 12-bit value shifted left by either 0 or 12.  If so, return true with
 /// Val set to the 12-bit value and Shift set to the shifter operand.
-InstructionSelector::ComplexRendererFn
+InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   MachineInstr &MI = *Root.getParent();
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1423,7 +1423,7 @@ AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
 /// immediate addressing mode.  The "Size" argument is the size in bytes of the
 /// memory reference, which is needed here to know what is valid for a scaled
 /// immediate.
-InstructionSelector::ComplexRendererFn
+InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
                                                    unsigned Size) const {
   MachineRegisterInfo &MRI =
@@ -1467,7 +1467,7 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
 /// Select a "register plus scaled unsigned 12-bit immediate" address.  The
 /// "Size" argument is the size in bytes of the memory reference, which
 /// determines the scale.
-InstructionSelector::ComplexRendererFn
+InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
                                                   unsigned Size) const {
   MachineRegisterInfo &MRI =
