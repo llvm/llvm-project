@@ -5089,6 +5089,11 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
     fieldType = arrayType->getElementType();
   }
 
+  if (isa<IncompleteArrayType>(fieldType)) {
+    numElts = 0;
+    fieldType = fieldType->getAsArrayTypeUnsafe()->getElementType();
+  }
+
   assert(!fieldType->isArrayType() && "ivar of non-constant array type?");
 
   // If we ended up with a zero-sized array, we've done what we can do within
