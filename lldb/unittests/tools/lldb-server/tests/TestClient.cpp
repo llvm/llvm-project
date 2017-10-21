@@ -101,6 +101,14 @@ bool TestClient::StopDebugger() {
 }
 
 bool TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
+  StringList env;
+  Host::GetEnvironment(env);
+  for (size_t i = 0; i < env.GetSize(); ++i) {
+    if (SendEnvironmentPacket(env[i].c_str()) != 0) {
+      GTEST_LOG_(ERROR) << "failed to set environment variable `" << env[i] << "`";
+      return false;
+    }
+  }
   std::stringstream command;
   command << "A";
   for (size_t i = 0; i < inferior_args.size(); i++) {

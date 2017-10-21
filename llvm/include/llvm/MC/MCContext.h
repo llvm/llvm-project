@@ -441,25 +441,25 @@ namespace llvm {
     getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
                               unsigned UniqueID = GenericSectionID);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type) {
-      return getWasmSection(Section, Type, nullptr);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
+      return getWasmSection(Section, K, nullptr);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const char *BeginSymName) {
-      return getWasmSection(Section, Type, "", ~0, BeginSymName);
+      return getWasmSection(Section, K, "", ~0, BeginSymName);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const Twine &Group, unsigned UniqueID) {
-      return getWasmSection(Section, Type, Group, UniqueID, nullptr);
+      return getWasmSection(Section, K, Group, UniqueID, nullptr);
     }
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const Twine &Group, unsigned UniqueID,
                                   const char *BeginSymName);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const MCSymbolWasm *Group, unsigned UniqueID,
                                   const char *BeginSymName);
 

@@ -274,9 +274,9 @@ static void sortInputSections(
 
 // Compute and remember which sections the InputSectionDescription matches.
 std::vector<InputSection *>
-LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
+LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
+                                   const DenseMap<SectionBase *, int> &Order) {
   std::vector<InputSection *> Ret;
-  DenseMap<SectionBase *, int> Order = buildSectionOrder();
 
   // Collects all sections that satisfy constraints of Cmd.
   for (const SectionPattern &Pat : Cmd->SectionPatterns) {
@@ -326,20 +326,20 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
   }
 }
 
-std::vector<InputSection *>
-LinkerScript::createInputSectionList(OutputSection &OutCmd) {
+std::vector<InputSection *> LinkerScript::createInputSectionList(
+    OutputSection &OutCmd, const DenseMap<SectionBase *, int> &Order) {
   std::vector<InputSection *> Ret;
 
   for (BaseCommand *Base : OutCmd.SectionCommands) {
     if (auto *Cmd = dyn_cast<InputSectionDescription>(Base)) {
-      Cmd->Sections = computeInputSections(Cmd);
+      Cmd->Sections = computeInputSections(Cmd, Order);
       Ret.insert(Ret.end(), Cmd->Sections.begin(), Cmd->Sections.end());
     }
   }
   return Ret;
 }
 
-void LinkerScript::processSectionCommands(OutputSectionFactory &Factory) {
+void LinkerScript::processSectionCommands() {
   // A symbol can be assigned before any section is mentioned in the linker
   // script. In an DSO, the symbol values are addresses, so the only important
   // section values are:
@@ -359,6 +359,7 @@ void LinkerScript::processSectionCommands(OutputSectionFactory &Factory) {
   Ctx = make_unique<AddressState>();
   Ctx->OutSec = Aether;
 
+  DenseMap<SectionBase *, int> Order = buildSectionOrder();
   // Add input sections to output sections.
   for (size_t I = 0; I < SectionCommands.size(); ++I) {
     // Handle symbol assignments outside of any output section.
@@ -368,7 +369,7 @@ void LinkerScript::processSectionCommands(OutputSectionFactory &Factory) {
     }
 
     if (auto *Sec = dyn_cast<OutputSection>(SectionCommands[I])) {
-      std::vector<InputSection *> V = createInputSectionList(*Sec);
+      std::vector<InputSection *> V = createInputSectionList(*Sec, Order);
 
       // The output section name `/DISCARD/' is special.
       // Any input section assigned to it is discarded.

@@ -1,4 +1,4 @@
-//===-- IndirectCallPromotion.cpp - Optimizations based on value profiling ===//
+//===- IndirectCallPromotion.cpp - Optimizations based on value profiling -===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -14,15 +14,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -36,20 +36,22 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/PassSupport.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
 #include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -112,6 +114,7 @@ static cl::opt<bool>
                  cl::desc("Dump IR after transformation happens"));
 
 namespace {
+
 class PGOIndirectCallPromotionLegacyPass : public ModulePass {
 public:
   static char ID;
@@ -139,9 +142,11 @@ private:
   // the promoted direct call.
   bool SamplePGO;
 };
+
 } // end anonymous namespace
 
 char PGOIndirectCallPromotionLegacyPass::ID = 0;
+
 INITIALIZE_PASS_BEGIN(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
                       "Use PGO instrumentation profile to promote indirect "
                       "calls to direct calls.",
@@ -158,6 +163,7 @@ ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO,
 }
 
 namespace {
+
 // The class for main data structure to promote indirect calls to conditional
 // direct calls.
 class ICallPromotionFunc {
@@ -177,6 +183,7 @@ private:
   struct PromotionCandidate {
     Function *TargetFunction;
     uint64_t Count;
+
     PromotionCandidate(Function *F, uint64_t C) : TargetFunction(F), Count(C) {}
   };
 
@@ -195,17 +202,16 @@ private:
                         const std::vector<PromotionCandidate> &Candidates,
                         uint64_t &TotalCount);
 
-  // Noncopyable
-  ICallPromotionFunc(const ICallPromotionFunc &other) = delete;
-  ICallPromotionFunc &operator=(const ICallPromotionFunc &other) = delete;
-
 public:
   ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab,
                      bool SamplePGO, OptimizationRemarkEmitter &ORE)
       : F(Func), M(Modu), Symtab(Symtab), SamplePGO(SamplePGO), ORE(ORE) {}
+  ICallPromotionFunc(const ICallPromotionFunc &) = delete;
+  ICallPromotionFunc &operator=(const ICallPromotionFunc &) = delete;
 
   bool processFunction(ProfileSummaryInfo *PSI);
 };
+
 } // end anonymous namespace
 
 bool llvm::isLegalToPromote(Instruction *Inst, Function *F,
@@ -313,6 +319,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     const char *Reason = nullptr;
     if (!isLegalToPromote(Inst, TargetFunction, &Reason)) {
       using namespace ore;
+
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", Inst)
                << "Cannot promote indirect call to "
@@ -613,6 +620,7 @@ Instruction *llvm::promoteIndirectCall(Instruction *Inst,
   DEBUG(dbgs() << *BB << *DirectCallBB << *IndirectCallBB << *MergeBB << "\n");
 
   using namespace ore;
+
   if (ORE)
     ORE->emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "Promoted", Inst)
@@ -700,7 +708,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
           AM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
       ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     } else {
-      OwnedORE = make_unique<OptimizationRemarkEmitter>(&F);
+      OwnedORE = llvm::make_unique<OptimizationRemarkEmitter>(&F);
       ORE = OwnedORE.get();
     }
 

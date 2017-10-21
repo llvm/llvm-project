@@ -27,12 +27,10 @@ class MCSymbol;
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {
 private:
+
   /// This is the name of the section.  The referenced memory is owned by
   /// TargetLoweringObjectFileWasm's WasmUniqueMap.
   StringRef SectionName;
-
-  /// This is the type of the section, from the enums in BinaryFormat/Wasm.h
-  unsigned Type;
 
   unsigned UniqueID;
 
@@ -48,12 +46,10 @@ private:
   uint64_t MemoryOffset;
 
   friend class MCContext;
-  MCSectionWasm(StringRef Section, unsigned type, SectionKind K,
-                const MCSymbolWasm *group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, K, Begin), SectionName(Section), Type(type),
-        UniqueID(UniqueID), Group(group), SectionOffset(0) {
-    assert(type == wasm::WASM_SEC_CODE || type == wasm::WASM_SEC_DATA);
-  }
+  MCSectionWasm(StringRef Section, SectionKind K, const MCSymbolWasm *group,
+                unsigned UniqueID, MCSymbol *Begin)
+      : MCSection(SV_Wasm, K, Begin), SectionName(Section), UniqueID(UniqueID),
+        Group(group), SectionOffset(0) {}
 
   void setSectionName(StringRef Name) { SectionName = Name; }
 
@@ -65,7 +61,6 @@ public:
   bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
 
   StringRef getSectionName() const { return SectionName; }
-  unsigned getType() const { return Type; }
   const MCSymbolWasm *getGroup() const { return Group; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -73,6 +68,10 @@ public:
                             const MCExpr *Subsection) const override;
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;
+
+  bool isWasmData() const {
+    return Kind.isGlobalWriteableData() || Kind.isReadOnly();
+  }
 
   bool isUnique() const { return UniqueID != ~0U; }
   unsigned getUniqueID() const { return UniqueID; }

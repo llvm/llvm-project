@@ -205,9 +205,12 @@ class LinkerScript final {
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
   std::vector<InputSection *>
-  computeInputSections(const InputSectionDescription *);
+  computeInputSections(const InputSectionDescription *,
+                       const llvm::DenseMap<SectionBase *, int> &Order);
 
-  std::vector<InputSection *> createInputSectionList(OutputSection &Cmd);
+  std::vector<InputSection *>
+  createInputSectionList(OutputSection &Cmd,
+                         const llvm::DenseMap<SectionBase *, int> &Order);
 
   std::vector<size_t> getPhdrIndices(OutputSection *Sec);
 
@@ -246,7 +249,7 @@ public:
   bool shouldKeep(InputSectionBase *S);
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
-  void processSectionCommands(OutputSectionFactory &Factory);
+  void processSectionCommands();
 
   // SECTIONS command list.
   std::vector<BaseCommand *> SectionCommands;
