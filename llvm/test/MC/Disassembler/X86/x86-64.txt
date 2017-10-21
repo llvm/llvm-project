@@ -431,24 +431,16 @@
 # CHECK: vaddps	287453952(%rip), %zmm20, %zmm15
 0x62 0x71 0x5c 0x40 0x58 0x3d 0x00 0x33 0x22 0x11
 
-# Known bugs: these use a SIB byte. The index register is incorrectly
-# printed as an xmm register. Indeed there are "gather" load instructions
-# taking a vector of indices, but ONLY those instructions can do that.
-# The CHECK lines test the current incorrect output; FIXME is desired.
-# CHECK: vaddps (%r10,%xmm9), %zmm20, %zmm15
-# FIXME: vaddps (%r10,%r9), %zmm20, %zmm15
+# CHECK: vaddps (%r10,%r9), %zmm20, %zmm15
 0x62 0x11 0x5c 0x40 0x58 0x3c 0x0a
 
-# CHECK: vaddps (%rdx,%xmm9), %zmm20, %zmm15
-# FIXME: vaddps (%rdx,%r9), %zmm20, %zmm15
+# CHECK: vaddps (%rdx,%r9), %zmm20, %zmm15
 0x62 0x31 0x5c 0x40 0x58 0x3c 0x0a
 
-# CHECK: vaddps (%r10,%xmm1), %zmm20, %zmm15
-# FIXME: vaddps (%r10,%rcx), %zmm20, %zmm15
+# CHECK: vaddps (%r10,%rcx), %zmm20, %zmm15
 0x62 0x51 0x5c 0x40 0x58 0x3c 0x0a
 
-# CHECK: vaddps (%rdx,%xmm1), %zmm20, %zmm15
-# FIXME: vaddps (%rdx,%rcx), %zmm20, %zmm15
+# CHECK: vaddps (%rdx,%rcx), %zmm20, %zmm15
 0x62 0x71 0x5c 0x40 0x58 0x3c 0x0a
 
 # CHECK: callq 32767

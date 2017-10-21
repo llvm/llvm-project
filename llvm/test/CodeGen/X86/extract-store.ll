@@ -285,23 +285,23 @@ define void @extract_i32_3(i32* nocapture %dst, <4 x i32> %foo) nounwind {
 ; SSE41-X32-LABEL: extract_i32_3:
 ; SSE41-X32:       # BB#0:
 ; SSE41-X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE41-X32-NEXT:    pextrd $3, %xmm0, (%eax)
+; SSE41-X32-NEXT:    extractps $3, %xmm0, (%eax)
 ; SSE41-X32-NEXT:    retl
 ;
 ; SSE41-X64-LABEL: extract_i32_3:
 ; SSE41-X64:       # BB#0:
-; SSE41-X64-NEXT:    pextrd $3, %xmm0, (%rdi)
+; SSE41-X64-NEXT:    extractps $3, %xmm0, (%rdi)
 ; SSE41-X64-NEXT:    retq
 ;
 ; AVX-X32-LABEL: extract_i32_3:
 ; AVX-X32:       # BB#0:
 ; AVX-X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-X32-NEXT:    vpextrd $3, %xmm0, (%eax)
+; AVX-X32-NEXT:    vextractps $3, %xmm0, (%eax)
 ; AVX-X32-NEXT:    retl
 ;
 ; AVX-X64-LABEL: extract_i32_3:
 ; AVX-X64:       # BB#0:
-; AVX-X64-NEXT:    vpextrd $3, %xmm0, (%rdi)
+; AVX-X64-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; AVX-X64-NEXT:    retq
 ;
 ; SSE-F128-LABEL: extract_i32_3:

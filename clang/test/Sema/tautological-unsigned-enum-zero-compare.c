@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DALL_WARN -verify %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGN_WARN -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -Wno-tautological-unsigned-enum-zero-compare -verify %s
 
 // Okay, this is where it gets complicated.
@@ -7,62 +7,254 @@
 // On windows, it is signed by default. We do not want to warn in that case.
 
 int main() {
-  enum A { A_foo, A_bar };
+  enum A { A_a = 0 };
   enum A a;
+  enum B { B_a = -1 };
+  enum B b;
 
-#ifdef ALL_WARN
+#ifdef UNSIGNED
   if (a < 0) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
     return 0;
-  if (a >= 0) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+  if (0 >= a)
+    return 0;
+  if (a > 0)
     return 0;
   if (0 <= a) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
     return 0;
+  if (a <= 0)
+    return 0;
   if (0 > a) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
     return 0;
+  if (a >= 0) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+    return 0;
+  if (0 < a)
+    return 0;
+
   if (a < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
     return 0;
-  if (a >= 0U) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+  if (0U >= a)
+    return 0;
+  if (a > 0U)
     return 0;
   if (0U <= a) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
     return 0;
+  if (a <= 0U)
+    return 0;
   if (0U > a) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
-    return 0;
-#elif defined(SIGN_WARN)
-  if (a < 0) // ok
-    return 0;
-  if (a >= 0) // ok
-    return 0;
-  if (0 <= a) // ok
-    return 0;
-  if (0 > a) // ok
-    return 0;
-  if (a < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
     return 0;
   if (a >= 0U) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
     return 0;
-  if (0U <= a) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
+  if (0U < a)
     return 0;
-  if (0U > a) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
+
+  if (b < 0)
     return 0;
-#else
-  // expected-no-diagnostics
+  if (0 >= b)
+    return 0;
+  if (b > 0)
+    return 0;
+  if (0 <= b)
+    return 0;
+  if (b <= 0)
+    return 0;
+  if (0 > b)
+    return 0;
+  if (b >= 0)
+    return 0;
+  if (0 < b)
+    return 0;
+
+  if (b < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
+    return 0;
+  if (0U >= b)
+    return 0;
+  if (b > 0U)
+    return 0;
+  if (0U <= b) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
+    return 0;
+  if (b <= 0U)
+    return 0;
+  if (0U > b) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
+    return 0;
+  if (b >= 0U) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+    return 0;
+  if (0U < b)
+    return 0;
+#elif defined(SIGNED)
   if (a < 0)
     return 0;
-  if (a >= 0)
+  if (0 >= a)
+    return 0;
+  if (a > 0)
     return 0;
   if (0 <= a)
     return 0;
+  if (a <= 0)
+    return 0;
   if (0 > a)
     return 0;
+  if (a >= 0)
+    return 0;
+  if (0 < a)
+    return 0;
+
+  if (a < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
+    return 0;
+  if (0U >= a)
+    return 0;
+  if (a > 0U)
+    return 0;
+  if (0U <= a) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
+    return 0;
+  if (a <= 0U)
+    return 0;
+  if (0U > a) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
+    return 0;
+  if (a >= 0U) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+    return 0;
+  if (0U < a)
+    return 0;
+
+  if (b < 0)
+    return 0;
+  if (0 >= b)
+    return 0;
+  if (b > 0)
+    return 0;
+  if (0 <= b)
+    return 0;
+  if (b <= 0)
+    return 0;
+  if (0 > b)
+    return 0;
+  if (b >= 0)
+    return 0;
+  if (0 < b)
+    return 0;
+
+  if (b < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
+    return 0;
+  if (0U >= b)
+    return 0;
+  if (b > 0U)
+    return 0;
+  if (0U <= b) // expected-warning {{comparison of 0 <= unsigned enum expression is always true}}
+    return 0;
+  if (b <= 0U)
+    return 0;
+  if (0U > b) // expected-warning {{comparison of 0 > unsigned enum expression is always false}}
+    return 0;
+  if (b >= 0U) // expected-warning {{comparison of unsigned enum expression >= 0 is always true}}
+    return 0;
+  if (0U < b)
+    return 0;
+#else
+  // expected-no-diagnostics
+
+  if (a < 0)
+    return 0;
+  if (0 >= a)
+    return 0;
+  if (a > 0)
+    return 0;
+  if (0 <= a)
+    return 0;
+  if (a <= 0)
+    return 0;
+  if (0 > a)
+    return 0;
+  if (a >= 0)
+    return 0;
+  if (0 < a)
+    return 0;
+
   if (a < 0U)
     return 0;
-  if (a >= 0U)
+  if (0U >= a)
+    return 0;
+  if (a > 0U)
     return 0;
   if (0U <= a)
     return 0;
+  if (a <= 0U)
+    return 0;
   if (0U > a)
     return 0;
+  if (a >= 0U)
+    return 0;
+  if (0U < a)
+    return 0;
+
+  if (b < 0)
+    return 0;
+  if (0 >= b)
+    return 0;
+  if (b > 0)
+    return 0;
+  if (0 <= b)
+    return 0;
+  if (b <= 0)
+    return 0;
+  if (0 > b)
+    return 0;
+  if (b >= 0)
+    return 0;
+  if (0 < b)
+    return 0;
+
+  if (b < 0U)
+    return 0;
+  if (0U >= b)
+    return 0;
+  if (b > 0U)
+    return 0;
+  if (0U <= b)
+    return 0;
+  if (b <= 0U)
+    return 0;
+  if (0U > b)
+    return 0;
+  if (b >= 0U)
+    return 0;
+  if (0U < b)
+    return 0;
 #endif
+
+  if (a == 0)
+    return 0;
+  if (0 != a)
+    return 0;
+  if (a != 0)
+    return 0;
+  if (0 == a)
+    return 0;
+
+  if (a == 0U)
+    return 0;
+  if (0U != a)
+    return 0;
+  if (a != 0U)
+    return 0;
+  if (0U == a)
+    return 0;
+
+  if (b == 0)
+    return 0;
+  if (0 != b)
+    return 0;
+  if (b != 0)
+    return 0;
+  if (0 == b)
+    return 0;
+
+  if (b == 0U)
+    return 0;
+  if (0U != b)
+    return 0;
+  if (b != 0U)
+    return 0;
+  if (0U == b)
+    return 0;
 
   return 1;
 }

@@ -1,7 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  AllTargetsAsmParsers
-  AllTargetsDescs
-  AllTargetsInfos
   Support
   )
 
