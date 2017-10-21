@@ -142,6 +142,7 @@ annotated with ``noescape`` do not actuallly escape.
 For example:
 
 .. code-block:: c
+
   int *gp;
 
   void nonescapingFunc(__attribute__((noescape)) int *p) {
@@ -155,6 +156,8 @@ For example:
 Additionally, when the parameter is a `block pointer
 <https://clang.llvm.org/docs/BlockLanguageSpec.html>`, the same restriction
 applies to copies of the block. For example:
+
+.. code-block:: c
 
   typedef void (^BlockTy)();
   BlockTy g0, g1;
