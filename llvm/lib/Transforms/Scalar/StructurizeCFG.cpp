@@ -1,4 +1,4 @@
-//===-- StructurizeCFG.cpp ------------------------------------------------===//
+//===- StructurizeCFG.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,49 +7,72 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPass.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include <algorithm>
+#include <cassert>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "structurizecfg"
 
+// The name for newly created blocks.
+static const char *const FlowBlockName = "Flow";
+
 namespace {
 
 // Definition of the complex types used in this pass.
 
-typedef std::pair<BasicBlock *, Value *> BBValuePair;
+using BBValuePair = std::pair<BasicBlock *, Value *>;
 
-typedef SmallVector<RegionNode*, 8> RNVector;
-typedef SmallVector<BasicBlock*, 8> BBVector;
-typedef SmallVector<BranchInst*, 8> BranchVector;
-typedef SmallVector<BBValuePair, 2> BBValueVector;
+using RNVector = SmallVector<RegionNode *, 8>;
+using BBVector = SmallVector<BasicBlock *, 8>;
+using BranchVector = SmallVector<BranchInst *, 8>;
+using BBValueVector = SmallVector<BBValuePair, 2>;
 
-typedef SmallPtrSet<BasicBlock *, 8> BBSet;
+using BBSet = SmallPtrSet<BasicBlock *, 8>;
 
-typedef MapVector<PHINode *, BBValueVector> PhiMap;
-typedef MapVector<BasicBlock *, BBVector> BB2BBVecMap;
+using PhiMap = MapVector<PHINode *, BBValueVector>;
+using BB2BBVecMap = MapVector<BasicBlock *, BBVector>;
 
-typedef DenseMap<BasicBlock *, PhiMap> BBPhiMap;
-typedef DenseMap<BasicBlock *, Value *> BBPredicates;
-typedef DenseMap<BasicBlock *, BBPredicates> PredMap;
-typedef DenseMap<BasicBlock *, BasicBlock*> BB2BBMap;
-
-// The name for newly created blocks.
-static const char *const FlowBlockName = "Flow";
+using BBPhiMap = DenseMap<BasicBlock *, PhiMap>;
+using BBPredicates = DenseMap<BasicBlock *, Value *>;
+using PredMap = DenseMap<BasicBlock *, BBPredicates>;
+using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
 
 /// Finds the nearest common dominator of a set of BasicBlocks.
 ///
@@ -736,7 +759,6 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
       changeExit(PrevNode, Node->getEntry(), true);
     }
     PrevNode = Node;
-
   } else {
     // Insert extra prefix node (or reuse last one)
     BasicBlock *Flow = needPrefix(false);

@@ -317,6 +317,15 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   resld = __builtin_floorl(LD);
   // CHECK: call x86_fp80 @llvm.floor.f80
 
+  resf = __builtin_sqrtf(F);
+  // CHECK: call float @sqrtf(
+
+  resd = __builtin_sqrt(D);
+  // CHECK: call double @sqrt(
+
+  resld = __builtin_sqrtl(LD);
+  // CHECK: call x86_fp80 @sqrtl(
+
   resf = __builtin_truncf(F);
   // CHECK: call float @llvm.trunc.f32
 

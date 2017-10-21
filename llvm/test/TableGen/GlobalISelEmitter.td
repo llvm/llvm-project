@@ -53,7 +53,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 // CHECK-NEXT:    mutable MatcherState State;
-// CHECK-NEXT:    typedef ComplexRendererFn(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
+// CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> MatcherInfo;
 // CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL

@@ -157,7 +157,7 @@ void MCWasmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
 
 void MCWasmStreamer::EmitIdent(StringRef IdentString) {
   MCSection *Comment = getAssembler().getContext().getWasmSection(
-      ".comment", wasm::WASM_SEC_DATA);
+      ".comment", SectionKind::getMetadata());
   PushSection();
   SwitchSection(Comment);
   if (!SeenIdent) {

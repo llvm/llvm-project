@@ -219,8 +219,8 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(
   // section. This will later be decoded and turned into contents for the
   // Globals Section.
   Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext()
-                                 .getWasmSection(".global_variables", 0, 0));
+  Streamer.SwitchSection(Streamer.getContext().getWasmSection(
+      ".global_variables", SectionKind::getMetadata()));
   for (const wasm::Global &G : Globals) {
     Streamer.EmitIntValue(int32_t(G.Type), 1);
     Streamer.EmitIntValue(G.Mutable, 1);
@@ -240,8 +240,8 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(
 
 void WebAssemblyTargetWasmStreamer::emitStackPointer(uint32_t Index) {
   Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext()
-                                 .getWasmSection(".stack_pointer", 0, 0));
+  Streamer.SwitchSection(Streamer.getContext().getWasmSection(
+      ".stack_pointer", SectionKind::getMetadata()));
   Streamer.EmitIntValue(Index, 4);
   Streamer.PopSection();
 }
