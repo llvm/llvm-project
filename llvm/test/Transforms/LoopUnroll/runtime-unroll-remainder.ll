@@ -47,7 +47,7 @@ for.cond.cleanup:
 ; CHECK: or i64 [[INDVAR0]], 1
 ; CHECK: or i64 [[INDVAR0]], 2
 ; CHECK: or i64 [[INDVAR0]], 3
-; CHECK: add nsw i64 [[INDVAR0]], 4
+; CHECK: add nuw nsw i64 [[INDVAR0]], 4
 ; CHECK: [[SUB:%[a-z.0-9]+]] = add i64 [[ITER]], -4
 ; CHECK: [[ITER_CMP:%[a-z.0-9]+]] = icmp eq i64 [[SUB]], 0
 ; CHECK: br i1 [[ITER_CMP]], label %[[LOOP_EXIT:.*]], label %for.body

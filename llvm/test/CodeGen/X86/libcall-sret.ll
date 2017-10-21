@@ -22,7 +22,7 @@ define void @test_sret_libcall(i128 %l, i128 %r) {
 ; CHECK: pushl 72(%esp)
 ; CHECK: pushl [[SRET_ADDR]]
 
-; CHECK: calll __multi3
+; CHECK: calll __udivti3
 
 ; CHECK: addl $44, %esp
 ; CHECK-DAG: movl 8(%esp), [[RES0:%[a-z]+]]
@@ -33,7 +33,7 @@ define void @test_sret_libcall(i128 %l, i128 %r) {
 ; CHECK-DAG: movl [[RES1]], var+4
 ; CHECK-DAG: movl [[RES2]], var+8
 ; CHECK-DAG: movl [[RES3]], var+12
-  %prod = mul i128 %l, %r
-  store i128 %prod, i128* @var
+  %quot = udiv i128 %l, %r
+  store i128 %quot, i128* @var
   ret void
 }

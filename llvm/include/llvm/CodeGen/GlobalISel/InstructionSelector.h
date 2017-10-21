@@ -276,13 +276,13 @@ public:
   virtual bool select(MachineInstr &I) const = 0;
 
 protected:
-  using ComplexRendererFn =
+  using ComplexRendererFns =
       Optional<SmallVector<std::function<void(MachineInstrBuilder &)>, 4>>;
   using RecordedMIVector = SmallVector<MachineInstr *, 4>;
   using NewMIVector = SmallVector<MachineInstrBuilder, 4>;
 
   struct MatcherState {
-    std::vector<ComplexRendererFn::value_type> Renderers;
+    std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
 
     MatcherState(unsigned MaxRenderers);

@@ -1499,7 +1499,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       if (StoreJ) {
         // Two stores are only allowed on V4+. Load following store is never
         // allowed.
-        if (LoadI) {
+        if (LoadI && alias(J, I)) {
           FoundSequentialDependence = true;
           break;
         }

@@ -1967,6 +1967,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, VT, Custom);
   }
 
+  // Extending loads from (native) vectors of i8 into (native) vectors of i16
+  // are legal.
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::SEXTLOAD, MVT::v2i16, MVT::v2i8, Legal);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+  setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+  setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+
   // Types natively supported:
   for (MVT NativeVT : {MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v32i1, MVT::v64i1,
                        MVT::v4i8, MVT::v8i8, MVT::v2i16, MVT::v4i16, MVT::v1i32,
@@ -2970,46 +2979,47 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
     case 'r':   // R0-R31
       switch (VT.SimpleTy) {
       default:
-        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
+        return {0u, nullptr};
       case MVT::i1:
       case MVT::i8:
       case MVT::i16:
       case MVT::i32:
       case MVT::f32:
-        return std::make_pair(0U, &Hexagon::IntRegsRegClass);
+        return {0u, &Hexagon::IntRegsRegClass};
       case MVT::i64:
       case MVT::f64:
-        return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
+        return {0u, &Hexagon::DoubleRegsRegClass};
       }
       break;
     case 'a': // M0-M1
-      return std::make_pair(0U, &Hexagon::ModRegsRegClass);
+      if (VT != MVT::i32)
+        return {0u, nullptr};
+      return {0u, &Hexagon::ModRegsRegClass};
     case 'q': // q0-q3
       switch (VT.getSizeInBits()) {
       default:
-        llvm_unreachable("getRegForInlineAsmConstraint Unhandled vector size");
+        return {0u, nullptr};
       case 512:
-        return std::make_pair(0U, &Hexagon::HvxQRRegClass);
       case 1024:
-        return std::make_pair(0U, &Hexagon::HvxQRRegClass);
+        return {0u, &Hexagon::HvxQRRegClass};
       }
       break;
     case 'v': // V0-V31
       switch (VT.getSizeInBits()) {
       default:
-        llvm_unreachable("getRegForInlineAsmConstraint Unhandled vector size");
+        return {0u, nullptr};
       case 512:
-        return std::make_pair(0U, &Hexagon::HvxVRRegClass);
+        return {0u, &Hexagon::HvxVRRegClass};
       case 1024:
         if (Subtarget.hasV60TOps() && Subtarget.useHVX128BOps())
-          return std::make_pair(0U, &Hexagon::HvxVRRegClass);
-        return std::make_pair(0U, &Hexagon::HvxWRRegClass);
+          return {0u, &Hexagon::HvxVRRegClass};
+        return {0u, &Hexagon::HvxWRRegClass};
       case 2048:
-        return std::make_pair(0U, &Hexagon::HvxWRRegClass);
+        return {0u, &Hexagon::HvxWRRegClass};
       }
       break;
     default:
-      llvm_unreachable("Unknown asm register class");
+      return {0u, nullptr};
     }
   }
 
