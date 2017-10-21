@@ -163,7 +163,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Create output sections.
   if (Script->HasSectionsCommand) {
     // If linker script contains SECTIONS commands, let it create sections.
-    Script->processSectionCommands(Factory);
+    Script->processSectionCommands();
 
     // Linker scripts may have left some input sections unassigned.
     // Assign such sections using the default rule.
@@ -173,7 +173,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // output sections by default rules. We still need to give the
     // linker script a chance to run, because it might contain
     // non-SECTIONS commands such as ASSERT.
-    Script->processSectionCommands(Factory);
+    Script->processSectionCommands();
     createSections();
   }
 

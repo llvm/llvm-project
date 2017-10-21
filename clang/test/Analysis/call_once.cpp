@@ -249,3 +249,44 @@ void g();
 void test_no_segfault_on_different_impl() {
   std::call_once(g, false); // no-warning
 }
+
+void test_lambda_refcapture() {
+  static std::once_flag flag;
+  int a = 6;
+  std::call_once(flag, [&](int &a) { a = 42; }, a);
+  clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+}
+
+void test_lambda_refcapture2() {
+  static std::once_flag flag;
+  int a = 6;
+  std::call_once(flag, [=](int &a) { a = 42; }, a);
+  clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+}
+
+void test_lambda_fail_refcapture() {
+  static std::once_flag flag;
+  int a = 6;
+  std::call_once(flag, [=](int a) { a = 42; }, a);
+  clang_analyzer_eval(a == 42); // expected-warning{{FALSE}}
+}
+
+void mutator(int &param) {
+  param = 42;
+}
+void test_reftypes_funcptr() {
+  static std::once_flag flag;
+  int a = 6;
+  std::call_once(flag, &mutator, a);
+  clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+}
+
+void fail_mutator(int param) {
+  param = 42;
+}
+void test_mutator_noref() {
+  static std::once_flag flag;
+  int a = 6;
+  std::call_once(flag, &fail_mutator, a);
+  clang_analyzer_eval(a == 42); // expected-warning{{FALSE}}
+}

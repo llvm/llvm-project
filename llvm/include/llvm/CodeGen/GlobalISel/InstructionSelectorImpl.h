@@ -297,7 +297,7 @@ bool InstructionSelector::executeMatchTable(
                    << "), ComplexPredicateID=" << ComplexPredicateID << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       // FIXME: Use std::invoke() when it's available.
-      ComplexRendererFn Renderer =
+      ComplexRendererFns Renderer =
           (ISel.*MatcherInfo.ComplexPredicates[ComplexPredicateID])(
               State.MIs[InsnID]->getOperand(OpIdx));
       if (Renderer.hasValue())

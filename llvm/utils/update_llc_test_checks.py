@@ -79,6 +79,7 @@ SCRUB_X86_SHUFFLES_RE = (
 SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
 SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
 SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
+SCRUB_X86_RET_RE = re.compile(r'ret[l|q]')
 
 RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
@@ -101,6 +102,8 @@ def scrub_asm_x86(asm):
   asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
   # Generically match a LCP symbol.
   asm = SCRUB_X86_LCP_RE.sub(r'{{\.LCPI.*}}', asm)
+  # Avoid generating different checks for 32- and 64-bit because of 'retl' vs 'retq'.
+  asm = SCRUB_X86_RET_RE.sub(r'ret{{[l|q]}}', asm)
   # Strip kill operands inserted into the asm.
   asm = SCRUB_KILL_COMMENT_RE.sub('', asm)
   # Strip trailing whitespace.
