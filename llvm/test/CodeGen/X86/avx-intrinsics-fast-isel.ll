@@ -792,14 +792,14 @@ define i32 @test_mm256_extract_epi32(<4 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_extract_epi32:
 ; X32:       # BB#0:
 ; X32-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X32-NEXT:    vpextrd $1, %xmm0, %eax
+; X32-NEXT:    vextractps $1, %xmm0, %eax
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_extract_epi32:
 ; X64:       # BB#0:
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-NEXT:    vpextrd $1, %xmm0, %eax
+; X64-NEXT:    vextractps $1, %xmm0, %eax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
@@ -811,8 +811,8 @@ define i64 @test_mm256_extract_epi64(<4 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_extract_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X32-NEXT:    vpextrd $2, %xmm0, %eax
-; X32-NEXT:    vpextrd $3, %xmm0, %edx
+; X32-NEXT:    vextractps $2, %xmm0, %eax
+; X32-NEXT:    vextractps $3, %xmm0, %edx
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
