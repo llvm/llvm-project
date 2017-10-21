@@ -310,7 +310,14 @@ namespace {
 class ARMPassConfig : public TargetPassConfig {
 public:
   ARMPassConfig(ARMBaseTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    if (TM.getOptLevel() != CodeGenOpt::None) {
+      ARMGenSubtargetInfo STI(TM.getTargetTriple(), TM.getTargetCPU(),
+                              TM.getTargetFeatureString());
+      if (STI.hasFeature(ARM::FeatureUseMISched))
+        substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+    }
+  }
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();

@@ -1,0 +1,63 @@
+# RUN: llc -march=hexagon -run-pass hwloops %s -o - | FileCheck %s
+
+# Normally, if the registers holding the induction variable's bounds
+# are redefined inside of the loop's body, the loop cannot be converted
+# to a hardware loop. However, if the redefining instruction is actually
+# loading an immediate value into the register, this conversion is both
+# possible and legal (since the immediate itself will be used in the
+# loop setup in the preheader).
+
+# CHECK:  [[R0:%[0-9]+]] = A2_tfrsi 1920
+# CHECK:  J2_loop0r %bb.1.b1, [[R0]]
+#
+# CHECK: bb.1.b1 (address-taken):
+# CHECK:   ENDLOOP0 %bb.1.b1
+
+
+--- |
+  define void @fred() {
+  b0:
+    br label %b1
+  b1:
+    br label %b2
+  b2:
+    ret void
+  }
+...
+
+---
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: intregs }
+  - { id: 5, class: intregs }
+  - { id: 6, class: intregs }
+  - { id: 7, class: intregs }
+  - { id: 8, class: predregs }
+body: |
+  bb.0.b0:
+    liveins: %r0
+    successors: %bb.1
+    %0 = A2_tfrsi 0
+    %1 = A2_tfrsi 0
+    %2 = COPY %r0
+
+  bb.1.b1:
+    successors: %bb.1, %bb.2
+    %3 = PHI %0, %bb.0, %6, %bb.1
+    %4 = PHI %1, %bb.0, %5, %bb.1
+    S4_storerh_rr %2, %4, 0, %3
+    %5 = A2_addi %4, 2
+    %6 = A2_addi %3, 1
+    ; This definition of %7 should not prevent conversion to hardware loop.
+    %7 = A2_tfrsi 3840
+    %8 = C2_cmpeq %5, %7
+    J2_jumpf %8, %bb.1, implicit-def %pc
+    J2_jump %bb.2, implicit-def %pc
+
+  bb.2.b2:
+...

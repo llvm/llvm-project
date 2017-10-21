@@ -6,886 +6,1523 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-LABEL: test_512:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $656, %esp # imm = 0x290
-; X32-NEXT:    movl 8(%ebp), %eax
-; X32-NEXT:    movl 48(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 52(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 56(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 60(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 40(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 44(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 32(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 36(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 4(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 16(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 20(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 8(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 12(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 24(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 28(%eax), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 12(%ebp), %eax
-; X32-NEXT:    movl 48(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 52(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 56(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 60(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 32(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 36(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 40(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 44(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 4(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 8(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 12(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl 16(%eax), %esi
-; X32-NEXT:    movl 20(%eax), %edi
-; X32-NEXT:    movl 24(%eax), %ebx
-; X32-NEXT:    movl 28(%eax), %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
+; X32-NEXT:    subl $244, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl 20(%ecx), %edi
 ; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl 16(%ecx), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, %ebp
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    addl %esi, %edi
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl (%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ecx, %ebx
+; X32-NEXT:    movl %ecx, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb %cl
+; X32-NEXT:    addl %eax, %ebx
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl 24(%ebp), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    mull %edx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    adcl %edx, %edi
+; X32-NEXT:    addl %ebx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ecx, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%ecx), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl 4(%ecx), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl %ebp, %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %ecx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movzbl %bl, %ebx
+; X32-NEXT:    adcl %edx, %ebx
+; X32-NEXT:    movl 8(%esi), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    mull %edx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %esi
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    adcl %edx, %eax
+; X32-NEXT:    addl %ecx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %ebp, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %ebp, %ebp
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    adcl %edi, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl %esi, %eax
-; X32-NEXT:    adcl %edx, %ecx
-; X32-NEXT:    setb %dl
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movzbl %dl, %edx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl 16(%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl %ecx, %edi
+; X32-NEXT:    movl %ecx, %ebp
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    adcl %edx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 4(%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %edi, %edi
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    addl %ebx, %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl %ebp, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %ecx
+; X32-NEXT:    movl %ebx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb %bl
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movzbl %bl, %ebx
+; X32-NEXT:    adcl %edx, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 8(%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %edi
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    adcl %edx, %esi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %edi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %esi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl 20(%esi), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    addl %ebp, %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %ecx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movzbl %bl, %ebx
+; X32-NEXT:    adcl %edx, %ebx
+; X32-NEXT:    movl 24(%esi), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    mull %edx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %esi
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    adcl %edx, %edi
+; X32-NEXT:    addl %ecx, %esi
+; X32-NEXT:    adcl %ebx, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    adcl %ebp, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %esi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %edi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    addl %edx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    addl %edx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl (%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 28(%eax), %esi
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %ebp, %ebx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %ebp
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movzbl %bl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %edi, %ebp
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %ecx, %ebx
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    addl (%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %ecx, %ebp
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 12(%eax), %ecx
+; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull (%esp) # 4-byte Folded Reload
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ebp
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    addl %ebx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %edi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, %ebp
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
 ; X32-NEXT:    adcl $0, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    addl %edx, %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %edx, %ebx
-; X32-NEXT:    movl %ebx, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %esi, %ebx
-; X32-NEXT:    movl %ebx, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl (%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi # 1-byte Folded Reload
+; X32-NEXT:    adcl %esi, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
 ; X32-NEXT:    addl %eax, %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    adcl %edx, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; X32-NEXT:    addl %ebp, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl %ecx, %esi
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edi
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
 ; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    addl %eax, %edx
-; X32-NEXT:    adcl %ecx, %esi
-; X32-NEXT:    setb %al
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    addl %eax, %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
-; X32-NEXT:    adcl %eax, %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %eax, (%esp) # 4-byte Folded Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 12(%eax), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %esi, %ebp
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %esi
+; X32-NEXT:    setb %cl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl %ebx, %eax
-; X32-NEXT:    addl %edx, %edi
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    adcl %esi, %edx
-; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edx, %esi
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    addl %eax, %edx
-; X32-NEXT:    adcl %ecx, %esi
-; X32-NEXT:    setb %al
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    addl %eax, %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl %ecx, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl %edi, %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %edi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    addl %edx, %ebx
-; X32-NEXT:    adcl %esi, %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ebx, %edi
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %ecx, %ebp
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %ecx, %ebx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    addl %ebx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl (%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl %edi, %esi
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movzbl %bl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ebx
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    addl %ebp, {{[0-9]+}}(%esp) # 4-byte Folded Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
 ; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
 ; X32-NEXT:    adcl $0, %ebx
-; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    adcl $0, %eax
 ; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    adcl $0, %edx
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl (%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi # 1-byte Folded Reload
+; X32-NEXT:    adcl %esi, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ebp
+; X32-NEXT:    adcl %edx, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; X32-NEXT:    addl %ebx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl %ecx, %esi
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %ebp
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl %esi, %ecx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %esi
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ecx
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
 ; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    setb (%esp) # 1-byte Folded Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    addl %eax, %esi
-; X32-NEXT:    adcl %ecx, %edx
-; X32-NEXT:    setb %al
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movzbl %al, %ebx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 28(%eax), %ebp
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ebx
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %ebp
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    addl %edi, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, %ebp
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %edx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movzbl %bl, %esi
+; X32-NEXT:    adcl %esi, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
-; X32-NEXT:    adcl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
-; X32-NEXT:    adcl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    addl %esi, %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    adcl %edx, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    adcl %edx, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
-; X32-NEXT:    adcl %ebx, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    movzbl (%esp), %eax # 1-byte Folded Reload
-; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl $0, %edi
-; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl $0, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    addl %eax, %edx
+; X32-NEXT:    addl %ebp, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
 ; X32-NEXT:    adcl %ecx, %esi
-; X32-NEXT:    setb %al
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edi
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, %edx
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %ecx
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %ecx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl %bl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %esi, %ebx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl %ebp, %edi
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %ecx, %ebx
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl %esi, %ecx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %ebp
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    addl %ebx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ecx, %edi
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %edi, %ebp
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %esi
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %ebp
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl 32(%ecx), %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl (%esp), %ebp # 4-byte Reload
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %esi, %ebx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 36(%eax), %esi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %esi
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %esi, %ebp
+; X32-NEXT:    movzbl %bl, %eax
+; X32-NEXT:    adcl %eax, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    mull %edx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl %edx, %esi
+; X32-NEXT:    addl %ebp, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ecx, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %ebx, %esi
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %edi, %ebp
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl %ebx, %esi
+; X32-NEXT:    mull %edi
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl 40(%eax), %ebp
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl 44(%ebx), %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %edi
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    addl %edi, %esi
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %ecx
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    mull %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %edx, %eax
+; X32-NEXT:    addl %esi, %edi
+; X32-NEXT:    adcl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    adcl $0, %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl (%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl %bl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %esi
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    imull %eax, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl %ebp, %edx
+; X32-NEXT:    imull {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    movl %esi, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    imull %ebx, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    imull %eax, %esi
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebp, %esi
+; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %ebp, %ebx
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl %bl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %edi, %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl 60(%edx), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    imull %eax, %ecx
+; X32-NEXT:    movl 56(%edx), %esi
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    movl 48(%edi), %ebx
+; X32-NEXT:    movl 52(%edi), %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    imull %ebp, %edi
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    addl %edi, %edx
+; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X32-NEXT:    imull %ebx, %ecx
+; X32-NEXT:    addl %edx, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %esi, %edi
+; X32-NEXT:    adcl $0, %ebp
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    addl %edi, %ebx
+; X32-NEXT:    adcl %ebp, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl (%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl %esi, %ecx
+; X32-NEXT:    movl 40(%ecx), %ebx
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl 44(%ecx), %ecx
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ebp, %edi
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %ebx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl %ebx, %edi
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %esi, %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl 32(%esi), %edi
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl 36(%esi), %esi
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %ebx
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl %ebx, %edi
+; X32-NEXT:    setb %bl
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    addl %edi, %esi
+; X32-NEXT:    movzbl %bl, %eax
+; X32-NEXT:    adcl %eax, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    adcl %edx, %eax
+; X32-NEXT:    addl %esi, %ecx
+; X32-NEXT:    adcl %ebp, %eax
+; X32-NEXT:    addl (%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl $0, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %ecx, %ebp
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    adcl %esi, %edi
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %ecx, %ebx
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %esi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %eax, (%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %esi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl $0, %esi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    adcl %esi, %ecx
+; X32-NEXT:    setb {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx # 1-byte Folded Reload
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    adcl %edx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    addl %eax, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # 1-byte Folded Reload
+; X32-NEXT:    adcl %eax, %edi
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl 48(%ecx), %ebp
+; X32-NEXT:    imull %ebp, %ebx
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    addl %ebx, %edx
+; X32-NEXT:    movl 52(%ecx), %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    imull %eax, %edi
 ; X32-NEXT:    addl %edx, %edi
 ; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl %esi, %ebx
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    movl 56(%ecx), %eax
+; X32-NEXT:    movl %ecx, %ebx
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    imull %esi, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl (%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    addl %edi, %edx
+; X32-NEXT:    movl 60(%ebx), %ebx
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    imull %eax, %ebx
+; X32-NEXT:    addl %edx, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl %ecx, {{[0-9]+}}(%esp) # 4-byte Folded Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ecx
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
 ; X32-NEXT:    adcl $0, %ecx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    adcl $0, %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl $0, %esi
-; X32-NEXT:    addl %eax, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    addl %edi, %eax
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
 ; X32-NEXT:    adcl %ecx, %esi
-; X32-NEXT:    setb %al
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl $0, %eax
+; X32-NEXT:    adcl %ebx, %edx
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    imull %ebp, %edi
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    addl %edi, %edx
+; X32-NEXT:    imull {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    addl %edx, %ecx
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    imull %ebx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    mull %edi
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    imull %edi, %ecx
+; X32-NEXT:    addl %edx, %ecx
+; X32-NEXT:    addl %esi, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl {{[0-9]+}}(%esp) # 4-byte Folded Reload
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %edi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    addl %esi, %ecx
+; X32-NEXT:    adcl $0, %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %ecx, %ebp
+; X32-NEXT:    adcl %edi, %esi
+; X32-NEXT:    setb %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
+; X32-NEXT:    mull %ebx
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    adcl %ecx, %ebx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebp # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    addl %edi, %ebx
-; X32-NEXT:    adcl %esi, %ecx
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, (%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 4(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 8(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 12(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 16(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 20(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 24(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 28(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 32(%ecx)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi # 4-byte Reload
+; X32-NEXT:    movl %edi, 36(%ecx)
 ; X32-NEXT:    movl (%esp), %edi # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
-; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ebx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edi # 4-byte Folded Reload
-; X32-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %esi # 4-byte Folded Reload
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %ecx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx # 4-byte Folded Reload
-; X32-NEXT:    adcl {{[0-9]+}}(%esp), %eax # 4-byte Folded Reload
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl 16(%ebp), %esi
-; X32-NEXT:    movl %edi, 4(%esi)
-; X32-NEXT:    movl 16(%ebp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, (%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 8(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 12(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 16(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 20(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 24(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 28(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 32(%edi)
-; X32-NEXT:    movl %ebx, 36(%edi)
-; X32-NEXT:    movl (%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 40(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 44(%edi)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; X32-NEXT:    movl %esi, 48(%edi)
-; X32-NEXT:    movl %ecx, 52(%edi)
-; X32-NEXT:    movl %edx, 56(%edi)
-; X32-NEXT:    movl %eax, 60(%edi)
-; X32-NEXT:    leal -12(%ebp), %esp
+; X32-NEXT:    movl %edi, 40(%ecx)
+; X32-NEXT:    movl %esi, 44(%ecx)
+; X32-NEXT:    movl %edx, 48(%ecx)
+; X32-NEXT:    movl %ebp, 52(%ecx)
+; X32-NEXT:    movl %eax, 56(%ecx)
+; X32-NEXT:    movl %ebx, 60(%ecx)
+; X32-NEXT:    addl $244, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

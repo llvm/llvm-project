@@ -31,7 +31,7 @@ public:
                 std::unique_ptr<BumpPtrAllocator> Allocator);
   ~NativeSession() override;
 
-  static Error createFromPdb(StringRef Path,
+  static Error createFromPdb(std::unique_ptr<MemoryBuffer> MB,
                              std::unique_ptr<IPDBSession> &Session);
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);

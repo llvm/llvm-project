@@ -1590,10 +1590,14 @@ bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
     case Hexagon::A4_cmpbgtui:
     case Hexagon::A4_cmpheqi:
     case Hexagon::A4_cmphgti:
-    case Hexagon::A4_cmphgtui:
+    case Hexagon::A4_cmphgtui: {
       SrcReg2 = 0;
+      const MachineOperand &Op2 = MI.getOperand(2);
+      if (!Op2.isImm())
+        return false;
       Value = MI.getOperand(2).getImm();
       return true;
+    }
   }
 
   return false;
