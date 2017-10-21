@@ -1298,7 +1298,7 @@ inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
 bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
                                              uint32_t LogAlign) {
   auto IsAligned = [LogAlign] (uint64_t V) -> bool {
-    return alignTo(V, 1u << LogAlign) == V;
+    return alignTo(V, (uint64_t)1 << LogAlign) == V;
   };
 
   switch (N.getOpcode()) {
@@ -1342,7 +1342,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
 bool HexagonDAGToDAGISel::SelectGlobalAddress(SDValue &N, SDValue &R,
                                               bool UseGP, uint32_t LogAlign) {
   auto IsAligned = [LogAlign] (uint64_t V) -> bool {
-    return alignTo(V, 1u << LogAlign) == V;
+    return alignTo(V, (uint64_t)1 << LogAlign) == V;
   };
 
   switch (N.getOpcode()) {

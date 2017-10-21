@@ -94,6 +94,9 @@ if sys.version_info[0] == 3:
                 return cls(param)
             if isinstance(param, bytes):
                 return cls(param)
+            if param is None:
+                # Support passing null to C functions expecting char arrays
+                return None
             raise TypeError("Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__))
 
         @staticmethod
@@ -211,25 +214,45 @@ class _CXString(Structure):
         assert isinstance(res, _CXString)
         return conf.lib.clang_getCString(res)
 
+class Location(object):
+    """A Location is a specific kind of source location.  A SourceLocation
+    refers to several kinds of locations (e.g.  spelling location vs. expansion
+    location)."""
+
+    def __init__(self, file, line, column, offset):
+        self._file   = File(file) if file else None
+        self._line   = int(line.value)
+        self._column = int(column.value)
+        self._offset = int(offset.value)
+
+
+    @property
+    def file(self):
+        """Get the file represented by this source location."""
+        return self._file
+
+    @property
+    def line(self):
+        """Get the line represented by this source location."""
+        return self._line
+
+    @property
+    def column(self):
+        """Get the column represented by this source location."""
+        return self._column
+
+    @property
+    def offset(self):
+        """Get the file offset represented by this source location."""
+        return self._offset
 
 class SourceLocation(Structure):
     """
     A SourceLocation represents a particular location within a source file.
     """
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _data = None
-
-    def _get_instantiation(self):
-        if self._data is None:
-            f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
-            conf.lib.clang_getInstantiationLocation(self, byref(f), byref(l),
-                    byref(c), byref(o))
-            if f:
-                f = File(f)
-            else:
-                f = None
-            self._data = (f, int(l.value), int(c.value), int(o.value))
-        return self._data
+    _expansion = None
+    _spelling = None
 
     @staticmethod
     def from_position(tu, file, line, column):
@@ -250,24 +273,72 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)
 
     @property
+    def expansion(self):
+        """
+        The source location where then entity this object is referring to is
+        expanded.
+        """
+        if not self._expansion:
+            file   = c_object_p()
+            line   = c_uint()
+            column = c_uint()
+            offset = c_uint()
+            conf.lib.clang_getExpansionLocation(self,
+                                                byref(file),
+                                                byref(line),
+                                                byref(column),
+                                                byref(offset))
+
+            self._expansion = Location(file, line, column, offset)
+        return self._expansion
+
+    @property
+    def spelling(self):
+        """
+        The source location where then entity this object is referring to is
+        written.
+        """
+        if not self._spelling:
+            file   = c_object_p()
+            line   = c_uint()
+            column = c_uint()
+            offset = c_uint()
+            conf.lib.clang_getSpellingLocation(self,
+                                               byref(file),
+                                               byref(line),
+                                               byref(column),
+                                               byref(offset))
+
+            self._spelling = Location(file, line, column, offset)
+        return self._spelling
+
+    @property
     def file(self):
-        """Get the file represented by this source location."""
-        return self._get_instantiation()[0]
+        """Get the file represented by this source location.
+
+        DEPRECATED: use expansion.file."""
+        return self.expansion.file
 
     @property
     def line(self):
-        """Get the line represented by this source location."""
-        return self._get_instantiation()[1]
+        """Get the line represented by this source location.
+
+        DEPRECATED: use expansion.line."""
+        return self.expansion.line
 
     @property
     def column(self):
-        """Get the column represented by this source location."""
-        return self._get_instantiation()[2]
+        """Get the column represented by this source location.
+
+        DEPRECATED: use expansion.column."""
+        return self.expansion.column
 
     @property
     def offset(self):
-        """Get the file offset represented by this source location."""
-        return self._get_instantiation()[3]
+        """Get the file offset represented by this source location.
+
+        DEPRECATED: use expansion.offset."""
+        return self.expansion.offset
 
     def __eq__(self, other):
         return conf.lib.clang_equalLocations(self, other)
@@ -1540,8 +1611,7 @@ class Cursor(Structure):
     @property
     def location(self):
         """
-        Return the source location (the starting character) of the entity
-        pointed at by the cursor.
+        Return the source locations of the entity pointed at by the cursor.
         """
         if not hasattr(self, '_loc'):
             self._loc = conf.lib.clang_getCursorLocation(self)
@@ -3689,7 +3759,11 @@ functionList = [
   ("clang_getInclusions",
    [TranslationUnit, callbacks['translation_unit_includes'], py_object]),
 
-  ("clang_getInstantiationLocation",
+  ("clang_getExpansionLocation",
+   [SourceLocation, POINTER(c_object_p), POINTER(c_uint), POINTER(c_uint),
+    POINTER(c_uint)]),
+
+  ("clang_getSpellingLocation",
    [SourceLocation, POINTER(c_object_p), POINTER(c_uint), POINTER(c_uint),
     POINTER(c_uint)]),
 
@@ -4151,6 +4225,7 @@ __all__ = [
     'FixIt',
     'Index',
     'LinkageKind',
+    'Location',
     'SourceLocation',
     'SourceRange',
     'TLSKind',

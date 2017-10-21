@@ -108,6 +108,7 @@ define float @ext_1(<4 x float> %v) nounwind {
   %t = fadd float %s, 1.0
   ret float %t
 }
+
 define float @ext_2(<4 x float> %v) nounwind {
 ; X32-LABEL: ext_2:
 ; X32:       ## BB#0:
@@ -125,15 +126,16 @@ define float @ext_2(<4 x float> %v) nounwind {
   %s = extractelement <4 x float> %v, i32 3
   ret float %s
 }
+
 define i32 @ext_3(<4 x i32> %v) nounwind {
 ; X32-LABEL: ext_3:
 ; X32:       ## BB#0:
-; X32-NEXT:    pextrd $3, %xmm0, %eax
+; X32-NEXT:    extractps $3, %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ext_3:
 ; X64:       ## BB#0:
-; X64-NEXT:    pextrd $3, %xmm0, %eax
+; X64-NEXT:    extractps $3, %xmm0, %eax
 ; X64-NEXT:    retq
   %i = extractelement <4 x i32> %v, i32 3
   ret i32 %i
@@ -260,7 +262,6 @@ define i32 @ptestz_3(<2 x i64> %t1, <2 x i64> %t2) nounwind {
   %tmp1 = call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %t1, <2 x i64> %t2) nounwind readnone
   ret i32 %tmp1
 }
-
 
 declare i32 @llvm.x86.sse41.ptestz(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestc(<2 x i64>, <2 x i64>) nounwind readnone

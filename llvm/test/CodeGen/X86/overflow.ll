@@ -6,39 +6,60 @@ define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X32-LABEL: mulhioverflow:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
+; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movl 8(%ebp), %esi
-; X32-NEXT:    movl 28(%ebp), %edi
-; X32-NEXT:    movl %esp, %eax
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl 24(%ebp)
-; X32-NEXT:    pushl 20(%ebp)
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl $0
-; X32-NEXT:    pushl 16(%ebp)
-; X32-NEXT:    pushl 12(%ebp)
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    calll __multi3
-; X32-NEXT:    addl $32, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    mull %ebp
+; X32-NEXT:    movl %edx, %ebp
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    addl %ebx, %esi
+; X32-NEXT:    adcl $0, %ebp
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    addl %esi, %eax
+; X32-NEXT:    adcl %ebp, %ebx
+; X32-NEXT:    setb %al
+; X32-NEXT:    movzbl %al, %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    andl $1, %edi
-; X32-NEXT:    addl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    adcl $0, %eax
+; X32-NEXT:    mull %edi
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %ebp
+; X32-NEXT:    addl %ebx, %ebp
+; X32-NEXT:    adcl %ecx, %esi
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    movl %edx, %edi
+; X32-NEXT:    movl %eax, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    mull %ecx
+; X32-NEXT:    addl %ebx, %eax
+; X32-NEXT:    adcl %edi, %edx
+; X32-NEXT:    addl %ebp, %eax
+; X32-NEXT:    adcl %esi, %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andl $1, %ecx
+; X32-NEXT:    addl %eax, %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    adcl $0, %edx
+; X32-NEXT:    movl %edx, 4(%eax)
 ; X32-NEXT:    setb %cl
 ; X32-NEXT:    movzbl %cl, %ecx
-; X32-NEXT:    movl %edi, (%esi)
-; X32-NEXT:    movl %eax, 4(%esi)
-; X32-NEXT:    movl %ecx, 8(%esi)
-; X32-NEXT:    movl $0, 12(%esi)
-; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    leal -8(%ebp), %esp
+; X32-NEXT:    movl %ecx, 8(%eax)
+; X32-NEXT:    movl $0, 12(%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
+; X32-NEXT:    popl %ebx
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl $4
 ;

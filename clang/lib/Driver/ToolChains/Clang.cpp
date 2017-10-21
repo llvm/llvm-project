@@ -4010,6 +4010,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcoroutines-ts");
   }
 
+  Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
+                  options::OPT_fno_double_square_bracket_attributes);
+
   bool HaveModules = false;
   RenderModulesOptions(C, D, Args, Input, Output, CmdArgs, HaveModules);
 

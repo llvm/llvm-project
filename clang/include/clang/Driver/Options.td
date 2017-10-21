@@ -613,8 +613,8 @@ def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Gr
 def fdouble_square_bracket_attributes : Flag<[ "-" ], "fdouble-square-bracket-attributes">,
   Group<f_Group>, Flags<[DriverOption, CC1Option]>,
   HelpText<"Enable '[[]]' attributes in all C and C++ language modes">;
-def fno_double_square_bracket_attributes : Flag<[ "-" ], "fno-fdouble-square-bracket-attributes">,
-  Group<f_Group>, Flags<[DriverOption]>,
+def fno_double_square_bracket_attributes : Flag<[ "-" ], "fno-double-square-bracket-attributes">,
+  Group<f_Group>, Flags<[DriverOption, CC1Option]>,
   HelpText<"Disable '[[]]' attributes in all C and C++ language modes">;
 
 def fautolink : Flag <["-"], "fautolink">, Group<f_Group>;

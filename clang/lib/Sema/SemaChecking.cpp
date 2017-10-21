@@ -8181,8 +8181,12 @@ struct IntRange {
     if (const AtomicType *AT = dyn_cast<AtomicType>(T))
       T = AT->getValueType().getTypePtr();
 
-    // For enum types, use the known bit width of the enumerators.
-    if (const EnumType *ET = dyn_cast<EnumType>(T)) {
+    if (!C.getLangOpts().CPlusPlus) {
+      // For enum types in C code, use the underlying datatype.
+      if (const EnumType *ET = dyn_cast<EnumType>(T))
+        T = ET->getDecl()->getIntegerType().getDesugaredType(C).getTypePtr();
+    } else if (const EnumType *ET = dyn_cast<EnumType>(T)) {
+      // For enum types in C++, use the known bit width of the enumerators.
       EnumDecl *Enum = ET->getDecl();
       // In C++11, enums without definitions can have an explicitly specified
       // underlying type.  Use this type to compute the range.
@@ -8584,8 +8588,10 @@ bool isNonBooleanUnsignedValue(Expr *E) {
 }
 
 enum class LimitType {
-  Max, // e.g. 32767 for short
-  Min  // e.g. -32768 for short
+  Max = 1U << 0U,  // e.g. 32767 for short
+  Min = 1U << 1U,  // e.g. -32768 for short
+  Both = Max | Min // When the value is both the Min and the Max limit at the
+                   // same time; e.g. in C++, A::a in enum A { a = 0 };
 };
 
 /// Checks whether Expr 'Constant' may be the
@@ -8608,6 +8614,10 @@ llvm::Optional<LimitType> IsTypeLimit(Sema &S, Expr *Constant, Expr *Other,
 
   IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
 
+  // Special-case for C++ for enum with one enumerator with value of 0.
+  if (OtherRange.Width == 0)
+    return Value == 0 ? LimitType::Both : llvm::Optional<LimitType>();
+
   if (llvm::APSInt::isSameValue(
           llvm::APSInt::getMaxValue(OtherRange.Width,
                                     OtherT->isUnsignedIntegerType()),
@@ -8620,7 +8630,7 @@ llvm::Optional<LimitType> IsTypeLimit(Sema &S, Expr *Constant, Expr *Other,
           Value))
     return LimitType::Min;
 
-  return llvm::Optional<LimitType>();
+  return llvm::None;
 }
 
 bool HasEnumType(Expr *E) {
@@ -8655,9 +8665,12 @@ bool CheckTautologicalComparison(Sema &S, BinaryOperator *E, Expr *Constant,
 
   bool ConstIsLowerBound = (Op == BO_LT || Op == BO_LE) ^ RhsConstant;
   bool ResultWhenConstEqualsOther = (Op == BO_LE || Op == BO_GE);
-  bool ResultWhenConstNeOther =
-      ConstIsLowerBound ^ (ValueType == LimitType::Max);
-  if (ResultWhenConstEqualsOther != ResultWhenConstNeOther)
+  if (ValueType != LimitType::Both) {
+    bool ResultWhenConstNeOther =
+        ConstIsLowerBound ^ (ValueType == LimitType::Max);
+    if (ResultWhenConstEqualsOther != ResultWhenConstNeOther)
+      return false; // The comparison is not tautological.
+  } else if (ResultWhenConstEqualsOther == ConstIsLowerBound)
     return false; // The comparison is not tautological.
 
   const bool Result = ResultWhenConstEqualsOther;

@@ -410,6 +410,9 @@ enum OperandEncoding {
   ENUM_ENTRY(TYPE_AVX512ICC,  "1-byte immediate operand for AVX512 icmp")      \
   ENUM_ENTRY(TYPE_UIMM8,      "1-byte unsigned immediate operand")             \
   ENUM_ENTRY(TYPE_M,          "Memory operand")                                \
+  ENUM_ENTRY(TYPE_MVSIBX,     "Memory operand using XMM index")                \
+  ENUM_ENTRY(TYPE_MVSIBY,     "Memory operand using YMM index")                \
+  ENUM_ENTRY(TYPE_MVSIBZ,     "Memory operand using ZMM index")                \
   ENUM_ENTRY(TYPE_SRCIDX,     "memory at source index")                        \
   ENUM_ENTRY(TYPE_DSTIDX,     "memory at destination index")                   \
   ENUM_ENTRY(TYPE_MOFFS,      "memory offset (relative to segment base)")      \

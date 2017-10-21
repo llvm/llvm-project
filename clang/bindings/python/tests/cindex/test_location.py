@@ -93,3 +93,10 @@ def test_extent():
     location3 = SourceLocation.from_position(tu, file, 1, 6)
     range3 = SourceRange.from_locations(location1, location3)
     assert range1 != range3
+
+def test_spelling_location():
+    tu = get_tu('''#define ONE int one
+ONE;''')
+    one = get_cursor(tu, 'one')
+    assert one.location.spelling.line == 1
+    assert one.location.expansion.line == 2
