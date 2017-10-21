@@ -46,6 +46,10 @@ std::string lld::toString(const InputSectionBase *Sec) {
 }
 
 DenseMap<SectionBase *, int> elf::buildSectionOrder() {
+  DenseMap<SectionBase *, int> SectionOrder;
+  if (Config->SymbolOrderingFile.empty())
+    return SectionOrder;
+
   // Build a map from symbols to their priorities. Symbols that didn't
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
@@ -55,7 +59,6 @@ DenseMap<SectionBase *, int> elf::buildSectionOrder() {
     SymbolOrder.insert({S, Priority++});
 
   // Build a map from sections to their priorities.
-  DenseMap<SectionBase *, int> SectionOrder;
   for (InputFile *File : ObjectFiles) {
     for (SymbolBody *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular>(Body);
