@@ -208,6 +208,13 @@ public:
 
   // Add a DAG mutation to be done before the packetization begins.
   void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation);
+
+  bool alias(const MachineInstr &MI1, const MachineInstr &MI2,
+             bool UseTBAA = true) const;
+
+private:
+  bool alias(const MachineMemOperand &Op1, const MachineMemOperand &Op2,
+             bool UseTBAA = true) const;
 };
 
 } // end namespace llvm

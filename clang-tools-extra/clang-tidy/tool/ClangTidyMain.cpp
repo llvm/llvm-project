@@ -18,6 +18,7 @@
 #include "../ClangTidy.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::driver;
@@ -402,6 +403,10 @@ static int clangTidyMain(int argc, const char **argv) {
   }
 
   ProfileData Profile;
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   ClangTidyContext Context(std::move(OwningOptionsProvider));
   runClangTidy(Context, OptionsParser.getCompilations(), PathList,

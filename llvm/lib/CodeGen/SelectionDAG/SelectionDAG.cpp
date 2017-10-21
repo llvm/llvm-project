@@ -2089,6 +2089,14 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   unsigned BitWidth = Op.getScalarValueSizeInBits();
 
   Known = KnownBits(BitWidth);   // Don't know anything.
+
+  if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+    // We know all of the bits for a constant!
+    Known.One = C->getAPIntValue();
+    Known.Zero = ~Known.One;
+    return;
+  }
+
   if (Depth == 6)
     return;  // Limit search depth.
 
@@ -2100,11 +2108,6 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-  case ISD::Constant:
-    // We know all of the bits for a constant!
-    Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
-    Known.Zero = ~Known.One;
-    break;
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every demanded vector element.
     assert(NumElts == Op.getValueType().getVectorNumElements() &&
@@ -2963,6 +2966,11 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   unsigned Tmp, Tmp2;
   unsigned FirstAnswer = 1;
 
+  if (isa<ConstantSDNode>(Op)) {
+    const APInt &Val = cast<ConstantSDNode>(Op)->getAPIntValue();
+    return Val.getNumSignBits();
+  }
+
   if (Depth == 6)
     return 1;  // Limit search depth.
 
@@ -2977,11 +2985,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertZext:
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
     return VTBits-Tmp;
-
-  case ISD::Constant: {
-    const APInt &Val = cast<ConstantSDNode>(Op)->getAPIntValue();
-    return Val.getNumSignBits();
-  }
 
   case ISD::BUILD_VECTOR:
     Tmp = VTBits;

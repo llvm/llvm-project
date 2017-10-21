@@ -23,6 +23,9 @@ namespace Array {
   A<const char*, &(&x)[1]> h; // expected-error {{refers to subobject '&x + 1'}}
   A<const char*, 0> i; // expected-error {{not allowed in a converted constant}}
   A<const char*, nullptr> j;
+
+  extern char aub[];
+  A<char[], aub> k;
 }
 
 namespace Function {
