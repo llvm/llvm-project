@@ -75,7 +75,8 @@ static inline const char* stringForOperandEncoding(OperandEncoding encoding) {
 /// @return       - True if child is a subset of parent, false otherwise.
 static inline bool inheritsFrom(InstructionContext child,
                                 InstructionContext parent,
-                                bool VEX_LIG = false, bool AdSize64 = false) {
+                                bool VEX_LIG = false, bool VEX_WIG = false,
+                                bool AdSize64 = false) {
   if (child == parent)
     return true;
 
@@ -133,20 +134,20 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_REXW_ADSIZE:
     return false;
   case IC_VEX:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W)) ||
-           inheritsFrom(child, IC_VEX_W) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L));
   case IC_VEX_XS:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_XS)) ||
-           inheritsFrom(child, IC_VEX_W_XS) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XS)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_XS)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_XS));
   case IC_VEX_XD:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_XD)) ||
-           inheritsFrom(child, IC_VEX_W_XD) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XD)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_XD)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_XD));
   case IC_VEX_OPSIZE:
-    return (VEX_LIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE)) ||
-           inheritsFrom(child, IC_VEX_W_OPSIZE) ||
+    return (VEX_LIG && VEX_WIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE)) ||
+           (VEX_WIG && inheritsFrom(child, IC_VEX_W_OPSIZE)) ||
            (VEX_LIG && inheritsFrom(child, IC_VEX_L_OPSIZE));
   case IC_VEX_W:
     return VEX_LIG && inheritsFrom(child, IC_VEX_L_W);
@@ -157,13 +158,13 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_VEX_W_OPSIZE:
     return VEX_LIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE);
   case IC_VEX_L:
-    return inheritsFrom(child, IC_VEX_L_W);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W);
   case IC_VEX_L_XS:
-    return inheritsFrom(child, IC_VEX_L_W_XS);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XS);
   case IC_VEX_L_XD:
-    return inheritsFrom(child, IC_VEX_L_W_XD);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_XD);
   case IC_VEX_L_OPSIZE:
-    return inheritsFrom(child, IC_VEX_L_W_OPSIZE);
+    return VEX_WIG && inheritsFrom(child, IC_VEX_L_W_OPSIZE);
   case IC_VEX_L_W:
   case IC_VEX_L_W_XS:
   case IC_VEX_L_W_XD:
@@ -909,6 +910,7 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
                                         InstrUID            uid,
                                         bool                is32bit,
                                         bool                ignoresVEX_L,
+                                        bool                ignoresVEX_W,
                                         unsigned            addressSize) {
   ContextDecision &decision = *Tables[type];
 
@@ -920,7 +922,7 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
     bool adSize64 = addressSize == 64;
     if (inheritsFrom((InstructionContext)index,
                      InstructionSpecifiers[uid].insnContext, ignoresVEX_L,
-                     adSize64))
+                     ignoresVEX_W, adSize64))
       setTableFields(decision.opcodeDecisions[index].modRMDecisions[opcode],
                      filter,
                      uid,

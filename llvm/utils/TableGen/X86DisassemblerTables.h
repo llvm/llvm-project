@@ -253,6 +253,7 @@ public:
                       InstrUID uid,
                       bool is32bit,
                       bool ignoresVEX_L,
+                      bool ignoresVEX_W,
                       unsigned AddrSize);
 
   /// specForUID - Returns the instruction specifier for a given unique
