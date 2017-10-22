@@ -51,6 +51,10 @@ bool TargetSubtargetInfo::enableRALocalReassignment(
   return true;
 }
 
+bool TargetSubtargetInfo::enableAdvancedRASplitCost() const {
+  return false;
+}
+
 bool TargetSubtargetInfo::enablePostRAScheduler() const {
   return getSchedModel().PostRAScheduler;
 }

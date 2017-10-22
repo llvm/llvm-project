@@ -133,8 +133,21 @@ static bool isRematerializable(const LiveInterval &LI,
   return true;
 }
 
-void
-VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
+void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
+  float weight = weightCalcHelper(li);
+  // Check if unspillable.
+  if (weight < 0)
+    return;
+  li.weight = weight;
+}
+
+float VirtRegAuxInfo::futureWeight(LiveInterval &li, SlotIndex start,
+                                   SlotIndex end) {
+  return weightCalcHelper(li, &start, &end);
+}
+
+float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
+                                       SlotIndex *end) {
   MachineRegisterInfo &mri = MF.getRegInfo();
   const TargetRegisterInfo &tri = *MF.getSubtarget().getRegisterInfo();
   MachineBasicBlock *mbb = nullptr;
@@ -154,10 +167,38 @@ VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
   // Don't recompute spill weight for an unspillable register.
   bool Spillable = li.isSpillable();
 
+  bool localSplitArtifact = start && end;
+
+  // Do not update future local split artifacts.
+  bool updateLI = !localSplitArtifact;
+
+  if (localSplitArtifact) {
+    MachineBasicBlock *localMBB = LIS.getMBBFromIndex(*end);
+    assert(localMBB == LIS.getMBBFromIndex(*start) &&
+           "start and end are expected to be in the same basic block");
+
+    // Local split artifact will have 2 additional copy instructions and they
+    // will be in the same BB.
+    // localLI = COPY other
+    // ...
+    // other   = COPY localLI
+    totalWeight += LiveIntervals::getSpillWeight(true, false, &MBFI, localMBB);
+    totalWeight += LiveIntervals::getSpillWeight(false, true, &MBFI, localMBB);
+
+    numInstr += 2;
+  }
+
   for (MachineRegisterInfo::reg_instr_iterator
        I = mri.reg_instr_begin(li.reg), E = mri.reg_instr_end();
        I != E; ) {
     MachineInstr *mi = &*(I++);
+
+    // For local split artifacts, we are interested only in instructions between
+    // the expected start and end of the range.
+    SlotIndex si = LIS.getInstructionIndex(*mi);
+    if (localSplitArtifact && ((si < *start) || (si > *end)))
+      continue;
+
     numInstr++;
     if (mi->isIdentityCopy() || mi->isImplicitDef() || mi->isDebugValue())
       continue;
@@ -212,23 +253,25 @@ VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
   Hint.clear();
 
   // Always prefer the physreg hint.
-  if (unsigned hint = hintPhys ? hintPhys : hintVirt) {
-    mri.setRegAllocationHint(li.reg, 0, hint);
-    // Weakly boost the spill weight of hinted registers.
-    totalWeight *= 1.01F;
+  if (updateLI) {
+    if (unsigned hint = hintPhys ? hintPhys : hintVirt) {
+      mri.setRegAllocationHint(li.reg, 0, hint);
+      // Weakly boost the spill weight of hinted registers.
+      totalWeight *= 1.01F;
+    }
   }
 
   // If the live interval was already unspillable, leave it that way.
   if (!Spillable)
-    return;
+    return -1.0;
 
   // Mark li as unspillable if all live ranges are tiny and the interval
   // is not live at any reg mask.  If the interval is live at a reg mask
   // spilling may be required.
-  if (li.isZeroLength(LIS.getSlotIndexes()) &&
+  if (updateLI && li.isZeroLength(LIS.getSlotIndexes()) &&
       !li.isLiveAtIndexes(LIS.getRegMaskSlots())) {
     li.markNotSpillable();
-    return;
+    return -1.0;
   }
 
   // If all of the definitions of the interval are re-materializable,
@@ -238,5 +281,7 @@ VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
   if (isRematerializable(li, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
     totalWeight *= 0.5F;
 
-  li.weight = normalize(totalWeight, li.getSize(), numInstr);
+  if (localSplitArtifact)
+    return normalize(totalWeight, start->distance(*end), numInstr);
+  return normalize(totalWeight, li.getSize(), numInstr);
 }

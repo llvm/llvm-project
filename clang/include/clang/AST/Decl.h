@@ -1678,10 +1678,18 @@ private:
   /// skipped.
   unsigned HasSkippedBody : 1;
 
-  /// Indicates if the function declaration will have a body, once we're done
-  /// parsing it.
-  unsigned WillHaveBody : 1;
-
+protected:
+  // Since a Deduction Guide [C++17] will never have a body, we can share the
+  // storage, and use a different name.
+  union {
+    /// Indicates if the function declaration will have a body, once we're done
+    /// parsing it.
+    unsigned WillHaveBody : 1;
+    /// Indicates that the Deduction Guide is the implicitly generated 'copy
+    /// deduction candidate' (is used during overload resolution).
+    unsigned IsCopyDeductionCandidate : 1;
+  };
+private:
   /// \brief End part of this FunctionDecl's source range.
   ///
   /// We could compute the full range in getSourceRange(). However, when we're

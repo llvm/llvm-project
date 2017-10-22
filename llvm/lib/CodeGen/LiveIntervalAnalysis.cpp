@@ -824,7 +824,13 @@ LiveIntervals::hasPHIKill(const LiveInterval &LI, const VNInfo *VNI) const {
 float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
                                     const MachineInstr &MI) {
-  BlockFrequency Freq = MBFI->getBlockFreq(MI.getParent());
+  return getSpillWeight(isDef, isUse, MBFI, MI.getParent());
+}
+
+float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
+                                    const MachineBlockFrequencyInfo *MBFI,
+                                    const MachineBasicBlock *MBB) {
+  BlockFrequency Freq = MBFI->getBlockFreq(MBB);
   const float Scale = 1.0f / MBFI->getEntryFreq();
   return (isDef + isUse) * (Freq.getFrequency() * Scale);
 }
