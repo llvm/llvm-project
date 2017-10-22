@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=thumb-eabi %s -verify-machineinstrs -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi %s -verify-machineinstrs -o - | \
+; RUN:    FileCheck %s -check-prefix CHECK --check-prefix CHECK-EABI
 ; RUN: llc -mtriple=thumb-apple-darwin %s -verify-machineinstrs -o - | \
 ; RUN:    FileCheck %s -check-prefix CHECK -check-prefix CHECK-DARWIN
 
@@ -172,10 +173,12 @@ entry:
         %retval = load i64, i64* %a          ; <i64> [#uses=1]
         ret i64 %retval
 ; CHECK-LABEL: f10:
-; CHECK: sub sp, #8
+; CHECK-EABI: sub sp, #8
+; CHECK-DARWIN: add r7, sp, #4
 ; CHECK: ldr r0, [sp]
 ; CHECK: ldr r1, [sp, #4]
-; CHECK: add sp, #8
+; CHECK-EABI: add sp, #8
+; CHECK-DARWIN: mov sp, r4
 }
 
 define i64 @f11(i64 %x, i64 %y) {
