@@ -5961,7 +5961,7 @@ let Predicates = [HasAVX] in {
   defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround",
                                  int_x86_sse41_round_ss,
                                  int_x86_sse41_round_sd, 0>, VEX_4V, VEX_LIG, VEX_WIG;
-  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround">, VEX_4V, VEX_LIG;
+  defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround">, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
 let Predicates = [UseAVX] in {

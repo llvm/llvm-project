@@ -541,19 +541,19 @@ define void @test_extract_i32(<4 x i32> %arg, i32* %dst) {
 ;
 ; SSE41-LABEL: test_extract_i32:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    extractps $1, %xmm0, %eax
 ; SSE41-NEXT:    movntil %eax, (%rdi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_extract_i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX-NEXT:    vextractps $1, %xmm0, %eax
 ; AVX-NEXT:    movntil %eax, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; VLX-LABEL: test_extract_i32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpextrd $1, %xmm0, %eax
+; VLX-NEXT:    vextractps $1, %xmm0, %eax
 ; VLX-NEXT:    movntil %eax, (%rdi)
 ; VLX-NEXT:    retq
   %1 = extractelement <4 x i32> %arg, i32 1

@@ -9451,6 +9451,8 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::UNPCKLPSrr, X86::UNPCKLPSrr, X86::PUNPCKLDQrr },
   { X86::UNPCKHPSrm, X86::UNPCKHPSrm, X86::PUNPCKHDQrm },
   { X86::UNPCKHPSrr, X86::UNPCKHPSrr, X86::PUNPCKHDQrr },
+  { X86::EXTRACTPSmr, X86::EXTRACTPSmr, X86::PEXTRDmr },
+  { X86::EXTRACTPSrr, X86::EXTRACTPSrr, X86::PEXTRDrr },
   // AVX 128-bit support
   { X86::VMOVAPSmr,  X86::VMOVAPDmr,  X86::VMOVDQAmr  },
   { X86::VMOVAPSrm,  X86::VMOVAPDrm,  X86::VMOVDQArm  },
@@ -9479,6 +9481,8 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VUNPCKLPSrr, X86::VUNPCKLPSrr, X86::VPUNPCKLDQrr },
   { X86::VUNPCKHPSrm, X86::VUNPCKHPSrm, X86::VPUNPCKHDQrm },
   { X86::VUNPCKHPSrr, X86::VUNPCKHPSrr, X86::VPUNPCKHDQrr },
+  { X86::VEXTRACTPSmr, X86::VEXTRACTPSmr, X86::VPEXTRDmr },
+  { X86::VEXTRACTPSrr, X86::VEXTRACTPSrr, X86::VPEXTRDrr },
   // AVX 256-bit support
   { X86::VMOVAPSYmr,   X86::VMOVAPDYmr,   X86::VMOVDQAYmr  },
   { X86::VMOVAPSYrm,   X86::VMOVAPDYrm,   X86::VMOVDQAYrm  },
@@ -9577,6 +9581,8 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VUNPCKLPSZrr,       X86::VUNPCKLPSZrr,       X86::VPUNPCKLDQZrr },
   { X86::VUNPCKHPSZrm,       X86::VUNPCKHPSZrm,       X86::VPUNPCKHDQZrm },
   { X86::VUNPCKHPSZrr,       X86::VUNPCKHPSZrr,       X86::VPUNPCKHDQZrr },
+  { X86::VEXTRACTPSZmr,      X86::VEXTRACTPSZmr,      X86::VPEXTRDZmr },
+  { X86::VEXTRACTPSZrr,      X86::VEXTRACTPSZrr,      X86::VPEXTRDZrr },
 };
 
 static const uint16_t ReplaceableInstrsAVX2[][3] = {
@@ -10787,7 +10793,7 @@ llvm::createCleanupLocalDynamicTLSPass() { return new LDTLSCleanup(); }
 ///
 /// * Call construction overhead: 1 (call instruction)
 /// * Frame construction overhead: 1 (return instruction)
-/// 
+///
 /// \p MachineOutlinerTailCall implies that the function is being tail called.
 /// A jump is emitted instead of a call, and the return is already present in
 /// the outlined sequence. That is,
@@ -10817,7 +10823,7 @@ X86InstrInfo::getOutlininingCandidateInfo(
                                MachineOutlinerTailCall, // Type of call.
                                MachineOutlinerTailCall // Type of frame.
                               );
-  
+
   return MachineOutlinerInfo(1, 1, MachineOutlinerDefault,
                              MachineOutlinerDefault);
 }
@@ -10830,12 +10836,12 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
   // with the stack.
   if (!F->hasFnAttribute(Attribute::NoRedZone))
       return false;
-  
+
   // If we *don't* want to outline from things that could potentially be deduped
   // then return false.
   if (!OutlineFromLinkOnceODRs && F->hasLinkOnceODRLinkage())
       return false;
-  
+
   // This function is viable for outlining, so return true.
   return true;
 }
