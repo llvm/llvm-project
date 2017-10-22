@@ -2269,10 +2269,9 @@ void MergeNoTailSection::finalizeContents() {
       for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
         if (!Sec->Pieces[I].Live)
           continue;
-        CachedHashStringRef Str = Sec->getData(I);
-        size_t ShardId = getShardId(Str.hash());
+        size_t ShardId = getShardId(Sec->Pieces[I].Hash);
         if ((ShardId & (Concurrency - 1)) == ThreadId)
-          Sec->Pieces[I].OutputOff = Shards[ShardId].add(Str);
+          Sec->Pieces[I].OutputOff = Shards[ShardId].add(Sec->getData(I));
       }
     }
   });
@@ -2294,7 +2293,7 @@ void MergeNoTailSection::finalizeContents() {
     for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
       if (Sec->Pieces[I].Live)
         Sec->Pieces[I].OutputOff +=
-            ShardOffsets[getShardId(Sec->getData(I).hash())];
+            ShardOffsets[getShardId(Sec->Pieces[I].Hash)];
   });
 }
 

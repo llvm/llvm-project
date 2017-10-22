@@ -1723,6 +1723,10 @@ static int readOperands(struct InternalInstruction* insn) {
       if (readModRM(insn))
         return -1;
 
+      // Reject if SIB wasn't used.
+      if (insn->eaBase != EA_BASE_sib && insn->eaBase != EA_BASE_sib64)
+        return -1;
+
       // If sibIndex was set to SIB_INDEX_NONE, index offset is 4.
       if (insn->sibIndex == SIB_INDEX_NONE)
         insn->sibIndex = (SIBIndex)4;
