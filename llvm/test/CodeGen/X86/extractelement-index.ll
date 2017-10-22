@@ -231,12 +231,12 @@ define i32 @extractelement_v4i32_3(<4 x i32> %a) nounwind {
 ;
 ; SSE41-LABEL: extractelement_v4i32_3:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    pextrd $3, %xmm0, %eax
+; SSE41-NEXT:    extractps $3, %xmm0, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extractelement_v4i32_3:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX-NEXT:    vextractps $3, %xmm0, %eax
 ; AVX-NEXT:    retq
   %b = extractelement <4 x i32> %a, i256 3
   ret i32 %b
@@ -297,22 +297,15 @@ define i32 @extractelement_v8i32_7(<8 x i32> %a) nounwind {
 ;
 ; SSE41-LABEL: extractelement_v8i32_7:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    pextrd $3, %xmm1, %eax
+; SSE41-NEXT:    extractps $3, %xmm1, %eax
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: extractelement_v8i32_7:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: extractelement_v8i32_7:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: extractelement_v8i32_7:
+; AVX:       # BB#0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vextractps $3, %xmm0, %eax
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %b = extractelement <8 x i32> %a, i64 7
   ret i32 %b
 }

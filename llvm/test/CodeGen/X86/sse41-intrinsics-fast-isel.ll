@@ -440,12 +440,12 @@ define i32 @test_mm_extract_epi8(<2 x i64> %a0) {
 define i32 @test_mm_extract_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_extract_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    pextrd $1, %xmm0, %eax
+; X32-NEXT:    extractps $1, %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_extract_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    pextrd $1, %xmm0, %eax
+; X64-NEXT:    extractps $1, %xmm0, %eax
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %ext = extractelement <4 x i32> %arg0, i32 1
@@ -455,8 +455,8 @@ define i32 @test_mm_extract_epi32(<2 x i64> %a0) {
 define i64 @test_mm_extract_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_extract_epi64:
 ; X32:       # BB#0:
-; X32-NEXT:    pextrd $2, %xmm0, %eax
-; X32-NEXT:    pextrd $3, %xmm0, %edx
+; X32-NEXT:    extractps $2, %xmm0, %eax
+; X32-NEXT:    extractps $3, %xmm0, %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_extract_epi64:

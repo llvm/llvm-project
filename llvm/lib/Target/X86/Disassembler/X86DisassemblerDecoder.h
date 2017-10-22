@@ -639,6 +639,7 @@ struct InternalInstruction {
   Reg                           reg;
 
   // SIB state
+  SIBIndex                      sibIndexBase;
   SIBIndex                      sibIndex;
   uint8_t                       sibScale;
   SIBBase                       sibBase;
