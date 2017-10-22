@@ -103,6 +103,13 @@ New Compiler Flags
 
 - --autocomplete was implemented to obtain a list of flags and its arguments. This is used for shell autocompletion.
 
+- The ``-fdouble-square-bracket-attributes`` and corresponding
+  ``-fno-double-square-bracket-attributes`` flags were added to enable or
+  disable [[]] attributes in any language mode. Currently, only a limited
+  number of attributes are supported outside of C++ mode. See the Clang
+  attribute documentation for more information about which attributes are
+  supported for each syntax.
+
 Deprecated Compiler Flags
 -------------------------
 

@@ -848,9 +848,8 @@ void EhInputSection::split(ArrayRef<RelTy> Rels) {
   }
 }
 
-static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
+static size_t findNull(StringRef S, size_t EntSize) {
   // Optimize the common case.
-  StringRef S((const char *)A.data(), A.size());
   if (EntSize == 1)
     return S.find(0);
 
@@ -871,14 +870,16 @@ SyntheticSection *MergeInputSection::getParent() const {
 void MergeInputSection::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   size_t Off = 0;
   bool IsAlloc = this->Flags & SHF_ALLOC;
-  while (!Data.empty()) {
-    size_t End = findNull(Data, EntSize);
+  StringRef S = toStringRef(Data);
+
+  while (!S.empty()) {
+    size_t End = findNull(S, EntSize);
     if (End == StringRef::npos)
       fatal(toString(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
-    Pieces.emplace_back(Off, !IsAlloc);
-    Hashes.push_back(xxHash64(toStringRef(Data.slice(0, Size))));
-    Data = Data.slice(Size);
+
+    Pieces.emplace_back(Off, xxHash64(S.substr(0, Size)), !IsAlloc);
+    S = S.substr(Size);
     Off += Size;
   }
 }
@@ -890,17 +891,23 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> Data,
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
   bool IsAlloc = this->Flags & SHF_ALLOC;
-  for (unsigned I = 0, N = Size; I != N; I += EntSize) {
-    Hashes.push_back(xxHash64(toStringRef(Data.slice(I, EntSize))));
-    Pieces.emplace_back(I, !IsAlloc);
-  }
+
+  for (size_t I = 0; I != Size; I += EntSize)
+    Pieces.emplace_back(I, xxHash64(toStringRef(Data.slice(I, EntSize))),
+                        !IsAlloc);
 }
 
 template <class ELFT>
 MergeInputSection::MergeInputSection(ObjFile<ELFT> *F,
                                      const typename ELFT::Shdr *Header,
                                      StringRef Name)
-    : InputSectionBase(F, Header, Name, InputSectionBase::Merge) {}
+    : InputSectionBase(F, Header, Name, InputSectionBase::Merge) {
+  // In order to reduce memory allocation, we assume that mergeable
+  // sections are smaller than 4 GiB, which is not an unreasonable
+  // assumption as of 2017.
+  if (Data.size() > UINT32_MAX)
+    error(toString(this) + ": section too large");
+}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents
@@ -910,12 +917,11 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> *F,
 // thread-safe (i.e. no memory allocation from the pools).
 void MergeInputSection::splitIntoPieces() {
   assert(Pieces.empty());
-  ArrayRef<uint8_t> Data = this->Data;
-  uint64_t EntSize = this->Entsize;
+
   if (this->Flags & SHF_STRINGS)
-    splitStrings(Data, EntSize);
+    splitStrings(Data, Entsize);
   else
-    splitNonStrings(Data, EntSize);
+    splitNonStrings(Data, Entsize);
 
   if (Config->GcSections && (this->Flags & SHF_ALLOC))
     for (uint64_t Off : LiveOffsets)
@@ -942,8 +948,7 @@ static It fastUpperBound(It First, It Last, const T &Value, Compare Comp) {
 }
 
 const SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) const {
-  uint64_t Size = this->Data.size();
-  if (Offset >= Size)
+  if (Data.size() <= Offset)
     fatal(toString(this) + ": entry is past the end of the section");
 
   // Find the element this offset points to.
@@ -958,20 +963,20 @@ const SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) const {
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
 uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
+  if (!this->Live)
+    return 0;
+
   // Initialize OffsetMap lazily.
   llvm::call_once(InitOffsetMap, [&] {
     OffsetMap.reserve(Pieces.size());
-    for (const SectionPiece &Piece : Pieces)
-      OffsetMap[Piece.InputOff] = Piece.OutputOff;
+    for (size_t I = 0; I < Pieces.size(); ++I)
+      OffsetMap[Pieces[I].InputOff] = I;
   });
 
   // Find a string starting at a given offset.
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
-    return It->second;
-
-  if (!this->Live)
-    return 0;
+    return Pieces[It->second].OutputOff;
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.

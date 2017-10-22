@@ -25,33 +25,19 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl $4
 ;
-; X86-AVX1-LABEL: load7_aligned:
-; X86-AVX1:       # BB#0:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX1-NEXT:    vmovaps (%ecx), %ymm0
-; X86-AVX1-NEXT:    vmovaps 32(%ecx), %ymm1
-; X86-AVX1-NEXT:    vmovaps %ymm0, (%eax)
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; X86-AVX1-NEXT:    vpextrd $1, %xmm0, 52(%eax)
-; X86-AVX1-NEXT:    vmovd %xmm0, 48(%eax)
-; X86-AVX1-NEXT:    vmovaps %xmm1, 32(%eax)
-; X86-AVX1-NEXT:    vzeroupper
-; X86-AVX1-NEXT:    retl $4
-;
-; X86-AVX2-LABEL: load7_aligned:
-; X86-AVX2:       # BB#0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vmovaps (%ecx), %ymm0
-; X86-AVX2-NEXT:    vmovdqa 32(%ecx), %ymm1
-; X86-AVX2-NEXT:    vmovaps %ymm0, (%eax)
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; X86-AVX2-NEXT:    vpextrd $1, %xmm0, 52(%eax)
-; X86-AVX2-NEXT:    vmovd %xmm0, 48(%eax)
-; X86-AVX2-NEXT:    vmovdqa %xmm1, 32(%eax)
-; X86-AVX2-NEXT:    vzeroupper
-; X86-AVX2-NEXT:    retl $4
+; X86-AVX-LABEL: load7_aligned:
+; X86-AVX:       # BB#0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vmovaps (%ecx), %ymm0
+; X86-AVX-NEXT:    vmovaps 32(%ecx), %ymm1
+; X86-AVX-NEXT:    vmovaps %ymm0, (%eax)
+; X86-AVX-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; X86-AVX-NEXT:    vextractps $1, %xmm0, 52(%eax)
+; X86-AVX-NEXT:    vmovss %xmm0, 48(%eax)
+; X86-AVX-NEXT:    vmovaps %xmm1, 32(%eax)
+; X86-AVX-NEXT:    vzeroupper
+; X86-AVX-NEXT:    retl $4
 ;
 ; X64-SSE-LABEL: load7_aligned:
 ; X64-SSE:       # BB#0:

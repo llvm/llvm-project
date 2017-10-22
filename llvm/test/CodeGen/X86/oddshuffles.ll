@@ -112,10 +112,10 @@ define void @v3i32(<2 x i32> %a, <2 x i32> %b, <3 x i32>* %p) nounwind {
 ;
 ; AVX2-LABEL: v3i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX2-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
-; AVX2-NEXT:    vmovq %xmm1, (%rdi)
+; AVX2-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2,3]
+; AVX2-NEXT:    vextractps $2, %xmm0, 8(%rdi)
+; AVX2-NEXT:    vmovlps %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: v3i32:
@@ -199,18 +199,18 @@ define void @v5i32(<4 x i32> %a, <4 x i32> %b, <5 x i32>* %p) nounwind {
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1],xmm1[1,2]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; AVX1-NEXT:    vpextrd $3, %xmm0, 16(%rdi)
+; AVX1-NEXT:    vextractps $3, %xmm0, 16(%rdi)
 ; AVX1-NEXT:    vmovaps %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v5i32:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,5,1,6,3,u,u,u>
-; AVX2-NEXT:    vpermd %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpextrd $3, %xmm0, 16(%rdi)
-; AVX2-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <0,5,1,6,3,u,u,u>
+; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vextractps $3, %xmm0, 16(%rdi)
+; AVX2-NEXT:    vmovaps %xmm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -218,7 +218,7 @@ define void @v5i32(<4 x i32> %a, <4 x i32> %b, <5 x i32>* %p) nounwind {
 ; XOP:       # BB#0:
 ; XOP-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,1],xmm1[1,2]
 ; XOP-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; XOP-NEXT:    vpextrd $3, %xmm0, 16(%rdi)
+; XOP-NEXT:    vextractps $3, %xmm0, 16(%rdi)
 ; XOP-NEXT:    vmovaps %xmm1, (%rdi)
 ; XOP-NEXT:    retq
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <5 x i32> <i32 0, i32 5, i32 1, i32 6, i32 3>

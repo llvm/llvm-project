@@ -1185,6 +1185,11 @@ bool LoopInterchangeTransform::transform() {
     else
       InnerIndexVar = dyn_cast<Instruction>(InductionPHI->getIncomingValue(0));
 
+    // Ensure that InductionPHI is the first Phi node as required by
+    // splitInnerLoopHeader
+    if (&InductionPHI->getParent()->front() != InductionPHI)
+      InductionPHI->moveBefore(&InductionPHI->getParent()->front());
+
     // Split at the place were the induction variable is
     // incremented/decremented.
     // TODO: This splitting logic may not work always. Fix this.
@@ -1218,7 +1223,7 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   if (InnerLoopHasReduction) {
-    // FIXME: Check if the induction PHI will always be the first PHI.
+    // Note: The induction PHI must be the first PHI for this to work
     BasicBlock *New = InnerLoopHeader->splitBasicBlock(
         ++(InnerLoopHeader->begin()), InnerLoopHeader->getName() + ".split");
     if (LI)
