@@ -92,6 +92,10 @@ FunctionPass *createX86CmovConverterPass();
 /// the upper portions of registers, and to save code size.
 FunctionPass *createX86FixupBWInsts();
 
+/// Return a Machine IR pass that reassigns instruction chains from one domain
+/// to another, when profitable.
+FunctionPass *createX86DomainReassignmentPass();
+
 void initializeFixupBWInstPassPass(PassRegistry &);
 
 /// This pass replaces EVEX encoded of AVX-512 instructiosn by VEX

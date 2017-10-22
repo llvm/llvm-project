@@ -25,6 +25,7 @@ set(sources
   X86CallFrameOptimization.cpp
   X86CallLowering.cpp
   X86CmovConversion.cpp
+  X86DomainReassignment.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
   X86FixupBWInsts.cpp

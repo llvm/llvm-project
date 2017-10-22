@@ -372,7 +372,7 @@ public:
           if (!Callee || !Callee->getSubprogram())
             S.insert(Function::getGUID(TS.getKey()));
         }
-    for (auto CS : CallsiteSamples)
+    for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
         NameFS.second.findImportedFunctions(S, M, Threshold);
   }
