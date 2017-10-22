@@ -4450,16 +4450,46 @@ static PHINode *FindPHIForConditionForwarding(ConstantInt *CaseValue,
 static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   typedef DenseMap<PHINode *, SmallVector<int, 4>> ForwardingNodesMap;
   ForwardingNodesMap ForwardingNodes;
-
+  BasicBlock *SwitchBlock = SI->getParent();
+  bool Changed = false;
   for (auto &Case : SI->cases()) {
     ConstantInt *CaseValue = Case.getCaseValue();
     BasicBlock *CaseDest = Case.getCaseSuccessor();
+
+    // Replace phi operands in successor blocks that are using the constant case
+    // value rather than the switch condition variable:
+    //   switchbb:
+    //   switch i32 %x, label %default [
+    //     i32 17, label %succ
+    //   ...
+    //   succ:
+    //     %r = phi i32 ... [ 17, %switchbb ] ...
+    // -->
+    //     %r = phi i32 ... [ %x, %switchbb ] ...
+
+    for (Instruction &InstInCaseDest : *CaseDest) {
+      auto *Phi = dyn_cast<PHINode>(&InstInCaseDest);
+      if (!Phi) break;
+
+      // This only works if there is exactly 1 incoming edge from the switch to
+      // a phi. If there is >1, that means multiple cases of the switch map to 1
+      // value in the phi, and that phi value is not the switch condition. Thus,
+      // this transform would not make sense (the phi would be invalid because
+      // a phi can't have different incoming values from the same block).
+      int SwitchBBIdx = Phi->getBasicBlockIndex(SwitchBlock);
+      if (Phi->getIncomingValue(SwitchBBIdx) == CaseValue &&
+          count(Phi->blocks(), SwitchBlock) == 1) {
+        Phi->setIncomingValue(SwitchBBIdx, SI->getCondition());
+        Changed = true;
+      }
+    }
+
+    // Collect phi nodes that are indirectly using this switch's case constants.
     int PhiIdx;
     if (auto *Phi = FindPHIForConditionForwarding(CaseValue, CaseDest, &PhiIdx))
       ForwardingNodes[Phi].push_back(PhiIdx);
   }
 
-  bool Changed = false;
   for (auto &ForwardingNode : ForwardingNodes) {
     PHINode *Phi = ForwardingNode.first;
     SmallVectorImpl<int> &Indexes = ForwardingNode.second;
@@ -5533,7 +5563,7 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (switchToSelect(SI, Builder, DL, TTI))
     return simplifyCFG(BB, TTI, Options) | true;
 
-  if (ForwardSwitchConditionToPHI(SI))
+  if (Options.ForwardSwitchCondToPhi && ForwardSwitchConditionToPHI(SI))
     return simplifyCFG(BB, TTI, Options) | true;
 
   // The conversion from switch to lookup tables results in difficult-to-analyze
