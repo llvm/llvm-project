@@ -491,6 +491,14 @@ void CSIImpl::instrumentCallsite(Instruction *I) {
   if (isa<DbgInfoIntrinsic>(I))
     return;
 
+  // Ignore intrinsics that act as placeholders, i.e., the intrinsics don't
+  // ultimately result in a function call.
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    if (Intrinsic::syncregion_start == II->getIntrinsicID() ||
+        Intrinsic::lifetime_start == II->getIntrinsicID() ||
+        Intrinsic::lifetime_end == II->getIntrinsicID())
+      return;
+
   bool IsInvoke = false;
   Function *Called = NULL;
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
