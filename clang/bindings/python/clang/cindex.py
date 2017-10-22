@@ -214,45 +214,25 @@ class _CXString(Structure):
         assert isinstance(res, _CXString)
         return conf.lib.clang_getCString(res)
 
-class Location(object):
-    """A Location is a specific kind of source location.  A SourceLocation
-    refers to several kinds of locations (e.g.  spelling location vs. expansion
-    location)."""
-
-    def __init__(self, file, line, column, offset):
-        self._file   = File(file) if file else None
-        self._line   = int(line.value)
-        self._column = int(column.value)
-        self._offset = int(offset.value)
-
-
-    @property
-    def file(self):
-        """Get the file represented by this source location."""
-        return self._file
-
-    @property
-    def line(self):
-        """Get the line represented by this source location."""
-        return self._line
-
-    @property
-    def column(self):
-        """Get the column represented by this source location."""
-        return self._column
-
-    @property
-    def offset(self):
-        """Get the file offset represented by this source location."""
-        return self._offset
 
 class SourceLocation(Structure):
     """
     A SourceLocation represents a particular location within a source file.
     """
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _expansion = None
-    _spelling = None
+    _data = None
+
+    def _get_instantiation(self):
+        if self._data is None:
+            f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
+            conf.lib.clang_getInstantiationLocation(self, byref(f), byref(l),
+                    byref(c), byref(o))
+            if f:
+                f = File(f)
+            else:
+                f = None
+            self._data = (f, int(l.value), int(c.value), int(o.value))
+        return self._data
 
     @staticmethod
     def from_position(tu, file, line, column):
@@ -273,72 +253,24 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)
 
     @property
-    def expansion(self):
-        """
-        The source location where then entity this object is referring to is
-        expanded.
-        """
-        if not self._expansion:
-            file   = c_object_p()
-            line   = c_uint()
-            column = c_uint()
-            offset = c_uint()
-            conf.lib.clang_getExpansionLocation(self,
-                                                byref(file),
-                                                byref(line),
-                                                byref(column),
-                                                byref(offset))
-
-            self._expansion = Location(file, line, column, offset)
-        return self._expansion
-
-    @property
-    def spelling(self):
-        """
-        The source location where then entity this object is referring to is
-        written.
-        """
-        if not self._spelling:
-            file   = c_object_p()
-            line   = c_uint()
-            column = c_uint()
-            offset = c_uint()
-            conf.lib.clang_getSpellingLocation(self,
-                                               byref(file),
-                                               byref(line),
-                                               byref(column),
-                                               byref(offset))
-
-            self._spelling = Location(file, line, column, offset)
-        return self._spelling
-
-    @property
     def file(self):
-        """Get the file represented by this source location.
-
-        DEPRECATED: use expansion.file."""
-        return self.expansion.file
+        """Get the file represented by this source location."""
+        return self._get_instantiation()[0]
 
     @property
     def line(self):
-        """Get the line represented by this source location.
-
-        DEPRECATED: use expansion.line."""
-        return self.expansion.line
+        """Get the line represented by this source location."""
+        return self._get_instantiation()[1]
 
     @property
     def column(self):
-        """Get the column represented by this source location.
-
-        DEPRECATED: use expansion.column."""
-        return self.expansion.column
+        """Get the column represented by this source location."""
+        return self._get_instantiation()[2]
 
     @property
     def offset(self):
-        """Get the file offset represented by this source location.
-
-        DEPRECATED: use expansion.offset."""
-        return self.expansion.offset
+        """Get the file offset represented by this source location."""
+        return self._get_instantiation()[3]
 
     def __eq__(self, other):
         return conf.lib.clang_equalLocations(self, other)
@@ -1611,7 +1543,8 @@ class Cursor(Structure):
     @property
     def location(self):
         """
-        Return the source locations of the entity pointed at by the cursor.
+        Return the source location (the starting character) of the entity
+        pointed at by the cursor.
         """
         if not hasattr(self, '_loc'):
             self._loc = conf.lib.clang_getCursorLocation(self)
@@ -3759,11 +3692,7 @@ functionList = [
   ("clang_getInclusions",
    [TranslationUnit, callbacks['translation_unit_includes'], py_object]),
 
-  ("clang_getExpansionLocation",
-   [SourceLocation, POINTER(c_object_p), POINTER(c_uint), POINTER(c_uint),
-    POINTER(c_uint)]),
-
-  ("clang_getSpellingLocation",
+  ("clang_getInstantiationLocation",
    [SourceLocation, POINTER(c_object_p), POINTER(c_uint), POINTER(c_uint),
     POINTER(c_uint)]),
 
@@ -4225,7 +4154,6 @@ __all__ = [
     'FixIt',
     'Index',
     'LinkageKind',
-    'Location',
     'SourceLocation',
     'SourceRange',
     'TLSKind',
