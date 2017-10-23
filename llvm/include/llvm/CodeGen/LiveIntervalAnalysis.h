@@ -107,6 +107,11 @@ class VirtRegMap;
                                 const MachineBlockFrequencyInfo *MBFI,
                                 const MachineInstr &Instr);
 
+    /// Calculate the spill weight to assign to a single instruction.
+    static float getSpillWeight(bool isDef, bool isUse,
+                                const MachineBlockFrequencyInfo *MBFI,
+                                const MachineBasicBlock *MBB);
+
     LiveInterval &getInterval(unsigned Reg) {
       if (hasInterval(Reg))
         return *VirtRegIntervals[Reg];

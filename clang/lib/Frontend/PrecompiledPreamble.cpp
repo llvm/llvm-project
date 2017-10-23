@@ -445,7 +445,7 @@ PrecompiledPreamble::PrecompiledPreamble(
     TempPCHFile PCHFile, std::vector<char> PreambleBytes,
     bool PreambleEndsAtStartOfLine,
     llvm::StringMap<PreambleFileHash> FilesInPreamble)
-    : PCHFile(std::move(PCHFile)), FilesInPreamble(FilesInPreamble),
+    : PCHFile(std::move(PCHFile)), FilesInPreamble(std::move(FilesInPreamble)),
       PreambleBytes(std::move(PreambleBytes)),
       PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
 

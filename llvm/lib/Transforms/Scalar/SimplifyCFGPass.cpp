@@ -179,8 +179,10 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
   return true;
 }
 
+// FIXME: The new pass manager always creates a "late" simplifycfg pass using
+// this default constructor.
 SimplifyCFGPass::SimplifyCFGPass()
-    : Options(UserBonusInstThreshold, true, false) {}
+    : Options(UserBonusInstThreshold, true, true, false) {}
 
 SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &PassOptions)
     : Options(PassOptions) {}
@@ -200,12 +202,15 @@ namespace {
 struct BaseCFGSimplifyPass : public FunctionPass {
   std::function<bool(const Function &)> PredicateFtor;
   int BonusInstThreshold;
+  bool ForwardSwitchCondToPhi;
   bool ConvertSwitchToLookupTable;
   bool KeepCanonicalLoops;
 
-  BaseCFGSimplifyPass(int T, bool ConvertSwitch, bool KeepLoops,
+  BaseCFGSimplifyPass(int T, bool ForwardSwitchCond, bool ConvertSwitch,
+                      bool KeepLoops,
                       std::function<bool(const Function &)> Ftor, char &ID)
       : FunctionPass(ID), PredicateFtor(std::move(Ftor)),
+        ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(ConvertSwitch),
         KeepCanonicalLoops(KeepLoops) {
     BonusInstThreshold = (T == -1) ? UserBonusInstThreshold : T;
@@ -219,8 +224,9 @@ struct BaseCFGSimplifyPass : public FunctionPass {
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     return simplifyFunctionCFG(F, TTI,
-                               {BonusInstThreshold, ConvertSwitchToLookupTable,
-                                KeepCanonicalLoops, AC});
+                               {BonusInstThreshold, ForwardSwitchCondToPhi,
+                                ConvertSwitchToLookupTable, KeepCanonicalLoops,
+                                AC});
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -235,7 +241,7 @@ struct CFGSimplifyPass : public BaseCFGSimplifyPass {
 
   CFGSimplifyPass(int T = -1,
                   std::function<bool(const Function &)> Ftor = nullptr)
-                  : BaseCFGSimplifyPass(T, false, true, Ftor, ID) {
+                  : BaseCFGSimplifyPass(T, false, false, true, Ftor, ID) {
     initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
   }
 };
@@ -245,7 +251,7 @@ struct LateCFGSimplifyPass : public BaseCFGSimplifyPass {
 
   LateCFGSimplifyPass(int T = -1,
                       std::function<bool(const Function &)> Ftor = nullptr)
-                      : BaseCFGSimplifyPass(T, true, false, Ftor, ID) {
+                      : BaseCFGSimplifyPass(T, true, true, false, Ftor, ID) {
     initializeLateCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
   }
 };

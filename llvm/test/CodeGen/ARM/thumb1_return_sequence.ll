@@ -9,6 +9,8 @@ entry:
 ; --------
 ; CHECK-V4T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 ; CHECK-V4T:    sub sp,
+; Stack is realigned because of the <6 x i32> type
+; CHECK-V4T:    mov sp, r4
 ; CHECK-V5T:    push {[[SAVED:(r[4567](, )?)+]], lr}
 
   %b = alloca <6 x i32>, align 16
@@ -21,7 +23,8 @@ entry:
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         add sp,
+; Stack realignment means sp is restored from frame pointer
+; CHECK-V4T:         mov sp
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
 ; The ISA for v4 does not support pop pc, so make sure we do not emit
 ; one even when we do not need to update SP.
@@ -70,8 +73,9 @@ entry:
 ; CHECK-V4T-NEXT:    mov lr, [[POP_REG]]
 ; CHECK-V4T-NEXT:    mov [[POP_REG]], r12
 ; CHECK-V4T:         bx  lr
-; CHECK-V5T:         add sp,
-; CHECK-V5T-NEXT:    pop {[[SAVED]]}
+; CHECK-V5T:         lsls r4
+; CHECK-V5T-NEXT:    mov sp, r4
+; CHECK-V5T:         pop {[[SAVED]]}
 ; CHECK-V5T-NEXT:    mov r12, [[POP_REG:r[0-7]]]
 ; CHECK-V5T-NEXT:    pop {[[POP_REG]]}
 ; CHECK-V5T-NEXT:    add sp,

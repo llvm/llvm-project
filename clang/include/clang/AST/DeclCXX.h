@@ -1881,6 +1881,10 @@ private:
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     IsExplicitSpecified = IsExplicit;
+
+    // IsCopyDeductionCandidate is a union variant member, so ensure it is the
+    // active member by storing to it.
+    IsCopyDeductionCandidate = false; 
   }
 
 public:
@@ -1902,6 +1906,12 @@ public:
   TemplateDecl *getDeducedTemplate() const {
     return getDeclName().getCXXDeductionGuideTemplate();
   }
+
+  void setIsCopyDeductionCandidate() {
+    IsCopyDeductionCandidate = true;
+  }
+
+  bool isCopyDeductionCandidate() const { return IsCopyDeductionCandidate; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

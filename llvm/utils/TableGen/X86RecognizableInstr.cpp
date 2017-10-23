@@ -800,13 +800,15 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
                             insnContext(),
                             currentOpcode,
                             *filter,
-                            UID, Is32Bit, IgnoresVEX_L, AddressSize);
+                            UID, Is32Bit, IgnoresVEX_L,
+                            VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   } else {
     tables.setTableFields(opcodeType,
                           insnContext(),
                           opcodeToSet,
                           *filter,
-                          UID, Is32Bit, IgnoresVEX_L, AddressSize);
+                          UID, Is32Bit, IgnoresVEX_L,
+                          VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   }
 
   delete filter;
