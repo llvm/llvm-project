@@ -1464,8 +1464,7 @@ define <8 x i64> @test_mm512_mask_set1_epi16(<8 x i64> %__O, i32 %__M, i16 signe
 ; X32-LABEL: test_mm512_mask_set1_epi16:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    kmovd %ecx, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
@@ -1488,8 +1487,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi16(i32 %__M, i16 signext %__A)  {
 ; X32-LABEL: test_mm512_maskz_set1_epi16:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    kmovd %ecx, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
@@ -1587,8 +1585,7 @@ define <8 x i64> @test_mm512_broadcastw_epi16(<2 x i64> %a0) {
 define <8 x i64> @test_mm512_mask_broadcastw_epi16(<8 x i64> %a0, i32 %a1, <2 x i64> %a2) {
 ; X32-LABEL: test_mm512_mask_broadcastw_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %xmm1, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
@@ -1609,8 +1606,7 @@ define <8 x i64> @test_mm512_mask_broadcastw_epi16(<8 x i64> %a0, i32 %a1, <2 x 
 define <8 x i64> @test_mm512_maskz_broadcastw_epi16(i32 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm512_maskz_broadcastw_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %xmm0, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
@@ -1744,8 +1740,7 @@ define <8 x i64> @test_mm512_unpackhi_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 define <8 x i64> @test_mm512_mask_unpackhi_epi16(<8 x i64> %a0, i32 %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpackhi_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} = zmm1[4],zmm2[4],zmm1[5],zmm2[5],zmm1[6],zmm2[6],zmm1[7],zmm2[7],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[20],zmm2[20],zmm1[21],zmm2[21],zmm1[22],zmm2[22],zmm1[23],zmm2[23],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31]
 ; X32-NEXT:    retl
 ;
@@ -1767,8 +1762,7 @@ define <8 x i64> @test_mm512_mask_unpackhi_epi16(<8 x i64> %a0, i32 %a1, <8 x i6
 define <8 x i64> @test_mm512_maskz_unpackhi_epi16(i32 %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpackhi_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} {z} = zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31]
 ; X32-NEXT:    retl
 ;
@@ -1870,8 +1864,7 @@ define <8 x i64> @test_mm512_unpacklo_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 define <8 x i64> @test_mm512_mask_unpacklo_epi16(<8 x i64> %a0, i32 %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpacklo_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[1],zmm2[1],zmm1[2],zmm2[2],zmm1[3],zmm2[3],zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[16],zmm2[16],zmm1[17],zmm2[17],zmm1[18],zmm2[18],zmm1[19],zmm2[19],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27]
 ; X32-NEXT:    retl
 ;
@@ -1893,8 +1886,7 @@ define <8 x i64> @test_mm512_mask_unpacklo_epi16(<8 x i64> %a0, i32 %a1, <8 x i6
 define <8 x i64> @test_mm512_maskz_unpacklo_epi16(i32 %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpacklo_epi16:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27]
 ; X32-NEXT:    retl
 ;

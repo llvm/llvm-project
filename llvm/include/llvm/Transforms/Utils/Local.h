@@ -60,14 +60,16 @@ class TargetTransformInfo;
 /// replaced by lookup tables and selects.
 struct SimplifyCFGOptions {
   int BonusInstThreshold;
+  bool ForwardSwitchCondToPhi;
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
   AssumptionCache *AC;
 
-  SimplifyCFGOptions(int BonusThreshold = 1, bool SwitchToLookup = false,
-                     bool CanonicalLoops = true,
+  SimplifyCFGOptions(int BonusThreshold = 1, bool ForwardSwitchCond = false,
+                     bool SwitchToLookup = false, bool CanonicalLoops = true,
                      AssumptionCache *AssumpCache = nullptr)
       : BonusInstThreshold(BonusThreshold),
+        ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(SwitchToLookup),
         NeedCanonicalLoop(CanonicalLoops), AC(AssumpCache) {}
 };

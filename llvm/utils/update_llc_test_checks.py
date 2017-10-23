@@ -122,7 +122,7 @@ def scrub_asm_arm_eabi(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_powerpc64le(asm):
+def scrub_asm_powerpc64(asm):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -158,7 +158,8 @@ def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
       'thumb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumbv8-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'armeb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
-      'powerpc64le': (scrub_asm_powerpc64le, ASM_FUNCTION_PPC_RE),
+      'powerpc64': (scrub_asm_powerpc64, ASM_FUNCTION_PPC_RE),
+      'powerpc64le': (scrub_asm_powerpc64, ASM_FUNCTION_PPC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
   }
   handlers = None

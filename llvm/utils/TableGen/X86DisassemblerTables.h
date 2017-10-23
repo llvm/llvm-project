@@ -245,6 +245,7 @@ public:
   /// @param uid          - The unique ID of the instruction.
   /// @param is32bit      - Instructon is only 32-bit
   /// @param ignoresVEX_L - Instruction ignores VEX.L
+  /// @param ignoresVEX_W - Instruction ignores VEX.W
   /// @param AddrSize     - Instructions address size 16/32/64. 0 is unspecified
   void setTableFields(OpcodeType type,
                       InstructionContext insnContext,
