@@ -963,27 +963,12 @@ const SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) const {
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
 uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
-  if (!this->Live)
+  if (!Live)
     return 0;
 
-  // Initialize OffsetMap lazily.
-  llvm::call_once(InitOffsetMap, [&] {
-    OffsetMap.reserve(Pieces.size());
-    for (size_t I = 0; I < Pieces.size(); ++I)
-      OffsetMap[Pieces[I].InputOff] = I;
-  });
-
-  // Find a string starting at a given offset.
-  auto It = OffsetMap.find(Offset);
-  if (It != OffsetMap.end())
-    return Pieces[It->second].OutputOff;
-
-  // If Offset is not at beginning of a section piece, it is not in the map.
-  // In that case we need to search from the original section piece vector.
-  const SectionPiece &Piece = *this->getSectionPiece(Offset);
+  const SectionPiece &Piece = *getSectionPiece(Offset);
   if (!Piece.Live)
     return 0;
-
   uint64_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
 }
