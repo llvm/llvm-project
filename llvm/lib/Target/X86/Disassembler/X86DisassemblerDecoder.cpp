@@ -1453,9 +1453,9 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_MM64:                                       \
       return prefix##_MM0 + (index & 0x7);                \
     case TYPE_SEGMENTREG:                                 \
-      if (index > 5)                                      \
+      if ((index & 7) > 5)                                \
         *valid = 0;                                       \
-      return prefix##_ES + index;                         \
+      return prefix##_ES + (index & 7);                   \
     case TYPE_DEBUGREG:                                   \
       return prefix##_DR0 + index;                        \
     case TYPE_CONTROLREG:                                 \
@@ -1802,6 +1802,10 @@ static int readOperands(struct InternalInstruction* insn) {
     case ENCODING_Ia:
       if (readImmediate(insn, insn->addressSize))
         return -1;
+      break;
+    case ENCODING_IRC:
+      insn->RC = (l2FromEVEX4of4(insn->vectorExtensionPrefix[3]) << 1) |
+                 lFromEVEX4of4(insn->vectorExtensionPrefix[3]);
       break;
     case ENCODING_RB:
       if (readOpcodeRegister(insn, 1))

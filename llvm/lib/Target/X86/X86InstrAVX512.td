@@ -1222,7 +1222,7 @@ multiclass avx512_int_broadcast_reg<bits<8> opc, X86VectorVTInfo _,
                          (_.VT (OpNode SrcRC:$src))>, T8PD, EVEX;
 }
 
-multiclass avx512_int_broadcastbw_reg<bits<8> opc, string Name, 
+multiclass avx512_int_broadcastbw_reg<bits<8> opc, string Name,
                                     X86VectorVTInfo _, SDPatternOperator OpNode,
                                     RegisterClass SrcRC, SubRegIndex Subreg> {
   let hasSideEffects = 0, ExeDomain = _.ExeDomain in
@@ -1250,7 +1250,7 @@ multiclass avx512_int_broadcastbw_reg_vl<bits<8> opc, string Name,
                       AVX512VLVectorVTInfo _, SDPatternOperator OpNode,
                       RegisterClass SrcRC, SubRegIndex Subreg, Predicate prd> {
   let Predicates = [prd] in
-    defm Z : avx512_int_broadcastbw_reg<opc, Name#Z, _.info512, OpNode, SrcRC, 
+    defm Z : avx512_int_broadcastbw_reg<opc, Name#Z, _.info512, OpNode, SrcRC,
               Subreg>, EVEX_V512;
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_int_broadcastbw_reg<opc, Name#Z256, _.info256, OpNode,
