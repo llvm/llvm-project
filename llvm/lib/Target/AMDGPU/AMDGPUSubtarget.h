@@ -587,6 +587,9 @@ public:
                                                  FlatWorkGroupSize);
   }
 
+  /// \returns Default range flat work group size for a calling convention.
+  std::pair<unsigned, unsigned> getDefaultFlatWorkGroupSize(CallingConv::ID CC) const;
+
   /// \returns Subtarget's default pair of minimum/maximum flat work group sizes
   /// for function \p F, or minimum/maximum flat work group sizes explicitly
   /// requested using "amdgpu-flat-work-group-size" attribute attached to

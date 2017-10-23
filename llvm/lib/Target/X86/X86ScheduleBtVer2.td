@@ -371,6 +371,38 @@ def : WriteRes<WriteFence,  [JSAGU]>;
 def : WriteRes<WriteNop, []>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// SSE4.1 instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def WriteDPPS: SchedWriteRes<[JFPU0, JFPU1]> {
+  let Latency = 11;
+  let ResourceCycles = [3,3];
+  let NumMicroOps = 5;
+}
+def : InstRW<[WriteDPPS], (instregex "(V)?DPPSrri")>;
+
+def WriteDPPSLd: SchedWriteRes<[JLAGU, JFPU0, JFPU1]> {
+  let Latency = 16;
+  let ResourceCycles = [1,3,3];
+  let NumMicroOps = 6;
+}
+def : InstRW<[WriteDPPSLd], (instregex "(V)?DPPSrmi")>;
+
+def WriteDPPD: SchedWriteRes<[JFPU0, JFPU1]> {
+  let Latency = 9;
+  let ResourceCycles = [3,3];
+  let NumMicroOps = 3;
+}
+def : InstRW<[WriteDPPD], (instregex "(V)?DPPDrri")>;
+
+def WriteDPPDLd: SchedWriteRes<[JLAGU, JFPU0, JFPU1]> {
+  let Latency = 14;
+  let ResourceCycles = [1,3,3];
+  let NumMicroOps = 3;
+}
+def : InstRW<[WriteDPPDLd], (instregex "(V)?DPPDrmi")>;
+
+////////////////////////////////////////////////////////////////////////////////
 // SSE4A instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -389,6 +421,20 @@ def : InstRW<[WriteINSERTQ], (instregex "INSERTQ")>;
 ////////////////////////////////////////////////////////////////////////////////
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
+
+def WriteVDPPSY: SchedWriteRes<[JFPU1, JFPU0]> {
+  let Latency = 12;
+  let ResourceCycles = [6, 6];
+  let NumMicroOps = 10;
+}
+def : InstRW<[WriteVDPPSY], (instregex "VDPPSYrr")>;
+
+def WriteVDPPSYLd: SchedWriteRes<[JLAGU, JFPU1, JFPU0]> {
+  let Latency = 17;
+  let ResourceCycles = [1, 6, 6];
+  let NumMicroOps = 11;
+}
+def : InstRW<[WriteVDPPSYLd, ReadAfterLd], (instregex "VDPPSYrm")>;
 
 def WriteFAddY: SchedWriteRes<[JFPU0]> {
   let Latency = 3;

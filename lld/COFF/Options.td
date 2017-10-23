@@ -110,6 +110,8 @@ def msvclto : F<"msvclto">;
 def output_def : Joined<["/", "-"], "output-def:">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
+def dash_dash_version : Flag<["--"], "version">,
+  HelpText<"Print version information">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

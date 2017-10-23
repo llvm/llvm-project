@@ -120,6 +120,10 @@ class SizeClassAllocator32 {
     // This is empty here. Currently only implemented in 64-bit allocator.
   }
 
+  void ForceReleaseToOS() {
+    // Currently implemented in 64-bit allocator only.
+  }
+
   void *MapWithCallback(uptr size) {
     void *res = MmapOrDie(size, "SizeClassAllocator32");
     MapUnmapCallback().OnMap((uptr)res, size);

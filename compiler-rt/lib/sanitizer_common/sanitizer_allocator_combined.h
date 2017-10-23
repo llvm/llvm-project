@@ -77,6 +77,10 @@ class CombinedAllocator {
     primary_.SetReleaseToOSIntervalMs(release_to_os_interval_ms);
   }
 
+  void ForceReleaseToOS() {
+    primary_.ForceReleaseToOS();
+  }
+
   void Deallocate(AllocatorCache *cache, void *p) {
     if (!p) return;
     if (primary_.PointerIsMine(p))

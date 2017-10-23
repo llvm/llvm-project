@@ -660,7 +660,7 @@ def LDS_WRXCHG_RET : R600_LDS_1A1D_RET <0x2d, "LDS_WRXCHG",
   [(set i32:$dst, (atomic_swap_local i32:$src0, i32:$src1))]
 >;
 def LDS_CMPST_RET : R600_LDS_1A2D_RET <0x30, "LDS_CMPST",
-  [(set i32:$dst, (atomic_cmp_swap_32_local i32:$src0, i32:$src1, i32:$src2))]
+  [(set i32:$dst, (atomic_cmp_swap_local i32:$src0, i32:$src1, i32:$src2))]
 >;
 def LDS_READ_RET : R600_LDS_1A <0x32, "LDS_READ_RET",
   [(set (i32 R600_Reg32:$dst), (load_local R600_Reg32:$src0))]

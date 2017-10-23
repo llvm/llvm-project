@@ -2469,7 +2469,8 @@ def _rtlib : Separate<["--"], "rtlib">, Alias<rtlib_EQ>;
 def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">, Flags<[DriverOption]>,
   HelpText<"Serialize compiler diagnostics to a file">;
 // We give --version different semantics from -version.
-def _version : Flag<["--"], "version">,  Flags<[CC1Option]>;
+def _version : Flag<["--"], "version">, Flags<[CoreOption, CC1Option]>,
+  HelpText<"Print version information">;
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
 def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;

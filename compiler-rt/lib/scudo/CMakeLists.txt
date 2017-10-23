@@ -30,15 +30,32 @@ if (COMPILER_RT_HAS_MCRC_FLAG)
 endif()
 
 if(COMPILER_RT_HAS_SCUDO)
+  set(SCUDO_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+  append_list_if(COMPILER_RT_HAS_LIBDL dl SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBRT rt SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread SCUDO_DYNAMIC_LIBS)
+  append_list_if(COMPILER_RT_HAS_LIBLOG log SCUDO_DYNAMIC_LIBS)
+
   foreach(arch ${SCUDO_SUPPORTED_ARCH})
     add_compiler_rt_runtime(clang_rt.scudo
       STATIC
       ARCHS ${arch}
       SOURCES ${SCUDO_SOURCES}
-              $<TARGET_OBJECTS:RTInterception.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonNoTermination.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+      OBJECT_LIBS RTSanitizerCommonNoTermination
+                  RTSanitizerCommonLibc
+                  RTInterception
       CFLAGS ${SCUDO_CFLAGS}
+      PARENT_TARGET scudo)
+
+    add_compiler_rt_runtime(clang_rt.scudo
+      SHARED
+      ARCHS ${arch}
+      SOURCES ${SCUDO_SOURCES}
+      OBJECT_LIBS RTSanitizerCommonNoTermination
+                  RTSanitizerCommonLibc
+                  RTInterception
+      CFLAGS ${SCUDO_CFLAGS}
+      LINK_LIBS ${SCUDO_DYNAMIC_LIBS}
       PARENT_TARGET scudo)
   endforeach()
 endif()

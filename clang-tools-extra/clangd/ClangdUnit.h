@@ -251,13 +251,49 @@ private:
   clangd::Logger &Logger;
 };
 
+struct CodeCompleteOptions {
+  CodeCompleteOptions() = default;
+
+  /// Uses default values for all flags, but sets EnableSnippets and
+  /// IncludeCodePatterns to the value of EnableSnippetsAndCodePatterns.
+  explicit CodeCompleteOptions(bool EnableSnippetsAndCodePatterns);
+
+  CodeCompleteOptions(bool EnableSnippets, bool IncludeCodePatterns,
+                      bool IncludeMacros, bool IncludeGlobals,
+                      bool IncludeBriefComments);
+
+  /// Returns options that can be passed to clang's completion engine.
+  clang::CodeCompleteOptions getClangCompleteOpts();
+
+  /// When true, completion items will contain expandable code snippets in
+  /// completion (e.g.  `return ${1:expression}` or `foo(${1:int a}, ${2:int
+  /// b})).
+  bool EnableSnippets = false;
+
+  /// Add code patterns to completion results.
+  /// If EnableSnippets is false, this options is ignored and code patterns will
+  /// always be omitted.
+  bool IncludeCodePatterns = false;
+
+  /// Add macros to code completion results.
+  bool IncludeMacros = true;
+
+  /// Add globals to code completion results.
+  bool IncludeGlobals = true;
+
+  /// Add brief comments to completion items, if available.
+  /// FIXME(ibiryukov): it looks like turning this option on significantly slows
+  /// down completion, investigate if it can be made faster.
+  bool IncludeBriefComments = true;
+};
+
 /// Get code completions at a specified \p Pos in \p FileName.
 std::vector<CompletionItem>
 codeComplete(PathRef FileName, tooling::CompileCommand Command,
              PrecompiledPreamble const *Preamble, StringRef Contents,
              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
              std::shared_ptr<PCHContainerOperations> PCHs,
-             bool SnippetCompletions, clangd::Logger &Logger);
+             clangd::CodeCompleteOptions Opts, clangd::Logger &Logger);
 
 /// Get signature help at a specified \p Pos in \p FileName.
 SignatureHelp signatureHelp(PathRef FileName, tooling::CompileCommand Command,

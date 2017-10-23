@@ -42,7 +42,7 @@ def VMRESUME : I<0x01, MRM_C3, (outs), (ins), "vmresume", []>, TB;
 def VMPTRLDm : I<0xC7, MRM6m, (outs), (ins i64mem:$vmcs),
   "vmptrld\t$vmcs", []>, PS;
 def VMPTRSTm : I<0xC7, MRM7m, (outs), (ins i64mem:$vmcs),
-  "vmptrst\t$vmcs", []>, TB;
+  "vmptrst\t$vmcs", []>, PS;
 def VMREAD64rr : I<0x78, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
   "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
 def VMREAD32rr : I<0x78, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
