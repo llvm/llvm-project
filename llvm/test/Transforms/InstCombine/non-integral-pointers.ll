@@ -46,3 +46,47 @@ entry:
   store i8 addrspace(3)* %val, i8 addrspace(3)** %ptr1
   ret void
 }
+
+define i64 @g(i8 addrspace(4)** %gp) {
+  ; CHECK-LABEL: @g(
+  ; CHECK: load
+  %.pre = load i8 addrspace(4)*, i8 addrspace(4)** %gp, align 8
+  %v74 = call i8 addrspace(4)* @alloc()
+  %v75 = addrspacecast i8 addrspace(4)* %v74 to i8*
+  %v76 = bitcast i8* %v75 to i8 addrspace(4)**
+  %v77 = getelementptr i8 addrspace(4)*, i8 addrspace(4)** %v76, i64 -1
+  ; CHECK: store
+  store i8 addrspace(4)* %.pre, i8 addrspace(4)** %v77, align 8
+  %v80 = bitcast i8 addrspace(4)** %v77 to i64*
+  ; CHECK: load
+  ; CHECK-NOT: ptrtoint
+  %v81 = load i64, i64* %v80, align 8
+  ret i64 %v81
+}
+
+define i64 @g2(i8* addrspace(4)* %gp) {
+  ; CHECK-LABEL: @g2(
+  ; CHECK: load
+  %.pre = load i8*, i8* addrspace(4)* %gp, align 8
+  %v74 = call i8 addrspace(4)* @alloc()
+  %v76 = bitcast i8 addrspace(4)* %v74 to i8* addrspace(4)*
+  %v77 = getelementptr i8*, i8* addrspace(4)* %v76, i64 -1
+  ; CHECK: store
+  store i8* %.pre, i8* addrspace(4)* %v77, align 8
+  %v80 = bitcast i8* addrspace(4)* %v77 to i64 addrspace(4)*
+  ; CHECK-NOT: store
+  %v81 = load i64, i64 addrspace(4)* %v80, align 8
+  ret i64 %v81
+}
+
+declare i8 addrspace(4)* @alloc()
+
+define i64 @f_4(i8 addrspace(4)* %v0) {
+  ; CHECK-LABEL: @f_4(
+  ; CHECK-NOT: ptrtoint
+  %v5 = bitcast i64 (i64)* @f_5 to i64 (i8 addrspace(4)*)*
+  %v6 = call i64 %v5(i8 addrspace(4)* %v0)
+  ret i64 %v6
+}
+
+declare i64 @f_5(i64)

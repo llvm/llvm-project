@@ -644,6 +644,9 @@ struct InternalInstruction {
   uint8_t                       sibScale;
   SIBBase                       sibBase;
 
+  // Embedded rounding control.
+  uint8_t                       RC;
+
   ArrayRef<OperandSpecifier> operands;
 };
 
