@@ -1,0 +1,37 @@
+# RUN: clangd -enable-snippets -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+Content-Length: 220
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"#define MACRO X\nint variable;\nstruct Struct {};\n int function();\nint X = "}}}
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
+Content-Length: 58
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[
+#
+# Keyword
+# CHECK-DAG: {"label":"int","kind":14,"sortText":"000050int","filterText":"int","insertText":"int","insertTextFormat":1}
+#
+# Code pattern
+# CHECK-DAG: {"label":"static_cast<type>(expression)","kind":15,"sortText":"000040static_cast","filterText":"static_cast","insertText":"static_cast<${1:type}>(${2:expression})","insertTextFormat":2}
+#
+# Struct
+# CHECK-DAG: {"label":"Struct","kind":7,"sortText":"000050Struct","filterText":"Struct","insertText":"Struct","insertTextFormat":1}
+#
+# Macro
+# CHECK-DAG: {"label":"MACRO","kind":1,"sortText":"000070MACRO","filterText":"MACRO","insertText":"MACRO","insertTextFormat":1}
+#
+# Variable
+# CHECK-DAG: {"label":"variable","kind":6,"detail":"int","sortText":"000012variable","filterText":"variable","insertText":"variable","insertTextFormat":1}
+#
+# Function
+# CHECK-DAG: {"label":"function()","kind":3,"detail":"int","sortText":"000012function","filterText":"function","insertText":"function()","insertTextFormat":1}
+#
+#
+# CHECK: ]}
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown","params":null}
