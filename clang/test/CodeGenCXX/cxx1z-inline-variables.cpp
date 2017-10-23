@@ -31,18 +31,28 @@ struct compat {
   static constexpr int b = 2;
   static constexpr int c = 3;
   static inline constexpr int d = 4;
+  static const int e = 5;
+  static const int f = 6;
+  static const int g = 7;
 };
 const int &compat_use_before_redecl = compat::b;
 const int compat::a;
 const int compat::b;
 const int compat::c;
 const int compat::d;
+const int compat::e;
+constexpr int compat::f;
+constexpr inline int compat::g;
 const int &compat_use_after_redecl1 = compat::c;
 const int &compat_use_after_redecl2 = compat::d;
-// CHECK: @_ZN6compat1bE = weak_odr constant i32 2
-// CHECK: @_ZN6compat1aE = weak_odr constant i32 1
-// CHECK: @_ZN6compat1cE = weak_odr constant i32 3
-// CHECK: @_ZN6compat1dE = linkonce_odr constant i32 4
+const int &compat_use_after_redecl3 = compat::g;
+// CHECK-DAG: @_ZN6compat1bE = weak_odr constant i32 2
+// CHECK-DAG: @_ZN6compat1aE = weak_odr constant i32 1
+// CHECK-DAG: @_ZN6compat1cE = weak_odr constant i32 3
+// CHECK-DAG: @_ZN6compat1dE = linkonce_odr constant i32 4
+// CHECK-DAG: @_ZN6compat1eE = constant i32 5
+// CHECK-DAG: @_ZN6compat1fE = weak_odr constant i32 6
+// CHECK-DAG: @_ZN6compat1gE = linkonce_odr constant i32 7
 
 template<typename T> struct X {
   static int a;

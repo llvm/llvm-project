@@ -558,7 +558,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   if (buildMSAsmString(PP, AsmLoc, AsmToks, TokOffsets, AsmString))
     return StmtError();
 
-  TargetOptions TO = Actions.Context.getTargetInfo().getTargetOpts();
+  const TargetOptions &TO = Actions.Context.getTargetInfo().getTargetOpts();
   std::string FeaturesStr =
       llvm::join(TO.Features.begin(), TO.Features.end(), ",");
 

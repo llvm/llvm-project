@@ -8965,12 +8965,6 @@ bool clang::isBetterOverloadCandidate(
     // C++14 [over.match.best]p1 section 2 bullet 3.
   }
 
-  //    -- F1 is generated from a deduction-guide and F2 is not
-  auto *Guide1 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand1.Function);
-  auto *Guide2 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand2.Function);
-  if (Guide1 && Guide2 && Guide1->isImplicit() != Guide2->isImplicit())
-    return Guide2->isImplicit();
-
   //    -- F1 is a non-template function and F2 is a function template
   //       specialization, or, if not that,
   bool Cand1IsSpecialization = Cand1.Function &&
@@ -9014,6 +9008,23 @@ bool clang::isBetterOverloadCandidate(
       return false;
     // Inherited from sibling base classes: still ambiguous.
   }
+
+  // Check C++17 tie-breakers for deduction guides.
+  {
+    auto *Guide1 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand1.Function);
+    auto *Guide2 = dyn_cast_or_null<CXXDeductionGuideDecl>(Cand2.Function);
+    if (Guide1 && Guide2) {
+      //  -- F1 is generated from a deduction-guide and F2 is not
+      if (Guide1->isImplicit() != Guide2->isImplicit())
+        return Guide2->isImplicit();
+
+      //  -- F1 is the copy deduction candidate(16.3.1.8) and F2 is not
+      if (Guide1->isCopyDeductionCandidate())
+        return true;
+    }
+  }
+  
+
 
   // FIXME: Work around a defect in the C++17 guaranteed copy elision wording,
   // as combined with the resolution to CWG issue 243.
