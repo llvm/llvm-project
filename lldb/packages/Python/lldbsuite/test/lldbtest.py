@@ -1371,10 +1371,9 @@ class Base(unittest2.TestCase):
         self.dumpSessionInfo()."""
         arch = self.getArchitecture()
         comp = self.getCompiler()
+        option_str = ""
         if arch:
             option_str = "-A " + arch
-        else:
-            option_str = ""
         if comp:
             option_str += " -C " + comp
         return option_str

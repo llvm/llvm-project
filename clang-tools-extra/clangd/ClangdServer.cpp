@@ -144,15 +144,15 @@ ClangdScheduler::~ClangdScheduler() {
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           unsigned AsyncThreadsCount, bool SnippetCompletions,
+                           unsigned AsyncThreadsCount,
+                           clangd::CodeCompleteOptions CodeCompleteOpts,
                            clangd::Logger &Logger,
                            llvm::Optional<StringRef> ResourceDir)
     : Logger(Logger), CDB(CDB), DiagConsumer(DiagConsumer),
       FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      SnippetCompletions(SnippetCompletions), WorkScheduler(AsyncThreadsCount) {
-}
+      CodeCompleteOpts(CodeCompleteOpts), WorkScheduler(AsyncThreadsCount) {}
 
 void ClangdServer::setRootPath(PathRef RootPath) {
   std::string NewRootPath = llvm::sys::path::convert_to_slash(
@@ -237,7 +237,7 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
     std::vector<CompletionItem> Result = clangd::codeComplete(
         File, Resources->getCompileCommand(),
         Preamble ? &Preamble->Preamble : nullptr, Contents, Pos, TaggedFS.Value,
-        PCHs, SnippetCompletions, Logger);
+        PCHs, CodeCompleteOpts, Logger);
     return make_tagged(std::move(Result), std::move(TaggedFS.Tag));
   });
 

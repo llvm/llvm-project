@@ -187,6 +187,13 @@ enum {
   /// - OldInsnID - Instruction ID to copy from
   /// - OpIdx - The operand to copy
   GIR_Copy,
+  /// Copy an operand to the specified instruction or add a zero register if the
+  /// operand is a zero immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// - OpIdx - The operand to copy
+  /// - ZeroReg - The zero register to use
+  GIR_CopyOrAddZeroReg,
   /// Copy an operand to the specified instruction
   /// - NewInsnID - Instruction ID to modify
   /// - OldInsnID - Instruction ID to copy from

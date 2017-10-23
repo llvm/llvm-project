@@ -76,6 +76,13 @@ extern "C" {
       void (*malloc_hook)(const volatile void *, size_t),
       void (*free_hook)(const volatile void *));
 
+  /* Drains allocator quarantines (calling thread's and global ones), returns
+     freed memory back to OS and releases other non-essential internal allocator
+     resources in attempt to reduce process RSS.
+     Currently available with ASan only.
+  */
+  void __sanitizer_purge_allocator();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

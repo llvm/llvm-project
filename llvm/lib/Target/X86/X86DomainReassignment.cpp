@@ -744,7 +744,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
 }
 
 INITIALIZE_PASS(X86DomainReassignment, "x86-domain-reassignment",
-                "X86 Domain Reassignment Pass", false, false);
+                "X86 Domain Reassignment Pass", false, false)
 
 /// Returns an instance of the Domain Reassignment pass.
 FunctionPass *llvm::createX86DomainReassignmentPass() {

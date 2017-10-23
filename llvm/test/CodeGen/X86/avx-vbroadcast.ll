@@ -853,14 +853,12 @@ define <4 x double> @broadcast_shuffle1032(double* %p) {
 ; X32-LABEL: broadcast_shuffle1032:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_shuffle1032:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; X64-NEXT:    retq
   %1 = load double, double* %p
   %2 = insertelement <2 x double> undef, double %1, i32 1

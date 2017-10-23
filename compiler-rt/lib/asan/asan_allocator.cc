@@ -716,6 +716,22 @@ struct Allocator {
     return AsanChunkView(m1);
   }
 
+  void Purge() {
+    AsanThread *t = GetCurrentThread();
+    if (t) {
+      AsanThreadLocalMallocStorage *ms = &t->malloc_storage();
+      quarantine.DrainAndRecycle(GetQuarantineCache(ms),
+                                 QuarantineCallback(GetAllocatorCache(ms)));
+    }
+    {
+      SpinMutexLock l(&fallback_mutex);
+      quarantine.DrainAndRecycle(&fallback_quarantine_cache,
+                                 QuarantineCallback(&fallback_allocator_cache));
+    }
+
+    allocator.ForceReleaseToOS();
+  }
+
   void PrintStats() {
     allocator.PrintStats();
     quarantine.PrintStats();
@@ -1009,6 +1025,10 @@ uptr __sanitizer_get_allocated_size(const void *p) {
     ReportSanitizerGetAllocatedSizeNotOwned(ptr, &stack);
   }
   return allocated_size;
+}
+
+void __sanitizer_purge_allocator() {
+  instance.Purge();
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS

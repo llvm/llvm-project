@@ -5529,8 +5529,8 @@ multiclass SS41I_extract8<bits<8> opc, string OpcodeStr> {
                  (ins i8mem:$dst, VR128:$src1, u8imm:$src2),
                  !strconcat(OpcodeStr,
                             "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                 [(store (i8 (trunc (assertzext (X86pextrb (v16i8 VR128:$src1),
-                                                 imm:$src2)))), addr:$dst)]>;
+                 [(store (i8 (trunc (X86pextrb (v16i8 VR128:$src1), imm:$src2))),
+                          addr:$dst)]>;
 }
 
 let Predicates = [HasAVX, NoBWI] in
@@ -5554,8 +5554,8 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
                  (ins i16mem:$dst, VR128:$src1, u8imm:$src2),
                  !strconcat(OpcodeStr,
                   "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                 [(store (i16 (trunc (assertzext (X86pextrw (v8i16 VR128:$src1),
-                                                  imm:$src2)))), addr:$dst)]>;
+                 [(store (i16 (trunc (X86pextrw (v8i16 VR128:$src1), imm:$src2))),
+                          addr:$dst)]>;
 }
 
 let Predicates = [HasAVX, NoBWI] in

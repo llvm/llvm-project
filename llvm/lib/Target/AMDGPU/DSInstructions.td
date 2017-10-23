@@ -631,35 +631,35 @@ class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
 
 
 // 32-bit atomics.
-def : DSAtomicRetPat<DS_WRXCHG_RTN_B32, i32, si_atomic_swap_local>;
-def : DSAtomicRetPat<DS_ADD_RTN_U32, i32, si_atomic_load_add_local>;
-def : DSAtomicRetPat<DS_SUB_RTN_U32, i32, si_atomic_load_sub_local>;
-def : DSAtomicRetPat<DS_INC_RTN_U32, i32, si_atomic_inc_local>;
-def : DSAtomicRetPat<DS_DEC_RTN_U32, i32, si_atomic_dec_local>;
-def : DSAtomicRetPat<DS_AND_RTN_B32, i32, si_atomic_load_and_local>;
-def : DSAtomicRetPat<DS_OR_RTN_B32, i32, si_atomic_load_or_local>;
-def : DSAtomicRetPat<DS_XOR_RTN_B32, i32, si_atomic_load_xor_local>;
-def : DSAtomicRetPat<DS_MIN_RTN_I32, i32, si_atomic_load_min_local>;
-def : DSAtomicRetPat<DS_MAX_RTN_I32, i32, si_atomic_load_max_local>;
-def : DSAtomicRetPat<DS_MIN_RTN_U32, i32, si_atomic_load_umin_local>;
-def : DSAtomicRetPat<DS_MAX_RTN_U32, i32, si_atomic_load_umax_local>;
-def : DSAtomicCmpXChg<DS_CMPST_RTN_B32, i32, si_atomic_cmp_swap_32_local>;
+def : DSAtomicRetPat<DS_WRXCHG_RTN_B32, i32, atomic_swap_local_m0>;
+def : DSAtomicRetPat<DS_ADD_RTN_U32, i32, atomic_load_add_local_m0>;
+def : DSAtomicRetPat<DS_SUB_RTN_U32, i32, atomic_load_sub_local_m0>;
+def : DSAtomicRetPat<DS_INC_RTN_U32, i32, atomic_inc_local_m0>;
+def : DSAtomicRetPat<DS_DEC_RTN_U32, i32, atomic_dec_local_m0>;
+def : DSAtomicRetPat<DS_AND_RTN_B32, i32, atomic_load_and_local_m0>;
+def : DSAtomicRetPat<DS_OR_RTN_B32, i32, atomic_load_or_local_m0>;
+def : DSAtomicRetPat<DS_XOR_RTN_B32, i32, atomic_load_xor_local_m0>;
+def : DSAtomicRetPat<DS_MIN_RTN_I32, i32, atomic_load_min_local_m0>;
+def : DSAtomicRetPat<DS_MAX_RTN_I32, i32, atomic_load_max_local_m0>;
+def : DSAtomicRetPat<DS_MIN_RTN_U32, i32, atomic_load_umin_local_m0>;
+def : DSAtomicRetPat<DS_MAX_RTN_U32, i32, atomic_load_umax_local_m0>;
+def : DSAtomicCmpXChg<DS_CMPST_RTN_B32, i32, atomic_cmp_swap_local_m0>;
 
 // 64-bit atomics.
-def : DSAtomicRetPat<DS_WRXCHG_RTN_B64, i64, si_atomic_swap_local>;
-def : DSAtomicRetPat<DS_ADD_RTN_U64, i64, si_atomic_load_add_local>;
-def : DSAtomicRetPat<DS_SUB_RTN_U64, i64, si_atomic_load_sub_local>;
-def : DSAtomicRetPat<DS_INC_RTN_U64, i64, si_atomic_inc_local>;
-def : DSAtomicRetPat<DS_DEC_RTN_U64, i64, si_atomic_dec_local>;
-def : DSAtomicRetPat<DS_AND_RTN_B64, i64, si_atomic_load_and_local>;
-def : DSAtomicRetPat<DS_OR_RTN_B64, i64, si_atomic_load_or_local>;
-def : DSAtomicRetPat<DS_XOR_RTN_B64, i64, si_atomic_load_xor_local>;
-def : DSAtomicRetPat<DS_MIN_RTN_I64, i64, si_atomic_load_min_local>;
-def : DSAtomicRetPat<DS_MAX_RTN_I64, i64, si_atomic_load_max_local>;
-def : DSAtomicRetPat<DS_MIN_RTN_U64, i64, si_atomic_load_umin_local>;
-def : DSAtomicRetPat<DS_MAX_RTN_U64, i64, si_atomic_load_umax_local>;
+def : DSAtomicRetPat<DS_WRXCHG_RTN_B64, i64, atomic_swap_local_m0>;
+def : DSAtomicRetPat<DS_ADD_RTN_U64, i64, atomic_load_add_local_m0>;
+def : DSAtomicRetPat<DS_SUB_RTN_U64, i64, atomic_load_sub_local_m0>;
+def : DSAtomicRetPat<DS_INC_RTN_U64, i64, atomic_inc_local_m0>;
+def : DSAtomicRetPat<DS_DEC_RTN_U64, i64, atomic_dec_local_m0>;
+def : DSAtomicRetPat<DS_AND_RTN_B64, i64, atomic_load_and_local_m0>;
+def : DSAtomicRetPat<DS_OR_RTN_B64, i64, atomic_load_or_local_m0>;
+def : DSAtomicRetPat<DS_XOR_RTN_B64, i64, atomic_load_xor_local_m0>;
+def : DSAtomicRetPat<DS_MIN_RTN_I64, i64, atomic_load_min_local_m0>;
+def : DSAtomicRetPat<DS_MAX_RTN_I64, i64, atomic_load_max_local_m0>;
+def : DSAtomicRetPat<DS_MIN_RTN_U64, i64, atomic_load_umin_local_m0>;
+def : DSAtomicRetPat<DS_MAX_RTN_U64, i64, atomic_load_umax_local_m0>;
 
-def : DSAtomicCmpXChg<DS_CMPST_RTN_B64, i64, si_atomic_cmp_swap_64_local>;
+def : DSAtomicCmpXChg<DS_CMPST_RTN_B64, i64, atomic_cmp_swap_local_m0>;
 
 //===----------------------------------------------------------------------===//
 // Real instructions
