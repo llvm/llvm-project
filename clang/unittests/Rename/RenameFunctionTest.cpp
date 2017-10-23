@@ -220,6 +220,25 @@ TEST_F(RenameFunctionTest, RenameFunctionDecls) {
   CompareSnippets(Expected, After);
 }
 
+TEST_F(RenameFunctionTest, RenameTemplateFunctions) {
+  std::string Before = R"(
+      namespace na {
+      template<typename T> T X();
+      }
+      namespace na { void f() { X<int>(); } }
+      namespace nb { void g() { na::X          <int>(); } }
+      )";
+  std::string Expected = R"(
+      namespace na {
+      template<typename T> T Y();
+      }
+      namespace na { void f() { nb::Y<int>(); } }
+      namespace nb { void g() { Y<int>(); } }
+      )";
+  std::string After = runClangRenameOnCode(Before, "na::X", "nb::Y");
+  CompareSnippets(Expected, After);
+}
+
 TEST_F(RenameFunctionTest, RenameOutOfLineFunctionDecls) {
   std::string Before = R"(
       namespace na {

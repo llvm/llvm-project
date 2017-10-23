@@ -1803,6 +1803,10 @@ static int readOperands(struct InternalInstruction* insn) {
       if (readImmediate(insn, insn->addressSize))
         return -1;
       break;
+    case ENCODING_IRC:
+      insn->RC = (l2FromEVEX4of4(insn->vectorExtensionPrefix[3]) << 1) |
+                 lFromEVEX4of4(insn->vectorExtensionPrefix[3]);
+      break;
     case ENCODING_RB:
       if (readOpcodeRegister(insn, 1))
         return -1;

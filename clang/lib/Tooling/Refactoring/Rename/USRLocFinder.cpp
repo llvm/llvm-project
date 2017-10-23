@@ -221,7 +221,12 @@ public:
     }
 
     auto StartLoc = Expr->getLocStart();
-    auto EndLoc = Expr->getLocEnd();
+    // For template function call expressions like `foo<int>()`, we want to
+    // restrict the end of location to just before the `<` character.
+    SourceLocation EndLoc = Expr->hasExplicitTemplateArgs()
+                                ? Expr->getLAngleLoc().getLocWithOffset(-1)
+                                : Expr->getLocEnd();
+
     // In case of renaming an enum declaration, we have to explicitly handle
     // unscoped enum constants referenced in expressions (e.g.
     // "auto r = ns1::ns2::Green" where Green is an enum constant of an unscoped
