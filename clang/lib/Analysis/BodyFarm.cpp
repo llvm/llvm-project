@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BodyFarm.h"
+#include "clang/Analysis/BodyFarm.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
