@@ -2180,13 +2180,13 @@ let Predicates = [HasMOVBE] in {
 let Predicates = [HasRDRAND], Defs = [EFLAGS] in {
   def RDRAND16r : I<0xC7, MRM6r, (outs GR16:$dst), (ins),
                     "rdrand{w}\t$dst",
-                    [(set GR16:$dst, EFLAGS, (X86rdrand))]>, OpSize16, TB;
+                    [(set GR16:$dst, EFLAGS, (X86rdrand))]>, OpSize16, PS;
   def RDRAND32r : I<0xC7, MRM6r, (outs GR32:$dst), (ins),
                     "rdrand{l}\t$dst",
-                    [(set GR32:$dst, EFLAGS, (X86rdrand))]>, OpSize32, TB;
+                    [(set GR32:$dst, EFLAGS, (X86rdrand))]>, OpSize32, PS;
   def RDRAND64r : RI<0xC7, MRM6r, (outs GR64:$dst), (ins),
                      "rdrand{q}\t$dst",
-                     [(set GR64:$dst, EFLAGS, (X86rdrand))]>, TB;
+                     [(set GR64:$dst, EFLAGS, (X86rdrand))]>, PS;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2195,13 +2195,13 @@ let Predicates = [HasRDRAND], Defs = [EFLAGS] in {
 let Predicates = [HasRDSEED], Defs = [EFLAGS] in {
   def RDSEED16r : I<0xC7, MRM7r, (outs GR16:$dst), (ins),
                     "rdseed{w}\t$dst",
-                    [(set GR16:$dst, EFLAGS, (X86rdseed))]>, OpSize16, TB;
+                    [(set GR16:$dst, EFLAGS, (X86rdseed))]>, OpSize16, PS;
   def RDSEED32r : I<0xC7, MRM7r, (outs GR32:$dst), (ins),
                     "rdseed{l}\t$dst",
-                    [(set GR32:$dst, EFLAGS, (X86rdseed))]>, OpSize32, TB;
+                    [(set GR32:$dst, EFLAGS, (X86rdseed))]>, OpSize32, PS;
   def RDSEED64r : RI<0xC7, MRM7r, (outs GR64:$dst), (ins),
                      "rdseed{q}\t$dst",
-                     [(set GR64:$dst, EFLAGS, (X86rdseed))]>, TB;
+                     [(set GR64:$dst, EFLAGS, (X86rdseed))]>, PS;
 }
 
 //===----------------------------------------------------------------------===//

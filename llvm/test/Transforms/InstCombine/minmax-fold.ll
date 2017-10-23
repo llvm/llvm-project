@@ -690,6 +690,7 @@ define <8 x float> @bitcast_vector_umin(<8 x float> %x, <8 x float> %y) {
 }
 
 ; Check that we look through cast and recognize min idiom.
+
 define zeroext i8 @look_through_cast1(i32 %x) {
 ; CHECK-LABEL: @look_through_cast1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 511
@@ -704,6 +705,7 @@ define zeroext i8 @look_through_cast1(i32 %x) {
 }
 
 ; Check that we look through cast but min is not recognized.
+
 define zeroext i8 @look_through_cast2(i32 %x) {
 ; CHECK-LABEL: @look_through_cast2(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X:%.*]], 510

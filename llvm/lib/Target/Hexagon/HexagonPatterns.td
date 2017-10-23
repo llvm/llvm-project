@@ -1310,6 +1310,8 @@ def: AccRRR_pat<M4_xor_andn,  Xor, Su<Not2<And>>, I32,  I32>;
 let AddedComplexity = 30 in {
   def: Pat<(add I32:$Rs, (Su<Add> I32:$Ru, anyimm:$s6)),
            (S4_addaddi IntRegs:$Rs, IntRegs:$Ru, imm:$s6)>;
+  def: Pat<(add anyimm:$s6, (Su<Add> I32:$Rs, I32:$Ru)),
+           (S4_addaddi IntRegs:$Rs, IntRegs:$Ru, imm:$s6)>;
   def: Pat<(add I32:$Rs, (Su<Sub> anyimm:$s6, I32:$Ru)),
            (S4_subaddi IntRegs:$Rs, imm:$s6, IntRegs:$Ru)>;
   def: Pat<(sub (Su<Add> I32:$Rs, anyimm:$s6), I32:$Ru),

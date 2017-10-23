@@ -320,8 +320,8 @@ define <2 x double> @test_dppd(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ;
 ; BTVER2-LABEL: test_dppd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vdppd $7, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vdppd $7, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vdppd $7, %xmm1, %xmm0, %xmm0 # sched: [9:3.00]
+; BTVER2-NEXT:    vdppd $7, (%rdi), %xmm0, %xmm0 # sched: [14:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_dppd:
@@ -381,8 +381,8 @@ define <4 x float> @test_dpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2
 ;
 ; BTVER2-LABEL: test_dpps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vdpps $7, %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vdpps $7, (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vdpps $7, %xmm1, %xmm0, %xmm0 # sched: [11:3.00]
+; BTVER2-NEXT:    vdpps $7, (%rdi), %xmm0, %xmm0 # sched: [16:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_dpps:

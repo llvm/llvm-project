@@ -30,6 +30,7 @@ set(LIBUNWIND_HEADERS
     DwarfParser.hpp
     libunwind_ext.h
     Registers.hpp
+    RWMutex.hpp
     UnwindCursor.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/libunwind.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/unwind.h)

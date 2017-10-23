@@ -39,6 +39,9 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
     void __sanitizer_free_hook(void *ptr);
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_purge_allocator();
+
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_print_memory_profile(uptr top_percent, uptr max_number_of_contexts);
 }  // extern "C"
 

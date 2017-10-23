@@ -178,13 +178,15 @@ static wasm::WasmTable readTable(const uint8_t *&Ptr) {
 }
 
 static Error readSection(WasmSection &Section, const uint8_t *&Ptr,
-                         const uint8_t *Start) {
-  // TODO(sbc): Avoid reading past EOF in the case of malformed files.
+                         const uint8_t *Start, const uint8_t *Eof) {
   Section.Offset = Ptr - Start;
   Section.Type = readVaruint7(Ptr);
   uint32_t Size = readVaruint32(Ptr);
   if (Size == 0)
     return make_error<StringError>("Zero length section",
+                                   object_error::parse_failed);
+  if (Ptr + Size > Eof)
+    return make_error<StringError>("Section too large",
                                    object_error::parse_failed);
   Section.Content = ArrayRef<uint8_t>(Ptr, Size);
   Ptr += Size;
@@ -221,7 +223,7 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
 
   WasmSection Sec;
   while (Ptr < Eof) {
-    if ((Err = readSection(Sec, Ptr, getPtr(0))))
+    if ((Err = readSection(Sec, Ptr, getPtr(0), Eof)))
       return;
     if ((Err = parseSection(Sec)))
       return;

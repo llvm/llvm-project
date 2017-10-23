@@ -481,7 +481,7 @@ public:
     {
 #if _LIBCPP_DEBUG_LEVEL >= 2
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to dereference a non-dereferenceable list::iterator");
+                       "Attempted to dereference a non-dereferenceable list::const_iterator");
 #endif
         return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__value_);
     }

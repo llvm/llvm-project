@@ -74,7 +74,7 @@ static inline const char* stringForOperandEncoding(OperandEncoding encoding) {
 /// @param parent - The class that may be the superset
 /// @return       - True if child is a subset of parent, false otherwise.
 static inline bool inheritsFrom(InstructionContext child,
-                                InstructionContext parent,
+                                InstructionContext parent, bool noPrefix = true,
                                 bool VEX_LIG = false, bool VEX_WIG = false,
                                 bool AdSize64 = false) {
   if (child == parent)
@@ -83,25 +83,25 @@ static inline bool inheritsFrom(InstructionContext child,
   switch (parent) {
   case IC:
     return(inheritsFrom(child, IC_64BIT, AdSize64) ||
-           inheritsFrom(child, IC_OPSIZE) ||
+           (noPrefix && inheritsFrom(child, IC_OPSIZE, noPrefix)) ||
            inheritsFrom(child, IC_ADSIZE) ||
-           inheritsFrom(child, IC_XD) ||
-           inheritsFrom(child, IC_XS));
+           (noPrefix && inheritsFrom(child, IC_XD, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_XS, noPrefix)));
   case IC_64BIT:
     return(inheritsFrom(child, IC_64BIT_REXW)   ||
-           inheritsFrom(child, IC_64BIT_OPSIZE) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE, noPrefix)) ||
            (!AdSize64 && inheritsFrom(child, IC_64BIT_ADSIZE)) ||
-           inheritsFrom(child, IC_64BIT_XD)     ||
-           inheritsFrom(child, IC_64BIT_XS));
+           (noPrefix && inheritsFrom(child, IC_64BIT_XD, noPrefix))     ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_XS, noPrefix)));
   case IC_OPSIZE:
     return inheritsFrom(child, IC_64BIT_OPSIZE) ||
            inheritsFrom(child, IC_OPSIZE_ADSIZE);
   case IC_ADSIZE:
-    return inheritsFrom(child, IC_OPSIZE_ADSIZE);
+    return (noPrefix && inheritsFrom(child, IC_OPSIZE_ADSIZE, noPrefix));
   case IC_OPSIZE_ADSIZE:
     return false;
   case IC_64BIT_ADSIZE:
-    return inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE);
+    return (noPrefix && inheritsFrom(child, IC_64BIT_OPSIZE_ADSIZE, noPrefix));
   case IC_64BIT_OPSIZE_ADSIZE:
     return false;
   case IC_XD:
@@ -113,9 +113,9 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_XS_OPSIZE:
     return inheritsFrom(child, IC_64BIT_XS_OPSIZE);
   case IC_64BIT_REXW:
-    return(inheritsFrom(child, IC_64BIT_REXW_XS) ||
-           inheritsFrom(child, IC_64BIT_REXW_XD) ||
-           inheritsFrom(child, IC_64BIT_REXW_OPSIZE) ||
+    return((noPrefix && inheritsFrom(child, IC_64BIT_REXW_XS, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_REXW_XD, noPrefix)) ||
+           (noPrefix && inheritsFrom(child, IC_64BIT_REXW_OPSIZE, noPrefix)) ||
            (!AdSize64 && inheritsFrom(child, IC_64BIT_REXW_ADSIZE)));
   case IC_64BIT_OPSIZE:
     return inheritsFrom(child, IC_64BIT_REXW_OPSIZE) ||
@@ -1108,6 +1108,7 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
                                         const ModRMFilter   &filter,
                                         InstrUID            uid,
                                         bool                is32bit,
+                                        bool                noPrefix,
                                         bool                ignoresVEX_L,
                                         bool                ignoresVEX_W,
                                         unsigned            addressSize) {
@@ -1120,8 +1121,8 @@ void DisassemblerTables::setTableFields(OpcodeType          type,
 
     bool adSize64 = addressSize == 64;
     if (inheritsFrom((InstructionContext)index,
-                     InstructionSpecifiers[uid].insnContext, ignoresVEX_L,
-                     ignoresVEX_W, adSize64))
+                     InstructionSpecifiers[uid].insnContext, noPrefix,
+                     ignoresVEX_L, ignoresVEX_W, adSize64))
       setTableFields(decision.opcodeDecisions[index].modRMDecisions[opcode],
                      filter,
                      uid,

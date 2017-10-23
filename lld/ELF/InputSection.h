@@ -220,7 +220,7 @@ struct SectionPiece {
 
   uint32_t InputOff;
   uint32_t Hash;
-  uint64_t OutputOff : 63;
+  int64_t OutputOff : 63;
   uint64_t Live : 1;
 };
 

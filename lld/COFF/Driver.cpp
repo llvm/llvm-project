@@ -17,6 +17,7 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/Driver.h"
+#include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -53,18 +54,25 @@ BumpPtrAllocator BAlloc;
 StringSaver Saver{BAlloc};
 std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 
-bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
+bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
   ErrorCount = 0;
   ErrorOS = &Diag;
 
   Config = make<Configuration>();
   Config->Argv = {Args.begin(), Args.end()};
   Config->ColorDiagnostics = ErrorOS->has_colors();
+  Config->CanExitEarly = CanExitEarly;
 
   Symtab = make<SymbolTable>();
 
   Driver = make<LinkerDriver>();
   Driver->link(Args);
+
+  // Call exit() if we can to avoid calling destructors.
+  if (CanExitEarly)
+    exitLld(ErrorCount ? 1 : 0);
+
+  freeArena();
   return !ErrorCount;
 }
 
@@ -731,6 +739,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  // Handle --version, which is an lld extension. This option is a bit odd
+  // because it doesn't start with "/", but we deliberately chose "--" to
+  // avoid conflict with /version and for compatibility with clang-cl.
+  if (Args.hasArg(OPT_dash_dash_version)) {
+    outs() << getLLDVersion() << "\n";
+    return;
+  }
+
   // Handle /lldmingw early, since it can potentially affect how other
   // options are handled.
   Config->MinGW = Args.hasArg(OPT_lldmingw);
@@ -1078,7 +1094,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Args.hasArg(OPT_INPUT)) {
     fixupExports();
     createImportLibrary(/*AsLib=*/true);
-    exit(0);
+    return;
   }
 
   // Handle /delayload
@@ -1170,7 +1186,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // This is useful because MSVC link.exe can generate complete PDBs.
   if (Args.hasArg(OPT_msvclto)) {
     invokeMSVC(Args);
-    exit(0);
+    return;
   }
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
@@ -1264,12 +1280,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result.
   writeResult();
-
-  if (ErrorCount)
-    return;
-
-  // Call exit to avoid calling destructors.
-  exit(0);
 }
 
 } // namespace coff

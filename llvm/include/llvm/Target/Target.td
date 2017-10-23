@@ -768,6 +768,12 @@ class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
   AsmOperandClass ParserMatchClass;
 
   string OperandType = "OPERAND_REGISTER";
+
+  // When referenced in the result of a CodeGen pattern, GlobalISel will
+  // normally copy the matched operand to the result. When this is set, it will
+  // emit a special copy that will replace zero-immediates with the specified
+  // zero-register.
+  Register GIZeroRegister = ?;
 }
 
 let OperandType = "OPERAND_IMMEDIATE" in {
