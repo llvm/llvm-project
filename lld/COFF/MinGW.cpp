@@ -66,6 +66,9 @@ AutoExporter::AutoExporter() {
       "libclang_rt.builtins-arm",
       "libclang_rt.builtins-i386",
       "libclang_rt.builtins-x86_64",
+      "libc++",
+      "libc++abi",
+      "libunwind",
   };
   ExcludeObjects = {
       "crt0.o",
