@@ -57,9 +57,27 @@ struct Token {
 };
 
 static bool isDecorated(StringRef Sym, bool MingwDef) {
-  // mingw does not prepend "_".
-  return (!MingwDef && Sym.startswith("_")) || Sym.startswith("@") ||
-         Sym.startswith("?");
+  // In def files, the symbols can either be listed decorated or undecorated.
+  //
+  // - For cdecl symbols, only the undecorated form is allowed.
+  // - For fastcall and vectorcall symbols, both fully decorated or
+  //   undecorated forms can be present.
+  // - For stdcall symbols in non-MinGW environments, the decorated form is
+  //   fully decorated with leading underscore and trailing stack argument
+  //   size - like "_Func@0".
+  // - In MinGW def files, a decorated stdcall symbol does not include the
+  //   leading underscore though, like "Func@0".
+
+  // This function controls whether a leading underscore should be added to
+  // the given symbol name or not. For MinGW, treat a stdcall symbol name such
+  // as "Func@0" as undecorated, i.e. a leading underscore must be added.
+  // For non-MinGW, look for '@' in the whole string and consider "_Func@0"
+  // as decorated, i.e. don't add any more leading underscores.
+  // We can't check for a leading underscore here, since function names
+  // themselves can start with an underscore, while a second one still needs
+  // to be added.
+  return Sym.startswith("@") || Sym.contains("@@") || Sym.startswith("?") ||
+         (!MingwDef && Sym.contains('@'));
 }
 
 static Error createError(const Twine &Err) {

@@ -268,8 +268,8 @@ template <class T> bool futureIsReady(std::shared_future<T> const &Future) {
 
 namespace {
 
-CompletionItemKind getKind(CXCursorKind K) {
-  switch (K) {
+CompletionItemKind getKindOfDecl(CXCursorKind CursorKind) {
+  switch (CursorKind) {
   case CXCursor_MacroInstantiation:
   case CXCursor_MacroDefinition:
     return CompletionItemKind::Text;
@@ -309,6 +309,22 @@ CompletionItemKind getKind(CXCursorKind K) {
   default:
     return CompletionItemKind::Missing;
   }
+}
+
+CompletionItemKind getKind(CodeCompletionResult::ResultKind ResKind,
+                           CXCursorKind CursorKind) {
+  switch (ResKind) {
+  case CodeCompletionResult::RK_Declaration:
+    return getKindOfDecl(CursorKind);
+  case CodeCompletionResult::RK_Keyword:
+    return CompletionItemKind::Keyword;
+  case CodeCompletionResult::RK_Macro:
+    return CompletionItemKind::Text; // unfortunately, there's no 'Macro'
+                                     // completion items in LSP.
+  case CodeCompletionResult::RK_Pattern:
+    return CompletionItemKind::Snippet;
+  }
+  llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
 }
 
 std::string escapeSnippet(const llvm::StringRef Text) {
@@ -395,7 +411,7 @@ private:
     ProcessChunks(CCS, Item);
 
     // Fill in the kind field of the CompletionItem.
-    Item.kind = getKind(Result.CursorKind);
+    Item.kind = getKind(Result.Kind, Result.CursorKind);
 
     FillSortText(CCS, Item);
 
