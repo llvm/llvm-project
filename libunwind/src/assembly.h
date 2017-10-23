@@ -24,20 +24,6 @@
 #define SEPARATOR ;
 #endif
 
-#if defined(__APPLE__)
-#define HIDDEN_DIRECTIVE .private_extern
-#elif defined(_WIN32)
-// In the COFF object file format, there's no attributes for a global,
-// non-static symbol to make it somehow hidden. So on windows, we don't
-// want to set this at all. To avoid conditionals in
-// DEFINE_LIBUNWIND_PRIVATE_FUNCTION below, make it .globl (which it already
-// is, defined in the same DEFINE_LIBUNWIND_PRIVATE_FUNCTION macro; the
-// duplicate .globl directives are harmless).
-#define HIDDEN_DIRECTIVE .globl
-#else
-#define HIDDEN_DIRECTIVE .hidden
-#endif
-
 #define GLUE2(a, b) a ## b
 #define GLUE(a, b) GLUE2(a, b)
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
@@ -45,6 +31,7 @@
 #if defined(__APPLE__)
 
 #define SYMBOL_IS_FUNC(name)
+#define HIDDEN_SYMBOL(name) .private_extern name
 #define NO_EXEC_STACK_DIRECTIVE
 
 #elif defined(__ELF__)
@@ -54,6 +41,7 @@
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
+#define HIDDEN_SYMBOL(name) .hidden name
 
 #if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
     defined(__linux__)
@@ -62,15 +50,20 @@
 #define NO_EXEC_STACK_DIRECTIVE
 #endif
 
-#else
+#elif defined(_WIN32)
 
 #define SYMBOL_IS_FUNC(name)                                                   \
   .def name SEPARATOR                                                          \
     .scl 2 SEPARATOR                                                           \
     .type 32 SEPARATOR                                                         \
   .endef
+#define HIDDEN_SYMBOL(name)
 
 #define NO_EXEC_STACK_DIRECTIVE
+
+#else
+
+#error Unsupported target
 
 #endif
 
@@ -81,7 +74,7 @@
 
 #define DEFINE_LIBUNWIND_PRIVATE_FUNCTION(name)           \
   .globl SYMBOL_NAME(name) SEPARATOR                      \
-  HIDDEN_DIRECTIVE SYMBOL_NAME(name) SEPARATOR            \
+  HIDDEN_SYMBOL(SYMBOL_NAME(name)) SEPARATOR              \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR             \
   SYMBOL_NAME(name):
 

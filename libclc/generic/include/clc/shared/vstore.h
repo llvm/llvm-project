@@ -16,37 +16,52 @@
 #define _CLC_VECTOR_VSTORE_PRIM1(PRIM_TYPE) \
   _CLC_VECTOR_VSTORE_PRIM3(,PRIM_TYPE, PRIM_TYPE) \
 
-#define _CLC_VECTOR_VSTORE_PRIM() \
-    _CLC_VECTOR_VSTORE_PRIM1(char) \
-    _CLC_VECTOR_VSTORE_PRIM1(uchar) \
-    _CLC_VECTOR_VSTORE_PRIM1(short) \
-    _CLC_VECTOR_VSTORE_PRIM1(ushort) \
-    _CLC_VECTOR_VSTORE_PRIM1(int) \
-    _CLC_VECTOR_VSTORE_PRIM1(uint) \
-    _CLC_VECTOR_VSTORE_PRIM1(long) \
-    _CLC_VECTOR_VSTORE_PRIM1(ulong) \
-    _CLC_VECTOR_VSTORE_PRIM1(float) \
-    _CLC_VECTOR_VSTORE_PRIM3(_half, half, float)
+_CLC_VECTOR_VSTORE_PRIM1(char)
+_CLC_VECTOR_VSTORE_PRIM1(uchar)
+_CLC_VECTOR_VSTORE_PRIM1(short)
+_CLC_VECTOR_VSTORE_PRIM1(ushort)
+_CLC_VECTOR_VSTORE_PRIM1(int)
+_CLC_VECTOR_VSTORE_PRIM1(uint)
+_CLC_VECTOR_VSTORE_PRIM1(long)
+_CLC_VECTOR_VSTORE_PRIM1(ulong)
+_CLC_VECTOR_VSTORE_PRIM1(float)
+_CLC_VECTOR_VSTORE_PRIM3(_half, half, float)
+// Use suffix to declare aligned vstorea_halfN
+_CLC_VECTOR_VSTORE_PRIM3(a_half, half, float)
 
 #ifdef cl_khr_fp64
   _CLC_VECTOR_VSTORE_PRIM1(double)
   _CLC_VECTOR_VSTORE_PRIM3(_half, half, double)
+  // Use suffix to declare aligned vstorea_halfN
+  _CLC_VECTOR_VSTORE_PRIM3(a_half, half, double)
+
+  // Scalar vstore_half also needs to be declared
   _CLC_VSTORE_DECL(_half, half, double, , __private)
   _CLC_VSTORE_DECL(_half, half, double, , __local)
   _CLC_VSTORE_DECL(_half, half, double, , __global)
+
+  // Scalar vstorea_half is not part of the specs but CTS expects it
+  _CLC_VSTORE_DECL(a_half, half, double, , __private)
+  _CLC_VSTORE_DECL(a_half, half, double, , __local)
+  _CLC_VSTORE_DECL(a_half, half, double, , __global)
 #endif
 
 #ifdef cl_khr_fp16
   _CLC_VECTOR_VSTORE_PRIM1(half)
 #endif
 
-_CLC_VECTOR_VSTORE_PRIM()
+// Scalar vstore_half also needs to be declared
 _CLC_VSTORE_DECL(_half, half, float, , __private)
 _CLC_VSTORE_DECL(_half, half, float, , __local)
 _CLC_VSTORE_DECL(_half, half, float, , __global)
+
+// Scalar vstorea_half is not part of the specs but CTS expects it
+_CLC_VSTORE_DECL(a_half, half, float, , __private)
+_CLC_VSTORE_DECL(a_half, half, float, , __local)
+_CLC_VSTORE_DECL(a_half, half, float, , __global)
+
 
 #undef _CLC_VSTORE_DECL
 #undef _CLC_VECTOR_VSTORE_DECL
 #undef _CLC_VECTOR_VSTORE_PRIM3
 #undef _CLC_VECTOR_VSTORE_PRIM1
-#undef _CLC_VECTOR_VSTORE_PRIM

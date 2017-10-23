@@ -268,8 +268,8 @@ template <class T> bool futureIsReady(std::shared_future<T> const &Future) {
 
 namespace {
 
-CompletionItemKind getKind(CXCursorKind K) {
-  switch (K) {
+CompletionItemKind getKindOfDecl(CXCursorKind CursorKind) {
+  switch (CursorKind) {
   case CXCursor_MacroInstantiation:
   case CXCursor_MacroDefinition:
     return CompletionItemKind::Text;
@@ -309,6 +309,22 @@ CompletionItemKind getKind(CXCursorKind K) {
   default:
     return CompletionItemKind::Missing;
   }
+}
+
+CompletionItemKind getKind(CodeCompletionResult::ResultKind ResKind,
+                           CXCursorKind CursorKind) {
+  switch (ResKind) {
+  case CodeCompletionResult::RK_Declaration:
+    return getKindOfDecl(CursorKind);
+  case CodeCompletionResult::RK_Keyword:
+    return CompletionItemKind::Keyword;
+  case CodeCompletionResult::RK_Macro:
+    return CompletionItemKind::Text; // unfortunately, there's no 'Macro'
+                                     // completion items in LSP.
+  case CodeCompletionResult::RK_Pattern:
+    return CompletionItemKind::Snippet;
+  }
+  llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
 }
 
 std::string escapeSnippet(const llvm::StringRef Text) {
@@ -353,7 +369,7 @@ std::string getDocumentation(const CodeCompletionString &CCS) {
 
 class CompletionItemsCollector : public CodeCompleteConsumer {
 public:
-  CompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
+  CompletionItemsCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
                            std::vector<CompletionItem> &Items)
       : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
         Items(Items),
@@ -395,7 +411,7 @@ private:
     ProcessChunks(CCS, Item);
 
     // Fill in the kind field of the CompletionItem.
-    Item.kind = getKind(Result.CursorKind);
+    Item.kind = getKind(Result.Kind, Result.CursorKind);
 
     FillSortText(CCS, Item);
 
@@ -455,8 +471,9 @@ class PlainTextCompletionItemsCollector final
     : public CompletionItemsCollector {
 
 public:
-  PlainTextCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
-                                    std::vector<CompletionItem> &Items)
+  PlainTextCompletionItemsCollector(
+      const clang::CodeCompleteOptions &CodeCompleteOpts,
+      std::vector<CompletionItem> &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:
@@ -491,8 +508,9 @@ private:
 class SnippetCompletionItemsCollector final : public CompletionItemsCollector {
 
 public:
-  SnippetCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
-                                  std::vector<CompletionItem> &Items)
+  SnippetCompletionItemsCollector(
+      const clang::CodeCompleteOptions &CodeCompleteOpts,
+      std::vector<CompletionItem> &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:
@@ -601,7 +619,7 @@ private:
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 
 public:
-  SignatureHelpCollector(const CodeCompleteOptions &CodeCompleteOpts,
+  SignatureHelpCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
                          SignatureHelp &SigHelp)
       : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
         SigHelp(SigHelp),
@@ -692,7 +710,8 @@ private:
 }; // SignatureHelpCollector
 
 bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
-                        const CodeCompleteOptions &Options, PathRef FileName,
+                        const clang::CodeCompleteOptions &Options,
+                        PathRef FileName,
                         const tooling::CompileCommand &Command,
                         PrecompiledPreamble const *Preamble, StringRef Contents,
                         Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
@@ -758,29 +777,51 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 
 } // namespace
 
+clangd::CodeCompleteOptions::CodeCompleteOptions(
+    bool EnableSnippetsAndCodePatterns)
+    : CodeCompleteOptions() {
+  EnableSnippets = EnableSnippetsAndCodePatterns;
+  IncludeCodePatterns = EnableSnippetsAndCodePatterns;
+}
+
+clangd::CodeCompleteOptions::CodeCompleteOptions(bool EnableSnippets,
+                                                 bool IncludeCodePatterns,
+                                                 bool IncludeMacros,
+                                                 bool IncludeGlobals,
+                                                 bool IncludeBriefComments)
+    : EnableSnippets(EnableSnippets), IncludeCodePatterns(IncludeCodePatterns),
+      IncludeMacros(IncludeMacros), IncludeGlobals(IncludeGlobals),
+      IncludeBriefComments(IncludeBriefComments) {}
+
+clang::CodeCompleteOptions clangd::CodeCompleteOptions::getClangCompleteOpts() {
+  clang::CodeCompleteOptions Result;
+  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
+  Result.IncludeMacros = IncludeMacros;
+  Result.IncludeGlobals = IncludeGlobals;
+  Result.IncludeBriefComments = IncludeBriefComments;
+
+  return Result;
+}
+
 std::vector<CompletionItem>
 clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
                      PrecompiledPreamble const *Preamble, StringRef Contents,
                      Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                      std::shared_ptr<PCHContainerOperations> PCHs,
-                     bool SnippetCompletions, clangd::Logger &Logger) {
+                     clangd::CodeCompleteOptions Opts, clangd::Logger &Logger) {
   std::vector<CompletionItem> Results;
-  CodeCompleteOptions Options;
   std::unique_ptr<CodeCompleteConsumer> Consumer;
-  Options.IncludeGlobals = true;
-  Options.IncludeMacros = true;
-  Options.IncludeBriefComments = true;
-  if (SnippetCompletions) {
-    Options.IncludeCodePatterns = true;
-    Consumer =
-        llvm::make_unique<SnippetCompletionItemsCollector>(Options, Results);
+  clang::CodeCompleteOptions ClangCompleteOpts = Opts.getClangCompleteOpts();
+  if (Opts.EnableSnippets) {
+    Consumer = llvm::make_unique<SnippetCompletionItemsCollector>(
+        ClangCompleteOpts, Results);
   } else {
-    Options.IncludeCodePatterns = false;
-    Consumer =
-        llvm::make_unique<PlainTextCompletionItemsCollector>(Options, Results);
+    Consumer = llvm::make_unique<PlainTextCompletionItemsCollector>(
+        ClangCompleteOpts, Results);
   }
-  invokeCodeComplete(std::move(Consumer), Options, FileName, Command, Preamble,
-                     Contents, Pos, std::move(VFS), std::move(PCHs), Logger);
+  invokeCodeComplete(std::move(Consumer), ClangCompleteOpts, FileName, Command,
+                     Preamble, Contents, Pos, std::move(VFS), std::move(PCHs),
+                     Logger);
   return Results;
 }
 
@@ -791,7 +832,7 @@ clangd::signatureHelp(PathRef FileName, tooling::CompileCommand Command,
                       std::shared_ptr<PCHContainerOperations> PCHs,
                       clangd::Logger &Logger) {
   SignatureHelp Result;
-  CodeCompleteOptions Options;
+  clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;

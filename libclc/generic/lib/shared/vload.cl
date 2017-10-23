@@ -85,15 +85,21 @@ float __clc_vload_half_float_helper__private(const __private half *);
 	VEC_LOAD8(val.lo, AS) \
 	VEC_LOAD8(val.hi, AS)
 
-#define __FUNC(SUFFIX, VEC_SIZE, TYPE, AS) \
+#define __FUNC(SUFFIX, VEC_SIZE, OFFSET_SIZE, TYPE, AS) \
   _CLC_OVERLOAD _CLC_DEF TYPE vload_half##SUFFIX(size_t offset, const AS half *mem) { \
     offset *= VEC_SIZE; \
     TYPE __tmp; \
     VEC_LOAD##VEC_SIZE(__tmp, AS) \
     return __tmp; \
+  } \
+  _CLC_OVERLOAD _CLC_DEF TYPE vloada_half##SUFFIX(size_t offset, const AS half *mem) { \
+    offset *= OFFSET_SIZE; \
+    TYPE __tmp; \
+    VEC_LOAD##VEC_SIZE(__tmp, AS) \
+    return __tmp; \
   }
 
-#define FUNC(SUFFIX, VEC_SIZE, TYPE, AS) __FUNC(SUFFIX, VEC_SIZE, TYPE, AS)
+#define FUNC(SUFFIX, VEC_SIZE, OFFSET_SIZE, TYPE, AS) __FUNC(SUFFIX, VEC_SIZE, OFFSET_SIZE, TYPE, AS)
 
 #define __CLC_BODY "vload_half.inc"
 #include <clc/math/gentype.inc>

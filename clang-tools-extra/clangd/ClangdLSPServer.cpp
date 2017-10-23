@@ -193,7 +193,9 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  llvm::Optional<Path> CompileCommandsDir)
     : Out(Out), CDB(/*Logger=*/Out, std::move(CompileCommandsDir)),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             SnippetCompletions, /*Logger=*/Out, ResourceDir) {}
+             clangd::CodeCompleteOptions(
+                 /*EnableSnippetsAndCodePatterns=*/SnippetCompletions),
+             /*Logger=*/Out, ResourceDir) {}
 
 void ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
