@@ -382,6 +382,7 @@ enum ModRMDecisionType {
                                                                                \
   ENUM_ENTRY(ENCODING_Iv,     "Immediate of operand size")                     \
   ENUM_ENTRY(ENCODING_Ia,     "Immediate of address size")                     \
+  ENUM_ENTRY(ENCODING_IRC,    "Immediate for static rounding control")         \
   ENUM_ENTRY(ENCODING_Rv,     "Register code of operand size added to the "    \
                               "opcode byte")                                   \
   ENUM_ENTRY(ENCODING_DUP,    "Duplicate of another operand; ID is encoded "   \

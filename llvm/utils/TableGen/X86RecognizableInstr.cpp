@@ -100,6 +100,9 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
 
   HasVEX_LPrefix   = Rec->getValueAsBit("hasVEX_L");
 
+  EncodeRC = HasEVEX_B &&
+             (Form == X86Local::MRMDestReg || Form == X86Local::MRMSrcReg);
+
   // Check for 64-bit inst which does not require REX
   Is32Bit = false;
   Is64Bit = false;
@@ -161,7 +164,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       llvm_unreachable("Don't support VEX.L if EVEX_L2 is enabled");
     }
     // VEX_L & VEX_W
-    if (HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
+    if (!EncodeRC && HasVEX_LPrefix && VEX_WPrefix == X86Local::VEX_W1) {
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_W_OPSIZE);
       else if (OpPrefix == X86Local::XS)
@@ -174,7 +177,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    } else if (HasVEX_LPrefix) {
+    } else if (!EncodeRC && HasVEX_LPrefix) {
       // VEX_L
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_OPSIZE);
@@ -188,8 +191,8 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    }
-    else if (HasEVEX_L2Prefix && VEX_WPrefix == X86Local::VEX_W1) {
+    } else if (!EncodeRC && HasEVEX_L2Prefix &&
+               VEX_WPrefix == X86Local::VEX_W1) {
       // EVEX_L2 & VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_W_OPSIZE);
@@ -203,7 +206,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    } else if (HasEVEX_L2Prefix) {
+    } else if (!EncodeRC && HasEVEX_L2Prefix) {
       // EVEX_L2
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_OPSIZE);
@@ -796,18 +799,12 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     for (currentOpcode = opcodeToSet;
          currentOpcode < opcodeToSet + 8;
          ++currentOpcode)
-      tables.setTableFields(opcodeType,
-                            insnContext(),
-                            currentOpcode,
-                            *filter,
-                            UID, Is32Bit, IgnoresVEX_L,
+      tables.setTableFields(opcodeType, insnContext(), currentOpcode, *filter,
+                            UID, Is32Bit, IgnoresVEX_L || EncodeRC,
                             VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   } else {
-    tables.setTableFields(opcodeType,
-                          insnContext(),
-                          opcodeToSet,
-                          *filter,
-                          UID, Is32Bit, IgnoresVEX_L,
+    tables.setTableFields(opcodeType, insnContext(), opcodeToSet, *filter, UID,
+                          Is32Bit, IgnoresVEX_L || EncodeRC,
                           VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   }
 
@@ -964,7 +961,7 @@ RecognizableInstr::immediateEncodingFromString(const std::string &s,
   ENCODING("XOPCC",           ENCODING_IB)
   ENCODING("AVXCC",           ENCODING_IB)
   ENCODING("AVX512ICC",       ENCODING_IB)
-  ENCODING("AVX512RC",        ENCODING_IB)
+  ENCODING("AVX512RC",        ENCODING_IRC)
   ENCODING("i16imm",          ENCODING_Iv)
   ENCODING("i16i8imm",        ENCODING_IB)
   ENCODING("i32imm",          ENCODING_Iv)

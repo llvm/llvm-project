@@ -959,6 +959,9 @@ static bool translateOperand(MCInst &mcInst, const OperandSpecifier &operand,
                        insn,
                        Dis);
     return false;
+  case ENCODING_IRC:
+    mcInst.addOperand(MCOperand::createImm(insn.RC));
+    return false;
   case ENCODING_SI:
     return translateSrcIndex(mcInst, insn);
   case ENCODING_DI:
