@@ -44,6 +44,9 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC_ADDR16_HA:
     write16be(Loc, (Val + 0x8000) >> 16);
     break;
+  case R_PPC_ADDR16_HI:
+    write16be(Loc, Val >> 16);
+    break;
   case R_PPC_ADDR16_LO:
     write16be(Loc, Val);
     break;

@@ -217,5 +217,5 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   std::vector<const char *> Vec;
   for (const std::string &S : LinkArgs)
     Vec.push_back(S.c_str());
-  return coff::link(Vec);
+  return coff::link(Vec, true);
 }
