@@ -440,6 +440,23 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
+    case GIR_CopyOrAddZeroReg: {
+      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t ZeroReg = MatchTable[CurrentIdx++];
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      MachineOperand &MO = State.MIs[OldInsnID]->getOperand(OpIdx);
+      if (isOperandImmEqual(MO, 0, MRI))
+        OutMIs[NewInsnID].addReg(ZeroReg);
+      else
+        OutMIs[NewInsnID].add(MO);
+      DEBUG(dbgs() << CurrentIdx << ": GIR_CopyOrAddZeroReg(OutMIs["
+                   << NewInsnID << "], MIs[" << OldInsnID << "], " << OpIdx
+                   << ", " << ZeroReg << ")\n");
+      break;
+    }
+
     case GIR_CopySubReg: {
       int64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t OldInsnID = MatchTable[CurrentIdx++];
