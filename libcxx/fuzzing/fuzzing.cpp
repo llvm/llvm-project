@@ -26,9 +26,12 @@
 #include "fuzzing.h"
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <regex>
 
-//	If we had C++14, we could use the four iterator version of is_permutation
+#include <iostream>
+
+//	If we had C++14, we could use the four iterator version of is_permutation and equal
 
 namespace fuzzing {
 
@@ -272,5 +275,102 @@ int regex_egrep (const uint8_t *data, size_t size)
 	(void) regex_helper(data, size, std::regex_constants::egrep);
 	return 0;
 }
+
+// --	heap fuzzers
+int make_heap (const uint8_t *data, size_t size)
+{
+	std::vector<uint8_t> working(data, data + size);
+	std::make_heap(working.begin(), working.end());
+
+	if (!std::is_heap(working.begin(), working.end())) return 1;
+	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	return 0;
+}
+
+int push_heap (const uint8_t *data, size_t size)
+{
+	if (size < 2) return 0;
+
+//	Make a heap from the first half of the data
+	std::vector<uint8_t> working(data, data + size);
+	auto iter = working.begin() + (size / 2);
+	std::make_heap(working.begin(), iter);
+	if (!std::is_heap(working.begin(), iter)) return 1;
+
+//	Now push the rest onto the heap, one at a time
+	++iter;
+	for (; iter != working.end(); ++iter) {
+		std::push_heap(working.begin(), iter);
+		if (!std::is_heap(working.begin(), iter)) return 2;	
+		}
+
+	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	return 0;
+}
+
+int pop_heap (const uint8_t *data, size_t size)
+{
+	if (size < 2) return 0;
+	std::vector<uint8_t> working(data, data + size);
+	std::make_heap(working.begin(), working.end());
+
+//	Pop things off, one at a time
+	auto iter = --working.end();
+	while (iter != working.begin()) {
+		std::pop_heap(working.begin(), iter);
+		if (!std::is_heap(working.begin(), --iter)) return 2;	
+		}
+
+	return 0;
+}
+
+
+// --	search fuzzers
+int search (const uint8_t *data, size_t size)
+{
+	if (size < 2) return 0;
+	
+	const size_t pat_size = data[0] * (size - 1) / std::numeric_limits<uint8_t>::max();
+	assert(pat_size <= size - 1);
+	const uint8_t *pat_begin = data + 1;
+	const uint8_t *pat_end   = pat_begin + pat_size;
+	const uint8_t *data_end  = data + size;
+	assert(pat_end <= data_end);
+// 	std::cerr << "data[0] = " << size_t(data[0]) << " ";
+// 	std::cerr << "Pattern size = " << pat_size << "; corpus is " << size - 1 << std::endl;
+	auto it = std::search(pat_end, data_end, pat_begin, pat_end);
+	if (it != data_end) // not found
+		if (!std::equal(pat_begin, pat_end, it))
+			return 1;
+	return 0;
+}
+
+template <typename S>
+static int search_helper (const uint8_t *data, size_t size)
+{
+	if (size < 2) return 0;
+	
+	const size_t pat_size = data[0] * (size - 1) / std::numeric_limits<uint8_t>::max();
+	const uint8_t *pat_begin = data + 1;
+	const uint8_t *pat_end   = pat_begin + pat_size;
+	const uint8_t *data_end  = data + size;
+
+	auto it = std::search(pat_end, data_end, S(pat_begin, pat_end));
+	if (it != data_end) // not found
+		if (!std::equal(pat_begin, pat_end, it))
+			return 1;
+	return 0;
+}
+
+//	These are still in std::experimental
+// int search_boyer_moore (const uint8_t *data, size_t size)
+// {
+// 	return search_helper<std::boyer_moore_searcher<const uint8_t *>>(data, size);
+// }
+// 
+// int search_boyer_moore_horspool (const uint8_t *data, size_t size)
+// {
+// 	return search_helper<std::boyer_moore_horspool_searcher<const uint8_t *>>(data, size);
+// }
 
 } // namespace fuzzing

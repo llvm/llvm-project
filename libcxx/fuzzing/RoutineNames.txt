@@ -1,0 +1,16 @@
+sort
+stable_sort
+partition
+stable_partition
+nth_element
+partial_sort
+make_heap
+push_heap
+pop_heap
+regex_ECMAScript
+regex_POSIX
+regex_extended
+regex_awk
+regex_grep
+regex_egrep
+search
