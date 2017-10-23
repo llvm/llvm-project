@@ -63,6 +63,26 @@ bb:
   ret void
 }
 
+; OPT-LABEL: @func_test_workitem_id_x_known_max_range(
+; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
+define void @func_test_workitem_id_x_known_max_range(i32 addrspace(1)* nocapture %out) #0 {
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %and = and i32 %id, 1023
+  store i32 %and, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; OPT-LABEL: @func_test_workitem_id_x_default_range(
+; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !6
+define void @func_test_workitem_id_x_default_range(i32 addrspace(1)* nocapture %out) #4 {
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %and = and i32 %id, 1023
+  store i32 %and, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 declare i32 @llvm.amdgcn.workitem.id.y() #2
@@ -73,6 +93,7 @@ attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,128" }
 attributes #1 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind readnone }
+attributes #4 = { nounwind }
 
 !0 = !{i32 32, i32 4, i32 1}
 
@@ -82,3 +103,4 @@ attributes #3 = { nounwind readnone }
 ; OPT: !3 = !{i32 0, i32 4}
 ; OPT: !4 = !{i32 0, i32 1}
 ; OPT: !5 = !{i32 0, i32 512}
+; OPT: !6 = !{i32 0, i32 1024}

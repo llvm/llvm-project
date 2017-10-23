@@ -9163,9 +9163,8 @@ multiclass avx512_extract_elt_bw_m<bits<8> opc, string OpcodeStr, SDNode OpNode,
   def mr : AVX512Ii8<opc, MRMDestMem, (outs),
               (ins _.ScalarMemOp:$dst, _.RC:$src1, u8imm:$src2),
               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-              [(store (_.EltVT (trunc (assertzext (OpNode (_.VT _.RC:$src1),
-                                                          imm:$src2)))),
-                      addr:$dst)]>,
+              [(store (_.EltVT (trunc (OpNode (_.VT _.RC:$src1), imm:$src2))),
+                       addr:$dst)]>,
               EVEX, EVEX_CD8<_.EltSize, CD8VT1>;
 }
 

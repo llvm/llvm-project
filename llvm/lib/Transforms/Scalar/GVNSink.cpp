@@ -118,7 +118,7 @@ static bool isMemoryInst(const Instruction *I) {
 /// list returned by operator*.
 class LockstepReverseIterator {
   ArrayRef<BasicBlock *> Blocks;
-  SmallPtrSet<BasicBlock *, 4> ActiveBlocks;
+  SmallSetVector<BasicBlock *, 4> ActiveBlocks;
   SmallVector<Instruction *, 4> Insts;
   bool Fail;
 
@@ -136,7 +136,7 @@ public:
     for (BasicBlock *BB : Blocks) {
       if (BB->size() <= 1) {
         // Block wasn't big enough - only contained a terminator.
-        ActiveBlocks.erase(BB);
+        ActiveBlocks.remove(BB);
         continue;
       }
       Insts.push_back(BB->getTerminator()->getPrevNode());
@@ -147,13 +147,20 @@ public:
 
   bool isValid() const { return !Fail; }
   ArrayRef<Instruction *> operator*() const { return Insts; }
-  SmallPtrSet<BasicBlock *, 4> &getActiveBlocks() { return ActiveBlocks; }
 
-  void restrictToBlocks(SmallPtrSetImpl<BasicBlock *> &Blocks) {
+  // Note: This needs to return a SmallSetVector as the elements of
+  // ActiveBlocks will be later copied to Blocks using std::copy. The
+  // resultant order of elements in Blocks needs to be deterministic.
+  // Using SmallPtrSet instead causes non-deterministic order while
+  // copying. And we cannot simply sort Blocks as they need to match the
+  // corresponding Values.
+  SmallSetVector<BasicBlock *, 4> &getActiveBlocks() { return ActiveBlocks; }
+
+  void restrictToBlocks(SmallSetVector<BasicBlock *, 4> &Blocks) {
     for (auto II = Insts.begin(); II != Insts.end();) {
       if (std::find(Blocks.begin(), Blocks.end(), (*II)->getParent()) ==
           Blocks.end()) {
-        ActiveBlocks.erase((*II)->getParent());
+        ActiveBlocks.remove((*II)->getParent());
         II = Insts.erase(II);
       } else {
         ++II;
@@ -167,7 +174,7 @@ public:
     SmallVector<Instruction *, 4> NewInsts;
     for (auto *Inst : Insts) {
       if (Inst == &Inst->getParent()->front())
-        ActiveBlocks.erase(Inst->getParent());
+        ActiveBlocks.remove(Inst->getParent());
       else
         NewInsts.push_back(Inst->getPrevNode());
     }
@@ -265,7 +272,7 @@ public:
 
   /// Restrict the PHI's contents down to only \c NewBlocks.
   /// \c NewBlocks must be a subset of \c this->Blocks.
-  void restrictToBlocks(const SmallPtrSetImpl<BasicBlock *> &NewBlocks) {
+  void restrictToBlocks(const SmallSetVector<BasicBlock *, 4> &NewBlocks) {
     auto BI = Blocks.begin();
     auto VI = Values.begin();
     while (BI != Blocks.end()) {
@@ -658,7 +665,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   SmallVector<Instruction *, 4> NewInsts;
   for (auto *I : Insts) {
     if (VN.lookup(I) != VNumToSink)
-      ActivePreds.erase(I->getParent());
+      ActivePreds.remove(I->getParent());
     else
       NewInsts.push_back(I);
   }

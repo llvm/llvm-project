@@ -5931,19 +5931,13 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     SDValue N0 = N.getOperand(0);
     SDValue SrcExtract;
 
-    if (N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        N0.getOperand(0).getValueType() == VT) {
+    if ((N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+         N0.getOperand(0).getValueType() == VT) ||
+        (N0.getOpcode() == X86ISD::PEXTRW &&
+         N0.getOperand(0).getValueType() == MVT::v8i16) ||
+        (N0.getOpcode() == X86ISD::PEXTRB &&
+         N0.getOperand(0).getValueType() == MVT::v16i8)) {
       SrcExtract = N0;
-    } else if (N0.getOpcode() == ISD::AssertZext &&
-               N0.getOperand(0).getOpcode() == X86ISD::PEXTRW &&
-               cast<VTSDNode>(N0.getOperand(1))->getVT() == MVT::i16) {
-      SrcExtract = N0.getOperand(0);
-      assert(SrcExtract.getOperand(0).getValueType() == MVT::v8i16);
-    } else if (N0.getOpcode() == ISD::AssertZext &&
-               N0.getOperand(0).getOpcode() == X86ISD::PEXTRB &&
-               cast<VTSDNode>(N0.getOperand(1))->getVT() == MVT::i8) {
-      SrcExtract = N0.getOperand(0);
-      assert(SrcExtract.getOperand(0).getValueType() == MVT::v16i8);
     }
 
     if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)))
@@ -5979,16 +5973,15 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       return true;
     }
 
-    // Attempt to recognise a PINSR*(ASSERTZEXT(PEXTR*)) shuffle pattern.
+    // Attempt to recognise a PINSR*(PEXTR*) shuffle pattern.
     // TODO: Expand this to support INSERT_VECTOR_ELT/etc.
     unsigned ExOp =
         (X86ISD::PINSRB == Opcode ? X86ISD::PEXTRB : X86ISD::PEXTRW);
-    if (InScl.getOpcode() != ISD::AssertZext ||
-        InScl.getOperand(0).getOpcode() != ExOp)
+    if (InScl.getOpcode() != ExOp)
       return false;
 
-    SDValue ExVec = InScl.getOperand(0).getOperand(0);
-    uint64_t ExIdx = InScl.getOperand(0).getConstantOperandVal(1);
+    SDValue ExVec = InScl.getOperand(0);
+    uint64_t ExIdx = InScl.getConstantOperandVal(1);
     assert(ExIdx < NumElts && "Illegal extraction index");
     Ops.push_back(InVec);
     Ops.push_back(ExVec);
@@ -14186,9 +14179,7 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
   if (VT.getSizeInBits() == 8) {
     SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32,
                                   Op.getOperand(0), Op.getOperand(1));
-    SDValue Assert  = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Extract,
-                                  DAG.getValueType(VT));
-    return DAG.getNode(ISD::TRUNCATE, dl, VT, Assert);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
   if (VT == MVT::f32) {
@@ -14347,9 +14338,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     // Transform it so it match pextrw which produces a 32-bit result.
     SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32,
                                   Op.getOperand(0), Op.getOperand(1));
-    SDValue Assert  = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Extract,
-                                  DAG.getValueType(VT));
-    return DAG.getNode(ISD::TRUNCATE, dl, VT, Assert);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
   if (Subtarget.hasSSE41())
@@ -27155,6 +27144,17 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(NumLoBits);
     break;
   }
+  case X86ISD::PEXTRB:
+  case X86ISD::PEXTRW: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    APInt DemandedElt = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
+                                            Op.getConstantOperandVal(1));
+    DAG.computeKnownBits(Src, Known, DemandedElt, Depth + 1);
+    Known = Known.zextOrTrunc(BitWidth);
+    Known.Zero.setBitsFrom(SrcVT.getScalarSizeInBits());
+    break;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
@@ -30082,9 +30082,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     unsigned OpCode = (SrcVT == MVT::v8i16 ? X86ISD::PEXTRW : X86ISD::PEXTRB);
     SDValue ExtOp = DAG.getNode(OpCode, dl, MVT::i32, SrcOp,
                                 DAG.getIntPtrConstant(SrcIdx, dl));
-    SDValue Assert = DAG.getNode(ISD::AssertZext, dl, MVT::i32, ExtOp,
-                                 DAG.getValueType(SrcSVT));
-    return DAG.getZExtOrTrunc(Assert, dl, VT);
+    return DAG.getZExtOrTrunc(ExtOp, dl, VT);
   }
 
   return SDValue();

@@ -27,7 +27,7 @@ struct S {
 // CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
-template <typename T>
+template <typename T, int length>
 T tmain() {
   T t;
   S<T> test;
@@ -36,6 +36,7 @@ T tmain() {
   S<T> s_arr[] = {1, 2};
   S<T> &var = test;
   S<T> var1;
+  S<T> arr[length];
 #pragma omp parallel
 #pragma omp for reduction(+:t_var) reduction(&:var) reduction(&& : var1) reduction(min: t_var1) nowait
   for (int i = 0; i < 2; ++i) {
@@ -44,6 +45,12 @@ T tmain() {
   }
 #pragma omp parallel
 #pragma omp for reduction(&& : t_var)
+  for (int i = 0; i < 2; ++i) {
+    vec[i] = t_var;
+    s_arr[i] = var;
+  }
+#pragma omp parallel
+#pragma omp for reduction(+ : arr[1:length-2])
   for (int i = 0; i < 2; ++i) {
     vec[i] = t_var;
     s_arr[i] = var;
@@ -180,12 +187,12 @@ int main() {
   S<float> test;
   float t_var = 0, t_var1;
   int vec[] = {1, 2};
-  S<float> s_arr[] = {1, 2};
+  S<float> s_arr[] = {1, 2, 3, 4};
   S<float> &var = test;
   S<float> var1, arrs[10][4];
   S<float> **var2 = foo();
-  S<float> vvar2[2];
-  S<float> (&var3)[2] = s_arr;
+  S<float> vvar2[5];
+  S<float> (&var3)[4] = s_arr;
 #pragma omp parallel
 #pragma omp for reduction(+:t_var) reduction(&:var) reduction(&& : var1) reduction(min: t_var1)
   for (int i = 0; i < 2; ++i) {
@@ -205,6 +212,18 @@ int main() {
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp parallel
+#pragma omp for reduction(& : var2[1][1 : 6])
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp parallel
+#pragma omp for reduction(& : var2[1 : 1][1 : 6])
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp parallel
+#pragma omp for reduction(& : var2[1 : 1][1])
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp parallel
 #pragma omp for reduction(& : vvar2[0 : 5])
   for (int i = 0; i < 10; ++i)
     ;
@@ -213,28 +232,42 @@ int main() {
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp parallel
+#pragma omp for reduction(& : var3[ : 2])
+  for (int i = 0; i < 10; ++i)
+    ;
+  // TODO: The compiler should also be able to generate a constant sized array in this case!
+#pragma omp parallel
+#pragma omp for reduction(& : var3[2 : ])
+  for (int i = 0; i < 10; ++i)
+    ;
+#pragma omp parallel
 #pragma omp for reduction(& : var3)
   for (int i = 0; i < 10; ++i)
     ;
-  return tmain<int>();
+  return tmain<int, 42>();
 #endif
 }
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: call {{.*}} [[S_FLOAT_TY_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, float*, [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]*, float*, [2 x i32]*, [2 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, float*, [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]*, float*, [2 x i32]*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [2 x i32]*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK1:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i64, i64, i32*, [10 x [4 x [[S_FLOAT_TY]]]]*)* [[MAIN_MICROTASK2:@.+]] to void
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[S_FLOAT_TY]]***)* [[MAIN_MICROTASK3:@.+]] to void
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK4:@.+]] to void
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK5:@.+]] to void
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK6:@.+]] to void
-// CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT:@.+]]()
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[S_FLOAT_TY]]***)* [[MAIN_MICROTASK4:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[S_FLOAT_TY]]***)* [[MAIN_MICROTASK5:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[S_FLOAT_TY]]***)* [[MAIN_MICROTASK6:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [5 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK7:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK8:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK9:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK10:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [4 x [[S_FLOAT_TY]]]*)* [[MAIN_MICROTASK11:@.+]] to void
+// CHECK: = call {{.*}}i{{.+}} [[TMAIN_INT_42:@.+]]()
 // CHECK: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]*
 // CHECK: ret
 //
-// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, float* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %vec, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, float* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, float* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %vec, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca float,
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: [[VAR1_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
@@ -910,67 +943,115 @@ int main() {
 // CHECK: store [[S_FLOAT_TY]]* [[PSEUDO_VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK4]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
 
-// CHECK: [[VVAR2_ORIG_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
+// CHECK: [[VAR2_PRIV:%.+]] = alloca [1 x [6 x [[S_FLOAT_TY]]]],
 
 // Reduction list for runtime.
-// CHECK: [[RED_LIST:%.+]] = alloca [2 x i8*],
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
 
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
-// CHECK: [[VVAR2_ORIG:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[VVAR2_ORIG_ADDR]],
+// CHECK: [[VAR2_ORIG:%.+]] = load [[S_FLOAT_TY]]***, [[S_FLOAT_TY]]**** [[VAR2_ORIG_ADDR]],
 
-// CHECK: [[LOW:%.+]] = getelementptr inbounds [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[VVAR2_ORIG]], i64 0, i64 0
-// CHECK: [[LAST:%.+]] = ptrtoint [[S_FLOAT_TY]]* %{{.+}} to i64
-// CHECK: [[FIRST:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
-// CHECK: [[BYTE_DIF:%.+]] = sub i64 [[LAST]], [[FIRST]]
-// CHECK: [[DIF:%.+]] = sdiv exact i64 [[BYTE_DIF]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
-// CHECK: [[SIZE:%.+]] = add nuw i64 [[DIF]], 1
-// CHECK: call i8* @llvm.stacksave()
-// CHECK: [[VVAR2_PRIV:%.+]] = alloca [[S_FLOAT_TY]], i64 [[SIZE]],
-// CHECK: [[ORIG_START:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[VVAR2_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ARRIDX:%.+]] = getelementptr inbounds [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[ARRIDX]],
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ORIG_START:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]],
 // CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
 // CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
 // CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
 // CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
-// CHECK: [[PSEUDO_VVAR2_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VVAR2_PRIV]], i64 [[OFFSET]]
-// CHECK: [[VVAR2_PRIV:%.+]] = bitcast [[S_FLOAT_TY]]* [[PSEUDO_VVAR2_PRIV]] to [2 x [[S_FLOAT_TY]]]*
+// CHECK: [[PSEUDO_VAR2_PRIV:%.+]] = getelementptr [1 x [6 x [[S_FLOAT_TY]]]], [1 x [6 x [[S_FLOAT_TY]]]]* [[VAR2_PRIV]], i64 [[OFFSET]]
+// CHECK: store [[S_FLOAT_TY]]** [[REF:.+]], [[S_FLOAT_TY]]*** %
+// CHECK: [[VAR2_PRIV:%.+]] = bitcast [1 x [6 x [[S_FLOAT_TY]]]]* [[PSEUDO_VAR2_PRIV]] to [[S_FLOAT_TY]]*
+// CHECK: store [[S_FLOAT_TY]]* [[VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK5]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
 
-// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
+// CHECK: [[VAR2_PRIV:%.+]] = alloca [1 x [6 x [[S_FLOAT_TY]]]],
 
 // Reduction list for runtime.
-// CHECK: [[RED_LIST:%.+]] = alloca [2 x i8*],
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
 
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+// CHECK: [[VAR2_ORIG:%.+]] = load [[S_FLOAT_TY]]***, [[S_FLOAT_TY]]**** [[VAR2_ORIG_ADDR]],
 
-// CHECK: [[VAR3_ORIG:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
-// CHECK: store [2 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
-// CHECK: [[LAST:%.+]] = ptrtoint [[S_FLOAT_TY]]* %{{.+}} to i64
-// CHECK: [[FIRST:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW:%.+]] to i64
-// CHECK: [[BYTE_DIF:%.+]] = sub i64 [[LAST]], [[FIRST]]
-// CHECK: [[DIF:%.+]] = sdiv exact i64 [[BYTE_DIF]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
-// CHECK: [[SIZE:%.+]] = add nuw i64 [[DIF]], 1
-// CHECK: call i8* @llvm.stacksave()
-// CHECK: [[VAR3_PRIV:%.+]] = alloca [[S_FLOAT_TY]], i64 [[SIZE]],
-// CHECK: [[VAR3_ORIG:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
-// CHECK: [[ORIG_START:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ARRIDX:%.+]] = getelementptr inbounds [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[ARRIDX]],
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ORIG_START:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]],
 // CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
 // CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
 // CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
 // CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
-// CHECK: [[PSEUDO_VAR3_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VAR3_PRIV]], i64 [[OFFSET]]
-// CHECK: [[VAR3_PRIV:%.+]] = bitcast [[S_FLOAT_TY]]* [[PSEUDO_VAR3_PRIV]] to [2 x [[S_FLOAT_TY]]]*
-
-// CHECK: store [2 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [2 x [[S_FLOAT_TY]]]** %
-
+// CHECK: [[PSEUDO_VAR2_PRIV:%.+]] = getelementptr [1 x [6 x [[S_FLOAT_TY]]]], [1 x [6 x [[S_FLOAT_TY]]]]* [[VAR2_PRIV]], i64 [[OFFSET]]
+// CHECK: store [[S_FLOAT_TY]]** [[REF:.+]], [[S_FLOAT_TY]]*** %
+// CHECK: [[VAR2_PRIV:%.+]] = bitcast [1 x [6 x [[S_FLOAT_TY]]]]* [[PSEUDO_VAR2_PRIV]] to [[S_FLOAT_TY]]*
+// CHECK: store [[S_FLOAT_TY]]* [[VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
 // CHECK: ret void
 
-// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}})
+// CHECK: define internal void [[MAIN_MICROTASK6]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[S_FLOAT_TY]]*** dereferenceable(8) %{{.+}})
 
-// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VAR2_ORIG_ADDR:%.+]] = alloca [[S_FLOAT_TY]]***,
+// CHECK: [[VAR2_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
+
+// CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+// CHECK: [[VAR2_ORIG:%.+]] = load [[S_FLOAT_TY]]***, [[S_FLOAT_TY]]**** [[VAR2_ORIG_ADDR]],
+
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ARRIDX:%.+]] = getelementptr inbounds [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[ARRIDX]],
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[LD]], i64 1
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+
+// CHECK: [[LD:%.+]] = load [[S_FLOAT_TY]]**, [[S_FLOAT_TY]]*** [[VAR2_ORIG]],
+// CHECK: [[ORIG_START:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[LD]],
+// CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[PSEUDO_VAR2_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VAR2_PRIV]], i64 [[OFFSET]]
+// CHECK: store [[S_FLOAT_TY]]** [[REF:.+]], [[S_FLOAT_TY]]*** %
+// CHECK: store [[S_FLOAT_TY]]* [[PSEUDO_VAR2_PRIV]], [[S_FLOAT_TY]]** [[REF]]
+// CHECK: ret void
+
+// CHECK: define internal void [[MAIN_MICROTASK7]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [5 x [[S_FLOAT_TY]]]* dereferenceable(20) %{{.+}})
+
+// CHECK: [[VVAR2_ORIG_ADDR:%.+]] = alloca [5 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VVAR2_PRIV:%.+]] = alloca [5 x [[S_FLOAT_TY]]],
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
+
+// CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+// CHECK: [[VVAR2_ORIG:%.+]] = load [5 x [[S_FLOAT_TY]]]*, [5 x [[S_FLOAT_TY]]]** [[VVAR2_ORIG_ADDR]],
+
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [5 x [[S_FLOAT_TY]]], [5 x [[S_FLOAT_TY]]]* [[VVAR2_ORIG]], i64 0, i64 0
+// CHECK: [[ORIG_START:%.+]] = bitcast [5 x [[S_FLOAT_TY]]]* [[VVAR2_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[PSEUDO_VVAR2_PRIV:%.+]] = getelementptr [5 x [[S_FLOAT_TY]]], [5 x [[S_FLOAT_TY]]]* [[VVAR2_PRIV]], i64 [[OFFSET]]
+// CHECK: ret void
+
+// CHECK: define internal void [[MAIN_MICROTASK8]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+
+// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR3_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
 
 // Reduction list for runtime.
@@ -978,21 +1059,115 @@ int main() {
 
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
-// CHECK: [[VAR3_ORIG:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
-// CHECK: store [2 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
-// CHECK: [[VAR3_ORIG:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
-// CHECK: getelementptr inbounds [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i32 0, i32 0
-// CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 2
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 
-// CHECK: store [2 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [2 x [[S_FLOAT_TY]]]** %
-// CHECK: bitcast [2 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], i64 0, i64 1
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: [[ORIG_START:%.+]] = bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[PSEUDO_VAR3_PRIV:%.+]] = getelementptr [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i64 [[OFFSET]]
+// CHECK: [[VAR3_PRIV:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[PSEUDO_VAR3_PRIV]] to [4 x [[S_FLOAT_TY]]]*
+
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
 
 // CHECK: ret void
 
-// CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT]]()
+// CHECK: define internal void [[MAIN_MICROTASK9]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+
+// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VAR3_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
+
+// CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], i64 0, i64 0
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: [[ORIG_START:%.+]] = bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[PSEUDO_VAR3_PRIV:%.+]] = getelementptr [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i64 [[OFFSET]]
+// CHECK: [[VAR3_PRIV:%.+]] = bitcast [2 x [[S_FLOAT_TY]]]* [[PSEUDO_VAR3_PRIV]] to [4 x [[S_FLOAT_TY]]]*
+
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
+
+// CHECK: ret void
+
+// CHECK: define internal void [[MAIN_MICROTASK10]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+
+// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [2 x i8*],
+
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+
+// CHECK: [[LAST:%.+]] = ptrtoint [[S_FLOAT_TY]]* %{{.+}} to i64
+// CHECK: [[FIRST:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW:%.+]] to i64
+// CHECK: [[BYTE_DIF:%.+]] = sub i64 [[LAST]], [[FIRST]]
+// CHECK: [[DIF:%.+]] = sdiv exact i64 [[BYTE_DIF]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[SIZE:%.+]] = add nuw i64 [[DIF]], 1
+// CHECK: call i8* @llvm.stacksave()
+// CHECK: [[VAR3_PRIV:%.+]] = alloca [[S_FLOAT_TY]], i64 [[SIZE]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: [[ORIG_START:%.+]] = bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+// CHECK: [[START:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_FLOAT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK: [[PSEUDO_VAR3_PRIV:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[VAR3_PRIV]], i64 [[OFFSET]]
+// CHECK: [[VAR3_PRIV:%.+]] = bitcast [[S_FLOAT_TY]]* [[PSEUDO_VAR3_PRIV]] to [4 x [[S_FLOAT_TY]]]*
+
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
+
+// CHECK: ret void
+
+// CHECK: define internal void [[MAIN_MICROTASK11]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [4 x [[S_FLOAT_TY]]]* dereferenceable(16) %{{.+}})
+
+// CHECK: [[VAR3_ORIG_ADDR:%.+]] = alloca [4 x [[S_FLOAT_TY]]]*,
+// CHECK: [[VAR3_PRIV:%.+]] = alloca [4 x [[S_FLOAT_TY]]],
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
+
+// CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
+// CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
+// CHECK: getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i32 0, i32 0
+// CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 4
+
+// CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
+// CHECK: bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
+
+// CHECK: ret void
+
+// CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
 // CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [[S_INT_TY]]*, [[S_INT_TY]]*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*)* [[TMAIN_MICROTASK:@.+]] to void
+// Not interested in this one:
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4,
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [42 x [[S_INT_TY]]]*, [2 x i32]*, i32*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK2:@.+]] to void
 // CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
 //
@@ -1224,6 +1399,28 @@ int main() {
 // CHECK: br i1 [[CMP]]
 // CHECK: [[UP:%.+]] = phi i32
 // CHECK: store i{{[0-9]+}} [[UP]], i{{[0-9]+}}* [[T_VAR1_LHS]],
+// CHECK: ret void
+
+// CHECK: define internal void [[TMAIN_MICROTASK2]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [42 x [[S_INT_TY]]]* dereferenceable(168) %{{.*}}, [2 x i32]* dereferenceable(8) %{{.*}}, i32* dereferenceable(4) %{{.*}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.*}}, [[S_INT_TY]]* dereferenceable(4) %{{.*}})
+
+// CHECK: [[ARR_ORIG_ADDR:%.+]] = alloca [42 x [[S_INT_TY]]]*,
+// CHECK: [[ARR_PRIV:%.+]] = alloca [40 x [[S_INT_TY]]],
+
+// Reduction list for runtime.
+// CHECK: [[RED_LIST:%.+]] = alloca [1 x i8*],
+
+// CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
+
+// CHECK: [[ARR_ORIG:%.+]] = load [42 x [[S_INT_TY]]]*, [42 x [[S_INT_TY]]]** [[ARR_ORIG_ADDR]],
+// CHECK: [[LOW:%.+]] = getelementptr inbounds [42 x [[S_INT_TY]]], [42 x [[S_INT_TY]]]* [[ARR_ORIG]], i64 0, i64 1
+// CHECK: [[ORIG_START:%.+]] = bitcast [42 x [[S_INT_TY]]]* [[ARR_ORIG]] to [[S_INT_TY]]*
+// CHECK: [[START:%.+]] = ptrtoint [[S_INT_TY]]* [[ORIG_START]] to i64
+// CHECK: [[LOW_BOUND:%.+]] = ptrtoint [[S_INT_TY]]* [[LOW]] to i64
+// CHECK: [[OFFSET_BYTES:%.+]] = sub i64 [[START]], [[LOW_BOUND]]
+// CHECK: [[OFFSET:%.+]] = sdiv exact i64 [[OFFSET_BYTES]], ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64)
+// CHECK: [[PSEUDO_ARR_PRIV:%.+]] = getelementptr [40 x [[S_INT_TY]]], [40 x [[S_INT_TY]]]* [[ARR_PRIV]], i64 [[OFFSET]]
+// CHECK: [[ARR_PRIV:%.+]] = bitcast [40 x [[S_INT_TY]]]* [[PSEUDO_ARR_PRIV]] to [42 x [[S_INT_TY]]]*
+
 // CHECK: ret void
 
 #endif

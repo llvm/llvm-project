@@ -677,13 +677,14 @@ SDValue HexagonTargetLowering::LowerCallResult(
       // as an implicit def to the call (EmitMachineNode).
       RetVal = DAG.getCopyFromReg(TPR.getValue(0), dl, PredR, MVT::i1);
       Glue = TPR.getValue(1);
+      Chain = TPR.getValue(0);
     } else {
       RetVal = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
                                   RVLocs[i].getValVT(), Glue);
       Glue = RetVal.getValue(2);
+      Chain = RetVal.getValue(1);
     }
     InVals.push_back(RetVal.getValue(0));
-    Chain = RetVal.getValue(1);
   }
 
   return Chain;

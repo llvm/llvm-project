@@ -246,6 +246,13 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
 
     if (Predicate.isNonExtLoad())
       continue;
+
+    if (Predicate.isStore() && Predicate.isUnindexed())
+      continue;
+
+    if (Predicate.isNonTruncStore())
+      continue;
+
     HasUnsupportedPredicate = true;
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
@@ -1419,6 +1426,7 @@ class OperandRenderer {
 public:
   enum RendererKind {
     OR_Copy,
+    OR_CopyOrAddZeroReg,
     OR_CopySubReg,
     OR_CopyConstantAsImm,
     OR_CopyFConstantAsFPImm,
@@ -1473,6 +1481,48 @@ public:
           << MatchTable::IntValue(NewInsnID) << MatchTable::Comment("OldInsnID")
           << MatchTable::IntValue(OldInsnVarID) << MatchTable::Comment("OpIdx")
           << MatchTable::IntValue(Operand.getOperandIndex())
+          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+  }
+};
+
+/// A CopyOrAddZeroRegRenderer emits code to copy a single operand from an
+/// existing instruction to the one being built. If the operand turns out to be
+/// a 'G_CONSTANT 0' then it replaces the operand with a zero register.
+class CopyOrAddZeroRegRenderer : public OperandRenderer {
+protected:
+  unsigned NewInsnID;
+  /// The name of the operand.
+  const StringRef SymbolicName;
+  const Record *ZeroRegisterDef;
+
+public:
+  CopyOrAddZeroRegRenderer(unsigned NewInsnID,
+                           const InstructionMatcher &Matched,
+                           StringRef SymbolicName, Record *ZeroRegisterDef)
+      : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
+        SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
+    assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");
+  }
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_CopyOrAddZeroReg;
+  }
+
+  const StringRef getSymbolicName() const { return SymbolicName; }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
+    unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+    Table << MatchTable::Opcode("GIR_CopyOrAddZeroReg")
+          << MatchTable::Comment("NewInsnID") << MatchTable::IntValue(NewInsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::IntValue(OldInsnVarID) << MatchTable::Comment("OpIdx")
+          << MatchTable::IntValue(Operand.getOperandIndex())
+          << MatchTable::NamedValue(
+                 (ZeroRegisterDef->getValue("Namespace")
+                      ? ZeroRegisterDef->getValueAsString("Namespace")
+                      : ""),
+                 ZeroRegisterDef->getName())
           << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -2275,6 +2325,25 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       continue;
     }
 
+    // No check required. A G_STORE is an unindexed store.
+    if (Predicate.isStore() && Predicate.isUnindexed())
+      continue;
+
+    // No check required. G_STORE by itself is a non-extending store.
+    if (Predicate.isNonTruncStore())
+      continue;
+
+    if (Predicate.isStore() && Predicate.getMemoryVT() != nullptr) {
+      Optional<LLTCodeGen> MemTyOrNone =
+          MVTToLLT(getValueType(Predicate.getMemoryVT()));
+
+      if (!MemTyOrNone)
+        return failedImport("MemVT could not be converted to LLT");
+
+      InsnMatcher.getOperand(0).addPredicate<LLTOperandMatcher>(MemTyOrNone.getValue());
+      continue;
+    }
+
     return failedImport("Src pattern child has predicate (" +
                         explainPredicates(Src) + ")");
   }
@@ -2311,7 +2380,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // Coerce integers to pointers to address space 0 if the context indicates a pointer.
       // TODO: Find a better way to do this, SDTCisPtrTy?
       bool OperandIsAPointer =
-          SrcGIOrNull->TheDef->getName() == "G_LOAD" && i == 0;
+          (SrcGIOrNull->TheDef->getName() == "G_LOAD" && i == 0) ||
+          (SrcGIOrNull->TheDef->getName() == "G_STORE" && i == 1);
 
       // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
       // following the defs is an intrinsic ID.
@@ -2530,6 +2600,14 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     if (ChildRec->isSubClassOf("RegisterClass") ||
         ChildRec->isSubClassOf("RegisterOperand") ||
         ChildRec->isSubClassOf("ValueType")) {
+      if (ChildRec->isSubClassOf("RegisterOperand") &&
+          !ChildRec->isValueUnset("GIZeroRegister")) {
+        DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
+            0, InsnMatcher, DstChild->getName(),
+            ChildRec->getValueAsDef("GIZeroRegister"));
+        return Error::success();
+      }
+
       DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
                                              DstChild->getName());
       return Error::success();
