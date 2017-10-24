@@ -60,12 +60,15 @@ body:             |
 
     ; CHECK-LABEL: name: anyext_s32_from_s8
     ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32all
+    ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32all
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
-    ; CHECK: %w0 = COPY [[COPY1]]
-    %0(s8) = COPY %w0
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: %w0 = COPY [[COPY2]]
+    %2:gpr(s32) = COPY %w0
+    %0(s8) = G_TRUNC %2
     %1(s32) = G_ANYEXT %0
     %w0 = COPY %1(s32)
 ...
@@ -114,10 +117,13 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY]], 0, 15
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY1]], 0, 15
     ; CHECK: %w0 = COPY [[UBFMWri]]
-    %0(s16) = COPY %w0
+    %2:gpr(s32) = COPY %w0
+    %0(s16) = G_TRUNC %2
     %1(s32) = G_ZEXT %0
     %w0 = COPY %1
 ...
@@ -139,10 +145,13 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY]], 0, 7
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY1]], 0, 15
     ; CHECK: %w0 = COPY [[UBFMWri]]
-    %0(s8) = COPY %w0
+    %2:gpr(s32) = COPY %w0
+    %0(s16) = G_TRUNC %2
     %1(s32) = G_ZEXT %0
     %w0 = COPY %1(s32)
 ...
@@ -164,12 +173,18 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
+    ; CHECK-NEXT: id: 3, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY]], 0, 7
-    ; CHECK: %w0 = COPY [[UBFMWri]]
-    %0(s8) = COPY %w0
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[UBFMWri:%[0-9]+]] = UBFMWri [[COPY1]], 0, 7
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[UBFMWri]]
+    ; CHECK: %w0 = COPY [[COPY2]]
+    %2:gpr(s32) = COPY %w0
+    %0(s8) = G_TRUNC %2
     %1(s16) = G_ZEXT %0
-    %w0 = COPY %1(s16)
+    %3:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %3(s32)
 ...
 
 ---
@@ -216,10 +231,13 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY]], 0, 15
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY1]], 0, 15
     ; CHECK: %w0 = COPY [[SBFMWri]]
-    %0(s16) = COPY %w0
+    %2:gpr(s32) = COPY %w0
+    %0(s16) = G_TRUNC %2
     %1(s32) = G_SEXT %0
     %w0 = COPY %1
 ...
@@ -241,10 +259,13 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY]], 0, 7
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY1]], 0, 7
     ; CHECK: %w0 = COPY [[SBFMWri]]
-    %0(s8) = COPY %w0
+    %2:gpr(s32) = COPY %w0
+    %0(s8) = G_TRUNC %2
     %1(s32) = G_SEXT %0
     %w0 = COPY %1(s32)
 ...
@@ -266,10 +287,16 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
+    ; CHECK-NEXT: id: 3, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY]], 0, 7
-    ; CHECK: %w0 = COPY [[SBFMWri]]
-    %0(s8) = COPY %w0
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
+    ; CHECK: [[SBFMWri:%[0-9]+]] = SBFMWri [[COPY1]], 0, 7
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[SBFMWri]]
+    ; CHECK: %w0 = COPY [[COPY2]]
+    %2:gpr(s32) = COPY %w0
+    %0(s8) = G_TRUNC %2
     %1(s16) = G_SEXT %0
-    %w0 = COPY %1(s16)
+    %3:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %3(s32)
 ...

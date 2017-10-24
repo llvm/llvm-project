@@ -3721,6 +3721,26 @@ static void DiagnoseWeakIvars(Sema &S, ObjCImplementationDecl *ID) {
   }
 }
 
+/// Diagnose attempts to use flexible array member with retainable object type.
+static void DiagnoseRetainableFlexibleArrayMember(Sema &S,
+                                                  ObjCInterfaceDecl *ID) {
+  if (!S.getLangOpts().ObjCAutoRefCount)
+    return;
+
+  for (auto ivar = ID->all_declared_ivar_begin(); ivar;
+       ivar = ivar->getNextIvar()) {
+    if (ivar->isInvalidDecl())
+      continue;
+    QualType IvarTy = ivar->getType();
+    if (IvarTy->isIncompleteArrayType() &&
+        (IvarTy.getObjCLifetime() != Qualifiers::OCL_ExplicitNone) &&
+        IvarTy->isObjCLifetimeType()) {
+      S.Diag(ivar->getLocation(), diag::err_flexible_array_arc_retainable);
+      ivar->setInvalidDecl();
+    }
+  }
+}
+
 Sema::ObjCContainerKind Sema::getObjCContainerKind() const {
   switch (CurContext->getDeclKind()) {
     case Decl::ObjCInterface:
@@ -3738,6 +3758,96 @@ Sema::ObjCContainerKind Sema::getObjCContainerKind() const {
 
     default:
       return Sema::OCK_None;
+  }
+}
+
+static bool IsVariableSizedType(QualType T) {
+  if (T->isIncompleteArrayType())
+    return true;
+  const auto *RecordTy = T->getAs<RecordType>();
+  return (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember());
+}
+
+static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
+  ObjCInterfaceDecl *IntfDecl = nullptr;
+  ObjCInterfaceDecl::ivar_range Ivars = llvm::make_range(
+      ObjCInterfaceDecl::ivar_iterator(), ObjCInterfaceDecl::ivar_iterator());
+  if ((IntfDecl = dyn_cast<ObjCInterfaceDecl>(OCD))) {
+    Ivars = IntfDecl->ivars();
+  } else if (auto *ImplDecl = dyn_cast<ObjCImplementationDecl>(OCD)) {
+    IntfDecl = ImplDecl->getClassInterface();
+    Ivars = ImplDecl->ivars();
+  } else if (auto *CategoryDecl = dyn_cast<ObjCCategoryDecl>(OCD)) {
+    if (CategoryDecl->IsClassExtension()) {
+      IntfDecl = CategoryDecl->getClassInterface();
+      Ivars = CategoryDecl->ivars();
+    }
+  }
+
+  // Check if variable sized ivar is in interface and visible to subclasses.
+  if (!isa<ObjCInterfaceDecl>(OCD)) {
+    for (auto ivar : Ivars) {
+      if (!ivar->isInvalidDecl() && IsVariableSizedType(ivar->getType())) {
+        S.Diag(ivar->getLocation(), diag::warn_variable_sized_ivar_visibility)
+            << ivar->getDeclName() << ivar->getType();
+      }
+    }
+  }
+
+  // Subsequent checks require interface decl.
+  if (!IntfDecl)
+    return;
+
+  // Check if variable sized ivar is followed by another ivar.
+  for (ObjCIvarDecl *ivar = IntfDecl->all_declared_ivar_begin(); ivar;
+       ivar = ivar->getNextIvar()) {
+    if (ivar->isInvalidDecl() || !ivar->getNextIvar())
+      continue;
+    QualType IvarTy = ivar->getType();
+    bool IsInvalidIvar = false;
+    if (IvarTy->isIncompleteArrayType()) {
+      S.Diag(ivar->getLocation(), diag::err_flexible_array_not_at_end)
+          << ivar->getDeclName() << IvarTy
+          << TTK_Class; // Use "class" for Obj-C.
+      IsInvalidIvar = true;
+    } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
+      if (RecordTy->getDecl()->hasFlexibleArrayMember()) {
+        S.Diag(ivar->getLocation(),
+               diag::err_objc_variable_sized_type_not_at_end)
+            << ivar->getDeclName() << IvarTy;
+        IsInvalidIvar = true;
+      }
+    }
+    if (IsInvalidIvar) {
+      S.Diag(ivar->getNextIvar()->getLocation(),
+             diag::note_next_ivar_declaration)
+          << ivar->getNextIvar()->getSynthesize();
+      ivar->setInvalidDecl();
+    }
+  }
+
+  // Check if ObjC container adds ivars after variable sized ivar in superclass.
+  // Perform the check only if OCD is the first container to declare ivars to
+  // avoid multiple warnings for the same ivar.
+  ObjCIvarDecl *FirstIvar =
+      (Ivars.begin() == Ivars.end()) ? nullptr : *Ivars.begin();
+  if (FirstIvar && (FirstIvar == IntfDecl->all_declared_ivar_begin())) {
+    const ObjCInterfaceDecl *SuperClass = IntfDecl->getSuperClass();
+    while (SuperClass && SuperClass->ivar_empty())
+      SuperClass = SuperClass->getSuperClass();
+    if (SuperClass) {
+      auto IvarIter = SuperClass->ivar_begin();
+      std::advance(IvarIter, SuperClass->ivar_size() - 1);
+      const ObjCIvarDecl *LastIvar = *IvarIter;
+      if (IsVariableSizedType(LastIvar->getType())) {
+        S.Diag(FirstIvar->getLocation(),
+               diag::warn_superclass_variable_sized_type_not_at_end)
+            << FirstIvar->getDeclName() << LastIvar->getDeclName()
+            << LastIvar->getType() << SuperClass->getDeclName();
+        S.Diag(LastIvar->getLocation(), diag::note_entity_declared_at)
+            << LastIvar->getDeclName();
+      }
+    }
   }
 }
 
@@ -3872,6 +3982,7 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       if (IDecl->hasDesignatedInitializers())
         DiagnoseMissingDesignatedInitOverrides(IC, IDecl);
       DiagnoseWeakIvars(*this, IC);
+      DiagnoseRetainableFlexibleArrayMember(*this, IDecl);
 
       bool HasRootClassAttr = IDecl->hasAttr<ObjCRootClassAttr>();
       if (IDecl->getSuperClass() == nullptr) {
@@ -3941,6 +4052,7 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       }
     }
   }
+  DiagnoseVariableSizedIvars(*this, OCD);
   if (isInterfaceDeclKind) {
     // Reject invalid vardecls.
     for (unsigned i = 0, e = allTUVars.size(); i != e; i++) {

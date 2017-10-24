@@ -1,16 +1,15 @@
 // RUN: %clang %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
-// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     --sysroot=%S/platform 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clang %s -### -no-canonical-prefixes --target=aarch64-unknown-fuchsia \
-// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     --sysroot=%S/platform 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
 // CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: {{.*}}lld{{.*}}" "-flavor" "gnu"
-// CHECK: "-z" "rodynamic"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"

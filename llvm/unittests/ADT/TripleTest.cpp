@@ -1000,6 +1000,15 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_EQ((unsigned)7, Major);
   EXPECT_EQ((unsigned)0, Minor);
   EXPECT_EQ((unsigned)0, Micro);
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+
+  T = Triple("x86_64-apple-ios10.3-simulator");
+  EXPECT_TRUE(T.isiOS());
+  T.getiOSVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)10, Major);
+  EXPECT_EQ((unsigned)3, Minor);
+  EXPECT_EQ((unsigned)0, Micro);
+  EXPECT_TRUE(T.isSimulatorEnvironment());
 }
 
 TEST(TripleTest, FileFormat) {

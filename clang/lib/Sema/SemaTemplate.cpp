@@ -4805,7 +4805,12 @@ bool Sema::CheckTemplateArgumentList(
   // template.
   TemplateArgumentListInfo NewArgs = TemplateArgs;
 
-  TemplateParameterList *Params = Template->getTemplateParameters();
+  // Make sure we get the template parameter list from the most
+  // recentdeclaration, since that is the only one that has is guaranteed to
+  // have all the default template argument information.
+  TemplateParameterList *Params =
+      cast<TemplateDecl>(Template->getMostRecentDecl())
+          ->getTemplateParameters();
 
   SourceLocation RAngleLoc = NewArgs.getRAngleLoc();
 

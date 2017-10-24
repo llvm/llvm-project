@@ -96,6 +96,7 @@ private:
   void CrashOnOverwrittenData();
   void InterruptCallback();
   void MutateAndTestOne();
+  void PurgeAllocator();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
   void PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
@@ -123,6 +124,8 @@ private:
 
   bool HasMoreMallocsThanFrees = false;
   size_t NumberOfLeakDetectionAttempts = 0;
+
+  system_clock::time_point LastAllocatorPurgeAttemptTime = system_clock::now();
 
   UserCallback CB;
   InputCorpus &Corpus;

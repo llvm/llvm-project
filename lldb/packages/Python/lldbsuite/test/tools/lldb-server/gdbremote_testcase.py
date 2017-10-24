@@ -369,7 +369,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 ["*:{}".format(self.port)]
         else:
             commandline_args = self.debug_monitor_extra_args + \
-                ["localhost:{}".format(self.port)]
+                ["127.0.0.1:{}".format(self.port)]
 
         if attach_pid:
             commandline_args += ["--attach=%d" % attach_pid]
