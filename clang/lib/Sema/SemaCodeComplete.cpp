@@ -6582,7 +6582,7 @@ typedef llvm::DenseMap<
 /// indexed by selector so they can be easily found.
 static void FindImplementableMethods(ASTContext &Context,
                                      ObjCContainerDecl *Container,
-                                     bool WantInstanceMethods,
+                                     Optional<bool> WantInstanceMethods,
                                      QualType ReturnType,
                                      KnownMethodsMap &KnownMethods,
                                      bool InOriginalClass = true) {
@@ -6653,7 +6653,7 @@ static void FindImplementableMethods(ASTContext &Context,
   // we want the methods from this container to override any methods
   // we've previously seen with the same selector.
   for (auto *M : Container->methods()) {
-    if (M->isInstanceMethod() == WantInstanceMethods) {
+    if (!WantInstanceMethods || M->isInstanceMethod() == *WantInstanceMethods) {
       if (!ReturnType.isNull() &&
           !Context.hasSameUnqualifiedType(ReturnType, M->getReturnType()))
         continue;
@@ -7325,8 +7325,7 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   }
 }
 
-void Sema::CodeCompleteObjCMethodDecl(Scope *S, 
-                                      bool IsInstanceMethod,
+void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
                                       ParsedType ReturnTy) {
   // Determine the return type of the method we're declaring, if
   // provided.
@@ -7381,7 +7380,13 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S,
     ObjCMethodDecl *Method = M->second.getPointer();
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
-    
+
+    // Add the '-'/'+' prefix if it wasn't provided yet.
+    if (!IsInstanceMethod) {
+      Builder.AddTextChunk(Method->isInstanceMethod() ? "-" : "+");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    }
+
     // If the result type was not already provided, add it to the
     // pattern as (type).
     if (ReturnType.isNull()) {
@@ -7483,11 +7488,13 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S,
     if (IFace)
       for (auto *Cat : IFace->visible_categories())
         Containers.push_back(Cat);
-    
-    for (unsigned I = 0, N = Containers.size(); I != N; ++I)
-      for (auto *P : Containers[I]->instance_properties())
-        AddObjCKeyValueCompletions(P, IsInstanceMethod, ReturnType, Context, 
-                                   KnownSelectors, Results);
+
+    if (IsInstanceMethod) {
+      for (unsigned I = 0, N = Containers.size(); I != N; ++I)
+        for (auto *P : Containers[I]->instance_properties())
+          AddObjCKeyValueCompletions(P, *IsInstanceMethod, ReturnType, Context,
+                                     KnownSelectors, Results);
+    }
   }
   
   Results.ExitScope();
