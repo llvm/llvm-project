@@ -96,7 +96,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     TargetTriple(TT),
     Gen(TT.getArch() == Triple::amdgcn ? SOUTHERN_ISLANDS : R600),
     IsaVersion(ISAVersion0_0_0),
-    WavefrontSize(64),
+    WavefrontSize(0),
     LocalMemorySize(0),
     LDSBankCount(0),
     MaxPrivateElementSize(0),
@@ -190,14 +190,31 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   return NumWaves;
 }
 
+std::pair<unsigned, unsigned>
+AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return std::make_pair(getWavefrontSize() * 2, getWavefrontSize() * 4);
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+    return std::make_pair(1, getWavefrontSize());
+  default:
+    return std::make_pair(1, 16 * getWavefrontSize());
+  }
+}
+
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   const Function &F) const {
+  // FIXME: 1024 if function.
   // Default minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> Default =
-    AMDGPU::isCompute(F.getCallingConv()) ?
-      std::pair<unsigned, unsigned>(getWavefrontSize() * 2,
-                                    getWavefrontSize() * 4) :
-      std::pair<unsigned, unsigned>(1, getWavefrontSize());
+    getDefaultFlatWorkGroupSize(F.getCallingConv());
 
   // TODO: Do not process "amdgpu-max-work-group-size" attribute once mesa
   // starts using "amdgpu-flat-work-group-size" attribute.

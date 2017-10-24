@@ -48,7 +48,7 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64
     ; CHECK: [[MOVi64imm:%[0-9]+]] = MOVi64imm 1234
-    ; CHECK: %w0 = COPY [[MOVi64imm]]
+    ; CHECK: %x0 = COPY [[MOVi64imm]]
     %0(s64) = G_CONSTANT i64 1234
-    %w0 = COPY %0(s64)
+    %x0 = COPY %0(s64)
 ...

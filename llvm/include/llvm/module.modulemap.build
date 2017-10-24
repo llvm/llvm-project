@@ -7,3 +7,7 @@ module LLVM_Config_ABI_Breaking {
   header "Config/abi-breaking.h"
   export *
 }
+module LLVM_Config_Config {
+  header "Config/llvm-config.h"
+  export *
+}

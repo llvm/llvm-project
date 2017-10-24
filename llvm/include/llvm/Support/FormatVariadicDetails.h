@@ -31,7 +31,7 @@ template <typename T> class provider_format_adapter : public format_adapter {
   T Item;
 
 public:
-  explicit provider_format_adapter(T &&Item) : Item(Item) {}
+  explicit provider_format_adapter(T &&Item) : Item(std::forward<T>(Item)) {}
 
   void format(llvm::raw_ostream &S, StringRef Options) override {
     format_provider<typename std::decay<T>::type>::format(Item, S, Options);

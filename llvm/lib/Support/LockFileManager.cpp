@@ -201,12 +201,11 @@ LockFileManager::LockFileManager(StringRef FileName)
     Out.close();
 
     if (Out.has_error()) {
-      // We failed to write out PID, so make up an excuse, remove the
+      // We failed to write out PID, so report the error, remove the
       // unique lock file, and fail.
-      auto EC = make_error_code(errc::no_space_on_device);
       std::string S("failed to write to ");
       S.append(UniqueLockFileName.str());
-      setError(EC, S);
+      setError(Out.error(), S);
       sys::fs::remove(UniqueLockFileName);
       return;
     }

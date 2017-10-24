@@ -228,16 +228,16 @@ entry:
 ; NORMAL-NEXT: pushl $2
 ; NORMAL-NEXT: pushl $1
 ; NORMAL-NEXT: call
-; NORMAL-NEXT: subl $4, %esp
-; NORMAL-NEXT: movl 20(%esp), [[E1:%e..]]
-; NORMAL-NEXT: movl 24(%esp), [[E2:%e..]]
-; NORMAL-NEXT: movl    [[E2]], 4(%esp)
-; NORMAL-NEXT: movl    [[E1]], (%esp)
-; NORMAL-NEXT: leal 32(%esp), [[E3:%e..]]
-; NORMAL-NEXT: movl    [[E3]], 16(%esp)
-; NORMAL-NEXT: leal 28(%esp), [[E4:%e..]]
-; NORMAL-NEXT: movl    [[E4]], 12(%esp)
-; NORMAL-NEXT: movl    $6, 8(%esp)
+; NORMAL-NEXT: addl $16, %esp
+; NORMAL-NEXT: movl (%esp), [[E1:%e..]]
+; NORMAL-NEXT: movl 4(%esp), [[E2:%e..]]
+; NORMAL-NEXT: leal 16(%esp), [[E3:%e..]]
+; NORMAL-NEXT: leal 12(%esp), [[E4:%e..]]
+; NORMAL-NEXT: pushl   [[E3]]
+; NORMAL-NEXT: pushl   [[E4]]
+; NORMAL-NEXT: pushl   $6
+; NORMAL-NEXT: pushl   [[E2]]
+; NORMAL-NEXT: pushl   [[E1]]
 ; NORMAL-NEXT: call
 ; NORMAL-NEXT: addl $20, %esp
 define void @test9() optsize {
@@ -297,10 +297,10 @@ define void @test11() optsize {
 ; Converting one mov into a push isn't worth it when 
 ; doing so forces too much overhead for other calls.
 ; NORMAL-LABEL: test12:
-; NORMAL: movl    $8, 12(%esp)
-; NORMAL-NEXT: movl    $7, 8(%esp)
-; NORMAL-NEXT: movl    $6, 4(%esp)
-; NORMAL-NEXT: movl    $5, (%esp)
+; NORMAL:       pushl  $8
+; NORMAL-NEXT:  pushl  $7
+; NORMAL-NEXT:  pushl  $6
+; NORMAL-NEXT:  pushl  $5
 ; NORMAL-NEXT: calll _good
 define void @test12() optsize {
 entry:
@@ -318,18 +318,22 @@ entry:
 ; NORMAL-NEXT: pushl    $2
 ; NORMAL-NEXT: pushl    $1
 ; NORMAL-NEXT: calll _good
-; NORMAL-NEXT: subl    $4, %esp
-; NORMAL: movl    $8, 16(%esp)
-; NORMAL-NEXT: movl    $7, 12(%esp)
-; NORMAL-NEXT: movl    $6, 8(%esp)
-; NORMAL-NEXT: calll _struct
-; NORMAL-NEXT: addl    $20, %esp
-; NORMAL-NEXT: pushl    $12
-; NORMAL-NEXT: pushl    $11
-; NORMAL-NEXT: pushl    $10
-; NORMAL-NEXT: pushl    $9
-; NORMAL-NEXT: calll _good
-; NORMAL-NEXT: addl $16, %esp
+; NORMAL-NEXT: addl    $16, %esp
+; NORMAL=NEXT: movl  (%esp), %eax
+; NORMAL=NEXT: movl  4(%esp), %ecx
+; NORMAL=NEXT: pushl  $8
+; NORMAL=NEXT: pushl  $7
+; NORMAL=NEXT: pushl  $6
+; NORMAL=NEXT: pushl  %ecx
+; NORMAL=NEXT: pushl  %eax
+; NORMAL=NEXT: calll  _struct
+; NORMAL=NEXT: addl  $20, %esp
+; NORMAL=NEXT: pushl  $12
+; NORMAL=NEXT: pushl  $11
+; NORMAL=NEXT: pushl  $10
+; NORMAL=NEXT: pushl  $9
+; NORMAL=NEXT: calll  _good
+; NORMAL=NEXT: addl  $16, %esp
 define void @test12b() optsize {
 entry:
   %s = alloca %struct.s, align 4  

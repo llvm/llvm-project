@@ -399,26 +399,14 @@ def mskor_global : PatFrag<(ops node:$val, node:$ptr),
   return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
 }]>;
 
-multiclass AtomicCmpSwapLocal <SDNode cmp_swap_node> {
-
-  def _32_local : PatFrag <
+class AtomicCmpSwapLocal <SDNode cmp_swap_node> : PatFrag<
     (ops node:$ptr, node:$cmp, node:$swap),
     (cmp_swap_node node:$ptr, node:$cmp, node:$swap), [{
       AtomicSDNode *AN = cast<AtomicSDNode>(N);
-      return AN->getMemoryVT() == MVT::i32 &&
-             AN->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
-  }]>;
+      return AN->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+}]>;
 
-  def _64_local : PatFrag<
-    (ops node:$ptr, node:$cmp, node:$swap),
-    (cmp_swap_node node:$ptr, node:$cmp, node:$swap), [{
-      AtomicSDNode *AN = cast<AtomicSDNode>(N);
-      return AN->getMemoryVT() == MVT::i64 &&
-             AN->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
-  }]>;
-}
-
-defm atomic_cmp_swap : AtomicCmpSwapLocal <atomic_cmp_swap>;
+def atomic_cmp_swap_local : AtomicCmpSwapLocal <atomic_cmp_swap>;
 
 multiclass global_binary_atomic_op<SDNode atomic_op> {
   def "" : PatFrag<

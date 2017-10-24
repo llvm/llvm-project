@@ -27,6 +27,8 @@
 
   define void @store_gep_8_s64_fpr(i64* %addr) { ret void }
   define void @store_gep_8_s32_fpr(i32* %addr) { ret void }
+
+  define void @store_v2s32(i64 *%addr) { ret void }
 ...
 
 ---
@@ -98,11 +100,14 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64sp
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store 2 into %ir.addr)
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: STRHHui [[COPY2]], [[COPY]], 0 :: (store 2 into %ir.addr)
     %0(p0) = COPY %x0
-    %1(s16) = COPY %w1
+    %2:gpr(s32) = COPY %w1
+    %1(s16) = G_TRUNC %2
     G_STORE  %1, %0 :: (store 2 into %ir.addr)
 
 ...
@@ -124,11 +129,14 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64sp
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: STRBBui [[COPY1]], [[COPY]], 0 :: (store 1 into %ir.addr)
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: STRBBui [[COPY2]], [[COPY]], 0 :: (store 1 into %ir.addr)
     %0(p0) = COPY %x0
-    %1(s8) = COPY %w1
+    %2:gpr(s32) = COPY %w1
+    %1(s8) = G_TRUNC %2
     G_STORE  %1, %0 :: (store 1 into %ir.addr)
 
 ...
@@ -293,11 +301,14 @@ body:             |
     ; CHECK-NEXT: id: 1, class: gpr32
     ; CHECK-NEXT: id: 2, class: gpr
     ; CHECK-NEXT: id: 3, class: gpr
+    ; CHECK-NEXT: id: 4, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: STRHHui [[COPY1]], [[COPY]], 32 :: (store 2 into %ir.addr)
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: STRHHui [[COPY2]], [[COPY]], 32 :: (store 2 into %ir.addr)
     %0(p0) = COPY %x0
-    %1(s16) = COPY %w1
+    %4:gpr(s32) = COPY %w1
+    %1(s16) = G_TRUNC %4
     %2(s64) = G_CONSTANT i64 64
     %3(p0) = G_GEP %0, %2
     G_STORE %1, %3 :: (store 2 into %ir.addr)
@@ -324,11 +335,14 @@ body:             |
     ; CHECK-NEXT: id: 1, class: gpr32
     ; CHECK-NEXT: id: 2, class: gpr
     ; CHECK-NEXT: id: 3, class: gpr
+    ; CHECK-NEXT: id: 4, class: gpr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: STRBBui [[COPY1]], [[COPY]], 1 :: (store 1 into %ir.addr)
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: STRBBui [[COPY2]], [[COPY]], 1 :: (store 1 into %ir.addr)
     %0(p0) = COPY %x0
-    %1(s8) = COPY %w1
+    %4:gpr(s32) = COPY %w1
+    %1(s8) = G_TRUNC %4
     %2(s64) = G_CONSTANT i64 1
     %3(p0) = G_GEP %0, %2
     G_STORE %1, %3 :: (store 1 into %ir.addr)
@@ -446,4 +460,30 @@ body:             |
     %2(s64) = G_CONSTANT i64 8
     %3(p0) = G_GEP %0, %2
     G_STORE %1, %3 :: (store 4 into %ir.addr)
+...
+---
+# CHECK-LABEL: name: store_v2s32
+name:            store_v2s32
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: fpr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %d1
+# CHECK: STRDui %1, %0, 0 :: (store 8 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %d1
+
+    %0(p0) = COPY %x0
+    %1(<2 x s32>) = COPY %d1
+    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+
 ...

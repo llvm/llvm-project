@@ -128,20 +128,22 @@ body:             |
   bb.1:
    ; CHECK-LABEL: name: legalize_phi_ptr
    ; CHECK-LABEL: bb.0:
-   ; CHECK: %0(p0) = COPY %x0
-   ; CHECK: %1(p0) = COPY %x1
-   ; CHECK: %2(s1) = COPY %w2
+   ; CHECK: [[A:%[0-9]+]](p0) = COPY %x0
+   ; CHECK: [[B:%[0-9]+]](p0) = COPY %x1
+   ; CHECK: [[CE:%[0-9]+]](s32) = COPY %w2
+   ; CHECK: [[C:%[0-9]+]](s1) = G_TRUNC [[CE]]
 
    ; CHECK-LABEL: bb.1:
    ; CHECK-LABEL: bb.2:
-   ; CHECK: %3(p0) = G_PHI %0(p0), %bb.0, %1(p0), %bb.1
+   ; CHECK: %3(p0) = G_PHI [[A]](p0), %bb.0, [[B]](p0), %bb.1
    ; CHECK: %x0 = COPY %3(p0)
     successors: %bb.2, %bb.3
     liveins: %w2, %x0, %x1
 
     %0(p0) = COPY %x0
     %1(p0) = COPY %x1
-    %2(s1) = COPY %w2
+    %4(s32) = COPY %w2
+    %2(s1) = G_TRUNC %4(s32)
     G_BRCOND %2(s1), %bb.2
     G_BR %bb.3
 

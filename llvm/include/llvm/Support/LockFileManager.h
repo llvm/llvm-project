@@ -88,7 +88,7 @@ public:
   std::string getErrorMessage() const;
 
   /// \brief Set error and error message
-  void setError(std::error_code &EC, StringRef ErrorMsg = "") {
+  void setError(const std::error_code &EC, StringRef ErrorMsg = "") {
     Error = EC;
     ErrorDiagMsg = ErrorMsg.str();
   }

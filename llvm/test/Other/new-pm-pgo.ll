@@ -11,6 +11,8 @@
 ;
 ; GEN: Running pass: PGOInstrumentationGen
 ; USE: Running pass: PGOInstrumentationUse
+; USE: Running pass: PGOIndirectCallPromotion
+; USE: Running pass: PGOMemOPSizeOpt
 ; SAMPLE_USE_O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 ; SAMPLE_USE_PRE_LINK: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 ; SAMPLE_USE: Running pass: SimplifyCFGPass

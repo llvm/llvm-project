@@ -108,6 +108,16 @@ MCDataFragment *MCObjectStreamer::getOrCreateDataFragment() {
   return F;
 }
 
+MCPaddingFragment *MCObjectStreamer::getOrCreatePaddingFragment() {
+  MCPaddingFragment *F =
+      dyn_cast_or_null<MCPaddingFragment>(getCurrentFragment());
+  if (!F) {
+    F = new MCPaddingFragment();
+    insert(F);
+  }
+  return F;
+}
+
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
@@ -247,6 +257,13 @@ bool MCObjectStreamer::mayHaveInstructions(MCSection &Sec) const {
 
 void MCObjectStreamer::EmitInstruction(const MCInst &Inst,
                                        const MCSubtargetInfo &STI, bool) {
+  getAssembler().getBackend().handleCodePaddingInstructionBegin(Inst);
+  EmitInstructionImpl(Inst, STI);
+  getAssembler().getBackend().handleCodePaddingInstructionEnd(Inst);
+}
+
+void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
+                                           const MCSubtargetInfo &STI) {
   MCStreamer::EmitInstruction(Inst, STI);
 
   MCSection *Sec = getCurrentSectionOnly();
@@ -465,6 +482,16 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
   insert(new MCOrgFragment(*Offset, Value, Loc));
+}
+
+void MCObjectStreamer::EmitCodePaddingBasicBlockStart(
+    const MCCodePaddingContext &Context) {
+  getAssembler().getBackend().handleCodePaddingBasicBlockStart(this, Context);
+}
+
+void MCObjectStreamer::EmitCodePaddingBasicBlockEnd(
+    const MCCodePaddingContext &Context) {
+  getAssembler().getBackend().handleCodePaddingBasicBlockEnd(Context);
 }
 
 // Associate DTPRel32 fixup with data and resize data area
