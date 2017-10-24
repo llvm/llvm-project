@@ -13,14 +13,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
 
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
@@ -72,7 +93,6 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 
   return MadeChange ? V : nullptr;
 }
-
 
 /// True if the multiply can not be expressed in an int this size.
 static bool MultiplyOverflows(const APInt &C1, const APInt &C2, APInt &Product,
@@ -540,7 +560,6 @@ static bool isFMulOrFDivWithConstant(Value *V) {
 /// This function is to simplify "FMulOrDiv * C" and returns the
 /// resulting expression. Note that this function could return NULL in
 /// case the constants cannot be folded into a normal floating-point.
-///
 Value *InstCombiner::foldFMulConst(Instruction *FMulOrDiv, Constant *C,
                                    Instruction *InsertBefore) {
   assert(isFMulOrFDivWithConstant(FMulOrDiv) && "V is invalid");
@@ -747,7 +766,6 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     //  latency of the instruction Y is amortized by the expression of X*X,
     //  and therefore Y is in a "less critical" position compared to what it
     //  was before the transformation.
-    //
     if (AllowReassociate) {
       Value *Opnd0_0, *Opnd0_1;
       if (Opnd0->hasOneUse() &&
@@ -847,7 +865,6 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
   }
   return true;
 }
-
 
 /// This function implements the transforms common to both integer division
 /// instructions (udiv and sdiv). It is called by the visitors to those integer
@@ -974,25 +991,29 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
+static const unsigned MaxDepth = 6;
+
 namespace {
-const unsigned MaxDepth = 6;
-typedef Instruction *(*FoldUDivOperandCb)(Value *Op0, Value *Op1,
-                                          const BinaryOperator &I,
-                                          InstCombiner &IC);
+
+using FoldUDivOperandCb = Instruction *(*)(Value *Op0, Value *Op1,
+                                           const BinaryOperator &I,
+                                           InstCombiner &IC);
 
 /// \brief Used to maintain state for visitUDivOperand().
 struct UDivFoldAction {
-  FoldUDivOperandCb FoldAction; ///< Informs visitUDiv() how to fold this
-                                ///< operand.  This can be zero if this action
-                                ///< joins two actions together.
+  /// Informs visitUDiv() how to fold this operand.  This can be zero if this
+  /// action joins two actions together.
+  FoldUDivOperandCb FoldAction;
 
-  Value *OperandToFold;         ///< Which operand to fold.
+  /// Which operand to fold.
+  Value *OperandToFold;
+
   union {
-    Instruction *FoldResult;    ///< The instruction returned when FoldAction is
-                                ///< invoked.
+    /// The instruction returned when FoldAction is invoked.
+    Instruction *FoldResult;
 
-    size_t SelectLHSIdx;        ///< Stores the LHS action index if this action
-                                ///< joins two actions together.
+    /// Stores the LHS action index if this action joins two actions together.
+    size_t SelectLHSIdx;
   };
 
   UDivFoldAction(FoldUDivOperandCb FA, Value *InputOperand)
@@ -1000,7 +1021,8 @@ struct UDivFoldAction {
   UDivFoldAction(FoldUDivOperandCb FA, Value *InputOperand, size_t SLHS)
       : FoldAction(FA), OperandToFold(InputOperand), SelectLHSIdx(SLHS) {}
 };
-}
+
+} // end anonymous namespace
 
 // X udiv 2^C -> X >> C
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
@@ -1280,8 +1302,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 ///    1) 1/C is exact, or
 ///    2) reciprocal is allowed.
 /// If the conversion was successful, the simplified expression "X * 1/C" is
-/// returned; otherwise, NULL is returned.
-///
+/// returned; otherwise, nullptr is returned.
 static Instruction *CvtFDivConstToReciprocal(Value *Dividend, Constant *Divisor,
                                              bool AllowReciprocal) {
   if (!isa<ConstantFP>(Divisor)) // TODO: handle vectors.
@@ -1342,7 +1363,6 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
           Res = BinaryOperator::CreateFMul(X, C);
       } else if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
         // (X/C1)/C2 => X /(C2*C1) [=> X * 1/(C2*C1) if reciprocal is allowed]
-        //
         Constant *C = ConstantExpr::getFMul(C1, C2);
         if (isNormalFp(C)) {
           Res = CvtFDivConstToReciprocal(X, C, AllowReciprocal);
@@ -1400,7 +1420,6 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
 
     if (Op0->hasOneUse() && match(Op0, m_FDiv(m_Value(X), m_Value(Y)))) {
       // (X/Y) / Z => X / (Y*Z)
-      //
       if (!isa<Constant>(Y) || !isa<Constant>(Op1)) {
         NewInst = Builder.CreateFMul(Y, Op1);
         if (Instruction *RI = dyn_cast<Instruction>(NewInst)) {
@@ -1412,7 +1431,6 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       }
     } else if (Op1->hasOneUse() && match(Op1, m_FDiv(m_Value(X), m_Value(Y)))) {
       // Z / (X/Y) => Z*Y / X
-      //
       if (!isa<Constant>(Y) || !isa<Constant>(Op0)) {
         NewInst = Builder.CreateFMul(Op0, Y);
         if (Instruction *RI = dyn_cast<Instruction>(NewInst)) {
@@ -1468,7 +1486,6 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
         if (Instruction *R = FoldOpIntoSelect(I, SI))
           return R;
       } else if (auto *PN = dyn_cast<PHINode>(Op0I)) {
-        using namespace llvm::PatternMatch;
         const APInt *Op1Int;
         if (match(Op1, m_APInt(Op1Int)) && !Op1Int->isMinValue() &&
             (I.getOpcode() == Instruction::URem ||

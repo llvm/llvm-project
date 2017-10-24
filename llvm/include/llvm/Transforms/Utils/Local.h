@@ -208,10 +208,10 @@ unsigned getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                     const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
-static inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
-                                         const Instruction *CxtI = nullptr,
-                                         AssumptionCache *AC = nullptr,
-                                         const DominatorTree *DT = nullptr) {
+inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
+                                  const Instruction *CxtI = nullptr,
+                                  AssumptionCache *AC = nullptr,
+                                  const DominatorTree *DT = nullptr) {
   return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 

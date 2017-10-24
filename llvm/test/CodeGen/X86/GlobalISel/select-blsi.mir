@@ -24,13 +24,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_blsi32rr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: gr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[BLSI32rr:%[0-9]+]] = BLSI32rr [[COPY]], implicit-def %eflags
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[BLSI32rr:%[0-9]+]]:gr32 = BLSI32rr [[COPY]], implicit-def %eflags
     ; CHECK: %edi = COPY [[BLSI32rr]]
     %0(s32) = COPY %edi
     %1(s32) = G_CONSTANT i32 0
@@ -55,15 +50,10 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_blsi32rr_nomatch
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gr32
-    ; CHECK-NEXT: id: 2, class: gr32
-    ; CHECK-NEXT: id: 3, class: gr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[MOV32r0_:%[0-9]+]] = MOV32r0 implicit-def %eflags
-    ; CHECK: [[SUB32ri:%[0-9]+]] = SUB32ri [[MOV32r0_]], 0, implicit-def %eflags
-    ; CHECK: [[AND32rr:%[0-9]+]] = AND32rr [[SUB32ri]], [[COPY]], implicit-def %eflags
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
+    ; CHECK: [[SUB32ri:%[0-9]+]]:gr32 = SUB32ri [[MOV32r0_]], 0, implicit-def %eflags
+    ; CHECK: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[SUB32ri]], [[COPY]], implicit-def %eflags
     ; CHECK: %edi = COPY [[AND32rr]]
     %0(s32) = COPY %edi
     %1(s32) = G_CONSTANT i32 0

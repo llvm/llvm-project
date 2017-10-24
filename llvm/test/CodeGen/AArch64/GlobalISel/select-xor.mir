@@ -29,13 +29,9 @@ body:             |
     liveins: %w0, %w1
 
     ; CHECK-LABEL: name: xor_s32_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: [[EORWrr:%[0-9]+]] = EORWrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
+    ; CHECK: [[EORWrr:%[0-9]+]]:gpr32 = EORWrr [[COPY]], [[COPY1]]
     ; CHECK: %w0 = COPY [[EORWrr]]
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
@@ -59,13 +55,9 @@ body:             |
     liveins: %x0, %x1
 
     ; CHECK-LABEL: name: xor_s64_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64
-    ; CHECK-NEXT: id: 1, class: gpr64
-    ; CHECK-NEXT: id: 2, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %x1
-    ; CHECK: [[EORXrr:%[0-9]+]] = EORXrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY %x1
+    ; CHECK: [[EORXrr:%[0-9]+]]:gpr64 = EORXrr [[COPY]], [[COPY1]]
     ; CHECK: %x0 = COPY [[EORXrr]]
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -90,12 +82,8 @@ body:             |
     liveins: %w0
 
     ; CHECK-LABEL: name: xor_constant_n1_s32_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[ORNWrr:%[0-9]+]] = ORNWrr %wzr, [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr %wzr, [[COPY]]
     ; CHECK: %w0 = COPY [[ORNWrr]]
     %0(s32) = COPY %w0
     %1(s32) = G_CONSTANT i32 -1
@@ -119,12 +107,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: xor_constant_n1_s64_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[ORNXrr:%[0-9]+]] = ORNXrr %xzr, [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %x0
+    ; CHECK: [[ORNXrr:%[0-9]+]]:gpr64 = ORNXrr %xzr, [[COPY]]
     ; CHECK: %x0 = COPY [[ORNXrr]]
     %0(s64) = COPY %x0
     %1(s64) = G_CONSTANT i64 -1
@@ -146,16 +130,12 @@ registers:
 
 body:             |
   ; CHECK-LABEL: name: xor_constant_n1_s32_gpr_2bb
-  ; CHECK: registers:
-  ; CHECK-NEXT: id: 0, class: gpr32
-  ; CHECK-NEXT: id: 1, class: gpr
-  ; CHECK-NEXT: id: 2, class: gpr32
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
-  ; CHECK:   [[COPY:%[0-9]+]] = COPY %w0
-  ; CHECK:   [[ORNWrr:%[0-9]+]] = ORNWrr %wzr, [[COPY]]
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+  ; CHECK:   [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr %wzr, [[COPY]]
   ; CHECK:   %w0 = COPY [[ORNWrr]]
   bb.0:
     liveins: %w0, %w1

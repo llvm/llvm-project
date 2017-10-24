@@ -41,11 +41,11 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; CHECK-LABEL: name: test_and_i1
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edx
-    ; CHECK: [[TRUNC:%[0-9]+]](s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]](s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]](s8) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]](s1) = G_TRUNC [[AND]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edx
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[AND]](s8)
     ; CHECK: RET 0
     %0(s32) = COPY %edx
     %1(s1) = G_TRUNC %0(s32)
@@ -67,8 +67,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i8
-    ; CHECK: [[DEF:%[0-9]+]](s8) = IMPLICIT_DEF
-    ; CHECK: [[AND:%[0-9]+]](s8) = G_AND [[DEF]], [[DEF]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = IMPLICIT_DEF
+    ; CHECK: [[AND:%[0-9]+]]:_(s8) = G_AND [[DEF]], [[DEF]]
     ; CHECK: %al = COPY [[AND]](s8)
     ; CHECK: RET 0, implicit %al
     %0(s8) = IMPLICIT_DEF
@@ -92,8 +92,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i16
-    ; CHECK: [[DEF:%[0-9]+]](s16) = IMPLICIT_DEF
-    ; CHECK: [[AND:%[0-9]+]](s16) = G_AND [[DEF]], [[DEF]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = IMPLICIT_DEF
+    ; CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[DEF]], [[DEF]]
     ; CHECK: %ax = COPY [[AND]](s16)
     ; CHECK: RET 0, implicit %ax
     %0(s16) = IMPLICIT_DEF
@@ -117,8 +117,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i32
-    ; CHECK: [[DEF:%[0-9]+]](s32) = IMPLICIT_DEF
-    ; CHECK: [[AND:%[0-9]+]](s32) = G_AND [[DEF]], [[DEF]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[DEF]], [[DEF]]
     ; CHECK: %eax = COPY [[AND]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s32) = IMPLICIT_DEF
@@ -142,8 +142,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_and_i64
-    ; CHECK: [[DEF:%[0-9]+]](s64) = IMPLICIT_DEF
-    ; CHECK: [[AND:%[0-9]+]](s64) = G_AND [[DEF]], [[DEF]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = IMPLICIT_DEF
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[DEF]]
     ; CHECK: %rax = COPY [[AND]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s64) = IMPLICIT_DEF

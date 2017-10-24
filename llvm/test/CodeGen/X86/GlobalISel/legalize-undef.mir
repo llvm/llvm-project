@@ -5,19 +5,19 @@
 name:            test_implicit_def
 # ALL-LABEL: name:  test_implicit_def
 registers:
-# X64:          %0(s1) = G_IMPLICIT_DEF
-# X64-NEXT:     %1(s8) = G_IMPLICIT_DEF
-# X64-NEXT:     %2(s16) = G_IMPLICIT_DEF
-# X64-NEXT:     %3(s32) = G_IMPLICIT_DEF
-# X64-NEXT:     %4(s64) = G_IMPLICIT_DEF
+# X64:          %0:_(s1) = G_IMPLICIT_DEF
+# X64-NEXT:     %1:_(s8) = G_IMPLICIT_DEF
+# X64-NEXT:     %2:_(s16) = G_IMPLICIT_DEF
+# X64-NEXT:     %3:_(s32) = G_IMPLICIT_DEF
+# X64-NEXT:     %4:_(s64) = G_IMPLICIT_DEF
 #
-# X32:          %0(s1) = G_IMPLICIT_DEF
-# X32-NEXT:     %1(s8) = G_IMPLICIT_DEF
-# X32-NEXT:     %2(s16) = G_IMPLICIT_DEF
-# X32-NEXT:     %3(s32) = G_IMPLICIT_DEF
-# X32-NEXT:     %5(s32) = G_IMPLICIT_DEF
-# X32-NEXT:     %6(s32) = G_IMPLICIT_DEF
-# X32-NEXT:     %4(s64) = G_MERGE_VALUES %5(s32), %6(s32)
+# X32:          %0:_(s1) = G_IMPLICIT_DEF
+# X32-NEXT:     %1:_(s8) = G_IMPLICIT_DEF
+# X32-NEXT:     %2:_(s16) = G_IMPLICIT_DEF
+# X32-NEXT:     %3:_(s32) = G_IMPLICIT_DEF
+# X32-NEXT:     %5:_(s32) = G_IMPLICIT_DEF
+# X32-NEXT:     %6:_(s32) = G_IMPLICIT_DEF
+# X32-NEXT:     %4:_(s64) = G_MERGE_VALUES %5(s32), %6(s32)
 body: |
   bb.0.entry:
     liveins:

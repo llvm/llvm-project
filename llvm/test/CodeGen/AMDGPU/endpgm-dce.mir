@@ -25,7 +25,7 @@ body:             |
 ---
 # GCN-LABEL: name: load_without_memoperand
 # GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
-# GCN-NEXT: dead %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr
 # GCN-NEXT: S_ENDPGM
 name: load_without_memoperand
 tracksRegLiveness: true
@@ -49,7 +49,7 @@ body:             |
 ---
 # GCN-LABEL: name: load_volatile
 # GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
-# GCN-NEXT: dead %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile load 4)
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile load 4)
 # GCN-NEXT: S_ENDPGM
 name: load_volatile
 tracksRegLiveness: true
@@ -120,7 +120,7 @@ body:             |
 ---
 # GCN-LABEL: name: exp
 # GCN:      %sgpr0_sgpr1 = S_OR_B64 %exec, killed %vcc, implicit-def %scc
-# GCN-NEXT: EXP 32, undef %0, undef %1, %2, undef %3, 0, 0, 15, implicit %exec
+# GCN-NEXT: EXP 32, undef %0:vgpr_32, undef %1:vgpr_32, %2, undef %3:vgpr_32, 0, 0, 15, implicit %exec
 # GCN-NEXT: S_ENDPGM
 name: exp
 tracksRegLiveness: true

@@ -6,8 +6,8 @@
 # CHECK:   - { id: 1, class: gr32, preferred-register: '' }
 # CHECK: body: |
 # CHECK:   bb.0:
-# CHECK:     %0 = MOV32r0 implicit-def %eflags
-# CHECK:     dead %1 = COPY %0
+# CHECK:     %0:gr32 = MOV32r0 implicit-def %eflags
+# CHECK:     dead %1:gr32 = COPY %0
 # CHECK:     MOV32mr undef %rcx, 1, _, 0, _, killed %0 :: (volatile store 4)
 # CHECK:     RETQ undef %eax
 name: func0

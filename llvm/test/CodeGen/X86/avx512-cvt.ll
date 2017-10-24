@@ -1685,9 +1685,9 @@ define <2 x double> @sbto2f64(<2 x double> %a) {
 ; VLNODQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; VLNODQ-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm1
+; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
 ; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm0
+; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm0
 ; VLNODQ-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; VLNODQ-NEXT:    retq
   %cmpres = fcmp ogt <2 x double> %a, zeroinitializer

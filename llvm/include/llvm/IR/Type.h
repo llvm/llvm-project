@@ -438,7 +438,7 @@ private:
 };
 
 // Printing of types.
-static inline raw_ostream &operator<<(raw_ostream &OS, const Type &T) {
+inline raw_ostream &operator<<(raw_ostream &OS, const Type &T) {
   T.print(OS);
   return OS;
 }

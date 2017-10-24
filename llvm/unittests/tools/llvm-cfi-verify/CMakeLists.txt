@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
-  CFIVerify
   MC
   MCParser
   Object

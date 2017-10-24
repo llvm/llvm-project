@@ -41,13 +41,9 @@ body:             |
     liveins: %edi, %esi
 
     ; ALL-LABEL: name: test_or_i8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL-NEXT: id: 1, class: gr8
-    ; ALL-NEXT: id: 2, class: gr8
-    ; ALL: [[COPY:%[0-9]+]] = COPY %dil
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %sil
-    ; ALL: [[OR8rr:%[0-9]+]] = OR8rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY %dil
+    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY %sil
+    ; ALL: [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %al = COPY [[OR8rr]]
     ; ALL: RET 0, implicit %al
     %0(s8) = COPY %dil
@@ -75,13 +71,9 @@ body:             |
     liveins: %edi, %esi
 
     ; ALL-LABEL: name: test_or_i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr16
-    ; ALL-NEXT: id: 1, class: gr16
-    ; ALL-NEXT: id: 2, class: gr16
-    ; ALL: [[COPY:%[0-9]+]] = COPY %di
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %si
-    ; ALL: [[OR16rr:%[0-9]+]] = OR16rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr16 = COPY %di
+    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY %si
+    ; ALL: [[OR16rr:%[0-9]+]]:gr16 = OR16rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %ax = COPY [[OR16rr]]
     ; ALL: RET 0, implicit %ax
     %0(s16) = COPY %di
@@ -109,13 +101,9 @@ body:             |
     liveins: %edi, %esi
 
     ; ALL-LABEL: name: test_or_i32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gr32
-    ; ALL: [[COPY:%[0-9]+]] = COPY %edi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %esi
-    ; ALL: [[OR32rr:%[0-9]+]] = OR32rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY %esi
+    ; ALL: [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %eax = COPY [[OR32rr]]
     ; ALL: RET 0, implicit %eax
     %0(s32) = COPY %edi
@@ -143,13 +131,9 @@ body:             |
     liveins: %rdi, %rsi
 
     ; ALL-LABEL: name: test_or_i64
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64
-    ; ALL-NEXT: id: 1, class: gr64
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %rsi
-    ; ALL: [[OR64rr:%[0-9]+]] = OR64rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr64 = COPY %rsi
+    ; ALL: [[OR64rr:%[0-9]+]]:gr64 = OR64rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %rax = COPY [[OR64rr]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi

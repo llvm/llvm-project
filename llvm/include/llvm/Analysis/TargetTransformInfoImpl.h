@@ -255,6 +255,8 @@ public:
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) { return false; }
 
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) { return false; }
+
   bool prefersVectorizedAddressing() { return true; }
 
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,

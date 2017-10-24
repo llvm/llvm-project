@@ -14,83 +14,83 @@ legalized:       true
 regBankSelected: true
 
 # GCN: body:
-# GCN: [[PTR:%[0-9]+]] = COPY %sgpr0_sgpr1
+# GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY %sgpr0_sgpr1
 
 # Immediate offset:
 # SICI: S_LOAD_DWORD_IMM [[PTR]], 1, 0
-# VI:   S_LOAD_DWORD_IMM [[PTR]], 4, 0 
+# VI:   S_LOAD_DWORD_IMM [[PTR]], 4, 0
 
 # Max immediate offset for SI
 # SICI: S_LOAD_DWORD_IMM [[PTR]], 255, 0
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0
 
 # Immediate overflow for SI
-# SI: [[K1024:%[0-9]+]] = S_MOV_B32 1024
+# SI: [[K1024:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
 # SI: S_LOAD_DWORD_SGPR [[PTR]], [[K1024]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 256, 0
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1024, 0
 
 # Max immediate offset for VI
-# SI: [[K1048572:%[0-9]+]] = S_MOV_B32 1048572
+# SI: [[K1048572:%[0-9]+]]:sreg_32 = S_MOV_B32 1048572
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262143
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1048572
 
 #
 # Immediate overflow for VI
-# SIVI: [[K1048576:%[0-9]+]] = S_MOV_B32 1048576
+# SIVI: [[K1048576:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K1048576]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262144, 0
 
 # Max immediate for CI
-# SIVI: [[K_LO:%[0-9]+]] = S_MOV_B32 4294967292
-# SIVI: [[K_HI:%[0-9]+]] = S_MOV_B32 3
-# SIVI: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# SIVI-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# SIVI-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
-# SIVI: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# SIVI-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
-# SIVI: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# SIVI: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
+# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
+# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 3
+# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
+# SIVI-DAG: [[K_SUB0:%[0-9]+]]:sgpr_32 = COPY [[K]].sub0
+# SIVI-DAG: [[PTR_LO:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub0
+# SIVI: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
+# SIVI-DAG: [[K_SUB1:%[0-9]+]]:sgpr_32 = COPY [[K]].sub1
+# SIVI-DAG: [[PTR_HI:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub1
+# SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
+# SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0
 
 # Immediate overflow for CI
-# GCN: [[K_LO:%[0-9]+]] = S_MOV_B32 0
-# GCN: [[K_HI:%[0-9]+]] = S_MOV_B32 4
-# GCN: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# GCN-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# GCN-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
-# GCN: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# GCN-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# GCN-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
-# GCN: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# GCN: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
+# GCN: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+# GCN: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 4
+# GCN: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
+# GCN-DAG: [[K_SUB0:%[0-9]+]]:sgpr_32 = COPY [[K]].sub0
+# GCN-DAG: [[PTR_LO:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub0
+# GCN: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
+# GCN-DAG: [[K_SUB1:%[0-9]+]]:sgpr_32 = COPY [[K]].sub1
+# GCN-DAG: [[PTR_HI:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub1
+# GCN: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
+# GCN: [[ADD_PTR:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 
 # Max 32-bit byte offset
-# SIVI: [[K4294967292:%[0-9]+]] = S_MOV_B32 4294967292
+# SIVI: [[K4294967292:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K4294967292]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741823, 0
 
 # Overflow 32-bit byte offset
-# SIVI: [[K_LO:%[0-9]+]] = S_MOV_B32 0
-# SIVI: [[K_HI:%[0-9]+]] = S_MOV_B32 1
-# SIVI: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# SIVI-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# SIVI-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
-# SIVI: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# SIVI-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
-# SIVI: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# SIVI: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
+# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
+# SIVI-DAG: [[K_SUB0:%[0-9]+]]:sgpr_32 = COPY [[K]].sub0
+# SIVI-DAG: [[PTR_LO:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub0
+# SIVI: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
+# SIVI-DAG: [[K_SUB1:%[0-9]+]]:sgpr_32 = COPY [[K]].sub1
+# SIVI-DAG: [[PTR_HI:%[0-9]+]]:sgpr_32 = COPY [[PTR]].sub1
+# SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
+# SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741824, 0
 
 body: |
   bb.0:
     liveins: %sgpr0_sgpr1
-   
+
     %0:sgpr(p2) = COPY %sgpr0_sgpr1
 
     %1:sgpr(s64) = G_CONSTANT i64 4

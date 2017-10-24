@@ -12,12 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
+#include <cassert>
+#include <utility>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -39,9 +53,14 @@ namespace {
     // is expensive. In order to avoid the cost of the constructor, we should
     // reuse some instances whenever possible. The pre-created instances
     // FAddCombine::Add[0-5] embodies this idea.
-    //
-    FAddendCoef() : IsFp(false), BufHasFpVal(false), IntVal(0) {}
+    FAddendCoef() = default;
     ~FAddendCoef();
+
+    // If possible, don't define operator+/operator- etc because these
+    // operators inevitably call FAddendCoef's constructor which is not cheap.
+    void operator=(const FAddendCoef &A);
+    void operator+=(const FAddendCoef &A);
+    void operator*=(const FAddendCoef &S);
 
     void set(short C) {
       assert(!insaneIntVal(C) && "Insane coefficient");
@@ -55,12 +74,6 @@ namespace {
     bool isZero() const { return isInt() ? !IntVal : getFpVal().isZero(); }
     Value *getValue(Type *) const;
 
-    // If possible, don't define operator+/operator- etc because these
-    // operators inevitably call FAddendCoef's constructor which is not cheap.
-    void operator=(const FAddendCoef &A);
-    void operator+=(const FAddendCoef &A);
-    void operator*=(const FAddendCoef &S);
-
     bool isOne() const { return isInt() && IntVal == 1; }
     bool isTwo() const { return isInt() && IntVal == 2; }
     bool isMinusOne() const { return isInt() && IntVal == -1; }
@@ -68,10 +81,12 @@ namespace {
 
   private:
     bool insaneIntVal(int V) { return V > 4 || V < -4; }
+
     APFloat *getFpValPtr()
-      { return reinterpret_cast<APFloat*>(&FpValBuf.buffer[0]); }
+      { return reinterpret_cast<APFloat *>(&FpValBuf.buffer[0]); }
+
     const APFloat *getFpValPtr() const
-      { return reinterpret_cast<const APFloat*>(&FpValBuf.buffer[0]); }
+      { return reinterpret_cast<const APFloat *>(&FpValBuf.buffer[0]); }
 
     const APFloat &getFpVal() const {
       assert(IsFp && BufHasFpVal && "Incorret state");
@@ -94,17 +109,16 @@ namespace {
     //       from an *SIGNED* integer.
     APFloat createAPFloatFromInt(const fltSemantics &Sem, int Val);
 
-  private:
-    bool IsFp;
+    bool IsFp = false;
 
     // True iff FpValBuf contains an instance of APFloat.
-    bool BufHasFpVal;
+    bool BufHasFpVal = false;
 
     // The integer coefficient of an individual addend is either 1 or -1,
     // and we try to simplify at most 4 addends from neighboring at most
     // two instructions. So the range of <IntVal> falls in [-4, 4]. APInt
     // is overkill of this end.
-    short IntVal;
+    short IntVal = 0;
 
     AlignedCharArrayUnion<APFloat> FpValBuf;
   };
@@ -112,10 +126,14 @@ namespace {
   /// FAddend is used to represent floating-point addend. An addend is
   /// represented as <C, V>, where the V is a symbolic value, and C is a
   /// constant coefficient. A constant addend is represented as <C, 0>.
-  ///
   class FAddend {
   public:
-    FAddend() : Val(nullptr) {}
+    FAddend() = default;
+
+    void operator+=(const FAddend &T) {
+      assert((Val == T.Val) && "Symbolic-values disagree");
+      Coeff += T.Coeff;
+    }
 
     Value *getSymVal() const { return Val; }
     const FAddendCoef &getCoef() const { return Coeff; }
@@ -146,16 +164,11 @@ namespace {
     /// splitted is the addend itself.
     unsigned drillAddendDownOneStep(FAddend &Addend0, FAddend &Addend1) const;
 
-    void operator+=(const FAddend &T) {
-      assert((Val == T.Val) && "Symbolic-values disagree");
-      Coeff += T.Coeff;
-    }
-
   private:
     void Scale(const FAddendCoef& ScaleAmt) { Coeff *= ScaleAmt; }
 
     // This addend has the value of "Coeff * Val".
-    Value *Val;
+    Value *Val = nullptr;
     FAddendCoef Coeff;
   };
 
@@ -164,11 +177,12 @@ namespace {
   ///
   class FAddCombine {
   public:
-    FAddCombine(InstCombiner::BuilderTy &B) : Builder(B), Instr(nullptr) {}
+    FAddCombine(InstCombiner::BuilderTy &B) : Builder(B) {}
+
     Value *simplify(Instruction *FAdd);
 
   private:
-    typedef SmallVector<const FAddend*, 4> AddendVect;
+    using AddendVect = SmallVector<const FAddend *, 4>;
 
     Value *simplifyFAdd(AddendVect& V, unsigned InstrQuota);
 
@@ -179,6 +193,7 @@ namespace {
 
     /// Return the number of instructions needed to emit the N-ary addition.
     unsigned calcInstrNumber(const AddendVect& Vect);
+
     Value *createFSub(Value *Opnd0, Value *Opnd1);
     Value *createFAdd(Value *Opnd0, Value *Opnd1);
     Value *createFMul(Value *Opnd0, Value *Opnd1);
@@ -186,9 +201,6 @@ namespace {
     Value *createFNeg(Value *V);
     Value *createNaryFAdd(const AddendVect& Opnds, unsigned InstrQuota);
     void createInstPostProc(Instruction *NewInst, bool NoNumber = false);
-
-    InstCombiner::BuilderTy &Builder;
-    Instruction *Instr;
 
      // Debugging stuff are clustered here.
     #ifndef NDEBUG
@@ -199,9 +211,12 @@ namespace {
       void initCreateInstNum() {}
       void incCreateInstNum() {}
     #endif
+
+    InstCombiner::BuilderTy &Builder;
+    Instruction *Instr = nullptr;
   };
 
-} // anonymous namespace
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 //
@@ -332,7 +347,6 @@ Value *FAddendCoef::getValue(Type *Ty) const {
 //  0 +/- 0                   <0, NULL> (corner case)
 //
 // Legend: A and B are not constant, C is constant
-//
 unsigned FAddend::drillValueDownOneStep
   (Value *Val, FAddend &Addend0, FAddend &Addend1) {
   Instruction *I = nullptr;
@@ -396,7 +410,6 @@ unsigned FAddend::drillValueDownOneStep
 // Try to break *this* addend into two addends. e.g. Suppose this addend is
 // <2.3, V>, and V = X + Y, by calling this function, we obtain two addends,
 // i.e. <2.3, X> and <2.3, Y>.
-//
 unsigned FAddend::drillAddendDownOneStep
   (FAddend &Addend0, FAddend &Addend1) const {
   if (isConstant())
@@ -421,7 +434,6 @@ unsigned FAddend::drillAddendDownOneStep
 // -------------------------------------------------------
 //   (x * y) +/- (x * z)               x * (y +/- z)
 //   (y / x) +/- (z / x)               (y +/- z) / x
-//
 Value *FAddCombine::performFactorization(Instruction *I) {
   assert((I->getOpcode() == Instruction::FAdd ||
           I->getOpcode() == Instruction::FSub) && "Expect add/sub");
@@ -447,7 +459,6 @@ Value *FAddCombine::performFactorization(Instruction *I) {
   //  ----------------------------------------------
   // (x*y) +/- (x*z)        x        y         z
   // (y/x) +/- (z/x)        x        y         z
-  //
   Value *Factor = nullptr;
   Value *AddSub0 = nullptr, *AddSub1 = nullptr;
 
@@ -599,7 +610,6 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
   // desirable to reside at the top of the resulting expression tree. Placing
   // constant close to supper-expr(s) will potentially reveal some optimization
   // opportunities in super-expr(s).
-  //
   const FAddend *ConstAdd = nullptr;
 
   // Simplified addends are placed <SimpVect>.
@@ -608,7 +618,6 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
   // The outer loop works on one symbolic-value at a time. Suppose the input
   // addends are : <a1, x>, <b1, y>, <a2, x>, <c1, z>, <b2, y>, ...
   // The symbolic-values will be processed in this order: x, y, z.
-  //
   for (unsigned SymIdx = 0; SymIdx < AddendNum; SymIdx++) {
 
     const FAddend *ThisAddend = Addends[SymIdx];
@@ -626,7 +635,6 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
     // example, if the symbolic value "y" is being processed, the inner loop
     // will collect two addends "<b1,y>" and "<b2,Y>". These two addends will
     // be later on folded into "<b1+b2, y>".
-    //
     for (unsigned SameSymIdx = SymIdx + 1;
          SameSymIdx < AddendNum; SameSymIdx++) {
       const FAddend *T = Addends[SameSymIdx];
@@ -681,7 +689,7 @@ Value *FAddCombine::createNaryFAdd
   assert(!Opnds.empty() && "Expect at least one addend");
 
   // Step 1: Check if the # of instructions needed exceeds the quota.
-  //
+
   unsigned InstrNeeded = calcInstrNumber(Opnds);
   if (InstrNeeded > InstrQuota)
     return nullptr;
@@ -726,10 +734,10 @@ Value *FAddCombine::createNaryFAdd
     LastVal = createFNeg(LastVal);
   }
 
-  #ifndef NDEBUG
-    assert(CreateInstrNum == InstrNeeded &&
-           "Inconsistent in instruction numbers");
-  #endif
+#ifndef NDEBUG
+  assert(CreateInstrNum == InstrNeeded &&
+         "Inconsistent in instruction numbers");
+#endif
 
   return LastVal;
 }
@@ -1034,7 +1042,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
                           SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-   // (A*B)+(A*C) -> A*(B+C) etc
+  // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
@@ -1389,7 +1397,6 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
 /// Optimize pointer differences into the same array into a size.  Consider:
 ///  &A[10] - &A[0]: we should compile this to "10".  LHS/RHS are the pointer
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
-///
 Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
                                                Type *Ty) {
   // If LHS is a gep based on RHS or RHS is a gep based on LHS, we can optimize
@@ -1611,7 +1618,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
                                       Builder.CreateSub(Z, Y, Op1->getName()));
 
     // (X - (X & Y))   -->   (X & ~Y)
-    //
     if (match(Op1, m_c_And(m_Value(Y), m_Specific(Op0))))
       return BinaryOperator::CreateAnd(Op0,
                                   Builder.CreateNot(Y, Y->getName() + ".not"));

@@ -5097,7 +5097,7 @@ bool ARMAsmParser::parseMemRegOffsetShift(ARM_AM::ShiftOpc &St,
   SMLoc Loc = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return true;
+    return Error(Loc, "illegal shift operator");
   StringRef ShiftName = Tok.getString();
   if (ShiftName == "lsl" || ShiftName == "LSL" ||
       ShiftName == "asl" || ShiftName == "ASL")

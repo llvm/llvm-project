@@ -1537,4 +1537,52 @@ define i64 @fcmp_constant_to_rhs_olt(float %x) {
   ret i64 %result
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.wqm.vote
+; --------------------------------------------------------------------
+
+declare i1 @llvm.amdgcn.wqm.vote(i1)
+
+; CHECK-LABEL: @wqm_vote_true(
+; CHECK: ret float 1.000000e+00
+define float @wqm_vote_true() {
+main_body:
+  %w = call i1 @llvm.amdgcn.wqm.vote(i1 true)
+  %r = select i1 %w, float 1.0, float 0.0
+  ret float %r
+}
+
+; CHECK-LABEL: @wqm_vote_false(
+; CHECK: ret float 0.000000e+00
+define float @wqm_vote_false() {
+main_body:
+  %w = call i1 @llvm.amdgcn.wqm.vote(i1 false)
+  %r = select i1 %w, float 1.0, float 0.0
+  ret float %r
+}
+
+; CHECK-LABEL: @wqm_vote_undef(
+; CHECK: ret float 0.000000e+00
+define float @wqm_vote_undef() {
+main_body:
+  %w = call i1 @llvm.amdgcn.wqm.vote(i1 undef)
+  %r = select i1 %w, float 1.0, float 0.0
+  ret float %r
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.kill
+; --------------------------------------------------------------------
+
+declare void @llvm.amdgcn.kill(i1)
+
+; CHECK-LABEL: @kill_true() {
+; CHECK-NEXT: ret void
+; CHECK-NEXT: }
+define void @kill_true() {
+  call void @llvm.amdgcn.kill(i1 true)
+  ret void
+}
+
+
 ; CHECK: attributes #5 = { convergent }
