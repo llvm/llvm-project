@@ -4,11 +4,11 @@
 ; that implictly defines %eflags has a same debug location with the icmp
 ; instruction, and the branch instructions have a same debug location with the
 ; br instruction.
-; 
+;
 ; CHECK:      [[DLOC1:![0-9]+]] = !DILocation(line: 5, column: 9, scope: !{{[0-9]+}})
 ; CHECK:      [[DLOC2:![0-9]+]] = !DILocation(line: 5, column: 7, scope: !{{[0-9]+}})
-; CHECK-DAG:  [[VREG1:%[^ ]+]] = COPY %esi
-; CHECK-DAG:  [[VREG2:%[^ ]+]] = COPY %edi
+; CHECK-DAG:  [[VREG1:%[^ ]+]]:gr32 = COPY %esi
+; CHECK-DAG:  [[VREG2:%[^ ]+]]:gr32 = COPY %edi
 ; CHECK:      SUB32rr [[VREG2]], [[VREG1]], implicit-def %eflags, debug-location [[DLOC1]]
 ; CHECK-NEXT: JE_1{{.*}} implicit %eflags, debug-location [[DLOC2]]
 ; CHECK-NEXT: JMP_1{{.*}} debug-location [[DLOC2]]
@@ -36,8 +36,8 @@ return:                                           ; preds = %if.else, %if.then
   ret i32 %retval.0, !dbg !21
 }
 
-declare i32 @bar(...) 
-declare i32 @baz(...) 
+declare i32 @bar(...)
+declare i32 @baz(...)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)

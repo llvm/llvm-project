@@ -15,13 +15,13 @@ body: |
     liveins: %x0, %x1, %x2, %x3
 
     ; CHECK-LABEL: name: test_scalar_or_small
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[TRUNC:%[0-9]+]](s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]](s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[OR:%[0-9]+]](s32) = G_OR [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]](s8) = G_TRUNC [[OR]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[TRUNC2]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[OR]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC2]](s8)
     ; CHECK: %x0 = COPY [[ANYEXT]](s64)
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -52,12 +52,12 @@ body: |
     ; copying the results of the G_OR ops.
 
     ; CHECK-LABEL: name: test_big_scalar_power_of_2
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[COPY2:%[0-9]+]](s64) = COPY %x2
-    ; CHECK: [[COPY3:%[0-9]+]](s64) = COPY %x3
-    ; CHECK: [[OR:%[0-9]+]](s64) = G_OR [[COPY]], [[COPY2]]
-    ; CHECK: [[OR1:%[0-9]+]](s64) = G_OR [[COPY1]], [[COPY3]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY %x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY %x3
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY2]]
+    ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[COPY1]], [[COPY3]]
     ; CHECK: %x0 = COPY [[OR]](s64)
     ; CHECK: %x1 = COPY [[OR1]](s64)
     ; CHECK: RET_ReallyLR implicit %x0, implicit %x1

@@ -17,7 +17,7 @@ body: |
     liveins: %x0
 
     ; CHECK-LABEL: name: test_copy
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
     ; CHECK: %x0 = COPY [[COPY]](s64)
     %0(s64) = COPY %x0
     %x0 = COPY %0

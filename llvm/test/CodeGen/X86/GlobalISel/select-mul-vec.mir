@@ -103,13 +103,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v8i16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128
-    ; CHECK-NEXT: id: 1, class: vr128
-    ; CHECK-NEXT: id: 2, class: vr128
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[PMULLWrr:%[0-9]+]] = PMULLWrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %xmm1
+    ; CHECK: [[PMULLWrr:%[0-9]+]]:vr128 = PMULLWrr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[PMULLWrr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<8 x s16>) = COPY %xmm0
@@ -133,13 +129,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v8i16_avx
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128
-    ; CHECK-NEXT: id: 1, class: vr128
-    ; CHECK-NEXT: id: 2, class: vr128
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[VPMULLWrr:%[0-9]+]] = VPMULLWrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %xmm1
+    ; CHECK: [[VPMULLWrr:%[0-9]+]]:vr128 = VPMULLWrr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[VPMULLWrr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<8 x s16>) = COPY %xmm0
@@ -163,13 +155,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v8i16_avx512bwvl
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128x
-    ; CHECK-NEXT: id: 1, class: vr128x
-    ; CHECK-NEXT: id: 2, class: vr128x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[VPMULLWZ128rr:%[0-9]+]] = VPMULLWZ128rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128x = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128x = COPY %xmm1
+    ; CHECK: [[VPMULLWZ128rr:%[0-9]+]]:vr128x = VPMULLWZ128rr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[VPMULLWZ128rr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<8 x s16>) = COPY %xmm0
@@ -193,13 +181,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v4i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128
-    ; CHECK-NEXT: id: 1, class: vr128
-    ; CHECK-NEXT: id: 2, class: vr128
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[PMULLDrr:%[0-9]+]] = PMULLDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %xmm1
+    ; CHECK: [[PMULLDrr:%[0-9]+]]:vr128 = PMULLDrr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[PMULLDrr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<4 x s32>) = COPY %xmm0
@@ -223,13 +207,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v4i32_avx
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128
-    ; CHECK-NEXT: id: 1, class: vr128
-    ; CHECK-NEXT: id: 2, class: vr128
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[VPMULLDrr:%[0-9]+]] = VPMULLDrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY %xmm1
+    ; CHECK: [[VPMULLDrr:%[0-9]+]]:vr128 = VPMULLDrr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[VPMULLDrr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<4 x s32>) = COPY %xmm0
@@ -253,13 +233,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v4i32_avx512vl
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128x
-    ; CHECK-NEXT: id: 1, class: vr128x
-    ; CHECK-NEXT: id: 2, class: vr128x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[VPMULLDZ128rr:%[0-9]+]] = VPMULLDZ128rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128x = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128x = COPY %xmm1
+    ; CHECK: [[VPMULLDZ128rr:%[0-9]+]]:vr128x = VPMULLDZ128rr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[VPMULLDZ128rr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<4 x s32>) = COPY %xmm0
@@ -283,13 +259,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_mul_v2i64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr128x
-    ; CHECK-NEXT: id: 1, class: vr128x
-    ; CHECK-NEXT: id: 2, class: vr128x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %xmm1
-    ; CHECK: [[VPMULLQZ128rr:%[0-9]+]] = VPMULLQZ128rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr128x = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr128x = COPY %xmm1
+    ; CHECK: [[VPMULLQZ128rr:%[0-9]+]]:vr128x = VPMULLQZ128rr [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[VPMULLQZ128rr]]
     ; CHECK: RET 0, implicit %xmm0
     %0(<2 x s64>) = COPY %xmm0
@@ -313,13 +285,9 @@ body:             |
     liveins: %ymm0, %ymm1
 
     ; CHECK-LABEL: name: test_mul_v16i16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr256
-    ; CHECK-NEXT: id: 1, class: vr256
-    ; CHECK-NEXT: id: 2, class: vr256
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %ymm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %ymm1
-    ; CHECK: [[VPMULLWYrr:%[0-9]+]] = VPMULLWYrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr256 = COPY %ymm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr256 = COPY %ymm1
+    ; CHECK: [[VPMULLWYrr:%[0-9]+]]:vr256 = VPMULLWYrr [[COPY]], [[COPY1]]
     ; CHECK: %ymm0 = COPY [[VPMULLWYrr]]
     ; CHECK: RET 0, implicit %ymm0
     %0(<16 x s16>) = COPY %ymm0
@@ -343,13 +311,9 @@ body:             |
     liveins: %ymm0, %ymm1
 
     ; CHECK-LABEL: name: test_mul_v16i16_avx512bwvl
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr256x
-    ; CHECK-NEXT: id: 1, class: vr256x
-    ; CHECK-NEXT: id: 2, class: vr256x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %ymm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %ymm1
-    ; CHECK: [[VPMULLWZ256rr:%[0-9]+]] = VPMULLWZ256rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr256x = COPY %ymm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr256x = COPY %ymm1
+    ; CHECK: [[VPMULLWZ256rr:%[0-9]+]]:vr256x = VPMULLWZ256rr [[COPY]], [[COPY1]]
     ; CHECK: %ymm0 = COPY [[VPMULLWZ256rr]]
     ; CHECK: RET 0, implicit %ymm0
     %0(<16 x s16>) = COPY %ymm0
@@ -373,13 +337,9 @@ body:             |
     liveins: %ymm0, %ymm1
 
     ; CHECK-LABEL: name: test_mul_v8i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr256
-    ; CHECK-NEXT: id: 1, class: vr256
-    ; CHECK-NEXT: id: 2, class: vr256
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %ymm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %ymm1
-    ; CHECK: [[VPMULLDYrr:%[0-9]+]] = VPMULLDYrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr256 = COPY %ymm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr256 = COPY %ymm1
+    ; CHECK: [[VPMULLDYrr:%[0-9]+]]:vr256 = VPMULLDYrr [[COPY]], [[COPY1]]
     ; CHECK: %ymm0 = COPY [[VPMULLDYrr]]
     ; CHECK: RET 0, implicit %ymm0
     %0(<8 x s32>) = COPY %ymm0
@@ -403,13 +363,9 @@ body:             |
     liveins: %ymm0, %ymm1
 
     ; CHECK-LABEL: name: test_mul_v8i32_avx512vl
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr256x
-    ; CHECK-NEXT: id: 1, class: vr256x
-    ; CHECK-NEXT: id: 2, class: vr256x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %ymm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %ymm1
-    ; CHECK: [[VPMULLDZ256rr:%[0-9]+]] = VPMULLDZ256rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr256x = COPY %ymm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr256x = COPY %ymm1
+    ; CHECK: [[VPMULLDZ256rr:%[0-9]+]]:vr256x = VPMULLDZ256rr [[COPY]], [[COPY1]]
     ; CHECK: %ymm0 = COPY [[VPMULLDZ256rr]]
     ; CHECK: RET 0, implicit %ymm0
     %0(<8 x s32>) = COPY %ymm0
@@ -433,13 +389,9 @@ body:             |
     liveins: %ymm0, %ymm1
 
     ; CHECK-LABEL: name: test_mul_v4i64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr256x
-    ; CHECK-NEXT: id: 1, class: vr256x
-    ; CHECK-NEXT: id: 2, class: vr256x
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %ymm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %ymm1
-    ; CHECK: [[VPMULLQZ256rr:%[0-9]+]] = VPMULLQZ256rr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr256x = COPY %ymm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr256x = COPY %ymm1
+    ; CHECK: [[VPMULLQZ256rr:%[0-9]+]]:vr256x = VPMULLQZ256rr [[COPY]], [[COPY1]]
     ; CHECK: %ymm0 = COPY [[VPMULLQZ256rr]]
     ; CHECK: RET 0, implicit %ymm0
     %0(<4 x s64>) = COPY %ymm0
@@ -463,13 +415,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; CHECK-LABEL: name: test_mul_v32i16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr512
-    ; CHECK-NEXT: id: 1, class: vr512
-    ; CHECK-NEXT: id: 2, class: vr512
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; CHECK: [[VPMULLWZrr:%[0-9]+]] = VPMULLWZrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; CHECK: [[VPMULLWZrr:%[0-9]+]]:vr512 = VPMULLWZrr [[COPY]], [[COPY1]]
     ; CHECK: %zmm0 = COPY [[VPMULLWZrr]]
     ; CHECK: RET 0, implicit %zmm0
     %0(<32 x s16>) = COPY %zmm0
@@ -493,13 +441,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; CHECK-LABEL: name: test_mul_v16i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr512
-    ; CHECK-NEXT: id: 1, class: vr512
-    ; CHECK-NEXT: id: 2, class: vr512
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; CHECK: [[VPMULLDZrr:%[0-9]+]] = VPMULLDZrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; CHECK: [[VPMULLDZrr:%[0-9]+]]:vr512 = VPMULLDZrr [[COPY]], [[COPY1]]
     ; CHECK: %zmm0 = COPY [[VPMULLDZrr]]
     ; CHECK: RET 0, implicit %zmm0
     %0(<16 x s32>) = COPY %zmm0
@@ -523,13 +467,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; CHECK-LABEL: name: test_mul_v8i64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: vr512
-    ; CHECK-NEXT: id: 1, class: vr512
-    ; CHECK-NEXT: id: 2, class: vr512
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; CHECK: [[VPMULLQZrr:%[0-9]+]] = VPMULLQZrr [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; CHECK: [[VPMULLQZrr:%[0-9]+]]:vr512 = VPMULLQZrr [[COPY]], [[COPY1]]
     ; CHECK: %zmm0 = COPY [[VPMULLQZrr]]
     ; CHECK: RET 0, implicit %zmm0
     %0(<8 x s64>) = COPY %zmm0

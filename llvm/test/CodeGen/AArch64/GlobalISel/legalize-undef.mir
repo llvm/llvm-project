@@ -7,10 +7,10 @@ registers:
 body: |
   bb.0.entry:
     liveins:
-    ; CHECK-LABEL: name: test_implicit_def
-    ; CHECK: [[DEF:%[0-9]+]](s64) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]](s64) = G_IMPLICIT_DEF
-    ; CHECK: [[MV:%[0-9]+]](s128) = G_MERGE_VALUES [[DEF]](s64), [[DEF1]](s64)
 
+    ; CHECK-LABEL: name: test_implicit_def
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[DEF]](s64), [[DEF1]](s64)
     %0:_(s128) = G_IMPLICIT_DEF
 ...

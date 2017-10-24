@@ -23,9 +23,9 @@ body: |
     liveins: %edi
     ; CHECK-LABEL: name: t
     ; CHECK: liveins: %edi
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
-    ; CHECK: [[AND8ri:%[0-9]+]] = AND8ri [[COPY1]], 1, implicit-def %eflags
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; CHECK: [[AND8ri:%[0-9]+]]:gr8 = AND8ri [[COPY1]], 1, implicit-def %eflags
     ; CHECK: %al = COPY [[AND8ri]]
     ; CHECK: RETQ %al
     %0 = COPY %edi

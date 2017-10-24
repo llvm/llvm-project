@@ -29,17 +29,13 @@
 name:            test_sub_i64
 legalized:       true
 regBankSelected: true
-# ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
-# ALL-NEXT:  - { id: 1, class: gr64, preferred-register: '' }
-# ALL-NEXT:  - { id: 2, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:      %0 = COPY %rdi
-# ALL-NEXT: %1 = COPY %rsi
-# ALL-NEXT: %2 = SUB64rr %0, %1
+# ALL:      %0:gr64 = COPY %rdi
+# ALL-NEXT: %1:gr64 = COPY %rsi
+# ALL-NEXT: %2:gr64 = SUB64rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
@@ -55,17 +51,13 @@ body:             |
 name:            test_sub_i32
 legalized:       true
 regBankSelected: true
-# ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
-# ALL-NEXT:  - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:  - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:      %0 = COPY %edi
-# ALL-NEXT: %1 = COPY %esi
-# ALL-NEXT: %2 = SUB32rr %0, %1
+# ALL:      %0:gr32 = COPY %edi
+# ALL-NEXT: %1:gr32 = COPY %esi
+# ALL-NEXT: %2:gr32 = SUB32rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
@@ -83,23 +75,18 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: true
-# ALL: registers:
-# NO_AVX512VL-NEXT:  - { id: 0, class: vr128, preferred-register: '' }
-# NO_AVX512VL-NEXT:  - { id: 1, class: vr128, preferred-register: '' }
-# NO_AVX512VL-NEXT:  - { id: 2, class: vr128, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 0, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# ALL:           %0 = COPY %xmm0
-# ALL-NEXT:      %1 = COPY %xmm1
-# SSE-NEXT:      %2 = PSUBDrr %0, %1
-# AVX-NEXT:      %2 = VPSUBDrr %0, %1
-# AVX512F-NEXT:  %2 = VPSUBDrr %0, %1
-# AVX512VL-NEXT: %2 = VPSUBDZ128rr %0, %1
+# NO_AVX512VL:   %0:vr128 = COPY %xmm0
+# AVX512VL:      %0:vr128x = COPY %xmm0
+# NO_AVX512VL:   %1:vr128 = COPY %xmm1
+# AVX512VL:      %1:vr128x = COPY %xmm1
+# SSE-NEXT:      %2:vr128 = PSUBDrr %0, %1
+# AVX-NEXT:      %2:vr128 = VPSUBDrr %0, %1
+# AVX512F-NEXT:  %2:vr128 = VPSUBDrr %0, %1
+# AVX512VL-NEXT: %2:vr128x = VPSUBDZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %xmm0, %xmm1
@@ -118,23 +105,19 @@ legalized:       true
 regBankSelected: true
 selected:        false
 tracksRegLiveness: true
-# ALL: registers:
-# NO_AVX512VL-NEXT:  - { id: 0, class: vr128, preferred-register: '' }
-# NO_AVX512VL-NEXT:  - { id: 1, class: vr128, preferred-register: '' }
-# NO_AVX512VL-NEXT:  - { id: 2, class: vr128, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 0, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 1, class: vr128x, preferred-register: '' }
-# AVX512VL-NEXT:  - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# ALL:           %0 = COPY %xmm0
-# ALL-NEXT:      %1 = COPY %xmm1
-# SSE-NEXT:      %2 = SUBPSrr %0, %1
-# AVX-NEXT:      %2 = VSUBPSrr %0, %1
-# AVX512F-NEXT:  %2 = VSUBPSrr %0, %1
-# AVX512VL-NEXT: %2 = VSUBPSZ128rr %0, %1
+# NO_AVX512VL:   %0:vr128 = COPY %xmm0
+# NO_AVX512VL:   %1:vr128 = COPY %xmm1
+# SSE-NEXT:      %2:vr128 = SUBPSrr %0, %1
+# AVX-NEXT:      %2:vr128 = VSUBPSrr %0, %1
+# AVX512F-NEXT:  %2:vr128 = VSUBPSrr %0, %1
+#
+# AVX512VL:      %0:vr128x = COPY %xmm0
+# AVX512VL:      %1:vr128x = COPY %xmm1
+# AVX512VL-NEXT: %2:vr128x = VSUBPSZ128rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %xmm0, %xmm1

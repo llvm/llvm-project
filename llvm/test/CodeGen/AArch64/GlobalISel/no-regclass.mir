@@ -22,7 +22,7 @@ body:             |
     liveins: %w0
     ; CHECK-LABEL: name: unused_reg
     ; CHECK: liveins: %w0
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %w0
     ; CHECK: %w0 = COPY [[COPY]]
     %0:gpr(s32) = COPY %w0
     %1:gpr(s32) = G_MERGE_VALUES %0(s32)

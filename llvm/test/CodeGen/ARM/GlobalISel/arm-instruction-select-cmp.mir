@@ -67,12 +67,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_eq_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 0, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -97,12 +97,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_ne_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 1, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -127,12 +127,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_ugt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 8, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -157,12 +157,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_uge_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 2, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 2, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -187,12 +187,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_ult_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 3, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 3, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -217,12 +217,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_ule_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 9, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -247,12 +247,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_sgt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 12, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -277,12 +277,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_sge_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 10, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -307,12 +307,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_slt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 11, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -337,12 +337,12 @@ body:             |
     liveins: %r0, %r1
 
     ; CHECK-LABEL: name: test_icmp_sle_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %r0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %r1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: CMPrr [[COPY]], [[COPY1]], 14, _, implicit-def %cpsr
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 13, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %r0
@@ -367,8 +367,8 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_true_s32
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 1, 14, _, _
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVi]], 1, 14, _, _
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14, _, _
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -393,8 +393,8 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_false_s32
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVi]], 1, 14, _, _
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -419,13 +419,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_oeq_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 0, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -450,13 +450,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ogt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 12, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -481,13 +481,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_oge_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 10, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -512,13 +512,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_olt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 4, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -543,13 +543,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ole_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 9, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -574,13 +574,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ord_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 7, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -605,13 +605,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ugt_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 8, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -636,13 +636,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_uge_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 5, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -667,13 +667,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ult_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 11, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -698,13 +698,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ule_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 13, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -729,13 +729,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_une_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 1, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -760,13 +760,13 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_uno_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 6, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -791,16 +791,16 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_one_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 12, %cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, %cpsr
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]] = MOVCCi [[MOVCCi]], 1, 4, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi1]], 1, 14, _, _
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -825,16 +825,16 @@ body:             |
     liveins: %s0, %s1
 
     ; CHECK-LABEL: name: test_fcmp_ueq_s32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %s0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %s1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:spr = COPY %s0
+    ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY %s1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 0, %cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, %cpsr
     ; CHECK: VCMPS [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]] = MOVCCi [[MOVCCi]], 1, 6, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi1]], 1, 14, _, _
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s32) = COPY %s0
@@ -859,8 +859,8 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_true_s64
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 1, 14, _, _
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVi]], 1, 14, _, _
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 1, 14, _, _
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -885,8 +885,8 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_false_s64
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVi]], 1, 14, _, _
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -911,13 +911,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_oeq_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 0, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -942,13 +942,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ogt_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 12, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -973,13 +973,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_oge_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 10, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 10, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1004,13 +1004,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_olt_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 4, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 4, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1035,13 +1035,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ole_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 9, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 9, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1066,13 +1066,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ord_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 7, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 7, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1097,13 +1097,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ugt_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 8, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 8, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1128,13 +1128,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_uge_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 5, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 5, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1159,13 +1159,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ult_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 11, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 11, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1190,13 +1190,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ule_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 13, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 13, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1221,13 +1221,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_une_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 1, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 1, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1252,13 +1252,13 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_uno_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 6, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi]], 1, 14, _, _
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 6, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1283,16 +1283,16 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_one_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 12, %cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 12, %cpsr
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]] = MOVCCi [[MOVCCi]], 1, 4, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi1]], 1, 14, _, _
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 4, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0
@@ -1317,16 +1317,16 @@ body:             |
     liveins: %d0, %d1
 
     ; CHECK-LABEL: name: test_fcmp_ueq_s64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %d1
-    ; CHECK: [[MOVi:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY %d1
+    ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14, _, _
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi:%[0-9]+]] = MOVCCi [[MOVi]], 1, 0, %cpsr
+    ; CHECK: [[MOVCCi:%[0-9]+]]:gpr = MOVCCi [[MOVi]], 1, 0, %cpsr
     ; CHECK: VCMPD [[COPY]], [[COPY1]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[MOVCCi1:%[0-9]+]] = MOVCCi [[MOVCCi]], 1, 6, %cpsr
-    ; CHECK: [[ANDri:%[0-9]+]] = ANDri [[MOVCCi1]], 1, 14, _, _
+    ; CHECK: [[MOVCCi1:%[0-9]+]]:gpr = MOVCCi [[MOVCCi]], 1, 6, %cpsr
+    ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14, _, _
     ; CHECK: %r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14, _, implicit %r0
     %0(s64) = COPY %d0

@@ -22,19 +22,12 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; ALL-LABEL: name: test_merge_v128
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr128x
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL-NEXT: id: 3, class: vr512
-    ; ALL-NEXT: id: 4, class: vr512
-    ; ALL-NEXT: id: 5, class: vr512
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; ALL: undef %2.sub_xmm = COPY [[DEF]]
-    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]] = VINSERTF32x4Zrr %2, [[DEF]], 1
-    ; ALL: [[VINSERTF32x4Zrr1:%[0-9]+]] = VINSERTF32x4Zrr [[VINSERTF32x4Zrr]], [[DEF]], 2
-    ; ALL: [[VINSERTF32x4Zrr2:%[0-9]+]] = VINSERTF32x4Zrr [[VINSERTF32x4Zrr1]], [[DEF]], 3
-    ; ALL: [[COPY:%[0-9]+]] = COPY [[VINSERTF32x4Zrr2]]
+    ; ALL: [[DEF:%[0-9]+]]:vr128x = IMPLICIT_DEF
+    ; ALL: undef %2.sub_xmm:vr512 = COPY [[DEF]]
+    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr %2, [[DEF]], 1
+    ; ALL: [[VINSERTF32x4Zrr1:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr]], [[DEF]], 2
+    ; ALL: [[VINSERTF32x4Zrr2:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr1]], [[DEF]], 3
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY [[VINSERTF32x4Zrr2]]
     ; ALL: %zmm0 = COPY [[COPY]]
     ; ALL: RET 0, implicit %zmm0
     %0(<4 x s32>) = IMPLICIT_DEF
@@ -55,15 +48,10 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; ALL-LABEL: name: test_merge_v256
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr256x
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL-NEXT: id: 3, class: vr512
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; ALL: undef %2.sub_ymm = COPY [[DEF]]
-    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]] = VINSERTF64x4Zrr %2, [[DEF]], 1
-    ; ALL: [[COPY:%[0-9]+]] = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
+    ; ALL: undef %2.sub_ymm:vr512 = COPY [[DEF]]
+    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr %2, [[DEF]], 1
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY [[VINSERTF64x4Zrr]]
     ; ALL: %zmm0 = COPY [[COPY]]
     ; ALL: RET 0, implicit %zmm0
     %0(<8 x s32>) = IMPLICIT_DEF

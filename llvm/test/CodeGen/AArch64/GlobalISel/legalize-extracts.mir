@@ -11,14 +11,14 @@ body: |
     ; value stored is forwarded directly from first load.
 
     ; CHECK-LABEL: name: test_extracts_1
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]](p0) = COPY %x2
-    ; CHECK: [[LOAD:%[0-9]+]](s64) = G_LOAD [[COPY2]](p0) :: (load 16)
-    ; CHECK: [[C:%[0-9]+]](s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]](p0) = G_GEP [[COPY2]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP]](p0) :: (load 16)
-    ; CHECK: [[COPY3:%[0-9]+]](s64) = COPY [[LOAD]](s64)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %w1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY %x2
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load 16)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY2]], [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 16)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[LOAD]](s64)
     ; CHECK: G_STORE [[COPY3]](s64), [[COPY2]](p0) :: (store 8)
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY %x0
@@ -38,16 +38,16 @@ body: |
 
       ; Low extraction wipes takes whole low register. High extraction is real.
     ; CHECK-LABEL: name: test_extracts_2
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]](p0) = COPY %x2
-    ; CHECK: [[LOAD:%[0-9]+]](s64) = G_LOAD [[COPY2]](p0) :: (load 16)
-    ; CHECK: [[C:%[0-9]+]](s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]](p0) = G_GEP [[COPY2]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP]](p0) :: (load 16)
-    ; CHECK: [[COPY3:%[0-9]+]](s64) = COPY [[LOAD]](s64)
-    ; CHECK: [[EXTRACT:%[0-9]+]](s32) = G_EXTRACT [[LOAD1]](s64), 0
-    ; CHECK: [[COPY4:%[0-9]+]](s32) = COPY [[EXTRACT]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %w1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY %x2
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load 16)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY2]], [[C]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 16)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[LOAD]](s64)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD1]](s64), 0
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[EXTRACT]](s32)
     ; CHECK: G_STORE [[COPY3]](s64), [[COPY2]](p0) :: (store 8)
     ; CHECK: G_STORE [[COPY4]](s32), [[COPY2]](p0) :: (store 4)
     ; CHECK: RET_ReallyLR
@@ -70,11 +70,11 @@ body: |
 
 
     ; CHECK-LABEL: name: test_extracts_3
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[EXTRACT:%[0-9]+]](s32) = G_EXTRACT [[COPY]](s64), 32
-    ; CHECK: [[EXTRACT1:%[0-9]+]](s32) = G_EXTRACT [[COPY1]](s64), 0
-    ; CHECK: [[MV:%[0-9]+]](s64) = G_MERGE_VALUES [[EXTRACT]](s32), [[EXTRACT1]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s64), 32
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](s64), 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[EXTRACT]](s32), [[EXTRACT1]](s32)
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
@@ -91,10 +91,10 @@ body: |
 
 
     ; CHECK-LABEL: name: test_extracts_4
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[EXTRACT:%[0-9]+]](s32) = G_EXTRACT [[COPY]](s64), 32
-    ; CHECK: [[COPY2:%[0-9]+]](s32) = COPY [[EXTRACT]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s64), 32
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[EXTRACT]](s32)
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1

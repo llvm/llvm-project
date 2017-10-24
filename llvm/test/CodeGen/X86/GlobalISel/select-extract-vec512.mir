@@ -32,8 +32,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# ALL:          %0 = COPY %zmm1
-# ALL-NEXT:     %1 = COPY %0.sub_xmm
+# ALL:          %0:vr512 = COPY %zmm1
+# ALL-NEXT:     %1:vr128x = COPY %0.sub_xmm
 # ALL-NEXT:     %xmm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit %xmm0
 body:             |
@@ -58,8 +58,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# ALL:          %0 = COPY %zmm1
-# ALL-NEXT:     %1 = VEXTRACTF32x4Zrr %0, 1
+# ALL:          %0:vr512 = COPY %zmm1
+# ALL-NEXT:     %1:vr128x = VEXTRACTF32x4Zrr %0, 1
 # ALL-NEXT:     %xmm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit %xmm0
 body:             |
@@ -84,8 +84,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# ALL:          %0 = COPY %zmm1
-# ALL-NEXT:     %1 = COPY %0.sub_ymm
+# ALL:          %0:vr512 = COPY %zmm1
+# ALL-NEXT:     %1:vr256x = COPY %0.sub_ymm
 # ALL-NEXT:     %ymm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit %ymm0
 body:             |
@@ -110,8 +110,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
-# ALL:          %0 = COPY %zmm1
-# ALL-NEXT:     %1 = VEXTRACTF64x4Zrr %0, 1
+# ALL:          %0:vr512 = COPY %zmm1
+# ALL-NEXT:     %1:vr256x = VEXTRACTF64x4Zrr %0, 1
 # ALL-NEXT:     %ymm0 = COPY %1
 # ALL-NEXT:     RET 0, implicit %ymm0
 body:             |
@@ -124,4 +124,3 @@ body:             |
     RET 0, implicit %ymm0
 
 ...
-

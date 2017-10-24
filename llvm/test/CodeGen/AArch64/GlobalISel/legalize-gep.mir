@@ -22,13 +22,13 @@ body: |
     liveins: %x0, %x1, %x2, %x3
 
     ; CHECK-LABEL: name: test_gep_small
-    ; CHECK: [[COPY:%[0-9]+]](p0) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[C:%[0-9]+]](s64) = G_CONSTANT i64 56
-    ; CHECK: [[COPY2:%[0-9]+]](s64) = COPY [[COPY1]](s64)
-    ; CHECK: [[SHL:%[0-9]+]](s64) = G_SHL [[COPY2]], [[C]]
-    ; CHECK: [[ASHR:%[0-9]+]](s64) = G_ASHR [[SHL]], [[C]]
-    ; CHECK: [[GEP:%[0-9]+]](p0) = G_GEP [[COPY]], [[ASHR]](s64)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY2]], [[C]]
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]]
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[ASHR]](s64)
     ; CHECK: %x0 = COPY [[GEP]](p0)
     %0(p0) = COPY %x0
     %1(s64) = COPY %x1

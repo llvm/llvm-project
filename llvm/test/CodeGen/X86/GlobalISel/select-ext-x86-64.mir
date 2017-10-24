@@ -37,15 +37,10 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: test_zext_i1
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL-NEXT: id: 1, class: gr8
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL-NEXT: id: 3, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %dil
-    ; ALL: [[COPY1:%[0-9]+]] = COPY [[COPY]]
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[COPY1]], 1
-    ; ALL: [[AND64ri8_:%[0-9]+]] = AND64ri8 [[SUBREG_TO_REG]], 1, implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY %dil
+    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]]
+    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY1]], 1
+    ; ALL: [[AND64ri8_:%[0-9]+]]:gr64 = AND64ri8 [[SUBREG_TO_REG]], 1, implicit-def %eflags
     ; ALL: %rax = COPY [[AND64ri8_]]
     ; ALL: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -68,11 +63,8 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: test_sext_i8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL-NEXT: id: 1, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %dil
-    ; ALL: [[MOVSX64rr8_:%[0-9]+]] = MOVSX64rr8 [[COPY]]
+    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY %dil
+    ; ALL: [[MOVSX64rr8_:%[0-9]+]]:gr64 = MOVSX64rr8 [[COPY]]
     ; ALL: %rax = COPY [[MOVSX64rr8_]]
     ; ALL: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -94,11 +86,8 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: test_sext_i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr16
-    ; ALL-NEXT: id: 1, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %di
-    ; ALL: [[MOVSX64rr16_:%[0-9]+]] = MOVSX64rr16 [[COPY]]
+    ; ALL: [[COPY:%[0-9]+]]:gr16 = COPY %di
+    ; ALL: [[MOVSX64rr16_:%[0-9]+]]:gr64 = MOVSX64rr16 [[COPY]]
     ; ALL: %rax = COPY [[MOVSX64rr16_]]
     ; ALL: RET 0, implicit %rax
     %0(s16) = COPY %di
@@ -121,13 +110,9 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: anyext_s64_from_s1
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64_with_sub_8bit
-    ; ALL-NEXT: id: 1, class: gr8
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[COPY1]], 1
+    ; ALL: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY1]], 1
     ; ALL: %rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi
@@ -150,13 +135,9 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: anyext_s64_from_s8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64_with_sub_8bit
-    ; ALL-NEXT: id: 1, class: gr8
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[COPY1]], 1
+    ; ALL: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
+    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY1]], 1
     ; ALL: %rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi
@@ -179,13 +160,9 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: anyext_s64_from_s16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64
-    ; ALL-NEXT: id: 1, class: gr16
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_16bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[COPY1]], 3
+    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
+    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY1]], 3
     ; ALL: %rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi
@@ -208,13 +185,9 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: anyext_s64_from_s32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_32bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[COPY1]], 4
+    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
+    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY1]], 4
     ; ALL: %rax = COPY [[SUBREG_TO_REG]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi

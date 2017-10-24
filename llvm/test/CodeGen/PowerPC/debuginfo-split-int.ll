@@ -26,9 +26,9 @@ target triple = "ppc32"
 ; CHECK: [[DL:![0-9]+]] = !DILocalVariable(name: "result"
 ;
 ; High 32 bits in R3, low 32 bits in R4
-; CHECK: %0 = COPY %r3
+; CHECK: %0:gprc = COPY %r3
 ; CHECK: DBG_VALUE debug-use %0, debug-use _, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK: %1 = COPY %r4
+; CHECK: %1:gprc = COPY %r4
 ; CHECK: DBG_VALUE debug-use %1, debug-use _, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 define void @bar() local_unnamed_addr #0 !dbg !6 {
   %1 = alloca i64, align 8

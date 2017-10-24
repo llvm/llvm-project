@@ -35,11 +35,8 @@ body:             |
     liveins: %rdi
 
     ; AVX512F-LABEL: name: test_load_v16i32_noalign
-    ; AVX512F: registers:
-    ; AVX512F-NEXT: id: 0, class: gr64
-    ; AVX512F-NEXT: id: 1, class: vr512
-    ; AVX512F: [[COPY:%[0-9]+]] = COPY %rdi
-    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]] = VMOVUPSZrm [[COPY]], 1, _, 0, _ :: (load 64 from %ir.p1, align 1)
+    ; AVX512F: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, _, 0, _ :: (load 64 from %ir.p1, align 1)
     ; AVX512F: %zmm0 = COPY [[VMOVUPSZrm]]
     ; AVX512F: RET 0, implicit %zmm0
     %0(p0) = COPY %rdi
@@ -61,11 +58,8 @@ body:             |
     liveins: %rdi
 
     ; AVX512F-LABEL: name: test_load_v16i32_align
-    ; AVX512F: registers:
-    ; AVX512F-NEXT: id: 0, class: gr64
-    ; AVX512F-NEXT: id: 1, class: vr512
-    ; AVX512F: [[COPY:%[0-9]+]] = COPY %rdi
-    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]] = VMOVUPSZrm [[COPY]], 1, _, 0, _ :: (load 64 from %ir.p1, align 32)
+    ; AVX512F: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, _, 0, _ :: (load 64 from %ir.p1, align 32)
     ; AVX512F: %zmm0 = COPY [[VMOVUPSZrm]]
     ; AVX512F: RET 0, implicit %zmm0
     %0(p0) = COPY %rdi
@@ -87,11 +81,8 @@ body:             |
     liveins: %rdi, %zmm0
 
     ; AVX512F-LABEL: name: test_store_v16i32_noalign
-    ; AVX512F: registers:
-    ; AVX512F-NEXT: id: 0, class: vr512
-    ; AVX512F-NEXT: id: 1, class: gr64
-    ; AVX512F: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; AVX512F: [[COPY1:%[0-9]+]] = COPY %rdi
+    ; AVX512F: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; AVX512F: [[COPY1:%[0-9]+]]:gr64 = COPY %rdi
     ; AVX512F: VMOVUPSZmr [[COPY1]], 1, _, 0, _, [[COPY]] :: (store 64 into %ir.p1, align 1)
     ; AVX512F: RET 0
     %0(<16 x s32>) = COPY %zmm0
@@ -113,11 +104,8 @@ body:             |
     liveins: %rdi, %zmm0
 
     ; AVX512F-LABEL: name: test_store_v16i32_align
-    ; AVX512F: registers:
-    ; AVX512F-NEXT: id: 0, class: vr512
-    ; AVX512F-NEXT: id: 1, class: gr64
-    ; AVX512F: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; AVX512F: [[COPY1:%[0-9]+]] = COPY %rdi
+    ; AVX512F: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; AVX512F: [[COPY1:%[0-9]+]]:gr64 = COPY %rdi
     ; AVX512F: VMOVUPSZmr [[COPY1]], 1, _, 0, _, [[COPY]] :: (store 64 into %ir.p1, align 32)
     ; AVX512F: RET 0
     %0(<16 x s32>) = COPY %zmm0
