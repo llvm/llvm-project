@@ -43,7 +43,7 @@ stack:
   - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
 
 # CHECK:  body:
-# CHECK: %0 = ADDXri %stack.0.ptr0, 0, 0
+# CHECK: %0:gpr64sp = ADDXri %stack.0.ptr0, 0, 0
 body:             |
   bb.0:
     %0(p0) = G_FRAME_INDEX %stack.0.ptr0
@@ -61,8 +61,8 @@ registers:
   - { id: 2, class: gpr }
 
 # CHECK:  body:
-# CHECK: %1 = MOVi64imm 42
-# CHECK: %2 = ADDXrr %0, %1
+# CHECK: %1:gpr64 = MOVi64imm 42
+# CHECK: %2:gpr64 = ADDXrr %0, %1
 body:             |
   bb.0:
       liveins: %x0
@@ -79,7 +79,7 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:  body:
-# CHECK: %1 = ANDXri %0, 8060
+# CHECK: %1:gpr64sp = ANDXri %0, 8060
 body:             |
   bb.0:
       liveins: %x0
@@ -98,9 +98,9 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
-# LINUX-DEFAULT: %0 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
-# LINUX-PIC: %0 = LOADgot target-flags(aarch64-got) @var_local
+# IOS: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_local
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
@@ -116,9 +116,9 @@ registers:
   - { id: 0, class: gpr }
 
 # CHECK:  body:
-# IOS: %0 = LOADgot target-flags(aarch64-got) @var_got
-# LINUX-DEFAULT: %0 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
-# LINUX-PIC: %0 = LOADgot target-flags(aarch64-got) @var_got
+# IOS: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
+# LINUX-DEFAULT: %0:gpr64 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
+# LINUX-PIC: %0:gpr64 = LOADgot target-flags(aarch64-got) @var_got
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got
@@ -154,13 +154,13 @@ registers:
 
 # CHECK:  body:
 # CHECK:    %wzr = SUBSWrr %0, %0, implicit-def %nzcv
-# CHECK:    %1 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
+# CHECK:    %1:gpr32 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
 
 # CHECK:    %xzr = SUBSXrr %2, %2, implicit-def %nzcv
-# CHECK:    %3 = CSINCWr %wzr, %wzr, 3, implicit %nzcv
+# CHECK:    %3:gpr32 = CSINCWr %wzr, %wzr, 3, implicit %nzcv
 
 # CHECK:    %xzr = SUBSXrr %4, %4, implicit-def %nzcv
-# CHECK:    %5 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
+# CHECK:    %5:gpr32 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
 
 body:             |
   bb.0:
@@ -210,12 +210,12 @@ registers:
 
 # CHECK:  body:
 # CHECK:    FCMPSrr %0, %0, implicit-def %nzcv
-# CHECK:    [[TST_MI:%[0-9]+]] = CSINCWr %wzr, %wzr, 5, implicit %nzcv
-# CHECK:    [[TST_GT:%[0-9]+]] = CSINCWr %wzr, %wzr, 13, implicit %nzcv
-# CHECK:    %1 = ORRWrr [[TST_MI]], [[TST_GT]]
+# CHECK:    [[TST_MI:%[0-9]+]]:gpr32 = CSINCWr %wzr, %wzr, 5, implicit %nzcv
+# CHECK:    [[TST_GT:%[0-9]+]]:gpr32 = CSINCWr %wzr, %wzr, 13, implicit %nzcv
+# CHECK:    %1:gpr32 = ORRWrr [[TST_MI]], [[TST_GT]]
 
 # CHECK:    FCMPDrr %2, %2, implicit-def %nzcv
-# CHECK:    %3 = CSINCWr %wzr, %wzr, 4, implicit %nzcv
+# CHECK:    %3:gpr32 = CSINCWr %wzr, %wzr, 4, implicit %nzcv
 
 body:             |
   bb.0:
@@ -253,7 +253,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:    bb.1:
-# CHECK:      %2 = PHI %0, %bb.0, %2, %bb.1
+# CHECK:      %2:fpr32 = PHI %0, %bb.0, %2, %bb.1
 
 body:             |
   bb.0:
@@ -305,11 +305,11 @@ registers:
 
 # CHECK:  body:
 # CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %3 = CSELWr %1, %2, 1, implicit %nzcv
+# CHECK:      %3:gpr32 = CSELWr %1, %2, 1, implicit %nzcv
 # CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %6 = CSELXr %4, %5, 1, implicit %nzcv
+# CHECK:      %6:gpr64 = CSELXr %4, %5, 1, implicit %nzcv
 # CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
-# CHECK:      %9 = CSELXr %7, %8, 1, implicit %nzcv
+# CHECK:      %9:gpr64 = CSELXr %7, %8, 1, implicit %nzcv
 body:             |
   bb.0:
     liveins: %w0, %w1, %w2

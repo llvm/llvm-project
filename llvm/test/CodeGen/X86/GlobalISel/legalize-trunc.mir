@@ -17,15 +17,14 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     %0(s32) = IMPLICIT_DEF
-    ; ALL: %1(s1)  = G_TRUNC %0(s32)
+    ; ALL: %1:_(s1)  = G_TRUNC %0(s32)
     %1(s1)  = G_TRUNC %0(s32)
 
-    ; ALL: %2(s8)  = G_TRUNC %0(s32)
+    ; ALL: %2:_(s8)  = G_TRUNC %0(s32)
     %2(s8)  = G_TRUNC %0(s32)
 
-    ; ALL: %3(s16) = G_TRUNC %0(s32)
+    ; ALL: %3:_(s16) = G_TRUNC %0(s32)
     %3(s16) = G_TRUNC %0(s32)
     RET 0
 
 ...
-

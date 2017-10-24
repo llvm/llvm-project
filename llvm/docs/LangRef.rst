@@ -3162,14 +3162,11 @@ that does not have side effects (e.g. load and call are not supported).
 The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
-    Truncate a constant to another type. The bit size of CST must be
-    larger than the bit size of TYPE. Both types must be integers.
+    Perform the :ref:`trunc operation <i_trunc>` on constants.
 ``zext (CST to TYPE)``
-    Zero extend a constant to another type. The bit size of CST must be
-    smaller than the bit size of TYPE. Both types must be integers.
+    Perform the :ref:`zext operation <i_zext>` on constants.
 ``sext (CST to TYPE)``
-    Sign extend a constant to another type. The bit size of CST must be
-    smaller than the bit size of TYPE. Both types must be integers.
+    Perform the :ref:`sext operation <i_sext>` on constants.
 ``fptrunc (CST to TYPE)``
     Truncate a floating point constant to another floating point type.
     The size of CST must be larger than the size of TYPE. Both types
@@ -3203,19 +3200,14 @@ The following is the syntax for constant expressions:
     be scalars, or vectors of the same number of elements. If the value
     won't fit in the floating point type, the results are undefined.
 ``ptrtoint (CST to TYPE)``
-    Convert a pointer typed constant to the corresponding integer
-    constant. ``TYPE`` must be an integer type. ``CST`` must be of
-    pointer type. The ``CST`` value is zero extended, truncated, or
-    unchanged to make it fit in ``TYPE``.
+    Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
 ``inttoptr (CST to TYPE)``
-    Convert an integer constant to a pointer constant. TYPE must be a
-    pointer type. CST must be of integer type. The CST value is zero
-    extended, truncated, or unchanged to make it fit in a pointer size.
+    Perform the :ref:`inttoptr operation <i_inttoptr>` on constants.
     This one is *really* dangerous!
 ``bitcast (CST to TYPE)``
-    Convert a constant, CST, to another TYPE. The constraints of the
-    operands are the same as those for the :ref:`bitcast
-    instruction <i_bitcast>`.
+    Convert a constant, CST, to another TYPE.
+    The constraints of the operands are the same as those for the
+    :ref:`bitcast instruction <i_bitcast>`.
 ``addrspacecast (CST to TYPE)``
     Convert a constant pointer or constant vector of pointer, CST, to another
     TYPE in a different address space. The constraints of the operands are the
@@ -3228,9 +3220,9 @@ The following is the syntax for constant expressions:
 ``select (COND, VAL1, VAL2)``
     Perform the :ref:`select operation <i_select>` on constants.
 ``icmp COND (VAL1, VAL2)``
-    Performs the :ref:`icmp operation <i_icmp>` on constants.
+    Perform the :ref:`icmp operation <i_icmp>` on constants.
 ``fcmp COND (VAL1, VAL2)``
-    Performs the :ref:`fcmp operation <i_fcmp>` on constants.
+    Perform the :ref:`fcmp operation <i_fcmp>` on constants.
 ``extractelement (VAL, IDX)``
     Perform the :ref:`extractelement operation <i_extractelement>` on
     constants.
@@ -8076,6 +8068,8 @@ The instructions in this category are the conversion instructions
 (casting) which all take a single operand and a type. They perform
 various bit conversions on the operand.
 
+.. _i_trunc:
+
 '``trunc .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -8118,6 +8112,8 @@ Example:
       %Z = trunc i32 122 to i1                        ; yields i1:false
       %W = trunc <2 x i16> <i16 8, i16 7> to <2 x i8> ; yields <i8 8, i8 7>
 
+.. _i_zext:
+
 '``zext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -8157,6 +8153,8 @@ Example:
       %X = zext i32 257 to i64              ; yields i64:257
       %Y = zext i1 true to i32              ; yields i32:1
       %Z = zext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
+
+.. _i_sext:
 
 '``sext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

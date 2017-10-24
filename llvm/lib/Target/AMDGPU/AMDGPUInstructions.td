@@ -167,7 +167,6 @@ def COND_OLE : PatLeaf <
   [{return N->get() == ISD::SETOLE || N->get() == ISD::SETLE;}]
 >;
 
-
 def COND_O : PatLeaf <(cond), [{return N->get() == ISD::SETO;}]>;
 def COND_UO : PatLeaf <(cond), [{return N->get() == ISD::SETUO;}]>;
 

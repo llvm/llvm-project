@@ -1729,18 +1729,20 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 // 1. the '-e' entry command-line option;
 // 2. the ENTRY(symbol) command in a linker control script;
 // 3. the value of the symbol start, if present;
-// 4. the address of the first byte of the .text section, if present;
-// 5. the address 0.
+// 4. the number represented by the entry symbol, if it is a number;
+// 5. the address of the first byte of the .text section, if present;
+// 6. the address 0.
 template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
-  // Case 1, 2 or 3. As a special case, if the symbol is actually
-  // a number, we'll use that number as an address.
+  // Case 1, 2 or 3
   if (SymbolBody *B = Symtab->find(Config->Entry))
     return B->getVA();
+
+  // Case 4
   uint64_t Addr;
   if (to_integer(Config->Entry, Addr))
     return Addr;
 
-  // Case 4
+  // Case 5
   if (OutputSection *Sec = findSection(".text")) {
     if (Config->WarnMissingEntry)
       warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
@@ -1748,7 +1750,7 @@ template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
     return Sec->Addr;
   }
 
-  // Case 5
+  // Case 6
   if (Config->WarnMissingEntry)
     warn("cannot find entry symbol " + Config->Entry +
          "; not setting start address");

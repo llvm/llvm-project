@@ -65,8 +65,8 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     ; CHECK-NOT: G_FREM
@@ -77,8 +77,8 @@ body:             |
     ; HARD-DAG: %s1 = COPY [[Y]]
     ; SOFT: BLX $fmodf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; HARD: BLX $fmodf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
-    ; SOFT: [[R:%[0-9]+]](s32) = COPY %r0
-    ; HARD: [[R:%[0-9]+]](s32) = COPY %s0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = COPY %s0
     ; CHECK: ADJCALLSTACKUP
     ; CHECK-NOT: G_FREM
     %2(s32) = G_FREM %0, %1
@@ -114,16 +114,16 @@ body:             |
     ; through R0-R1, ends up in R0-R1 or R1-R0, and the second value, received
     ; through R2-R3, ends up in R2-R3 or R3-R2, when passed to fmod.
     ; For hard float, the values need to end up in D0 and D1.
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]]
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]]
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
     %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     ; CHECK-NOT: G_FREM
@@ -160,8 +160,8 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     ; CHECK-NOT: G_FPOW
@@ -172,8 +172,8 @@ body:             |
     ; HARD-DAG: %s1 = COPY [[Y]]
     ; SOFT: BLX $powf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; HARD: BLX $powf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
-    ; SOFT: [[R:%[0-9]+]](s32) = COPY %r0
-    ; HARD: [[R:%[0-9]+]](s32) = COPY %s0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = COPY %s0
     ; CHECK: ADJCALLSTACKUP
     ; CHECK-NOT: G_FPOW
     %2(s32) = G_FPOW %0, %1
@@ -209,16 +209,16 @@ body:             |
     ; through R0-R1, ends up in R0-R1 or R1-R0, and the second value, received
     ; through R2-R3, ends up in R2-R3 or R3-R2, when passed to pow.
     ; For hard float, the values need to end up in D0 and D1.
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]]
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]]
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
     %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     ; CHECK-NOT: G_FPOW
@@ -255,18 +255,18 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; HARD: [[R:%[0-9]+]](s32) = G_FADD [[X]], [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FADD [[X]], [[Y]]
     ; SOFT-NOT: G_FADD
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fadd, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__addsf3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_FADD
     %2(s32) = G_FADD %0, %1
@@ -296,19 +296,19 @@ body:             |
   bb.0:
     liveins: %r0, %r1, %r2, %r3
 
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]]
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]]
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
     %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
-    ; HARD: [[R:%[0-9]+]](s64) = G_FADD [[X]], [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_FADD [[X]], [[Y]]
     ; SOFT-NOT: G_FADD
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r{{[0-1]}} = COPY [[X0]]
@@ -345,16 +345,16 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(true), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(true), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(true), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 -1
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]](s32)
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -378,16 +378,16 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(false), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(false), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(false), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]](s32)
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -411,24 +411,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(oeq), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oeq), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -452,24 +452,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ogt), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ogt), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -493,24 +493,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(oge), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oge), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -534,24 +534,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(olt), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(olt), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -575,24 +575,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ole), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ole), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ole), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -616,23 +616,23 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ord), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ord), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -656,24 +656,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ugt), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ugt), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ugt), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -697,24 +697,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(uge), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uge), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(uge), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -738,24 +738,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ult), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ult), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -779,24 +779,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ule), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ule), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ule), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -820,24 +820,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(une), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(une), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(une), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__nesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -861,24 +861,24 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(uno), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uno), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(uno), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -902,39 +902,39 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(one), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(one), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(one), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET1]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET1]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
-    ; SOFT-AEABI: [[R1EXT:%[0-9]+]](s32) = COPY [[RET1]]
-    ; SOFT-AEABI: [[R2EXT:%[0-9]+]](s32) = COPY [[RET2]]
-    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
-    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R1EXT:%[0-9]+]]:_(s32) = COPY [[RET1]]
+    ; SOFT-AEABI: [[R2EXT:%[0-9]+]]:_(s32) = COPY [[RET2]]
+    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
+    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -958,39 +958,39 @@ body:             |
 
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %2(s1) = G_FCMP floatpred(ueq), %0(s32), %1
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ueq), [[X]](s32), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ueq), [[X]](s32), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET1]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET1]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
-    ; SOFT-AEABI: [[R1EXT:%[0-9]+]](s32) = COPY [[RET1]]
-    ; SOFT-AEABI: [[R2EXT:%[0-9]+]](s32) = COPY [[RET2]]
-    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
-    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R1EXT:%[0-9]+]]:_(s32) = COPY [[RET1]]
+    ; SOFT-AEABI: [[R2EXT:%[0-9]+]]:_(s32) = COPY [[RET2]]
+    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
+    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]]
     ; SOFT-NOT: G_FCMP
     %3(s32) = G_ZEXT %2(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1020,22 +1020,22 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(true), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(true), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(true), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 -1
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]](s32)
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1065,22 +1065,22 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(false), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(false), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(false), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]](s32)
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1110,16 +1110,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(oeq), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oeq), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1128,14 +1128,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1165,16 +1165,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ogt), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ogt), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1183,14 +1183,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1220,16 +1220,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(oge), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oge), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1238,14 +1238,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1275,16 +1275,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(olt), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(olt), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1293,14 +1293,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1330,16 +1330,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ole), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ole), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ole), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1348,14 +1348,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1385,16 +1385,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ord), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ord), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1403,13 +1403,13 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1439,16 +1439,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ugt), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ugt), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ugt), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1457,14 +1457,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1494,16 +1494,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(uge), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uge), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(uge), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1512,14 +1512,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1549,16 +1549,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ult), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ult), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ult), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1567,14 +1567,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1604,16 +1604,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ule), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ule), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ule), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1622,14 +1622,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1659,16 +1659,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(une), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(une), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(une), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1677,14 +1677,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__nedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1714,16 +1714,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(uno), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uno), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(uno), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1732,14 +1732,14 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1769,16 +1769,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(one), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(one), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(one), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1787,10 +1787,10 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET1]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[RET1]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1799,19 +1799,19 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
-    ; SOFT-AEABI: [[R1EXT:%[0-9]+]](s32) = COPY [[RET1]]
-    ; SOFT-AEABI: [[R2EXT:%[0-9]+]](s32) = COPY [[RET2]]
-    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
-    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R1EXT:%[0-9]+]]:_(s32) = COPY [[RET1]]
+    ; SOFT-AEABI: [[R2EXT:%[0-9]+]]:_(s32) = COPY [[RET2]]
+    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
+    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0
@@ -1841,16 +1841,16 @@ body:             |
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
     %3(s32) = COPY %r3
-    ; CHECK-DAG: [[X0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[X1:%[0-9]+]](s32) = COPY %r1
-    ; CHECK-DAG: [[Y0:%[0-9]+]](s32) = COPY %r2
-    ; CHECK-DAG: [[Y1:%[0-9]+]](s32) = COPY %r3
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
     %4(s64) = G_MERGE_VALUES %0(s32), %1
     %5(s64) = G_MERGE_VALUES %2(s32), %3
-    ; HARD-DAG: [[X:%[0-9]+]](s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
-    ; HARD-DAG: [[Y:%[0-9]+]](s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]](s32), [[X1]](s32)
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]](s32), [[Y1]](s32)
     %6(s1) = G_FCMP floatpred(ueq), %4(s64), %5
-    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ueq), [[X]](s64), [[Y]]
+    ; HARD: [[R:%[0-9]+]]:_(s1) = G_FCMP floatpred(ueq), [[X]](s64), [[Y]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1859,10 +1859,10 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET1]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[RET1]](s32), [[ZERO]]
     ; SOFT-NOT: G_FCMP
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X0]]
@@ -1871,19 +1871,19 @@ body:             |
     ; SOFT-DAG: %r3 = COPY [[Y1]]
     ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
-    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
-    ; SOFT-AEABI: [[R1EXT:%[0-9]+]](s32) = COPY [[RET1]]
-    ; SOFT-AEABI: [[R2EXT:%[0-9]+]](s32) = COPY [[RET2]]
-    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
-    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
-    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
-    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
+    ; SOFT-AEABI: [[R1EXT:%[0-9]+]]:_(s32) = COPY [[RET1]]
+    ; SOFT-AEABI: [[R2EXT:%[0-9]+]]:_(s32) = COPY [[RET2]]
+    ; SOFT-DEFAULT: [[R1EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R1]]
+    ; SOFT-DEFAULT: [[R2EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]]:_(s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[REXT]]
     ; SOFT-NOT: G_FCMP
     %7(s32) = G_ZEXT %6(s1)
-    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    ; CHECK: [[REXT:%[0-9]+]]:_(s32) = G_ZEXT [[R]](s1)
     %r0 = COPY %7(s32)
     ; CHECK: %r0 = COPY [[REXT]]
     BX_RET 14, _, implicit %r0

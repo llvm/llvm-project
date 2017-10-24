@@ -134,7 +134,8 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
-static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
+static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
+                       const SIInstrInfo *TII) {
   unsigned SaveExecReg = MI.getOperand(0).getReg();
   auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
 
@@ -143,7 +144,7 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
       U->getOpcode() != AMDGPU::SI_END_CF)
     return false;
 
-  // Check for SI_KILL_TERMINATOR on path from if to endif.
+  // Check for SI_KILL_*_TERMINATOR on path from if to endif.
   // if there is any such terminator simplififcations are not safe.
   auto SMBB = MI.getParent();
   auto EMBB = U->getParent();
@@ -157,7 +158,7 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
     if (MBB == EMBB || !Visited.insert(MBB).second)
       continue;
     for(auto &Term : MBB->terminators())
-      if (Term.getOpcode() == AMDGPU::SI_KILL_TERMINATOR)
+      if (TII->isKillTerminator(Term.getOpcode()))
         return false;
 
     Worklist.append(MBB->succ_begin(), MBB->succ_end());
@@ -184,7 +185,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
   // just cleared bits.
-  bool SimpleIf = isSimpleIf(MI, MRI);
+  bool SimpleIf = isSimpleIf(MI, MRI, TII);
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.

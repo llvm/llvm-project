@@ -19,10 +19,10 @@ body: |
   bb.0:
     liveins: %w0, %w1, %w2
     ; CHECK-LABEL: name: test_legalize_merge_v3s32
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]](s32) = COPY %w2
-    ; CHECK: [[MV:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %w1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY %w2
+    ; CHECK: [[MV:%[0-9]+]]:_(<3 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = COPY %w2

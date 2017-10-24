@@ -413,8 +413,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
     Refs.push_back({TiRefKind::IndexRef, 8, 1}); // ID of inlinee
     break;
   case SymbolKind::S_HEAPALLOCSITE:
-    // FIXME: It's not clear if this is a type or item reference.
-    Refs.push_back({TiRefKind::IndexRef, 8, 1}); // signature
+    Refs.push_back({TiRefKind::TypeRef, 8, 1}); // UDT allocated
     break;
 
   // Defranges don't have types, just registers and code offsets.

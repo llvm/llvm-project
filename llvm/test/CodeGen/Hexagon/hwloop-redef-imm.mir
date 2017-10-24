@@ -7,7 +7,7 @@
 # possible and legal (since the immediate itself will be used in the
 # loop setup in the preheader).
 
-# CHECK:  [[R0:%[0-9]+]] = A2_tfrsi 1920
+# CHECK:  [[R0:%[0-9]+]]:intregs = A2_tfrsi 1920
 # CHECK:  J2_loop0r %bb.1.b1, [[R0]]
 #
 # CHECK: bb.1.b1 (address-taken):

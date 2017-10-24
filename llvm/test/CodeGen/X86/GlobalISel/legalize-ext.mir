@@ -98,8 +98,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s8) = G_ZEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s8) = G_ZEXT %0(s1)
 # ALL-NEXT:     %al = COPY %1(s8)
 # ALL-NEXT:     RET 0, implicit %al
 body:             |
@@ -121,8 +121,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s16) = G_ZEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s16) = G_ZEXT %0(s1)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -145,9 +145,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
-# ALL-NEXT:     %2(s32) = G_ZEXT %1(s1)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s1) = G_TRUNC %0(s8)
+# ALL-NEXT:     %2:_(s32) = G_ZEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -170,8 +170,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s16) = G_ZEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s16) = G_ZEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -193,8 +193,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s32) = G_ZEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s32) = G_ZEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -216,8 +216,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %di
-# ALL-NEXT:     %1(s32) = G_ZEXT %0(s16)
+# ALL:          %0:_(s16) = COPY %di
+# ALL-NEXT:     %1:_(s32) = G_ZEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -239,8 +239,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s8) = G_SEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s8) = G_SEXT %0(s1)
 # ALL-NEXT:     %al = COPY %1(s8)
 # ALL-NEXT:     RET 0, implicit %al
 body:             |
@@ -262,8 +262,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s16) = G_SEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s16) = G_SEXT %0(s1)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -286,9 +286,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
-# ALL-NEXT:     %2(s32) = G_SEXT %1(s1)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s1) = G_TRUNC %0(s8)
+# ALL-NEXT:     %2:_(s32) = G_SEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -311,8 +311,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s16) = G_SEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s16) = G_SEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -334,8 +334,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s32) = G_SEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s32) = G_SEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -357,8 +357,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %di
-# ALL-NEXT:     %1(s32) = G_SEXT %0(s16)
+# ALL:          %0:_(s16) = COPY %di
+# ALL-NEXT:     %1:_(s32) = G_SEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -380,8 +380,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s8) = G_ANYEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s8) = G_ANYEXT %0(s1)
 # ALL-NEXT:     %al = COPY %1(s8)
 # ALL-NEXT:     RET 0, implicit %al
 body:             |
@@ -403,8 +403,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s1) = COPY %edi
-# ALL-NEXT:     %1(s16) = G_ANYEXT %0(s1)
+# ALL:          %0:_(s1) = COPY %edi
+# ALL-NEXT:     %1:_(s16) = G_ANYEXT %0(s1)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -427,9 +427,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s1) = G_TRUNC %0(s8)
-# ALL-NEXT:     %2(s32) = G_ANYEXT %1(s1)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s1) = G_TRUNC %0(s8)
+# ALL-NEXT:     %2:_(s32) = G_ANYEXT %1(s1)
 # ALL-NEXT:     %eax = COPY %2(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -452,8 +452,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s16) = G_ANYEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s16) = G_ANYEXT %0(s8)
 # ALL-NEXT:     %ax = COPY %1(s16)
 # ALL-NEXT:     RET 0, implicit %ax
 body:             |
@@ -475,8 +475,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s8) = COPY %dil
-# ALL-NEXT:     %1(s32) = G_ANYEXT %0(s8)
+# ALL:          %0:_(s8) = COPY %dil
+# ALL-NEXT:     %1:_(s32) = G_ANYEXT %0(s8)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -498,8 +498,8 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# ALL:          %0(s16) = COPY %di
-# ALL-NEXT:     %1(s32) = G_ANYEXT %0(s16)
+# ALL:          %0:_(s16) = COPY %di
+# ALL-NEXT:     %1:_(s32) = G_ANYEXT %0(s16)
 # ALL-NEXT:     %eax = COPY %1(s32)
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |

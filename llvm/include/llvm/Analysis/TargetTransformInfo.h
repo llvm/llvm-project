@@ -489,6 +489,13 @@ public:
   /// would typically be allowed using throughput or size cost models.
   bool hasDivRemOp(Type *DataType, bool IsSigned) const;
 
+  /// Return true if the given instruction (assumed to be a memory access
+  /// instruction) has a volatile variant. If that's the case then we can avoid
+  /// addrspacecast to generic AS for volatile loads/stores. Default
+  /// implementation returns false, which prevents address space inference for
+  /// volatile loads/stores.
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const;
+
   /// Return true if target doesn't mind addresses in vectors.
   bool prefersVectorizedAddressing() const;
 
@@ -967,6 +974,7 @@ public:
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
   virtual bool hasDivRemOp(Type *DataType, bool IsSigned) = 0;
+  virtual bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) = 0;
   virtual bool prefersVectorizedAddressing() = 0;
   virtual int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                    int64_t BaseOffset, bool HasBaseReg,
@@ -1191,6 +1199,9 @@ public:
   }
   bool hasDivRemOp(Type *DataType, bool IsSigned) override {
     return Impl.hasDivRemOp(DataType, IsSigned);
+  }
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) override {
+    return Impl.hasVolatileVariant(I, AddrSpace);
   }
   bool prefersVectorizedAddressing() override {
     return Impl.prefersVectorizedAddressing();

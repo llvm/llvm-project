@@ -46,11 +46,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s64_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRXui:%[0-9]+]] = LDRXui [[COPY]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 0 :: (load 8 from %ir.addr)
     ; CHECK: %x0 = COPY [[LDRXui]]
     %0(p0) = COPY %x0
     %1(s64) = G_LOAD  %0 :: (load 8 from %ir.addr)
@@ -71,11 +68,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s32_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRWui:%[0-9]+]] = LDRWui [[COPY]], 0 :: (load 4 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from %ir.addr)
     ; CHECK: %w0 = COPY [[LDRWui]]
     %0(p0) = COPY %x0
     %1(s32) = G_LOAD  %0 :: (load 4 from %ir.addr)
@@ -96,13 +90,9 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s16_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRHHui:%[0-9]+]] = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRHHui]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
@@ -124,13 +114,9 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s8_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRBBui:%[0-9]+]] = LDRBBui [[COPY]], 0 :: (load 1 from %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRBBui]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1 from %ir.addr)
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
@@ -155,10 +141,7 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_fi_s64_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr
-    ; CHECK-NEXT: id: 1, class: gpr64
-    ; CHECK: [[LDRXui:%[0-9]+]] = LDRXui %stack.0.ptr0, 0 :: (load 8)
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui %stack.0.ptr0, 0 :: (load 8)
     ; CHECK: %x0 = COPY [[LDRXui]]
     %0(p0) = G_FRAME_INDEX %stack.0.ptr0
     %1(s64) = G_LOAD %0 :: (load 8)
@@ -181,13 +164,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_128_s64_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRXui:%[0-9]+]] = LDRXui [[COPY]], 16 :: (load 8 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 16 :: (load 8 from %ir.addr)
     ; CHECK: %x0 = COPY [[LDRXui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 128
@@ -212,13 +190,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_512_s32_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: gpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRWui:%[0-9]+]] = LDRWui [[COPY]], 128 :: (load 4 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 128 :: (load 4 from %ir.addr)
     ; CHECK: %w0 = COPY [[LDRWui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 512
@@ -243,15 +216,9 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_64_s16_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: gpr32
-    ; CHECK-NEXT: id: 4, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRHHui:%[0-9]+]] = LDRHHui [[COPY]], 32 :: (load 2 from %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRHHui]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 32 :: (load 2 from %ir.addr)
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 64
@@ -277,15 +244,9 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_1_s8_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: gpr32
-    ; CHECK-NEXT: id: 4, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRBBui:%[0-9]+]] = LDRBBui [[COPY]], 1 :: (load 1 from %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRBBui]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 1 :: (load 1 from %ir.addr)
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 1
@@ -309,11 +270,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s64_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: fpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRDui:%[0-9]+]] = LDRDui [[COPY]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load 8 from %ir.addr)
     ; CHECK: %d0 = COPY [[LDRDui]]
     %0(p0) = COPY %x0
     %1(s64) = G_LOAD  %0 :: (load 8 from %ir.addr)
@@ -334,11 +292,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s32_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: fpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRSui:%[0-9]+]] = LDRSui [[COPY]], 0 :: (load 4 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 0 :: (load 4 from %ir.addr)
     ; CHECK: %s0 = COPY [[LDRSui]]
     %0(p0) = COPY %x0
     %1(s32) = G_LOAD  %0 :: (load 4 from %ir.addr)
@@ -359,11 +314,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s16_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: fpr16
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRHui:%[0-9]+]] = LDRHui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 0 :: (load 2 from %ir.addr)
     ; CHECK: %h0 = COPY [[LDRHui]]
     %0(p0) = COPY %x0
     %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
@@ -384,11 +336,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_s8_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: fpr8
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRBui:%[0-9]+]] = LDRBui [[COPY]], 0 :: (load 1 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load 1 from %ir.addr)
     ; CHECK: %b0 = COPY [[LDRBui]]
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
@@ -411,13 +360,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_8_s64_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: fpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRDui:%[0-9]+]] = LDRDui [[COPY]], 1 :: (load 8 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 1 :: (load 8 from %ir.addr)
     ; CHECK: %d0 = COPY [[LDRDui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 8
@@ -442,13 +386,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_16_s32_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: fpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRSui:%[0-9]+]] = LDRSui [[COPY]], 4 :: (load 4 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 4 :: (load 4 from %ir.addr)
     ; CHECK: %s0 = COPY [[LDRSui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 16
@@ -473,13 +412,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_64_s16_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: fpr16
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRHui:%[0-9]+]] = LDRHui [[COPY]], 32 :: (load 2 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 32 :: (load 2 from %ir.addr)
     ; CHECK: %h0 = COPY [[LDRHui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 64
@@ -504,13 +438,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_gep_32_s8_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: gpr
-    ; CHECK-NEXT: id: 3, class: fpr8
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRBui:%[0-9]+]] = LDRBui [[COPY]], 32 :: (load 1 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 32 :: (load 1 from %ir.addr)
     ; CHECK: %b0 = COPY [[LDRBui]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 32
@@ -532,11 +461,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: load_v2s32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: fpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[LDRDui:%[0-9]+]] = LDRDui [[COPY]], 0 :: (load 8 from %ir.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load 8 from %ir.addr)
     ; CHECK: %d0 = COPY [[LDRDui]]
     %0(p0) = COPY %x0
     %1(<2 x s32>) = G_LOAD %0 :: (load 8 from %ir.addr)

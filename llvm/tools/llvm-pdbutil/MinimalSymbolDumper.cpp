@@ -615,7 +615,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             HeapAllocationSiteSym &HAS) {
   AutoIndent Indent(P, 7);
-  P.formatLine("type = {0}, addr = {1} call size = {2}", idIndex(HAS.Type),
+  P.formatLine("type = {0}, addr = {1} call size = {2}", typeIndex(HAS.Type),
                formatSegmentOffset(HAS.Segment, HAS.CodeOffset),
                HAS.CallInstructionSize);
   return Error::success();

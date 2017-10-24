@@ -88,7 +88,7 @@ IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
 CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
-def scrub_asm_x86(asm):
+def scrub_asm_x86(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -102,15 +102,16 @@ def scrub_asm_x86(asm):
   asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
   # Generically match a LCP symbol.
   asm = SCRUB_X86_LCP_RE.sub(r'{{\.LCPI.*}}', asm)
-  # Avoid generating different checks for 32- and 64-bit because of 'retl' vs 'retq'.
-  asm = SCRUB_X86_RET_RE.sub(r'ret{{[l|q]}}', asm)
+  if args.x86_extra_scrub:
+    # Avoid generating different checks for 32- and 64-bit because of 'retl' vs 'retq'.
+    asm = SCRUB_X86_RET_RE.sub(r'ret{{[l|q]}}', asm)
   # Strip kill operands inserted into the asm.
   asm = SCRUB_KILL_COMMENT_RE.sub('', asm)
   # Strip trailing whitespace.
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_arm_eabi(asm):
+def scrub_asm_arm_eabi(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -122,7 +123,7 @@ def scrub_asm_arm_eabi(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_powerpc64(asm):
+def scrub_asm_powerpc64(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -134,7 +135,7 @@ def scrub_asm_powerpc64(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_systemz(asm):
+def scrub_asm_systemz(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -147,7 +148,7 @@ def scrub_asm_systemz(asm):
 
 # Build up a dictionary of all the function bodies.
 def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
-                                   verbose):
+                                   args):
   target_handlers = {
       'x86_64': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
@@ -175,11 +176,11 @@ def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
     if not m:
       continue
     func = m.group('func')
-    scrubbed_body = scrubber(m.group('body'))
+    scrubbed_body = scrubber(m.group('body'), args)
     if func.startswith('stress'):
       # We only use the last line of the function body for stress tests.
       scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])
-    if verbose:
+    if args.verbose:
       print >>sys.stderr, 'Processing function: ' + func
       for l in scrubbed_body.splitlines():
         print >>sys.stderr, '  ' + l
@@ -242,6 +243,9 @@ def main():
                       help='The "llc" binary to use to generate the test case')
   parser.add_argument(
       '--function', help='The function in the test file to update')
+  parser.add_argument(
+      '--x86_extra_scrub', action='store_true',
+      help='Use more regex for x86 matching to reduce diffs between various subtargets')
   parser.add_argument('tests', nargs='+')
   args = parser.parse_args()
 
@@ -323,7 +327,7 @@ def main():
         print >>sys.stderr, "Cannot find a triple. Assume 'x86'"
 
       build_function_body_dictionary(raw_tool_output,
-          triple_in_cmd or triple_in_ir or 'x86', prefixes, func_dict, args.verbose)
+          triple_in_cmd or triple_in_ir or 'x86', prefixes, func_dict, args)
 
     is_in_function = False
     is_in_function_start = False

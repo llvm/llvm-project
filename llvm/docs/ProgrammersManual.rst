@@ -495,7 +495,7 @@ that inherits from the ErrorInfo utility, E.g.:
 
   Error printFormattedFile(StringRef Path) {
     if (<check for valid format>)
-      return make_error<InvalidObjectFile>(Path);
+      return make_error<BadFileFormat>(Path);
     // print file contents.
     return Error::success();
   }

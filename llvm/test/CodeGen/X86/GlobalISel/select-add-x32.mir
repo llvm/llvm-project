@@ -26,26 +26,15 @@ registers:
 body:             |
   bb.0 (%ir-block.0):
     ; X32-LABEL: name: test_add_i64
-    ; X32: registers:
-    ; X32-NEXT: id: 0, class: gr32
-    ; X32-NEXT: id: 1, class: gr32
-    ; X32-NEXT: id: 2, class: gr32
-    ; X32-NEXT: id: 3, class: gr32
-    ; X32-NEXT: id: 4, class: gpr
-    ; X32-NEXT: id: 5, class: gr32
-    ; X32-NEXT: id: 6, class: gr32
-    ; X32-NEXT: id: 7, class: gr32
-    ; X32-NEXT: id: 8, class: gr32
-    ; X32-NEXT: id: 9, class: gpr
-    ; X32: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; X32: [[DEF1:%[0-9]+]] = IMPLICIT_DEF
-    ; X32: [[DEF2:%[0-9]+]] = IMPLICIT_DEF
-    ; X32: [[DEF3:%[0-9]+]] = IMPLICIT_DEF
-    ; X32: [[ADD32rr:%[0-9]+]] = ADD32rr [[DEF]], [[DEF2]], implicit-def %eflags
-    ; X32: [[COPY:%[0-9]+]] = COPY %eflags
+    ; X32: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32: [[DEF1:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32: [[DEF2:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32: [[DEF3:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; X32: [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[DEF]], [[DEF2]], implicit-def %eflags
+    ; X32: [[COPY:%[0-9]+]]:gr32 = COPY %eflags
     ; X32: %eflags = COPY [[COPY]]
-    ; X32: [[ADC32rr:%[0-9]+]] = ADC32rr [[DEF1]], [[DEF3]], implicit-def %eflags, implicit %eflags
-    ; X32: [[COPY1:%[0-9]+]] = COPY %eflags
+    ; X32: [[ADC32rr:%[0-9]+]]:gr32 = ADC32rr [[DEF1]], [[DEF3]], implicit-def %eflags, implicit %eflags
+    ; X32: [[COPY1:%[0-9]+]]:gr32 = COPY %eflags
     ; X32: %eax = COPY [[ADD32rr]]
     ; X32: %edx = COPY [[ADC32rr]]
     ; X32: RET 0, implicit %eax, implicit %edx

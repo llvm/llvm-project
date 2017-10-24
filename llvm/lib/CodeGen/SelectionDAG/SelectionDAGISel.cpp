@@ -3550,6 +3550,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                "NodeToMatch was removed partway through selection");
         SelectionDAG::DAGNodeDeletedListener NDL(*CurDAG, [&](SDNode *N,
                                                               SDNode *E) {
+          CurDAG->salvageDebugInfo(*N);
           auto &Chain = ChainNodesMatched;
           assert((!E || !is_contained(Chain, N)) &&
                  "Chain node replaced during MorphNode");

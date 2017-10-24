@@ -270,6 +270,28 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
   OS << ')';
 }
 
+static void printRegClassOrBank(unsigned Reg, raw_ostream &OS,
+                                const MachineRegisterInfo &RegInfo,
+                                const TargetRegisterInfo *TRI) {
+  if (RegInfo.getRegClassOrNull(Reg))
+    OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
+  else if (RegInfo.getRegBankOrNull(Reg))
+    OS << StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
+  else {
+    OS << "_";
+    assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
+           "Generic registers must have a valid type");
+  }
+}
+
+static void printRegClassOrBank(unsigned Reg, yaml::StringValue &Dest,
+                                const MachineRegisterInfo &RegInfo,
+                                const TargetRegisterInfo *TRI) {
+  raw_string_ostream OS(Dest.Value);
+  printRegClassOrBank(Reg, OS, RegInfo, TRI);
+}
+
+
 void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
                          const TargetRegisterInfo *TRI) {
@@ -280,16 +302,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
     yaml::VirtualRegisterDefinition VReg;
     VReg.ID = I;
-    if (RegInfo.getRegClassOrNull(Reg))
-      VReg.Class =
-          StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
-    else if (RegInfo.getRegBankOrNull(Reg))
-      VReg.Class = StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
-    else {
-      VReg.Class = std::string("_");
-      assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
-             "Generic registers must have a valid type");
-    }
+    printRegClassOrBank(Reg, VReg.Class, RegInfo, TRI);
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printReg(PreferredReg, VReg.PreferredRegister, TRI);
@@ -915,7 +928,8 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
                       bool IsDef) {
   printTargetFlags(Op);
   switch (Op.getType()) {
-  case MachineOperand::MO_Register:
+  case MachineOperand::MO_Register: {
+    unsigned Reg = Op.getReg();
     if (Op.isImplicit())
       OS << (Op.isDef() ? "implicit-def " : "implicit ");
     else if (!IsDef && Op.isDef())
@@ -933,15 +947,23 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
       OS << "early-clobber ";
     if (Op.isDebug())
       OS << "debug-use ";
-    printReg(Op.getReg(), OS, TRI);
+    printReg(Reg, OS, TRI);
     // Print the sub register.
     if (Op.getSubReg() != 0)
       OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
+    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      const MachineRegisterInfo &MRI = Op.getParent()->getMF()->getRegInfo();
+      if (IsDef || MRI.def_empty(Reg)) {
+        OS << ':';
+        printRegClassOrBank(Reg, OS, MRI, TRI);
+      }
+    }
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
       OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(I) << ")";
     if (TypeToPrint.isValid())
       OS << '(' << TypeToPrint << ')';
     break;
+  }
   case MachineOperand::MO_Immediate:
     OS << Op.getImm();
     break;

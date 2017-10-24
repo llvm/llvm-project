@@ -85,7 +85,7 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
 ; SSE-NEXT:    movmskps %xmm2, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
@@ -96,7 +96,7 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovmskps %xmm0, %eax
 ; AVX-NEXT:    negl %eax
 ; AVX-NEXT:    sbbl %eax, %eax
@@ -217,7 +217,7 @@ define i32 @test_v8f32_legal_sext(<8 x float> %a0, <8 x float> %a1) {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE-NEXT:    cmpltps %xmm0, %xmm2
-; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
@@ -227,7 +227,7 @@ define i32 @test_v8f32_legal_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX-NEXT:    negl %eax
 ; AVX-NEXT:    sbbl %eax, %eax
@@ -355,7 +355,7 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpgtq %xmm3, %xmm1
 ; SSE-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    movmskps %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
@@ -368,7 +368,7 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovmskps %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
 ; AVX1-NEXT:    sbbl %eax, %eax
@@ -380,7 +380,7 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovmskps %xmm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
@@ -514,7 +514,7 @@ define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
@@ -526,7 +526,7 @@ define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
 ; AVX1-NEXT:    sbbl %eax, %eax
@@ -537,7 +537,7 @@ define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax

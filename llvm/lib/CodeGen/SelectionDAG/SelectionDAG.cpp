@@ -3109,6 +3109,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
 
   case ISD::SELECT:
+  case ISD::VSELECT:
     Tmp = ComputeNumSignBits(Op.getOperand(1), Depth+1);
     if (Tmp == 1) return 1;  // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(2), Depth+1);
@@ -6977,6 +6978,40 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
   return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
 }
 
+void SelectionDAG::salvageDebugInfo(SDNode &N) {
+  if (!N.getHasDebugValue())
+    return;
+  for (auto DV : GetDbgValues(&N)) {
+    if (DV->isInvalidated())
+      continue;
+    switch (N.getOpcode()) {
+    default:
+      break;
+    case ISD::ADD:
+      SDValue N0 = N.getOperand(0);
+      SDValue N1 = N.getOperand(1);
+      if (!isConstantIntBuildVectorOrConstantInt(N0) &&
+          isConstantIntBuildVectorOrConstantInt(N1)) {
+        uint64_t Offset = N.getConstantOperandVal(1);
+        // Rewrite an ADD constant node into a DIExpression. Since we are
+        // performing arithmetic to compute the variable's *value* in the
+        // DIExpression, we need to mark the expression with a
+        // DW_OP_stack_value.
+        auto *DIExpr = DV->getExpression();
+        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
+                                       DIExpression::WithStackValue);
+        SDDbgValue *Clone =
+            getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
+                        DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
+        DV->setIsInvalidated();
+        AddDbgValue(Clone, N0.getNode(), false);
+        DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+              dbgs() << " into " << *DIExpr << '\n');
+      }
+    }
+  }
+}
+
 namespace {
 
 /// RAUWUpdateListener - Helper for ReplaceAllUsesWith - When the node
@@ -7391,17 +7426,14 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
   DbgInfo->add(DB, SD, isParameter);
 }
 
-/// TransferDbgValues - Transfer SDDbgValues. Called in replace nodes.
+/// Transfer SDDbgValues. Called in replace nodes.
 void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
   if (From == To || !From.getNode()->getHasDebugValue())
     return;
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
-  ArrayRef<SDDbgValue *> DVs = GetDbgValues(FromNode);
   SmallVector<SDDbgValue *, 2> ClonedDVs;
-  for (ArrayRef<SDDbgValue *>::iterator I = DVs.begin(), E = DVs.end();
-       I != E; ++I) {
-    SDDbgValue *Dbg = *I;
+  for (auto *Dbg : GetDbgValues(FromNode)) {
     // Only add Dbgvalues attached to same ResNo.
     if (Dbg->getKind() == SDDbgValue::SDNODE &&
         Dbg->getSDNode() == From.getNode() &&

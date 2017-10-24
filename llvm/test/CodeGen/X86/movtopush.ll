@@ -12,6 +12,8 @@ declare void @inreg(i32 %a, i32 inreg %b, i32 %c, i32 %d)
 declare x86_thiscallcc void @thiscall(%class.Class* %class, i32 %a, i32 %b, i32 %c, i32 %d)
 declare void @oneparam(i32 %a)
 declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+declare void @eightparams16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h)
+declare void @eightparams64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h)
 declare void @struct(%struct.s* byval %a, i32 %b, i32 %c, i32 %d)
 declare void @inalloca(<{ %struct.s }>* inalloca)
 
@@ -414,5 +416,119 @@ entry:
   %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* %ref.tmp, %struct.A* byval %tmpcast)
   %2 = getelementptr inbounds %struct.B, %struct.B* %tmp, i32 0, i32 0
   call void @B_func(%struct.B* sret %tmp, %struct.B* %ref.tmp, i32 1)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_16
+; NORMAL:       movl  4(%esp), %eax
+; NORMAL-NEXT:  pushl  $65535
+; NORMAL-NEXT:  pushl  $0
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  pushl  %eax
+; NORMAL-NEXT:  calll  _eightparams16
+; NORMAL-NEXT:  addl  $32, %esp
+;
+; NOPUSH-LABEL: pr34863_16
+; NOPUSH:       subl  $32, %esp       
+; NOPUSH-NEXT:  movl  36(%esp), %eax  
+; NOPUSH-NEXT:  movl  %eax, 20(%esp)  
+; NOPUSH-NEXT:  movl  %eax, 16(%esp)  
+; NOPUSH-NEXT:  movl  %eax, 12(%esp)  
+; NOPUSH-NEXT:  movl  %eax, 8(%esp)   
+; NOPUSH-NEXT:  movl  %eax, 4(%esp)   
+; NOPUSH-NEXT:  movl  %eax, (%esp)    
+; NOPUSH-NEXT:  movl  $65535, 28(%esp)
+; NOPUSH-NEXT:  andl  $0, 24(%esp)    
+; NOPUSH-NEXT:  calll  _eightparams16  
+; NOPUSH-NEXT:   addl  $32, %esp
+define void @pr34863_16(i16 %x) minsize nounwind {
+entry:
+  tail call void @eightparams16(i16 %x, i16 %x, i16 %x, i16 %x, i16 %x, i16 %x, i16 0, i16 -1)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_32
+; NORMAL:      movl  4(%esp), %eax
+; NORMAL-NEXT: pushl  $-1
+; NORMAL-NEXT: pushl  $0
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: calll  _eightparams
+; NORMAL-NEXT: addl  $32, %esp
+;
+; NOPUSH-LABEL: pr34863_32
+; NOPUSH:      subl  $32, %esp     
+; NOPUSH-NEXT: movl  36(%esp), %eax
+; NOPUSH-NEXT: movl  %eax, 20(%esp)
+; NOPUSH-NEXT: movl  %eax, 16(%esp)
+; NOPUSH-NEXT: movl  %eax, 12(%esp)
+; NOPUSH-NEXT: movl  %eax, 8(%esp) 
+; NOPUSH-NEXT: movl  %eax, 4(%esp) 
+; NOPUSH-NEXT: movl  %eax, (%esp)  
+; NOPUSH-NEXT: orl  $-1, 28(%esp)     
+; NOPUSH-NEXT: andl  $0, 24(%esp)  
+; NOPUSH-NEXT: calll  _eightparams  
+; NOPUSH-NEXT: addl  $32, %esp     
+define void @pr34863_32(i32 %x) minsize nounwind {
+entry:
+  tail call void @eightparams(i32 %x, i32 %x, i32 %x, i32 %x, i32 %x, i32 %x, i32 0, i32 -1)
+  ret void
+}
+
+; NORMAL-LABEL: pr34863_64
+; NORMAL:      movl  4(%esp), %eax
+; NORMAL-NEXT: movl  8(%esp), %ecx
+; NORMAL-NEXT: pushl  $-1
+; NORMAL-NEXT: pushl  $-1
+; NORMAL-NEXT: pushl  $0
+; NORMAL-NEXT: pushl  $0
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: pushl  %ecx
+; NORMAL-NEXT: pushl  %eax
+; NORMAL-NEXT: calll  _eightparams64
+; NORMAL-NEXT: addl  $64, %esp
+;
+; NOPUSH-LABEL: pr34863_64
+; NOPUSH:      subl  $64, %esp     
+; NOPUSH-NEXT: movl  68(%esp), %eax
+; NOPUSH-NEXT: movl  72(%esp), %ecx
+; NOPUSH-NEXT: movl  %ecx, 44(%esp)
+; NOPUSH-NEXT: movl  %eax, 40(%esp)
+; NOPUSH-NEXT: movl  %ecx, 36(%esp)
+; NOPUSH-NEXT: movl  %eax, 32(%esp)
+; NOPUSH-NEXT: movl  %ecx, 28(%esp)
+; NOPUSH-NEXT: movl  %eax, 24(%esp)
+; NOPUSH-NEXT: movl  %ecx, 20(%esp)
+; NOPUSH-NEXT: movl  %eax, 16(%esp)
+; NOPUSH-NEXT: movl  %ecx, 12(%esp)
+; NOPUSH-NEXT: movl  %eax, 8(%esp) 
+; NOPUSH-NEXT: movl  %ecx, 4(%esp) 
+; NOPUSH-NEXT: movl  %eax, (%esp)  
+; NOPUSH-NEXT: orl  $-1, 60(%esp)     
+; NOPUSH-NEXT: orl  $-1, 56(%esp)     
+; NOPUSH-NEXT: andl  $0, 52(%esp)  
+; NOPUSH-NEXT: andl  $0, 48(%esp)  
+; NOPUSH-NEXT: calll  _eightparams64
+; NOPUSH-NEXT: addl  $64, %esp     
+define void @pr34863_64(i64 %x) minsize nounwind {
+entry:
+  tail call void @eightparams64(i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 %x, i64 0, i64 -1)
   ret void
 }

@@ -65,13 +65,13 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s1) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_ZEXT %1(s1)
-    ; CHECK: [[VREGEXT:%[0-9]+]] = ANDri [[VREGTRUNC]], 1, 14, _, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -95,14 +95,14 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s1) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_SEXT %1(s1)
-    ; CHECK: [[VREGAND:%[0-9]+]] = ANDri [[VREGTRUNC]], 1, 14, _, _
-    ; CHECK: [[VREGEXT:%[0-9]+]] = RSBri [[VREGAND]], 0, 14, _, _
+    ; CHECK: [[VREGAND:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, _, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = RSBri [[VREGAND]], 0, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -126,13 +126,13 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s8) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
 
     %2(s32) = G_SEXT %1(s8)
-    ; CHECK: [[VREGEXT:%[0-9]+]] = SXTB [[VREGTRUNC]], 0, 14, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = SXTB [[VREGTRUNC]], 0, 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -156,13 +156,13 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s16) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
 
     %2(s32) = G_ZEXT %1(s16)
-    ; CHECK: [[VREGEXT:%[0-9]+]] = UXTH [[VREGTRUNC]], 0, 14, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = UXTH [[VREGTRUNC]], 0, 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -186,13 +186,13 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s8) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_ANYEXT %1(s8)
-    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGTRUNC]]
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = COPY [[VREGTRUNC]]
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -216,13 +216,13 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREG:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY %r0
 
     %1(s16) = G_TRUNC %0(s32)
-    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREG]]
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_ANYEXT %1(s16)
-    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGTRUNC]]
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = COPY [[VREGTRUNC]]
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
@@ -249,13 +249,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGSUM]]
@@ -282,13 +282,13 @@ body:             |
     liveins: %s0, %s1
 
     %0(s32) = COPY %s0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]]:spr = COPY %s0
 
     %1(s32) = COPY %s1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %s1
+    ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
 
     %2(s32) = G_FADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDS [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VADDS [[VREGX]], [[VREGY]], 14, _
 
     %s0 = COPY %2(s32)
     ; CHECK: %s0 = COPY [[VREGSUM]]
@@ -315,13 +315,13 @@ body:             |
     liveins: %d0, %d1
 
     %0(s64) = COPY %d0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY %d0
 
     %1(s64) = COPY %d1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
 
     %2(s64) = G_FADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDD [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VADDD [[VREGX]], [[VREGY]], 14, _
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
@@ -348,13 +348,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SUB %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SUBrr [[VREGX]], [[VREGY]], 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -381,13 +381,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_MUL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MUL [[VREGX]], [[VREGY]], 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -414,13 +414,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_MUL %0, %1
-    ; CHECK: early-clobber [[VREGRES:%[0-9]+]] = MULv5 [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: early-clobber [[VREGRES:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -447,13 +447,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SDIV %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = SDIV [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SDIV [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -480,13 +480,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_UDIV %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = UDIV [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = UDIV [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -513,13 +513,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_AND %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = ANDrr [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = ANDrr [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -546,13 +546,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_OR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = ORRrr [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = ORRrr [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -579,13 +579,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_XOR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = EORrr [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = EORrr [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -612,13 +612,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_LSHR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 3, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 3, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -645,13 +645,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_ASHR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 1, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 1, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -678,13 +678,13 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SHL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]] = MOVsr [[VREGX]], [[VREGY]], 2, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 2, 14, _, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
@@ -721,22 +721,22 @@ body:             |
     liveins: %r0, %r1, %r2, %r3
 
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
-    ; CHECK: [[FI32VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
+    ; CHECK: [[FI32VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: [[LD32VREG:%[0-9]+]] = LDRi12 [[FI32VREG]], 0, 14, _
+    ; CHECK: [[LD32VREG:%[0-9]+]]:gpr = LDRi12 [[FI32VREG]], 0, 14, _
 
     %r0 = COPY %1
     ; CHECK: %r0 = COPY [[LD32VREG]]
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; CHECK: [[FI1VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
+    ; CHECK: [[FI1VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
 
     %3(s1) = G_LOAD %2(p0) :: (load 1)
-    ; CHECK: [[LD1VREG:%[0-9]+]] = LDRBi12 [[FI1VREG]], 0, 14, _
+    ; CHECK: [[LD1VREG:%[0-9]+]]:gprnopc = LDRBi12 [[FI1VREG]], 0, 14, _
 
     %4(s32) = G_ANYEXT %3(s1)
-    ; CHECK: [[RES:%[0-9]+]] = COPY [[LD1VREG]]
+    ; CHECK: [[RES:%[0-9]+]]:gpr = COPY [[LD1VREG]]
 
     %r0 = COPY %4
     ; CHECK: %r0 = COPY [[RES]]
@@ -763,7 +763,7 @@ body:             |
     %0(p0) = COPY %r0
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: %[[V]] = VLDRS %[[P]], 0, 14, _
+    ; CHECK: %[[V]]:spr = VLDRS %[[P]], 0, 14, _
 
     %s0 = COPY %1
     ; CHECK: %s0 = COPY %[[V]]
@@ -790,7 +790,7 @@ body:             |
     %0(p0) = COPY %r0
 
     %1(s64) = G_LOAD %0(p0) :: (load 8)
-    ; CHECK: %[[V]] = VLDRD %[[P]], 0, 14, _
+    ; CHECK: %[[V]]:dpr = VLDRD %[[P]], 0, 14, _
 
     %d0 = COPY %1
     ; CHECK: %d0 = COPY %[[V]]
@@ -868,7 +868,7 @@ body:             |
     %1(s32) = COPY %r1
 
     %2(p0) = G_GEP %0, %1(s32)
-    ; CHECK: %[[GEP]] = ADDrr %[[PTR]], %[[OFF]], 14, _, _
+    ; CHECK: %[[GEP]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, _, _
 
     %r0 = COPY %2(p0)
     BX_RET 14, _, implicit %r0
@@ -886,7 +886,7 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_CONSTANT 42
-    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+    ; CHECK: %[[C]]:gpr = MOVi 42, 14, _, _
 
     %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
@@ -906,7 +906,7 @@ body:             |
     ; Adding a type on G_CONSTANT changes its operand from an Imm into a CImm.
     ; We still want to see the same thing in the output though.
     %0(s32) = G_CONSTANT i32 42
-    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+    ; CHECK: %[[C]]:gpr = MOVi 42, 14, _, _
 
     %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
@@ -928,17 +928,17 @@ body:             |
     liveins: %r0, %r1
 
     %0(s32) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s1) = G_TRUNC %1(s32)
-    ; CHECK: [[VREGC:%[0-9]+]] = COPY [[VREGY]]
+    ; CHECK: [[VREGC:%[0-9]+]]:gpr = COPY [[VREGY]]
 
     %3(s32) = G_SELECT %2(s1),  %0, %1
     ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+    ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
 
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[RES]]
@@ -963,17 +963,17 @@ body:             |
     liveins: %r0, %r1
 
     %0(p0) = COPY %r0
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(p0) = COPY %r1
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s1) = G_TRUNC %1(p0)
-    ; CHECK: [[VREGC:%[0-9]+]] = COPY [[VREGY]]
+    ; CHECK: [[VREGC:%[0-9]+]]:gpr = COPY [[VREGY]]
 
     %3(p0) = G_SELECT %2(s1),  %0, %1
     ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+    ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
 
     %r0 = COPY %3(p0)
     ; CHECK: %r0 = COPY [[RES]]
@@ -998,9 +998,9 @@ body:             |
     liveins: %r0
 
     %0(s32) = COPY %r0
-    ; CHECK: [[COND32:%[0-9]+]] = COPY %r0
+    ; CHECK: [[COND32:%[0-9]+]]:gpr = COPY %r0
     %1(s1) = G_TRUNC %0(s32)
-    ; CHECK: [[COND:%[0-9]+]] = COPY [[COND32]]
+    ; CHECK: [[COND:%[0-9]+]]:gpr = COPY [[COND32]]
 
     G_BRCOND %1(s1), %bb.1
     ; CHECK: TSTri [[COND]], 1, 14, _, implicit-def %cpsr
@@ -1044,16 +1044,16 @@ body:             |
     liveins: %r0, %r1, %r2, %r3
 
     %0(s32) = COPY %r2
-    ; CHECK: [[IN1:%[0-9]+]] = COPY %r2
+    ; CHECK: [[IN1:%[0-9]+]]:gpr = COPY %r2
 
     %1(s32) = COPY %r3
-    ; CHECK: [[IN2:%[0-9]+]] = COPY %r3
+    ; CHECK: [[IN2:%[0-9]+]]:gpr = COPY %r3
 
     %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
-    ; CHECK: %[[DREG]] = VMOVDRR [[IN1]], [[IN2]]
+    ; CHECK: %[[DREG]]:dpr = VMOVDRR [[IN1]], [[IN2]]
 
     %3(s32), %4(s32) = G_UNMERGE_VALUES %2(s64)
-    ; CHECK: [[OUT1:%[0-9]+]], [[OUT2:%[0-9]+]] = VMOVRRD %[[DREG]]
+    ; CHECK: [[OUT1:%[0-9]+]]:gpr, [[OUT2:%[0-9]+]]:gpr = VMOVRRD %[[DREG]]
 
     %r0 = COPY %3
     ; CHECK: %r0 = COPY [[OUT1]]

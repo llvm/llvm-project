@@ -39,8 +39,8 @@ body: |
         %1 = COPY %r1
         %2 = COPY %p0
         ; Check that %3 was coalesced into %4.
-        ; CHECK: %4 = A2_abs %1
-        ; CHECK: %4 = A2_tfrt killed %2, killed %0, implicit %4
+        ; CHECK: %4:intregs = A2_abs %1
+        ; CHECK: %4:intregs = A2_tfrt killed %2, killed %0, implicit %4
         %3 = A2_abs %1
         %4 = C2_mux %2, %0, %3
         %r0 = COPY %4

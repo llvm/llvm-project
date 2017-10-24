@@ -19,11 +19,8 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: read_flags
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gr64
-    ; CHECK: [[RDFLAGS32_:%[0-9]+]] = RDFLAGS32 implicit-def %esp, implicit %esp
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]] = SUBREG_TO_REG 0, [[RDFLAGS32_]], 4
+    ; CHECK: [[RDFLAGS32_:%[0-9]+]]:gr32 = RDFLAGS32 implicit-def %esp, implicit %esp
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[RDFLAGS32_]], 4
     ; CHECK: %rax = COPY [[SUBREG_TO_REG]]
     %0(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.flags.read.u32)
     %rax = COPY %0(s32)

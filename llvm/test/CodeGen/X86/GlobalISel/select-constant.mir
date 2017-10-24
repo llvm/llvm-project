@@ -46,9 +46,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i8
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr8
-    ; CHECK: [[MOV8ri:%[0-9]+]] = MOV8ri 2
+    ; CHECK: [[MOV8ri:%[0-9]+]]:gr8 = MOV8ri 2
     ; CHECK: %al = COPY [[MOV8ri]]
     ; CHECK: RET 0, implicit %al
     %0(s8) = G_CONSTANT i8 2
@@ -66,9 +64,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr16
-    ; CHECK: [[MOV16ri:%[0-9]+]] = MOV16ri 3
+    ; CHECK: [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 3
     ; CHECK: %ax = COPY [[MOV16ri]]
     ; CHECK: RET 0, implicit %ax
     %0(s16) = G_CONSTANT i16 3
@@ -86,9 +82,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK: [[MOV32ri:%[0-9]+]] = MOV32ri 4
+    ; CHECK: [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 4
     ; CHECK: %eax = COPY [[MOV32ri]]
     ; CHECK: RET 0, implicit %eax
     %0(s32) = G_CONSTANT i32 4
@@ -105,9 +99,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32_0
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK: [[MOV32r0_:%[0-9]+]] = MOV32r0 implicit-def %eflags
+    ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def %eflags
     ; CHECK: %eax = COPY [[MOV32r0_]]
     ; CHECK: RET 0, implicit %eax
     %0(s32) = G_CONSTANT i32 0
@@ -125,9 +117,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK: [[MOV64ri:%[0-9]+]] = MOV64ri 68719476720
+    ; CHECK: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri 68719476720
     ; CHECK: %rax = COPY [[MOV64ri]]
     ; CHECK: RET 0, implicit %rax
     %0(s64) = G_CONSTANT i64 68719476720
@@ -146,9 +136,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_u32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK: [[MOV64ri32_:%[0-9]+]] = MOV64ri32 1879048192
+    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 1879048192
     ; CHECK: %rax = COPY [[MOV64ri32_]]
     ; CHECK: RET 0, implicit %rax
     %0(s64) = G_CONSTANT i64 1879048192
@@ -166,9 +154,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i64_i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK: [[MOV64ri32_:%[0-9]+]] = MOV64ri32 -1
+    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 -1
     ; CHECK: %rax = COPY [[MOV64ri32_]]
     ; CHECK: RET 0, implicit %rax
     %0(s64) = G_CONSTANT i64 -1
@@ -189,11 +175,8 @@ body:             |
     liveins: %rdi
 
     ; CHECK-LABEL: name: main
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK-NEXT: id: 1, class: gr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %rdi
-    ; CHECK: [[MOV64ri32_:%[0-9]+]] = MOV64ri32 0
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 0
     ; CHECK: MOV64mr [[COPY]], 1, _, 0, _, [[MOV64ri32_]] :: (store 8 into %ir.data)
     ; CHECK: RET 0
     %0(p0) = COPY %rdi
