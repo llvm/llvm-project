@@ -183,6 +183,8 @@ private:
 
   bool relaxInstruction(MCAsmLayout &Layout, MCRelaxableFragment &IF);
 
+  bool relaxPaddingFragment(MCAsmLayout &Layout, MCPaddingFragment &PF);
+
   bool relaxLEB(MCAsmLayout &Layout, MCLEBFragment &IF);
 
   bool relaxDwarfLineAddr(MCAsmLayout &Layout, MCDwarfLineAddrFragment &DF);

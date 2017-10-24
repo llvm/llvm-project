@@ -417,6 +417,7 @@ void MipsAsmPrinter::EmitFunctionBodyEnd() {
 }
 
 void MipsAsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  AsmPrinter::EmitBasicBlockEnd(MBB);
   MipsTargetStreamer &TS = getTargetStreamer();
   if (MBB.empty())
     TS.emitDirectiveInsn();
