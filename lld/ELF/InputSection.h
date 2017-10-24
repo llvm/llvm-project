@@ -237,8 +237,8 @@ public:
 
   // Mark the piece at a given offset live. Used by GC.
   void markLiveAt(uint64_t Offset) {
-    assert(this->Flags & llvm::ELF::SHF_ALLOC);
-    LiveOffsets.insert(Offset);
+    if (this->Flags & llvm::ELF::SHF_ALLOC)
+      LiveOffsets.insert(Offset);
   }
 
   // Translate an offset in the input section to an offset
