@@ -31,33 +31,33 @@ body: |
     ; CHECK-LABEL: name: test_load
     %0(p0) = COPY %x0
 
-    ; CHECK: [[BIT8:%[0-9]+]](s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
-    ; CHECK: %1(s1) = G_TRUNC [[BIT8]]
+    ; CHECK: [[BIT8:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
+    ; CHECK: %1:_(s1) = G_TRUNC [[BIT8]]
     %1(s1) = G_LOAD %0 :: (load 1 from %ir.addr)
 
-    ; CHECK: %2(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
+    ; CHECK: %2:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
     %2(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
 
-    ; CHECK: %3(s16) = G_LOAD %0(p0) :: (load 2 from %ir.addr)
+    ; CHECK: %3:_(s16) = G_LOAD %0(p0) :: (load 2 from %ir.addr)
     %3(s16) = G_LOAD %0 :: (load 2 from %ir.addr)
 
-    ; CHECK: %4(s32) = G_LOAD %0(p0) :: (load 4 from %ir.addr)
+    ; CHECK: %4:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.addr)
     %4(s32) = G_LOAD %0 :: (load 4 from %ir.addr)
 
-    ; CHECK: %5(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    ; CHECK: %5:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %5(s64) = G_LOAD %0 :: (load 8 from %ir.addr)
 
-    ; CHECK: %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    ; CHECK: %6:_(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
 
-    ; CHECK: %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    ; CHECK: %7:_(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
 
-    ; CHECK: [[LOAD0:%[0-9]+]](s64) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
-    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
-    ; CHECK: %8(s128) = G_MERGE_VALUES [[LOAD0]](s64), [[LOAD1]](s64)
+    ; CHECK: [[LOAD0:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
+    ; CHECK: [[OFFSET1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: %8:_(s128) = G_MERGE_VALUES [[LOAD0]](s64), [[LOAD1]](s64)
     %8(s128) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
 ...
 
@@ -80,11 +80,11 @@ body: |
     %0(p0) = COPY %x0
     %1(s32) = COPY %w1
 
-    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 1
-    ; CHECK: [[B:%.*]](s32) = COPY %1(s32)
-    ; CHECK: [[COPY_C1:%.*]](s32) = COPY [[C1]]
-    ; CHECK: [[AND:%.*]](s32) = G_AND [[B]], [[COPY_C1]]
-    ; CHECK: [[BIT8:%.*]](s8) = G_TRUNC [[AND]]
+    ; CHECK: [[C1:%.*]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[B:%.*]]:_(s32) = COPY %1(s32)
+    ; CHECK: [[COPY_C1:%.*]]:_(s32) = COPY [[C1]]
+    ; CHECK: [[AND:%.*]]:_(s32) = G_AND [[B]], [[COPY_C1]]
+    ; CHECK: [[BIT8:%.*]]:_(s8) = G_TRUNC [[AND]]
 
 
     ; CHECK: G_STORE [[BIT8]](s8), %0(p0) :: (store 1 into %ir.addr)
@@ -110,8 +110,8 @@ body: |
     G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
 
     ; CHECK: G_STORE %5(s64), %0(p0) :: (store 16 into %ir.addr)
-    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: [[OFFSET1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP %0, [[OFFSET1]](s64)
     ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 16 into %ir.addr)
     %6(s64) = G_PTRTOINT %0(p0)
     %7(s128) = G_MERGE_VALUES %5, %6

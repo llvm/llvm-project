@@ -30,6 +30,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace tooling {
@@ -86,12 +87,17 @@ public:
   /// All options not belonging to \p Category become hidden.
   ///
   /// It also allows calls to set the required number of positional parameters.
-  ///
-  /// This constructor exits program in case of error.
   CommonOptionsParser(int &argc, const char **argv,
                       llvm::cl::OptionCategory &Category,
                       llvm::cl::NumOccurrencesFlag OccurrencesFlag,
                       const char *Overview = nullptr);
+
+  /// \brief A factory method that is similar to the above constructor, except
+  /// this returns an error instead exiting the program on error.
+  static llvm::Expected<CommonOptionsParser>
+  create(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+         llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+         const char *Overview = nullptr);
 
   /// Returns a reference to the loaded compilations database.
   CompilationDatabase &getCompilations() {
@@ -106,6 +112,13 @@ public:
   static const char *const HelpMessage;
 
 private:
+  CommonOptionsParser() = default;
+
+  llvm::Error init(int &argc, const char **argv,
+                   llvm::cl::OptionCategory &Category,
+                   llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                   const char *Overview);
+
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<std::string> SourcePathList;
 };

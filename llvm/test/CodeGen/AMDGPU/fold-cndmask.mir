@@ -1,11 +1,11 @@
 # RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
 
-# CHECK: %1 = V_MOV_B32_e32 0, implicit %exec
-# CHECK: %2 = V_MOV_B32_e32 0, implicit %exec
-# CHECK: %4 = COPY %3
-# CHECK: %5 = V_MOV_B32_e32 0, implicit %exec
-# CHECK: %6 = V_MOV_B32_e32 0, implicit %exec
-# CHECK: %7 = COPY %3
+# CHECK: %1:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
+# CHECK: %2:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
+# CHECK: %4:vgpr_32 = COPY %3
+# CHECK: %5:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
+# CHECK: %6:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
+# CHECK: %7:vgpr_32 = COPY %3
 
 ---
 name:            fold_cndmask

@@ -26,7 +26,7 @@ registers:
   - { id: 1, class: _, preferred-register: '' }
   - { id: 2, class: _, preferred-register: '' }
   - { id: 3, class: _, preferred-register: '' }
-# ALL:         %1(s1) = G_TRUNC %0(s32)
+# ALL:         %1:_(s1) = G_TRUNC %0(s32)
 # ALL-NEXT:    G_BRCOND %1(s1), %[[TRUE:bb.[0-9]+.if.then]]
 # ALL-NEXT:    G_BR %[[FALSE:bb.[0-9]+.if.else]]
 # ALL:       [[TRUE]]:

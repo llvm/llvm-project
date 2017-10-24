@@ -22,29 +22,19 @@ name:            test
 alignment:       4
 legalized:       true
 regBankSelected: true
-# X64:        registers:
-# X64-NEXT:     - { id: 0, class: gr32, preferred-register: '' }
-# X64-NEXT:     - { id: 1, class: gr8, preferred-register: '' }
-# X64-NEXT:     - { id: 2, class: gr32, preferred-register: '' }
-# X64-NEXT:     - { id: 3, class: gr32, preferred-register: '' }
-#
-# X32:        registers:
-# X32-NEXT:     - { id: 0, class: gr32_abcd, preferred-register: '' }
-# X32-NEXT:     - { id: 1, class: gr8, preferred-register: '' }
-# X32-NEXT:     - { id: 2, class: gr32, preferred-register: '' }
-# X32-NEXT:     - { id: 3, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
   - { id: 2, class: gpr, preferred-register: '' }
   - { id: 3, class: gpr, preferred-register: '' }
-# CHECK:         %0 = COPY %edi
-# CHECK-NEXT:    %2 = MOV32r0 implicit-def %eflags
-# CHECK-NEXT:    %3 = MOV32ri 1
-# CHECK-NEXT:    %1 = COPY %0.sub_8bit
+# X64:           %0:gr32 = COPY %edi
+# X32:           %0:gr32_abcd = COPY %edi
+# CHECK-NEXT:    %2:gr32 = MOV32r0 implicit-def %eflags
+# CHECK-NEXT:    %3:gr32 = MOV32ri 1
+# CHECK-NEXT:    %1:gr8 = COPY %0.sub_8bit
 # CHECK-NEXT:    TEST8ri %1, 1, implicit-def %eflags
 # CHECK-NEXT:    JNE_1 %[[TRUE:bb.[0-9].true]], implicit %eflags
-# CHECK-NEXT:    JMP_1 %[[FALSE:bb.[0-9].false]] 
+# CHECK-NEXT:    JMP_1 %[[FALSE:bb.[0-9].false]]
 # CHECK:      [[TRUE]]:
 # CHECK-NEXT:    %eax = COPY %2
 # CHECK-NEXT:    RET 0, implicit %eax

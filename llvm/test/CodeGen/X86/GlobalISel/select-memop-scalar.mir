@@ -109,8 +109,8 @@ registers:
 # ALL:   - { id: 1, class: gr8, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr8 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.p1)
 # ALL:     %al = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -133,8 +133,8 @@ registers:
 # ALL:   - { id: 1, class: gr16, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV16rm %0, 1, _, 0, _ :: (load 2 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr16 = MOV16rm %0, 1, _, 0, _ :: (load 2 from %ir.p1)
 # ALL:     %ax = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -157,8 +157,8 @@ registers:
 # ALL:   - { id: 1, class: gr32, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr32 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
 # ALL:     %eax = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -181,8 +181,8 @@ registers:
 # ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr64 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
 # ALL:     %rax = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -205,8 +205,8 @@ registers:
 # ALL:   - { id: 1, class: gr32, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr32 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
 # ALL:     %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -225,15 +225,12 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# ALL:          - { id: 0, class: gr64, preferred-register: '' }
-# NO_AVX512F:   - { id: 1, class: fr32, preferred-register: '' }
-# AVX512ALL:    - { id: 1, class: fr32x, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
-# ALL:       %0 = COPY %rdi
-# SSE:       %1 = MOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
-# AVX:       %1 = VMOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
-# AVX512ALL: %1 = VMOVSSZrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL:       %0:gr64 = COPY %rdi
+# SSE:       %1:fr32 = MOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# AVX:       %1:fr32 = VMOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# AVX512ALL: %1:fr32x = VMOVSSZrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
 # ALL: %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -256,8 +253,8 @@ registers:
 # ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr64 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
 # ALL:     %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -276,15 +273,12 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# ALL:          - { id: 0, class: gr64, preferred-register: '' }
-# NO_AVX512F:   - { id: 1, class: fr64, preferred-register: '' }
-# AVX512ALL:    - { id: 1, class: fr64x, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
-# ALL:       %0 = COPY %rdi
-# SSE:       %1 = MOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
-# AVX:       %1 = VMOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
-# AVX512ALL: %1 = VMOVSDZrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL:       %0:gr64 = COPY %rdi
+# SSE:       %1:fr64 = MOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# AVX:       %1:fr64 = VMOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# AVX512ALL: %1:fr64x = VMOVSDZrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
 # ALL: %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -307,8 +301,8 @@ registers:
 # ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %edi
-# ALL:     %1 = COPY %rsi
+# ALL:     %0:gr32 = COPY %edi
+# ALL:     %1:gr64 = COPY %rsi
 # ALL:     MOV32mr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
 # ALL:     %rax = COPY %1
 body:             |
@@ -333,8 +327,8 @@ registers:
 # ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL:     %0 = COPY %rdi
-# ALL:     %1 = COPY %rsi
+# ALL:     %0:gr64 = COPY %rdi
+# ALL:     %1:gr64 = COPY %rsi
 # ALL:     MOV64mr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
 # ALL:     %rax = COPY %1
 body:             |
@@ -354,22 +348,14 @@ name:            test_store_float
 alignment:       4
 legalized:       true
 regBankSelected: true
-# NO_AVX512F:       registers:
-# NO_AVX512F-NEXT:    - { id: 0, class: fr32, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 2, class: gr32, preferred-register: '' }
-#
-# AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: fr32x, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:     %0 = COPY %xmm0
-# ALL:     %1 = COPY %rdi
-# ALL:     %2 = COPY %0
+# NO_AVX512F: %0:fr32 = COPY %xmm0
+# AVX512ALL:  %0:fr32x = COPY %xmm0
+# ALL:     %1:gr64 = COPY %rdi
+# ALL:     %2:gr32 = COPY %0
 # ALL:     MOV32mr %1, 1, _, 0, _, %2 :: (store 4 into %ir.p1)
 # ALL:     %rax = COPY %1
 body:             |
@@ -391,13 +377,11 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# NO_AVX512F:   - { id: 0, class: fr32, preferred-register: '' }
-# AVX512ALL:    - { id: 0, class: fr32x, preferred-register: '' }
-# ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
-# ALL:       %0 = COPY %xmm0
-# ALL:       %1 = COPY %rdi
+# NO_AVX512F: %0:fr32 = COPY %xmm0
+# AVX512ALL:  %0:fr32x = COPY %xmm0
+# ALL:       %1:gr64 = COPY %rdi
 # SSE:       MOVSSmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
 # AVX:       VMOVSSmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
 # AVX512ALL: VMOVSSZmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
@@ -419,22 +403,14 @@ name:            test_store_double
 alignment:       4
 legalized:       true
 regBankSelected: true
-# NO_AVX512F:       registers:
-# NO_AVX512F-NEXT:    - { id: 0, class: fr64, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 2, class: gr64, preferred-register: '' }
-#
-# AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: fr64x, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 2, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
-# ALL:     %0 = COPY %xmm0
-# ALL:     %1 = COPY %rdi
-# ALL:     %2 = COPY %0
+# NO_AVX512X: %0:fr64 = COPY %xmm0
+# AVX512ALL:  %0:fr64x = COPY %xmm0
+# ALL:     %1:gr64 = COPY %rdi
+# ALL:     %2:gr64 = COPY %0
 # ALL:     MOV64mr %1, 1, _, 0, _, %2 :: (store 8 into %ir.p1)
 # ALL:     %rax = COPY %1
 body:             |
@@ -456,13 +432,11 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 registers:
-# NO_AVX512F:   - { id: 0, class: fr64, preferred-register: '' }
-# AVX512ALL:    - { id: 0, class: fr64x, preferred-register: '' }
-# ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
-# ALL:       %0 = COPY %xmm0
-# ALL:       %1 = COPY %rdi
+# NO_AVX512F: %0:fr64 = COPY %xmm0
+# AVX512ALL:  %0:fr64x = COPY %xmm0
+# ALL:       %1:gr64 = COPY %rdi
 # SSE:       MOVSDmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
 # AVX:       VMOVSDmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
 # AVX512ALL: VMOVSDZmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
@@ -490,7 +464,7 @@ registers:
 # ALL:   - { id: 1, class: gr64, preferred-register: '' }
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
-# ALL: %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.ptr1)
+# ALL: %1:gr64 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.ptr1)
 body:             |
   bb.1 (%ir-block.0):
     liveins: %rdi
@@ -542,10 +516,10 @@ registers:
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
-# ALL:                  %0 = COPY %rdi
-# ALL-NEXT:             %1 = COPY %esi
+# ALL:                  %0:gr64 = COPY %rdi
+# ALL-NEXT:             %1:gr32 = COPY %esi
 # ALL-NEXT:             MOV32mr %0, 1, _, 20, _, %1 :: (store 4 into %ir.arrayidx)
-# ALL-NEXT:             %4 = MOV32rm %0, 1, _, 20, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %4:gr32 = MOV32rm %0, 1, _, 20, _ :: (load 4 from %ir.arrayidx)
 # ALL-NEXT:             %eax = COPY %4
 # ALL-NEXT:             RET 0, implicit %eax
 body:             |
@@ -580,12 +554,12 @@ registers:
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
   - { id: 4, class: gpr }
-# ALL:                  %0 = COPY %rdi
-# ALL-NEXT:             %1 = COPY %esi
-# ALL-NEXT:             %2 = MOV64ri 228719476720
-# ALL-NEXT:             %3 = LEA64r %0, 1, %2, 0, _
+# ALL:                  %0:gr64 = COPY %rdi
+# ALL-NEXT:             %1:gr32 = COPY %esi
+# ALL-NEXT:             %2:gr64_nosp = MOV64ri 228719476720
+# ALL-NEXT:             %3:gr64 = LEA64r %0, 1, %2, 0, _
 # ALL-NEXT:             MOV32mr %3, 1, _, 0, _, %1 :: (store 4 into %ir.arrayidx)
-# ALL-NEXT:             %4 = MOV32rm %3, 1, _, 0, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %4:gr32 = MOV32rm %3, 1, _, 0, _ :: (load 4 from %ir.arrayidx)
 # ALL-NEXT:             %eax = COPY %4
 # ALL-NEXT:             RET 0, implicit %eax
 body:             |

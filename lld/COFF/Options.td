@@ -9,10 +9,11 @@ class F<string name> : Flag<["/", "-", "-?"], name>;
 class P<string name, string help> :
       Joined<["/", "-", "-?"], name#":">, HelpText<help>;
 
-// Boolean flag suffixed by ":no".
-multiclass B<string name, string help> {
-  def "" : F<name>;
-  def _no : F<name#":no">, HelpText<help>;
+// Boolean flag which can be suffixed by ":no". Using it unsuffixed turns the
+// flag on and using it suffixed by ":no" turns it off.
+multiclass B<string name, string help_on, string help_off> {
+  def "" : F<name>, HelpText<help_on>;
+  def _no : F<name#":no">, HelpText<help_off>;
 }
 
 def align   : P<"align", "Section alignment">;
@@ -85,18 +86,31 @@ def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_unresolved : F<"force:unresolved">;
 
-defm allowbind: B<"allowbind", "Disable DLL binding">;
-defm allowisolation : B<"allowisolation", "Set NO_ISOLATION bit">;
+defm allowbind : B<"allowbind", "Enable DLL binding (default)",
+                   "Disable DLL binding">;
+defm allowisolation : B<"allowisolation", "Enable DLL isolation (default)",
+                        "Disable DLL isolation">;
 defm appcontainer : B<"appcontainer",
-                      "Image can only be run in an app container">;
-defm dynamicbase : B<"dynamicbase",
-                     "Disable address space layout randomization">;
-defm fixed    : B<"fixed", "Enable base relocations">;
-defm highentropyva : B<"highentropyva", "Set HIGH_ENTROPY_VA bit">;
-defm largeaddressaware : B<"largeaddressaware", "Disable large addresses">;
-defm nxcompat : B<"nxcompat", "Disable data execution provention">;
-defm safeseh : B<"safeseh", "Produce an image with Safe Exception Handler">;
-defm tsaware  : B<"tsaware", "Create non-Terminal Server aware executable">;
+                      "Image can only be run in an app container",
+                      "Image can run outside an app container (default)">;
+defm dynamicbase : B<"dynamicbase", "Enable ASLR (default unless /fixed)",
+                     "Disable ASLR (default when /fixed)">;
+defm fixed : B<"fixed", "Disable base relocations",
+               "Enable base relocations (default)">;
+defm highentropyva : B<"highentropyva",
+                       "Enable 64-bit ASLR (default on 64-bit)",
+                       "Disable 64-bit ASLR">;
+defm largeaddressaware : B<"largeaddressaware",
+                           "Enable large addresses (default on 64-bit)",
+                           "Disable large addresses (default on 32-bit)">;
+defm nxcompat : B<"nxcompat", "Enable data execution prevention (default)",
+                  "Disable data execution provention">;
+defm safeseh : B<"safeseh",
+                 "Produce an image with Safe Exception Handler (only for x86)",
+                 "Don't produce an image with Safe Exception Handler">;
+defm tsaware  : B<"tsaware",
+                  "Create Terminal Server aware executable (default)",
+                  "Create non-Terminal Server aware executable">;
 
 def help : F<"help">;
 def help_q : Flag<["/?", "-?"], "">, Alias<help>;

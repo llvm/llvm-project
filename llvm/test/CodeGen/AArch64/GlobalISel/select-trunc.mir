@@ -23,11 +23,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: trunc_s32_s64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64sp
-    ; CHECK-NEXT: id: 1, class: gpr32sp
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_32
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32sp = COPY [[COPY]].sub_32
     ; CHECK: %w0 = COPY [[COPY1]]
     %0(s64) = COPY %x0
     %1(s32) = G_TRUNC %0
@@ -48,13 +45,9 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: trunc_s8_s64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
     ; CHECK: %w0 = COPY [[COPY2]]
     %0(s64) = COPY %x0
     %1(s8) = G_TRUNC %0
@@ -76,13 +69,9 @@ body:             |
     liveins: %w0
 
     ; CHECK-LABEL: name: trunc_s1_s32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32all
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
     ; CHECK: %w0 = COPY [[COPY2]]
     %0(s32) = COPY %w0
     %1(s1) = G_TRUNC %0

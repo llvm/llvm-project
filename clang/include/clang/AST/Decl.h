@@ -3540,7 +3540,7 @@ public:
     return K >= firstRecord && K <= lastRecord;
   }
 
-  /// isMsStrust - Get whether or not this is an ms_struct which can
+  /// \brief Get whether or not this is an ms_struct which can
   /// be turned on with an attribute, pragma, or -mms-bitfields
   /// commandline option.
   bool isMsStruct(const ASTContext &C) const;

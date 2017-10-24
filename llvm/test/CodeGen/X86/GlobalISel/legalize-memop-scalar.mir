@@ -28,23 +28,23 @@ registers:
   - { id: 8, class: _, preferred-register: '' }
   - { id: 9, class: _, preferred-register: '' }
   - { id: 10, class: _, preferred-register: '' }
-# ALL:          %0(p0) = IMPLICIT_DEF
-# ALL-NEXT:     %11(s8) = G_LOAD %0(p0) :: (load 1)
-# ALL-NEXT:     %9(s1) = G_TRUNC %11(s8)
-# ALL-NEXT:     %1(s8) = G_LOAD %0(p0) :: (load 1)
-# ALL-NEXT:     %2(s16) = G_LOAD %0(p0) :: (load 2)
-# ALL-NEXT:     %3(s32) = G_LOAD %0(p0) :: (load 4)
-# ALL-NEXT:     %4(p0) = G_LOAD %0(p0) :: (load 8)
-# ALL-NEXT:     %10(s1) = IMPLICIT_DEF
-# ALL-NEXT:     %12(s8) = G_ZEXT %10(s1)
+# ALL:          %0:_(p0) = IMPLICIT_DEF
+# ALL-NEXT:     %11:_(s8) = G_LOAD %0(p0) :: (load 1)
+# ALL-NEXT:     %9:_(s1) = G_TRUNC %11(s8)
+# ALL-NEXT:     %1:_(s8) = G_LOAD %0(p0) :: (load 1)
+# ALL-NEXT:     %2:_(s16) = G_LOAD %0(p0) :: (load 2)
+# ALL-NEXT:     %3:_(s32) = G_LOAD %0(p0) :: (load 4)
+# ALL-NEXT:     %4:_(p0) = G_LOAD %0(p0) :: (load 8)
+# ALL-NEXT:     %10:_(s1) = IMPLICIT_DEF
+# ALL-NEXT:     %12:_(s8) = G_ZEXT %10(s1)
 # ALL-NEXT:     G_STORE %12(s8), %0(p0) :: (store 1)
-# ALL-NEXT:     %5(s8) = IMPLICIT_DEF
+# ALL-NEXT:     %5:_(s8) = IMPLICIT_DEF
 # ALL-NEXT:     G_STORE %5(s8), %0(p0) :: (store 1)
-# ALL-NEXT:     %6(s16) = IMPLICIT_DEF
+# ALL-NEXT:     %6:_(s16) = IMPLICIT_DEF
 # ALL-NEXT:     G_STORE %6(s16), %0(p0) :: (store 2)
-# ALL-NEXT:     %7(s32) = IMPLICIT_DEF
+# ALL-NEXT:     %7:_(s32) = IMPLICIT_DEF
 # ALL-NEXT:     G_STORE %7(s32), %0(p0) :: (store 4)
-# ALL-NEXT:     %8(p0) = IMPLICIT_DEF
+# ALL-NEXT:     %8:_(p0) = IMPLICIT_DEF
 # ALL-NEXT:     G_STORE %8(p0), %0(p0) :: (store 8)
 body:             |
   bb.1 (%ir-block.0):
@@ -79,22 +79,22 @@ registers:
   - { id: 1, class: _, preferred-register: '' }
   - { id: 2, class: _, preferred-register: '' }
 liveins:
-# X64:          %0(p0) = IMPLICIT_DEF
-# X64-NEXT:     %1(s64) = G_LOAD %0(p0) :: (load 8)
-# X64-NEXT:     %2(s64) = IMPLICIT_DEF
+# X64:          %0:_(p0) = IMPLICIT_DEF
+# X64-NEXT:     %1:_(s64) = G_LOAD %0(p0) :: (load 8)
+# X64-NEXT:     %2:_(s64) = IMPLICIT_DEF
 # X64-NEXT:     G_STORE %2(s64), %0(p0) :: (store 8)
 #
-# X32:          %0(p0) = IMPLICIT_DEF
-# X32-NEXT:     %3(s32) = G_LOAD %0(p0) :: (load 8)
-# X32-NEXT:     %6(s32) = G_CONSTANT i32 4
-# X32-NEXT:     %5(p0) = G_GEP %0, %6(s32)
-# X32-NEXT:     %4(s32) = G_LOAD %5(p0) :: (load 8)
-# X32-NEXT:     %1(s64) = G_MERGE_VALUES %3(s32), %4(s32)
-# X32-NEXT:     %2(s64) = IMPLICIT_DEF
-# X32-NEXT:     %7(s32), %8(s32) = G_UNMERGE_VALUES %2(s64)
+# X32:          %0:_(p0) = IMPLICIT_DEF
+# X32-NEXT:     %3:_(s32) = G_LOAD %0(p0) :: (load 8)
+# X32-NEXT:     %6:_(s32) = G_CONSTANT i32 4
+# X32-NEXT:     %5:_(p0) = G_GEP %0, %6(s32)
+# X32-NEXT:     %4:_(s32) = G_LOAD %5(p0) :: (load 8)
+# X32-NEXT:     %1:_(s64) = G_MERGE_VALUES %3(s32), %4(s32)
+# X32-NEXT:     %2:_(s64) = IMPLICIT_DEF
+# X32-NEXT:     %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %2(s64)
 # X32-NEXT:     G_STORE %7(s32), %0(p0) :: (store 8)
-# X32-NEXT:     %10(s32) = G_CONSTANT i32 4
-# X32-NEXT:     %9(p0) = G_GEP %0, %10(s32)
+# X32-NEXT:     %10:_(s32) = G_CONSTANT i32 4
+# X32-NEXT:     %9:_(p0) = G_GEP %0, %10(s32)
 # X32-NEXT:     G_STORE %8(s32), %9(p0) :: (store 8)
 body:             |
   bb.1 (%ir-block.0):
@@ -107,4 +107,3 @@ body:             |
     G_STORE %2, %0 :: (store 8)
 
 ...
-

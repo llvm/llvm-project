@@ -21,6 +21,8 @@ template<typename T>
 void test () {
 #if TEST_STD_VER > 11
     {
+    ASSERT_NOEXCEPT(T());
+
     constexpr T sv1;
     static_assert ( sv1.size() == 0, "" );
     static_assert ( sv1.empty(), "");

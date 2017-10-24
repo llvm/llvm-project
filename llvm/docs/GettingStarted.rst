@@ -52,6 +52,12 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/tools``
    * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
 
+#. Checkout Extra Clang Tools **[Optional]**:
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/tools/clang/tools``
+   * ``svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
+   
 #. Checkout LLD linker **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``

@@ -46,11 +46,11 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; BROADWELL-LABEL: test_ctpop_i16:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    popcntw (%rsi), %cx # sched: [3:1.00]
+; BROADWELL-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i16:
 ; SKYLAKE:       # BB#0:
@@ -114,10 +114,10 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ;
 ; BROADWELL-LABEL: test_ctpop_i32:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    popcntl (%rsi), %ecx # sched: [3:1.00]
+; BROADWELL-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i32:
 ; SKYLAKE:       # BB#0:
@@ -178,10 +178,10 @@ define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ;
 ; BROADWELL-LABEL: test_ctpop_i64:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    popcntq (%rsi), %rcx # sched: [3:1.00]
+; BROADWELL-NEXT:    popcntq (%rsi), %rcx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i64:
 ; SKYLAKE:       # BB#0:

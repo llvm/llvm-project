@@ -38,21 +38,21 @@ liveins:
 fixedStack:
 stack:
 constants:
-# SSE:                  %0 = COPY %xmm0
-# SSE-NEXT:             %1 = COPY %xmm1
-# SSE-NEXT:             %2 = DIVSSrr %0, %1
+# SSE:                  %0:fr32 = COPY %xmm0
+# SSE-NEXT:             %1:fr32 = COPY %xmm1
+# SSE-NEXT:             %2:fr32 = DIVSSrr %0, %1
 # SSE-NEXT:             %xmm0 = COPY %2
 # SSE-NEXT:             RET 0, implicit %xmm0
 #
-# AVX:                  %0 = COPY %xmm0
-# AVX-NEXT:             %1 = COPY %xmm1
-# AVX-NEXT:             %2 = VDIVSSrr %0, %1
+# AVX:                  %0:fr32 = COPY %xmm0
+# AVX-NEXT:             %1:fr32 = COPY %xmm1
+# AVX-NEXT:             %2:fr32 = VDIVSSrr %0, %1
 # AVX-NEXT:             %xmm0 = COPY %2
 # AVX-NEXT:             RET 0, implicit %xmm0
 #
-# AVX512ALL:            %0 = COPY %xmm0
-# AVX512ALL-NEXT:       %1 = COPY %xmm1
-# AVX512ALL-NEXT:       %2 = VDIVSSZrr %0, %1
+# AVX512ALL:            %0:fr32x = COPY %xmm0
+# AVX512ALL-NEXT:       %1:fr32x = COPY %xmm1
+# AVX512ALL-NEXT:       %2:fr32x = VDIVSSZrr %0, %1
 # AVX512ALL-NEXT:       %xmm0 = COPY %2
 # AVX512ALL-NEXT:       RET 0, implicit %xmm0
 body:             |
@@ -89,21 +89,21 @@ liveins:
 fixedStack:
 stack:
 constants:
-# SSE:                  %0 = COPY %xmm0
-# SSE-NEXT:             %1 = COPY %xmm1
-# SSE-NEXT:             %2 = DIVSDrr %0, %1
+# SSE:                  %0:fr64 = COPY %xmm0
+# SSE-NEXT:             %1:fr64 = COPY %xmm1
+# SSE-NEXT:             %2:fr64 = DIVSDrr %0, %1
 # SSE-NEXT:             %xmm0 = COPY %2
 # SSE-NEXT:             RET 0, implicit %xmm0
 #
-# AVX:                  %0 = COPY %xmm0
-# AVX-NEXT:             %1 = COPY %xmm1
-# AVX-NEXT:             %2 = VDIVSDrr %0, %1
+# AVX:                  %0:fr64 = COPY %xmm0
+# AVX-NEXT:             %1:fr64 = COPY %xmm1
+# AVX-NEXT:             %2:fr64 = VDIVSDrr %0, %1
 # AVX-NEXT:             %xmm0 = COPY %2
 # AVX-NEXT:             RET 0, implicit %xmm0
 #
-# AVX512ALL:            %0 = COPY %xmm0
-# AVX512ALL-NEXT:       %1 = COPY %xmm1
-# AVX512ALL-NEXT:       %2 = VDIVSDZrr %0, %1
+# AVX512ALL:            %0:fr64x = COPY %xmm0
+# AVX512ALL-NEXT:       %1:fr64x = COPY %xmm1
+# AVX512ALL-NEXT:       %2:fr64x = VDIVSDZrr %0, %1
 # AVX512ALL-NEXT:       %xmm0 = COPY %2
 # AVX512ALL-NEXT:       RET 0, implicit %xmm0
 body:             |

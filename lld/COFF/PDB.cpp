@@ -305,7 +305,7 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static void remapTypesInSymbolRecord(ObjFile *File,
+static void remapTypesInSymbolRecord(ObjFile *File, SymbolKind SymKind,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
                                      const TypeTableBuilder &IDTable,
@@ -317,15 +317,17 @@ static void remapTypesInSymbolRecord(ObjFile *File,
 
     // This can be an item index or a type index. Choose the appropriate map.
     ArrayRef<TypeIndex> TypeOrItemMap = IndexMap.TPIMap;
-    if (Ref.Kind == TiRefKind::IndexRef && IndexMap.IsTypeServerMap)
+    bool IsItemIndex = Ref.Kind == TiRefKind::IndexRef;
+    if (IsItemIndex && IndexMap.IsTypeServerMap)
       TypeOrItemMap = IndexMap.IPIMap;
 
     MutableArrayRef<TypeIndex> TIs(
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
     for (TypeIndex &TI : TIs) {
       if (!remapTypeIndex(TI, TypeOrItemMap)) {
-        log("ignoring symbol record in " + File->getName() +
-            " with bad type index 0x" + utohexstr(TI.getIndex()));
+        log("ignoring symbol record of kind 0x" + utohexstr(SymKind) + " in " +
+            File->getName() + " with bad " + (IsItemIndex ? "item" : "type") +
+            " index 0x" + utohexstr(TI.getIndex()));
         TI = TypeIndex(SimpleTypeKind::NotTranslated);
         continue;
       }
@@ -571,7 +573,8 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, IndexMap, IDTable, TypeRefs);
+    remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap, IDTable,
+                             TypeRefs);
 
     // An object file may have S_xxx_ID symbols, but these get converted to
     // "real" symbols in a PDB.

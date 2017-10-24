@@ -142,15 +142,12 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   OS << "enum {\n";
 
   // For each record
-  for (unsigned i = 0; i < N;) {
+  for (unsigned i = 0; i < N; ++i) {
     // Next record
     Record *Def = DefList[i];
 
     // Get and emit name
-    OS << "  " << Def->getName() << " = " << i;
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << "  " << Def->getName() << " = " << i << ",\n";
   }
 
   // Close enumeration and namespace
@@ -203,15 +200,8 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
       OS << " " << Target << "::" << ImpliesList[j]->getName();
       if (++j < M) OS << ",";
     }
-    OS << " }";
-
-    OS << " }";
+    OS << " } },\n";
     ++NumFeatures;
-
-    // Depending on 'if more in the list' emit comma
-    if ((i + 1) < N) OS << ",";
-
-    OS << "\n";
   }
 
   // End feature table
@@ -236,10 +226,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
      << "SubTypeKV[] = {\n";
 
   // For each processor
-  for (unsigned i = 0, N = ProcessorList.size(); i < N;) {
-    // Next processor
-    Record *Processor = ProcessorList[i];
-
+  for (Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     const std::vector<Record*> &FeatureList =
       Processor->getValueAsListOfDefs("Features");
@@ -254,15 +241,8 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
       OS << " " << Target << "::" << FeatureList[j]->getName();
       if (++j < M) OS << ",";
     }
-    OS << " }";
-
     // The { } is for the "implies" section of this data structure.
-    OS << ", { } }";
-
-    // Depending on 'if more in the list' emit comma
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << " }, { } },\n";
   }
 
   // End processor table
@@ -600,12 +580,10 @@ void SubtargetEmitter::EmitProcessorProp(raw_ostream &OS, const Record *R,
 
 void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
-  char Sep = ProcModel.ProcResourceDefs.empty() ? ' ' : ',';
-
   OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered}\n";
   OS << "static const llvm::MCProcResourceDesc "
      << ProcModel.ModelName << "ProcResources" << "[] = {\n"
-     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0}" << Sep << "\n";
+     << "  {DBGFIELD(\"InvalidUnit\")     0, 0, 0},\n";
 
   for (unsigned i = 0, e = ProcModel.ProcResourceDefs.size(); i < e; ++i) {
     Record *PRDef = ProcModel.ProcResourceDefs[i];
@@ -630,13 +608,11 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
       NumUnits = PRDef->getValueAsInt("NumUnits");
     }
     // Emit the ProcResourceDesc
-    if (i+1 == e)
-      Sep = ' ';
     OS << "  {DBGFIELD(\"" << PRDef->getName() << "\") ";
     if (PRDef->getName().size() < 15)
       OS.indent(15 - PRDef->getName().size());
     OS << NumUnits << ", " << SuperIdx << ", "
-       << BufferSize << "}" << Sep << " // #" << i+1;
+       << BufferSize << "}, // #" << i+1;
     if (SuperDef)
       OS << ", Super=" << SuperDef->getName();
     OS << "\n";
@@ -1131,10 +1107,8 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
          << ", " << format("%2d", MCDesc.WriteLatencyIdx)
          << ", " << MCDesc.NumWriteLatencyEntries
          << ", " << format("%2d", MCDesc.ReadAdvanceIdx)
-         << ", " << MCDesc.NumReadAdvanceEntries << "}";
-      if (SCIdx + 1 < SCEnd)
-        OS << ',';
-      OS << " // #" << SCIdx << '\n';
+         << ", " << MCDesc.NumReadAdvanceEntries
+         << "}, // #" << SCIdx << '\n';
     }
     OS << "}; // " << PI->ModelName << "SchedClasses\n";
   }
@@ -1183,9 +1157,10 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
       OS << "  nullptr, nullptr, 0, 0,"
          << " // No instruction-level machine model.\n";
     if (PM.hasItineraries())
-      OS << "  " << PM.ItinsDef->getName() << "};\n";
+      OS << "  " << PM.ItinsDef->getName() << "\n";
     else
-      OS << "  nullptr}; // No Itinerary\n";
+      OS << "  nullptr // No Itinerary\n";
+    OS << "};\n";
   }
 }
 
@@ -1205,21 +1180,13 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
      << Target << "ProcSchedKV[] = {\n";
 
   // For each processor
-  for (unsigned i = 0, N = ProcessorList.size(); i < N;) {
-    // Next processor
-    Record *Processor = ProcessorList[i];
-
+  for (Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
     const std::string &ProcModelName =
       SchedModels.getModelForProc(Processor).ModelName;
 
     // Emit as { "cpu", procinit },
-    OS << "  { \"" << Name << "\", (const void *)&" << ProcModelName << " }";
-
-    // Depending on ''if more in the list'' emit comma
-    if (++i < N) OS << ",";
-
-    OS << "\n";
+    OS << "  { \"" << Name << "\", (const void *)&" << ProcModelName << " },\n";
   }
 
   // End processor table
@@ -1259,7 +1226,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   // Emit the processor lookup data
   EmitProcessorLookup(OS);
 
-  OS << "#undef DBGFIELD";
+  OS << "\n#undef DBGFIELD";
 }
 
 void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
@@ -1423,7 +1390,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 #endif
 
   // MCInstrInfo initialization routine.
-  OS << "static inline MCSubtargetInfo *create" << Target
+  OS << "\nstatic inline MCSubtargetInfo *create" << Target
      << "MCSubtargetInfoImpl("
      << "const Triple &TT, StringRef CPU, StringRef FS) {\n";
   OS << "  return new MCSubtargetInfo(TT, CPU, FS, ";

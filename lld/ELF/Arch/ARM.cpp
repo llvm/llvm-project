@@ -26,6 +26,7 @@ namespace {
 class ARM final : public TargetInfo {
 public:
   ARM();
+  uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(RelType Type) const override;
@@ -62,6 +63,13 @@ ARM::ARM() {
   // ARM uses Variant 1 TLS
   TcbSize = 8;
   NeedsThunks = true;
+}
+
+uint32_t ARM::calcEFlags() const {
+  // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
+  // but we don't have any firm guarantees of conformance. Linux AArch64
+  // kernels (as of 2016) require an EABI version to be set.
+  return EF_ARM_EABI_VER5;
 }
 
 RelExpr ARM::getRelExpr(RelType Type, const SymbolBody &S,

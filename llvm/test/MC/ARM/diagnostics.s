@@ -60,6 +60,7 @@
         ldr r4, [r5, r6, ror #-1]
         pld r4, [r5, r6, ror #32]
         pld r4, [r5, r6, rrx #0]
+        ldr r4, [r5, r6, not_a_shift]
 
 @ CHECK-ERRORS: error: shift amount must be an immediate
 @ CHECK-ERRORS:         str r1, [r2, r3, lsl #invalid]
@@ -89,6 +90,8 @@
 @ CHECK-ERRORS:         pld r4, [r5, r6, ror #32]
 @ CHECK-ERRORS: error: ']' expected
 @ CHECK-ERRORS:         pld r4, [r5, r6, rrx #0]
+@ CHECK-ERRORS: error: illegal shift operator
+@ CHECK-ERRORS:         ldr r4, [r5, r6, not_a_shift]
         
         @ Out of range 16-bit immediate on BKPT
         bkpt #65536

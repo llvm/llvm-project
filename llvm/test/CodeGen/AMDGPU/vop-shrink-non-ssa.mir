@@ -1,8 +1,8 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: name: fold_imm_non_ssa{{$}}
-# GCN: %0 = V_MOV_B32_e32 123, implicit %exec
-# GCN: %2 = V_ADD_I32_e32 456, %0, implicit-def %vcc, implicit %exec
+# GCN: %0:vgpr_32 = V_MOV_B32_e32 123, implicit %exec
+# GCN: %2:vgpr_32 = V_ADD_I32_e32 456, %0, implicit-def %vcc, implicit %exec
 
 name: fold_imm_non_ssa
 tracksRegLiveness: true
@@ -21,8 +21,8 @@ body:             |
 
 ...
 # GCN-LABEL: name: fold_partially_defined_superreg{{$}}
-# GCN: %1 = V_MOV_B32_e32 456, implicit %exec
-# GCN: %2 = V_ADD_I32_e32 123, %1, implicit-def %vcc, implicit %exec
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 456, implicit %exec
+# GCN: %2:vgpr_32 = V_ADD_I32_e32 123, %1, implicit-def %vcc, implicit %exec
 name: fold_partially_defined_superreg
 tracksRegLiveness: true
 registers:

@@ -32,13 +32,9 @@ body:             |
     liveins: %edi, %esi
 
     ; ALL-LABEL: name: test_mul_i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr16
-    ; ALL-NEXT: id: 1, class: gr16
-    ; ALL-NEXT: id: 2, class: gr16
-    ; ALL: [[COPY:%[0-9]+]] = COPY %di
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %si
-    ; ALL: [[IMUL16rr:%[0-9]+]] = IMUL16rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr16 = COPY %di
+    ; ALL: [[COPY1:%[0-9]+]]:gr16 = COPY %si
+    ; ALL: [[IMUL16rr:%[0-9]+]]:gr16 = IMUL16rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %ax = COPY [[IMUL16rr]]
     ; ALL: RET 0, implicit %ax
     %0(s16) = COPY %di
@@ -62,13 +58,9 @@ body:             |
     liveins: %edi, %esi
 
     ; ALL-LABEL: name: test_mul_i32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gr32
-    ; ALL: [[COPY:%[0-9]+]] = COPY %edi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %esi
-    ; ALL: [[IMUL32rr:%[0-9]+]] = IMUL32rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; ALL: [[COPY1:%[0-9]+]]:gr32 = COPY %esi
+    ; ALL: [[IMUL32rr:%[0-9]+]]:gr32 = IMUL32rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %eax = COPY [[IMUL32rr]]
     ; ALL: RET 0, implicit %eax
     %0(s32) = COPY %edi
@@ -92,13 +84,9 @@ body:             |
     liveins: %rdi, %rsi
 
     ; ALL-LABEL: name: test_mul_i64
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr64
-    ; ALL-NEXT: id: 1, class: gr64
-    ; ALL-NEXT: id: 2, class: gr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %rdi
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %rsi
-    ; ALL: [[IMUL64rr:%[0-9]+]] = IMUL64rr [[COPY]], [[COPY1]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; ALL: [[COPY1:%[0-9]+]]:gr64 = COPY %rsi
+    ; ALL: [[IMUL64rr:%[0-9]+]]:gr64 = IMUL64rr [[COPY]], [[COPY1]], implicit-def %eflags
     ; ALL: %rax = COPY [[IMUL64rr]]
     ; ALL: RET 0, implicit %rax
     %0(s64) = COPY %rdi

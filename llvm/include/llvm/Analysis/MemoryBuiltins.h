@@ -92,8 +92,7 @@ bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.
 const CallInst *extractMallocCall(const Value *I, const TargetLibraryInfo *TLI);
-static inline CallInst *extractMallocCall(Value *I,
-                                          const TargetLibraryInfo *TLI) {
+inline CallInst *extractMallocCall(Value *I, const TargetLibraryInfo *TLI) {
   return const_cast<CallInst*>(extractMallocCall((const Value*)I, TLI));
 }
 
@@ -127,8 +126,7 @@ Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
 /// extractCallocCall - Returns the corresponding CallInst if the instruction
 /// is a calloc call.
 const CallInst *extractCallocCall(const Value *I, const TargetLibraryInfo *TLI);
-static inline CallInst *extractCallocCall(Value *I,
-                                          const TargetLibraryInfo *TLI) {
+inline CallInst *extractCallocCall(Value *I, const TargetLibraryInfo *TLI) {
   return const_cast<CallInst*>(extractCallocCall((const Value*)I, TLI));
 }
 
@@ -140,7 +138,7 @@ static inline CallInst *extractCallocCall(Value *I,
 /// isFreeCall - Returns non-null if the value is a call to the builtin free()
 const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
 
-static inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
+inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
   return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
 }
 

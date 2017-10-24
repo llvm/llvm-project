@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLING_REFACTOR_REFACTORING_ACTION_RULE_REQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
 #include "clang/Tooling/Refactoring/RefactoringRuleContext.h"
@@ -50,6 +51,31 @@ public:
       return Context.getSelectionRange();
     return Context.createDiagnosticError(diag::err_refactor_no_selection);
   }
+};
+
+/// An AST selection requirement is satisfied when any portion of the AST
+/// overlaps with the selection range.
+///
+/// The requirement will be evaluated only once during the initiation and
+/// search of matching refactoring action rules.
+class ASTSelectionRequirement : public SourceRangeSelectionRequirement {
+public:
+  Expected<SelectedASTNode> evaluate(RefactoringRuleContext &Context) const;
+};
+
+/// A selection requirement that is satisfied when the selection range overlaps
+/// with a number of neighbouring statements in the AST. The statemenst must be
+/// contained in declaration like a function. The selection range must be a
+/// non-empty source selection (i.e. cursors won't be accepted).
+///
+/// The requirement will be evaluated only once during the initiation and search
+/// of matching refactoring action rules.
+///
+/// \see CodeRangeASTSelection
+class CodeRangeASTSelectionRequirement : public ASTSelectionRequirement {
+public:
+  Expected<CodeRangeASTSelection>
+  evaluate(RefactoringRuleContext &Context) const;
 };
 
 /// A base class for any requirement that requires some refactoring options.

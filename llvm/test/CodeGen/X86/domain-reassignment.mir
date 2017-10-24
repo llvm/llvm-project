@@ -56,9 +56,6 @@ regBankSelected: false
 selected:        false
 tracksRegLiveness: true
 registers:       
-  # CHECK: - { id: 0, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 1, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 2, class: vk8, preferred-register: '' }
   - { id: 0, class: gr8, preferred-register: '' }
   - { id: 1, class: gr8, preferred-register: '' }
   - { id: 2, class: gr8, preferred-register: '' }
@@ -72,12 +69,8 @@ registers:
   - { id: 10, class: fr32x, preferred-register: '' }
   - { id: 11, class: gr8, preferred-register: '' }
   - { id: 12, class: vk1, preferred-register: '' }
-  # CHECK: - { id: 13, class: vk32, preferred-register: '' }
   - { id: 13, class: gr32, preferred-register: '' }
   - { id: 14, class: vk1, preferred-register: '' }
-  # CHECK: - { id: 15, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 16, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 17, class: vk32, preferred-register: '' }
   - { id: 15, class: gr32, preferred-register: '' }
   - { id: 16, class: gr32, preferred-register: '' }
   - { id: 17, class: gr32, preferred-register: '' }
@@ -139,8 +132,8 @@ body:             |
     %14 = VCMPSSZrr %7, %8, 0
 
     ; check that cross domain copies are replaced with same domain copies.
-    ; CHECK: %15 = COPY %14
-    ; CHECK: %0 = COPY %15
+    ; CHECK: %15:vk32 = COPY %14
+    ; CHECK: %0:vk8 = COPY %15
     
     %15 = COPY %14
     %0 = COPY %15.sub_8bit
@@ -151,8 +144,8 @@ body:             |
     %12 = VCMPSSZrr %9, %10, 0
 
     ; check that cross domain copies are replaced with same domain copies.
-    ; CHECK: %13 = COPY %12
-    ; CHECK: %1 = COPY %13
+    ; CHECK: %13:vk32 = COPY %12
+    ; CHECK: %1:vk8 = COPY %13
 
     %13 = COPY %12
     %1 = COPY %13.sub_8bit
@@ -160,9 +153,9 @@ body:             |
   bb.3.exit:
 
     ; check PHI, IMPLICIT_DEF, and INSERT_SUBREG replacers.
-    ; CHECK: %2 = PHI %1, %bb.2.else, %0, %bb.1.if
-    ; CHECK: %16 = COPY %2
-    ; CHECK: %18 = COPY %16
+    ; CHECK: %2:vk8 = PHI %1, %bb.2.else, %0, %bb.1.if
+    ; CHECK: %16:vk32 = COPY %2
+    ; CHECK: %18:vk1wm = COPY %16
   
     %2 = PHI %1, %bb.2.else, %0, %bb.1.if
     %17 = IMPLICIT_DEF
@@ -192,23 +185,12 @@ registers:
   - { id: 3, class: vr512, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
   - { id: 5, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk32, preferred-register: '' }
   - { id: 6, class: gr32, preferred-register: '' }
   - { id: 7, class: gr8, preferred-register: '' }
   - { id: 8, class: gr32, preferred-register: '' }
   - { id: 9, class: gr32, preferred-register: '' }
   - { id: 10, class: vk8wm, preferred-register: '' }
   - { id: 11, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 12, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 13, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 14, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 15, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 16, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 17, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 18, class: vk8, preferred-register: '' }
   - { id: 12, class: gr8, preferred-register: '' }
   - { id: 13, class: gr8, preferred-register: '' }
   - { id: 14, class: gr8, preferred-register: '' }
@@ -253,18 +235,18 @@ body:             |
     %4 = COPY %zmm3
   
     %5 = VCMPPDZrri %3, %4, 0
-    ; CHECK: %6 = COPY %5
-    ; CHECK: %7 = COPY %6
+    ; CHECK: %6:vk32 = COPY %5
+    ; CHECK: %7:vk8 = COPY %6
     %6 = COPY %5
     %7 = COPY %6.sub_8bit
 
-    ; CHECK: %12 = KSHIFTRBri %7, 2
-    ; CHECK: %13 = KSHIFTLBri %12, 1
-    ; CHECK: %14 = KNOTBrr %13
-    ; CHECK: %15 = KORBrr %14, %12
-    ; CHECK: %16 = KANDBrr %15, %13
-    ; CHECK: %17 = KXORBrr %16, %12
-    ; CHECK: %18 = KADDBrr %17, %14
+    ; CHECK: %12:vk8 = KSHIFTRBri %7, 2
+    ; CHECK: %13:vk8 = KSHIFTLBri %12, 1
+    ; CHECK: %14:vk8 = KNOTBrr %13
+    ; CHECK: %15:vk8 = KORBrr %14, %12
+    ; CHECK: %16:vk8 = KANDBrr %15, %13
+    ; CHECK: %17:vk8 = KXORBrr %16, %12
+    ; CHECK: %18:vk8 = KADDBrr %17, %14
     %12 = SHR8ri %7, 2, implicit-def dead %eflags
     %13 = SHL8ri %12, 1, implicit-def dead %eflags
     %14 = NOT8r %13
@@ -273,8 +255,8 @@ body:             |
     %17 = XOR8rr %16, %12, implicit-def dead %eflags
     %18 = ADD8rr %17, %14, implicit-def dead %eflags
   
-    ; CHECK: %9 = COPY %18
-    ; CHECK: %10 = COPY %9
+    ; CHECK: %9:vk32 = COPY %18
+    ; CHECK: %10:vk8wm = COPY %9
     %8 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %8, %18, 1
     %10 = COPY %9
@@ -308,22 +290,12 @@ registers:
   - { id: 3, class: vr512, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
   - { id: 5, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk32, preferred-register: '' }
   - { id: 6, class: gr32, preferred-register: '' }
   - { id: 7, class: gr16, preferred-register: '' }
   - { id: 8, class: gr32, preferred-register: '' }
   - { id: 9, class: gr32, preferred-register: '' }
   - { id: 10, class: vk16wm, preferred-register: '' }
   - { id: 11, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 12, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 13, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 14, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 15, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 16, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 17, class: vk16, preferred-register: '' }
   - { id: 12, class: gr16, preferred-register: '' }
   - { id: 13, class: gr16, preferred-register: '' }
   - { id: 14, class: gr16, preferred-register: '' }
@@ -367,17 +339,17 @@ body:             |
     %4 = COPY %zmm3
   
     %5 = VCMPPSZrri %3, %4, 0
-    ; CHECK: %6 = COPY %5
-    ; CHECK: %7 = COPY %6
+    ; CHECK: %6:vk32 = COPY %5
+    ; CHECK: %7:vk16 = COPY %6
     %6 = COPY %5
     %7 = COPY %6.sub_16bit
 
-    ; CHECK: %12 = KSHIFTRWri %7, 2
-    ; CHECK: %13 = KSHIFTLWri %12, 1
-    ; CHECK: %14 = KNOTWrr %13
-    ; CHECK: %15 = KORWrr %14, %12
-    ; CHECK: %16 = KANDWrr %15, %13
-    ; CHECK: %17 = KXORWrr %16, %12
+    ; CHECK: %12:vk16 = KSHIFTRWri %7, 2
+    ; CHECK: %13:vk16 = KSHIFTLWri %12, 1
+    ; CHECK: %14:vk16 = KNOTWrr %13
+    ; CHECK: %15:vk16 = KORWrr %14, %12
+    ; CHECK: %16:vk16 = KANDWrr %15, %13
+    ; CHECK: %17:vk16 = KXORWrr %16, %12
     %12 = SHR16ri %7, 2, implicit-def dead %eflags
     %13 = SHL16ri %12, 1, implicit-def dead %eflags
     %14 = NOT16r %13
@@ -385,8 +357,8 @@ body:             |
     %16 = AND16rr %15, %13, implicit-def dead %eflags
     %17 = XOR16rr %16, %12, implicit-def dead %eflags
   
-    ; CHECK: %9 = COPY %17
-    ; CHECK: %10 = COPY %9
+    ; CHECK: %9:vk32 = COPY %17
+    ; CHECK: %10:vk16wm = COPY %9
     %8 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %8, %17, 3
     %10 = COPY %9
@@ -419,15 +391,6 @@ registers:
   - { id: 2, class: vr512, preferred-register: '' }
   - { id: 3, class: vk32wm, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 5, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 10, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 11, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 12, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 13, class: vk32, preferred-register: '' }
   - { id: 5, class: gr32, preferred-register: '' }
   - { id: 6, class: gr32, preferred-register: '' }
   - { id: 7, class: gr32, preferred-register: '' }
@@ -469,15 +432,15 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %5 = KMOVDkm %0, 1, _, 0, _
-    ; CHECK: %6 = KSHIFTRDri %5, 2
-    ; CHECK: %7 = KSHIFTLDri %6, 1
-    ; CHECK: %8 = KNOTDrr %7
-    ; CHECK: %9 = KORDrr %8, %6
-    ; CHECK: %10 = KANDDrr %9, %7
-    ; CHECK: %11 = KXORDrr %10, %6
-    ; CHECK: %12 = KANDNDrr %11, %9
-    ; CHECK: %13 = KADDDrr %12, %11
+    ; CHECK: %5:vk32 = KMOVDkm %0, 1, _, 0, _
+    ; CHECK: %6:vk32 = KSHIFTRDri %5, 2
+    ; CHECK: %7:vk32 = KSHIFTLDri %6, 1
+    ; CHECK: %8:vk32 = KNOTDrr %7
+    ; CHECK: %9:vk32 = KORDrr %8, %6
+    ; CHECK: %10:vk32 = KANDDrr %9, %7
+    ; CHECK: %11:vk32 = KXORDrr %10, %6
+    ; CHECK: %12:vk32 = KANDNDrr %11, %9
+    ; CHECK: %13:vk32 = KADDDrr %12, %11
     %5 = MOV32rm %0, 1, _, 0, _
     %6 = SHR32ri %5, 2, implicit-def dead %eflags
     %7 = SHL32ri %6, 1, implicit-def dead %eflags
@@ -488,7 +451,7 @@ body:             |
     %12 = ANDN32rr %11, %9, implicit-def dead %eflags
     %13 = ADD32rr %12, %11, implicit-def dead %eflags
   
-    ; CHECK: %3 = COPY %13
+    ; CHECK: %3:vk32wm = COPY %13
     %3 = COPY %13
     %4 = VMOVDQU16Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
@@ -519,15 +482,6 @@ registers:
   - { id: 2, class: vr512, preferred-register: '' }
   - { id: 3, class: vk64wm, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 5, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 10, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 11, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 12, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 13, class: vk64, preferred-register: '' }
   - { id: 5, class: gr64, preferred-register: '' }
   - { id: 6, class: gr64, preferred-register: '' }
   - { id: 7, class: gr64, preferred-register: '' }
@@ -569,15 +523,15 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %5 = KMOVQkm %0, 1, _, 0, _
-    ; CHECK: %6 = KSHIFTRQri %5, 2
-    ; CHECK: %7 = KSHIFTLQri %6, 1
-    ; CHECK: %8 = KNOTQrr %7
-    ; CHECK: %9 = KORQrr %8, %6
-    ; CHECK: %10 = KANDQrr %9, %7
-    ; CHECK: %11 = KXORQrr %10, %6
-    ; CHECK: %12 = KANDNQrr %11, %9
-    ; CHECK: %13 = KADDQrr %12, %11
+    ; CHECK: %5:vk64 = KMOVQkm %0, 1, _, 0, _
+    ; CHECK: %6:vk64 = KSHIFTRQri %5, 2
+    ; CHECK: %7:vk64 = KSHIFTLQri %6, 1
+    ; CHECK: %8:vk64 = KNOTQrr %7
+    ; CHECK: %9:vk64 = KORQrr %8, %6
+    ; CHECK: %10:vk64 = KANDQrr %9, %7
+    ; CHECK: %11:vk64 = KXORQrr %10, %6
+    ; CHECK: %12:vk64 = KANDNQrr %11, %9
+    ; CHECK: %13:vk64 = KADDQrr %12, %11
     %5 = MOV64rm %0, 1, _, 0, _
     %6 = SHR64ri %5, 2, implicit-def dead %eflags
     %7 = SHL64ri %6, 1, implicit-def dead %eflags
@@ -588,7 +542,7 @@ body:             |
     %12 = ANDN64rr %11, %9, implicit-def dead %eflags
     %13 = ADD64rr %12, %11, implicit-def dead %eflags
   
-    ; CHECK: %3 = COPY %13
+    ; CHECK: %3:vk64wm = COPY %13
     %3 = COPY %13
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
@@ -619,11 +573,8 @@ registers:
   - { id: 2, class: vr512, preferred-register: '' }
   - { id: 3, class: vk16wm, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 5, class: vk16, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk16, preferred-register: '' }
   - { id: 5, class: gr16, preferred-register: '' }
   - { id: 6, class: gr16, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk8, preferred-register: '' }
 liveins:         
   - { reg: '%rdi', virtual-reg: '%0' }
   - { reg: '%zmm0', virtual-reg: '%1' }
@@ -656,13 +607,13 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %7 = KMOVBkm %0, 1, _, 0, _
-    ; CHECK: %5 = COPY %7
-    ; CHECK: %6 = KNOTWrr %5
+    ; CHECK: %7:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %5:vk16 = COPY %7
+    ; CHECK: %6:vk16 = KNOTWrr %5
     %5 = MOVZX16rm8 %0, 1, _, 0, _
     %6 = NOT16r %5
 
-    ; CHECK: %3 = COPY %6
+    ; CHECK: %3:vk16wm = COPY %6
     %3 = COPY %6
     %4 = VMOVAPSZrrk %2, killed %3, %1
     VMOVAPSZmr %0, 1, _, 0, _, killed %4
@@ -684,14 +635,9 @@ registers:
   - { id: 2, class: vr512, preferred-register: '' }
   - { id: 3, class: vk64wm, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 5, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk32, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk32, preferred-register: '' }
   - { id: 5, class: gr32, preferred-register: '' }
   - { id: 6, class: gr32, preferred-register: '' }
   - { id: 7, class: gr32, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk16, preferred-register: '' }
 liveins:         
   - { reg: '%rdi', virtual-reg: '%0' }
   - { reg: '%zmm0', virtual-reg: '%1' }
@@ -724,16 +670,16 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %8 = KMOVBkm %0, 1, _, 0, _
-    ; CHECK: %5 = COPY %8
-    ; CHECK: %9 = KMOVWkm %0, 1, _, 0, _
-    ; CHECK: %6 = COPY %9
-    ; CHECK: %7 = KADDDrr %5, %6
+    ; CHECK: %8:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %5:vk32 = COPY %8
+    ; CHECK: %9:vk16 = KMOVWkm %0, 1, _, 0, _
+    ; CHECK: %6:vk32 = COPY %9
+    ; CHECK: %7:vk32 = KADDDrr %5, %6
     %5 = MOVZX32rm8 %0, 1, _, 0, _
     %6 = MOVZX32rm16 %0, 1, _, 0, _
     %7 = ADD32rr %5, %6, implicit-def dead %eflags
 
-    ; CHECK: %3 = COPY %7
+    ; CHECK: %3:vk64wm = COPY %7
     %3 = COPY %7
     %4 = VMOVDQU16Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
@@ -755,14 +701,9 @@ registers:
   - { id: 2, class: vr512, preferred-register: '' }
   - { id: 3, class: vk64wm, preferred-register: '' }
   - { id: 4, class: vr512, preferred-register: '' }
-  # CHECK: - { id: 5, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 6, class: vk64, preferred-register: '' }
-  # CHECK: - { id: 7, class: vk64, preferred-register: '' }
   - { id: 5, class: gr64, preferred-register: '' }
   - { id: 6, class: gr64, preferred-register: '' }
   - { id: 7, class: gr64, preferred-register: '' }
-  # CHECK: - { id: 8, class: vk8, preferred-register: '' }
-  # CHECK: - { id: 9, class: vk16, preferred-register: '' }
 liveins:         
   - { reg: '%rdi', virtual-reg: '%0' }
   - { reg: '%zmm0', virtual-reg: '%1' }
@@ -795,16 +736,16 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %8 = KMOVBkm %0, 1, _, 0, _
-    ; CHECK: %5 = COPY %8
-    ; CHECK: %9 = KMOVWkm %0, 1, _, 0, _
-    ; CHECK: %6 = COPY %9
-    ; CHECK: %7 = KADDQrr %5, %6
+    ; CHECK: %8:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %5:vk64 = COPY %8
+    ; CHECK: %9:vk16 = KMOVWkm %0, 1, _, 0, _
+    ; CHECK: %6:vk64 = COPY %9
+    ; CHECK: %7:vk64 = KADDQrr %5, %6
     %5 = MOVZX64rm8 %0, 1, _, 0, _
     %6 = MOVZX64rm16 %0, 1, _, 0, _
     %7 = ADD64rr %5, %6, implicit-def dead %eflags
 
-    ; CHECK: %3 = COPY %7
+    ; CHECK: %3:vk64wm = COPY %7
     %3 = COPY %7
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
     VMOVDQA32Zmr %0, 1, _, 0, _, killed %4

@@ -24,6 +24,7 @@ PPCMCAsmInfoDarwin::PPCMCAsmInfoDarwin(bool is64Bit, const Triple& T) {
   }
   IsLittleEndian = false;
 
+  SeparatorString = "@";
   CommentString = ";";
   ExceptionsType = ExceptionHandling::DwarfCFI;
 

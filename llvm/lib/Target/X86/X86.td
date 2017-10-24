@@ -576,7 +576,7 @@ def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
   FeatureADX,
   FeatureRDSEED
 ]>;
-class BroadwellProc<string Name> : ProcModel<Name, HaswellModel,
+class BroadwellProc<string Name> : ProcModel<Name, BroadwellModel,
                                              BDWFeatures.Value, [
   ProcIntelBDW
 ]>;

@@ -170,7 +170,7 @@ public:
   /// Relaxes a fragment (changes the size of the padding) according to target
   /// requirements. The new size computation is done w.r.t a layout.
   ///
-  /// \param Fragment The fragment to relax.
+  /// \param PF The fragment to relax.
   /// \param Layout Code layout information.
   ///
   /// \returns true iff any relaxation occured.

@@ -22,11 +22,8 @@ body:             |
     liveins: %w0
 
     ; CHECK-LABEL: name: bswap_s32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[REVWr:%[0-9]+]] = REVWr [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[REVWr:%[0-9]+]]:gpr32 = REVWr [[COPY]]
     ; CHECK: %w0 = COPY [[REVWr]]
     %0(s32) = COPY %w0
     %1(s32) = G_BSWAP %0
@@ -47,11 +44,8 @@ body:             |
     liveins: %x0
 
     ; CHECK-LABEL: name: bswap_s64
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64
-    ; CHECK-NEXT: id: 1, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[REVXr:%[0-9]+]] = REVXr [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %x0
+    ; CHECK: [[REVXr:%[0-9]+]]:gpr64 = REVXr [[COPY]]
     ; CHECK: %x0 = COPY [[REVXr]]
     %0(s64) = COPY %x0
     %1(s64) = G_BSWAP %0

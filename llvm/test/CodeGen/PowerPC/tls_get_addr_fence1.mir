@@ -4,9 +4,9 @@
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
-  
+
   @tls_var = external thread_local local_unnamed_addr global i32
-  
+
   define i32 @tls_func() local_unnamed_addr {
   entry:
     %0 = load i32, i32* @tls_var
@@ -22,13 +22,13 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '%x2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -45,9 +45,9 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: %x2
@@ -57,7 +57,7 @@ body:             |
     %x3 = COPY %2
     BLR8 implicit %lr8, implicit %rm, implicit %x3
     ; CHECK-LABEL: bb.0.entry
-    ; CHECK: %[[reg1:[0-9]+]] = ADDIStlsgdHA %x2, @tls_var
+    ; CHECK: %[[reg1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStlsgdHA %x2, @tls_var
     ; CHECK: ADJCALLSTACKDOWN 0, 0
     ; CHECK: %x3 = ADDItlsgdL %[[reg1]], @tls_var
     ; CHECK: %x3 = GETtlsADDR %x3, @tls_var

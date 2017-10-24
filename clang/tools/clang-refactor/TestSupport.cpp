@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -241,9 +242,9 @@ bool TestRefactoringResultConsumer::handleAllResults() {
     // Dump the results:
     const auto &TestGroup = TestRanges.GroupedRanges[Group.index()];
     if (!CanonicalResult) {
-      llvm::errs() << TestGroup.Ranges.size() << " '" << TestGroup.Name
+      llvm::outs() << TestGroup.Ranges.size() << " '" << TestGroup.Name
                    << "' results:\n";
-      llvm::errs() << *CanonicalErrorMessage << "\n";
+      llvm::outs() << *CanonicalErrorMessage << "\n";
     } else {
       llvm::outs() << TestGroup.Ranges.size() << " '" << TestGroup.Name
                    << "' results:\n";
@@ -271,6 +272,25 @@ static unsigned addColumnOffset(StringRef Source, unsigned Offset,
          (NewlinePos == StringRef::npos ? ColumnOffset : (unsigned)NewlinePos);
 }
 
+static unsigned addEndLineOffsetAndEndColumn(StringRef Source, unsigned Offset,
+                                             unsigned LineNumberOffset,
+                                             unsigned Column) {
+  StringRef Line = Source.drop_front(Offset);
+  unsigned LineOffset = 0;
+  for (; LineNumberOffset != 0; --LineNumberOffset) {
+    size_t NewlinePos = Line.find_first_of("\r\n");
+    // Line offset goes out of bounds.
+    if (NewlinePos == StringRef::npos)
+      break;
+    LineOffset += NewlinePos + 1;
+    Line = Line.drop_front(NewlinePos + 1);
+  }
+  // Source now points to the line at +lineOffset;
+  size_t LineStart = Source.find_last_of("\r\n", /*From=*/Offset + LineOffset);
+  return addColumnOffset(
+      Source, LineStart == StringRef::npos ? 0 : LineStart + 1, Column - 1);
+}
+
 Optional<TestSelectionRangesInFile>
 findTestSelectionRanges(StringRef Filename) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrOrFile =
@@ -282,11 +302,11 @@ findTestSelectionRanges(StringRef Filename) {
   }
   StringRef Source = ErrOrFile.get()->getBuffer();
 
-  // FIXME (Alex L): 3rd capture groups for +line:column.
   // See the doc comment for this function for the explanation of this
   // syntax.
   static Regex RangeRegex("range[[:blank:]]*([[:alpha:]_]*)?[[:blank:]]*=[[:"
-                          "blank:]]*(\\+[[:digit:]]+)?");
+                          "blank:]]*(\\+[[:digit:]]+)?[[:blank:]]*(->[[:blank:]"
+                          "]*[\\+\\:[:digit:]]+)?");
 
   std::map<std::string, SmallVector<TestSelectionRange, 8>> GroupedRanges;
 
@@ -304,18 +324,22 @@ findTestSelectionRanges(StringRef Filename) {
     StringRef Comment =
         Source.substr(Tok.getLocation().getRawEncoding(), Tok.getLength());
     SmallVector<StringRef, 4> Matches;
-    // Allow CHECK: comments to contain range= commands.
-    if (!RangeRegex.match(Comment, &Matches) || Comment.contains("CHECK")) {
-      // Try to detect mistyped 'range:' comments to ensure tests don't miss
-      // anything.
+    // Try to detect mistyped 'range:' comments to ensure tests don't miss
+    // anything.
+    auto DetectMistypedCommand = [&]() -> bool {
       if (Comment.contains_lower("range") && Comment.contains("=") &&
           !Comment.contains_lower("run") && !Comment.contains("CHECK")) {
         llvm::errs() << "error: suspicious comment '" << Comment
                      << "' that "
                         "resembles the range command found\n";
         llvm::errs() << "note: please reword if this isn't a range command\n";
-        return None;
       }
+      return false;
+    };
+    // Allow CHECK: comments to contain range= commands.
+    if (!RangeRegex.match(Comment, &Matches) || Comment.contains("CHECK")) {
+      if (DetectMistypedCommand())
+        return None;
       continue;
     }
     unsigned Offset = Tok.getEndLoc().getRawEncoding();
@@ -325,9 +349,28 @@ findTestSelectionRanges(StringRef Filename) {
       if (Matches[2].drop_front().getAsInteger(10, ColumnOffset))
         assert(false && "regex should have produced a number");
     }
-    // FIXME (Alex L): Support true ranges.
     Offset = addColumnOffset(Source, Offset, ColumnOffset);
-    TestSelectionRange Range = {Offset, Offset};
+    unsigned EndOffset;
+
+    if (!Matches[3].empty()) {
+      static Regex EndLocRegex(
+          "->[[:blank:]]*(\\+[[:digit:]]+):([[:digit:]]+)");
+      SmallVector<StringRef, 4> EndLocMatches;
+      if (!EndLocRegex.match(Matches[3], &EndLocMatches)) {
+        if (DetectMistypedCommand())
+          return None;
+        continue;
+      }
+      unsigned EndLineOffset = 0, EndColumn = 0;
+      if (EndLocMatches[1].drop_front().getAsInteger(10, EndLineOffset) ||
+          EndLocMatches[2].getAsInteger(10, EndColumn))
+        assert(false && "regex should have produced a number");
+      EndOffset = addEndLineOffsetAndEndColumn(Source, Offset, EndLineOffset,
+                                               EndColumn);
+    } else {
+      EndOffset = Offset;
+    }
+    TestSelectionRange Range = {Offset, EndOffset};
     auto It = GroupedRanges.insert(std::make_pair(
         Matches[1].str(), SmallVector<TestSelectionRange, 8>{Range}));
     if (!It.second)

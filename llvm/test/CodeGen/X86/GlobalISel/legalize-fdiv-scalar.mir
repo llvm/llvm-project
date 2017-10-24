@@ -31,9 +31,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_fdiv_float
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %xmm1
-    ; CHECK: [[FDIV:%[0-9]+]](s32) = G_FDIV [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %xmm1
+    ; CHECK: [[FDIV:%[0-9]+]]:_(s32) = G_FDIV [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[FDIV]](s32)
     ; CHECK: RET 0, implicit %xmm0
     %0(s32) = COPY %xmm0
@@ -61,9 +61,9 @@ body:             |
     liveins: %xmm0, %xmm1
 
     ; CHECK-LABEL: name: test_fdiv_double
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %xmm1
-    ; CHECK: [[FDIV:%[0-9]+]](s64) = G_FDIV [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %xmm1
+    ; CHECK: [[FDIV:%[0-9]+]]:_(s64) = G_FDIV [[COPY]], [[COPY1]]
     ; CHECK: %xmm0 = COPY [[FDIV]](s64)
     ; CHECK: RET 0, implicit %xmm0
     %0(s64) = COPY %xmm0

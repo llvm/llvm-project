@@ -13,7 +13,7 @@ legalized:       true
 regBankSelected: true
 
 # GCN: global_addrspace
-# GCN: [[PTR:%[0-9]+]] = COPY %vgpr0_vgpr1
+# GCN: [[PTR:%[0-9]+]]:vreg_64 = COPY %vgpr0_vgpr1
 # GCN: FLAT_LOAD_DWORD  [[PTR]], 0, 0, 0
 
 body: |
