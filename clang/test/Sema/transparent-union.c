@@ -102,7 +102,7 @@ union pr15134v2 {
 
 union pr30520v { void b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'void'}}
 
-union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'int []'}}
+union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{flexible array member 'b' in a union is not allowed}}
 
 // expected-note@+1 2 {{forward declaration of 'struct stb'}}
 union pr30520s { struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}

@@ -35,17 +35,23 @@ for symbolizer in ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH']:
     if symbolizer in os.environ:
         config.environment[symbolizer] = os.environ[symbolizer]
 
-shlibpath_var = ''
-if platform.system() == 'Linux':
-    shlibpath_var = 'LD_LIBRARY_PATH'
-elif platform.system() == 'Darwin':
-    shlibpath_var = 'DYLD_LIBRARY_PATH'
-elif platform.system() == 'Windows':
-    shlibpath_var = 'PATH'
+def find_shlibpath_var():
+    if platform.system() in ['Linux', 'FreeBSD', 'NetBSD']:
+        yield 'LD_LIBRARY_PATH'
+    elif platform.system() == 'Darwin':
+        yield 'DYLD_LIBRARY_PATH'
+    elif platform.system() == 'Windows':
+        yield 'PATH'
 
-# in stand-alone builds, shlibdir is clang's build tree
-# while llvm_libs_dir is installed LLVM (and possibly older clang)
-shlibpath = os.path.pathsep.join((config.shlibdir, config.llvm_libs_dir,
-                                 config.environment.get(shlibpath_var,'')))
-
-config.environment[shlibpath_var] = shlibpath
+for shlibpath_var in find_shlibpath_var():
+    # in stand-alone builds, shlibdir is clang's build tree
+    # while llvm_libs_dir is installed LLVM (and possibly older clang)
+    shlibpath = os.path.pathsep.join(
+        (config.shlibdir,
+         config.llvm_libs_dir,
+         config.environment.get(shlibpath_var, '')))
+    config.environment[shlibpath_var] = shlibpath
+    break
+else:
+    lit_config.warning("unable to inject shared library path on '{}'"
+                       .format(platform.system()))
