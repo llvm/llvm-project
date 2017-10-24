@@ -64,6 +64,8 @@
 #include <utility>
 #include <vector>
 
+#define DEBUG_TYPE "asm-parser"
+
 using namespace llvm;
 
 namespace {
@@ -84,11 +86,6 @@ static cl::opt<ImplicitItModeTy> ImplicitItMode(
 
 static cl::opt<bool> AddBuildAttributes("arm-add-build-attributes",
                                         cl::init(false));
-
-cl::opt<bool>
-DevDiags("arm-asm-parser-dev-diags", cl::init(false),
-         cl::desc("Use extended diagnostics, which include implementation "
-                  "details useful for development"));
 
 enum VectorLaneTy { NoLanes, AllLanes, IndexedLane };
 
@@ -10200,18 +10197,16 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
 
       NearMissMessage Message;
       Message.Loc = OperandLoc;
-      raw_svector_ostream OS(Message.Message);
       if (OperandDiag) {
-        OS << OperandDiag;
+        Message.Message = OperandDiag;
       } else if (I.getOperandClass() == InvalidMatchClass) {
-        OS << "too many operands for instruction";
+        Message.Message = "too many operands for instruction";
       } else {
-        OS << "invalid operand for instruction";
-        if (DevDiags) {
-          OS << " class" << I.getOperandClass() << ", error "
-             << I.getOperandError() << ", opcode "
-             << MII.getName(I.getOpcode());
-        }
+        Message.Message = "invalid operand for instruction";
+        DEBUG(dbgs() << "Missing diagnostic string for operand class " <<
+              getMatchClassName((MatchClassKind)I.getOperandClass())
+              << I.getOperandClass() << ", error " << I.getOperandError()
+              << ", opcode " << MII.getName(I.getOpcode()) << "\n");
       }
       NearMissesOut.emplace_back(Message);
       break;

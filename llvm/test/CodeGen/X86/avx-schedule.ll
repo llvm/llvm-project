@@ -1509,8 +1509,8 @@ define <8 x float> @test_dpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2
 ;
 ; BTVER2-LABEL: test_dpps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:6.00]
+; BTVER2-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [17:6.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_dpps:

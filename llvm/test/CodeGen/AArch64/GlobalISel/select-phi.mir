@@ -106,7 +106,8 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(p0) = COPY %x1
-    %2(s1) = COPY %w2
+    %6:gpr(s32) = COPY %w2
+    %2(s1) = G_TRUNC %6
     G_BRCOND %2(s1), %bb.1
     G_BR %bb.2
 

@@ -47,6 +47,7 @@ class MCObjectStreamer : public MCStreamer {
   void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   MCSymbol *EmitCFILabel() override;
+  void EmitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
 
 protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
@@ -76,6 +77,7 @@ public:
   /// Get a data fragment to write into, creating a new one if the current
   /// fragment is not a data fragment.
   MCDataFragment *getOrCreateDataFragment();
+  MCPaddingFragment *getOrCreatePaddingFragment();
 
 protected:
   bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
@@ -121,6 +123,10 @@ public:
                          unsigned MaxBytesToEmit = 0) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
+  void
+  EmitCodePaddingBasicBlockStart(const MCCodePaddingContext &Context) override;
+  void
+  EmitCodePaddingBasicBlockEnd(const MCCodePaddingContext &Context) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                              unsigned Column, unsigned Flags,
                              unsigned Isa, unsigned Discriminator,

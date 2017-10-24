@@ -2603,6 +2603,23 @@ multiclass StoreUI<bits<2> sz, bit V, bits<2> opc, RegisterClass regtype,
                   (!cast<Instruction>(NAME # "ui") regtype:$Rt, GPR64sp:$Rn, 0)>;
 }
 
+// Same as StoreUI, but take a RegisterOperand. This is used by GlobalISel to
+// substitute zero-registers automatically.
+//
+// TODO: Roll out zero-register subtitution to GPR32/GPR64 and fold this back
+//       into StoreUI.
+multiclass StoreUIz<bits<2> sz, bit V, bits<2> opc, RegisterOperand regtype,
+             Operand indextype, string asm, list<dag> pattern> {
+  let AddedComplexity = 10, mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
+  def ui : BaseLoadStoreUI<sz, V, opc, (outs),
+                           (ins regtype:$Rt, GPR64sp:$Rn, indextype:$offset),
+                           asm, pattern>,
+           Sched<[WriteST]>;
+
+  def : InstAlias<asm # "\t$Rt, [$Rn]",
+                  (!cast<Instruction>(NAME # "ui") regtype:$Rt, GPR64sp:$Rn, 0)>;
+}
+
 def PrefetchOperand : AsmOperandClass {
   let Name = "Prefetch";
   let ParserMethod = "tryParsePrefetch";

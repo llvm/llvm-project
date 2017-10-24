@@ -32,11 +32,11 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
     ; CHECK: [[COPY2:%[0-9]+]] = COPY %w2
     ; CHECK: [[FMADDSrrr:%[0-9]+]] = FMADDSrrr [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK: %x0 = COPY [[FMADDSrrr]]
+    ; CHECK: %w0 = COPY [[FMADDSrrr]]
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = COPY %w2
     %3(s32) = G_FMA %0, %1, %2
-    %x0 = COPY %3
+    %w0 = COPY %3
 ...
 

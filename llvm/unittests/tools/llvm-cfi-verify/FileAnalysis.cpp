@@ -63,15 +63,24 @@ public:
 class BasicFileAnalysisTest : public ::testing::Test {
 protected:
   virtual void SetUp() {
-    if (Analysis.initialiseDisassemblyMembers()) {
-      FAIL() << "Failed to initialise FileAnalysis.";
+    SuccessfullyInitialised = true;
+    if (auto Err = Analysis.initialiseDisassemblyMembers()) {
+      handleAllErrors(std::move(Err), [&](const UnsupportedDisassembly &E) {
+        SuccessfullyInitialised = false;
+        outs()
+            << "Note: CFIVerifyTests are disabled due to lack of x86 support "
+               "on this build.\n";
+      });
     }
   }
 
+  bool SuccessfullyInitialised;
   ELFx86TestFileAnalysis Analysis;
 };
 
 TEST_F(BasicFileAnalysisTest, BasicDisassemblyTraversalTest) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90,                   // 0: nop
@@ -180,6 +189,8 @@ TEST_F(BasicFileAnalysisTest, BasicDisassemblyTraversalTest) {
 }
 
 TEST_F(BasicFileAnalysisTest, PrevAndNextFromBadInst) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90, // 0: nop
@@ -201,6 +212,8 @@ TEST_F(BasicFileAnalysisTest, PrevAndNextFromBadInst) {
 }
 
 TEST_F(BasicFileAnalysisTest, CFITrapTest) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90,                   // 0: nop
@@ -234,6 +247,8 @@ TEST_F(BasicFileAnalysisTest, CFITrapTest) {
 }
 
 TEST_F(BasicFileAnalysisTest, FallThroughTest) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop
@@ -272,6 +287,8 @@ TEST_F(BasicFileAnalysisTest, FallThroughTest) {
 }
 
 TEST_F(BasicFileAnalysisTest, DefiniteNextInstructionTest) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop
@@ -360,6 +377,8 @@ TEST_F(BasicFileAnalysisTest, DefiniteNextInstructionTest) {
 }
 
 TEST_F(BasicFileAnalysisTest, ControlFlowXRefsTest) {
+  if (!SuccessfullyInitialised)
+    return;
   Analysis.parseSectionContents(
       {
           0x90,                         // 0: nop

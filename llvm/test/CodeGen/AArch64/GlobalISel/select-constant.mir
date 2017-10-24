@@ -106,7 +106,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s64_0
     ; CHECK: [[FMOVD0_:%[0-9]+]] = FMOVD0
-    ; CHECK: %s0 = COPY [[FMOVD0_]]
+    ; CHECK: %x0 = COPY [[FMOVD0_]]
     %0(s64) = G_FCONSTANT double 0.0
-    %s0 = COPY %0(s64)
+    %x0 = COPY %0(s64)
 ...

@@ -935,7 +935,24 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);
   Ops.push_back(Res);
 
-  unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+  if (Code == InlineAsm::Kind_Clobber) {
+    // Clobbers should always have a 1:1 mapping with registers, and may
+    // reference registers that have illegal (e.g. vector) types. Hence, we
+    // shouldn't try to apply any sort of splitting logic to them.
+    assert(Regs.size() == RegVTs.size() && Regs.size() == ValueVTs.size() &&
+           "No 1:1 mapping from clobbers to regs?");
+    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    (void)SP;
+    for (unsigned I = 0, E = ValueVTs.size(); I != E; ++I) {
+      Ops.push_back(DAG.getRegister(Regs[I], RegVTs[I]));
+      assert(
+          (Regs[I] != SP ||
+           DAG.getMachineFunction().getFrameInfo().hasOpaqueSPAdjustment()) &&
+          "If we clobbered the stack pointer, MFI should know about it.");
+    }
+    return;
+  }
+
   for (unsigned Value = 0, Reg = 0, e = ValueVTs.size(); Value != e; ++Value) {
     unsigned NumRegs = TLI.getNumRegisters(*DAG.getContext(), ValueVTs[Value]);
     MVT RegisterVT = RegVTs[Value];
@@ -943,11 +960,6 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
       assert(Reg < Regs.size() && "Mismatch in # registers expected");
       unsigned TheReg = Regs[Reg++];
       Ops.push_back(DAG.getRegister(TheReg, RegisterVT));
-
-      if (TheReg == SP && Code == InlineAsm::Kind_Clobber) {
-        // If we clobbered the stack pointer, MFI should know about it.
-        assert(DAG.getMachineFunction().getFrameInfo().hasOpaqueSPAdjustment());
-      }
     }
   }
 }
