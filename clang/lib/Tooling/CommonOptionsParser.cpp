@@ -24,9 +24,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -81,7 +81,7 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
   return Commands;
 }
 
-CommonOptionsParser::CommonOptionsParser(
+llvm::Error CommonOptionsParser::init(
     int &argc, const char **argv, cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
   static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
@@ -105,20 +105,30 @@ CommonOptionsParser::CommonOptionsParser(
       cl::desc("Additional argument to prepend to the compiler command line"),
       cl::cat(Category), cl::sub(*cl::AllSubCommands));
 
+  cl::ResetAllOptionOccurrences();
+
   cl::HideUnrelatedOptions(Category);
 
   std::string ErrorMessage;
   Compilations =
       FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
-  if (!Compilations && !ErrorMessage.empty())
-    llvm::errs() << ErrorMessage;
-  cl::ParseCommandLineOptions(argc, argv, Overview);
+  if (!ErrorMessage.empty())
+    ErrorMessage.append("\n");
+  llvm::raw_string_ostream OS(ErrorMessage);
+  // Stop initializing if command-line option parsing failed.
+  if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
+    OS.flush();
+    return llvm::make_error<llvm::StringError>("[CommonOptionsParser]: " +
+                                                   ErrorMessage,
+                                               llvm::inconvertibleErrorCode());
+  }
+
   cl::PrintOptionValues();
 
   SourcePathList = SourcePaths;
   if ((OccurrencesFlag == cl::ZeroOrMore || OccurrencesFlag == cl::Optional) &&
       SourcePathList.empty())
-    return;
+    return llvm::Error::success();
   if (!Compilations) {
     if (!BuildPath.empty()) {
       Compilations =
@@ -142,4 +152,27 @@ CommonOptionsParser::CommonOptionsParser(
   AdjustingCompilations->appendArgumentsAdjuster(
       getInsertArgumentAdjuster(ArgsAfter, ArgumentInsertPosition::END));
   Compilations = std::move(AdjustingCompilations);
+  return llvm::Error::success();
+}
+
+llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
+    int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
+  CommonOptionsParser Parser;
+  llvm::Error Err =
+      Parser.init(argc, argv, Category, OccurrencesFlag, Overview);
+  if (Err)
+    return std::move(Err);
+  return std::move(Parser);
+}
+
+CommonOptionsParser::CommonOptionsParser(
+    int &argc, const char **argv, cl::OptionCategory &Category,
+    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
+  llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
+  if (Err) {
+    llvm::report_fatal_error(
+        "CommonOptionsParser: failed to parse command-line arguments. " +
+        llvm::toString(std::move(Err)));
+  }
 }

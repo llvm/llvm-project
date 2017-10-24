@@ -82,6 +82,10 @@ Improvements to Clang's diagnostics
   tautological comparisons between integer variable of the type ``T`` and the
   largest/smallest possible integer constant of that same type.
 
+- For C code, ``-Wsign-compare``, ``-Wtautological-constant-compare`` and
+  ``-Wtautological-constant-out-of-range-compare`` were adjusted to use the
+  underlying datatype of ``enum``.
+
 - ``-Wnull-pointer-arithmetic`` now warns about performing pointer arithmetic
   on a null pointer. Such pointer arithmetic has an undefined behavior if the
   offset is nonzero. It also now warns about arithmetic on a null pointer

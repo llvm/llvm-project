@@ -127,6 +127,9 @@ public:
 
     /// This is a compound statement scope.
     CompoundStmtScope = 0x400000,
+
+    /// We are between inheritance colon and the real class/struct definition scope.
+    ClassInheritanceScope = 0x800000,
   };
 private:
   /// The parent scope for this scope.  This is null for the translation-unit

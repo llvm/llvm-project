@@ -3,5 +3,6 @@
 #endif
 
 REFACTORING_ACTION(LocalRename)
+REFACTORING_ACTION(Extract)
 
 #undef REFACTORING_ACTION

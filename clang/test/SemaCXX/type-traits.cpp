@@ -2352,3 +2352,236 @@ void is_trivially_destructible_test() {
   { int arr[F(__is_trivially_destructible(void))]; }
   { int arr[F(__is_trivially_destructible(const volatile void))]; }
 }
+
+// Instantiation of __has_unique_object_representations
+template <typename T>
+struct has_unique_object_representations {
+  static const bool value = __has_unique_object_representations(T);
+};
+
+static_assert(!has_unique_object_representations<void>::value, "void is never unique");
+static_assert(!has_unique_object_representations<const void>::value, "void is never unique");
+static_assert(!has_unique_object_representations<volatile void>::value, "void is never unique");
+static_assert(!has_unique_object_representations<const volatile void>::value, "void is never unique");
+
+static_assert(has_unique_object_representations<int>::value, "integrals are");
+static_assert(has_unique_object_representations<const int>::value, "integrals are");
+static_assert(has_unique_object_representations<volatile int>::value, "integrals are");
+static_assert(has_unique_object_representations<const volatile int>::value, "integrals are");
+
+static_assert(has_unique_object_representations<void *>::value, "as are pointers");
+static_assert(has_unique_object_representations<const void *>::value, "as are pointers");
+static_assert(has_unique_object_representations<volatile void *>::value, "are pointers");
+static_assert(has_unique_object_representations<const volatile void *>::value, "as are pointers");
+
+static_assert(has_unique_object_representations<int *>::value, "as are pointers");
+static_assert(has_unique_object_representations<const int *>::value, "as are pointers");
+static_assert(has_unique_object_representations<volatile int *>::value, "as are pointers");
+static_assert(has_unique_object_representations<const volatile int *>::value, "as are pointers");
+
+class C {};
+using FP = int (*)(int);
+using PMF = int (C::*)(int);
+using PMD = int C::*;
+
+static_assert(has_unique_object_representations<FP>::value, "even function pointers");
+static_assert(has_unique_object_representations<const FP>::value, "even function pointers");
+static_assert(has_unique_object_representations<volatile FP>::value, "even function pointers");
+static_assert(has_unique_object_representations<const volatile FP>::value, "even function pointers");
+
+static_assert(has_unique_object_representations<PMF>::value, "and pointer to members");
+static_assert(has_unique_object_representations<const PMF>::value, "and pointer to members");
+static_assert(has_unique_object_representations<volatile PMF>::value, "and pointer to members");
+static_assert(has_unique_object_representations<const volatile PMF>::value, "and pointer to members");
+
+static_assert(has_unique_object_representations<PMD>::value, "and pointer to members");
+static_assert(has_unique_object_representations<const PMD>::value, "and pointer to members");
+static_assert(has_unique_object_representations<volatile PMD>::value, "and pointer to members");
+static_assert(has_unique_object_representations<const volatile PMD>::value, "and pointer to members");
+
+static_assert(has_unique_object_representations<bool>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<char>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<signed char>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<unsigned char>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<short>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<unsigned short>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<int>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<unsigned int>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<long>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<unsigned long>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<long long>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<unsigned long long>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<wchar_t>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<char16_t>::value, "yes, all integral types");
+static_assert(has_unique_object_representations<char32_t>::value, "yes, all integral types");
+
+static_assert(!has_unique_object_representations<void>::value, "but not void!");
+static_assert(!has_unique_object_representations<decltype(nullptr)>::value, "or nullptr_t");
+static_assert(!has_unique_object_representations<float>::value, "definitely not Floating Point");
+static_assert(!has_unique_object_representations<double>::value, "definitely not Floating Point");
+static_assert(!has_unique_object_representations<long double>::value, "definitely not Floating Point");
+
+struct NoPadding {
+  int a;
+  int b;
+};
+
+static_assert(has_unique_object_representations<NoPadding>::value, "types without padding are");
+
+struct InheritsFromNoPadding : NoPadding {
+  int c;
+  int d;
+};
+
+static_assert(has_unique_object_representations<InheritsFromNoPadding>::value, "types without padding are");
+
+struct VirtuallyInheritsFromNoPadding : virtual NoPadding {
+  int c;
+  int d;
+};
+
+static_assert(!has_unique_object_representations<VirtuallyInheritsFromNoPadding>::value, "No virtual inheritence");
+
+struct Padding {
+  char a;
+  int b;
+};
+
+static_assert(!has_unique_object_representations<Padding>::value, "but not with padding");
+
+struct InheritsFromPadding : Padding {
+  int c;
+  int d;
+};
+
+static_assert(!has_unique_object_representations<InheritsFromPadding>::value, "or its subclasses");
+
+struct TailPadding {
+  int a;
+  char b;
+};
+
+static_assert(!has_unique_object_representations<TailPadding>::value, "even at the end");
+
+struct TinyStruct {
+  char a;
+};
+
+static_assert(has_unique_object_representations<TinyStruct>::value, "Should be no padding");
+
+struct InheritsFromTinyStruct : TinyStruct {
+  int b;
+};
+
+static_assert(!has_unique_object_representations<InheritsFromTinyStruct>::value, "Inherit causes padding");
+
+union NoPaddingUnion {
+  int a;
+  unsigned int b;
+};
+
+static_assert(has_unique_object_representations<NoPaddingUnion>::value, "unions follow the same rules as structs");
+
+union PaddingUnion {
+  int a;
+  long long b;
+};
+
+static_assert(!has_unique_object_representations<PaddingUnion>::value, "unions follow the same rules as structs");
+
+struct NotTriviallyCopyable {
+  int x;
+  NotTriviallyCopyable(const NotTriviallyCopyable &) {}
+};
+
+static_assert(!has_unique_object_representations<NotTriviallyCopyable>::value, "must be trivially copyable");
+
+struct HasNonUniqueMember {
+  float x;
+};
+
+static_assert(!has_unique_object_representations<HasNonUniqueMember>::value, "all members must be unique");
+
+enum ExampleEnum { xExample,
+                   yExample };
+enum LLEnum : long long { xLongExample,
+                          yLongExample };
+
+static_assert(has_unique_object_representations<ExampleEnum>::value, "Enums are integrals, so unique!");
+static_assert(has_unique_object_representations<LLEnum>::value, "Enums are integrals, so unique!");
+
+enum class ExampleEnumClass { xExample,
+                              yExample };
+enum class LLEnumClass : long long { xLongExample,
+                                     yLongExample };
+
+static_assert(has_unique_object_representations<ExampleEnumClass>::value, "Enums are integrals, so unique!");
+static_assert(has_unique_object_representations<LLEnumClass>::value, "Enums are integrals, so unique!");
+
+// because reference types aren't object types
+static_assert(!has_unique_object_representations<int &>::value, "No references!");
+static_assert(!has_unique_object_representations<const int &>::value, "No references!");
+static_assert(!has_unique_object_representations<volatile int &>::value, "No references!");
+static_assert(!has_unique_object_representations<const volatile int &>::value, "No references!");
+
+static_assert(!has_unique_object_representations<Empty>::value, "No empty types!");
+
+class Compressed : Empty {
+  int x;
+};
+
+static_assert(has_unique_object_representations<Compressed>::value, "But inheriting from one is ok");
+
+class EmptyInheritor : Compressed {};
+
+static_assert(has_unique_object_representations<EmptyInheritor>::value, "As long as the base has items, empty is ok");
+
+class Dynamic {
+  virtual void A();
+  int i;
+};
+
+static_assert(!has_unique_object_representations<Dynamic>::value, "Dynamic types are not valid");
+
+class InheritsDynamic : Dynamic {
+  int j;
+};
+
+static_assert(!has_unique_object_representations<InheritsDynamic>::value, "Dynamic types are not valid");
+
+static_assert(has_unique_object_representations<int[42]>::value, "Arrays are fine, as long as their value type is");
+static_assert(has_unique_object_representations<int[]>::value, "Arrays are fine, as long as their value type is");
+static_assert(has_unique_object_representations<int[][42]>::value, "Arrays are fine, as long as their value type is");
+static_assert(!has_unique_object_representations<double[42]>::value, "So no array of doubles!");
+static_assert(!has_unique_object_representations<double[]>::value, "So no array of doubles!");
+static_assert(!has_unique_object_representations<double[][42]>::value, "So no array of doubles!");
+
+static_assert(!has_unique_object_representations<int(int)>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) volatile>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const volatile>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) volatile &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const volatile &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) volatile &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int) const volatile &&>::value, "Functions are not unique");
+
+static_assert(!has_unique_object_representations<int(int, ...)>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) volatile>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const volatile>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) volatile &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const volatile &>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) volatile &&>::value, "Functions are not unique");
+static_assert(!has_unique_object_representations<int(int, ...) const volatile &&>::value, "Functions are not unique");
+
+static auto lambda = []() {};
+static_assert(!has_unique_object_representations<decltype(lambda)>::value, "Lambdas are not unique");
+
