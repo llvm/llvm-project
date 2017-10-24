@@ -324,9 +324,9 @@ static void remapTypesInSymbolRecord(ObjFile *File,
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
     for (TypeIndex &TI : TIs) {
       if (!remapTypeIndex(TI, TypeOrItemMap)) {
-        TI = TypeIndex(SimpleTypeKind::NotTranslated);
         log("ignoring symbol record in " + File->getName() +
             " with bad type index 0x" + utohexstr(TI.getIndex()));
+        TI = TypeIndex(SimpleTypeKind::NotTranslated);
         continue;
       }
     }

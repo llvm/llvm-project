@@ -15,11 +15,9 @@
 #ifndef XRAY_BUFFER_QUEUE_H
 #define XRAY_BUFFER_QUEUE_H
 
+#include <cstddef>
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_mutex.h"
-#include <cstdint>
-#include <memory>
-#include <utility>
 
 namespace __xray {
 
@@ -29,38 +27,45 @@ namespace __xray {
 /// the "flight data recorder" (FDR) mode to support ongoing XRay function call
 /// trace collection.
 class BufferQueue {
-public:
+ public:
   struct Buffer {
     void *Buffer = nullptr;
     size_t Size = 0;
   };
 
-private:
+ private:
+  struct BufferRep {
+    // The managed buffer.
+    Buffer Buffer;
+
+    // This is true if the buffer has been returned to the available queue, and
+    // is considered "used" by another thread.
+    bool Used = false;
+  };
+
   // Size of each individual Buffer.
   size_t BufferSize;
 
-  // We use a bool to indicate whether the Buffer has been used in this
-  // freelist implementation.
-  std::unique_ptr<std::tuple<Buffer, bool>[]> Buffers;
+  BufferRep *Buffers;
   size_t BufferCount;
 
   __sanitizer::SpinMutex Mutex;
   __sanitizer::atomic_uint8_t Finalizing;
 
   // Pointers to buffers managed/owned by the BufferQueue.
-  std::unique_ptr<void *[]> OwnedBuffers;
+  void **OwnedBuffers;
 
   // Pointer to the next buffer to be handed out.
-  std::tuple<Buffer, bool> *Next;
+  BufferRep *Next;
 
   // Pointer to the entry in the array where the next released buffer will be
   // placed.
-  std::tuple<Buffer, bool> *First;
+  BufferRep *First;
 
   // Count of buffers that have been handed out through 'getBuffer'.
   size_t LiveBuffers;
 
-public:
+ public:
   enum class ErrorCode : unsigned {
     Ok,
     NotEnoughMemory,
@@ -71,16 +76,16 @@ public:
 
   static const char *getErrorString(ErrorCode E) {
     switch (E) {
-    case ErrorCode::Ok:
-      return "(none)";
-    case ErrorCode::NotEnoughMemory:
-      return "no available buffers in the queue";
-    case ErrorCode::QueueFinalizing:
-      return "queue already finalizing";
-    case ErrorCode::UnrecognizedBuffer:
-      return "buffer being returned not owned by buffer queue";
-    case ErrorCode::AlreadyFinalized:
-      return "queue already finalized";
+      case ErrorCode::Ok:
+        return "(none)";
+      case ErrorCode::NotEnoughMemory:
+        return "no available buffers in the queue";
+      case ErrorCode::QueueFinalizing:
+        return "queue already finalizing";
+      case ErrorCode::UnrecognizedBuffer:
+        return "buffer being returned not owned by buffer queue";
+      case ErrorCode::AlreadyFinalized:
+        return "queue already finalized";
     }
     return "unknown error";
   }
@@ -131,12 +136,12 @@ public:
   /// Applies the provided function F to each Buffer in the queue, only if the
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation).
-  template <class F> void apply(F Fn) {
+  template <class F>
+  void apply(F Fn) {
     __sanitizer::SpinMutexLock G(&Mutex);
-    for (auto I = Buffers.get(), E = Buffers.get() + BufferCount; I != E; ++I) {
+    for (auto I = Buffers, E = Buffers + BufferCount; I != E; ++I) {
       const auto &T = *I;
-      if (std::get<1>(T))
-        Fn(std::get<0>(T));
+      if (T.Used) Fn(T.Buffer);
     }
   }
 
@@ -144,6 +149,6 @@ public:
   ~BufferQueue();
 };
 
-} // namespace __xray
+}  // namespace __xray
 
-#endif // XRAY_BUFFER_QUEUE_H
+#endif  // XRAY_BUFFER_QUEUE_H

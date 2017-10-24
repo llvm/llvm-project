@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "BodyFarm.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -23,6 +22,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
+#include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/Support/BumpVector.h"
@@ -63,18 +63,12 @@ AnalysisDeclContext::AnalysisDeclContext(AnalysisDeclContextManager *Mgr,
   cfgBuildOptions.forcedBlkExprs = &forcedBlkExprs;
 }
 
-AnalysisDeclContextManager::AnalysisDeclContextManager(bool useUnoptimizedCFG,
-                                                       bool addImplicitDtors,
-                                                       bool addInitializers,
-                                                       bool addTemporaryDtors,
-                                                       bool addLifetime,
-                                                       bool addLoopExit,
-                                                       bool synthesizeBodies,
-                                                       bool addStaticInitBranch,
-                                                       bool addCXXNewAllocator,
-                                                       CodeInjector *injector)
-  : Injector(injector), SynthesizeBodies(synthesizeBodies)
-{
+AnalysisDeclContextManager::AnalysisDeclContextManager(
+    ASTContext &ASTCtx, bool useUnoptimizedCFG, bool addImplicitDtors,
+    bool addInitializers, bool addTemporaryDtors, bool addLifetime,
+    bool addLoopExit, bool synthesizeBodies, bool addStaticInitBranch,
+    bool addCXXNewAllocator, CodeInjector *injector)
+    : ASTCtx(ASTCtx), Injector(injector), SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;
   cfgBuildOptions.AddInitializers = addInitializers;
@@ -87,11 +81,6 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(bool useUnoptimizedCFG,
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }
 
-static BodyFarm &getBodyFarm(ASTContext &C, CodeInjector *injector = nullptr) {
-  static BodyFarm *BF = new BodyFarm(C, injector);
-  return *BF;
-}
-
 Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   IsAutosynthesized = false;
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -99,8 +88,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
       Body = CoroBody->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody =
-          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(FD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm()->getBody(FD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -111,8 +99,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody =
-          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(MD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm()->getBody(MD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -315,6 +302,12 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
   if (!AC)
     AC = llvm::make_unique<AnalysisDeclContext>(this, D, cfgBuildOptions);
   return AC.get();
+}
+
+BodyFarm *AnalysisDeclContextManager::getBodyFarm() {
+  if (!BdyFrm)
+    BdyFrm = new BodyFarm(ASTCtx, Injector.get());
+  return BdyFrm;
 }
 
 const StackFrameContext *
@@ -610,7 +603,10 @@ AnalysisDeclContext::~AnalysisDeclContext() {
   }
 }
 
-AnalysisDeclContextManager::~AnalysisDeclContextManager() {}
+AnalysisDeclContextManager::~AnalysisDeclContextManager() {
+  if (BdyFrm)
+    delete BdyFrm;
+}
 
 LocationContext::~LocationContext() {}
 

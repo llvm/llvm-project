@@ -250,10 +250,14 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     // If this is an invoke instruction, we're scanning it as part of
     // one of its successor blocks, since we can't insert code after it
     // in its own block, and we don't want to split critical edges.
-    if (isa<InvokeInst>(Inst))
-      InsertReverseInsertPt(&*BB->getFirstInsertionPt());
-    else
-      InsertReverseInsertPt(&*++Inst->getIterator());
+    BasicBlock::iterator InsertAfter;
+    if (isa<InvokeInst>(Inst)) {
+      const auto IP = BB->getFirstInsertionPt();
+      InsertAfter = IP == BB->end() ? std::prev(BB->end()) : IP;
+    } else {
+      InsertAfter = std::next(Inst->getIterator());
+    }
+    InsertReverseInsertPt(&*InsertAfter);
   };
 
   // Check for possible direct uses.
