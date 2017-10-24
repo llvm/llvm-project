@@ -51,12 +51,15 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_32
-    ; CHECK: %w0 = COPY [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: %w0 = COPY [[COPY2]]
     %0(s64) = COPY %x0
     %1(s8) = G_TRUNC %0
-    %w0 = COPY %1(s8)
+    %2:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -76,10 +79,13 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr32
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
     ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]]
-    ; CHECK: %w0 = COPY [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]] = COPY [[COPY1]]
+    ; CHECK: %w0 = COPY [[COPY2]]
     %0(s32) = COPY %w0
     %1(s1) = G_TRUNC %0
-    %w0 = COPY %1(s1)
+    %2:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %2(s32)
 ...

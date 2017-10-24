@@ -114,6 +114,10 @@ FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "Be careful, this will also close e.g. asan's stderr/stdout.")
 FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
     "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
+FUZZER_FLAG_INT(purge_allocator_interval, 1, "Purge allocator caches and "
+    "quarantines every <N> seconds. When rss_limit_mb is specified (>0), "
+    "purging starts when RSS exceeds 50% of rss_limit_mb. Pass "
+    "purge_allocator_interval=-1 to disable this functionality.")
 FUZZER_FLAG_INT(trace_malloc, 0, "If >= 1 will print all mallocs/frees. "
     "If >= 2 will also print stack traces.")
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"

@@ -99,12 +99,15 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64sp
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[LDRHHui:%[0-9]+]] = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
-    ; CHECK: %w0 = COPY [[LDRHHui]]
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRHHui]]
+    ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
-    %w0 = COPY %1(s16)
+    %2:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -124,12 +127,15 @@ body:             |
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gpr64sp
     ; CHECK-NEXT: id: 1, class: gpr32
+    ; CHECK-NEXT: id: 2, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[LDRBBui:%[0-9]+]] = LDRBBui [[COPY]], 0 :: (load 1 from %ir.addr)
-    ; CHECK: %w0 = COPY [[LDRBBui]]
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRBBui]]
+    ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
-    %w0 = COPY %1(s8)
+    %2:gpr(s32) = G_ANYEXT %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -242,14 +248,17 @@ body:             |
     ; CHECK-NEXT: id: 1, class: gpr
     ; CHECK-NEXT: id: 2, class: gpr
     ; CHECK-NEXT: id: 3, class: gpr32
+    ; CHECK-NEXT: id: 4, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[LDRHHui:%[0-9]+]] = LDRHHui [[COPY]], 32 :: (load 2 from %ir.addr)
-    ; CHECK: %w0 = COPY [[LDRHHui]]
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRHHui]]
+    ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 64
     %2(p0) = G_GEP %0, %1
     %3(s16) = G_LOAD %2 :: (load 2 from %ir.addr)
-    %w0 = COPY %3
+    %4:gpr(s32) = G_ANYEXT %3
+    %w0 = COPY %4
 ...
 
 ---
@@ -273,14 +282,17 @@ body:             |
     ; CHECK-NEXT: id: 1, class: gpr
     ; CHECK-NEXT: id: 2, class: gpr
     ; CHECK-NEXT: id: 3, class: gpr32
+    ; CHECK-NEXT: id: 4, class: gpr32all
     ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
     ; CHECK: [[LDRBBui:%[0-9]+]] = LDRBBui [[COPY]], 1 :: (load 1 from %ir.addr)
-    ; CHECK: %w0 = COPY [[LDRBBui]]
+    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[LDRBBui]]
+    ; CHECK: %w0 = COPY [[COPY1]]
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 1
     %2(p0) = G_GEP %0, %1
     %3(s8) = G_LOAD %2 :: (load 1 from %ir.addr)
-    %w0 = COPY %3
+    %4:gpr(s32) = G_ANYEXT %3
+    %w0 = COPY %4
 ...
 
 ---

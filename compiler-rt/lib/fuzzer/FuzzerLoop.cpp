@@ -587,7 +587,7 @@ void Fuzzer::MutateAndTestOne() {
     size_t NewSize = 0;
     NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
-    assert(NewSize <= CurrentMaxMutationLen && "Mutator return overisized unit");
+    assert(NewSize <= CurrentMaxMutationLen && "Mutator return oversized unit");
     Size = NewSize;
     II.NumExecutedMutations++;
     if (RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II))
@@ -596,6 +596,25 @@ void Fuzzer::MutateAndTestOne() {
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);
   }
+}
+
+void Fuzzer::PurgeAllocator() {
+  if (Options.PurgeAllocatorIntervalSec < 0 ||
+      !EF->__sanitizer_purge_allocator) {
+    return;
+  }
+  if (duration_cast<seconds>(system_clock::now() -
+                             LastAllocatorPurgeAttemptTime).count() <
+      Options.PurgeAllocatorIntervalSec) {
+    return;
+  }
+
+  if (Options.RssLimitMb <= 0 ||
+      GetPeakRSSMb() > static_cast<size_t>(Options.RssLimitMb) / 2) {
+    EF->__sanitizer_purge_allocator();
+  }
+
+  LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
 void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
@@ -699,6 +718,8 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
 
     // Perform several mutations and runs.
     MutateAndTestOne();
+
+    PurgeAllocator();
   }
 
   PrintStats("DONE  ", "\n");

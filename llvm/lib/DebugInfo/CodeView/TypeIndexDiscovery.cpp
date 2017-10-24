@@ -434,6 +434,8 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_ENVBLOCK:
   case SymbolKind::S_BLOCK32:
   case SymbolKind::S_FRAMEPROC:
+  case SymbolKind::S_THUNK32:
+  case SymbolKind::S_FRAMECOOKIE:
     break;
   // Scope ending symbols.
   case SymbolKind::S_END:

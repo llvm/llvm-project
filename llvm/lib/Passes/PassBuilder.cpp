@@ -362,6 +362,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   invokePeepholeEPCallbacks(FPM, Level);
 
+  // For PGO use pipeline, try to optimize memory intrinsics such as memcpy
+  // using the size value profile. Don't perform this when optimizing for size.
+  if (PGOOpt && !PGOOpt->ProfileUseFile.empty() &&
+      !isOptimizingForSize(Level))
+    FPM.addPass(PGOMemOPSizeOpt());
+
   FPM.addPass(TailCallElimPass());
   FPM.addPass(SimplifyCFGPass());
 

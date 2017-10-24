@@ -374,6 +374,7 @@ def ObjCRootClass : DiagGroup<"objc-root-class">;
 def ObjCPointerIntrospectPerformSelector : DiagGroup<"deprecated-objc-pointer-introspection-performSelector">;
 def ObjCPointerIntrospect : DiagGroup<"deprecated-objc-pointer-introspection", [ObjCPointerIntrospectPerformSelector]>;
 def ObjCMultipleMethodNames : DiagGroup<"objc-multiple-method-names">;
+def ObjCFlexibleArray : DiagGroup<"objc-flexible-array">;
 def OpenCLUnsupportedRGBA: DiagGroup<"opencl-unsupported-rgba">;
 def DeprecatedObjCIsaUsage : DiagGroup<"deprecated-objc-isa-usage">;
 def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
@@ -750,6 +751,7 @@ def Most : DiagGroup<"most", [
     VolatileRegisterVar,
     ObjCMissingSuperCalls,
     ObjCDesignatedInit,
+    ObjCFlexibleArray,
     OverloadedVirtual,
     PrivateExtern,
     SelTypeCast,

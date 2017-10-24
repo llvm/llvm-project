@@ -17,5 +17,6 @@ body: |
     %1:_(s64) = COPY %x1
     %2:_(p0) = COPY %x2
     %3:_(s128) = G_MERGE_VALUES %0, %1
-    %d0 = COPY %3
+    %4:_(s64) = G_TRUNC %3
+    %d0 = COPY %4
 ...

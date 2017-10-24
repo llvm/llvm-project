@@ -82,7 +82,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
   const char *getDefaultLinker() const override {
-    return "lld";
+    return "ld.lld";
   }
 
 protected:

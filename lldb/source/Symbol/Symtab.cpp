@@ -399,29 +399,6 @@ void Symtab::InitNameIndexes() {
     m_basename_to_index.SizeToFit();
     m_method_to_index.Sort();
     m_method_to_index.SizeToFit();
-
-    //        static StreamFile a ("/tmp/a.txt");
-    //
-    //        count = m_basename_to_index.GetSize();
-    //        if (count)
-    //        {
-    //            for (size_t i=0; i<count; ++i)
-    //            {
-    //                if (m_basename_to_index.GetValueAtIndex(i, entry.value))
-    //                    a.Printf ("%s BASENAME\n",
-    //                    m_symbols[entry.value].GetMangled().GetName().GetCString());
-    //            }
-    //        }
-    //        count = m_method_to_index.GetSize();
-    //        if (count)
-    //        {
-    //            for (size_t i=0; i<count; ++i)
-    //            {
-    //                if (m_method_to_index.GetValueAtIndex(i, entry.value))
-    //                    a.Printf ("%s METHOD\n",
-    //                    m_symbols[entry.value].GetMangled().GetName().GetCString());
-    //            }
-    //        }
   }
 }
 
