@@ -1757,13 +1757,16 @@ private:
 
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule) const {
+    if (!Matched)
+      return false;
+
     if (OperandRenderers.size() != Matched->getNumOperands())
       return false;
 
     for (const auto &Renderer : enumerate(OperandRenderers)) {
       if (const auto *Copy = dyn_cast<CopyRenderer>(&*Renderer.value())) {
         const OperandMatcher &OM = Rule.getOperandMatcher(Copy->getSymbolicName());
-        if ((Matched != nullptr && Matched != &OM.getInstructionMatcher()) ||
+        if (Matched != &OM.getInstructionMatcher() ||
             OM.getOperandIndex() != Renderer.index())
           return false;
       } else
