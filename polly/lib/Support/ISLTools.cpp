@@ -301,58 +301,51 @@ isl::union_map polly::computeReachingWrite(isl::union_map Schedule,
                                            bool InclPrevDef, bool InclNextDef) {
 
   // { Scatter[] }
-  auto ScatterSpace = getScatterSpace(Schedule);
+  isl::space ScatterSpace = getScatterSpace(Schedule);
 
   // { ScatterRead[] -> ScatterWrite[] }
   isl::map Relation;
   if (Reverse)
-    Relation = give(InclPrevDef ? isl_map_lex_lt(ScatterSpace.take())
-                                : isl_map_lex_le(ScatterSpace.take()));
+    Relation = InclPrevDef ? isl::map::lex_lt(ScatterSpace)
+                           : isl::map::lex_le(ScatterSpace);
   else
-    Relation = give(InclNextDef ? isl_map_lex_gt(ScatterSpace.take())
-                                : isl_map_lex_ge(ScatterSpace.take()));
+    Relation = InclNextDef ? isl::map::lex_gt(ScatterSpace)
+                           : isl::map::lex_ge(ScatterSpace);
 
   // { ScatterWrite[] -> [ScatterRead[] -> ScatterWrite[]] }
-  auto RelationMap = give(isl_map_reverse(isl_map_range_map(Relation.take())));
+  isl::map RelationMap = Relation.range_map().reverse();
 
   // { Element[] -> ScatterWrite[] }
-  auto WriteAction =
-      give(isl_union_map_apply_domain(Schedule.copy(), Writes.take()));
+  isl::union_map WriteAction = Schedule.apply_domain(Writes);
 
   // { ScatterWrite[] -> Element[] }
-  auto WriteActionRev = give(isl_union_map_reverse(WriteAction.copy()));
+  isl::union_map WriteActionRev = WriteAction.reverse();
 
   // { Element[] -> [ScatterUse[] -> ScatterWrite[]] }
-  auto DefSchedRelation = give(isl_union_map_apply_domain(
-      isl_union_map_from_map(RelationMap.take()), WriteActionRev.take()));
+  isl::union_map DefSchedRelation =
+      isl::union_map(RelationMap).apply_domain(WriteActionRev);
 
   // For each element, at every point in time, map to the times of previous
   // definitions. { [Element[] -> ScatterRead[]] -> ScatterWrite[] }
-  auto ReachableWrites = give(isl_union_map_uncurry(DefSchedRelation.take()));
+  isl::union_map ReachableWrites = DefSchedRelation.uncurry();
   if (Reverse)
-    ReachableWrites = give(isl_union_map_lexmin(ReachableWrites.copy()));
+    ReachableWrites = ReachableWrites.lexmin();
   else
-    ReachableWrites = give(isl_union_map_lexmax(ReachableWrites.copy()));
+    ReachableWrites = ReachableWrites.lexmax();
 
   // { [Element[] -> ScatterWrite[]] -> ScatterWrite[] }
-  auto SelfUse = give(isl_union_map_range_map(WriteAction.take()));
+  isl::union_map SelfUse = WriteAction.range_map();
 
   if (InclPrevDef && InclNextDef) {
     // Add the Def itself to the solution.
-    ReachableWrites =
-        give(isl_union_map_union(ReachableWrites.take(), SelfUse.take()));
-    ReachableWrites = give(isl_union_map_coalesce(ReachableWrites.take()));
+    ReachableWrites = ReachableWrites.unite(SelfUse).coalesce();
   } else if (!InclPrevDef && !InclNextDef) {
     // Remove Def itself from the solution.
-    ReachableWrites =
-        give(isl_union_map_subtract(ReachableWrites.take(), SelfUse.take()));
+    ReachableWrites = ReachableWrites.subtract(SelfUse);
   }
 
   // { [Element[] -> ScatterRead[]] -> Domain[] }
-  auto ReachableWriteDomain = give(isl_union_map_apply_range(
-      ReachableWrites.take(), isl_union_map_reverse(Schedule.take())));
-
-  return ReachableWriteDomain;
+  return ReachableWrites.apply_range(Schedule.reverse());
 }
 
 isl::union_map
