@@ -27,8 +27,9 @@ body: |
   bb.0.entry:
 
     ; CHECK-LABEL: name: test_constant
-    ; CHECK: [[C:%[0-9]+]](s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]](s1) = G_CONSTANT i1 false
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C1]](s1), [[C1]](s1)
     %0(s32) = G_CONSTANT i32 5
     %1(s1) = G_CONSTANT i1 0
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.f32), %0, %0, %0, %0, %0, %0, %1, %1;
@@ -43,8 +44,8 @@ body: |
   bb.0.entry:
 
     ; CHECK-LABEL: name: test_fconstant
-    ; CHECK: [[C:%[0-9]+]](s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK: [[C1:%[0-9]+]](s32) = G_FCONSTANT float 7.500000e+00
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 7.500000e+00
     %0(s32) = G_FCONSTANT float 1.0
     %1(s32) = G_FCONSTANT float 7.5
 ...

@@ -10210,8 +10210,7 @@ public:
   void CodeCompleteObjCPropertyDefinition(Scope *S);
   void CodeCompleteObjCPropertySynthesizeIvar(Scope *S,
                                               IdentifierInfo *PropertyName);
-  void CodeCompleteObjCMethodDecl(Scope *S,
-                                  bool IsInstanceMethod,
+  void CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
                                   ParsedType ReturnType);
   void CodeCompleteObjCMethodDeclSelector(Scope *S,
                                           bool IsInstanceMethod,

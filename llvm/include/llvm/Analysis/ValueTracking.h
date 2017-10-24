@@ -220,9 +220,9 @@ class Value;
   /// pointer plus a constant offset. Return the base and offset to the caller.
   Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                                           const DataLayout &DL);
-  static inline const Value *
-  GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
-                                   const DataLayout &DL) {
+  inline const Value *GetPointerBaseWithConstantOffset(const Value *Ptr,
+                                                       int64_t &Offset,
+                                                       const DataLayout &DL) {
     return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset,
                                             DL);
   }
@@ -283,9 +283,8 @@ class Value;
   /// be stripped off.
   Value *GetUnderlyingObject(Value *V, const DataLayout &DL,
                              unsigned MaxLookup = 6);
-  static inline const Value *GetUnderlyingObject(const Value *V,
-                                                 const DataLayout &DL,
-                                                 unsigned MaxLookup = 6) {
+  inline const Value *GetUnderlyingObject(const Value *V, const DataLayout &DL,
+                                          unsigned MaxLookup = 6) {
     return GetUnderlyingObject(const_cast<Value *>(V), DL, MaxLookup);
   }
 
@@ -506,7 +505,7 @@ class Value;
   ///
   SelectPatternResult matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                                          Instruction::CastOps *CastOp = nullptr);
-  static inline SelectPatternResult
+  inline SelectPatternResult
   matchSelectPattern(const Value *V, const Value *&LHS, const Value *&RHS,
                      Instruction::CastOps *CastOp = nullptr) {
     Value *L = const_cast<Value*>(LHS);

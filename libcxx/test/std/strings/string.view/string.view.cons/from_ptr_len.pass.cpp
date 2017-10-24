@@ -23,7 +23,10 @@
 template<typename CharT>
 void test ( const CharT *s, size_t sz ) {
     {
-    std::basic_string_view<CharT> sv1 ( s, sz );
+    typedef std::basic_string_view<CharT> SV;
+    LIBCPP_ASSERT_NOEXCEPT(SV(s, sz));
+
+    SV sv1 ( s, sz );
     assert ( sv1.size() == sz );
     assert ( sv1.data() == s );
     }

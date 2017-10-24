@@ -3,7 +3,7 @@
 
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:
-; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}}, 
+; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
 ; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
 ; CHECK-NEXT: di-variable: '!11', di-expression: '!DIExpression()',
 ; CHECK: DBG_VALUE debug-use %0(s32), debug-use _, !11, !DIExpression(), debug-location !12
@@ -26,7 +26,7 @@ entry:
 }
 
 ; CHECK-LABEL: name: debug_value
-; CHECK: [[IN:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[IN:%[0-9]+]]:_(s32) = COPY %w0
 define void @debug_value(i32 %in) #0 !dbg !16 {
   %addr = alloca i32
 ; CHECK: DBG_VALUE debug-use [[IN]](s32), debug-use _, !17, !DIExpression(), debug-location !18

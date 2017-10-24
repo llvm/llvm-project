@@ -1373,19 +1373,19 @@ inline void swapStruct(fvmlib_command &C) {
 
 // Get/Set functions from <mach-o/nlist.h>
 
-static inline uint16_t GET_LIBRARY_ORDINAL(uint16_t n_desc) {
+inline uint16_t GET_LIBRARY_ORDINAL(uint16_t n_desc) {
   return (((n_desc) >> 8u) & 0xffu);
 }
 
-static inline void SET_LIBRARY_ORDINAL(uint16_t &n_desc, uint8_t ordinal) {
+inline void SET_LIBRARY_ORDINAL(uint16_t &n_desc, uint8_t ordinal) {
   n_desc = (((n_desc)&0x00ff) | (((ordinal)&0xff) << 8));
 }
 
-static inline uint8_t GET_COMM_ALIGN(uint16_t n_desc) {
+inline uint8_t GET_COMM_ALIGN(uint16_t n_desc) {
   return (n_desc >> 8u) & 0x0fu;
 }
 
-static inline void SET_COMM_ALIGN(uint16_t &n_desc, uint8_t align) {
+inline void SET_COMM_ALIGN(uint16_t &n_desc, uint8_t align) {
   n_desc = ((n_desc & 0xf0ffu) | ((align & 0x0fu) << 8u));
 }
 
@@ -1449,15 +1449,13 @@ enum CPUSubTypeX86 {
   CPU_SUBTYPE_X86_ARCH1 = 4,
   CPU_SUBTYPE_X86_64_H = 8
 };
-static inline int CPU_SUBTYPE_INTEL(int Family, int Model) {
+inline int CPU_SUBTYPE_INTEL(int Family, int Model) {
   return Family | (Model << 4);
 }
-static inline int CPU_SUBTYPE_INTEL_FAMILY(CPUSubTypeX86 ST) {
+inline int CPU_SUBTYPE_INTEL_FAMILY(CPUSubTypeX86 ST) {
   return ((int)ST) & 0x0f;
 }
-static inline int CPU_SUBTYPE_INTEL_MODEL(CPUSubTypeX86 ST) {
-  return ((int)ST) >> 4;
-}
+inline int CPU_SUBTYPE_INTEL_MODEL(CPUSubTypeX86 ST) { return ((int)ST) >> 4; }
 enum { CPU_SUBTYPE_INTEL_FAMILY_MAX = 15, CPU_SUBTYPE_INTEL_MODEL_ALL = 0 };
 
 enum CPUSubTypeARM {

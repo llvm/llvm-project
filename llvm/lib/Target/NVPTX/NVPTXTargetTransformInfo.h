@@ -63,6 +63,22 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) {
+    // Volatile loads/stores are only supported for shared and global address
+    // spaces, or for generic AS that maps to them.
+    if (!(AddrSpace == llvm::ADDRESS_SPACE_GENERIC ||
+          AddrSpace == llvm::ADDRESS_SPACE_GLOBAL ||
+          AddrSpace == llvm::ADDRESS_SPACE_SHARED))
+      return false;
+
+    switch(I->getOpcode()){
+    default:
+      return false;
+    case Instruction::Load:
+    case Instruction::Store:
+      return true;
+    }
+  }
 };
 
 } // end namespace llvm

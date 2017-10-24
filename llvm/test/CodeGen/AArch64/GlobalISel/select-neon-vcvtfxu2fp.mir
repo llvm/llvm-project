@@ -23,12 +23,8 @@ body:             |
     liveins: %d0
 
     ; CHECK-LABEL: name: vcvtfxu2fp_s64_fpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: fpr64
-    ; CHECK-NEXT: id: 1, class: gpr
-    ; CHECK-NEXT: id: 2, class: fpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %d0
-    ; CHECK: [[UCVTFd:%[0-9]+]] = UCVTFd [[COPY]], 12
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY %d0
+    ; CHECK: [[UCVTFd:%[0-9]+]]:fpr64 = UCVTFd [[COPY]], 12
     ; CHECK: %d1 = COPY [[UCVTFd]]
     %0(s64) = COPY %d0
     %1(s32) = G_CONSTANT i32 12

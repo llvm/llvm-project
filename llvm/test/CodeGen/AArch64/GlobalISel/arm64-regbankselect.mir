@@ -99,17 +99,14 @@
 # Based on the type i32, this should be gpr.
 name:            defaultMapping
 legalized:       true
-# CHECK-LABEL: name: defaultMapping
-# CHECK:      registers:
-# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0
-    ; CHECK:      %1(s32) = G_ADD %0
+    ; CHECK-LABEL: name: defaultMapping
+    ; CHECK:      %1:gpr(s32) = G_ADD %0
     %0(s32) = COPY %w0
     %1(s32) = G_ADD %0, %0
 ...
@@ -120,18 +117,15 @@ body: |
 # FPR is used for both floating point and vector registers.
 name:            defaultMappingVector
 legalized:       true
-# CHECK-LABEL: name: defaultMappingVector
-# CHECK:      registers:
-# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
-# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %d0
-    ; CHECK:      %0(<2 x s32>) = COPY %d0
-    ; CHECK:      %1(<2 x s32>) = G_ADD %0
+    ; CHECK-LABEL: name: defaultMappingVector
+    ; CHECK:      %0:fpr(<2 x s32>) = COPY %d0
+    ; CHECK:      %1:fpr(<2 x s32>) = G_ADD %0
     %0(<2 x s32>) = COPY %d0
     %1(<2 x s32>) = G_ADD %0, %0
 ...
@@ -142,12 +136,6 @@ body: |
 # in FPR, but at the use, it should be GPR.
 name:            defaultMapping1Repair
 legalized:       true
-# CHECK-LABEL: name: defaultMapping1Repair
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: fpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -155,10 +143,11 @@ registers:
 body: |
   bb.0.entry:
     liveins: %s0, %x0
-    ; CHECK:           %0(s32) = COPY %s0
-    ; CHECK-NEXT:      %1(s32) = COPY %w0
-    ; CHECK-NEXT:      %3(s32) = COPY %0
-    ; CHECK-NEXT:      %2(s32) = G_ADD %3, %1
+    ; CHECK-LABEL: name: defaultMapping1Repair
+    ; CHECK:           %0:fpr(s32) = COPY %s0
+    ; CHECK-NEXT:      %1:gpr(s32) = COPY %w0
+    ; CHECK-NEXT:      %3:gpr(s32) = COPY %0
+    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %3, %1
     %0(s32) = COPY %s0
     %1(s32) = COPY %w0
     %2(s32) = G_ADD %0, %1
@@ -167,22 +156,17 @@ body: |
 # Check that we repair the assignment for %0 differently for both uses.
 name:            defaultMapping2Repairs
 legalized:       true
-# CHECK-LABEL: name: defaultMapping2Repairs
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: fpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %s0, %x0
-    ; CHECK:           %0(s32) = COPY %s0
-    ; CHECK-NEXT:      %2(s32) = COPY %0
-    ; CHECK-NEXT:      %3(s32) = COPY %0
-    ; CHECK-NEXT:      %1(s32) = G_ADD %2, %3
+    ; CHECK-LABEL: name: defaultMapping2Repairs
+    ; CHECK:           %0:fpr(s32) = COPY %s0
+    ; CHECK-NEXT:      %2:gpr(s32) = COPY %0
+    ; CHECK-NEXT:      %3:gpr(s32) = COPY %0
+    ; CHECK-NEXT:      %1:gpr(s32) = G_ADD %2, %3
     %0(s32) = COPY %s0
     %1(s32) = G_ADD %0, %0
 ...
@@ -194,20 +178,16 @@ body: |
 # fixes that.
 name:            defaultMappingDefRepair
 legalized:       true
-# CHECK-LABEL: name: defaultMappingDefRepair
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: fpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: fpr }
 body: |
   bb.0.entry:
     liveins: %w0
-    ; CHECK:           %0(s32) = COPY %w0
-    ; CHECK-NEXT:      %2(s32) = G_ADD %0, %0
-    ; CHECK-NEXT:      %1(s32) = COPY %2
+    ; CHECK-LABEL: name: defaultMappingDefRepair
+    ; CHECK:           %0:gpr(s32) = COPY %w0
+    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %0, %0
+    ; CHECK-NEXT:      %1:fpr(s32) = COPY %2
     %0(s32) = COPY %w0
     %1(s32) = G_ADD %0, %0
 ...
@@ -255,12 +235,6 @@ body: |
 # Make sure we can repair physical register uses as well.
 name:            defaultMappingUseRepairPhysReg
 legalized:       true
-# CHECK-LABEL: name: defaultMappingUseRepairPhysReg
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: fpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -268,10 +242,11 @@ registers:
 body: |
   bb.0.entry:
     liveins: %w0, %s0
-    ; CHECK:           %0(s32) = COPY %w0
-    ; CHECK-NEXT:      %1(s32) = COPY %s0
-    ; CHECK-NEXT:      %3(s32) = COPY %1
-    ; CHECK-NEXT:      %2(s32) = G_ADD %0, %3
+    ; CHECK-LABEL: name: defaultMappingUseRepairPhysReg
+    ; CHECK:           %0:gpr(s32) = COPY %w0
+    ; CHECK-NEXT:      %1:fpr(s32) = COPY %s0
+    ; CHECK-NEXT:      %3:gpr(s32) = COPY %1
+    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %0, %3
     %0(s32) = COPY %w0
     %1(s32) = COPY %s0
     %2(s32) = G_ADD %0, %1
@@ -281,18 +256,15 @@ body: |
 # Make sure we can repair physical register defs.
 name:            defaultMappingDefRepairPhysReg
 legalized:       true
-# CHECK-LABEL: name: defaultMappingDefRepairPhysReg
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %w0
-    ; CHECK:           %0(s32) = COPY %w0
-    ; CHECK-NEXT:      %1(s32) = G_ADD %0, %0
+    ; CHECK-LABEL: name: defaultMappingDefRepairPhysReg
+    ; CHECK:           %0:gpr(s32) = COPY %w0
+    ; CHECK-NEXT:      %1:gpr(s32) = G_ADD %0, %0
     ; CHECK-NEXT:      %s0 = COPY %1
     %0(s32) = COPY %w0
     %1(s32) = G_ADD %0, %0
@@ -304,21 +276,6 @@ body: |
 # G_OR instruction from fpr to gpr.
 name:            greedyMappingOr
 legalized:       true
-# CHECK-LABEL: name: greedyMappingOr
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-
-# Fast mode maps vector instruction on FPR.
-# FAST-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
-# Fast mode needs two extra copies.
-# FAST-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
-# FAST-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
-
-# Greedy mode coalesce the computation on the GPR register
-# because it is the cheapest.
-# GREEDY-NEXT:  - { id: 2, class: gpr, preferred-register: '' }
-
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -326,20 +283,19 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1
-    ; CHECK: %0(<2 x s32>) = COPY %x0
-    ; CHECK-NEXT: %1(<2 x s32>) = COPY %x1
-
+    ; CHECK: %0:gpr(<2 x s32>) = COPY %x0
+    ; CHECK-NEXT: %1:gpr(<2 x s32>) = COPY %x1
 
     ; Fast mode tries to reuse the source of the copy for the destination.
     ; Now, the default mapping says that %0 and %1 need to be in FPR.
     ; The repairing code insert two copies to materialize that.
-    ; FAST-NEXT: %3(<2 x s32>) = COPY %0
-    ; FAST-NEXT: %4(<2 x s32>) = COPY %1
+    ; FAST-NEXT: %3:fpr(<2 x s32>) = COPY %0
+    ; FAST-NEXT: %4:fpr(<2 x s32>) = COPY %1
     ; The mapping of G_OR is on FPR.
-    ; FAST-NEXT: %2(<2 x s32>) = G_OR %3, %4
+    ; FAST-NEXT: %2:fpr(<2 x s32>) = G_OR %3, %4
 
     ; Greedy mode remapped the instruction on the GPR bank.
-    ; GREEDY-NEXT: %2(<2 x s32>) = G_OR %0, %1
+    ; GREEDY-NEXT: %2:gpr(<2 x s32>) = G_OR %0, %1
     %0(<2 x s32>) = COPY %x0
     %1(<2 x s32>) = COPY %x1
     %2(<2 x s32>) = G_OR %0, %1
@@ -351,21 +307,6 @@ body: |
 # %2 constraint.
 name:            greedyMappingOrWithConstraints
 legalized:       true
-# CHECK-LABEL: name: greedyMappingOrWithConstraints
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
-
-# Fast mode maps vector instruction on FPR.
-# Fast mode needs two extra copies.
-# FAST-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
-# FAST-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
-
-# Greedy mode coalesce the computation on the GPR register because it
-# is the cheapest, but will need one extra copy to materialize %2 into a FPR.
-# GREEDY-NEXT:  - { id: 3, class: gpr, preferred-register: '' }
-
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -373,22 +314,23 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1
-    ; CHECK: %0(<2 x s32>) = COPY %x0
-    ; CHECK-NEXT: %1(<2 x s32>) = COPY %x1
+    ; CHECK-LABEL: name: greedyMappingOrWithConstraints
 
+    ; CHECK: %0:gpr(<2 x s32>) = COPY %x0
+    ; CHECK-NEXT: %1:gpr(<2 x s32>) = COPY %x1
 
     ; Fast mode tries to reuse the source of the copy for the destination.
     ; Now, the default mapping says that %0 and %1 need to be in FPR.
     ; The repairing code insert two copies to materialize that.
-    ; FAST-NEXT: %3(<2 x s32>) = COPY %0
-    ; FAST-NEXT: %4(<2 x s32>) = COPY %1
+    ; FAST-NEXT: %3:fpr(<2 x s32>) = COPY %0
+    ; FAST-NEXT: %4:fpr(<2 x s32>) = COPY %1
     ; The mapping of G_OR is on FPR.
-    ; FAST-NEXT: %2(<2 x s32>) = G_OR %3, %4
+    ; FAST-NEXT: %2:fpr(<2 x s32>) = G_OR %3, %4
 
     ; Greedy mode remapped the instruction on the GPR bank.
-    ; GREEDY-NEXT: %3(<2 x s32>) = G_OR %0, %1
+    ; GREEDY-NEXT: %3:gpr(<2 x s32>) = G_OR %0, %1
     ; We need to keep %2 into FPR because we do not know anything about it.
-    ; GREEDY-NEXT: %2(<2 x s32>) = COPY %3
+    ; GREEDY-NEXT: %2:fpr(<2 x s32>) = COPY %3
     %0(<2 x s32>) = COPY %x0
     %1(<2 x s32>) = COPY %x1
     %2(<2 x s32>) = G_OR %0, %1
@@ -408,8 +350,8 @@ body: |
   bb.0:
     liveins: %x0
 
-    ; CHECK: %0 = COPY %x0
-    ; CHECK-NEXT: %1 = ADDXrr %0, %0
+    ; CHECK: %0:gpr64 = COPY %x0
+    ; CHECK-NEXT: %1:gpr64 = ADDXrr %0, %0
     ; CHECK-NEXT: %x0 = COPY %1
     ; CHECK-NEXT: RET_ReallyLR implicit %x0
 
@@ -444,8 +386,8 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0(s32) = COPY %w0
-# CHECK:    %1(s32) = G_BITCAST %0
+# CHECK:    %0:gpr(s32) = COPY %w0
+# CHECK:    %1:gpr(s32) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %w0
@@ -467,8 +409,8 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0(<2 x s16>) = COPY %s0
-# CHECK:    %1(<2 x s16>) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x s16>) = COPY %s0
+# CHECK:    %1:fpr(<2 x s16>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %s0
@@ -491,8 +433,9 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0(s32) = COPY %w0
-# CHECK:    %1(<2 x s16>) = G_BITCAST %0
+# CHECK:    %0:gpr(s32) = COPY %w0
+# FAST:     %1:fpr(<2 x s16>) = G_BITCAST %0
+# GREEDY:   %1:gpr(<2 x s16>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %w0
@@ -505,18 +448,13 @@ body:             |
 # CHECK-LABEL: name: bitcast_s32_fpr_gpr
 name:            bitcast_s32_fpr_gpr
 legalized:       true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
-# FAST-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-# GREEDY-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-
 # CHECK:  body:
-# CHECK:    %0(<2 x s16>) = COPY %s0
-# CHECK:    %1(s32) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x s16>) = COPY %s0
+# FAST:     %1:gpr(s32) = G_BITCAST %0
+# GREEDY:   %1:fpr(s32) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %s0
@@ -529,17 +467,12 @@ body:             |
 # CHECK-LABEL: name: bitcast_s64_gpr
 name:            bitcast_s64_gpr
 legalized:       true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-
 # CHECK:  body:
-# CHECK:    %0(s64) = COPY %x0
-# CHECK:    %1(s64) = G_BITCAST %0
+# CHECK:    %0:gpr(s64) = COPY %x0
+# CHECK:    %1:gpr(s64) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %x0
@@ -552,17 +485,12 @@ body:             |
 # CHECK-LABEL: name: bitcast_s64_fpr
 name:            bitcast_s64_fpr
 legalized:       true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-
 # CHECK:  body:
-# CHECK:    %0(<2 x s32>) = COPY %d0
-# CHECK:    %1(<2 x s32>) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x s32>) = COPY %d0
+# CHECK:    %1:fpr(<2 x s32>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %d0
@@ -575,17 +503,13 @@ body:             |
 # CHECK-LABEL: name: bitcast_s64_gpr_fpr
 name:            bitcast_s64_gpr_fpr
 legalized:       true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
-# FAST-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
-# GREEDY-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0(s64) = COPY %x0
-# CHECK:    %1(<2 x s32>) = G_BITCAST %0
+# CHECK:    %0:gpr(s64) = COPY %x0
+# FAST:     %1:fpr(<2 x s32>) = G_BITCAST %0
+# GREEDY:   %1:gpr(<2 x s32>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %x0
@@ -598,18 +522,13 @@ body:             |
 # CHECK-LABEL: name: bitcast_s64_fpr_gpr
 name:            bitcast_s64_fpr_gpr
 legalized:       true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '' }
-# FAST-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-# GREEDY-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-
 # CHECK:  body:
-# CHECK:    %0(<2 x s32>) = COPY %d0
-# CHECK:    %1(s64) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x s32>) = COPY %d0
+# FAST:     %1:gpr(s64) = G_BITCAST %0
+# GREEDY:   %1:fpr(s64) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: %d0
@@ -628,10 +547,8 @@ registers:
   - { id: 1, class: _}
   - { id: 2, class: _}
   - { id: 3, class: _}
-# CHECK: registers:
-# CHECK:  - { id: 2, class: fpr, preferred-register: '' }
-# CHECK:  - { id: 3, class: fpr, preferred-register: '' }
-# CHECK: %2(<2 x s64>) = G_BITCAST %3(s128)
+# CHECK: %3:fpr(s128) = G_MERGE_VALUES
+# CHECK: %2:fpr(<2 x s64>) = G_BITCAST %3(s128)
 body:             |
   bb.1:
     liveins: %x0, %x1
@@ -658,12 +575,9 @@ registers:
   - { id: 2, class: _}
   - { id: 3, class: _}
   - { id: 4, class: _}
-# CHECK: registers:
-# CHECK:  - { id: 2, class: fpr, preferred-register: '' }
-# CHECK:  - { id: 3, class: fpr, preferred-register: '' }
-# CHECK:  - { id: 4, class: fpr, preferred-register: '' }
-# CHECK: %4(s128) = COPY %3(s128)
-# CHECK-NEXT: %2(<2 x s64>) = G_BITCAST %4(s128)
+# CHECK: %3:fpr(s128) = G_MERGE_VALUES
+# CHECK: %4:fpr(s128) = COPY %3(s128)
+# CHECK-NEXT: %2:fpr(<2 x s64>) = G_BITCAST %4(s128)
 body:             |
   bb.1:
     liveins: %x0, %x1
@@ -695,7 +609,7 @@ registers:
 # CHECK: registers:
 # CHECK:  - { id: 0, class: fpr128, preferred-register: '' }
 # CHECK:  - { id: 1, class: fpr, preferred-register: '' }
-# CHECK: %1(s128) = COPY %0
+# CHECK: %1:fpr(s128) = COPY %0
 body:             |
   bb.1:
     liveins: %x0
@@ -714,17 +628,6 @@ body:             |
 # CHECK-LABEL: name: greedyWithChainOfComputation
 name:            greedyWithChainOfComputation
 legalized:       true
-
-# CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
-# FAST-NEXT:   - { id: 2, class: fpr, preferred-register: '' }
-# FAST-NEXT:   - { id: 3, class: fpr, preferred-register: '' }
-# FAST-NEXT:   - { id: 4, class: fpr, preferred-register: '' }
-# GREEDY-NEXT: - { id: 2, class: gpr, preferred-register: '' }
-# GREEDY-NEXT: - { id: 3, class: gpr, preferred-register: '' }
-# GREEDY-NEXT: - { id: 4, class: gpr, preferred-register: '' }
-# CHECK-NEXT:  - { id: 5, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -732,17 +635,18 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
-
 # No repairing should be necessary for both modes.
-# CHECK:         %0(s64) = COPY %x0
-# CHECK-NEXT:    %1(p0) = COPY %x1
-# CHECK-NEXT:    %2(<2 x s32>) = G_BITCAST %0(s64)
-# CHECK-NEXT:    %3(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
-# CHECK-NEXT:    %4(<2 x s32>) = G_OR %2, %3
-# CHECK-NEXT:    %5(s64) = G_BITCAST %4(<2 x s32>)
+# CHECK:         %0:gpr(s64) = COPY %x0
+# CHECK-NEXT:    %1:gpr(p0) = COPY %x1
+# FAST-NEXT:     %2:fpr(<2 x s32>) = G_BITCAST %0(s64)
+# FAST-NEXT:     %3:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# FAST-NEXT:     %4:fpr(<2 x s32>) = G_OR %2, %3
+# GREEDY-NEXT:   %2:gpr(<2 x s32>) = G_BITCAST %0(s64)
+# GREEDY-NEXT:   %3:gpr(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# GREEDY-NEXT:   %4:gpr(<2 x s32>) = G_OR %2, %3
+# CHECK-NEXT:    %5:gpr(s64) = G_BITCAST %4(<2 x s32>)
 # CHECK-NEXT:    %x0 = COPY %5(s64)
 # CHECK-NEXT:    RET_ReallyLR implicit %x0
-
 body:             |
   bb.0:
     liveins: %x0, %x1
@@ -778,12 +682,12 @@ registers:
   - { id: 3, class: _ }
 
 # No repairing should be necessary for both modes.
-# CHECK:         %0(s64) = COPY %x0
-# CHECK-NEXT:    %1(p0) = COPY %x1
-# CHECK-NEXT:    %2(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# CHECK:         %0:gpr(s64) = COPY %x0
+# CHECK-NEXT:    %1:gpr(p0) = COPY %x1
+# CHECK-NEXT:    %2:fpr(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %4(s64) = COPY %0
-# CHECK-NEXT:    %3(s64) = G_FADD %4, %2
+# CHECK-NEXT:    %4:fpr(s64) = COPY %0
+# CHECK-NEXT:    %3:fpr(s64) = G_FADD %4, %2
 # CHECK-NEXT:    %x0 = COPY %3(s64)
 # CHECK-NEXT:    RET_ReallyLR implicit %x0
 
@@ -818,12 +722,12 @@ registers:
   - { id: 1, class: _ }
   - { id: 2, class: _ }
 
-# CHECK:         %0(s64) = COPY %x0
-# CHECK-NEXT:    %1(p0) = COPY %x1
+# CHECK:         %0:gpr(s64) = COPY %x0
+# CHECK-NEXT:    %1:gpr(p0) = COPY %x1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3(s64) = COPY %0
-# CHECK-NEXT:    %4(s64) = COPY %0
-# CHECK-NEXT:    %2(s64) = G_FADD %3, %4
+# CHECK-NEXT:    %3:fpr(s64) = COPY %0
+# CHECK-NEXT:    %4:fpr(s64) = COPY %0
+# CHECK-NEXT:    %2:fpr(s64) = G_FADD %3, %4
 # CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.addr)
 # CHECK-NEXT:    RET_ReallyLR
 

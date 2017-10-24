@@ -330,8 +330,8 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
       SS->getFile<ELFT>()->IsUsed = true;
   }
   if (auto *L = dyn_cast<Lazy>(S->body())) {
-    // An undefined weak will not fetch archive members, but we have to remember
-    // its type. See also comment in addLazyArchive.
+    // An undefined weak will not fetch archive members. See comment on Lazy in
+    // Symbols.h for the details.
     if (S->isWeak())
       L->Type = Type;
     else if (InputFile *F = L->fetch())
@@ -574,13 +574,8 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
   if (!S->body()->isUndefined())
     return S;
 
-  // Weak undefined symbols should not fetch members from archives. If we were
-  // to keep old symbol we would not know that an archive member was available
-  // if a strong undefined symbol shows up afterwards in the link. If a strong
-  // undefined symbol never shows up, this lazy symbol will get to the end of
-  // the link and must be treated as the weak undefined one. We already marked
-  // this symbol as used when we added it to the symbol table, but we also need
-  // to preserve its type. FIXME: Move the Type field to Symbol.
+  // An undefined weak will not fetch archive members. See comment on Lazy in
+  // Symbols.h for the details.
   if (S->isWeak()) {
     replaceBody<LazyArchive>(S, F, Sym, S->body()->Type);
     return S;

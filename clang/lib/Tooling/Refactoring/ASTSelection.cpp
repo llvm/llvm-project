@@ -322,6 +322,10 @@ CodeRangeASTSelection::create(SourceRange SelectionRange,
     return CodeRangeASTSelection(Selected.Node, Selected.Parents,
                                  /*AreChildrenSelected=*/false);
   }
+  // FIXME (Alex L): First selected SwitchCase means that first case statement.
+  // is selected actually
+  // (See https://github.com/apple/swift-clang & CompoundStmtRange).
+
   // FIXME (Alex L): Tweak selection rules for compound statements, see:
   // https://github.com/apple/swift-clang/blob/swift-4.1-branch/lib/Tooling/
   // Refactor/ASTSlice.cpp#L513
@@ -329,4 +333,37 @@ CodeRangeASTSelection::create(SourceRange SelectionRange,
   Selected.Parents.push_back(Selected.Node);
   return CodeRangeASTSelection(Selected.Node, Selected.Parents,
                                /*AreChildrenSelected=*/true);
+}
+
+bool CodeRangeASTSelection::isInFunctionLikeBodyOfCode() const {
+  bool IsPrevCompound = false;
+  // Scan through the parents (bottom-to-top) and check if the selection is
+  // contained in a compound statement that's a body of a function/method
+  // declaration.
+  for (const auto &Parent : llvm::reverse(Parents)) {
+    const DynTypedNode &Node = Parent.get().Node;
+    if (const auto *D = Node.get<Decl>()) {
+      // FIXME (Alex L): Test for BlockDecl && ObjCMethodDecl.
+      if (isa<FunctionDecl>(D))
+        return IsPrevCompound;
+      // FIXME (Alex L): We should return false on top-level decls in functions
+      // e.g. we don't want to extract:
+      // function foo() { struct X {
+      //   int m = /*selection:*/ 1 + 2 /*selection end*/; }; };
+    }
+    IsPrevCompound = Node.get<CompoundStmt>() != nullptr;
+  }
+  return false;
+}
+
+const Decl *CodeRangeASTSelection::getFunctionLikeNearestParent() const {
+  for (const auto &Parent : llvm::reverse(Parents)) {
+    const DynTypedNode &Node = Parent.get().Node;
+    if (const auto *D = Node.get<Decl>()) {
+      // FIXME (Alex L): Test for BlockDecl && ObjCMethodDecl.
+      if (isa<FunctionDecl>(D))
+        return D;
+    }
+  }
+  return nullptr;
 }

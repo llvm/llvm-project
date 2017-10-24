@@ -33,18 +33,16 @@ class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
-static inline char hexdigit(unsigned X, bool LowerCase = false) {
+inline char hexdigit(unsigned X, bool LowerCase = false) {
   const char HexChar = LowerCase ? 'a' : 'A';
   return X < 10 ? '0' + X : HexChar + X - 10;
 }
 
 /// Construct a string ref from a boolean.
-static inline StringRef toStringRef(bool B) {
-  return StringRef(B ? "true" : "false");
-}
+inline StringRef toStringRef(bool B) { return StringRef(B ? "true" : "false"); }
 
 /// Construct a string ref from an array ref of unsigned chars.
-static inline StringRef toStringRef(ArrayRef<uint8_t> Input) {
+inline StringRef toStringRef(ArrayRef<uint8_t> Input) {
   return StringRef(reinterpret_cast<const char *>(Input.begin()), Input.size());
 }
 
@@ -52,7 +50,7 @@ static inline StringRef toStringRef(ArrayRef<uint8_t> Input) {
 /// value.
 ///
 /// If \p C is not a valid hex digit, -1U is returned.
-static inline unsigned hexDigitValue(char C) {
+inline unsigned hexDigitValue(char C) {
   if (C >= '0' && C <= '9') return C-'0';
   if (C >= 'a' && C <= 'f') return C-'a'+10U;
   if (C >= 'A' && C <= 'F') return C-'A'+10U;
@@ -60,21 +58,21 @@ static inline unsigned hexDigitValue(char C) {
 }
 
 /// Checks if character \p C is one of the 10 decimal digits.
-static inline bool isDigit(char C) { return C >= '0' && C <= '9'; }
+inline bool isDigit(char C) { return C >= '0' && C <= '9'; }
 
 /// Checks if character \p C is a hexadecimal numeric character.
-static inline bool isHexDigit(char C) { return hexDigitValue(C) != -1U; }
+inline bool isHexDigit(char C) { return hexDigitValue(C) != -1U; }
 
 /// Checks if character \p C is a valid letter as classified by "C" locale.
-static inline bool isAlpha(char C) {
+inline bool isAlpha(char C) {
   return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z');
 }
 
 /// Checks whether character \p C is either a decimal digit or an uppercase or
 /// lowercase letter as classified by "C" locale.
-static inline bool isAlnum(char C) { return isAlpha(C) || isDigit(C); }
+inline bool isAlnum(char C) { return isAlpha(C) || isDigit(C); }
 
-static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
+inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
 
@@ -109,7 +107,7 @@ inline std::string toHex(ArrayRef<uint8_t> Input) {
   return toHex(toStringRef(Input));
 }
 
-static inline uint8_t hexFromNibbles(char MSB, char LSB) {
+inline uint8_t hexFromNibbles(char MSB, char LSB) {
   unsigned U1 = hexDigitValue(MSB);
   unsigned U2 = hexDigitValue(LSB);
   assert(U1 != -1U && U2 != -1U);
@@ -119,7 +117,7 @@ static inline uint8_t hexFromNibbles(char MSB, char LSB) {
 
 /// Convert hexadecimal string \p Input to its binary representation.
 /// The return string is half the size of \p Input.
-static inline std::string fromHex(StringRef Input) {
+inline std::string fromHex(StringRef Input) {
   if (Input.empty())
     return std::string();
 
@@ -172,7 +170,7 @@ inline bool to_float(const Twine &T, long double &Num) {
   return detail::to_float(T, Num, strtold);
 }
 
-static inline std::string utostr(uint64_t X, bool isNeg = false) {
+inline std::string utostr(uint64_t X, bool isNeg = false) {
   char Buffer[21];
   char *BufPtr = std::end(Buffer);
 
@@ -187,7 +185,7 @@ static inline std::string utostr(uint64_t X, bool isNeg = false) {
   return std::string(BufPtr, std::end(Buffer));
 }
 
-static inline std::string itostr(int64_t X) {
+inline std::string itostr(int64_t X) {
   if (X < 0)
     return utostr(static_cast<uint64_t>(-X), true);
   else
@@ -221,14 +219,14 @@ void SplitString(StringRef Source,
 // FIXME: Investigate whether a modified bernstein hash function performs
 // better: http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
 //   X*33+c -> X*33^c
-static inline unsigned HashString(StringRef Str, unsigned Result = 0) {
+inline unsigned HashString(StringRef Str, unsigned Result = 0) {
   for (StringRef::size_type i = 0, e = Str.size(); i != e; ++i)
     Result = Result * 33 + (unsigned char)Str[i];
   return Result;
 }
 
 /// Returns the English suffix for an ordinal integer (-st, -nd, -rd, -th).
-static inline StringRef getOrdinalSuffix(unsigned Val) {
+inline StringRef getOrdinalSuffix(unsigned Val) {
   // It is critically important that we do this perfectly for
   // user-written sequences with over 100 elements.
   switch (Val % 100) {

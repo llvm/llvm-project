@@ -45,11 +45,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: trunc_i32toi1
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gr8
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; CHECK: %al = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %al
     %0(s32) = COPY %edi
@@ -71,11 +68,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: trunc_i32toi8
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gr8
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; CHECK: %al = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %al
     %0(s32) = COPY %edi
@@ -97,11 +91,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: trunc_i32toi16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr32
-    ; CHECK-NEXT: id: 1, class: gr16
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_16bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
     ; CHECK: %ax = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %ax
     %0(s32) = COPY %edi
@@ -123,11 +114,8 @@ body:             |
     liveins: %rdi
 
     ; CHECK-LABEL: name: trunc_i64toi8
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64_with_sub_8bit
-    ; CHECK-NEXT: id: 1, class: gr8
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %rdi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_8bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY %rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
     ; CHECK: %al = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %al
     %0(s64) = COPY %rdi
@@ -149,11 +137,8 @@ body:             |
     liveins: %rdi
 
     ; CHECK-LABEL: name: trunc_i64toi16
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK-NEXT: id: 1, class: gr16
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %rdi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_16bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
     ; CHECK: %ax = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %ax
     %0(s64) = COPY %rdi
@@ -175,11 +160,8 @@ body:             |
     liveins: %rdi
 
     ; CHECK-LABEL: name: trunc_i64toi32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK-NEXT: id: 1, class: gr32
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %rdi
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY [[COPY]].sub_32bit
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
     ; CHECK: %eax = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %eax
     %0(s64) = COPY %rdi

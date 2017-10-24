@@ -21,8 +21,8 @@ body: |
       ; forwarded to the G_STORE. Hi part is unchanged so (split) G_LOAD gets
       ; forwarded.
     ; CHECK-LABEL: name: test_inserts_1
-    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[LO:%[0-9]+]]:_(s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD
     ; CHECK: G_STORE %0(s64)
     ; CHECK: G_STORE [[HI]]
     %0:_(s64) = COPY %x0
@@ -43,9 +43,9 @@ body: |
       ; Low insertion wipes out the old register entirely, so %0 gets forwarded
       ; to the G_STORE again. Second insertion is real.
     ; CHECK-LABEL: name: test_inserts_2
-    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[NEWHI:%[0-9]+]](s64) = G_INSERT [[HI]], %1(s32), 0
+    ; CHECK: [[LO:%[0-9]+]]:_(s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD
+    ; CHECK: [[NEWHI:%[0-9]+]]:_(s64) = G_INSERT [[HI]], %1(s32), 0
     ; CHECK: G_STORE %0(s64)
     ; CHECK: G_STORE [[NEWHI]]
     %0:_(s64) = COPY %x0
@@ -68,9 +68,9 @@ body: |
       ; certainly better than the alternative of directly forwarding the value
       ; which would cause a nasty type mismatch.
     ; CHECK-LABEL: name: test_inserts_3
-    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[NEWLO:%[0-9]+]](s64) = G_PTRTOINT %0(p0)
+    ; CHECK: [[LO:%[0-9]+]]:_(s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD
+    ; CHECK: [[NEWLO:%[0-9]+]]:_(s64) = G_PTRTOINT %0(p0)
     ; CHECK: G_STORE [[NEWLO]](s64)
     ; CHECK: G_STORE [[HI]]
     %0:_(p0) = COPY %x0
@@ -90,9 +90,9 @@ body: |
 
       ; A narrow insert gets surrounded by a G_ANYEXT/G_TRUNC pair.
     ; CHECK-LABEL: name: test_inserts_4
-    ; CHECK: [[VALEXT:%[0-9]+]](s32) = COPY %2(s32)
-    ; CHECK: [[VAL:%[0-9]+]](s32) = G_INSERT [[VALEXT]], %1(s1), 0
-    ; CHECK: %5(s8) = G_TRUNC [[VAL]](s32)
+    ; CHECK: [[VALEXT:%[0-9]+]]:_(s32) = COPY %2(s32)
+    ; CHECK: [[VAL:%[0-9]+]]:_(s32) = G_INSERT [[VALEXT]], %1(s1), 0
+    ; CHECK: %5:_(s8) = G_TRUNC [[VAL]](s32)
     %4:_(s32) = COPY %w0
     %0:_(s1) = G_TRUNC %4
     %5:_(s32) = COPY %w1
@@ -111,11 +111,11 @@ body: |
 
 
     ; CHECK-LABEL: name: test_inserts_5
-    ; CHECK: [[INS_LO:%[0-9]+]](s32) = G_EXTRACT %2(s64), 0
-    ; CHECK: [[VAL_LO:%[0-9]+]](s64) = G_INSERT %0, [[INS_LO]](s32), 32
-    ; CHECK: [[INS_HI:%[0-9]+]](s32) = G_EXTRACT %2(s64), 32
-    ; CHECK: [[VAL_HI:%[0-9]+]](s64) = G_INSERT %1, [[INS_HI]](s32), 0
-    ; CHECK: %4(s128) = G_MERGE_VALUES [[VAL_LO]](s64), [[VAL_HI]](s64)
+    ; CHECK: [[INS_LO:%[0-9]+]]:_(s32) = G_EXTRACT %2(s64), 0
+    ; CHECK: [[VAL_LO:%[0-9]+]]:_(s64) = G_INSERT %0, [[INS_LO]](s32), 32
+    ; CHECK: [[INS_HI:%[0-9]+]]:_(s32) = G_EXTRACT %2(s64), 32
+    ; CHECK: [[VAL_HI:%[0-9]+]]:_(s64) = G_INSERT %1, [[INS_HI]](s32), 0
+    ; CHECK: %4:_(s128) = G_MERGE_VALUES [[VAL_LO]](s64), [[VAL_HI]](s64)
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s64) = COPY %x2
@@ -132,8 +132,8 @@ body: |
 
 
     ; CHECK-LABEL: name: test_inserts_6
-    ; CHECK: [[VAL_LO:%[0-9]+]](s64) = G_INSERT %0, %2(s32), 32
-    ; CHECK: %4(s128) = G_MERGE_VALUES [[VAL_LO]](s64), %1(s64)
+    ; CHECK: [[VAL_LO:%[0-9]+]]:_(s64) = G_INSERT %0, %2(s32), 32
+    ; CHECK: %4:_(s128) = G_MERGE_VALUES [[VAL_LO]](s64), %1(s64)
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s32) = COPY %w2

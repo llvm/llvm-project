@@ -13,7 +13,7 @@ name: func0
 body: |
   bb.0:
     ; We usually should not coalesce copies from allocatable physregs.
-    ; CHECK: %0 = COPY %w7
+    ; CHECK: %0:gpr32 = COPY %w7
     ; CHECK: STRWui %0, %x1, 0
     %0 : gpr32 = COPY %w7
     STRWui %0, %x1, 0
@@ -26,7 +26,7 @@ body: |
 
     ; It is not fine to coalesce copies from reserved physregs when they are
     ; clobbered.
-    ; CHECK: %2 = COPY %fp
+    ; CHECK: %2:gpr64 = COPY %fp
     ; CHECK: STRXui %2, %x1, 0
     %2 : gpr64 = COPY %fp
     %fp = SUBXri %fp, 4, 0
@@ -56,14 +56,14 @@ body: |
     ; Only coalesce when the source register is reserved as a whole (this is
     ; a limitation of the current code which cannot update liveness information
     ; of the non-reserved part).
-    ; CHECK: %6 = COPY %x28_fp
+    ; CHECK: %6:xseqpairsclass = COPY %x28_fp
     ; CHECK: HINT 0, implicit %6
     %6 : xseqpairsclass = COPY %x28_fp
     HINT 0, implicit %6
 
     ; It is not fine to coalesce copies from reserved physregs when they are
     ; clobbered by the regmask on a call.
-    ; CHECK: %7 = COPY %x18
+    ; CHECK: %7:gpr64 = COPY %x18
     ; CHECK: BL @f2, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
     ; CHECK: STRXui %7, %x1, 0
 
@@ -80,7 +80,7 @@ body: |
 
     ; Cannot coalesce when there are reads of the physreg.
     ; CHECK-NOT: %fp = SUBXri %fp, 8, 0
-    ; CHECK: %9 = SUBXri %fp, 8, 0
+    ; CHECK: %9:gpr64sp = SUBXri %fp, 8, 0
     ; CHECK: STRXui %fp, %fp, 0
     ; CHECK: %fp = COPY %9
     %9 : gpr64sp = SUBXri %fp, 8, 0
@@ -96,7 +96,7 @@ body: |
     ; Cannot coalesce physreg because we have reads on other CFG paths (we
     ; currently abort for any control flow)
     ; CHECK-NOT: %fp = SUBXri
-    ; CHECK: %0 = SUBXri %fp, 12, 0
+    ; CHECK: %0:gpr64sp = SUBXri %fp, 12, 0
     ; CHECK: CBZX undef %x0, %bb.1
     ; CHECK: B %bb.2
     %0 : gpr64sp = SUBXri %fp, 12, 0

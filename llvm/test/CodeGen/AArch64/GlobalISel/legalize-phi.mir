@@ -4,7 +4,7 @@
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-unknown"
-  
+
   define i32 @legalize_phi(i32 %argc) {
   entry:
     ret i32 0
@@ -48,7 +48,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
   - { id: 2, class: _, preferred-register: '' }
@@ -60,26 +60,26 @@ registers:
   - { id: 8, class: _, preferred-register: '' }
   - { id: 9, class: _, preferred-register: '' }
   - { id: 10, class: _, preferred-register: '' }
-liveins:         
+liveins:
 body:             |
   bb.0:
    ; Test that we insert legalization artifacts(Truncs here) into the correct BBs
    ; while legalizing the G_PHI to s16.
    ; CHECK-LABEL: name: legalize_phi
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[ADD_BB1:%.*]](s32) = G_ADD
-   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[ADD_BB1]]
+   ; CHECK: [[ADD_BB1:%.*]]:_(s32) = G_ADD
+   ; CHECK: [[RES_BB1:%.*]]:_(s16) = G_TRUNC [[ADD_BB1]]
 
    ; CHECK-LABEL: bb.2:
-   ; CHECK: [[ADD_BB2:%.*]](s32) = G_ADD
-   ; CHECK: [[RES_BB2:%.*]](s16) = G_TRUNC [[ADD_BB2]]
+   ; CHECK: [[ADD_BB2:%.*]]:_(s32) = G_ADD
+   ; CHECK: [[RES_BB2:%.*]]:_(s16) = G_TRUNC [[ADD_BB2]]
 
    ; CHECK-LABEL: bb.3:
-   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
-   ; CHECK: [[RES:%.*]](s1) = G_TRUNC [[RES_PHI]]
+   ; CHECK: [[RES_PHI:%.*]]:_(s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
+   ; CHECK: [[RES:%.*]]:_(s1) = G_TRUNC [[RES_PHI]]
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: %w0
-  
+
     %0(s32) = COPY %w0
     %1(s32) = G_CONSTANT i32 0
     %3(s32) = G_CONSTANT i32 1
@@ -87,20 +87,20 @@ body:             |
     %2(s1) = G_ICMP intpred(ugt), %0(s32), %1
     G_BRCOND %2(s1), %bb.1
     G_BR %bb.2
-  
+
   bb.1:
     successors: %bb.3(0x80000000)
-  
+
     %4(s32) = G_ADD %0, %3
     %5(s1) = G_TRUNC %4(s32)
     G_BR %bb.3
-  
+
   bb.2:
     successors: %bb.3(0x80000000)
-  
+
     %7(s32) = G_ADD %0, %6
     %8(s1) = G_TRUNC %7(s32)
-  
+
   bb.3:
     %9(s1) = G_PHI %5(s1), %bb.1, %8(s1), %bb.2
     %10(s32) = G_ZEXT %9(s1)
@@ -128,14 +128,14 @@ body:             |
   bb.1:
    ; CHECK-LABEL: name: legalize_phi_ptr
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[A:%[0-9]+]](p0) = COPY %x0
-   ; CHECK: [[B:%[0-9]+]](p0) = COPY %x1
-   ; CHECK: [[CE:%[0-9]+]](s32) = COPY %w2
-   ; CHECK: [[C:%[0-9]+]](s1) = G_TRUNC [[CE]]
+   ; CHECK: [[A:%[0-9]+]]:_(p0) = COPY %x0
+   ; CHECK: [[B:%[0-9]+]]:_(p0) = COPY %x1
+   ; CHECK: [[CE:%[0-9]+]]:_(s32) = COPY %w2
+   ; CHECK: [[C:%[0-9]+]]:_(s1) = G_TRUNC [[CE]]
 
    ; CHECK-LABEL: bb.1:
    ; CHECK-LABEL: bb.2:
-   ; CHECK: %3(p0) = G_PHI [[A]](p0), %bb.0, [[B]](p0), %bb.1
+   ; CHECK: %3:_(p0) = G_PHI [[A]](p0), %bb.0, [[B]](p0), %bb.1
    ; CHECK: %x0 = COPY %3(p0)
     successors: %bb.2, %bb.3
     liveins: %w2, %x0, %x1
@@ -184,17 +184,17 @@ body:             |
    ; Test that we properly legalize a phi with a predecessor that's empty
    ; CHECK-LABEL: name: legalize_phi_empty
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
+   ; CHECK: [[ENTRY_ADD:%.*]]:_(s32) = G_ADD
 
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[ADD_BB1:%.*]](s32) = G_ADD
-   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[ADD_BB1]]
+   ; CHECK: [[ADD_BB1:%.*]]:_(s32) = G_ADD
+   ; CHECK: [[RES_BB1:%.*]]:_(s16) = G_TRUNC [[ADD_BB1]]
 
    ; CHECK-LABEL: bb.2:
-   ; CHECK: [[RES_BB2:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[RES_BB2:%.*]]:_(s16) = G_TRUNC [[ENTRY_ADD]]
 
-   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
-   ; CHECK: [[RES:%.*]](s1) = G_TRUNC [[RES_PHI]]
+   ; CHECK: [[RES_PHI:%.*]]:_(s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
+   ; CHECK: [[RES:%.*]]:_(s1) = G_TRUNC [[RES_PHI]]
 
     %0(s32) = COPY %w0
     %1(s32) = G_CONSTANT i32 0
@@ -249,13 +249,13 @@ body:             |
    ; Test that we properly legalize a phi that uses a value from the same BB
    ; CHECK-LABEL: name: legalize_phi_loop
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[C0:%.*]](s32) = G_CONSTANT i32 0
-   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[C0]]
+   ; CHECK: [[C0:%.*]]:_(s32) = G_CONSTANT i32 0
+   ; CHECK: [[RES_BB1:%.*]]:_(s16) = G_TRUNC [[C0]]
 
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
+   ; CHECK: [[RES_PHI:%.*]]:_(s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
    ; CHECK-NEXT: G_ANYEXT [[RES_PHI]]
-   ; CHECK: [[RES_BB2]](s16) = G_ANYEXT
+   ; CHECK: [[RES_BB2]]:_(s16) = G_ANYEXT
     %0(s32) = COPY %w0
     %2(s8) = G_CONSTANT i8 1
     %7(s8) = G_CONSTANT i8 0
@@ -297,13 +297,13 @@ body:             |
    ; Test that we properly legalize a phi that uses itself
    ; CHECK-LABEL: name: legalize_phi_cycle
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[C0:%.*]](s32) = G_CONSTANT i32 0
-   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[C0]]
+   ; CHECK: [[C0:%.*]]:_(s32) = G_CONSTANT i32 0
+   ; CHECK: [[RES_BB1:%.*]]:_(s16) = G_TRUNC [[C0]]
 
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
+   ; CHECK: [[RES_PHI:%.*]]:_(s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
    ; CHECK-NEXT: G_TRUNC
-   ; CHECK: [[RES_BB2]](s16) = COPY
+   ; CHECK: [[RES_BB2]]:_(s16) = COPY
 
     %0(s32) = COPY %w0
     %4(s8) = G_CONSTANT i8 0
@@ -354,21 +354,21 @@ body:             |
    ; correct location (ie make sure G_PHIs are the first insts in the BB).
    ; CHECK-LABEL: name: legalize_phi_same_bb
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[C42:%.*]](s32) = G_CONSTANT i32 42
-   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
+   ; CHECK: [[C42:%.*]]:_(s32) = G_CONSTANT i32 42
+   ; CHECK: [[ENTRY_ADD:%.*]]:_(s32) = G_ADD
 
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[BB1_ADD:%.*]](s32) = G_ADD
-   ; CHECK: [[RES1_BB1:%.*]](s16) = G_TRUNC [[BB1_ADD]]
-   ; CHECK: [[RES2_BB1:%.*]](s16) = G_TRUNC [[BB1_ADD]]
+   ; CHECK: [[BB1_ADD:%.*]]:_(s32) = G_ADD
+   ; CHECK: [[RES1_BB1:%.*]]:_(s16) = G_TRUNC [[BB1_ADD]]
+   ; CHECK: [[RES2_BB1:%.*]]:_(s16) = G_TRUNC [[BB1_ADD]]
 
    ; CHECK-LABEL: bb.2:
-   ; CHECK: [[RES1_BB2:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
-   ; CHECK: [[RES2_BB2:%.*]](s16) = G_TRUNC [[C42]]
+   ; CHECK: [[RES1_BB2:%.*]]:_(s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[RES2_BB2:%.*]]:_(s16) = G_TRUNC [[C42]]
 
    ; CHECK-LABEL: bb.3:
-   ; CHECK: [[RES1_PHI:%.*]](s16) = G_PHI [[RES1_BB1]](s16), %bb.1, [[RES1_BB2]](s16), %bb.2
-   ; CHECK-NEXT: [[RES_PHI:%.*]](s16) = G_PHI [[RES2_BB1]](s16), %bb.1, [[RES2_BB2]](s16), %bb.2
+   ; CHECK: [[RES1_PHI:%.*]]:_(s16) = G_PHI [[RES1_BB1]](s16), %bb.1, [[RES1_BB2]](s16), %bb.2
+   ; CHECK-NEXT: [[RES_PHI:%.*]]:_(s16) = G_PHI [[RES2_BB1]](s16), %bb.1, [[RES2_BB2]](s16), %bb.2
    ; CHECK-NEXT: G_TRUNC
    ; CHECK-NEXT: G_TRUNC
 
@@ -438,19 +438,19 @@ body:             |
    ; in different BBs.
    ; CHECK-LABEL: name: legalize_phi_diff_bb
    ; CHECK-LABEL: bb.0:
-   ; CHECK: [[C44:%.*]](s32) = G_CONSTANT i32 44
-   ; CHECK: [[C43:%.*]](s32) = G_CONSTANT i32 43
-   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
-   ; CHECK: [[RES_ENTRY:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
-   ; CHECK: [[RES_ENTRY1:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[C44:%.*]]:_(s32) = G_CONSTANT i32 44
+   ; CHECK: [[C43:%.*]]:_(s32) = G_CONSTANT i32 43
+   ; CHECK: [[ENTRY_ADD:%.*]]:_(s32) = G_ADD
+   ; CHECK: [[RES_ENTRY:%.*]]:_(s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[RES_ENTRY1:%.*]]:_(s16) = G_TRUNC [[ENTRY_ADD]]
 
    ; CHECK-LABEL: bb.1:
-   ; CHECK: [[RES1_PHI:%.*]](s16) = G_PHI [[RES_ENTRY]](s16), %bb.0, [[RES_BB1:%.*]](s16), %bb.1
-   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC
-   ; CHECK: [[RES_FOR_BB2:%.*]](s16) = COPY [[RES1_PHI]]
+   ; CHECK: [[RES1_PHI:%.*]]:_(s16) = G_PHI [[RES_ENTRY]](s16), %bb.0, [[RES_BB1:%.*]](s16), %bb.1
+   ; CHECK: [[RES_BB1:%.*]]:_(s16) = G_TRUNC
+   ; CHECK: [[RES_FOR_BB2:%.*]]:_(s16) = COPY [[RES1_PHI]]
 
    ; CHECK-LABEL: bb.2:
-   ; CHECK: [[RES2_PHI:%.*]](s16) = G_PHI [[RES_FOR_BB2]](s16), %bb.1, [[RES_ENTRY1:%.*]](s16), %bb.0
+   ; CHECK: [[RES2_PHI:%.*]]:_(s16) = G_PHI [[RES_FOR_BB2]](s16), %bb.1, [[RES_ENTRY1:%.*]](s16), %bb.0
    ; CHECK-NEXT: G_TRUNC
 
     %0(s32) = COPY %w0
@@ -483,4 +483,3 @@ body:             |
     RET_ReallyLR implicit %w0
 
 ...
-

@@ -32,9 +32,9 @@ body: |
     liveins: %x0, %x1, %x2, %x3
 
     ; CHECK-LABEL: name: test_urem_64
-    ; CHECK: [[QUOT:%[0-9]+]](s64) = G_UDIV %0, %1
-    ; CHECK: [[PROD:%[0-9]+]](s64) = G_MUL [[QUOT]], %1
-    ; CHECK: [[RES:%[0-9]+]](s64) = G_SUB %0, [[PROD]]
+    ; CHECK: [[QUOT:%[0-9]+]]:_(s64) = G_UDIV %0, %1
+    ; CHECK: [[PROD:%[0-9]+]]:_(s64) = G_MUL [[QUOT]], %1
+    ; CHECK: [[RES:%[0-9]+]]:_(s64) = G_SUB %0, [[PROD]]
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_UREM %0, %1
@@ -53,11 +53,11 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_srem_32
-    ; CHECK: [[T1:%.*]](s32) = G_TRUNC %0(s64)
-    ; CHECK: [[T2:%.*]](s32) = G_TRUNC %1(s64)
-    ; CHECK: [[DIV:%.*]](s32) = G_SDIV [[T1]], [[T2]]
-    ; CHECK: [[MUL:%.*]](s32) = G_MUL [[DIV]], [[T2]]
-    ; CHECK: [[RES:%.*]](s32) = G_SUB [[T1]], [[MUL]]
+    ; CHECK: [[T1:%.*]]:_(s32) = G_TRUNC %0(s64)
+    ; CHECK: [[T2:%.*]]:_(s32) = G_TRUNC %1(s64)
+    ; CHECK: [[DIV:%.*]]:_(s32) = G_SDIV [[T1]], [[T2]]
+    ; CHECK: [[MUL:%.*]]:_(s32) = G_MUL [[DIV]], [[T2]]
+    ; CHECK: [[RES:%.*]]:_(s32) = G_SUB [[T1]], [[MUL]]
 
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -79,22 +79,22 @@ body: |
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_srem_8
 
-    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[SRC1:%.*]](s32) = G_TRUNC %0(s64)
-    ; CHECK: [[SHL1:%.*]](s32) = G_SHL [[SRC1]], [[C1]]
-    ; CHECK: [[LHS_SEXT:%.*]](s32) = G_ASHR [[SHL1]], [[C1]]
-    ; CHECK: [[C2:%.*]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[SRC2:%.*]](s32) = G_TRUNC %1(s64)
-    ; CHECK: [[SHL2:%.*]](s32) = G_SHL [[SRC2]], [[C2]]
-    ; CHECK: [[RHS_SEXT:%.*]](s32) = G_ASHR [[SHL2]], [[C2]]
-    ; CHECK: [[SDIV:%.*]](s32) = G_SDIV [[LHS_SEXT]], [[RHS_SEXT]]
-    ; CHECK: [[A:%.*]](s32) = COPY [[SDIV]]
-    ; CHECK: [[SRC3:%.*]](s32) = G_TRUNC %1(s64)
-    ; CHECK: [[MUL:%.*]](s32) = G_MUL [[A]], [[SRC3]]
-    ; CHECK: [[SRC4:%.*]](s32) = G_TRUNC %0(s64)
-    ; CHECK: [[SRC5:%.*]](s32) = COPY [[MUL]]
-    ; CHECK: [[SUB:%.*]](s32) = G_SUB [[SRC4]], [[SRC5]]
-    ; CHECK: [[RES:%.*]](s8) = G_TRUNC [[SUB]]
+    ; CHECK: [[C1:%.*]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[SRC1:%.*]]:_(s32) = G_TRUNC %0(s64)
+    ; CHECK: [[SHL1:%.*]]:_(s32) = G_SHL [[SRC1]], [[C1]]
+    ; CHECK: [[LHS_SEXT:%.*]]:_(s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: [[C2:%.*]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[SRC2:%.*]]:_(s32) = G_TRUNC %1(s64)
+    ; CHECK: [[SHL2:%.*]]:_(s32) = G_SHL [[SRC2]], [[C2]]
+    ; CHECK: [[RHS_SEXT:%.*]]:_(s32) = G_ASHR [[SHL2]], [[C2]]
+    ; CHECK: [[SDIV:%.*]]:_(s32) = G_SDIV [[LHS_SEXT]], [[RHS_SEXT]]
+    ; CHECK: [[A:%.*]]:_(s32) = COPY [[SDIV]]
+    ; CHECK: [[SRC3:%.*]]:_(s32) = G_TRUNC %1(s64)
+    ; CHECK: [[MUL:%.*]]:_(s32) = G_MUL [[A]], [[SRC3]]
+    ; CHECK: [[SRC4:%.*]]:_(s32) = G_TRUNC %0(s64)
+    ; CHECK: [[SRC5:%.*]]:_(s32) = COPY [[MUL]]
+    ; CHECK: [[SUB:%.*]]:_(s32) = G_SUB [[SRC4]], [[SRC5]]
+    ; CHECK: [[RES:%.*]]:_(s8) = G_TRUNC [[SUB]]
 
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -119,7 +119,7 @@ body: |
     ; CHECK: %d0 = COPY %0
     ; CHECK: %d1 = COPY %1
     ; CHECK: BL $fmod, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
-    ; CHECK: [[RES:%.*]](s64) = COPY %d0
+    ; CHECK: [[RES:%.*]]:_(s64) = COPY %d0
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_FREM %0, %1
@@ -127,7 +127,7 @@ body: |
     ; CHECK: %s0 = COPY %3
     ; CHECK: %s1 = COPY %4
     ; CHECK: BL $fmodf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
-    ; CHECK: [[RES:%.*]](s32) = COPY %s0
+    ; CHECK: [[RES:%.*]]:_(s32) = COPY %s0
     %3(s32) = G_TRUNC %0
     %4(s32) = G_TRUNC %1
     %5(s32) = G_FREM %3, %4

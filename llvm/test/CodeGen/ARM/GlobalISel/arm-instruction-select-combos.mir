@@ -30,13 +30,13 @@ body:             |
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
-    ; CHECK: [[VREGZ:%[0-9]+]] = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %3, %2
-    ; CHECK: [[VREGR:%[0-9]+]] = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
 
     %r0 = COPY %4(s32)
     ; CHECK: %r0 = COPY [[VREGR]]
@@ -64,13 +64,13 @@ body:             |
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
-    ; CHECK: [[VREGZ:%[0-9]+]] = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %3, %2
-    ; CHECK: [[VREGR:%[0-9]+]] = MLAv5 [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLAv5 [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
 
     %r0 = COPY %4(s32)
     ; CHECK: %r0 = COPY [[VREGR]]
@@ -98,13 +98,13 @@ body:             |
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
-    ; CHECK: [[VREGZ:%[0-9]+]] = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_SUB %2, %3
-    ; CHECK: [[VREGR:%[0-9]+]] = MLS [[VREGX]], [[VREGY]], [[VREGZ]], 14, _
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = MLS [[VREGX]], [[VREGY]], [[VREGZ]], 14, _
 
     %r0 = COPY %4(s32)
     ; CHECK: %r0 = COPY [[VREGR]]
@@ -132,14 +132,14 @@ body:             |
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s32) = COPY %r2
-    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
-    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
-    ; CHECK: [[VREGZ:%[0-9]+]] = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gpr = COPY %r2
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_SUB %2, %3
-    ; CHECK: [[VREGM:%[0-9]+]] = MULv5 [[VREGX]], [[VREGY]], 14, _, _
-    ; CHECK: [[VREGR:%[0-9]+]] = SUBrr [[VREGZ]], [[VREGM]], 14, _, _
+    ; CHECK: [[VREGM:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = SUBrr [[VREGZ]], [[VREGM]], 14, _, _
 
     %r0 = COPY %4(s32)
     ; CHECK: %r0 = COPY [[VREGR]]

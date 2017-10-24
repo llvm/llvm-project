@@ -39,13 +39,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_add_v64i8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; ALL: [[VPADDBZrr:%[0-9]+]] = VPADDBZrr [[COPY]], [[COPY1]]
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; ALL: [[VPADDBZrr:%[0-9]+]]:vr512 = VPADDBZrr [[COPY]], [[COPY1]]
     ; ALL: %zmm0 = COPY [[VPADDBZrr]]
     ; ALL: RET 0, implicit %zmm0
     %0(<64 x s8>) = COPY %zmm0
@@ -69,13 +65,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_add_v32i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; ALL: [[VPADDWZrr:%[0-9]+]] = VPADDWZrr [[COPY]], [[COPY1]]
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; ALL: [[VPADDWZrr:%[0-9]+]]:vr512 = VPADDWZrr [[COPY]], [[COPY1]]
     ; ALL: %zmm0 = COPY [[VPADDWZrr]]
     ; ALL: RET 0, implicit %zmm0
     %0(<32 x s16>) = COPY %zmm0
@@ -99,13 +91,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_add_v16i32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; ALL: [[VPADDDZrr:%[0-9]+]] = VPADDDZrr [[COPY]], [[COPY1]]
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; ALL: [[VPADDDZrr:%[0-9]+]]:vr512 = VPADDDZrr [[COPY]], [[COPY1]]
     ; ALL: %zmm0 = COPY [[VPADDDZrr]]
     ; ALL: RET 0, implicit %zmm0
     %0(<16 x s32>) = COPY %zmm0
@@ -129,13 +117,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_add_v8i64
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr512
-    ; ALL-NEXT: id: 2, class: vr512
-    ; ALL: [[COPY:%[0-9]+]] = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]] = COPY %zmm1
-    ; ALL: [[VPADDQZrr:%[0-9]+]] = VPADDQZrr [[COPY]], [[COPY1]]
+    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:vr512 = COPY %zmm1
+    ; ALL: [[VPADDQZrr:%[0-9]+]]:vr512 = VPADDQZrr [[COPY]], [[COPY1]]
     ; ALL: %zmm0 = COPY [[VPADDQZrr]]
     ; ALL: RET 0, implicit %zmm0
     %0(<8 x s64>) = COPY %zmm0

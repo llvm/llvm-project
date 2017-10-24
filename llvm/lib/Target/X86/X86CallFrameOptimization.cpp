@@ -76,7 +76,7 @@ public:
 private:
   // Information we know about a particular call site
   struct CallContext {
-    CallContext() : FrameSetup(nullptr), MovVector(4, nullptr) {}
+    CallContext() : FrameSetup(nullptr), ArgStoreVector(4, nullptr) {}
 
     // Iterator referring to the frame setup instruction
     MachineBasicBlock::iterator FrameSetup;
@@ -90,8 +90,8 @@ private:
     // The total displacement of all passed parameters
     int64_t ExpectedDist = 0;
 
-    // The sequence of movs used to pass the parameters
-    SmallVector<MachineInstr *, 4> MovVector;
+    // The sequence of storing instructions used to pass the parameters
+    SmallVector<MachineInstr *, 4> ArgStoreVector;
 
     // True if this call site has no stack parameters
     bool NoStackParams = false;
@@ -402,7 +402,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   // push a sequence of stack-slot-aligned values onto the stack, with
   // no gaps between them.
   if (MaxAdjust > 4)
-    Context.MovVector.resize(MaxAdjust, nullptr);
+    Context.ArgStoreVector.resize(MaxAdjust, nullptr);
 
   DenseSet<unsigned int> UsedRegs;
 
@@ -440,13 +440,13 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       return;
     StackDisp >>= Log2SlotSize;
 
-    assert((size_t)StackDisp < Context.MovVector.size() &&
+    assert((size_t)StackDisp < Context.ArgStoreVector.size() &&
            "Function call has more parameters than the stack is adjusted for.");
 
     // If the same stack slot is being filled twice, something's fishy.
-    if (Context.MovVector[StackDisp] != nullptr)
+    if (Context.ArgStoreVector[StackDisp] != nullptr)
       return;
-    Context.MovVector[StackDisp] = &*I;
+    Context.ArgStoreVector[StackDisp] = &*I;
 
     for (const MachineOperand &MO : I->uses()) {
       if (!MO.isReg())
@@ -469,14 +469,14 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
-  // but only a series of MOVs.
-  auto MMI = Context.MovVector.begin(), MME = Context.MovVector.end();
+  // but only a series of storing instructions.
+  auto MMI = Context.ArgStoreVector.begin(), MME = Context.ArgStoreVector.end();
   for (; MMI != MME; ++MMI, Context.ExpectedDist += SlotSize)
     if (*MMI == nullptr)
       break;
 
   // If the call had no parameters, do nothing
-  if (MMI == Context.MovVector.begin())
+  if (MMI == Context.ArgStoreVector.begin())
     return;
 
   // We are either at the last parameter, or a gap.
@@ -503,11 +503,11 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   // stack with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
   // replace uses.
   for (int Idx = (Context.ExpectedDist >> Log2SlotSize) - 1; Idx >= 0; --Idx) {
-    MachineBasicBlock::iterator MOV = *Context.MovVector[Idx];
-    MachineOperand PushOp = MOV->getOperand(X86::AddrNumOperands);
+    MachineBasicBlock::iterator Store = *Context.ArgStoreVector[Idx];
+    MachineOperand PushOp = Store->getOperand(X86::AddrNumOperands);
     MachineBasicBlock::iterator Push = nullptr;
     unsigned PushOpcode;
-    switch (MOV->getOpcode()) {
+    switch (Store->getOpcode()) {
     default:
       llvm_unreachable("Unexpected Opcode!");
     case X86::AND16mi8:
@@ -536,7 +536,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
       // in preparation for the PUSH64. The upper 32 bits can be undef.
-      if (Is64Bit && MOV->getOpcode() == X86::MOV32mr) {
+      if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
         unsigned UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
@@ -580,7 +580,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
           MBB, std::next(Push), DL,
           MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
 
-    MBB.erase(MOV);
+    MBB.erase(Store);
   }
 
   // The stack-pointer copy is no longer used in the call sequences.

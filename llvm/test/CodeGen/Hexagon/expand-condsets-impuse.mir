@@ -53,7 +53,7 @@ body: |
         %7 = L2_loadrb_io %99, 12
         %8 = C2_cmpeqi %7, 9
         %9 = A2_tfrsi -999
-        ; CHECK: %10 = C2_cmoveit killed %8, -999, implicit %10
+        ; CHECK: %10:intregs = C2_cmoveit killed %8, -999, implicit %10
         %10 = C2_mux %8, %9, %1
         J2_jumpr %10, implicit-def %pc
 
