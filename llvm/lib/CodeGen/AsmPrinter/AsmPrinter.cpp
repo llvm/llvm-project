@@ -73,6 +73,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodePadder.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
@@ -233,8 +234,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfo>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
-  if (isVerbose())
-    AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfo>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1440,8 +1440,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   }
 
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  if (isVerbose())
-    LI = &getAnalysis<MachineLoopInfo>();
+  LI = &getAnalysis<MachineLoopInfo>();
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   EnablePrintSchedInfo = PrintSchedule.getNumOccurrences()
@@ -2614,6 +2613,23 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
   PrintChildLoopComment(OS, Loop, AP.getFunctionNumber());
 }
 
+void AsmPrinter::setupCodePaddingContext(const MachineBasicBlock &MBB,
+                                         MCCodePaddingContext &Context) const {
+  assert(MF != nullptr && "Machine function must be valid");
+  assert(LI != nullptr && "Loop info must be valid");
+  Context.IsPaddingActive = !MF->hasInlineAsm() &&
+                            !MF->getFunction()->optForSize() &&
+                            TM.getOptLevel() != CodeGenOpt::None;
+  const MachineLoop *CurrentLoop = LI->getLoopFor(&MBB);
+  Context.IsBasicBlockInsideInnermostLoop =
+      CurrentLoop != nullptr && CurrentLoop->getSubLoops().empty();
+  Context.IsBasicBlockReachableViaFallthrough =
+      std::find(MBB.pred_begin(), MBB.pred_end(), MBB.getPrevNode()) !=
+      MBB.pred_end();
+  Context.IsBasicBlockReachableViaBranch =
+      MBB.pred_size() > 0 && !isBlockOnlyReachableByFallthrough(&MBB);
+}
+
 /// EmitBasicBlockStart - This method prints the label for the specified
 /// MachineBasicBlock, an alignment (if present) and a comment describing
 /// it if appropriate.
@@ -2629,6 +2645,9 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
   // Emit an alignment directive for this block, if needed.
   if (unsigned Align = MBB.getAlignment())
     EmitAlignment(Align);
+  MCCodePaddingContext Context;
+  setupCodePaddingContext(MBB, Context);
+  OutStreamer->EmitCodePaddingBasicBlockStart(Context);
 
   // If the block has its address taken, emit any labels that were used to
   // reference the block.  It is possible that there is more than one label
@@ -2668,6 +2687,12 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
   } else {
     OutStreamer->EmitLabel(MBB.getSymbol());
   }
+}
+
+void AsmPrinter::EmitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  MCCodePaddingContext Context;
+  setupCodePaddingContext(MBB, Context);
+  OutStreamer->EmitCodePaddingBasicBlockEnd(Context);
 }
 
 void AsmPrinter::EmitVisibility(MCSymbol *Sym, unsigned Visibility,

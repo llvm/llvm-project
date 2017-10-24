@@ -275,17 +275,20 @@ def SI_ELSE_BREAK : CFPseudoInstSI <
 }
 
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
-def SI_KILL : PseudoInstSI <
-  (outs), (ins VSrc_b32:$src),
-  [(AMDGPUkill i32:$src)]> {
-  let isConvergent = 1;
-  let usesCustomInserter = 1;
+
+multiclass PseudoInstKill <dag ins> {
+  def _PSEUDO : PseudoInstSI <(outs), ins> {
+    let isConvergent = 1;
+    let usesCustomInserter = 1;
+  }
+
+  def _TERMINATOR : SPseudoInstSI <(outs), ins> {
+    let isTerminator = 1;
+  }
 }
 
-def SI_KILL_TERMINATOR : SPseudoInstSI <
-  (outs), (ins VSrc_b32:$src)> {
-  let isTerminator = 1;
-}
+defm SI_KILL_I1 : PseudoInstKill <(ins SSrc_b64:$src, i1imm:$killvalue)>;
+defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
 
 def SI_ILLEGAL_COPY : SPseudoInstSI <
   (outs unknown:$dst), (ins unknown:$src),
@@ -546,8 +549,35 @@ def : GCNPat<
 
 def : GCNPat <
   (int_AMDGPU_kilp),
-  (SI_KILL (i32 0xbf800000))
+  (SI_KILL_I1_PSEUDO (i1 0), 0)
 >;
+
+def : Pat <
+  // -1.0 as i32 (LowerINTRINSIC_VOID converts all other constants to -1.0)
+  (AMDGPUkill (i32 -1082130432)),
+  (SI_KILL_I1_PSEUDO (i1 0), 0)
+>;
+
+def : Pat <
+  (int_amdgcn_kill i1:$src),
+  (SI_KILL_I1_PSEUDO $src, 0)
+>;
+
+def : Pat <
+  (int_amdgcn_kill (i1 (not i1:$src))),
+  (SI_KILL_I1_PSEUDO $src, -1)
+>;
+
+def : Pat <
+  (AMDGPUkill i32:$src),
+  (SI_KILL_F32_COND_IMM_PSEUDO $src, 0, 3) // 3 means SETOGE
+>;
+
+def : Pat <
+  (int_amdgcn_kill (i1 (setcc f32:$src, InlineFPImm<f32>:$imm, cond:$cond))),
+  (SI_KILL_F32_COND_IMM_PSEUDO $src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+>;
+// TODO: we could add more variants for other types of conditionals
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns

@@ -278,6 +278,9 @@ void MCFragment::destroy() {
     case FT_LEB:
       delete cast<MCLEBFragment>(this);
       return;
+    case FT_Padding:
+      delete cast<MCPaddingFragment>(this);
+      return;
     case FT_SafeSEH:
       delete cast<MCSafeSEHFragment>(this);
       return;
@@ -322,6 +325,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Dwarf: OS << "MCDwarfFragment"; break;
   case MCFragment::FT_DwarfFrame: OS << "MCDwarfCallFrameFragment"; break;
   case MCFragment::FT_LEB:   OS << "MCLEBFragment"; break;
+  case MCFragment::FT_Padding: OS << "MCPaddingFragment"; break;
   case MCFragment::FT_SafeSEH:    OS << "MCSafeSEHFragment"; break;
   case MCFragment::FT_CVInlineLines: OS << "MCCVInlineLineTableFragment"; break;
   case MCFragment::FT_CVDefRange: OS << "MCCVDefRangeTableFragment"; break;
@@ -417,6 +421,19 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     const MCLEBFragment *LF = cast<MCLEBFragment>(this);
     OS << "\n       ";
     OS << " Value:" << LF->getValue() << " Signed:" << LF->isSigned();
+    break;
+  }
+  case MCFragment::FT_Padding: {
+    const MCPaddingFragment *F = cast<MCPaddingFragment>(this);
+    OS << "\n       ";
+    OS << " PaddingPoliciesMask:" << F->getPaddingPoliciesMask()
+       << " IsInsertionPoint:" << F->isInsertionPoint()
+       << " Size:" << F->getSize();
+    OS << "\n       ";
+    OS << " Inst:";
+    F->getInst().dump_pretty(OS);
+    OS << " InstSize:" << F->getInstSize();
+    OS << "\n       ";
     break;
   }
   case MCFragment::FT_SafeSEH: {

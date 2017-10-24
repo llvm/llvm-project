@@ -36,7 +36,7 @@ BufferQueue::BufferQueue(size_t B, size_t N, bool &Success)
       Success = false;
       return;
     }
-    auto &Buf = T.Buffer;
+    auto &Buf = T.Buff;
     Buf.Buffer = Tmp;
     Buf.Size = B;
     OwnedBuffers[i] = Tmp;
@@ -51,7 +51,7 @@ BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   if (LiveBuffers == BufferCount) return ErrorCode::NotEnoughMemory;
 
   auto &T = *Next;
-  auto &B = T.Buffer;
+  auto &B = T.Buff;
   Buf = B;
   ++LiveBuffers;
 
@@ -78,7 +78,7 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
   if (LiveBuffers == 0) return ErrorCode::NotEnoughMemory;
 
   // Now that the buffer has been released, we mark it as "used".
-  First->Buffer = Buf;
+  First->Buff = Buf;
   First->Used = true;
   Buf.Buffer = nullptr;
   Buf.Size = 0;
@@ -98,7 +98,7 @@ BufferQueue::ErrorCode BufferQueue::finalize() {
 BufferQueue::~BufferQueue() {
   for (auto I = Buffers, E = Buffers + BufferCount; I != E; ++I) {
     auto &T = *I;
-    auto &Buf = T.Buffer;
+    auto &Buf = T.Buff;
     InternalFree(Buf.Buffer);
   }
   delete[] Buffers;

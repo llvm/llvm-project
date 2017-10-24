@@ -14,3 +14,4 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(CFIVerifyTests
   FileAnalysis.cpp
   GraphBuilder.cpp)
+target_link_libraries(CFIVerifyTests LLVMCFIVerify)

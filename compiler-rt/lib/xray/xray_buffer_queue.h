@@ -36,7 +36,7 @@ class BufferQueue {
  private:
   struct BufferRep {
     // The managed buffer.
-    Buffer Buffer;
+    Buffer Buff;
 
     // This is true if the buffer has been returned to the available queue, and
     // is considered "used" by another thread.
@@ -141,7 +141,7 @@ class BufferQueue {
     __sanitizer::SpinMutexLock G(&Mutex);
     for (auto I = Buffers, E = Buffers + BufferCount; I != E; ++I) {
       const auto &T = *I;
-      if (T.Used) Fn(T.Buffer);
+      if (T.Used) Fn(T.Buff);
     }
   }
 

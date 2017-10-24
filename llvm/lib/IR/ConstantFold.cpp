@@ -629,6 +629,15 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
       if (CE->getOpcode() == Instruction::GetElementPtr &&
           CE->getOperand(0)->isNullValue()) {
+        // FIXME: Looks like getFoldedSizeOf(), getFoldedOffsetOf() and
+        // getFoldedAlignOf() don't handle the case when DestTy is a vector of
+        // pointers yet. We end up in asserts in CastInst::getCastOpcode (see
+        // test/Analysis/ConstantFolding/cast-vector.ll). I've only seen this
+        // happen in one "real" C-code test case, so it does not seem to be an
+        // important optimization to handle vectors here. For now, simply bail
+        // out.
+        if (DestTy->isVectorTy())
+          return nullptr;
         GEPOperator *GEPO = cast<GEPOperator>(CE);
         Type *Ty = GEPO->getSourceElementType();
         if (CE->getNumOperands() == 2) {

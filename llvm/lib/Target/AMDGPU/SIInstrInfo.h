@@ -857,6 +857,9 @@ public:
                                     MachineBasicBlock::iterator I,
                                     const DebugLoc &DL,
                                     unsigned DestReg) const;
+
+  static bool isKillTerminator(unsigned Opcode);
+  const MCInstrDesc &getKillTerminatorFromPseudo(unsigned Opcode) const;
 };
 
 namespace AMDGPU {
