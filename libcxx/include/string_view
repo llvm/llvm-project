@@ -155,10 +155,10 @@ namespace std {
   template <> struct hash<u32string_view>;
   template <> struct hash<wstring_view>;
 
-  constexpr basic_string<char>     operator "" s( const char *str,     size_t len ); // C++17
-  constexpr basic_string<wchar_t>  operator "" s( const wchar_t *str,  size_t len ); // C++17
-  constexpr basic_string<char16_t> operator "" s( const char16_t *str, size_t len ); // C++17
-  constexpr basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++17
+  constexpr basic_string_view<char>     operator "" sv( const char *str,     size_t len ) noexcept;
+  constexpr basic_string_view<wchar_t>  operator "" sv( const wchar_t *str,  size_t len ) noexcept;
+  constexpr basic_string_view<char16_t> operator "" sv( const char16_t *str, size_t len ) noexcept;
+  constexpr basic_string_view<char32_t> operator "" sv( const char32_t *str, size_t len ) noexcept;
 
 }  // namespace std
 
@@ -216,7 +216,7 @@ public:
 	basic_string_view& operator=(const basic_string_view&) _NOEXCEPT = default;
 
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-	basic_string_view(const _CharT* __s, size_type __len)
+	basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
 		: __data(__s), __size(__len)
 	{
 // #if _LIBCPP_STD_VER > 11
@@ -760,25 +760,25 @@ inline namespace literals
   inline namespace string_view_literals
   {
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    basic_string_view<char> operator "" sv(const char *__str, size_t __len)
+    basic_string_view<char> operator "" sv(const char *__str, size_t __len) _NOEXCEPT
     {
         return basic_string_view<char> (__str, __len);
     }
 
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    basic_string_view<wchar_t> operator "" sv(const wchar_t *__str, size_t __len)
+    basic_string_view<wchar_t> operator "" sv(const wchar_t *__str, size_t __len) _NOEXCEPT
     {
         return basic_string_view<wchar_t> (__str, __len);
     }
 
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    basic_string_view<char16_t> operator "" sv(const char16_t *__str, size_t __len)
+    basic_string_view<char16_t> operator "" sv(const char16_t *__str, size_t __len) _NOEXCEPT
     {
         return basic_string_view<char16_t> (__str, __len);
     }
 
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    basic_string_view<char32_t> operator "" sv(const char32_t *__str, size_t __len)
+    basic_string_view<char32_t> operator "" sv(const char32_t *__str, size_t __len) _NOEXCEPT
     {
         return basic_string_view<char32_t> (__str, __len);
     }

@@ -1778,19 +1778,12 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr();
   EHdr->e_shoff = SectionHeaderOff;
+  EHdr->e_flags = Config->EFlags;
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
   EHdr->e_shnum = OutputSections.size() + 1;
   EHdr->e_shstrndx = InX::ShStrTab->getParent()->SectionIndex;
-
-  if (Config->EMachine == EM_ARM)
-    // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
-    // but we don't have any firm guarantees of conformance. Linux AArch64
-    // kernels (as of 2016) require an EABI version to be set.
-    EHdr->e_flags = EF_ARM_EABI_VER5;
-  else if (Config->EMachine == EM_MIPS)
-    EHdr->e_flags = Config->MipsEFlags;
 
   if (!Config->Relocatable) {
     EHdr->e_phoff = sizeof(Elf_Ehdr);

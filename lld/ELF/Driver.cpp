@@ -1087,8 +1087,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 
-  if (Config->EMachine == EM_MIPS)
-    Config->MipsEFlags = calcMipsEFlags<ELFT>();
+  Config->EFlags = Target->calcEFlags();
 
   // This adds a .comment section containing a version string. We have to add it
   // before decompressAndMergeSections because the .comment section is a
