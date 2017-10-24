@@ -4591,3 +4591,24 @@ SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
   return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
            .addReg(UnusedCarry, RegState::Define | RegState::Dead);
 }
+
+bool SIInstrInfo::isKillTerminator(unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
+  case AMDGPU::SI_KILL_I1_TERMINATOR:
+    return true;
+  default:
+    return false;
+  }
+}
+
+const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) const {
+  switch (Opcode) {
+  case AMDGPU::SI_KILL_F32_COND_IMM_PSEUDO:
+    return get(AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR);
+  case AMDGPU::SI_KILL_I1_PSEUDO:
+    return get(AMDGPU::SI_KILL_I1_TERMINATOR);
+  default:
+    llvm_unreachable("invalid opcode, expected SI_KILL_*_PSEUDO");
+  }
+}
