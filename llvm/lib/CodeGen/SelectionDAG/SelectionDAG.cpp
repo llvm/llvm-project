@@ -7237,17 +7237,14 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
   DbgInfo->add(DB, SD, isParameter);
 }
 
-/// TransferDbgValues - Transfer SDDbgValues. Called in replace nodes.
+/// Transfer SDDbgValues. Called in replace nodes.
 void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
   if (From == To || !From.getNode()->getHasDebugValue())
     return;
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
-  ArrayRef<SDDbgValue *> DVs = GetDbgValues(FromNode);
   SmallVector<SDDbgValue *, 2> ClonedDVs;
-  for (ArrayRef<SDDbgValue *>::iterator I = DVs.begin(), E = DVs.end();
-       I != E; ++I) {
-    SDDbgValue *Dbg = *I;
+  for (auto *Dbg : GetDbgValues(FromNode)) {
     // Only add Dbgvalues attached to same ResNo.
     if (Dbg->getKind() == SDDbgValue::SDNODE &&
         Dbg->getSDNode() == From.getNode() &&
