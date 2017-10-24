@@ -222,7 +222,14 @@ class LinkerScript final {
 
   void assignOffsets(OutputSection *Sec);
 
-  std::unique_ptr<AddressState> Ctx;
+  // Ctx captures the local AddressState and makes it accessible
+  // deliberately. This is needed as there are some cases where we cannot just
+  // thread the current state through to a lambda function created by the
+  // script parser.
+  // This should remain a plain pointer as its lifetime is smaller than
+  // LinkerScript.
+  AddressState *Ctx = nullptr;
+
   OutputSection *Aether;
 
   uint64_t Dot;

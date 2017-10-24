@@ -440,7 +440,10 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   //  value. See also the similar FIXME in getLValueFieldOrIvar().
   if (Base.isUnknownOrUndef() || Base.getAs<loc::ConcreteInt>())
     return Base;
-
+  
+  if (Base.getAs<loc::GotoLabel>())
+    return UnknownVal();
+  
   const SubRegion *BaseRegion =
       Base.castAs<loc::MemRegionVal>().getRegionAs<SubRegion>();
 

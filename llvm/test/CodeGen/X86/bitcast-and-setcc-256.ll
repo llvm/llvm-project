@@ -210,34 +210,19 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 }
 
 define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
-; SSE2-LABEL: v8i32:
-; SSE2:       # BB#0:
-; SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    pcmpgtd %xmm7, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSE2-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-NEXT:    pand %xmm0, %xmm4
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm4
-; SSE2-NEXT:    packuswb %xmm4, %xmm4
-; SSE2-NEXT:    pmovmskb %xmm4, %eax
-; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; SSE2-NEXT:    ret{{[l|q]}}
-;
-; SSSE3-LABEL: v8i32:
-; SSSE3:       # BB#0:
-; SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
-; SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
-; SSSE3-NEXT:    packssdw %xmm5, %xmm4
-; SSSE3-NEXT:    pand %xmm0, %xmm4
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; SSSE3-NEXT:    pmovmskb %xmm4, %eax
-; SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
-; SSSE3-NEXT:    ret{{[l|q]}}
+; SSE2-SSSE3-LABEL: v8i32:
+; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm7, %xmm5
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm6, %xmm4
+; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
+; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
+; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: v8i32:
 ; AVX1:       # BB#0:
@@ -252,7 +237,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpacksswb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX1-NEXT:    vzeroupper
@@ -267,7 +252,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX2-NEXT:    vzeroupper
@@ -310,8 +295,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-NEXT:    packsswb %xmm0, %xmm2
 ; SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    ret{{[l|q]}}
@@ -330,7 +314,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm6
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm6 = xmm6[0],xmm7[0]
 ; SSSE3-NEXT:    pand %xmm2, %xmm6
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm6 = xmm6[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSSE3-NEXT:    packsswb %xmm0, %xmm6
 ; SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSSE3-NEXT:    ret{{[l|q]}}
@@ -344,7 +328,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; AVX12-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX12-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX12-NEXT:    vzeroupper

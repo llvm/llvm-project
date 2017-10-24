@@ -29598,13 +29598,12 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   }
 
   if (SExtVT == MVT::v8i16) {
-    V = DAG.getBitcast(MVT::v16i8, V);
-    V = DAG.getVectorShuffle(
-        MVT::v16i8, DL, V, DAG.getUNDEF(MVT::v16i8),
-        {0, 2, 4, 6, 8, 10, 12, 14, -1, -1, -1, -1, -1, -1, -1, -1});
+    assert(16 == DAG.ComputeNumSignBits(V) && "Expected all/none bit vector");
+    V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V,
+                    DAG.getUNDEF(MVT::v8i16));
   } else
     assert(SExtVT.getScalarType() != MVT::i16 &&
-           "Vectors of i16 must be shuffled");
+           "Vectors of i16 must be packed");
   if (FPCastVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
     V = DAG.getBitcast(FPCastVT, V);
   V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);

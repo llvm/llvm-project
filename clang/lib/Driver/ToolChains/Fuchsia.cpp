@@ -44,10 +44,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.ClaimAllArgs(options::OPT_w);
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  if (llvm::sys::path::stem(Exec).equals_lower("lld")) {
-    CmdArgs.push_back("-flavor");
-    CmdArgs.push_back("gnu");
-
+  if (llvm::sys::path::filename(Exec).equals_lower("ld.lld") ||
+      llvm::sys::path::stem(Exec).equals_lower("ld.lld")) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rodynamic");
   }

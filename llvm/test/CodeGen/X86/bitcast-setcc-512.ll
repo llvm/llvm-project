@@ -1045,7 +1045,7 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b) {
 ; SSE-NEXT:    pcmpgtq %xmm4, %xmm0
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    packsswb %xmm2, %xmm0
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    packsswb %xmm0, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE-NEXT:    retq
@@ -1109,7 +1109,7 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b) {
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm4
 ; SSE-NEXT:    packsswb %xmm5, %xmm4
 ; SSE-NEXT:    packsswb %xmm6, %xmm4
-; SSE-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    packsswb %xmm0, %xmm4
 ; SSE-NEXT:    pmovmskb %xmm4, %eax
 ; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE-NEXT:    retq

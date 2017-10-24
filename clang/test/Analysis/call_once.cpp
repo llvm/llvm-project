@@ -290,3 +290,16 @@ void test_mutator_noref() {
   std::call_once(flag, &fail_mutator, a);
   clang_analyzer_eval(a == 42); // expected-warning{{FALSE}}
 }
+
+// Function is implicitly treated as a function pointer
+// even when an ampersand is not explicitly set.
+void callbackn(int &param) {
+  param = 42;
+};
+void test_implicit_funcptr() {
+  int x = 0;
+  static std::once_flag flagn;
+
+  std::call_once(flagn, callbackn, x);
+  clang_analyzer_eval(x == 42); // expected-warning{{TRUE}}
+}

@@ -89,7 +89,8 @@ private:
 
   /// Pretend all of this node's results are legal.
   bool IgnoreNodeResults(SDNode *N) const {
-    return N->getOpcode() == ISD::TargetConstant;
+    return N->getOpcode() == ISD::TargetConstant ||
+           N->getOpcode() == ISD::Register;
   }
 
   /// For integer nodes that are below legal width, this map indicates what
@@ -400,18 +401,22 @@ private:
   /// Given an operand Op of Float type, returns the integer if the Op is not
   /// supported in target HW and converted to the integer.
   /// The integer contains exactly the same bits as Op - only the type changed.
-  /// For example, if Op is an f32 which was softened to an i32, then this method
-  /// returns an i32, the bits of which coincide with those of Op.
+  /// For example, if Op is an f32 which was softened to an i32, then this
+  /// method returns an i32, the bits of which coincide with those of Op.
   /// If the Op can be efficiently supported in target HW or the operand must
   /// stay in a register, the Op is not converted to an integer.
   /// In that case, the given op is returned.
   SDValue GetSoftenedFloat(SDValue Op) {
-    SDValue &SoftenedOp = SoftenedFloats[Op];
-    if (!SoftenedOp.getNode() &&
-        isSimpleLegalType(Op.getValueType()))
+    auto Iter = SoftenedFloats.find(Op);
+    if (Iter == SoftenedFloats.end()) {
+      assert(isSimpleLegalType(Op.getValueType()) &&
+             "Operand wasn't converted to integer?");
       return Op;
+    }
+
+    SDValue &SoftenedOp = Iter->second;
+    assert(SoftenedOp.getNode() && "Unconverted op in SoftenedFloats?");
     RemapValue(SoftenedOp);
-    assert(SoftenedOp.getNode() && "Operand wasn't converted to integer?");
     return SoftenedOp;
   }
   void SetSoftenedFloat(SDValue Op, SDValue Result);

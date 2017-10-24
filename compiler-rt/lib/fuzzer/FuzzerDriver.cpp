@@ -578,6 +578,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.ReloadIntervalSec = Flags.reload;
   Options.OnlyASCII = Flags.only_ascii;
   Options.DetectLeaks = Flags.detect_leaks;
+  Options.PurgeAllocatorIntervalSec = Flags.purge_allocator_interval;
   Options.TraceMalloc = Flags.trace_malloc;
   Options.RssLimitMb = Flags.rss_limit_mb;
   if (Flags.runs >= 0)

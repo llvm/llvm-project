@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BodyFarm.h"
+#include "clang/Analysis/BodyFarm.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
@@ -253,13 +253,23 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
                                                const ParmVarDecl *Callback,
                                                ArrayRef<Expr *> CallArgs) {
 
-  return new (C) CallExpr(
-      /*ASTContext=*/C,
-      /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Callback),
-      /*args=*/CallArgs,
-      /*QualType=*/C.VoidTy,
-      /*ExprValueType=*/VK_RValue,
-      /*SourceLocation=*/SourceLocation());
+  QualType Ty = Callback->getType();
+  DeclRefExpr *Call = M.makeDeclRefExpr(Callback);
+  CastKind CK;
+  if (Ty->isRValueReferenceType()) {
+    CK = CK_LValueToRValue;
+  } else {
+    assert(Ty->isLValueReferenceType());
+    CK = CK_FunctionToPointerDecay;
+    Ty = C.getPointerType(Ty.getNonReferenceType());
+  }
+
+  return new (C)
+      CallExpr(C, M.makeImplicitCast(Call, Ty.getNonReferenceType(), CK),
+               /*args=*/CallArgs,
+               /*QualType=*/C.VoidTy,
+               /*ExprValueType=*/VK_RValue,
+               /*SourceLocation=*/SourceLocation());
 }
 
 static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
@@ -366,9 +376,11 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
     CallbackFunctionType = CallbackRecordDecl->getLambdaCallOperator()
                                ->getType()
                                ->getAs<FunctionProtoType>();
-  } else {
+  } else if (!CallbackType->getPointeeType().isNull()) {
     CallbackFunctionType =
         CallbackType->getPointeeType()->getAs<FunctionProtoType>();
+  } else {
+    CallbackFunctionType = CallbackType->getAs<FunctionProtoType>();
   }
 
   if (!CallbackFunctionType)
