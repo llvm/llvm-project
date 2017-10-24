@@ -202,7 +202,8 @@ public:
     AMDOpenCL,
     CoreCLR,
     OpenCL,
-    LastEnvironmentType = OpenCL
+    Simulator,  // Simulator variants of other systems, e.g., Apple's iOS
+    LastEnvironmentType = Simulator
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -465,6 +466,10 @@ public:
   /// isOSDarwin - Is this a "Darwin" OS (OS X, iOS, or watchOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS();
+  }
+
+  bool isSimulatorEnvironment() const {
+    return getEnvironment() == Triple::Simulator;
   }
 
   bool isOSNetBSD() const {
