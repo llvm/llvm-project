@@ -112,8 +112,8 @@ body:             |
 # Make sure constant bus restriction isn't violated if src0 is an SGPR.
 
 # GCN-LABEL: name: test_madak_sgpr_src0_f32
-# GCN: %1 = V_MOV_B32_e32 1078523331, implicit %exec
-# GCN: %2 = V_MAD_F32 0, killed %0, 0, %1, 0, %3, 0, 0, implicit %exec
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit %exec
+# GCN: %2:vgpr_32 = V_MAD_F32 0, killed %0, 0, %1, 0, %3:vgpr_32, 0, 0, implicit %exec
 
 ---
 name:            test_madak_sgpr_src0_f32
@@ -134,7 +134,7 @@ body:             |
 # This can still fold if this is an inline immediate.
 
 # GCN-LABEL: name: test_madak_inlineimm_src0_f32
-# GCN: %1 = V_MADMK_F32 1073741824, 1078523331, %2, implicit %exec
+# GCN: %1:vgpr_32 = V_MADMK_F32 1073741824, 1078523331, %2:vgpr_32, implicit %exec
 
 ---
 name:            test_madak_inlineimm_src0_f32
@@ -152,7 +152,7 @@ body:             |
 # Non-inline immediate uses constant bus already.
 
 # GCN-LABEL: name: test_madak_otherimm_src0_f32
-# GCN: %1 = V_MAC_F32_e32 1120403456, %0, %1, implicit %exec
+# GCN: %1:vgpr_32 = V_MAC_F32_e32 1120403456, %0, %1, implicit %exec
 
 ---
 name:            test_madak_otherimm_src0_f32
@@ -170,7 +170,7 @@ body:             |
 # Non-inline immediate uses constant bus already.
 
 # GCN-LABEL: name: test_madak_other_constantlike_src0_f32
-# GCN: %1 = V_MAC_F32_e32 %stack.0, %0, %1, implicit %exec
+# GCN: %1:vgpr_32 = V_MAC_F32_e32 %stack.0, %0, %1, implicit %exec
 ---
 name:            test_madak_other_constantlike_src0_f32
 registers:

@@ -1214,9 +1214,8 @@ private:
   }
 };
 
-template<typename KeyT, typename ValueT, typename KeyInfoT>
-static inline size_t
-capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
+template <typename KeyT, typename ValueT, typename KeyInfoT>
+inline size_t capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
   return X.getMemorySize();
 }
 

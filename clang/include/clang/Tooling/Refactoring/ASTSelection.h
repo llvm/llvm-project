@@ -115,6 +115,21 @@ public:
     return SelectedNode.get().Children[I].Node.get<Stmt>();
   }
 
+  /// Returns true when a selected code range is in a function-like body
+  /// of code, like a function, method or a block.
+  ///
+  /// This function can be used to test against selected expressions that are
+  /// located outside of a function, e.g. global variable initializers, default
+  /// argument values, or even template arguments.
+  ///
+  /// Use the \c getFunctionLikeNearestParent to get the function-like parent
+  /// declaration.
+  bool isInFunctionLikeBodyOfCode() const;
+
+  /// Returns the nearest function-like parent declaration or null if such
+  /// declaration doesn't exist.
+  const Decl *getFunctionLikeNearestParent() const;
+
   static Optional<CodeRangeASTSelection>
   create(SourceRange SelectionRange, const SelectedASTNode &ASTSelection);
 

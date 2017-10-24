@@ -35,14 +35,14 @@ body: |
     liveins: %x0, %x1, %x2, %x3
 
     ; CHECK-LABEL: name: test_scalar_add_big
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[COPY2:%[0-9]+]](s64) = COPY %x2
-    ; CHECK: [[COPY3:%[0-9]+]](s64) = COPY %x3
-    ; CHECK: [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[C]](s32)
-    ; CHECK: [[UADDE:%[0-9]+]](s64), [[UADDE1:%[0-9]+]](s1) = G_UADDE [[COPY]], [[COPY2]], [[TRUNC]]
-    ; CHECK: [[UADDE2:%[0-9]+]](s64), [[UADDE3:%[0-9]+]](s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDE1]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY %x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY %x3
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[C]](s32)
+    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY]], [[COPY2]], [[TRUNC]]
+    ; CHECK: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDE1]]
     ; CHECK: %x0 = COPY [[UADDE]](s64)
     ; CHECK: %x1 = COPY [[UADDE2]](s64)
     %0(s64) = COPY %x0
@@ -71,13 +71,13 @@ body: |
     liveins: %x0, %x1, %x2, %x3
 
     ; CHECK-LABEL: name: test_scalar_add_small
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %x1
-    ; CHECK: [[TRUNC:%[0-9]+]](s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]](s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[ADD:%[0-9]+]](s32) = G_ADD [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]](s8) = G_TRUNC [[ADD]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[TRUNC2]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[ADD]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC2]](s8)
     ; CHECK: %x0 = COPY [[ANYEXT]](s64)
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -105,12 +105,12 @@ body: |
     liveins: %q0, %q1, %q2, %q3
 
     ; CHECK-LABEL: name: test_vector_add
-    ; CHECK: [[COPY:%[0-9]+]](<2 x s64>) = COPY %q0
-    ; CHECK: [[COPY1:%[0-9]+]](<2 x s64>) = COPY %q1
-    ; CHECK: [[COPY2:%[0-9]+]](<2 x s64>) = COPY %q2
-    ; CHECK: [[COPY3:%[0-9]+]](<2 x s64>) = COPY %q3
-    ; CHECK: [[ADD:%[0-9]+]](<2 x s64>) = G_ADD [[COPY]], [[COPY2]]
-    ; CHECK: [[ADD1:%[0-9]+]](<2 x s64>) = G_ADD [[COPY1]], [[COPY3]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY %q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY %q1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY %q2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY %q3
+    ; CHECK: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY2]]
+    ; CHECK: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY1]], [[COPY3]]
     ; CHECK: %q0 = COPY [[ADD]](<2 x s64>)
     ; CHECK: %q1 = COPY [[ADD1]](<2 x s64>)
     %0(<2 x s64>) = COPY %q0

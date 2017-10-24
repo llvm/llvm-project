@@ -927,8 +927,8 @@ public:
   }
 };
 
-template<typename T, unsigned N>
-static inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
+template <typename T, unsigned N>
+inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
   return X.capacity_in_bytes();
 }
 

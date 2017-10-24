@@ -105,7 +105,7 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
   if (internal_strncmp(info->dlpi_name, "linux-", sizeof("linux-") - 1) == 0)
     return 0;
 
-#if SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
   // Ignore first entry (the main program)
   char **p = (char **)data;
   if (!(*p)) {

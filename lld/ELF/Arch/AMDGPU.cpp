@@ -25,6 +25,7 @@ namespace {
 class AMDGPU final : public TargetInfo {
 public:
   AMDGPU();
+  uint32_t calcEFlags() const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
@@ -35,6 +36,24 @@ AMDGPU::AMDGPU() {
   RelativeRel = R_AMDGPU_RELATIVE64;
   GotRel = R_AMDGPU_ABS64;
   GotEntrySize = 8;
+}
+
+static uint32_t getEFlags(InputFile *File) {
+  return cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags;
+}
+
+uint32_t AMDGPU::calcEFlags() const {
+  assert(!ObjectFiles.empty());
+  uint32_t Ret = getEFlags(ObjectFiles[0]);
+
+  // Verify that all input files have the same e_flags.
+  for (InputFile *F : makeArrayRef(ObjectFiles).slice(1)) {
+    if (Ret == getEFlags(F))
+      continue;
+    error("incompatible e_flags: " + toString(F));
+    return 0;
+  }
+  return Ret;
 }
 
 void AMDGPU::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {

@@ -15,12 +15,12 @@ body:             |
     %1:gpr(s64) = G_IMPLICIT_DEF
 
     ; CHECK:  body:
-    ; CHECK: [[TMP:%[0-9]+]] = SUBREG_TO_REG 0, %0, 15
-    ; CHECK: %2 = BFMXri %1, [[TMP]], 0, 31
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: %2:gpr64 = BFMXri %1, [[TMP]], 0, 31
     %2:gpr(s64) = G_INSERT %1, %0, 0
 
-    ; CHECK: [[TMP:%[0-9]+]] = SUBREG_TO_REG 0, %0, 15
-    ; CHECK: %3 = BFMXri %1, [[TMP]], 51, 31
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: %3:gpr64 = BFMXri %1, [[TMP]], 51, 31
     %3:gpr(s64) = G_INSERT %1, %0, 13
 
     %x0 = COPY %2
@@ -41,12 +41,12 @@ body:             |
     %0:gpr(s64) = COPY %x0
 
     ; CHECK:  body:
-    ; CHECK: [[TMP:%[0-9]+]] = UBFMXri %0, 0, 31
-    ; CHECK: %1 = COPY [[TMP]].sub_32
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = UBFMXri %0, 0, 31
+    ; CHECK: %1:gpr32 = COPY [[TMP]].sub_32
     %1:gpr(s32) = G_EXTRACT %0, 0
 
-    ; CHECK: [[TMP:%[0-9]+]] = UBFMXri %0, 13, 44
-    ; CHECK: %2 = COPY [[TMP]].sub_32
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = UBFMXri %0, 13, 44
+    ; CHECK: %2:gpr32 = COPY [[TMP]].sub_32
     %2:gpr(s32) = G_EXTRACT %0, 13
 
     %w0 = COPY %1

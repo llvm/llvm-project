@@ -1,10 +1,10 @@
 ; RUN: llc -stop-after=tailduplication < %s | FileCheck %s
 ;
-; Check that DebugLoc attached to the branch instruction of 
+; Check that DebugLoc attached to the branch instruction of
 ; 'while.cond1.preheader.lr.ph' survives after tailduplication pass.
 ;
 ; CHECK: [[DLOC:![0-9]+]] = !DILocation(line: 9, column: 5, scope: !{{[0-9]+}})
-; CHECK: [[VREG:%[^ ]+]] = COPY %rdi
+; CHECK: [[VREG:%[^ ]+]]:gr64 = COPY %rdi
 ; CHECK: TEST64rr [[VREG]], [[VREG]]
 ; CHECK-NEXT: JE_1 {{.+}}, debug-location [[DLOC]]
 ; CHECK-NEXT: JMP_1 {{.+}}, debug-location [[DLOC]]

@@ -53,9 +53,9 @@ body:             |
     liveins: %w0
     ; CHECK-LABEL: name: main
     ; CHECK: liveins: %w0
-    ; CHECK: [[MOVi32imm:%[0-9]+]] = MOVi32imm 1
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[EONWrr:%[0-9]+]] = EONWrr [[COPY]], [[MOVi32imm]]
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[EONWrr:%[0-9]+]]:gpr32 = EONWrr [[COPY]], [[MOVi32imm]]
     ; CHECK: %w0 = COPY [[EONWrr]]
     %0(s32) = G_CONSTANT i32 -1
     %3(s32) = G_CONSTANT i32 1

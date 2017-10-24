@@ -28,6 +28,7 @@ namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS();
+  uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const SymbolBody &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
@@ -67,6 +68,10 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
     TlsModuleIndexRel = R_MIPS_TLS_DTPMOD32;
     TlsOffsetRel = R_MIPS_TLS_DTPREL32;
   }
+}
+
+template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
+  return calcMipsEFlags<ELFT>();
 }
 
 template <class ELFT>
@@ -236,7 +241,7 @@ static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
   write16<E>(Loc, Data);
 }
 
-static bool isMicroMips() { return Config->MipsEFlags & EF_MIPS_MICROMIPS; }
+static bool isMicroMips() { return Config->EFlags & EF_MIPS_MICROMIPS; }
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;

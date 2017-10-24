@@ -8,7 +8,7 @@
 ...
 
 # CHECK-LABEL: name: test0
-# CHECK: [[B:%[0-9]+]] = A2_tfrsi @global_address
+# CHECK: [[B:%[0-9]+]]:intregs = A2_tfrsi @global_address
 # CHECK: L2_loadri_io [[B]], 0
 # CHECK: L2_loadri_io [[B]], 4
 # CHECK: L2_loadri_io [[B]], 8
@@ -26,8 +26,8 @@ body: |
 ...
 
 # CHECK-LABEL: name: test1
-# CHECK: [[C:%[0-9]+]] = COPY %r0
-# CHECK: [[B:%[0-9]+]] = A2_addi [[C]], @global_address
+# CHECK: [[C:%[0-9]+]]:intregs = COPY %r0
+# CHECK: [[B:%[0-9]+]]:intregs = A2_addi [[C]], @global_address
 # CHECK: L2_loadri_io [[B]], 0
 # CHECK: L2_loadri_io [[B]], 4
 # CHECK: L2_loadri_io [[B]], 8
@@ -48,11 +48,11 @@ body: |
 ...
 
 # CHECK-LABEL: name: test2
-# CHECK: [[C:%[0-9]+]] = COPY %r0
-# CHECK: [[B:%[0-9]+]] = A2_tfrsi @global_address + 4
-# CHECK: [[T0:%[0-9]+]] = A2_addi [[B]], -4
+# CHECK: [[C:%[0-9]+]]:intregs = COPY %r0
+# CHECK: [[B:%[0-9]+]]:intregs = A2_tfrsi @global_address + 4
+# CHECK: [[T0:%[0-9]+]]:intregs = A2_addi [[B]], -4
 # CHECK: %r0 = COPY [[T0]]
-# CHECK: [[T1:%[0-9]+]] = A2_addi [[B]], -2
+# CHECK: [[T1:%[0-9]+]]:intregs = A2_addi [[B]], -2
 # CHECK: %r1 = COPY [[T1]]
 # CHECK: L4_loadri_rr [[B]], [[C]], 0
 ---
@@ -72,4 +72,3 @@ body: |
     %r1 = COPY %2
     %3 = L4_loadri_ur %0, 0, @global_address+4
 ...
-

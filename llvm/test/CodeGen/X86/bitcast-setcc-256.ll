@@ -54,7 +54,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; SSE2-SSSE3:       # BB#0:
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
@@ -97,7 +97,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE2-SSSE3:       # BB#0:
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packsswb %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
@@ -189,7 +189,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    packsswb %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    movmskps %xmm1, %eax
 ; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq
@@ -232,7 +232,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE2-SSSE3:       # BB#0:
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packsswb %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-SSSE3-NEXT:    retq

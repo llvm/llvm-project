@@ -26,18 +26,10 @@ body:             |
     liveins: %x0, %w1, %w2
 
     ; CHECK-LABEL: name: SMADDLrrr_gpr
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr64
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK-NEXT: id: 2, class: gpr32
-    ; CHECK-NEXT: id: 3, class: gpr
-    ; CHECK-NEXT: id: 4, class: gpr
-    ; CHECK-NEXT: id: 5, class: gpr
-    ; CHECK-NEXT: id: 6, class: gpr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]] = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]] = COPY %w2
-    ; CHECK: [[SMADDLrrr:%[0-9]+]] = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY %w2
+    ; CHECK: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: %x0 = COPY [[SMADDLrrr]]
     %0(s64) = COPY %x0
     %1(s32) = COPY %w1

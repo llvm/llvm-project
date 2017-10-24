@@ -22,13 +22,9 @@ body:             |
     liveins: %rdi
 
     ; CHECK-LABEL: name: test_gep_i32
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gr64
-    ; CHECK-NEXT: id: 1, class: gr64_nosp
-    ; CHECK-NEXT: id: 2, class: gr64
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %rdi
-    ; CHECK: [[MOV64ri32_:%[0-9]+]] = MOV64ri32 20
-    ; CHECK: [[LEA64r:%[0-9]+]] = LEA64r [[COPY]], 1, [[MOV64ri32_]], 0, _
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY %rdi
+    ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64_nosp = MOV64ri32 20
+    ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 1, [[MOV64ri32_]], 0, _
     ; CHECK: %rax = COPY [[LEA64r]]
     ; CHECK: RET 0, implicit %rax
     %0(p0) = COPY %rdi

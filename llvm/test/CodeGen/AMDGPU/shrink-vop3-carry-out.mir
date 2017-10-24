@@ -8,8 +8,8 @@
 
 ...
 # GCN-LABEL: name: shrink_add_vop3{{$}}
-# GCN: %29, %9 = V_ADD_I32_e64 %19, %17, implicit %exec
-# GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_ADD_I32_e64 %19, %17, implicit %exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
 name:            shrink_add_vop3
 alignment:       0
 exposesReturnsTwice: false
@@ -91,8 +91,8 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: shrink_sub_vop3{{$}}
-# GCN: %29, %9 = V_SUB_I32_e64 %19, %17, implicit %exec
-# GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUB_I32_e64 %19, %17, implicit %exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
 
 name:            shrink_sub_vop3
 alignment:       0
@@ -175,8 +175,8 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: shrink_subrev_vop3{{$}}
-# GCN: %29, %9 = V_SUBREV_I32_e64 %19, %17, implicit %exec
-# GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUBREV_I32_e64 %19, %17, implicit %exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 1, killed %9, implicit %exec
 
 name:            shrink_subrev_vop3
 alignment:       0
@@ -259,8 +259,8 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: check_addc_src2_vop3{{$}}
-# GCN: %29, %vcc = V_ADDC_U32_e64 %19, %17, %9, implicit %exec
-# GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
+# GCN: %29:vgpr_32, %vcc = V_ADDC_U32_e64 %19, %17, %9, implicit %exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
 name: check_addc_src2_vop3
 alignment:       0
 exposesReturnsTwice: false
@@ -343,7 +343,7 @@ body:             |
 ...
 ---
 # GCN-LABEL: name: shrink_addc_vop3{{$}}
-# GCN: %29 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit %vcc, implicit %exec
+# GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit %vcc, implicit %exec
 # GCN %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
 
 name:            shrink_addc_vop3
@@ -429,8 +429,8 @@ body:             |
 
 ---
 # GCN-LABEL: name: shrink_addc_undef_vcc{{$}}
-# GCN: %29 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit undef %vcc, implicit %exec
-# GCN: %24 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
+# GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def %vcc, implicit undef %vcc, implicit %exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 1, killed %vcc, implicit %exec
 name:            shrink_addc_undef_vcc
 alignment:       0
 exposesReturnsTwice: false

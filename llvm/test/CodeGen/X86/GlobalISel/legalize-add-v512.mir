@@ -38,29 +38,29 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# AVX1:              %0(<64 x s8>) = IMPLICIT_DEF
-# AVX1-NEXT:         %1(<64 x s8>) = IMPLICIT_DEF
-# AVX1-NEXT:         %3(<16 x s8>), %4(<16 x s8>), %5(<16 x s8>), %6(<16 x s8>) = G_UNMERGE_VALUES %0(<64 x s8>)
-# AVX1-NEXT:         %7(<16 x s8>), %8(<16 x s8>), %9(<16 x s8>), %10(<16 x s8>) = G_UNMERGE_VALUES %1(<64 x s8>)
-# AVX1-NEXT:         %11(<16 x s8>) = G_ADD %3, %7
-# AVX1-NEXT:         %12(<16 x s8>) = G_ADD %4, %8
-# AVX1-NEXT:         %13(<16 x s8>) = G_ADD %5, %9
-# AVX1-NEXT:         %14(<16 x s8>) = G_ADD %6, %10
-# AVX1-NEXT:         %2(<64 x s8>) = G_MERGE_VALUES %11(<16 x s8>), %12(<16 x s8>), %13(<16 x s8>), %14(<16 x s8>)
+# AVX1:              %0:_(<64 x s8>) = IMPLICIT_DEF
+# AVX1-NEXT:         %1:_(<64 x s8>) = IMPLICIT_DEF
+# AVX1-NEXT:         %3:_(<16 x s8>), %4:_(<16 x s8>), %5:_(<16 x s8>), %6:_(<16 x s8>) = G_UNMERGE_VALUES %0(<64 x s8>)
+# AVX1-NEXT:         %7:_(<16 x s8>), %8:_(<16 x s8>), %9:_(<16 x s8>), %10:_(<16 x s8>) = G_UNMERGE_VALUES %1(<64 x s8>)
+# AVX1-NEXT:         %11:_(<16 x s8>) = G_ADD %3, %7
+# AVX1-NEXT:         %12:_(<16 x s8>) = G_ADD %4, %8
+# AVX1-NEXT:         %13:_(<16 x s8>) = G_ADD %5, %9
+# AVX1-NEXT:         %14:_(<16 x s8>) = G_ADD %6, %10
+# AVX1-NEXT:         %2:_(<64 x s8>) = G_MERGE_VALUES %11(<16 x s8>), %12(<16 x s8>), %13(<16 x s8>), %14(<16 x s8>)
 # AVX1-NEXT:         RET 0
 #
-# AVX512F:           %0(<64 x s8>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %1(<64 x s8>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %3(<32 x s8>), %4(<32 x s8>) = G_UNMERGE_VALUES %0(<64 x s8>)
-# AVX512F-NEXT:      %5(<32 x s8>), %6(<32 x s8>) = G_UNMERGE_VALUES %1(<64 x s8>)
-# AVX512F-NEXT:      %7(<32 x s8>) = G_ADD %3, %5
-# AVX512F-NEXT:      %8(<32 x s8>) = G_ADD %4, %6
-# AVX512F-NEXT:      %2(<64 x s8>) = G_MERGE_VALUES %7(<32 x s8>), %8(<32 x s8>)
+# AVX512F:           %0:_(<64 x s8>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %1:_(<64 x s8>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %3:_(<32 x s8>), %4:_(<32 x s8>) = G_UNMERGE_VALUES %0(<64 x s8>)
+# AVX512F-NEXT:      %5:_(<32 x s8>), %6:_(<32 x s8>) = G_UNMERGE_VALUES %1(<64 x s8>)
+# AVX512F-NEXT:      %7:_(<32 x s8>) = G_ADD %3, %5
+# AVX512F-NEXT:      %8:_(<32 x s8>) = G_ADD %4, %6
+# AVX512F-NEXT:      %2:_(<64 x s8>) = G_MERGE_VALUES %7(<32 x s8>), %8(<32 x s8>)
 # AVX512F-NEXT:      RET 0
 #
-# AVX512BW:          %0(<64 x s8>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %1(<64 x s8>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %2(<64 x s8>) = G_ADD %0, %1
+# AVX512BW:          %0:_(<64 x s8>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1:_(<64 x s8>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2:_(<64 x s8>) = G_ADD %0, %1
 # AVX512BW-NEXT:     RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -82,29 +82,29 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# AVX1:              %0(<32 x s16>) = IMPLICIT_DEF
-# AVX1-NEXT:         %1(<32 x s16>) = IMPLICIT_DEF
-# AVX1-NEXT:         %3(<8 x s16>), %4(<8 x s16>), %5(<8 x s16>), %6(<8 x s16>) = G_UNMERGE_VALUES %0(<32 x s16>)
-# AVX1-NEXT:         %7(<8 x s16>), %8(<8 x s16>), %9(<8 x s16>), %10(<8 x s16>) = G_UNMERGE_VALUES %1(<32 x s16>)
-# AVX1-NEXT:         %11(<8 x s16>) = G_ADD %3, %7
-# AVX1-NEXT:         %12(<8 x s16>) = G_ADD %4, %8
-# AVX1-NEXT:         %13(<8 x s16>) = G_ADD %5, %9
-# AVX1-NEXT:         %14(<8 x s16>) = G_ADD %6, %10
-# AVX1-NEXT:         %2(<32 x s16>) = G_MERGE_VALUES %11(<8 x s16>), %12(<8 x s16>), %13(<8 x s16>), %14(<8 x s16>)
+# AVX1:              %0:_(<32 x s16>) = IMPLICIT_DEF
+# AVX1-NEXT:         %1:_(<32 x s16>) = IMPLICIT_DEF
+# AVX1-NEXT:         %3:_(<8 x s16>), %4:_(<8 x s16>), %5:_(<8 x s16>), %6:_(<8 x s16>) = G_UNMERGE_VALUES %0(<32 x s16>)
+# AVX1-NEXT:         %7:_(<8 x s16>), %8:_(<8 x s16>), %9:_(<8 x s16>), %10:_(<8 x s16>) = G_UNMERGE_VALUES %1(<32 x s16>)
+# AVX1-NEXT:         %11:_(<8 x s16>) = G_ADD %3, %7
+# AVX1-NEXT:         %12:_(<8 x s16>) = G_ADD %4, %8
+# AVX1-NEXT:         %13:_(<8 x s16>) = G_ADD %5, %9
+# AVX1-NEXT:         %14:_(<8 x s16>) = G_ADD %6, %10
+# AVX1-NEXT:         %2:_(<32 x s16>) = G_MERGE_VALUES %11(<8 x s16>), %12(<8 x s16>), %13(<8 x s16>), %14(<8 x s16>)
 # AVX1-NEXT:         RET 0
 #
-# AVX512F:           %0(<32 x s16>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %1(<32 x s16>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %3(<16 x s16>), %4(<16 x s16>) = G_UNMERGE_VALUES %0(<32 x s16>)
-# AVX512F-NEXT:      %5(<16 x s16>), %6(<16 x s16>) = G_UNMERGE_VALUES %1(<32 x s16>)
-# AVX512F-NEXT:      %7(<16 x s16>) = G_ADD %3, %5
-# AVX512F-NEXT:      %8(<16 x s16>) = G_ADD %4, %6
-# AVX512F-NEXT:      %2(<32 x s16>) = G_MERGE_VALUES %7(<16 x s16>), %8(<16 x s16>)
+# AVX512F:           %0:_(<32 x s16>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %1:_(<32 x s16>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %3:_(<16 x s16>), %4:_(<16 x s16>) = G_UNMERGE_VALUES %0(<32 x s16>)
+# AVX512F-NEXT:      %5:_(<16 x s16>), %6:_(<16 x s16>) = G_UNMERGE_VALUES %1(<32 x s16>)
+# AVX512F-NEXT:      %7:_(<16 x s16>) = G_ADD %3, %5
+# AVX512F-NEXT:      %8:_(<16 x s16>) = G_ADD %4, %6
+# AVX512F-NEXT:      %2:_(<32 x s16>) = G_MERGE_VALUES %7(<16 x s16>), %8(<16 x s16>)
 # AVX512F-NEXT:      RET 0
 #
-# AVX512BW:          %0(<32 x s16>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %1(<32 x s16>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %2(<32 x s16>) = G_ADD %0, %1
+# AVX512BW:          %0:_(<32 x s16>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1:_(<32 x s16>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2:_(<32 x s16>) = G_ADD %0, %1
 # AVX512BW-NEXT:     RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -126,25 +126,25 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# AVX1:              %0(<16 x s32>) = IMPLICIT_DEF
-# AVX1-NEXT:         %1(<16 x s32>) = IMPLICIT_DEF
-# AVX1-NEXT:         %3(<4 x s32>), %4(<4 x s32>), %5(<4 x s32>), %6(<4 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
-# AVX1-NEXT:         %7(<4 x s32>), %8(<4 x s32>), %9(<4 x s32>), %10(<4 x s32>) = G_UNMERGE_VALUES %1(<16 x s32>)
-# AVX1-NEXT:         %11(<4 x s32>) = G_ADD %3, %7
-# AVX1-NEXT:         %12(<4 x s32>) = G_ADD %4, %8
-# AVX1-NEXT:         %13(<4 x s32>) = G_ADD %5, %9
-# AVX1-NEXT:         %14(<4 x s32>) = G_ADD %6, %10
-# AVX1-NEXT:         %2(<16 x s32>) = G_MERGE_VALUES %11(<4 x s32>), %12(<4 x s32>), %13(<4 x s32>), %14(<4 x s32>)
+# AVX1:              %0:_(<16 x s32>) = IMPLICIT_DEF
+# AVX1-NEXT:         %1:_(<16 x s32>) = IMPLICIT_DEF
+# AVX1-NEXT:         %3:_(<4 x s32>), %4:_(<4 x s32>), %5:_(<4 x s32>), %6:_(<4 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
+# AVX1-NEXT:         %7:_(<4 x s32>), %8:_(<4 x s32>), %9:_(<4 x s32>), %10:_(<4 x s32>) = G_UNMERGE_VALUES %1(<16 x s32>)
+# AVX1-NEXT:         %11:_(<4 x s32>) = G_ADD %3, %7
+# AVX1-NEXT:         %12:_(<4 x s32>) = G_ADD %4, %8
+# AVX1-NEXT:         %13:_(<4 x s32>) = G_ADD %5, %9
+# AVX1-NEXT:         %14:_(<4 x s32>) = G_ADD %6, %10
+# AVX1-NEXT:         %2:_(<16 x s32>) = G_MERGE_VALUES %11(<4 x s32>), %12(<4 x s32>), %13(<4 x s32>), %14(<4 x s32>)
 # AVX1-NEXT:         RET 0
 #
-# AVX512F:           %0(<16 x s32>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %1(<16 x s32>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %2(<16 x s32>) = G_ADD %0, %1
+# AVX512F:           %0:_(<16 x s32>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %1:_(<16 x s32>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %2:_(<16 x s32>) = G_ADD %0, %1
 # AVX512F-NEXT:      RET 0
 #
-# AVX512BW:          %0(<16 x s32>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %1(<16 x s32>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %2(<16 x s32>) = G_ADD %0, %1
+# AVX512BW:          %0:_(<16 x s32>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1:_(<16 x s32>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2:_(<16 x s32>) = G_ADD %0, %1
 # AVX512BW-NEXT:     RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -166,25 +166,25 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# AVX1:              %0(<8 x s64>) = IMPLICIT_DEF
-# AVX1-NEXT:         %1(<8 x s64>) = IMPLICIT_DEF
-# AVX1-NEXT:         %3(<2 x s64>), %4(<2 x s64>), %5(<2 x s64>), %6(<2 x s64>) = G_UNMERGE_VALUES %0(<8 x s64>)
-# AVX1-NEXT:         %7(<2 x s64>), %8(<2 x s64>), %9(<2 x s64>), %10(<2 x s64>) = G_UNMERGE_VALUES %1(<8 x s64>)
-# AVX1-NEXT:         %11(<2 x s64>) = G_ADD %3, %7
-# AVX1-NEXT:         %12(<2 x s64>) = G_ADD %4, %8
-# AVX1-NEXT:         %13(<2 x s64>) = G_ADD %5, %9
-# AVX1-NEXT:         %14(<2 x s64>) = G_ADD %6, %10
-# AVX1-NEXT:         %2(<8 x s64>) = G_MERGE_VALUES %11(<2 x s64>), %12(<2 x s64>), %13(<2 x s64>), %14(<2 x s64>)
+# AVX1:              %0:_(<8 x s64>) = IMPLICIT_DEF
+# AVX1-NEXT:         %1:_(<8 x s64>) = IMPLICIT_DEF
+# AVX1-NEXT:         %3:_(<2 x s64>), %4:_(<2 x s64>), %5:_(<2 x s64>), %6:_(<2 x s64>) = G_UNMERGE_VALUES %0(<8 x s64>)
+# AVX1-NEXT:         %7:_(<2 x s64>), %8:_(<2 x s64>), %9:_(<2 x s64>), %10:_(<2 x s64>) = G_UNMERGE_VALUES %1(<8 x s64>)
+# AVX1-NEXT:         %11:_(<2 x s64>) = G_ADD %3, %7
+# AVX1-NEXT:         %12:_(<2 x s64>) = G_ADD %4, %8
+# AVX1-NEXT:         %13:_(<2 x s64>) = G_ADD %5, %9
+# AVX1-NEXT:         %14:_(<2 x s64>) = G_ADD %6, %10
+# AVX1-NEXT:         %2:_(<8 x s64>) = G_MERGE_VALUES %11(<2 x s64>), %12(<2 x s64>), %13(<2 x s64>), %14(<2 x s64>)
 # AVX1-NEXT:         RET 0
 #
-# AVX512F:           %0(<8 x s64>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %1(<8 x s64>) = IMPLICIT_DEF
-# AVX512F-NEXT:      %2(<8 x s64>) = G_ADD %0, %1
+# AVX512F:           %0:_(<8 x s64>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %1:_(<8 x s64>) = IMPLICIT_DEF
+# AVX512F-NEXT:      %2:_(<8 x s64>) = G_ADD %0, %1
 # AVX512F-NEXT:      RET 0
 #
-# AVX512BW:          %0(<8 x s64>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %1(<8 x s64>) = IMPLICIT_DEF
-# AVX512BW-NEXT:     %2(<8 x s64>) = G_ADD %0, %1
+# AVX512BW:          %0:_(<8 x s64>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %1:_(<8 x s64>) = IMPLICIT_DEF
+# AVX512BW-NEXT:     %2:_(<8 x s64>) = G_ADD %0, %1
 # AVX512BW-NEXT:     RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -212,42 +212,42 @@ registers:
   - { id: 6, class: _ }
   - { id: 7, class: _ }
   - { id: 8, class: _ }
-# AVX1:              %2(<32 x s8>) = COPY %ymm0
-# AVX1-NEXT:         %3(<32 x s8>) = COPY %ymm1
-# AVX1-NEXT:         %4(<32 x s8>) = COPY %ymm2
-# AVX1-NEXT:         %5(<32 x s8>) = COPY %ymm3
-# AVX1-NEXT:         %9(<16 x s8>), %10(<16 x s8>) = G_UNMERGE_VALUES %2(<32 x s8>)
-# AVX1-NEXT:         %11(<16 x s8>), %12(<16 x s8>) = G_UNMERGE_VALUES %3(<32 x s8>)
-# AVX1-NEXT:         %13(<16 x s8>), %14(<16 x s8>) = G_UNMERGE_VALUES %4(<32 x s8>)
-# AVX1-NEXT:         %15(<16 x s8>), %16(<16 x s8>) = G_UNMERGE_VALUES %5(<32 x s8>)
-# AVX1-NEXT:         %17(<16 x s8>) = G_ADD %9, %13
-# AVX1-NEXT:         %18(<16 x s8>) = G_ADD %10, %14
-# AVX1-NEXT:         %19(<16 x s8>) = G_ADD %11, %15
-# AVX1-NEXT:         %20(<16 x s8>) = G_ADD %12, %16
-# AVX1-NEXT:         %7(<32 x s8>) = G_MERGE_VALUES %17(<16 x s8>), %18(<16 x s8>)
-# AVX1-NEXT:         %8(<32 x s8>) = G_MERGE_VALUES %19(<16 x s8>), %20(<16 x s8>)
+# AVX1:              %2:_(<32 x s8>) = COPY %ymm0
+# AVX1-NEXT:         %3:_(<32 x s8>) = COPY %ymm1
+# AVX1-NEXT:         %4:_(<32 x s8>) = COPY %ymm2
+# AVX1-NEXT:         %5:_(<32 x s8>) = COPY %ymm3
+# AVX1-NEXT:         %9:_(<16 x s8>), %10:_(<16 x s8>) = G_UNMERGE_VALUES %2(<32 x s8>)
+# AVX1-NEXT:         %11:_(<16 x s8>), %12:_(<16 x s8>) = G_UNMERGE_VALUES %3(<32 x s8>)
+# AVX1-NEXT:         %13:_(<16 x s8>), %14:_(<16 x s8>) = G_UNMERGE_VALUES %4(<32 x s8>)
+# AVX1-NEXT:         %15:_(<16 x s8>), %16:_(<16 x s8>) = G_UNMERGE_VALUES %5(<32 x s8>)
+# AVX1-NEXT:         %17:_(<16 x s8>) = G_ADD %9, %13
+# AVX1-NEXT:         %18:_(<16 x s8>) = G_ADD %10, %14
+# AVX1-NEXT:         %19:_(<16 x s8>) = G_ADD %11, %15
+# AVX1-NEXT:         %20:_(<16 x s8>) = G_ADD %12, %16
+# AVX1-NEXT:         %7:_(<32 x s8>) = G_MERGE_VALUES %17(<16 x s8>), %18(<16 x s8>)
+# AVX1-NEXT:         %8:_(<32 x s8>) = G_MERGE_VALUES %19(<16 x s8>), %20(<16 x s8>)
 # AVX1-NEXT:         %ymm0 = COPY %7(<32 x s8>)
 # AVX1-NEXT:         %ymm1 = COPY %8(<32 x s8>)
 # AVX1-NEXT:         RET 0, implicit %ymm0, implicit %ymm1
 #
-# AVX512F:           %2(<32 x s8>) = COPY %ymm0
-# AVX512F-NEXT:      %3(<32 x s8>) = COPY %ymm1
-# AVX512F-NEXT:      %4(<32 x s8>) = COPY %ymm2
-# AVX512F-NEXT:      %5(<32 x s8>) = COPY %ymm3
-# AVX512F-NEXT:      %13(<32 x s8>) = G_ADD %2, %4
-# AVX512F-NEXT:      %14(<32 x s8>) = G_ADD %3, %5
+# AVX512F:           %2:_(<32 x s8>) = COPY %ymm0
+# AVX512F-NEXT:      %3:_(<32 x s8>) = COPY %ymm1
+# AVX512F-NEXT:      %4:_(<32 x s8>) = COPY %ymm2
+# AVX512F-NEXT:      %5:_(<32 x s8>) = COPY %ymm3
+# AVX512F-NEXT:      %13:_(<32 x s8>) = G_ADD %2, %4
+# AVX512F-NEXT:      %14:_(<32 x s8>) = G_ADD %3, %5
 # AVX512F-NEXT:      %ymm0 = COPY %13(<32 x s8>)
 # AVX512F-NEXT:      %ymm1 = COPY %14(<32 x s8>)
 # AVX512F-NEXT:      RET 0, implicit %ymm0, implicit %ymm1
 #
-# AVX512BW:          %2(<32 x s8>) = COPY %ymm0
-# AVX512BW-NEXT:     %3(<32 x s8>) = COPY %ymm1
-# AVX512BW-NEXT:     %4(<32 x s8>) = COPY %ymm2
-# AVX512BW-NEXT:     %5(<32 x s8>) = COPY %ymm3
-# AVX512BW-NEXT:     %0(<64 x s8>) = G_MERGE_VALUES %2(<32 x s8>), %3(<32 x s8>)
-# AVX512BW-NEXT:     %1(<64 x s8>) = G_MERGE_VALUES %4(<32 x s8>), %5(<32 x s8>)
-# AVX512BW-NEXT:     %6(<64 x s8>) = G_ADD %0, %1
-# AVX512BW-NEXT:     %7(<32 x s8>), %8(<32 x s8>) = G_UNMERGE_VALUES %6(<64 x s8>)
+# AVX512BW:          %2:_(<32 x s8>) = COPY %ymm0
+# AVX512BW-NEXT:     %3:_(<32 x s8>) = COPY %ymm1
+# AVX512BW-NEXT:     %4:_(<32 x s8>) = COPY %ymm2
+# AVX512BW-NEXT:     %5:_(<32 x s8>) = COPY %ymm3
+# AVX512BW-NEXT:     %0:_(<64 x s8>) = G_MERGE_VALUES %2(<32 x s8>), %3(<32 x s8>)
+# AVX512BW-NEXT:     %1:_(<64 x s8>) = G_MERGE_VALUES %4(<32 x s8>), %5(<32 x s8>)
+# AVX512BW-NEXT:     %6:_(<64 x s8>) = G_ADD %0, %1
+# AVX512BW-NEXT:     %7:_(<32 x s8>), %8:_(<32 x s8>) = G_UNMERGE_VALUES %6(<64 x s8>)
 # AVX512BW-NEXT:     %ymm0 = COPY %7(<32 x s8>)
 # AVX512BW-NEXT:     %ymm1 = COPY %8(<32 x s8>)
 # AVX512BW-NEXT:     RET 0, implicit %ymm0, implicit %ymm1

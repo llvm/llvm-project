@@ -15,9 +15,9 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# ALL:               %0(<8 x s32>) = COPY %ymm0
-# ALL-NEXT:          %1(<4 x s32>) = COPY %xmm1
-# ALL-NEXT:          %2(<8 x s32>) = G_INSERT %0, %1(<4 x s32>), 0
+# ALL:               %0:_(<8 x s32>) = COPY %ymm0
+# ALL-NEXT:          %1:_(<4 x s32>) = COPY %xmm1
+# ALL-NEXT:          %2:_(<8 x s32>) = G_INSERT %0, %1(<4 x s32>), 0
 # ALL-NEXT:          %ymm0 = COPY %2(<8 x s32>)
 # ALL-NEXT:          RET 0, implicit %ymm0
 body:             |

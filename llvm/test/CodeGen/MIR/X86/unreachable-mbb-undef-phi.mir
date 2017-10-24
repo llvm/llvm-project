@@ -31,8 +31,8 @@ body:             |
 
 # CHECK:  bb.1:
 # CHECK:    successors: %bb.2
-# CHECK:    [[TMP1:%[0-9]+]] = COPY undef %{{[0-9]+}}
-# CHECK:    %{{[0-9]+}} = ADD32ri8 killed [[TMP1]], 1
+# CHECK:    [[TMP1:%[0-9]+]]:gr32 = COPY undef %{{[0-9]+}}
+# CHECK:    %{{[0-9]+}}:gr32 = ADD32ri8 killed [[TMP1]], 1
 # CHECK:    JMP_1 %bb.2
 
 # CHECK:  bb.2:

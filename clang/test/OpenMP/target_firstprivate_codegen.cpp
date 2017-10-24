@@ -223,7 +223,7 @@ int foo(int n, double *ptr) {
   
   // make sure that firstprivate variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A2_IN:%.+]], [10 x float]* {{.+}} [[B_IN:%.+]], i{{[0-9]+}} [[BN_SZ:%.+]], float* [[BN_IN:%.+]], [5 x [10 x double]]* {{.+}} [[C_IN:%.+]], i{{[0-9]+}} [[CN_SZ1:%.+]], i{{[0-9]+}} [[CN_SZ2:%.+]], double* [[CN_IN:%.+]], [[TT]]* {{.+}} [[D_IN:%.+]])
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A2_IN:%.+]], [10 x float]* {{.+}} [[B_IN:%.+]], i{{[0-9]+}} [[BN_SZ:%.+]], float* {{.+}} [[BN_IN:%.+]], [5 x [10 x double]]* {{.+}} [[C_IN:%.+]], i{{[0-9]+}} [[CN_SZ1:%.+]], i{{[0-9]+}} [[CN_SZ2:%.+]], double* {{.+}} [[CN_IN:%.+]], [[TT]]* {{.+}} [[D_IN:%.+]])
   // TCHECK:  [[A2_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x float]*,
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},

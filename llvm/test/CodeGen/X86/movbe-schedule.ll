@@ -40,9 +40,9 @@ define i16 @test_movbe_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ;
 ; BROADWELL-LABEL: test_movbe_i16:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    movbew (%rdi), %ax # sched: [1:0.50]
-; BROADWELL-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    movbew (%rdi), %ax # sched: [6:0.50]
+; BROADWELL-NEXT:    movbew %si, (%rdx) # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i16:
 ; SKYLAKE:       # BB#0:
@@ -100,9 +100,9 @@ define i32 @test_movbe_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ;
 ; BROADWELL-LABEL: test_movbe_i32:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    movbel (%rdi), %eax # sched: [1:0.50]
-; BROADWELL-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    movbel (%rdi), %eax # sched: [6:0.50]
+; BROADWELL-NEXT:    movbel %esi, (%rdx) # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i32:
 ; SKYLAKE:       # BB#0:
@@ -160,9 +160,9 @@ define i64 @test_movbe_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ;
 ; BROADWELL-LABEL: test_movbe_i64:
 ; BROADWELL:       # BB#0:
-; BROADWELL-NEXT:    movbeq (%rdi), %rax # sched: [1:0.50]
-; BROADWELL-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
-; BROADWELL-NEXT:    retq # sched: [2:1.00]
+; BROADWELL-NEXT:    movbeq (%rdi), %rax # sched: [6:0.50]
+; BROADWELL-NEXT:    movbeq %rsi, (%rdx) # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i64:
 ; SKYLAKE:       # BB#0:
