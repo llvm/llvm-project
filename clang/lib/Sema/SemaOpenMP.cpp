@@ -9330,6 +9330,68 @@ struct ReductionData {
 };
 } // namespace
 
+static bool CheckOMPArraySectionConstantForReduction(
+    ASTContext &Context, const OMPArraySectionExpr *OASE, bool &SingleElement,
+    SmallVectorImpl<llvm::APSInt> &ArraySizes) {
+  const Expr *Length = OASE->getLength();
+  if (Length == nullptr) {
+    // For array sections of the form [1:] or [:], we would need to analyze
+    // the lower bound...
+    if (OASE->getColonLoc().isValid())
+      return false;
+
+    // This is an array subscript which has implicit length 1!
+    SingleElement = true;
+    ArraySizes.push_back(llvm::APSInt::get(1));
+  } else {
+    llvm::APSInt ConstantLengthValue;
+    if (!Length->EvaluateAsInt(ConstantLengthValue, Context))
+      return false;
+
+    SingleElement = (ConstantLengthValue.getSExtValue() == 1);
+    ArraySizes.push_back(ConstantLengthValue);
+  }
+
+  // Get the base of this array section and walk up from there.
+  const Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
+
+  // We require length = 1 for all array sections except the right-most to
+  // guarantee that the memory region is contiguous and has no holes in it.
+  while (const auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base)) {
+    Length = TempOASE->getLength();
+    if (Length == nullptr) {
+      // For array sections of the form [1:] or [:], we would need to analyze
+      // the lower bound...
+      if (OASE->getColonLoc().isValid())
+        return false;
+
+      // This is an array subscript which has implicit length 1!
+      ArraySizes.push_back(llvm::APSInt::get(1));
+    } else {
+      llvm::APSInt ConstantLengthValue;
+      if (!Length->EvaluateAsInt(ConstantLengthValue, Context) ||
+          ConstantLengthValue.getSExtValue() != 1)
+        return false;
+
+      ArraySizes.push_back(ConstantLengthValue);
+    }
+    Base = TempOASE->getBase()->IgnoreParenImpCasts();
+  }
+
+  // If we have a single element, we don't need to add the implicit lengths.
+  if (!SingleElement) {
+    while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base)) {
+      // Has implicit length 1!
+      ArraySizes.push_back(llvm::APSInt::get(1));
+      Base = TempASE->getBase()->IgnoreParenImpCasts();
+    }
+  }
+
+  // This array section can be privatized as a single value or as a constant
+  // sized array.
+  return true;
+}
+
 static bool ActOnOMPReductionKindClause(
     Sema &S, DSAStackTy *Stack, OpenMPClauseKind ClauseKind,
     ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -9628,7 +9690,26 @@ static bool ActOnOMPReductionKindClause(
     auto *RHSVD = buildVarDecl(S, ELoc, Type, D->getName(),
                                D->hasAttrs() ? &D->getAttrs() : nullptr);
     auto PrivateTy = Type;
-    if (OASE ||
+
+    // Try if we can determine constant lengths for all array sections and avoid
+    // the VLA.
+    bool ConstantLengthOASE = false;
+    if (OASE) {
+      bool SingleElement;
+      llvm::SmallVector<llvm::APSInt, 4> ArraySizes;
+      ConstantLengthOASE = CheckOMPArraySectionConstantForReduction(
+          Context, OASE, SingleElement, ArraySizes);
+
+      // If we don't have a single element, we must emit a constant array type.
+      if (ConstantLengthOASE && !SingleElement) {
+        for (auto &Size : ArraySizes) {
+          PrivateTy = Context.getConstantArrayType(
+              PrivateTy, Size, ArrayType::Normal, /*IndexTypeQuals=*/0);
+        }
+      }
+    }
+
+    if ((OASE && !ConstantLengthOASE) ||
         (!ASE &&
          D->getType().getNonReferenceType()->isVariablyModifiedType())) {
       // For arrays/array sections only:

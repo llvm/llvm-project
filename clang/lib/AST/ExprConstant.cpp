@@ -1818,6 +1818,9 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
       }
     }
     for (const auto *I : RD->fields()) {
+      if (I->isUnnamedBitfield())
+        continue;
+
       if (!CheckConstantExpression(Info, DiagLoc, I->getType(),
                                    Value.getStructField(I->getFieldIndex())))
         return false;

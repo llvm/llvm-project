@@ -342,3 +342,8 @@ void negativeIndex(char *str) {
   clang_analyzer_eval(*ptr3 == 'a'); // expected-warning{{UNKNOWN}}
 }
 
+void test_no_crash_on_pointer_to_label() {
+  char *a = &&label;
+  a[0] = 0;
+label:;
+}

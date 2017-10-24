@@ -574,6 +574,7 @@
 // RUN:     -fstandalone-debug \
 // RUN:     -flimit-debug-info \
 // RUN:     -flto \
+// RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 
