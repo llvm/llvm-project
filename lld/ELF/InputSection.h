@@ -212,7 +212,7 @@ private:
 // SectionPiece represents a piece of splittable section contents.
 // We allocate a lot of these and binary search on them. This means that they
 // have to be as compact as possible, which is why we don't store the size (can
-// be found by looking at the next one) and put the hash in a side table.
+// be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t Off, uint32_t Hash, bool Live)
       : InputOff(Off), Hash(Hash), OutputOff(-1),
@@ -237,8 +237,8 @@ public:
 
   // Mark the piece at a given offset live. Used by GC.
   void markLiveAt(uint64_t Offset) {
-    assert(this->Flags & llvm::ELF::SHF_ALLOC);
-    LiveOffsets.insert(Offset);
+    if (this->Flags & llvm::ELF::SHF_ALLOC)
+      LiveOffsets.insert(Offset);
   }
 
   // Translate an offset in the input section to an offset

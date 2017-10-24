@@ -1729,18 +1729,20 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 // 1. the '-e' entry command-line option;
 // 2. the ENTRY(symbol) command in a linker control script;
 // 3. the value of the symbol start, if present;
-// 4. the address of the first byte of the .text section, if present;
-// 5. the address 0.
+// 4. the number represented by the entry symbol, if it is a number;
+// 5. the address of the first byte of the .text section, if present;
+// 6. the address 0.
 template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
-  // Case 1, 2 or 3. As a special case, if the symbol is actually
-  // a number, we'll use that number as an address.
+  // Case 1, 2 or 3
   if (SymbolBody *B = Symtab->find(Config->Entry))
     return B->getVA();
+
+  // Case 4
   uint64_t Addr;
   if (to_integer(Config->Entry, Addr))
     return Addr;
 
-  // Case 4
+  // Case 5
   if (OutputSection *Sec = findSection(".text")) {
     if (Config->WarnMissingEntry)
       warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
@@ -1748,7 +1750,7 @@ template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
     return Sec->Addr;
   }
 
-  // Case 5
+  // Case 6
   if (Config->WarnMissingEntry)
     warn("cannot find entry symbol " + Config->Entry +
          "; not setting start address");
@@ -1778,19 +1780,12 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr();
   EHdr->e_shoff = SectionHeaderOff;
+  EHdr->e_flags = Config->EFlags;
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
   EHdr->e_shnum = OutputSections.size() + 1;
   EHdr->e_shstrndx = InX::ShStrTab->getParent()->SectionIndex;
-
-  if (Config->EMachine == EM_ARM)
-    // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
-    // but we don't have any firm guarantees of conformance. Linux AArch64
-    // kernels (as of 2016) require an EABI version to be set.
-    EHdr->e_flags = EF_ARM_EABI_VER5;
-  else if (Config->EMachine == EM_MIPS)
-    EHdr->e_flags = Config->MipsEFlags;
 
   if (!Config->Relocatable) {
     EHdr->e_phoff = sizeof(Elf_Ehdr);

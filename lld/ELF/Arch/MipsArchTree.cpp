@@ -365,7 +365,7 @@ bool elf::isMipsN32Abi(const InputFile *F) {
 }
 
 bool elf::isMipsR6() {
-  uint32_t Arch = Config->MipsEFlags & EF_MIPS_ARCH;
+  uint32_t Arch = Config->EFlags & EF_MIPS_ARCH;
   return Arch == EF_MIPS_ARCH_32R6 || Arch == EF_MIPS_ARCH_64R6;
 }
 

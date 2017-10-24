@@ -666,19 +666,6 @@ private:
   /// For each PHI instance we can directly determine which was the incoming
   /// block, and hence derive which value the PHI has.
   ///
-  /// The returned relation generally is injective, meaning that every PHI write
-  /// has at most one (or zero, if the incoming block's branch does not jump to
-  /// the PHI's block) PHI Read that reads it. However, due to the SCoP's
-  /// parameter context it is possible a statement instance that would overwrite
-  /// the PHI scalar is not in the statement's domain and thus a PHI write
-  /// appear to be used twice.  This is a static property, at runtime the
-  /// runtime condition should avoid that a configuration is executed. Although
-  /// incorrect, it should not have any effect in DeLICM.  If it passes the
-  /// conflict check, there are multiple locations, one for each PHI Read it
-  /// matches, it had to write to.  MemoryAccess::getAddressFunction() will
-  /// select only one of them.  That is, statically, not all necessary value are
-  /// written, but the runtime check guards it from ever being executed.
-  ///
   /// @param SAI The ScopArrayInfo representing the PHI's storage.
   ///
   /// @return { DomainPHIRead[] -> DomainPHIWrite[] }
@@ -715,6 +702,7 @@ private:
         isl_union_map_from_map(LastPerPHIWrites.take()),
         isl_union_map_reverse(PHIWriteScatter.take())));
     assert(isl_union_map_is_single_valued(Result.keep()) == isl_bool_true);
+    assert(isl_union_map_is_injective(Result.keep()) == isl_bool_true);
     return Result;
   }
 
@@ -1360,7 +1348,31 @@ public:
           continue;
         }
 
-        isl::union_set TouchedElts = MA->getLatestAccessRelation().range();
+        // Check for more than one element acces per statement instance.
+        // Currently we expect write accesses to be functional, eg. disallow
+        //
+        //   { Stmt[0] -> [i] : 0 <= i < 2 }
+        //
+        // This may occur when some accesses to the element write/read only
+        // parts of the element, eg. a single byte. Polly then divides each
+        // element into subelements of the smallest access length, normal access
+        // then touch multiple of such subelements. It is very common when the
+        // array is accesses with memset, memcpy or memmove which take i8*
+        // arguments.
+        isl::union_map AccRel = MA->getLatestAccessRelation();
+        if (!AccRel.is_single_valued().is_true()) {
+          DEBUG(dbgs() << "Access " << MA
+                       << " is incompatible because it writes multiple "
+                          "elements per instance\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "NonFunctionalAccRel",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because it writes more than "
+               "one element";
+          S->getFunction().getContext().diagnose(R);
+          continue;
+        }
+
+        isl::union_set TouchedElts = AccRel.range();
         if (!TouchedElts.is_subset(CompatibleElts)) {
           DEBUG(
               dbgs()

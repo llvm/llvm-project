@@ -72,7 +72,7 @@ static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
     // TODO: mangle this differently for your system - on OSX, the first
     // underscore needs to be removed and the second one stays
     LLDBCommandPluginInit init_func =
-        (LLDBCommandPluginInit)dynlib.getAddressOfSymbol(
+        (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
             "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
     if (init_func) {
       if (init_func(debugger_sb))
