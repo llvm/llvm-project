@@ -26,9 +26,7 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
+    ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
     ; ALL: %al = COPY [[DEF]]
     ; ALL: RET 0, implicit %al
     %0(s8) = G_IMPLICIT_DEF
@@ -54,13 +52,9 @@ body:             |
     liveins: %edi
 
     ; ALL-LABEL: name: test2
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL-NEXT: id: 1, class: gr8
-    ; ALL-NEXT: id: 2, class: gr8
-    ; ALL: [[COPY:%[0-9]+]] = COPY %dil
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; ALL: [[ADD8rr:%[0-9]+]] = ADD8rr [[COPY]], [[DEF]], implicit-def %eflags
+    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY %dil
+    ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
+    ; ALL: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def %eflags
     ; ALL: %al = COPY [[ADD8rr]]
     ; ALL: RET 0, implicit %al
     %0(s8) = COPY %dil

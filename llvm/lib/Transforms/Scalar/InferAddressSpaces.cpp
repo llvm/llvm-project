@@ -148,10 +148,9 @@ private:
   // Changes the flat address expressions in function F to point to specific
   // address spaces if InferredAddrSpace says so. Postorder is the postorder of
   // all flat expressions in the use-def graph of function F.
-  bool
-  rewriteWithNewAddressSpaces(ArrayRef<WeakTrackingVH> Postorder,
-                              const ValueToAddrSpaceMapTy &InferredAddrSpace,
-                              Function *F) const;
+  bool rewriteWithNewAddressSpaces(
+      const TargetTransformInfo &TTI, ArrayRef<WeakTrackingVH> Postorder,
+      const ValueToAddrSpaceMapTy &InferredAddrSpace, Function *F) const;
 
   void appendsFlatAddressExpressionToPostorderStack(
     Value *V, std::vector<std::pair<Value *, bool>> &PostorderStack,
@@ -602,7 +601,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
 
   // Changes the address spaces of the flat address expressions who are inferred
   // to point to a specific address space.
-  return rewriteWithNewAddressSpaces(Postorder, InferredAddrSpace, &F);
+  return rewriteWithNewAddressSpaces(TTI, Postorder, InferredAddrSpace, &F);
 }
 
 // Constants need to be tracked through RAUW to handle cases with nested
@@ -710,23 +709,32 @@ Optional<unsigned> InferAddressSpaces::updateAddressSpace(
 
 /// \p returns true if \p U is the pointer operand of a memory instruction with
 /// a single pointer operand that can have its address space changed by simply
-/// mutating the use to a new value.
-static bool isSimplePointerUseValidToReplace(Use &U) {
+/// mutating the use to a new value. If the memory instruction is volatile,
+/// return true only if the target allows the memory instruction to be volatile
+/// in the new address space.
+static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
+                                             Use &U, unsigned AddrSpace) {
   User *Inst = U.getUser();
   unsigned OpNo = U.getOperandNo();
+  bool VolatileIsAllowed = false;
+  if (auto *I = dyn_cast<Instruction>(Inst))
+    VolatileIsAllowed = TTI.hasVolatileVariant(I, AddrSpace);
 
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return OpNo == LoadInst::getPointerOperandIndex() && !LI->isVolatile();
+    return OpNo == LoadInst::getPointerOperandIndex() &&
+           (VolatileIsAllowed || !LI->isVolatile());
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return OpNo == StoreInst::getPointerOperandIndex() && !SI->isVolatile();
+    return OpNo == StoreInst::getPointerOperandIndex() &&
+           (VolatileIsAllowed || !SI->isVolatile());
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return OpNo == AtomicRMWInst::getPointerOperandIndex() && !RMW->isVolatile();
+    return OpNo == AtomicRMWInst::getPointerOperandIndex() &&
+           (VolatileIsAllowed || !RMW->isVolatile());
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
     return OpNo == AtomicCmpXchgInst::getPointerOperandIndex() &&
-           !CmpX->isVolatile();
+           (VolatileIsAllowed || !CmpX->isVolatile());
   }
 
   return false;
@@ -820,7 +828,7 @@ static Value::use_iterator skipToNextUser(Value::use_iterator I,
 }
 
 bool InferAddressSpaces::rewriteWithNewAddressSpaces(
-    ArrayRef<WeakTrackingVH> Postorder,
+    const TargetTransformInfo &TTI, ArrayRef<WeakTrackingVH> Postorder,
     const ValueToAddrSpaceMapTy &InferredAddrSpace, Function *F) const {
   // For each address expression to be modified, creates a clone of it with its
   // pointer operands converted to the new address space. Since the pointer
@@ -880,7 +888,8 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
       // to the next instruction.
       I = skipToNextUser(I, E);
 
-      if (isSimplePointerUseValidToReplace(U)) {
+      if (isSimplePointerUseValidToReplace(
+              TTI, U, V->getType()->getPointerAddressSpace())) {
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.

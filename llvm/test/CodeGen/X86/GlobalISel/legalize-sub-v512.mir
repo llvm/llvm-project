@@ -37,9 +37,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_sub_v64i8
-    ; ALL: [[DEF:%[0-9]+]](<64 x s8>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]](<64 x s8>) = IMPLICIT_DEF
-    ; ALL: [[SUB:%[0-9]+]](<64 x s8>) = G_SUB [[DEF]], [[DEF1]]
+    ; ALL: [[DEF:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; ALL: [[DEF1:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; ALL: [[SUB:%[0-9]+]]:_(<64 x s8>) = G_SUB [[DEF]], [[DEF1]]
     ; ALL: RET 0
     %0(<64 x s8>) = IMPLICIT_DEF
     %1(<64 x s8>) = IMPLICIT_DEF
@@ -61,9 +61,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_sub_v32i16
-    ; ALL: [[DEF:%[0-9]+]](<32 x s16>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]](<32 x s16>) = IMPLICIT_DEF
-    ; ALL: [[SUB:%[0-9]+]](<32 x s16>) = G_SUB [[DEF]], [[DEF1]]
+    ; ALL: [[DEF:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; ALL: [[DEF1:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; ALL: [[SUB:%[0-9]+]]:_(<32 x s16>) = G_SUB [[DEF]], [[DEF1]]
     ; ALL: RET 0
     %0(<32 x s16>) = IMPLICIT_DEF
     %1(<32 x s16>) = IMPLICIT_DEF
@@ -85,9 +85,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_sub_v16i32
-    ; ALL: [[DEF:%[0-9]+]](<16 x s32>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]](<16 x s32>) = IMPLICIT_DEF
-    ; ALL: [[SUB:%[0-9]+]](<16 x s32>) = G_SUB [[DEF]], [[DEF1]]
+    ; ALL: [[DEF:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; ALL: [[DEF1:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; ALL: [[SUB:%[0-9]+]]:_(<16 x s32>) = G_SUB [[DEF]], [[DEF1]]
     ; ALL: RET 0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = IMPLICIT_DEF
@@ -109,9 +109,9 @@ body:             |
     liveins: %zmm0, %zmm1
 
     ; ALL-LABEL: name: test_sub_v8i64
-    ; ALL: [[DEF:%[0-9]+]](<8 x s64>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]](<8 x s64>) = IMPLICIT_DEF
-    ; ALL: [[SUB:%[0-9]+]](<8 x s64>) = G_SUB [[DEF]], [[DEF1]]
+    ; ALL: [[DEF:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; ALL: [[DEF1:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; ALL: [[SUB:%[0-9]+]]:_(<8 x s64>) = G_SUB [[DEF]], [[DEF1]]
     ; ALL: RET 0
     %0(<8 x s64>) = IMPLICIT_DEF
     %1(<8 x s64>) = IMPLICIT_DEF

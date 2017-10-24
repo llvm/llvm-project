@@ -61,7 +61,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0 = COPY %x0
+# CHECK:    %0:gpr64 = COPY %x0
 # CHECK:    BR %0
 body:             |
   bb.0:

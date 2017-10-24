@@ -41,10 +41,10 @@
 # CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit %esp, implicit-def %esp
 # CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
 # CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
-# CHECK-NEXT: %1 = MOV32rm %stack.2.s, 1, _, 0, _ :: (load 4 from %stack.2.s, align 8)
-# CHECK-NEXT: %2 = MOV32rm %stack.2.s, 1, _, 4, _ :: (load 4 from %stack.2.s + 4)
-# CHECK-NEXT: %4 = LEA32r %stack.0.p, 1, _, 0, _
-# CHECK-NEXT: %5 = LEA32r %stack.1.q, 1, _, 0, _
+# CHECK-NEXT: %1:gr32 = MOV32rm %stack.2.s, 1, _, 0, _ :: (load 4 from %stack.2.s, align 8)
+# CHECK-NEXT: %2:gr32 = MOV32rm %stack.2.s, 1, _, 4, _ :: (load 4 from %stack.2.s + 4)
+# CHECK-NEXT: %4:gr32 = LEA32r %stack.0.p, 1, _, 0, _
+# CHECK-NEXT: %5:gr32 = LEA32r %stack.1.q, 1, _, 0, _
 # CHECK-NEXT: PUSH32r %4, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32r %5, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32i8 6, implicit-def %esp, implicit %esp

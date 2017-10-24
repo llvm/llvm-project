@@ -23,24 +23,16 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; AVX-LABEL: name: test_unmerge
-    ; AVX: registers:
-    ; AVX-NEXT: id: 0, class: vr256
-    ; AVX-NEXT: id: 1, class: vr128
-    ; AVX-NEXT: id: 2, class: vr128
-    ; AVX: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; AVX: [[COPY:%[0-9]+]] = COPY [[DEF]].sub_xmm
-    ; AVX: [[VEXTRACTF128rr:%[0-9]+]] = VEXTRACTF128rr [[DEF]], 1
+    ; AVX: [[DEF:%[0-9]+]]:vr256 = IMPLICIT_DEF
+    ; AVX: [[COPY:%[0-9]+]]:vr128 = COPY [[DEF]].sub_xmm
+    ; AVX: [[VEXTRACTF128rr:%[0-9]+]]:vr128 = VEXTRACTF128rr [[DEF]], 1
     ; AVX: %xmm0 = COPY [[COPY]]
     ; AVX: %xmm1 = COPY [[VEXTRACTF128rr]]
     ; AVX: RET 0, implicit %xmm0, implicit %xmm1
     ; AVX512VL-LABEL: name: test_unmerge
-    ; AVX512VL: registers:
-    ; AVX512VL-NEXT: id: 0, class: vr256x
-    ; AVX512VL-NEXT: id: 1, class: vr128x
-    ; AVX512VL-NEXT: id: 2, class: vr128x
-    ; AVX512VL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; AVX512VL: [[COPY:%[0-9]+]] = COPY [[DEF]].sub_xmm
-    ; AVX512VL: [[VEXTRACTF32x4Z256rr:%[0-9]+]] = VEXTRACTF32x4Z256rr [[DEF]], 1
+    ; AVX512VL: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
+    ; AVX512VL: [[COPY:%[0-9]+]]:vr128x = COPY [[DEF]].sub_xmm
+    ; AVX512VL: [[VEXTRACTF32x4Z256rr:%[0-9]+]]:vr128x = VEXTRACTF32x4Z256rr [[DEF]], 1
     ; AVX512VL: %xmm0 = COPY [[COPY]]
     ; AVX512VL: %xmm1 = COPY [[VEXTRACTF32x4Z256rr]]
     ; AVX512VL: RET 0, implicit %xmm0, implicit %xmm1

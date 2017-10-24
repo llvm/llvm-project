@@ -13,7 +13,7 @@ define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    psrad $31, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: trunc_ashr_v4i64:
@@ -22,7 +22,7 @@ define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;
@@ -31,7 +31,7 @@ define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
   %1 = ashr <4 x i64> %a, <i64 63, i64 63, i64 63, i64 63>
@@ -44,7 +44,7 @@ define <8 x i16> @trunc_ashr_v8i32(<8 x i32> %a) nounwind {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm0
-; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: trunc_ashr_v8i32:
@@ -52,7 +52,7 @@ define <8 x i16> @trunc_ashr_v8i32(<8 x i32> %a) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;
@@ -60,7 +60,7 @@ define <8 x i16> @trunc_ashr_v8i32(<8 x i32> %a) nounwind {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
   %1 = ashr <8 x i32> %a, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
@@ -73,28 +73,28 @@ define <8 x i16> @trunc_ashr_v4i32_icmp_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ; X86-SSE:       # BB#0:
 ; X86-SSE-NEXT:    psrad $31, %xmm0
 ; X86-SSE-NEXT:    pcmpgtd {{\.LCPI.*}}, %xmm1
-; X86-SSE-NEXT:    packsswb %xmm1, %xmm0
+; X86-SSE-NEXT:    packssdw %xmm1, %xmm0
 ; X86-SSE-NEXT:    ret{{[l|q]}}
 ;
 ; X86-AVX-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X86-AVX:       # BB#0:
 ; X86-AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpcmpgtd {{\.LCPI.*}}, %xmm1, %xmm1
-; X86-AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X64-SSE:       # BB#0:
 ; X64-SSE-NEXT:    psrad $31, %xmm0
 ; X64-SSE-NEXT:    pcmpgtd {{.*}}(%rip), %xmm1
-; X64-SSE-NEXT:    packsswb %xmm1, %xmm0
+; X64-SSE-NEXT:    packssdw %xmm1, %xmm0
 ; X64-SSE-NEXT:    ret{{[l|q]}}
 ;
 ; X64-AVX-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X64-AVX:       # BB#0:
 ; X64-AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm1, %xmm1
-; X64-AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; X64-AVX-NEXT:    ret{{[l|q]}}
   %1 = ashr <4 x i32> %a, <i32 31, i32 31, i32 31, i32 31>
   %2 = icmp sgt <4 x i32> %b, <i32 1, i32 16, i32 255, i32 65535>

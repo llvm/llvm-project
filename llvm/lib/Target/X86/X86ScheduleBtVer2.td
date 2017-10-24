@@ -419,6 +419,56 @@ def WriteINSERTQ: SchedWriteRes<[JFPU01]> {
 def : InstRW<[WriteINSERTQ], (instregex "INSERTQ")>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// F16C instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def WriteCVT3: SchedWriteRes<[JFPU1]> {
+  let Latency = 3;
+}
+def : InstRW<[WriteCVT3], (instregex "VCVTPS2PHrr")>;
+def : InstRW<[WriteCVT3], (instregex "VCVTPH2PSrr")>;
+
+def WriteCVT3St: SchedWriteRes<[JFPU1, JLAGU]> {
+  let Latency = 3;
+  let ResourceCycles = [1, 1];
+}
+def : InstRW<[WriteCVT3St], (instregex "VCVTPS2PHmr")>;
+
+def WriteCVT3Ld: SchedWriteRes<[JFPU1, JLAGU]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 1];
+}
+def : InstRW<[WriteCVT3Ld], (instregex "VCVTPH2PSrm")>;
+
+def WriteCVTPS2PHY: SchedWriteRes<[JFPU1, JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [2,2];
+  let NumMicroOps = 3;
+}
+def : InstRW<[WriteCVTPS2PHY], (instregex "VCVTPS2PHYrr")>;
+
+def WriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JFPU01, JLAGU]> {
+  let Latency = 11;
+  let ResourceCycles = [2,2,1];
+  let NumMicroOps = 3;
+}
+def : InstRW<[WriteCVTPS2PHYSt], (instregex "VCVTPS2PHYmr")>;
+
+def WriteCVTPH2PSY: SchedWriteRes<[JFPU1]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[WriteCVTPH2PSY], (instregex "VCVTPH2PSYrr")>;
+
+def WriteCVTPH2PSYLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 8;
+  let ResourceCycles = [1,2];
+  let NumMicroOps = 2;
+}
+def : InstRW<[WriteCVTPH2PSYLd], (instregex "VCVTPH2PSYrm")>;
+
+////////////////////////////////////////////////////////////////////////////////
 // AVX instructions.
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -1381,7 +1381,6 @@ void llvm::salvageDebugInfo(Instruction &I) {
       // need to mark the expression with a DW_OP_stack_value.
       if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
         auto *DIExpr = DVI->getExpression();
-        DIBuilder DIB(M, /*AllowUnresolved*/ false);
         // GEP offsets are i32 and thus always fit into an int64_t.
         DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref,
                                        Offset.getSExtValue(),
@@ -1396,7 +1395,6 @@ void llvm::salvageDebugInfo(Instruction &I) {
     for (auto *DVI : DbgValues) {
       // Rewrite the load into DW_OP_deref.
       auto *DIExpr = DVI->getExpression();
-      DIBuilder DIB(M, /*AllowUnresolved*/ false);
       DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
       DVI->setOperand(0, MDWrap(I.getOperand(0)));
       DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));

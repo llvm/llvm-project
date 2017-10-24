@@ -25,17 +25,11 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; ALL-LABEL: name: test_unmerge_v128
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr128x
-    ; ALL-NEXT: id: 2, class: vr128x
-    ; ALL-NEXT: id: 3, class: vr128x
-    ; ALL-NEXT: id: 4, class: vr128x
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]] = COPY [[DEF]].sub_xmm
-    ; ALL: [[VEXTRACTF32x4Zrr:%[0-9]+]] = VEXTRACTF32x4Zrr [[DEF]], 1
-    ; ALL: [[VEXTRACTF32x4Zrr1:%[0-9]+]] = VEXTRACTF32x4Zrr [[DEF]], 2
-    ; ALL: [[VEXTRACTF32x4Zrr2:%[0-9]+]] = VEXTRACTF32x4Zrr [[DEF]], 3
+    ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
+    ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY [[DEF]].sub_xmm
+    ; ALL: [[VEXTRACTF32x4Zrr:%[0-9]+]]:vr128x = VEXTRACTF32x4Zrr [[DEF]], 1
+    ; ALL: [[VEXTRACTF32x4Zrr1:%[0-9]+]]:vr128x = VEXTRACTF32x4Zrr [[DEF]], 2
+    ; ALL: [[VEXTRACTF32x4Zrr2:%[0-9]+]]:vr128x = VEXTRACTF32x4Zrr [[DEF]], 3
     ; ALL: %xmm0 = COPY [[COPY]]
     ; ALL: RET 0, implicit %xmm0
     %0(<16 x s32>) = IMPLICIT_DEF
@@ -57,13 +51,9 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; ALL-LABEL: name: test_unmerge_v256
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: vr512
-    ; ALL-NEXT: id: 1, class: vr256x
-    ; ALL-NEXT: id: 2, class: vr256x
-    ; ALL: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; ALL: [[COPY:%[0-9]+]] = COPY [[DEF]].sub_ymm
-    ; ALL: [[VEXTRACTF64x4Zrr:%[0-9]+]] = VEXTRACTF64x4Zrr [[DEF]], 1
+    ; ALL: [[DEF:%[0-9]+]]:vr512 = IMPLICIT_DEF
+    ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY [[DEF]].sub_ymm
+    ; ALL: [[VEXTRACTF64x4Zrr:%[0-9]+]]:vr256x = VEXTRACTF64x4Zrr [[DEF]], 1
     ; ALL: %ymm0 = COPY [[COPY]]
     ; ALL: RET 0, implicit %ymm0
     %0(<16 x s32>) = IMPLICIT_DEF

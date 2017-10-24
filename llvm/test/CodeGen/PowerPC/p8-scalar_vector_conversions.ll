@@ -16,7 +16,7 @@ entry:
 ; CHECK: sldi [[REG1:[0-9]+]], 3, 56
 ; CHECK: mtvsrd {{[0-9]+}}, [[REG1]]
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK-LE: vspltb {{[0-9]+}}, {{[0-9]+}}, 7
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -28,7 +28,7 @@ entry:
 ; CHECK: sldi [[REG1:[0-9]+]], 3, 48
 ; CHECK: mtvsrd {{[0-9]+}}, [[REG1]]
 ; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK-LE: vsplth {{[0-9]+}}, {{[0-9]+}}, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone

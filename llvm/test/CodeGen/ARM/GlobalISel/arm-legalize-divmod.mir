@@ -37,19 +37,19 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; HWDIV: [[R:%[0-9]+]](s32) = G_SDIV [[X]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SDIV [[X]], [[Y]]
     ; SOFT-NOT: G_SDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
     %2(s32) = G_SDIV %0, %1
@@ -73,19 +73,19 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; HWDIV: [[R:%[0-9]+]](s32) = G_UDIV [[X]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_UDIV [[X]], [[Y]]
     ; SOFT-NOT: G_UDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
     %2(s32) = G_UDIV %0, %1
@@ -112,35 +112,35 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 16
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]](s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 16
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]](s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s16) = G_TRUNC %2(s32)
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
     ; SOFT-NOT: G_SDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
-    ; CHECK: [[R16:%[0-9]+]](s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_SEXT [[R16]]
+    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R16]]
     ; SOFT-NOT: G_SDIV
     %4(s16) = G_SDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -167,33 +167,33 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 65535
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_AND [[X]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 65535
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_AND [[Y]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[X]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[Y]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s16) = G_TRUNC %2(s32)
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
     ; SOFT-NOT: G_UDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
-    ; CHECK: [[R16:%[0-9]+]](s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_ZEXT [[R16]]
+    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R16]]
     ; SOFT-NOT: G_UDIV
     %4(s16) = G_UDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -220,35 +220,35 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]](s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]](s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s8) = G_TRUNC %2(s32)
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
     ; SOFT-NOT: G_SDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_idiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__divsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
-    ; CHECK: [[R8:%[0-9]+]](s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_SEXT [[R8]]
+    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R8]]
     ; SOFT-NOT: G_SDIV
     %4(s8) = G_SDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -275,33 +275,33 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_AND [[X]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_AND [[Y]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[X]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[Y]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s8) = G_TRUNC %2(s32)
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
     ; SOFT-NOT: G_UDIV
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_uidiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT-DEFAULT: BLX $__udivsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
-    ; CHECK: [[R8:%[0-9]+]](s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_ZEXT [[R8]]
+    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R8]]
     ; SOFT-NOT: G_UDIV
     %4(s8) = G_UDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -325,21 +325,21 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; HWDIV: [[Q:%[0-9]+]](s32) = G_SDIV [[X]], [[Y]]
-    ; HWDIV: [[P:%[0-9]+]](s32) = G_MUL [[Q]], [[Y]]
-    ; HWDIV: [[R:%[0-9]+]](s32) = G_SUB [[X]], [[P]]
+    ; HWDIV: [[Q:%[0-9]+]]:_(s32) = G_SDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]]:_(s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SUB [[X]], [[P]]
     ; SOFT-NOT: G_SREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_idivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
-    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__modsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
     %2(s32) = G_SREM %0, %1
@@ -363,21 +363,21 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
-    ; HWDIV: [[Q:%[0-9]+]](s32) = G_UDIV [[X]], [[Y]]
-    ; HWDIV: [[P:%[0-9]+]](s32) = G_MUL [[Q]], [[Y]]
-    ; HWDIV: [[R:%[0-9]+]](s32) = G_SUB [[X]], [[P]]
+    ; HWDIV: [[Q:%[0-9]+]]:_(s32) = G_UDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]]:_(s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SUB [[X]], [[P]]
     ; SOFT-NOT: G_UREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; SOFT-AEABI: BLX $__aeabi_uidivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
-    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__umodsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
     %2(s32) = G_UREM %0, %1
@@ -404,37 +404,37 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 16
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]](s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 16
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]](s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s16) = G_TRUNC %2(s32)
-    ; HWDIV: [[Q32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
-    ; HWDIV: [[P32:%[0-9]+]](s32) = G_MUL [[Q32]], [[Y32]]
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SUB [[X32]], [[P32]]
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
     ; SOFT-NOT: G_SREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_idivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__modsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
-    ; CHECK: [[R16:%[0-9]+]](s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_SEXT [[R16]]
+    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R16]]
     ; SOFT-NOT: G_SREM
     %4(s16) = G_SREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -461,35 +461,35 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 65535
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_AND [[X]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 65535
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_AND [[Y]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[X]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[Y]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s16) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s16) = G_TRUNC %2(s32)
-    ; HWDIV: [[Q32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
-    ; HWDIV: [[P32:%[0-9]+]](s32) = G_MUL [[Q32]], [[Y32]]
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SUB [[X32]], [[P32]]
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
     ; SOFT-NOT: G_UREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_uidivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__umodsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
-    ; CHECK: [[R16:%[0-9]+]](s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_ZEXT [[R16]]
+    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R16]]
     ; SOFT-NOT: G_UREM
     %4(s16) = G_UREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -516,37 +516,37 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[SHIFTEDX:%[0-9]+]](s32) = G_SHL [[X]], [[BITS]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[SHIFTEDY:%[0-9]+]](s32) = G_SHL [[Y]], [[BITS]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITS]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[Y]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s8) = G_TRUNC %2(s32)
-    ; HWDIV: [[Q32:%[0-9]+]](s32) = G_SDIV [[X32]], [[Y32]]
-    ; HWDIV: [[P32:%[0-9]+]](s32) = G_MUL [[Q32]], [[Y32]]
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SUB [[X32]], [[P32]]
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
     ; SOFT-NOT: G_SREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_idivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__modsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
-    ; CHECK: [[R8:%[0-9]+]](s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_SEXT [[R8]]
+    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R8]]
     ; SOFT-NOT: G_SREM
     %4(s8) = G_SREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -573,35 +573,35 @@ body:             |
   bb.0:
     liveins: %r0, %r1
 
-    ; CHECK-DAG: [[R0:%[0-9]+]](s32) = COPY %r0
-    ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r1
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
     ; The G_TRUNC will combine with the extensions introduced by the legalizer,
     ; leading to the following complicated sequences.
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[X:%[0-9]+]](s32) = COPY [[R0]]
-    ; CHECK: [[X32:%[0-9]+]](s32) = G_AND [[X]], [[BITS]]
-    ; CHECK: [[BITS:%[0-9]+]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[Y:%[0-9]+]](s32) = COPY [[R1]]
-    ; CHECK: [[Y32:%[0-9]+]](s32) = G_AND [[Y]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY [[R0]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[X]], [[BITS]]
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[Y:%[0-9]+]]:_(s32) = COPY [[R1]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[Y]], [[BITS]]
     %0(s32) = COPY %r0
     %1(s8) = G_TRUNC %0(s32)
     %2(s32) = COPY %r1
     %3(s8) = G_TRUNC %2(s32)
-    ; HWDIV: [[Q32:%[0-9]+]](s32) = G_UDIV [[X32]], [[Y32]]
-    ; HWDIV: [[P32:%[0-9]+]](s32) = G_MUL [[Q32]], [[Y32]]
-    ; HWDIV: [[R32:%[0-9]+]](s32) = G_SUB [[X32]], [[P32]]
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
     ; SOFT-NOT: G_UREM
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X32]]
     ; SOFT-DAG: %r1 = COPY [[Y32]]
     ; SOFT-AEABI: BLX $__aeabi_uidivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY %r1
     ; SOFT-DEFAULT: BLX $__umodsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]](s32) = COPY %r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
-    ; CHECK: [[R8:%[0-9]+]](s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]](s32) = G_ZEXT [[R8]]
+    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R8]]
     ; SOFT-NOT: G_UREM
     %4(s8) = G_UREM %1, %3
     ; CHECK: %r0 = COPY [[R]]

@@ -180,6 +180,11 @@ bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return TTIImpl->hasDivRemOp(DataType, IsSigned);
 }
 
+bool TargetTransformInfo::hasVolatileVariant(Instruction *I,
+                                             unsigned AddrSpace) const {
+  return TTIImpl->hasVolatileVariant(I, AddrSpace);
+}
+
 bool TargetTransformInfo::prefersVectorizedAddressing() const {
   return TTIImpl->prefersVectorizedAddressing();
 }

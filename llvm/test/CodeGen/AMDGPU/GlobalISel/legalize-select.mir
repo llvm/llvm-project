@@ -18,12 +18,12 @@ body: |
   bb.0:
     liveins: %vgpr0
     ; CHECK-LABEL: name: test_select
-    ; CHECK: [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %vgpr0
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
-    ; CHECK: [[C2:%[0-9]+]](s32) = G_CONSTANT i32 2
-    ; CHECK: [[SELECT:%[0-9]+]](s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %vgpr0
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
     %0(s32) = G_CONSTANT i32 0
     %1(s32) = COPY %vgpr0
 

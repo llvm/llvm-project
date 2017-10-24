@@ -24,9 +24,9 @@ body:             |
     liveins: %zmm0, %ymm1
 
     ; ALL-LABEL: name: test_insert_128
-    ; ALL: [[COPY:%[0-9]+]](<16 x s32>) = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]](<4 x s32>) = COPY %xmm1
-    ; ALL: [[INSERT:%[0-9]+]](<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<4 x s32>), 0
+    ; ALL: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY %xmm1
+    ; ALL: [[INSERT:%[0-9]+]]:_(<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<4 x s32>), 0
     ; ALL: %zmm0 = COPY [[INSERT]](<16 x s32>)
     ; ALL: RET 0, implicit %ymm0
     %0(<16 x s32>) = COPY %zmm0
@@ -50,9 +50,9 @@ body:             |
     liveins: %zmm0, %ymm1
 
     ; ALL-LABEL: name: test_insert_256
-    ; ALL: [[COPY:%[0-9]+]](<16 x s32>) = COPY %zmm0
-    ; ALL: [[COPY1:%[0-9]+]](<8 x s32>) = COPY %ymm1
-    ; ALL: [[INSERT:%[0-9]+]](<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<8 x s32>), 0
+    ; ALL: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY %zmm0
+    ; ALL: [[COPY1:%[0-9]+]]:_(<8 x s32>) = COPY %ymm1
+    ; ALL: [[INSERT:%[0-9]+]]:_(<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<8 x s32>), 0
     ; ALL: %zmm0 = COPY [[INSERT]](<16 x s32>)
     ; ALL: RET 0, implicit %ymm0
     %0(<16 x s32>) = COPY %zmm0

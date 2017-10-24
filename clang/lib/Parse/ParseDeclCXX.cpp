@@ -3195,6 +3195,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   if (Tok.is(tok::colon)) {
+    ParseScope InheritanceScope(this, getCurScope()->getFlags() |
+                                          Scope::ClassInheritanceScope);
+
     ParseBaseClause(TagDecl);
     if (!Tok.is(tok::l_brace)) {
       bool SuggestFixIt = false;

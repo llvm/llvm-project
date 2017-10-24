@@ -12,9 +12,9 @@ body: |
     liveins: %vgpr0, %vgpr1
 
     ; CHECK-LABEL: name: test_shl
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %vgpr1
-    ; CHECK: [[SHL:%[0-9]+]](s32) = G_SHL [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %vgpr1
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]]
     %0(s32) = COPY %vgpr0
     %1(s32) = COPY %vgpr1
     %2(s32) = G_SHL %0, %1

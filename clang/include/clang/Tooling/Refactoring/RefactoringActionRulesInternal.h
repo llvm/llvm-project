@@ -57,7 +57,7 @@ void invokeRuleAfterValidatingRequirements(
     return Consumer.handleError(std::move(Err));
   // Construct the target action rule by extracting the evaluated
   // requirements from Expected<> wrappers and then run it.
-  RuleType((*std::get<Is>(Values))...).invoke(Consumer, Context);
+  RuleType(std::move((*std::get<Is>(Values)))...).invoke(Consumer, Context);
 }
 
 inline void visitRefactoringOptionsImpl(RefactoringOptionVisitor &) {}

@@ -43,8 +43,8 @@ body: |
   bb.0:
     liveins: %w0
     ; CHECK-LABEL: name: test_dbg_value
-    ; CHECK: [[COPY:%[0-9]+]] = COPY %w0
-    ; CHECK: [[ADDWrr:%[0-9]+]] = ADDWrr [[COPY]], [[COPY]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
+    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY]]
     ; CHECK: %w0 = COPY [[ADDWrr]]
     ; CHECK: DBG_VALUE debug-use [[ADDWrr]], debug-use _, !7, !DIExpression(), debug-location !9
     %0:gpr(s32) = COPY %w0

@@ -4,12 +4,12 @@
 # LIS->getInstructionIndex with a DBG_VALUE instruction, which does not have
 # a slot index.
 
-# CHECK: %13.sub2 = S_MOV_B32 0
+# CHECK: %13.sub2:sgpr_128 = S_MOV_B32 0
 # CHECK: DBG_VALUE{{.*}}debug-use %13.sub2
 
 --- |
   define amdgpu_kernel void @test(i32 addrspace(1)* %out) { ret void }
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4)
   !1 = !DILocalVariable(name: "a", scope: !2, file: !4, line: 126, type: !6)
   !2 = distinct !DISubprogram(name: "test", scope: !4, file: !4, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !5)
@@ -25,7 +25,7 @@
 ---
 name:            test
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }
   - { id: 2, class: sgpr_32 }
@@ -47,13 +47,13 @@ registers:
   - { id: 18, class: vgpr_32 }
   - { id: 19, class: vreg_64 }
   - { id: 20, class: vreg_64 }
-liveins:         
+liveins:
   - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '%vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
-  
+
     %3 = COPY killed %vgpr0
     %0 = COPY killed %sgpr0_sgpr1
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)

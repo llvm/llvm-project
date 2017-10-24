@@ -29,13 +29,13 @@ body: |
     %2(s32) = G_TRUNC %0
     %3(s32) = G_TRUNC %1
 
-    ; CHECK: [[CMP1:%[0-9]+]](s32) = G_FCMP floatpred(oge), %0(s64), %1
-    ; CHECK: [[TRUNC1:%[0-9]+]](s1) = G_TRUNC [[CMP1]]
+    ; CHECK: [[CMP1:%[0-9]+]]:_(s32) = G_FCMP floatpred(oge), %0(s64), %1
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[CMP1]]
     %4(s32) = G_FCMP floatpred(oge), %0, %1
     %6(s1) = G_TRUNC %4(s32)
 
-    ; CHECK: [[CMP2:%[0-9]+]](s32) = G_FCMP floatpred(uno), %2(s32), %3
-    ; CHECK: [[TRUNC2:%[0-9]+]](s1) = G_TRUNC [[CMP2]]
+    ; CHECK: [[CMP2:%[0-9]+]]:_(s32) = G_FCMP floatpred(uno), %2(s32), %3
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[CMP2]]
     %5(s32) = G_FCMP floatpred(uno), %2, %3
     %7(s1) = G_TRUNC %5(s32)
 ...

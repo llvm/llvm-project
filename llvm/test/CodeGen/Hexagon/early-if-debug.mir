@@ -3,16 +3,16 @@
 # if-converted.
 
 # CHECK-LABEL: bb.0:
-# CHECK: %0 = COPY %r0
-# CHECK: %1 = C2_cmpeqi %0, 0
-# CHECK: %2 = A2_tfrsi 123
+# CHECK: %0:intregs = COPY %r0
+# CHECK: %1:predregs = C2_cmpeqi %0, 0
+# CHECK: %2:intregs = A2_tfrsi 123
 # CHECK: DBG_VALUE debug-use %0, debug-use _
 # CHECK: DBG_VALUE debug-use %0, debug-use _
 # CHECK: DBG_VALUE debug-use %0, debug-use _
 # CHECK: DBG_VALUE debug-use %0, debug-use _
 # CHECK: DBG_VALUE debug-use %0, debug-use _
-# CHECK: %3 = A2_tfrsi 321
-# CHECK: %5 = C2_mux %1, %2, %3
+# CHECK: %3:intregs = A2_tfrsi 321
+# CHECK: %5:intregs = C2_mux %1, %2, %3
 
 --- |
   define void @foo() {

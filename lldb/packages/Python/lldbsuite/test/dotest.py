@@ -50,11 +50,7 @@ from ..support import seven
 
 
 def is_exe(fpath):
-    """Returns true if fpath is an executable.
-       Exits with an error code if the specified path is invalid"""
-    if not os.path.exists(fpath):
-        print(fpath  + " is not a valid path, exiting")
-        sys.exit(-1)
+    """Returns true if fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 

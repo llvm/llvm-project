@@ -122,11 +122,11 @@ define void @signum64b(<4 x double>*) {
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvtdq2pd %xmm2, %ymm2
 ; AVX1-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX1-NEXT:    vsubpd %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vmovapd %ymm0, (%rdi)
@@ -139,11 +139,11 @@ define void @signum64b(<4 x double>*) {
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
 ; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vcvtdq2pd %xmm2, %ymm2
 ; AVX2-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX2-NEXT:    vsubpd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vmovapd %ymm0, (%rdi)

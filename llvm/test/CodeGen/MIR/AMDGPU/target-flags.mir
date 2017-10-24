@@ -22,8 +22,8 @@ body: |
   bb.0:
     liveins: %sgpr0_sgpr1
     ; CHECK-LABEL: name: flags
-    ; CHECK: [[SI_PC_ADD_REL_OFFSET:%[0-9]+]] = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead %scc
-    ; CHECK: [[S_MOV_B64_:%[0-9]+]] = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
+    ; CHECK: [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead %scc
+    ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
     ; CHECK: S_ENDPGM
     %0 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead %scc
   %1 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
