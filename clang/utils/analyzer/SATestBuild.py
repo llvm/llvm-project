@@ -732,6 +732,7 @@ def testAll(IsReferenceBuild=False, Strictness=0):
         for (ProjName, ProjBuildMode) in iterateOverProjects(PMapFile):
             TestsPassed &= testProject(
                 ProjName, int(ProjBuildMode), IsReferenceBuild, Strictness)
+    return TestsPassed
 
 
 if __name__ == '__main__':
