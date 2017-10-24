@@ -14,7 +14,7 @@
         {"name": "swift",
          "vcs": "git",
          "url": "https://github.com/apple/swift.git",
-         "ref": "master"},
+         "ref": "swift-4.1-branch"},
 
         {"name": "cmark",
          "vcs": "git",
