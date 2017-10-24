@@ -16,25 +16,34 @@
 
 namespace fuzzing {
 
-//	These all return 0 on success; != 0 on failure
-	int sort             (const uint8_t *data, size_t size);
-	int stable_sort      (const uint8_t *data, size_t size);
-	int partition        (const uint8_t *data, size_t size);
-	int stable_partition (const uint8_t *data, size_t size);
+//  These all return 0 on success; != 0 on failure
+    int sort             (const uint8_t *data, size_t size);
+    int stable_sort      (const uint8_t *data, size_t size);
+    int partition        (const uint8_t *data, size_t size);
+    int stable_partition (const uint8_t *data, size_t size);
 
-//	partition and stable_partition take Bi-Di iterators.
-//	Should test those, too
+//  partition and stable_partition take Bi-Di iterators.
+//  Should test those, too
+    int nth_element      (const uint8_t *data, size_t size);
+    int partial_sort     (const uint8_t *data, size_t size);
 
-	int nth_element      (const uint8_t *data, size_t size);
-	int partial_sort     (const uint8_t *data, size_t size);
+//  Heap operations
+    int make_heap        (const uint8_t *data, size_t size);
+    int push_heap        (const uint8_t *data, size_t size);
+    int pop_heap         (const uint8_t *data, size_t size);
 
-//	Various flavors of regex
-	int regex_ECMAScript (const uint8_t *data, size_t size);
-	int regex_POSIX      (const uint8_t *data, size_t size);
-	int regex_extended   (const uint8_t *data, size_t size);
-	int regex_awk        (const uint8_t *data, size_t size);
-	int regex_grep       (const uint8_t *data, size_t size);
-	int regex_egrep      (const uint8_t *data, size_t size);
+//  Various flavors of regex
+    int regex_ECMAScript (const uint8_t *data, size_t size);
+    int regex_POSIX      (const uint8_t *data, size_t size);
+    int regex_extended   (const uint8_t *data, size_t size);
+    int regex_awk        (const uint8_t *data, size_t size);
+    int regex_grep       (const uint8_t *data, size_t size);
+    int regex_egrep      (const uint8_t *data, size_t size);
+
+//	Searching
+	int search                      (const uint8_t *data, size_t size);
+// 	int search_boyer_moore          (const uint8_t *data, size_t size);
+// 	int search_boyer_moore_horspool (const uint8_t *data, size_t size);
 
 } // namespace fuzzing
 

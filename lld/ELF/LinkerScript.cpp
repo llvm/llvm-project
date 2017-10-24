@@ -356,7 +356,8 @@ void LinkerScript::processSectionCommands() {
   // This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
   // script parser.
-  Ctx = make_unique<AddressState>();
+  auto Deleter = make_unique<AddressState>();
+  Ctx = Deleter.get();
   Ctx->OutSec = Aether;
 
   DenseMap<SectionBase *, int> Order = buildSectionOrder();
@@ -803,11 +804,8 @@ void LinkerScript::assignAddresses() {
   // -image-base if set.
   Dot = Config->ImageBase ? *Config->ImageBase : 0;
 
-  // Ctx captures the local AddressState and makes it accessible
-  // deliberately. This is needed as there are some cases where we cannot just
-  // thread the current state through to a lambda function created by the
-  // script parser.
-  Ctx = make_unique<AddressState>();
+  auto Deleter = make_unique<AddressState>();
+  Ctx = Deleter.get();
   ErrorOnMissingSection = true;
   switchTo(Aether);
 

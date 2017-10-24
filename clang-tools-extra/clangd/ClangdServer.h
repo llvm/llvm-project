@@ -209,7 +209,8 @@ public:
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
-               bool SnippetCompletions, clangd::Logger &Logger,
+               clangd::CodeCompleteOptions CodeCompleteOpts,
+               clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Set the root path of the workspace.
@@ -309,7 +310,7 @@ private:
   // If set, this represents the workspace path.
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  bool SnippetCompletions;
+  clangd::CodeCompleteOptions CodeCompleteOpts;
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters
   /// into CppFile.

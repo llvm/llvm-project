@@ -1,5 +1,5 @@
 # RUN: clangd -run-synchronously -input-mirror-file %t < %s
-# Note that we have to use '-Z' as -input-mirror-file does not have a newline at the end of file.
+# Note that we have to use '-b' as -input-mirror-file does not have a newline at the end of file.
 # RUN: diff -b %t %s
 # It is absolutely vital that this file has CRLF line endings.
 #
