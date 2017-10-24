@@ -1453,17 +1453,12 @@ public:
 class CopyRenderer : public OperandRenderer {
 protected:
   unsigned NewInsnID;
-  /// The matcher for the instruction that this operand is copied from.
-  /// This provides the facility for looking up an a operand by it's name so
-  /// that it can be used as a source for the instruction being built.
-  const InstructionMatcher &Matched;
   /// The name of the operand.
   const StringRef SymbolicName;
 
 public:
-  CopyRenderer(unsigned NewInsnID, const InstructionMatcher &Matched,
-               StringRef SymbolicName)
-      : OperandRenderer(OR_Copy), NewInsnID(NewInsnID), Matched(Matched),
+  CopyRenderer(unsigned NewInsnID, StringRef SymbolicName)
+      : OperandRenderer(OR_Copy), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");
   }
@@ -1497,7 +1492,6 @@ protected:
 
 public:
   CopyOrAddZeroRegRenderer(unsigned NewInsnID,
-                           const InstructionMatcher &Matched,
                            StringRef SymbolicName, Record *ZeroRegisterDef)
       : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
@@ -1595,19 +1589,15 @@ public:
 class CopySubRegRenderer : public OperandRenderer {
 protected:
   unsigned NewInsnID;
-  /// The matcher for the instruction that this operand is copied from.
-  /// This provides the facility for looking up an a operand by it's name so
-  /// that it can be used as a source for the instruction being built.
-  const InstructionMatcher &Matched;
   /// The name of the operand.
   const StringRef SymbolicName;
   /// The subregister to extract.
   const CodeGenSubRegIndex *SubReg;
 
 public:
-  CopySubRegRenderer(unsigned NewInsnID, const InstructionMatcher &Matched,
-                     StringRef SymbolicName, const CodeGenSubRegIndex *SubReg)
-      : OperandRenderer(OR_CopySubReg), NewInsnID(NewInsnID), Matched(Matched),
+  CopySubRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
+                     const CodeGenSubRegIndex *SubReg)
+      : OperandRenderer(OR_CopySubReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), SubReg(SubReg) {}
 
   static bool classof(const OperandRenderer *R) {
@@ -2555,8 +2545,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild->getOperator()->isSubClassOf("SDNode")) {
       auto &ChildSDNI = CGP.getSDNodeInfo(DstChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
-                                               DstChild->getName());
+        DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
         return Error::success();
       }
     }
@@ -2603,13 +2592,11 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       if (ChildRec->isSubClassOf("RegisterOperand") &&
           !ChildRec->isValueUnset("GIZeroRegister")) {
         DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
-            0, InsnMatcher, DstChild->getName(),
-            ChildRec->getValueAsDef("GIZeroRegister"));
+            0, DstChild->getName(), ChildRec->getValueAsDef("GIZeroRegister"));
         return Error::success();
       }
 
-      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
-                                             DstChild->getName());
+      DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
       return Error::success();
     }
 
@@ -2669,7 +2656,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   // Render the explicit defs.
   for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
     const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
-    DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, DstIOperand.Name);
+    DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
   }
 
   // EXTRACT_SUBREG needs to use a subregister COPY.
@@ -2692,7 +2679,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
       }
 
       DstMIBuilder.addRenderer<CopySubRegRenderer>(
-          0, InsnMatcher, Dst->getChild(0)->getName(), SubIdx);
+          0, Dst->getChild(0)->getName(), SubIdx);
       return DstMIBuilder;
     }
 
@@ -2816,8 +2803,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       OM0.addPredicate<RegisterBankOperandMatcher>(RC);
 
       auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI, InsnMatcher);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, DstIOperand.Name);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, Dst->getName());
+      DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
+      DstMIBuilder.addRenderer<CopyRenderer>(0, Dst->getName());
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
       // We're done with this pattern!  It's eligible for GISel emission; return

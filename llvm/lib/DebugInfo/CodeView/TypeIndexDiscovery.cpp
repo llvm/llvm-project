@@ -404,6 +404,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
     break;
   case SymbolKind::S_CALLERS:
   case SymbolKind::S_CALLEES:
+  case SymbolKind::S_INLINEES:
     // The record is a count followed by an array of type indices.
     Count = *reinterpret_cast<const ulittle32_t *>(Content.data());
     Refs.push_back({TiRefKind::IndexRef, 4, Count}); // Callees
