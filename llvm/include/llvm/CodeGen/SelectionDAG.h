@@ -1286,6 +1286,10 @@ public:
     return DbgInfo->ByvalParmDbgEnd();
   }
 
+  /// To be invoked on an SDNode that is slated to be erased. This
+  /// function mirrors \c llvm::salvageDebugInfo.
+  void salvageDebugInfo(SDNode &N);
+
   void dump() const;
 
   /// Create a stack temporary, suitable for holding the specified value type.

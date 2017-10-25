@@ -6,42 +6,59 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 ///
 /// This file provides internal interfaces used to implement the InstCombine.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/Pass.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <cassert>
+#include <cstdint>
 
 #define DEBUG_TYPE "instcombine"
 
 namespace llvm {
+
+class APInt;
+class AssumptionCache;
 class CallSite;
 class DataLayout;
 class DominatorTree;
-class TargetLibraryInfo;
-class MemIntrinsic;
-class MemSetInst;
+class GEPOperator;
+class GlobalVariable;
+class LoopInfo;
 class OptimizationRemarkEmitter;
+class TargetLibraryInfo;
+class User;
 
 /// Assign a complexity or rank value to LLVM Values. This is used to reduce
 /// the amount of pattern matching needed for compares and commutative
@@ -109,6 +126,7 @@ static inline Value *peekThroughBitcast(Value *V, bool OneUseOnly = false) {
 static inline Constant *AddOne(Constant *C) {
   return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
 }
+
 /// \brief Subtract one from a Constant
 static inline Constant *SubOne(Constant *C) {
   return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
@@ -118,7 +136,6 @@ static inline Constant *SubOne(Constant *C) {
 /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
 /// is true, work under the assumption that the caller intends to remove all
 /// uses of V and only keep uses of ~V.
-///
 static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
   // ~(~(X)) -> X.
   if (BinaryOperator::isNot(V))
@@ -160,7 +177,6 @@ static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
 
   return false;
 }
-
 
 /// \brief Specific patterns of overflow check idioms that we match.
 enum OverflowCheckFlavor {
@@ -209,12 +225,13 @@ public:
 
   /// \brief An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  typedef IRBuilder<TargetFolder, IRBuilderCallbackInserter> BuilderTy;
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy &Builder;
 
 private:
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
+
   /// Enable combines that trigger rarely but are costly in compiletime.
   const bool ExpensiveCombines;
 
@@ -227,11 +244,12 @@ private:
   const DataLayout &DL;
   const SimplifyQuery SQ;
   OptimizationRemarkEmitter &ORE;
+
   // Optional analyses. When non-null, these can both be used to do better
   // combining and will be updated to reflect any changes.
   LoopInfo *LI;
 
-  bool MadeIRChange;
+  bool MadeIRChange = false;
 
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy &Builder,
@@ -241,7 +259,7 @@ public:
                LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
         ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), LI(LI), MadeIRChange(false) {}
+        DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), LI(LI) {}
 
   /// \brief Run the combiner over the entire worklist until it is empty.
   ///
@@ -413,27 +431,32 @@ private:
                                  bool DoTransform = true);
 
   Instruction *transformSExtICmp(ICmpInst *ICI, Instruction &CI);
+
   bool willNotOverflowSignedAdd(const Value *LHS, const Value *RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
-  };
+  }
+
   bool willNotOverflowUnsignedAdd(const Value *LHS, const Value *RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
-  };
+  }
+
   bool willNotOverflowSignedSub(const Value *LHS, const Value *RHS,
                                 const Instruction &CxtI) const;
   bool willNotOverflowUnsignedSub(const Value *LHS, const Value *RHS,
                                   const Instruction &CxtI) const;
   bool willNotOverflowSignedMul(const Value *LHS, const Value *RHS,
                                 const Instruction &CxtI) const;
+
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedMul(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
-  };
+  }
+
   Value *EmitGEPOffset(User *GEP);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
@@ -548,6 +571,7 @@ public:
                         unsigned Depth, const Instruction *CxtI) const {
     llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
   }
+
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
     return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
@@ -563,20 +587,24 @@ public:
                          const Instruction *CxtI = nullptr) const {
     return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
   }
+
   unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,
                               const Instruction *CxtI = nullptr) const {
     return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
+
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
     return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
   }
+
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
   }
+
   OverflowResult computeOverflowForSignedAdd(const Value *LHS,
                                              const Value *RHS,
                                              const Instruction *CxtI) const {
@@ -626,6 +654,7 @@ private:
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, KnownBits &Known,
                             unsigned Depth = 0);
+
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
   /// DemandedMask, but without modifying the Instruction.
@@ -633,6 +662,7 @@ private:
                                          const APInt &DemandedMask,
                                          KnownBits &Known,
                                          unsigned Depth, Instruction *CxtI);
+
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
   Value *simplifyShrShlDemandedBits(
@@ -672,6 +702,7 @@ private:
   Instruction *FoldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgZextsIntoPHI(PHINode &PN);
+
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
   /// insert a new pointer typed PHI and replace the original one.
@@ -771,8 +802,8 @@ private:
   Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
 };
 
-} // end namespace llvm.
+} // end namespace llvm
 
 #undef DEBUG_TYPE
 
-#endif
+#endif // LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H

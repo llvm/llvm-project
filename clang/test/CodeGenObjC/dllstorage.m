@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=ios -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -check-prefix CHECK-IR %s
 // RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=macosx -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -check-prefix CHECK-IR %s
 // RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=objfw -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -check-prefix CHECK-FW %s
 
@@ -113,6 +114,15 @@ __attribute__((__objc_exception__))
 @end
 
 // CHECK-IR-DAG: @"OBJC_EHTYPE_$_P" = external global %struct._objc_typeinfo
+
+@interface Q : M
+@end
+
+id f(Q *q) {
+  return q->_ivar;
+}
+
+// CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
 int g() {
   @autoreleasepool {
