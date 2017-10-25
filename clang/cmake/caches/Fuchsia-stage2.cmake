@@ -33,15 +33,11 @@ set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -gline-tables-only -DNDEBUG" CACHE STRING "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -gline-tables-only -DNDEBUG" CACHE STRING "")
 
-set(LLVM_BUILTIN_TARGETS "x86_64-fuchsia;aarch64-fuchsia" CACHE STRING "")
+set(LLVM_BUILTIN_TARGETS "default;x86_64-fuchsia;aarch64-fuchsia" CACHE STRING "")
 foreach(target x86_64;aarch64)
   set(BUILTINS_${target}-fuchsia_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
   set(BUILTINS_${target}-fuchsia_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
 endforeach()
-
-if(NOT APPLE)
-  set(LLVM_BUILTIN_TARGETS "default;${LLVM_BUILTIN_TARGETS}" CACHE STRING "" FORCE)
-endif()
 
 set(LLVM_RUNTIME_TARGETS "default;x86_64-fuchsia;aarch64-fuchsia;x86_64-fuchsia-asan:x86_64-fuchsia;aarch64-fuchsia-asan:aarch64-fuchsia" CACHE STRING "")
 foreach(target x86_64;aarch64)
@@ -97,6 +93,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   LTO
   clang-format
   clang-headers
+  clang-refactor
   clang-tidy
   clangd
   builtins
