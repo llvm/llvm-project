@@ -198,6 +198,28 @@ std::future<Tagged<std::vector<CompletionItem>>>
 ClangdServer::codeComplete(PathRef File, Position Pos,
                            llvm::Optional<StringRef> OverridenContents,
                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  using ResultType = Tagged<std::vector<CompletionItem>>;
+
+  std::promise<ResultType> ResultPromise;
+
+  auto Callback = [](std::promise<ResultType> ResultPromise,
+                     ResultType Result) -> void {
+    ResultPromise.set_value(std::move(Result));
+  };
+
+  std::future<ResultType> ResultFuture = ResultPromise.get_future();
+  codeComplete(BindWithForward(Callback, std::move(ResultPromise)), File, Pos,
+               OverridenContents, UsedFS);
+  return ResultFuture;
+}
+
+void ClangdServer::codeComplete(
+    UniqueFunction<void(Tagged<std::vector<CompletionItem>>)> Callback,
+    PathRef File, Position Pos, llvm::Optional<StringRef> OverridenContents,
+    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
+  using CallbackType =
+      UniqueFunction<void(Tagged<std::vector<CompletionItem>>)>;
+
   std::string Contents;
   if (OverridenContents) {
     Contents = *OverridenContents;
@@ -216,9 +238,6 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
   assert(Resources && "Calling completion on non-added file");
 
-  using PackagedTask =
-      std::packaged_task<Tagged<std::vector<CompletionItem>>()>;
-
   // Remember the current Preamble and use it when async task starts executing.
   // At the point when async task starts executing, we may have a different
   // Preamble in Resources. However, we assume the Preamble that we obtain here
@@ -226,26 +245,25 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   std::shared_ptr<const PreambleData> Preamble =
       Resources->getPossiblyStalePreamble();
   // A task that will be run asynchronously.
-  PackagedTask Task([=]() mutable { // 'mutable' to reassign Preamble variable.
-    if (!Preamble) {
-      // Maybe we built some preamble before processing this request.
-      Preamble = Resources->getPossiblyStalePreamble();
-    }
-    // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
-    // both the old and the new version in case only one of them matches.
+  auto Task =
+      // 'mutable' to reassign Preamble variable.
+      [=](CallbackType Callback) mutable {
+        if (!Preamble) {
+          // Maybe we built some preamble before processing this request.
+          Preamble = Resources->getPossiblyStalePreamble();
+        }
+        // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
+        // both the old and the new version in case only one of them matches.
 
-    std::vector<CompletionItem> Result = clangd::codeComplete(
-        File, Resources->getCompileCommand(),
-        Preamble ? &Preamble->Preamble : nullptr, Contents, Pos, TaggedFS.Value,
-        PCHs, CodeCompleteOpts, Logger);
-    return make_tagged(std::move(Result), std::move(TaggedFS.Tag));
-  });
+        std::vector<CompletionItem> Result = clangd::codeComplete(
+            File, Resources->getCompileCommand(),
+            Preamble ? &Preamble->Preamble : nullptr, Contents, Pos,
+            TaggedFS.Value, PCHs, CodeCompleteOpts, Logger);
 
-  auto Future = Task.get_future();
-  // FIXME(ibiryukov): to reduce overhead for wrapping the same callable
-  // multiple times, ClangdScheduler should return future<> itself.
-  WorkScheduler.addToFront([](PackagedTask Task) { Task(); }, std::move(Task));
-  return Future;
+        Callback(make_tagged(std::move(Result), std::move(TaggedFS.Tag)));
+      };
+
+  WorkScheduler.addToFront(std::move(Task), std::move(Callback));
 }
 
 Tagged<SignatureHelp>

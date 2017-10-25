@@ -212,6 +212,41 @@ public:
     return true;
   }
 
+  bool VisitMemberExpr(const MemberExpr *Expr) {
+    const NamedDecl *Decl = Expr->getFoundDecl();
+    auto StartLoc = Expr->getMemberLoc();
+    auto EndLoc = Expr->getMemberLoc();
+    if (isInUSRSet(Decl)) {
+      RenameInfos.push_back({StartLoc, EndLoc,
+                            /*FromDecl=*/nullptr,
+                            /*Context=*/nullptr,
+                            /*Specifier=*/nullptr,
+                            /*IgnorePrefixQualifiers=*/true});
+    }
+    return true;
+  }
+
+  bool VisitCXXConstructorDecl(const CXXConstructorDecl *CD) {
+    // Fix the constructor initializer when renaming class members.
+    for (const auto *Initializer : CD->inits()) {
+      // Ignore implicit initializers.
+      if (!Initializer->isWritten())
+        continue;
+
+      if (const FieldDecl *FD = Initializer->getMember()) {
+        if (isInUSRSet(FD)) {
+          auto Loc = Initializer->getSourceLocation();
+          RenameInfos.push_back({Loc, Loc,
+                                 /*FromDecl=*/nullptr,
+                                 /*Context=*/nullptr,
+                                 /*Specifier=*/nullptr,
+                                 /*IgnorePrefixQualifiers=*/true});
+        }
+      }
+    }
+    return true;
+  }
+
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
     const NamedDecl *Decl = Expr->getFoundDecl();
     // Get the underlying declaration of the shadow declaration introduced by a
@@ -226,6 +261,20 @@ public:
     SourceLocation EndLoc = Expr->hasExplicitTemplateArgs()
                                 ? Expr->getLAngleLoc().getLocWithOffset(-1)
                                 : Expr->getLocEnd();
+
+    if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(Decl)) {
+      if (isInUSRSet(MD)) {
+        // Handle renaming static template class methods, we only rename the
+        // name without prefix qualifiers and restrict the source range to the
+        // name.
+        RenameInfos.push_back({EndLoc, EndLoc,
+                               /*FromDecl=*/nullptr,
+                               /*Context=*/nullptr,
+                               /*Specifier=*/nullptr,
+                               /*IgnorePrefixQualifiers=*/true});
+        return true;
+      }
+    }
 
     // In case of renaming an enum declaration, we have to explicitly handle
     // unscoped enum constants referenced in expressions (e.g.

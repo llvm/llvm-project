@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -irce-allow-unsigned-latch=true -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
 
 ; The test demonstrates that incorrect behavior of Clamp may lead to incorrect
 ; calculation of post-loop exit condition.
@@ -23,7 +23,10 @@ preheader:                                 ; preds = %entry
 ; CHECK-NEXT:   %length_gep.i146 = getelementptr inbounds i8, i8 addrspace(1)* undef, i64 8
 ; CHECK-NEXT:   %length_gep_typed.i147 = bitcast i8 addrspace(1)* undef to i32 addrspace(1)*
 ; CHECK-NEXT:   %tmp43 = icmp ult i64 %indvars.iv.next467, %tmp21
-; CHECK-NEXT:   br i1 false, label %loop.preheader, label %main.pseudo.exit
+; CHECK-NEXT:   [[C0:%[^ ]+]] = icmp ugt i64 %tmp21, 1
+; CHECK-NEXT:   %exit.mainloop.at = select i1 [[C0]], i64 %tmp21, i64 1
+; CHECK-NEXT:   [[C1:%[^ ]+]] = icmp ult i64 1, %exit.mainloop.at
+; CHECK-NEXT:   br i1 [[C1]], label %loop.preheader, label %main.pseudo.exit
 
   %length_gep.i146 = getelementptr inbounds i8, i8 addrspace(1)* undef, i64 8
   %length_gep_typed.i147 = bitcast i8 addrspace(1)* undef to i32 addrspace(1)*
@@ -33,7 +36,7 @@ preheader:                                 ; preds = %entry
 not_zero:                                       ; preds = %in_bounds
 ; CHECK:      not_zero:
 ; CHECK:        %tmp56 = icmp ult i64 %indvars.iv.next, %tmp21
-; CHECK-NEXT:   [[COND:%[^ ]+]] = icmp ult i64 %indvars.iv.next, 1
+; CHECK-NEXT:   [[COND:%[^ ]+]] = icmp ult i64 %indvars.iv.next, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND]], label %loop, label %main.exit.selector
 
   %tmp51 = trunc i64 %indvars.iv.next to i32

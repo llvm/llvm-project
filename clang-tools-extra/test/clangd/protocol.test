@@ -1,7 +1,9 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
-# RUN: clangd -run-synchronously < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# RUN: not clangd -run-synchronously < %s | FileCheck %s
+# RUN: not clangd -run-synchronously < %s 2>&1 | FileCheck -check-prefix=STDERR %s
 # vim: fileformat=dos
 # It is absolutely vital that this file has CRLF line endings.
+#
+# Note that we invert the test because we intent to let clangd exit prematurely.
 #
 # Test protocol parsing
 Content-Length: 125
