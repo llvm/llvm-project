@@ -15,9 +15,9 @@
 
 #include "Config.h"
 #include "Driver.h"
-#include "Error.h"
 #include "Memory.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -57,7 +57,7 @@ public:
   void run() {
     ErrorOr<std::string> ExeOrErr = sys::findProgramByName(Prog);
     if (auto EC = ExeOrErr.getError())
-      fatal(EC, "unable to find " + Prog + " in PATH");
+      fatal("unable to find " + Prog + " in PATH: " + EC.message());
     StringRef Exe = Saver.save(*ExeOrErr);
     Args.insert(Args.begin(), Exe);
 
@@ -288,14 +288,14 @@ public:
   TemporaryFile(StringRef Prefix, StringRef Extn, StringRef Contents = "") {
     SmallString<128> S;
     if (auto EC = sys::fs::createTemporaryFile("lld-" + Prefix, Extn, S))
-      fatal(EC, "cannot create a temporary file");
+      fatal("cannot create a temporary file: " + EC.message());
     Path = S.str();
 
     if (!Contents.empty()) {
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::F_None);
       if (EC)
-        fatal(EC, "failed to open " + Path);
+        fatal("failed to open " + Path + ": " + EC.message());
       OS << Contents;
     }
   }
@@ -363,13 +363,15 @@ static std::string createManifestXmlWithInternalMt(StringRef DefaultXml) {
 
   windows_manifest::WindowsManifestMerger Merger;
   if (auto E = Merger.merge(*DefaultXmlCopy.get()))
-    fatal(E, "internal manifest tool failed on default xml");
+    fatal("internal manifest tool failed on default xml: " +
+          toString(std::move(E)));
 
   for (StringRef Filename : Config->ManifestInput) {
     std::unique_ptr<MemoryBuffer> Manifest =
         check(MemoryBuffer::getFile(Filename));
     if (auto E = Merger.merge(*Manifest.get()))
-      fatal(E, "internal manifest tool failed on file " + Filename);
+      fatal("internal manifest tool failed on file " + Filename + ": " +
+            toString(std::move(E)));
   }
 
   return Merger.getMergedManifest().get()->getBuffer();
@@ -381,7 +383,7 @@ static std::string createManifestXmlWithExternalMt(StringRef DefaultXml) {
   std::error_code EC;
   raw_fd_ostream OS(Default.Path, EC, sys::fs::F_Text);
   if (EC)
-    fatal(EC, "failed to open " + Default.Path);
+    fatal("failed to open " + Default.Path + ": " + EC.message());
   OS << DefaultXml;
   OS.close();
 
@@ -482,7 +484,7 @@ void createSideBySideManifest() {
   std::error_code EC;
   raw_fd_ostream Out(Path, EC, sys::fs::F_Text);
   if (EC)
-    fatal(EC, "failed to create manifest");
+    fatal("failed to create manifest: " + EC.message());
   Out << createManifestXml();
 }
 
@@ -649,13 +651,13 @@ MemoryBufferRef convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
     if (!RF)
       fatal("cannot compile non-resource file as resource");
     if (auto EC = Parser.parse(RF))
-      fatal(EC, "failed to parse .res file");
+      fatal("failed to parse .res file: " + toString(std::move(EC)));
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
       llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
   if (!E)
-    fatal(errorToErrorCode(E.takeError()), "failed to write .res to COFF");
+    fatal("failed to write .res to COFF: " + toString(E.takeError()));
 
   MemoryBufferRef MBRef = **E;
   make<std::unique_ptr<MemoryBuffer>>(std::move(*E)); // take ownership
@@ -739,7 +741,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
   }
 
   // Handle /WX early since it converts missing argument warnings to errors.
-  Config->FatalWarnings = Args.hasFlag(OPT_WX, OPT_WX_no, false);
+  errorHandler().FatalWarnings = Args.hasFlag(OPT_WX, OPT_WX_no, false);
 
   if (MissingCount)
     fatal(Twine(Args.getArgString(MissingIndex)) + ": missing argument");

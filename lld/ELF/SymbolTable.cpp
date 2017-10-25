@@ -16,10 +16,10 @@
 
 #include "SymbolTable.h"
 #include "Config.h"
-#include "Error.h"
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
@@ -91,7 +91,7 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
   if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
-    if (ErrorCount || !SoNames.insert(F->SoName).second)
+    if (errorCount() || !SoNames.insert(F->SoName).second)
       return;
     SharedFiles.push_back(F);
     F->parseRest();

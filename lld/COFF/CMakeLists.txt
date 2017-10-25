@@ -11,7 +11,6 @@ add_lld_library(lldCOFF
   DLL.cpp
   Driver.cpp
   DriverUtils.cpp
-  Error.cpp
   ICF.cpp
   InputFiles.cpp
   LTO.cpp

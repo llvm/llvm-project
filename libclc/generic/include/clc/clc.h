@@ -104,6 +104,7 @@
 #include <clc/math/native_exp10.h>
 #include <clc/math/native_exp2.h>
 #include <clc/math/native_log.h>
+#include <clc/math/native_log10.h>
 #include <clc/math/native_log2.h>
 #include <clc/math/native_powr.h>
 #include <clc/math/native_recip.h>

@@ -38,6 +38,9 @@ kmp_msg_t __kmp_msg_empty = {kmp_mt_dummy, 0, "", 0};
 kmp_msg_t __kmp_msg_null = {kmp_mt_dummy, 0, NULL, 0};
 static char const *no_message_available = "(No message available)";
 
+static void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message,
+                      va_list ap);
+
 enum kmp_i18n_cat_status {
   KMP_I18N_CLOSED, // Not yet opened or closed.
   KMP_I18N_OPENED, // Opened successfully, ready to use.
@@ -784,9 +787,7 @@ kmp_msg_t __kmp_msg_error_mesg(char const *mesg) {
 } // __kmp_msg_error_mesg
 
 // -----------------------------------------------------------------------------
-void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
-
-  va_list args;
+void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
   kmp_i18n_id_t format; // format identifier
   kmp_msg_t fmsg; // formatted message
   kmp_str_buf_t buffer;
@@ -815,7 +816,6 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
   __kmp_str_free(&fmsg.str);
 
   // Format other messages.
-  va_start(args, message);
   for (;;) {
     message = va_arg(args, kmp_msg_t);
     if (message.type == kmp_mt_dummy && message.str == NULL) {
@@ -838,7 +838,6 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
     __kmp_str_buf_cat(&buffer, fmsg.str, fmsg.len);
     __kmp_str_free(&fmsg.str);
   }
-  va_end(args);
 
   // Print formatted messages.
   // This lock prevents multiple fatal errors on the same problem.
@@ -852,8 +851,18 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
 
 } // __kmp_msg
 
+void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
+  va_list args;
+  va_start(args, message);
+  __kmp_msg(severity, message, args);
+  va_end(args);
+}
+
 void __kmp_fatal(kmp_msg_t message, ...) {
-  __kmp_msg(kmp_ms_fatal, message, __kmp_msg_null);
+  va_list args;
+  va_start(args, message);
+  __kmp_msg(kmp_ms_fatal, message, args);
+  va_end(args);
 #if KMP_OS_WINDOWS
   // Delay to give message a chance to appear before reaping
   __kmp_thread_sleep(500);
