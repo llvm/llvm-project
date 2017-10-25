@@ -87,6 +87,15 @@ static SDVTList makeVTList(const EVT *VTs, unsigned NumVTs) {
 void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode*, SDNode*) {}
 void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
 
+#define DEBUG_TYPE "selectiondag"
+
+static void NewSDValueDbgMsg(SDValue V, StringRef Msg) {
+  DEBUG(
+    dbgs() << Msg;
+    V.dump();
+  );
+}
+
 //===----------------------------------------------------------------------===//
 //                              ConstantFPSDNode Class
 //===----------------------------------------------------------------------===//
@@ -1156,7 +1165,10 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     SmallVector<SDValue, 8> Ops;
     for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
       Ops.insert(Ops.end(), EltParts.begin(), EltParts.end());
-    return getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
+
+    SDValue V = getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
+    NewSDValueDbgMsg(V, "Creating constant: ");
+    return V;
   }
 
   assert(Elt->getBitWidth() == EltVT.getSizeInBits() &&
@@ -1181,6 +1193,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   SDValue Result(N, 0);
   if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
+
+  NewSDValueDbgMsg(Result, "Creating constant: ");
   return Result;
 }
 
@@ -1222,6 +1236,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   SDValue Result(N, 0);
   if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
+  NewSDValueDbgMsg(Result, "Creating fp constant: ");
   return Result;
 }
 
@@ -3391,7 +3406,9 @@ static SDValue FoldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
                ? DAG.getZExtOrTrunc(Op, DL, SVT)
                : DAG.getSExtOrTrunc(Op, DL, SVT);
 
-  return DAG.getBuildVector(VT, DL, Elts);
+  SDValue V = DAG.getBuildVector(VT, DL, Elts);
+  NewSDValueDbgMsg(V, "New node fold concat vectors: ");
+  return V;
 }
 
 /// Gets or creates the specified node.
@@ -3407,7 +3424,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
   CSEMap.InsertNode(N, IP);
 
   InsertNode(N);
-  return SDValue(N, 0);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ");
+  return V;
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -3768,7 +3787,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   InsertNode(N);
-  return SDValue(N, 0);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ");
+  return V;
 }
 
 static std::pair<APInt, bool> FoldValue(unsigned Opcode, const APInt &C1,
@@ -4027,7 +4048,9 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
     ScalarResults.push_back(ScalarResult);
   }
 
-  return getBuildVector(VT, DL, ScalarResults);
+  SDValue V = getBuildVector(VT, DL, ScalarResults);
+  NewSDValueDbgMsg(V, "New node fold constant vector: ");
+  return V;
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -4518,7 +4541,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   InsertNode(N);
-  return SDValue(N, 0);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ");
+  return V;
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -4553,8 +4578,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     // Vector constant folding.
     SDValue Ops[] = {N1, N2, N3};
-    if (SDValue V = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops))
+    if (SDValue V = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops)) {
+      NewSDValueDbgMsg(V, "New node vector constant folding: ");
       return V;
+    }
     break;
   }
   case ISD::SELECT:
@@ -4626,7 +4653,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   InsertNode(N);
-  return SDValue(N, 0);
+  SDValue V = SDValue(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ");
+  return V;
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -6823,6 +6852,40 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
   return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
 }
 
+void SelectionDAG::salvageDebugInfo(SDNode &N) {
+  if (!N.getHasDebugValue())
+    return;
+  for (auto DV : GetDbgValues(&N)) {
+    if (DV->isInvalidated())
+      continue;
+    switch (N.getOpcode()) {
+    default:
+      break;
+    case ISD::ADD:
+      SDValue N0 = N.getOperand(0);
+      SDValue N1 = N.getOperand(1);
+      if (!isConstantIntBuildVectorOrConstantInt(N0) &&
+          isConstantIntBuildVectorOrConstantInt(N1)) {
+        uint64_t Offset = N.getConstantOperandVal(1);
+        // Rewrite an ADD constant node into a DIExpression. Since we are
+        // performing arithmetic to compute the variable's *value* in the
+        // DIExpression, we need to mark the expression with a
+        // DW_OP_stack_value.
+        auto *DIExpr = DV->getExpression();
+        DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
+                                       DIExpression::WithStackValue);
+        SDDbgValue *Clone =
+            getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
+                        DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
+        DV->setIsInvalidated();
+        AddDbgValue(Clone, N0.getNode(), false);
+        DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+              dbgs() << " into " << *DIExpr << '\n');
+      }
+    }
+  }
+}
+
 namespace {
 
 /// RAUWUpdateListener - Helper for ReplaceAllUsesWith - When the node
@@ -7237,17 +7300,14 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
   DbgInfo->add(DB, SD, isParameter);
 }
 
-/// TransferDbgValues - Transfer SDDbgValues. Called in replace nodes.
+/// Transfer SDDbgValues. Called in replace nodes.
 void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
   if (From == To || !From.getNode()->getHasDebugValue())
     return;
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
-  ArrayRef<SDDbgValue *> DVs = GetDbgValues(FromNode);
   SmallVector<SDDbgValue *, 2> ClonedDVs;
-  for (ArrayRef<SDDbgValue *>::iterator I = DVs.begin(), E = DVs.end();
-       I != E; ++I) {
-    SDDbgValue *Dbg = *I;
+  for (auto *Dbg : GetDbgValues(FromNode)) {
     // Only add Dbgvalues attached to same ResNo.
     if (Dbg->getKind() == SDDbgValue::SDNODE &&
         Dbg->getSDNode() == From.getNode() &&
