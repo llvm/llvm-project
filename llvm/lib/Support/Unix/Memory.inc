@@ -27,7 +27,7 @@
 #if defined(__mips__)
 #  if defined(__OpenBSD__)
 #    include <mips64/sysarch.h>
-#  else
+#  elif !defined(__FreeBSD__)
 #    include <sys/cachectl.h>
 #  endif
 #endif

@@ -554,6 +554,17 @@ static SortSectionPolicy getSortSection(opt::InputArgList &Args) {
   return SortSectionPolicy::Default;
 }
 
+static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &Args) {
+  StringRef S = Args.getLastArgValue(OPT_orphan_handling, "place");
+  if (S == "warn")
+    return OrphanHandlingPolicy::Warn;
+  if (S == "error")
+    return OrphanHandlingPolicy::Error;
+  if (S != "place")
+    error("unknown --orphan-handling mode: " + S);
+  return OrphanHandlingPolicy::Place;
+}
+
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
 // -build-id=sha1 are actually tree hashes for performance reasons.
@@ -656,6 +667,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = getInteger(Args, OPT_O, 1);
+  Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Pie = Args.hasFlag(OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);

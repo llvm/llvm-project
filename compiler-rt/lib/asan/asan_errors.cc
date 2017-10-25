@@ -63,7 +63,7 @@ void ErrorDoubleFree::Print() {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
-void ErrorNewDeleteSizeMismatch::Print() {
+void ErrorNewDeleteTypeMismatch::Print() {
   Decorator d;
   Printf("%s", d.Warning());
   char tname[128];
@@ -73,10 +73,28 @@ void ErrorNewDeleteSizeMismatch::Print() {
       scariness.GetDescription(), addr_description.addr, tid,
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s  object passed to delete has wrong type:\n", d.Default());
-  Printf(
-      "  size of the allocated type:   %zd bytes;\n"
-      "  size of the deallocated type: %zd bytes.\n",
-      addr_description.chunk_access.chunk_size, delete_size);
+  if (delete_size != 0) {
+    Printf(
+        "  size of the allocated type:   %zd bytes;\n"
+        "  size of the deallocated type: %zd bytes.\n",
+        addr_description.chunk_access.chunk_size, delete_size);
+  }
+  const uptr user_alignment =
+      addr_description.chunk_access.user_requested_alignment;
+  if (delete_alignment != user_alignment) {
+    char user_alignment_str[32];
+    char delete_alignment_str[32];
+    internal_snprintf(user_alignment_str, sizeof(user_alignment_str),
+                      "%zd bytes", user_alignment);
+    internal_snprintf(delete_alignment_str, sizeof(delete_alignment_str),
+                      "%zd bytes", delete_alignment);
+    static const char *kDefaultAlignment = "default-aligned";
+    Printf(
+        "  alignment of the allocated type:   %s;\n"
+        "  alignment of the deallocated type: %s.\n",
+        user_alignment > 0 ? user_alignment_str : kDefaultAlignment,
+        delete_alignment > 0 ? delete_alignment_str : kDefaultAlignment);
+  }
   CHECK_GT(free_stack->size, 0);
   scariness.Print();
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
@@ -422,9 +440,14 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   InternalScopedString str(4096 * 8);
   str.append("Shadow bytes around the buggy address:\n");
   for (int i = -5; i <= 5; i++) {
+    uptr row_shadow_addr = aligned_shadow + i * n_bytes_per_row;
+    // Skip rows that would be outside the shadow range. This can happen when
+    // the user address is near the bottom, top, or shadow gap of the address
+    // space.
+    if (!AddrIsInShadow(row_shadow_addr)) continue;
     const char *prefix = (i == 0) ? "=>" : "  ";
-    PrintShadowBytes(&str, prefix, (u8 *)(aligned_shadow + i * n_bytes_per_row),
-                     (u8 *)shadow_addr, n_bytes_per_row);
+    PrintShadowBytes(&str, prefix, (u8 *)row_shadow_addr, (u8 *)shadow_addr,
+                     n_bytes_per_row);
   }
   if (flags()->print_legend) PrintLegend(&str);
   Printf("%s", str.data());

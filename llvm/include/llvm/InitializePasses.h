@@ -93,6 +93,7 @@ void initializeCallGraphViewerPass(PassRegistry&);
 void initializeCallGraphWrapperPassPass(PassRegistry&);
 void initializeCodeGenPreparePass(PassRegistry&);
 void initializeConstantHoistingLegacyPassPass(PassRegistry&);
+void initializeCalledValuePropagationLegacyPassPass(PassRegistry &);
 void initializeConstantMergeLegacyPassPass(PassRegistry&);
 void initializeConstantPropagationPass(PassRegistry&);
 void initializeCorrelatedValuePropagationPass(PassRegistry&);

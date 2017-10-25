@@ -104,8 +104,6 @@ public:
   Expected<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section,
                                              Elf_Shdr_Range Sections) const;
 
-  void VerifyStrTab(const Elf_Shdr *sh) const;
-
   StringRef getRelocationTypeName(uint32_t Type) const;
   void getRelocationTypeName(uint32_t Type,
                              SmallVectorImpl<char> &Result) const;

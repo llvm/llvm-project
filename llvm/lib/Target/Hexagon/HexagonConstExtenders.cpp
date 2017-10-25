@@ -1040,10 +1040,13 @@ OffsetRange HCE::getOffsetRange(Register Rb, const MachineInstr &MI) const {
   unsigned L = Log2_32(A);
   unsigned S = 10+L;  // sint11_L
   int32_t Min = -alignDown((1<<S)-1, A);
-  int32_t Max = 0;  // Force non-negative offsets.
+
+  // The range will be shifted by Off. To prefer non-negative offsets,
+  // adjust Max accordingly.
+  int32_t Off = MI.getOperand(OffP).getImm();
+  int32_t Max = Off >= 0 ? 0 : -Off;
 
   OffsetRange R = { Min, Max, A };
-  int32_t Off = MI.getOperand(OffP).getImm();
   return R.shift(Off);
 }
 
@@ -1622,6 +1625,9 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
 #ifndef NDEBUG
     // Make sure the output is within allowable range for uses.
     OffsetRange Uses = getOffsetRange(MI.getOperand(0));
+    if (!Uses.contains(Diff))
+      dbgs() << "Diff: " << Diff << " out of range " << Uses
+             << " for " << MI;
     assert(Uses.contains(Diff));
 #endif
     MBB.erase(MI);

@@ -120,6 +120,7 @@ math/logb.cl
 math/mad.cl
 math/modf.cl
 math/native_log.cl
+math/native_log10.cl
 math/native_log2.cl
 math/tables.cl
 math/clc_nextafter.cl
