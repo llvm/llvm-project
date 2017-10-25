@@ -85,6 +85,7 @@ def wholearchive_flag : F<"wholearchive">;
 def force : F<"force">,
     HelpText<"Allow undefined symbols when creating executables">;
 def force_unresolved : F<"force:unresolved">;
+defm WX : B<"WX", "Treat warnings as errors", "Don't treat warnings as errors">;
 
 defm allowbind : B<"allowbind", "Enable DLL binding (default)",
                    "Disable DLL binding">;
@@ -162,5 +163,3 @@ def tlbid : QF<"tlbid">;
 def tlbout : QF<"tlbout">;
 def verbose_all : QF<"verbose">;
 def guardsym : QF<"guardsym">;
-
-defm wx : QB<"wx">;

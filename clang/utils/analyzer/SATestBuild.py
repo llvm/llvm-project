@@ -43,6 +43,7 @@ For testing additional checkers, use the SA_ADDITIONAL_CHECKERS environment
 variable. It should contain a comma separated list.
 """
 import CmpRuns
+import SATestUtils
 
 import os
 import csv
@@ -53,7 +54,7 @@ import shutil
 import time
 import plistlib
 import argparse
-from subprocess import check_call, check_output, CalledProcessError
+from subprocess import check_call, CalledProcessError
 import multiprocessing
 
 #------------------------------------------------------------------------------
@@ -61,51 +62,7 @@ import multiprocessing
 #------------------------------------------------------------------------------
 
 
-def which(command, paths=None):
-    """which(command, [paths]) - Look up the given command in the paths string
-    (or the PATH environment variable, if unspecified)."""
-
-    if paths is None:
-        paths = os.environ.get('PATH', '')
-
-    # Check for absolute match first.
-    if os.path.exists(command):
-        return command
-
-    # Would be nice if Python had a lib function for this.
-    if not paths:
-        paths = os.defpath
-
-    # Get suffixes to search.
-    # On Cygwin, 'PATHEXT' may exist but it should not be used.
-    if os.pathsep == ';':
-        pathext = os.environ.get('PATHEXT', '').split(';')
-    else:
-        pathext = ['']
-
-    # Search the paths...
-    for path in paths.split(os.pathsep):
-        for ext in pathext:
-            p = os.path.join(path, command + ext)
-            if os.path.exists(p):
-                return p
-
-    return None
-
-
-class flushfile(object):
-    """
-    Wrapper to flush the output after every print statement.
-    """
-    def __init__(self, f):
-        self.f = f
-
-    def write(self, x):
-        self.f.write(x)
-        self.f.flush()
-
-
-sys.stdout = flushfile(sys.stdout)
+sys.stdout = SATestUtils.flushfile(sys.stdout)
 
 
 def getProjectMapPath():
@@ -137,7 +94,7 @@ def getSBOutputDirName(IsReferenceBuild):
 if 'CC' in os.environ:
     Clang = os.environ['CC']
 else:
-    Clang = which("clang", os.environ['PATH'])
+    Clang = SATestUtils.which("clang", os.environ['PATH'])
 if not Clang:
     print "Error: cannot find 'clang' in PATH"
     sys.exit(-1)
@@ -215,7 +172,7 @@ def runCleanupScript(Dir, PBuildLogFile):
     """
     Cwd = os.path.join(Dir, PatchedSourceDirName)
     ScriptPath = os.path.join(Dir, CleanupScript)
-    runScript(ScriptPath, PBuildLogFile, Cwd)
+    SATestUtils.runScript(ScriptPath, PBuildLogFile, Cwd)
 
 
 def runDownloadScript(Dir, PBuildLogFile):
@@ -223,29 +180,7 @@ def runDownloadScript(Dir, PBuildLogFile):
     Run the script to download the project, if it exists.
     """
     ScriptPath = os.path.join(Dir, DownloadScript)
-    runScript(ScriptPath, PBuildLogFile, Dir)
-
-
-def runScript(ScriptPath, PBuildLogFile, Cwd):
-    """
-    Run the provided script if it exists.
-    """
-    if os.path.exists(ScriptPath):
-        try:
-            if Verbose == 1:
-                print "  Executing: %s" % (ScriptPath,)
-            check_call("chmod +x '%s'" % ScriptPath, cwd=Cwd,
-                       stderr=PBuildLogFile,
-                       stdout=PBuildLogFile,
-                       shell=True)
-            check_call("'%s'" % ScriptPath, cwd=Cwd,
-                       stderr=PBuildLogFile,
-                       stdout=PBuildLogFile,
-                       shell=True)
-        except:
-            print "Error: Running %s failed. See %s for details." % (
-                  ScriptPath, PBuildLogFile.name)
-            sys.exit(-1)
+    SATestUtils.runScript(ScriptPath, PBuildLogFile, Dir)
 
 
 def downloadAndPatch(Dir, PBuildLogFile):
@@ -343,28 +278,6 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
         raise
 
 
-def hasNoExtension(FileName):
-    (Root, Ext) = os.path.splitext(FileName)
-    return (Ext == "")
-
-
-def isValidSingleInputFile(FileName):
-    (Root, Ext) = os.path.splitext(FileName)
-    return Ext in (".i", ".ii", ".c", ".cpp", ".m", "")
-
-
-def getSDKPath(SDKName):
-    """
-    Get the path to the SDK for the given SDK name. Returns None if
-    the path cannot be determined.
-    """
-    if which("xcrun") is None:
-        return None
-
-    Cmd = "xcrun --sdk " + SDKName + " --show-sdk-path"
-    return check_output(Cmd, shell=True).rstrip()
-
-
 def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
     """
     Run analysis on a set of preprocessed files.
@@ -378,7 +291,7 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
 
     # For now, we assume the preprocessed files should be analyzed
     # with the OS X SDK.
-    SDKPath = getSDKPath("macosx")
+    SDKPath = SATestUtils.getSDKPath("macosx")
     if SDKPath is not None:
         CmdPrefix += "-isysroot " + SDKPath + " "
 
@@ -398,9 +311,9 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
         Failed = False
 
         # Only run the analyzes on supported files.
-        if (hasNoExtension(FileName)):
+        if SATestUtils.hasNoExtension(FileName):
             continue
-        if (not isValidSingleInputFile(FileName)):
+        if not SATestUtils.isValidSingleInputFile(FileName):
             print "Error: Invalid single input file %s." % (FullFileName,)
             raise Exception()
 
@@ -493,6 +406,14 @@ def normalizeReferenceResults(Dir, SBOutputDir, ProjectBuildMode):
                      if SourceFile.startswith(PathPrefix)
                      else SourceFile for SourceFile in Data['files']]
             Data['files'] = Paths
+
+            # Remove transient fields which change from run to run.
+            for Diag in Data['diagnostics']:
+                if 'HTMLDiagnostics_files' in Diag:
+                    Diag.pop('HTMLDiagnostics_files')
+            if 'clang_version' in Data:
+                Data.pop('clang_version')
+
             plistlib.writePlist(Data, Plist)
 
 
@@ -555,14 +476,6 @@ def checkBuild(SBOutputDir):
     sys.exit(-1)
 
 
-class Discarder(object):
-    """
-    Auxiliary object to discard stdout.
-    """
-    def write(self, text):
-        pass  # do nothing
-
-
 def runCmpResults(Dir, Strictness=0):
     """
     Compare the warnings produced by scan-build.
@@ -616,7 +529,7 @@ def runCmpResults(Dir, Strictness=0):
         # Discard everything coming out of stdout
         # (CmpRun produces a lot of them).
         OLD_STDOUT = sys.stdout
-        sys.stdout = Discarder()
+        sys.stdout = SATestUtils.Discarder()
         # Scan the results, delete empty plist files.
         NumDiffs, ReportsInRef, ReportsInNew = \
             CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts, False)
@@ -686,13 +599,6 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
     return TestsPassed
 
 
-def isCommentCSVLine(Entries):
-    """
-    Treat CSV lines starting with a '#' as a comment.
-    """
-    return len(Entries) > 0 and Entries[0].startswith("#")
-
-
 def projectFileHandler():
     return open(getProjectMapPath(), "rb")
 
@@ -704,7 +610,7 @@ def iterateOverProjects(PMapFile):
     """
     PMapFile.seek(0)
     for I in csv.reader(PMapFile):
-        if (isCommentCSVLine(I)):
+        if (SATestUtils.isCommentCSVLine(I)):
             continue
         yield I
 
@@ -714,10 +620,10 @@ def validateProjectFile(PMapFile):
     Validate project file.
     """
     for I in iterateOverProjects(PMapFile):
-        if (len(I) != 2):
+        if len(I) != 2:
             print "Error: Rows in the ProjectMapFile should have 2 entries."
             raise Exception()
-        if (not ((I[1] == "0") | (I[1] == "1") | (I[1] == "2"))):
+        if I[1] not in ('0', '1', '2'):
             print "Error: Second entry in the ProjectMapFile should be 0" \
                   " (single file), 1 (project), or 2(single file c++11)."
             raise Exception()
@@ -732,6 +638,7 @@ def testAll(IsReferenceBuild=False, Strictness=0):
         for (ProjName, ProjBuildMode) in iterateOverProjects(PMapFile):
             TestsPassed &= testProject(
                 ProjName, int(ProjBuildMode), IsReferenceBuild, Strictness)
+    return TestsPassed
 
 
 if __name__ == '__main__':
@@ -754,4 +661,5 @@ if __name__ == '__main__':
 
     TestsPassed = testAll(IsReference, Strictness)
     if not TestsPassed:
+        print "ERROR: Tests failed."
         sys.exit(-1)

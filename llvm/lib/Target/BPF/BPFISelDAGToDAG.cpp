@@ -40,7 +40,9 @@ namespace {
 
 class BPFDAGToDAGISel : public SelectionDAGISel {
 public:
-  explicit BPFDAGToDAGISel(BPFTargetMachine &TM) : SelectionDAGISel(TM) {}
+  explicit BPFDAGToDAGISel(BPFTargetMachine &TM) : SelectionDAGISel(TM) {
+    curr_func_ = nullptr;
+  }
 
   StringRef getPassName() const override {
     return "BPF DAG->DAG Pattern Instruction Selection";

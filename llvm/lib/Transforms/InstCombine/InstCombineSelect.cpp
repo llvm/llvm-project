@@ -12,13 +12,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include <cassert>
+#include <utility>
+
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -185,7 +208,6 @@ static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
 /// Assuming that the specified instruction is an operand to the select, return
 /// a bitmask indicating which operands of this instruction are foldable if they
 /// equal the other incoming value of the select.
-///
 static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
@@ -263,7 +285,6 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       if (TI->getOpcode() != Instruction::BitCast &&
           (!TI->hasOneUse() || !FI->hasOneUse()))
         return nullptr;
-
     } else if (!TI->hasOneUse() || !FI->hasOneUse()) {
       // TODO: The one-use restrictions for a scalar select could be eased if
       // the fold of a select in visitLoadInst() was enhanced to match a pattern
@@ -840,7 +861,6 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
 ///   Z = select X, Y, 0
 ///
 /// because Y is not live in BB1/BB2.
-///
 static bool canSelectOperandBeMappingIntoPredBlock(const Value *V,
                                                    const SelectInst &SI) {
   // If the value is a non-instruction value like a constant or argument, it
@@ -1209,7 +1229,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   // may have an undef operand. This is a workaround for PR31652 caused by
   // descrepancy about branch on undef between LoopUnswitch and GVN.
   if (isa<UndefValue>(TrueVal) || isa<UndefValue>(FalseVal)) {
-    if (any_of(SI.users(), [&](User *U) {
+    if (llvm::any_of(SI.users(), [&](User *U) {
           ICmpInst *CI = dyn_cast<ICmpInst>(U);
           if (CI && CI->isEquality())
             return true;

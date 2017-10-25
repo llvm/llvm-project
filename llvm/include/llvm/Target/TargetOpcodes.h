@@ -28,13 +28,13 @@ enum {
 
 /// Check whether the given Opcode is a generic opcode that is not supposed
 /// to appear after ISel.
-static inline bool isPreISelGenericOpcode(unsigned Opcode) {
+inline bool isPreISelGenericOpcode(unsigned Opcode) {
   return Opcode >= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START &&
          Opcode <= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 }
 
 /// Check whether the given Opcode is a target-specific opcode.
-static inline bool isTargetSpecificOpcode(unsigned Opcode) {
+inline bool isTargetSpecificOpcode(unsigned Opcode) {
   return Opcode > TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 }
 } // end namespace llvm
