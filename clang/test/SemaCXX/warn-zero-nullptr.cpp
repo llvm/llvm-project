@@ -25,3 +25,10 @@ void g() {
 // Warn on these too. Matches gcc and arguably makes sense.
 void* pp = (decltype(nullptr))0; // expected-warning{{zero as null pointer constant}}
 void* pp2 = static_cast<decltype(nullptr)>(0); // expected-warning{{zero as null pointer constant}}
+
+// Shouldn't warn.
+namespace pr34362 {
+struct A { operator int*() { return nullptr; } };
+void func() { if (nullptr == A()) {} }
+void func2() { if ((nullptr) == A()) {} }
+}
