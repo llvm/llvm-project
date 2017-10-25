@@ -168,10 +168,10 @@ ASTMaker::makeLvalueToRvalue(const VarDecl *Arg,
 ImplicitCastExpr *ASTMaker::makeImplicitCast(const Expr *Arg, QualType Ty,
                                              CastKind CK) {
   return ImplicitCastExpr::Create(C, Ty,
-                                  /* CastKind= */ CK,
-                                  /* Expr= */ const_cast<Expr *>(Arg),
-                                  /* CXXCastPath= */ nullptr,
-                                  /* ExprValueKind= */ VK_RValue);
+                                  /* CastKind=*/ CK,
+                                  /* Expr=*/ const_cast<Expr *>(Arg),
+                                  /* CXXCastPath=*/ nullptr,
+                                  /* ExprValueKind=*/ VK_RValue);
 }
 
 Expr *ASTMaker::makeIntegralCast(const Expr *Arg, QualType Ty) {
@@ -222,7 +222,7 @@ MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
       C, base, IsArrow, SourceLocation(), NestedNameSpecifierLoc(),
       SourceLocation(), MemberDecl, FoundDecl,
       DeclarationNameInfo(MemberDecl->getDeclName(), SourceLocation()),
-      /* TemplateArgumentListInfo= */ nullptr, MemberDecl->getType(), ValueKind,
+      /* TemplateArgumentListInfo=*/ nullptr, MemberDecl->getType(), ValueKind,
       OK_Ordinary);
 }
 
@@ -231,7 +231,7 @@ ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {
   CXXBasePaths Paths(
       /* FindAmbiguities=*/false,
       /* RecordPaths=*/false,
-      /* DetectVirtual= */ false);
+      /* DetectVirtual=*/ false);
   const IdentifierInfo &II = C.Idents.get(Name);
   DeclarationName DeclName = C.DeclarationNames.getIdentifier(&II);
 
@@ -282,14 +282,14 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
   assert(callOperatorDecl != nullptr);
 
   DeclRefExpr *callOperatorDeclRef =
-      DeclRefExpr::Create(/* Ctx = */ C,
-                          /* QualifierLoc = */ NestedNameSpecifierLoc(),
-                          /* TemplateKWLoc = */ SourceLocation(),
+      DeclRefExpr::Create(/* Ctx =*/ C,
+                          /* QualifierLoc =*/ NestedNameSpecifierLoc(),
+                          /* TemplateKWLoc =*/ SourceLocation(),
                           const_cast<FunctionDecl *>(callOperatorDecl),
-                          /* RefersToEnclosingVariableOrCapture= */ false,
-                          /* NameLoc = */ SourceLocation(),
-                          /* T = */ callOperatorDecl->getType(),
-                          /* VK = */ VK_LValue);
+                          /* RefersToEnclosingVariableOrCapture=*/ false,
+                          /* NameLoc =*/ SourceLocation(),
+                          /* T =*/ callOperatorDecl->getType(),
+                          /* VK =*/ VK_LValue);
 
   return new (C)
       CXXOperatorCallExpr(/*AstContext=*/C, OO_Call, callOperatorDeclRef,
@@ -372,7 +372,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
     // Lambda requires callback itself inserted as a first parameter.
     CallArgs.push_back(
         M.makeDeclRefExpr(Callback,
-                          /* RefersToEnclosingVariableOrCapture= */ true));
+                          /* RefersToEnclosingVariableOrCapture=*/ true));
     CallbackFunctionType = CallbackRecordDecl->getLambdaCallOperator()
                                ->getType()
                                ->getAs<FunctionProtoType>();
@@ -429,13 +429,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   // Negation predicate.
   UnaryOperator *FlagCheck = new (C) UnaryOperator(
-      /* input= */
+      /* input=*/
       M.makeImplicitCast(M.makeLvalueToRvalue(Deref, DerefType), DerefType,
                          CK_IntegralToBoolean),
-      /* opc= */ UO_LNot,
-      /* QualType= */ C.IntTy,
-      /* ExprValueKind= */ VK_RValue,
-      /* ExprObjectKind= */ OK_Ordinary, SourceLocation());
+      /* opc=*/ UO_LNot,
+      /* QualType=*/ C.IntTy,
+      /* ExprValueKind=*/ VK_RValue,
+      /* ExprObjectKind=*/ OK_Ordinary, SourceLocation());
 
   // Create assignment.
   BinaryOperator *FlagAssignment = M.makeAssignment(
@@ -443,11 +443,11 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   IfStmt *Out = new (C)
       IfStmt(C, SourceLocation(),
-             /* IsConstexpr= */ false,
-             /* init= */ nullptr,
-             /* var= */ nullptr,
-             /* cond= */ FlagCheck,
-             /* then= */ M.makeCompound({CallbackCall, FlagAssignment}));
+             /* IsConstexpr=*/ false,
+             /* init=*/ nullptr,
+             /* var=*/ nullptr,
+             /* cond=*/ FlagCheck,
+             /* then=*/ M.makeCompound({CallbackCall, FlagAssignment}));
 
   return Out;
 }
@@ -522,19 +522,19 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
     PredicateTy);
   
   UnaryOperator *UO = new (C) UnaryOperator(
-      /* input= */ LValToRval,
-      /* opc= */ UO_LNot,
-      /* QualType= */ C.IntTy,
-      /* ExprValueKind= */ VK_RValue,
-      /* ExprObjectKind= */ OK_Ordinary, SourceLocation());
+      /* input=*/ LValToRval,
+      /* opc=*/ UO_LNot,
+      /* QualType=*/ C.IntTy,
+      /* ExprValueKind=*/ VK_RValue,
+      /* ExprObjectKind=*/ OK_Ordinary, SourceLocation());
   
   // (5) Create the 'if' statement.
   IfStmt *If = new (C) IfStmt(C, SourceLocation(),
-                              /* IsConstexpr= */ false,
-                              /* init= */ nullptr,
-                              /* var= */ nullptr,
-                              /* cond= */ UO,
-                              /* then= */ CS);
+                              /* IsConstexpr=*/ false,
+                              /* init=*/ nullptr,
+                              /* var=*/ nullptr,
+                              /* cond=*/ UO,
+                              /* then=*/ CS);
   return If;
 }
 
