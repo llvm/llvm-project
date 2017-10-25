@@ -371,9 +371,9 @@ TSAN_INTERCEPTOR(int, nanosleep, void *req, void *rem) {
   return res;
 }
 
-TSAN_INTERCEPTOR(int, pause) {
-  SCOPED_TSAN_INTERCEPTOR(pause);
-  return BLOCK_REAL(pause)();
+TSAN_INTERCEPTOR(int, pause, int fake) {
+  SCOPED_TSAN_INTERCEPTOR(pause, fake);
+  return BLOCK_REAL(pause)(fake);
 }
 
 // The sole reason tsan wraps atexit callbacks is to establish synchronization
