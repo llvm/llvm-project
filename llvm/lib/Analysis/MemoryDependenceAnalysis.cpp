@@ -196,13 +196,16 @@ MemDepResult MemoryDependenceResults::getCallSiteDependencyFrom(
 
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
+    Instruction *Inst = &*--ScanIt;
+    // Debug intrinsics don't cause dependences and should not affect Limit
+    if (isa<DbgInfoIntrinsic>(Inst))
+      continue;
+
     // Limit the amount of scanning we do so we don't end up with quadratic
     // running time on extreme testcases.
     --Limit;
     if (!Limit)
       return MemDepResult::getUnknown();
-
-    Instruction *Inst = &*--ScanIt;
 
     // If this inst is a memory op, get the pointer it accessed
     MemoryLocation Loc;
@@ -215,9 +218,6 @@ MemDepResult MemoryDependenceResults::getCallSiteDependencyFrom(
     }
 
     if (auto InstCS = CallSite(Inst)) {
-      // Debug intrinsics don't cause dependences.
-      if (isa<DbgInfoIntrinsic>(Inst))
-        continue;
       // If these two calls do not interfere, look past it.
       switch (AA.getModRefInfo(CS, InstCS)) {
       case MRI_NoModRef:

@@ -3857,6 +3857,12 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         break;
       }
     }
+  } else if ((ARM_AM::getShiftOpcForNode(LHS.getOpcode()) != ARM_AM::no_shift) &&
+             (ARM_AM::getShiftOpcForNode(RHS.getOpcode()) == ARM_AM::no_shift)) {
+    // In ARM and Thumb-2, the compare instructions can shift their second
+    // operand.
+    CC = ISD::getSetCCSwappedOperands(CC);
+    std::swap(LHS, RHS);
   }
 
   ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
@@ -10351,6 +10357,132 @@ static SDValue PerformORCombineToSMULWBT(SDNode *OR,
   return SDValue(OR, 0);
 }
 
+static SDValue PerformORCombineToBFI(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const ARMSubtarget *Subtarget) {
+  // BFI is only available on V6T2+
+  if (Subtarget->isThumb1Only() || !Subtarget->hasV6T2Ops())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  // 1) or (and A, mask), val => ARMbfi A, val, mask
+  //      iff (val & mask) == val
+  //
+  // 2) or (and A, mask), (and B, mask2) => ARMbfi A, (lsr B, amt), mask
+  //  2a) iff isBitFieldInvertedMask(mask) && isBitFieldInvertedMask(~mask2)
+  //          && mask == ~mask2
+  //  2b) iff isBitFieldInvertedMask(~mask) && isBitFieldInvertedMask(mask2)
+  //          && ~mask == mask2
+  //  (i.e., copy a bitfield value into another bitfield of the same width)
+
+  if (VT != MVT::i32)
+    return SDValue();
+
+  SDValue N00 = N0.getOperand(0);
+
+  // The value and the mask need to be constants so we can verify this is
+  // actually a bitfield set. If the mask is 0xffff, we can do better
+  // via a movt instruction, so don't use BFI in that case.
+  SDValue MaskOp = N0.getOperand(1);
+  ConstantSDNode *MaskC = dyn_cast<ConstantSDNode>(MaskOp);
+  if (!MaskC)
+    return SDValue();
+  unsigned Mask = MaskC->getZExtValue();
+  if (Mask == 0xffff)
+    return SDValue();
+  SDValue Res;
+  // Case (1): or (and A, mask), val => ARMbfi A, val, mask
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  if (N1C) {
+    unsigned Val = N1C->getZExtValue();
+    if ((Val & ~Mask) != Val)
+      return SDValue();
+
+    if (ARM::isBitFieldInvertedMask(Mask)) {
+      Val >>= countTrailingZeros(~Mask);
+
+      Res = DAG.getNode(ARMISD::BFI, DL, VT, N00,
+                        DAG.getConstant(Val, DL, MVT::i32),
+                        DAG.getConstant(Mask, DL, MVT::i32));
+
+      DCI.CombineTo(N, Res, false);
+      // Return value from the original node to inform the combiner than N is
+      // now dead.
+      return SDValue(N, 0);
+    }
+  } else if (N1.getOpcode() == ISD::AND) {
+    // case (2) or (and A, mask), (and B, mask2) => ARMbfi A, (lsr B, amt), mask
+    ConstantSDNode *N11C = dyn_cast<ConstantSDNode>(N1.getOperand(1));
+    if (!N11C)
+      return SDValue();
+    unsigned Mask2 = N11C->getZExtValue();
+
+    // Mask and ~Mask2 (or reverse) must be equivalent for the BFI pattern
+    // as is to match.
+    if (ARM::isBitFieldInvertedMask(Mask) &&
+        (Mask == ~Mask2)) {
+      // The pack halfword instruction works better for masks that fit it,
+      // so use that when it's available.
+      if (Subtarget->hasDSP() &&
+          (Mask == 0xffff || Mask == 0xffff0000))
+        return SDValue();
+      // 2a
+      unsigned amt = countTrailingZeros(Mask2);
+      Res = DAG.getNode(ISD::SRL, DL, VT, N1.getOperand(0),
+                        DAG.getConstant(amt, DL, MVT::i32));
+      Res = DAG.getNode(ARMISD::BFI, DL, VT, N00, Res,
+                        DAG.getConstant(Mask, DL, MVT::i32));
+      DCI.CombineTo(N, Res, false);
+      // Return value from the original node to inform the combiner than N is
+      // now dead.
+      return SDValue(N, 0);
+    } else if (ARM::isBitFieldInvertedMask(~Mask) &&
+               (~Mask == Mask2)) {
+      // The pack halfword instruction works better for masks that fit it,
+      // so use that when it's available.
+      if (Subtarget->hasDSP() &&
+          (Mask2 == 0xffff || Mask2 == 0xffff0000))
+        return SDValue();
+      // 2b
+      unsigned lsb = countTrailingZeros(Mask);
+      Res = DAG.getNode(ISD::SRL, DL, VT, N00,
+                        DAG.getConstant(lsb, DL, MVT::i32));
+      Res = DAG.getNode(ARMISD::BFI, DL, VT, N1.getOperand(0), Res,
+                        DAG.getConstant(Mask2, DL, MVT::i32));
+      DCI.CombineTo(N, Res, false);
+      // Return value from the original node to inform the combiner than N is
+      // now dead.
+      return SDValue(N, 0);
+    }
+  }
+
+  if (DAG.MaskedValueIsZero(N1, MaskC->getAPIntValue()) &&
+      N00.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N00.getOperand(1)) &&
+      ARM::isBitFieldInvertedMask(~Mask)) {
+    // Case (3): or (and (shl A, #shamt), mask), B => ARMbfi B, A, ~mask
+    // where lsb(mask) == #shamt and masked bits of B are known zero.
+    SDValue ShAmt = N00.getOperand(1);
+    unsigned ShAmtC = cast<ConstantSDNode>(ShAmt)->getZExtValue();
+    unsigned LSB = countTrailingZeros(Mask);
+    if (ShAmtC != LSB)
+      return SDValue();
+
+    Res = DAG.getNode(ARMISD::BFI, DL, VT, N1, N00.getOperand(0),
+                      DAG.getConstant(~Mask, DL, MVT::i32));
+
+    DCI.CombineTo(N, Res, false);
+    // Return value from the original node to inform the combiner than N is
+    // now dead.
+    return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
+
 /// PerformORCombine - Target-specific dag combine xforms for ISD::OR
 static SDValue PerformORCombine(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
@@ -10435,117 +10567,8 @@ static SDValue PerformORCombine(SDNode *N,
 
   // Try to use the ARM/Thumb2 BFI (bitfield insert) instruction when
   // reasonable.
-
-  // BFI is only available on V6T2+
-  if (Subtarget->isThumb1Only() || !Subtarget->hasV6T2Ops())
-    return SDValue();
-
-  SDLoc DL(N);
-  // 1) or (and A, mask), val => ARMbfi A, val, mask
-  //      iff (val & mask) == val
-  //
-  // 2) or (and A, mask), (and B, mask2) => ARMbfi A, (lsr B, amt), mask
-  //  2a) iff isBitFieldInvertedMask(mask) && isBitFieldInvertedMask(~mask2)
-  //          && mask == ~mask2
-  //  2b) iff isBitFieldInvertedMask(~mask) && isBitFieldInvertedMask(mask2)
-  //          && ~mask == mask2
-  //  (i.e., copy a bitfield value into another bitfield of the same width)
-
-  if (VT != MVT::i32)
-    return SDValue();
-
-  SDValue N00 = N0.getOperand(0);
-
-  // The value and the mask need to be constants so we can verify this is
-  // actually a bitfield set. If the mask is 0xffff, we can do better
-  // via a movt instruction, so don't use BFI in that case.
-  SDValue MaskOp = N0.getOperand(1);
-  ConstantSDNode *MaskC = dyn_cast<ConstantSDNode>(MaskOp);
-  if (!MaskC)
-    return SDValue();
-  unsigned Mask = MaskC->getZExtValue();
-  if (Mask == 0xffff)
-    return SDValue();
-  SDValue Res;
-  // Case (1): or (and A, mask), val => ARMbfi A, val, mask
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
-  if (N1C) {
-    unsigned Val = N1C->getZExtValue();
-    if ((Val & ~Mask) != Val)
-      return SDValue();
-
-    if (ARM::isBitFieldInvertedMask(Mask)) {
-      Val >>= countTrailingZeros(~Mask);
-
-      Res = DAG.getNode(ARMISD::BFI, DL, VT, N00,
-                        DAG.getConstant(Val, DL, MVT::i32),
-                        DAG.getConstant(Mask, DL, MVT::i32));
-
-      // Do not add new nodes to DAG combiner worklist.
-      DCI.CombineTo(N, Res, false);
-      return SDValue();
-    }
-  } else if (N1.getOpcode() == ISD::AND) {
-    // case (2) or (and A, mask), (and B, mask2) => ARMbfi A, (lsr B, amt), mask
-    ConstantSDNode *N11C = dyn_cast<ConstantSDNode>(N1.getOperand(1));
-    if (!N11C)
-      return SDValue();
-    unsigned Mask2 = N11C->getZExtValue();
-
-    // Mask and ~Mask2 (or reverse) must be equivalent for the BFI pattern
-    // as is to match.
-    if (ARM::isBitFieldInvertedMask(Mask) &&
-        (Mask == ~Mask2)) {
-      // The pack halfword instruction works better for masks that fit it,
-      // so use that when it's available.
-      if (Subtarget->hasDSP() &&
-          (Mask == 0xffff || Mask == 0xffff0000))
-        return SDValue();
-      // 2a
-      unsigned amt = countTrailingZeros(Mask2);
-      Res = DAG.getNode(ISD::SRL, DL, VT, N1.getOperand(0),
-                        DAG.getConstant(amt, DL, MVT::i32));
-      Res = DAG.getNode(ARMISD::BFI, DL, VT, N00, Res,
-                        DAG.getConstant(Mask, DL, MVT::i32));
-      // Do not add new nodes to DAG combiner worklist.
-      DCI.CombineTo(N, Res, false);
-      return SDValue();
-    } else if (ARM::isBitFieldInvertedMask(~Mask) &&
-               (~Mask == Mask2)) {
-      // The pack halfword instruction works better for masks that fit it,
-      // so use that when it's available.
-      if (Subtarget->hasDSP() &&
-          (Mask2 == 0xffff || Mask2 == 0xffff0000))
-        return SDValue();
-      // 2b
-      unsigned lsb = countTrailingZeros(Mask);
-      Res = DAG.getNode(ISD::SRL, DL, VT, N00,
-                        DAG.getConstant(lsb, DL, MVT::i32));
-      Res = DAG.getNode(ARMISD::BFI, DL, VT, N1.getOperand(0), Res,
-                        DAG.getConstant(Mask2, DL, MVT::i32));
-      // Do not add new nodes to DAG combiner worklist.
-      DCI.CombineTo(N, Res, false);
-      return SDValue();
-    }
-  }
-
-  if (DAG.MaskedValueIsZero(N1, MaskC->getAPIntValue()) &&
-      N00.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N00.getOperand(1)) &&
-      ARM::isBitFieldInvertedMask(~Mask)) {
-    // Case (3): or (and (shl A, #shamt), mask), B => ARMbfi B, A, ~mask
-    // where lsb(mask) == #shamt and masked bits of B are known zero.
-    SDValue ShAmt = N00.getOperand(1);
-    unsigned ShAmtC = cast<ConstantSDNode>(ShAmt)->getZExtValue();
-    unsigned LSB = countTrailingZeros(Mask);
-    if (ShAmtC != LSB)
-      return SDValue();
-
-    Res = DAG.getNode(ARMISD::BFI, DL, VT, N1, N00.getOperand(0),
-                      DAG.getConstant(~Mask, DL, MVT::i32));
-
-    // Do not add new nodes to DAG combiner worklist.
-    DCI.CombineTo(N, Res, false);
-  }
+  if (SDValue Res = PerformORCombineToBFI(N, DCI, Subtarget))
+    return Res;
 
   return SDValue();
 }
