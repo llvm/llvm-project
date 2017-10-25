@@ -410,6 +410,12 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     case OPT_INPUT:
     case OPT_defaultlib:
     case OPT_libpath:
+    case OPT_manifest:
+    case OPT_manifest_colon:
+    case OPT_manifestdependency:
+    case OPT_manifestfile:
+    case OPT_manifestinput:
+    case OPT_manifestuac:
       break;
     default:
       OS << toString(Arg) << "\n";

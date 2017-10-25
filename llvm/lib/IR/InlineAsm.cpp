@@ -163,6 +163,7 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
           return true;
         // Note that operand #n has a matching input.
         scInfo.MatchingInput = ConstraintsSoFar.size();
+        assert(scInfo.MatchingInput >= 0);
       } else {
         if (ConstraintsSoFar[N].hasMatchingInput() &&
             (size_t)ConstraintsSoFar[N].MatchingInput !=
@@ -170,6 +171,7 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
           return true;
         // Note that operand #n has a matching input.
         ConstraintsSoFar[N].MatchingInput = ConstraintsSoFar.size();
+        assert(ConstraintsSoFar[N].MatchingInput >= 0);
         }
     } else if (*I == '|') {
       multipleAlternativeIndex++;

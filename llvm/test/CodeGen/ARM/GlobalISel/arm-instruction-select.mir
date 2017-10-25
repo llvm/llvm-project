@@ -340,9 +340,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -373,9 +370,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gprnopc
-# CHECK: id: 1, class: gprnopc
-# CHECK: id: 2, class: gprnopc
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -406,9 +400,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gprnopc
-# CHECK: id: 1, class: gprnopc
-# CHECK: id: 2, class: gprnopc
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -439,9 +430,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -472,9 +460,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -505,9 +490,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -538,9 +520,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -571,9 +550,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -604,9 +580,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -637,9 +610,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -670,9 +640,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -705,11 +672,6 @@ registers:
   - { id: 2, class: gprb }
   - { id: 3, class: gprb }
   - { id: 4, class: gprb }
-# CHECK-DAG: id: 0, class: gpr
-# CHECK-DAG: id: 1, class: gpr
-# CHECK-DAG: id: 2, class: gpr
-# CHECK-DAG: id: 3, class: gpr
-# CHECK-DAG: id: 4, class: gpr
 fixedStack:
   - { id: 0, offset: 0, size: 1, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
@@ -754,16 +716,15 @@ selected:        false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
-# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
-# CHECK-DAG: id: [[V:[0-9]+]], class: spr
 body:             |
   bb.0:
     liveins: %r0
 
     %0(p0) = COPY %r0
+    ; CHECK: %[[P:[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: %[[V]]:spr = VLDRS %[[P]], 0, 14, _
+    ; CHECK: %[[V:[0-9]+]]:spr = VLDRS %[[P]], 0, 14, _
 
     %s0 = COPY %1
     ; CHECK: %s0 = COPY %[[V]]
@@ -781,16 +742,15 @@ selected:        false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
-# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
-# CHECK-DAG: id: [[V:[0-9]+]], class: dpr
 body:             |
   bb.0:
     liveins: %r0
 
     %0(p0) = COPY %r0
+    ; CHECK: %[[P:[0-9]+]]:gpr = COPY %r0
 
     %1(s64) = G_LOAD %0(p0) :: (load 8)
-    ; CHECK: %[[V]]:dpr = VLDRD %[[P]], 0, 14, _
+    ; CHECK: %[[V:[0-9]+]]:dpr = VLDRD %[[P]], 0, 14, _
 
     %d0 = COPY %1
     ; CHECK: %d0 = COPY %[[V]]
@@ -857,18 +817,18 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: [[PTR:[0-9]+]], class: gpr
-# CHECK: id: [[OFF:[0-9]+]], class: gpr
-# CHECK: id: [[GEP:[0-9]+]], class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
 
     %0(p0) = COPY %r0
+    ; CHECK: %[[PTR:[0-9]+]]:gpr = COPY %r0
+
     %1(s32) = COPY %r1
+    ; CHECK: %[[OFF:[0-9]+]]:gpr = COPY %r1
 
     %2(p0) = G_GEP %0, %1(s32)
-    ; CHECK: %[[GEP]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, _, _
+    ; CHECK: %[[GEP:[0-9]+]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, _, _
 
     %r0 = COPY %2(p0)
     BX_RET 14, _, implicit %r0
@@ -882,11 +842,10 @@ selected:        false
 # CHECK: selected: true
 registers:
   - { id: 0, class: gprb }
-# CHECK: id: [[C:[0-9]+]], class: gpr
 body:             |
   bb.0:
     %0(s32) = G_CONSTANT 42
-    ; CHECK: %[[C]]:gpr = MOVi 42, 14, _, _
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, _, _
 
     %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
@@ -900,13 +859,12 @@ selected:        false
 # CHECK: selected: true
 registers:
   - { id: 0, class: gprb }
-# CHECK: id: [[C:[0-9]+]], class: gpr
 body:             |
   bb.0:
     ; Adding a type on G_CONSTANT changes its operand from an Imm into a CImm.
     ; We still want to see the same thing in the output though.
     %0(s32) = G_CONSTANT i32 42
-    ; CHECK: %[[C]]:gpr = MOVi 42, 14, _, _
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, _, _
 
     %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
@@ -1034,11 +992,6 @@ registers:
   - { id: 2, class: fprb }
   - { id: 3, class: gprb }
   - { id: 4, class: gprb }
-# CHECK-DAG: id: {{[0-9]+}}, class: gpr
-# CHECK-DAG: id: {{[0-9]+}}, class: gpr
-# CHECK-DAG: id: {{[0-9]+}}, class: gpr
-# CHECK-DAG: id: {{[0-9]+}}, class: gpr
-# CHECK-DAG: id: [[DREG:[0-9]+]], class: dpr
 body:             |
   bb.0:
     liveins: %r0, %r1, %r2, %r3
@@ -1050,7 +1003,7 @@ body:             |
     ; CHECK: [[IN2:%[0-9]+]]:gpr = COPY %r3
 
     %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
-    ; CHECK: %[[DREG]]:dpr = VMOVDRR [[IN1]], [[IN2]]
+    ; CHECK: %[[DREG:[0-9]+]]:dpr = VMOVDRR [[IN1]], [[IN2]]
 
     %3(s32), %4(s32) = G_UNMERGE_VALUES %2(s64)
     ; CHECK: [[OUT1:%[0-9]+]]:gpr, [[OUT2:%[0-9]+]]:gpr = VMOVRRD %[[DREG]]

@@ -39,7 +39,9 @@ public:
   /// opened in binary mode. Output will be written using Out variable passed to
   /// class constructor. This method must not be executed more than once for
   /// each instance of ClangdLSPServer.
-  void run(std::istream &In);
+  ///
+  /// \return Wether we received a 'shutdown' request before an 'exit' request
+  bool run(std::istream &In);
 
 private:
   // Implement DiagnosticsConsumer.
@@ -50,6 +52,7 @@ private:
   // Implement ProtocolCallbacks.
   void onInitialize(Ctx C, InitializeParams &Params) override;
   void onShutdown(Ctx C, ShutdownParams &Params) override;
+  void onExit(Ctx C, ExitParams &Params) override;
   void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) override;
   void onDocumentDidChange(Ctx C, DidChangeTextDocumentParams &Params) override;
   void onDocumentDidClose(Ctx C, DidCloseTextDocumentParams &Params) override;
@@ -78,6 +81,10 @@ private:
 
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
+  /// Language Server client.
+  bool ShutdownRequestReceived = false;
+
+  /// Used to indicate that the 'exit' notification was received from the
   /// Language Server client.
   /// It's used to break out of the LSP parsing loop.
   bool IsDone = false;

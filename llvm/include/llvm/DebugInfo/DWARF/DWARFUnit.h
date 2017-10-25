@@ -372,6 +372,7 @@ public:
 
   DWARFDie getParent(const DWARFDebugInfoEntry *Die);
   DWARFDie getSibling(const DWARFDebugInfoEntry *Die);
+  DWARFDie getFirstChild(const DWARFDebugInfoEntry *Die);
 
   /// \brief Return the DIE object for a given offset inside the
   /// unit's DIE vector.

@@ -148,6 +148,7 @@ protected:
   bool Has16BitInsts;
   bool HasIntClamp;
   bool HasVOP3PInsts;
+  bool HasMadMixInsts;
   bool HasMovrel;
   bool HasVGPRIndexMode;
   bool HasScalarStores;
@@ -319,7 +320,7 @@ public:
   }
 
   bool hasMadMixInsts() const {
-    return getGeneration() >= GFX9;
+    return HasMadMixInsts;
   }
 
   bool hasCARRY() const {
