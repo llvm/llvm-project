@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-refactor
+add_clang_tool(clang-refactor
   ClangRefactor.cpp
   TestSupport.cpp
   )

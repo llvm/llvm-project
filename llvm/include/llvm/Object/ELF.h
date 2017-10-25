@@ -142,6 +142,8 @@ public:
     return getSectionContentsAsArray<Elf_Rel>(Sec);
   }
 
+  Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr *Sec) const;
+
   /// \brief Iterate over program header table.
   Expected<Elf_Phdr_Range> program_headers() const {
     if (getHeader()->e_phnum && getHeader()->e_phentsize != sizeof(Elf_Phdr))

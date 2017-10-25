@@ -67,6 +67,9 @@ TEST_F(SpecialCaseListTest, SectionRegexErrorHandling) {
 
   EXPECT_EQ(makeSpecialCaseList("[[]", Error), nullptr);
   EXPECT_TRUE(((StringRef)Error).startswith("malformed regex for section [: "));
+
+  EXPECT_EQ(makeSpecialCaseList("src:=", Error), nullptr);
+  EXPECT_TRUE(((StringRef)Error).endswith("Supplied regexp was blank"));
 }
 
 TEST_F(SpecialCaseListTest, Section) {

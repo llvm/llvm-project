@@ -90,6 +90,7 @@ struct Configuration {
   uint64_t ErrorLimit = 20;
   bool Relocatable = true;
   bool Force = false;
+  bool FatalWarnings = false;
   bool Debug = false;
   bool WriteSymtab = true;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);

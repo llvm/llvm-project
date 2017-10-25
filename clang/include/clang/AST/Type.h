@@ -770,6 +770,10 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
+  /// Return true if this has unique object representations according to (C++17
+  /// [meta.unary.prop]p9)
+  bool hasUniqueObjectRepresentations(const ASTContext &Context) const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 
@@ -1114,6 +1118,8 @@ public:
   QualType getAtomicUnqualifiedType() const;
 
 private:
+  bool unionHasUniqueObjectRepresentations(const ASTContext& Context) const;
+  bool structHasUniqueObjectRepresentations(const ASTContext& Context) const;
   // These methods are implemented in a separate translation unit;
   // "static"-ize them to avoid creating temporary QualTypes in the
   // caller.

@@ -295,7 +295,7 @@ void test_mutator_noref() {
 // even when an ampersand is not explicitly set.
 void callbackn(int &param) {
   param = 42;
-};
+}
 void test_implicit_funcptr() {
   int x = 0;
   static std::once_flag flagn;
