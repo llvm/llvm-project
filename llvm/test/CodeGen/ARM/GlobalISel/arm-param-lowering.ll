@@ -10,7 +10,7 @@ define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
 ; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: %r1 = COPY [[AVREG]]
-; CHECK: BLX @simple_reg_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0
+; CHECK: BL @simple_reg_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY %r0
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %r0 = COPY [[RVREG]]
@@ -39,7 +39,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store 4
-; CHECK: BLX @simple_stack_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+; CHECK: BL @simple_stack_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY %r0
 ; CHECK: ADJCALLSTACKUP 8, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %r0 = COPY [[RVREG]]
@@ -93,7 +93,7 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: [[FI5:%[0-9]+]]:_(p0) = G_GEP [[SP5]], [[OFF5]](s32)
 ; CHECK: [[ZEXTC:%[0-9]+]]:_(s32) = G_ZEXT [[CVREG]]
 ; CHECK: G_STORE [[ZEXTC]](s32), [[FI5]](p0){{.*}}store 4
-; CHECK: BLX @ext_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+; CHECK: BL @ext_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
 ; CHECK: [[R0VREG:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R0VREG]]
 ; CHECK: ADJCALLSTACKUP 20, 0, 14, _, implicit-def %sp, implicit %sp
@@ -114,7 +114,7 @@ define arm_aapcs_vfpcc double @test_call_vfpcc_fp_params(double %a, float %b) {
 ; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %s0 = COPY [[BVREG]]
 ; CHECK-DAG: %d1 = COPY [[AVREG]]
-; CHECK: BLX @vfpcc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %d1, implicit-def %d0
+; CHECK: BL @vfpcc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %d1, implicit-def %d0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s64) = COPY %d0
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %d0 = COPY [[RVREG]]
@@ -148,7 +148,7 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](s64), [[FI2]](p0){{.*}}store 8
-; CHECK: BLX @aapcscc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: BL @aapcscc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
 ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK-DAG: [[R2:%[0-9]+]]:_(s32) = COPY %r1
 ; LITTLE: [[RVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R1]](s32), [[R2]](s32)
@@ -172,7 +172,7 @@ define arm_aapcs_vfpcc float @test_call_different_call_conv(float %x) {
 ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY %s0
 ; CHECK: ADJCALLSTACKDOWN 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %r0 = COPY [[X]]
-; CHECK: BLX @different_call_conv_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit-def %r0
+; CHECK: BL @different_call_conv_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit-def %r0
 ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %s0 = COPY [[R]]
@@ -194,7 +194,7 @@ define arm_aapcscc [3 x i32] @test_tiny_int_arrays([2 x i32] %arr) {
 ; CHECK: [[R0:%[0-9]+]]:_(s32), [[R1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ARG_ARR]](s64)
 ; CHECK: %r0 = COPY [[R0]]
 ; CHECK: %r1 = COPY [[R1]]
-; CHECK: BLX @tiny_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
+; CHECK: BL @tiny_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY %r1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY %r2
@@ -231,7 +231,7 @@ define arm_aapcscc void @test_multiple_int_arrays([2 x i32] %arr0, [2 x i32] %ar
 ; CHECK: %r1 = COPY [[R1]]
 ; CHECK: %r2 = COPY [[R2]]
 ; CHECK: %r3 = COPY [[R3]]
-; CHECK: BLX @multiple_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
+; CHECK: BL @multiple_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: BX_RET 14, _
 entry:
@@ -274,7 +274,7 @@ define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
 ; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 60
 ; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
-; CHECK: BLX @large_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
+; CHECK: BL @large_int_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3
 ; CHECK: ADJCALLSTACKUP 64, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: BX_RET 14, _
 entry:
@@ -316,7 +316,7 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; CHECK: [[ARR2_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[ARR2_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[ARR2_OFFSET]](s32)
 ; CHECK: G_STORE [[ARR2]](s64), [[ARR2_ADDR]](p0){{.*}}store 8
-; CHECK: BLX @fp_arrays_aapcs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: BL @fp_arrays_aapcs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY %r1
 ; CHECK: [[R_MERGED:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R0]](s32), [[R1]](s32)
@@ -383,7 +383,7 @@ define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3
 ; CHECK: [[Z3_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
 ; CHECK: [[Z3_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[Z3_OFFSET]](s32)
 ; CHECK: G_STORE [[Z3]](s64), [[Z3_ADDR]](p0){{.*}}store 8
-; CHECK: BLX @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit %d2, implicit %s6, implicit %s7, implicit %s8, implicit-def %s0, implicit-def %s1, implicit-def %s2, implicit-def %s3
+; CHECK: BL @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit %d2, implicit %s6, implicit %s7, implicit %s8, implicit-def %s0, implicit-def %s1, implicit-def %s2, implicit-def %s3
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY %s0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY %s1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY %s2
@@ -436,7 +436,7 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 76
 ; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
-; CHECK: BLX @tough_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+; CHECK: BL @tough_arrays_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY %r1
 ; CHECK: [[RES_ARR:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R0]](s32), [[R1]](s32)
@@ -462,7 +462,7 @@ define arm_aapcscc {i32, i32} @test_structs({i32, i32} %x) {
 ; CHECK: [[X0:%[0-9]+]]:_(s32), [[X1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[X]](s64)
 ; CHECK-DAG: %r0 = COPY [[X0]](s32)
 ; CHECK-DAG: %r1 = COPY [[X1]](s32)
-; CHECK: BLX @structs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
+; CHECK: BL @structs_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY %r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY %r1
 ; CHECK: [[R:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R0]](s32), [[R1]](s32)
