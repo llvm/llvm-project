@@ -19,10 +19,12 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -33,7 +35,25 @@ AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
 
 MCSymbol *
 AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
-  return Printer.getSymbol(MO.getGlobal());
+  const GlobalValue *GV = MO.getGlobal();
+  unsigned TargetFlags = MO.getTargetFlags();
+  const Triple &TheTriple = Printer.TM.getTargetTriple();
+  if (!TheTriple.isOSBinFormatCOFF())
+    return Printer.getSymbol(GV);
+
+  assert(TheTriple.isOSWindows() &&
+         "Windows is the only supported COFF target");
+
+  bool IsIndirect = (TargetFlags & AArch64II::MO_DLLIMPORT);
+  if (!IsIndirect)
+    return Printer.getSymbol(GV);
+
+  SmallString<128> Name;
+  Name = "__imp_";
+  Printer.TM.getNameWithPrefix(Name, GV,
+                               Printer.getObjFileLowering().getMangler());
+
+  return Ctx.getOrCreateSymbol(Name);
 }
 
 MCSymbol *

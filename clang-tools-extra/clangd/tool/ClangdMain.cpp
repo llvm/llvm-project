@@ -114,5 +114,7 @@ int main(int argc, char *argv[]) {
   /// Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, EnableSnippets,
                             ResourceDirRef, CompileCommandsDirPath);
-  LSPServer.run(std::cin);
+
+  constexpr int NoShutdownRequestErrorCode = 1;
+  return LSPServer.run(std::cin) ? 0 : NoShutdownRequestErrorCode;
 }

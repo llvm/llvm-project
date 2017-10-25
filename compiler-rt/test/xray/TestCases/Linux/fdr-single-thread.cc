@@ -1,4 +1,5 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
+// RUN: rm fdr-logging-1thr-* || true
 // RUN: XRAY_OPTIONS=XRAY_OPTIONS="verbosity=1 patch_premain=true \
 // RUN:   xray_naive_log=false xray_fdr_log=true \
 // RUN:   xray_fdr_log_func_duration_threshold_us=0 \

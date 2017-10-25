@@ -173,6 +173,7 @@ struct NoParams {
   }
 };
 using ShutdownParams = NoParams;
+using ExitParams = NoParams;
 
 struct InitializeParams {
   /// The process Id of the parent process that started

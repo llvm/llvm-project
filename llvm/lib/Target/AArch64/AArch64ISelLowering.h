@@ -538,10 +538,12 @@ private:
                         unsigned Flag) const;
   SDValue getTargetNode(BlockAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
                         unsigned Flag) const;
-  template <class NodeTy> SDValue getGOT(NodeTy *N, SelectionDAG &DAG) const;
   template <class NodeTy>
-  SDValue getAddrLarge(NodeTy *N, SelectionDAG &DAG) const;
-  template <class NodeTy> SDValue getAddr(NodeTy *N, SelectionDAG &DAG) const;
+  SDValue getGOT(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
+  template <class NodeTy>
+  SDValue getAddrLarge(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
