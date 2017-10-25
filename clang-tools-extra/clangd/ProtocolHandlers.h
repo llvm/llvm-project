@@ -34,6 +34,7 @@ public:
 
   virtual void onInitialize(Ctx C, InitializeParams &Params) = 0;
   virtual void onShutdown(Ctx C, ShutdownParams &Params) = 0;
+  virtual void onExit(Ctx C, ExitParams &Params) = 0;
   virtual void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) = 0;
   virtual void onDocumentDidChange(Ctx C,
                                    DidChangeTextDocumentParams &Params) = 0;

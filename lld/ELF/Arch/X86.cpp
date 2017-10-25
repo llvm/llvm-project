@@ -251,11 +251,11 @@ int64_t X86::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
 }
 
 void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
-  // being used for some 16-bit programs such as boot loaders, so
-  // we want to support them.
   switch (Type) {
   case R_386_8:
+    // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
+    // being used for some 16-bit programs such as boot loaders, so
+    // we want to support them.
     checkUInt<8>(Loc, Val, Type);
     *Loc = Val;
     break;
