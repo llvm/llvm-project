@@ -136,6 +136,11 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
           spec.SetTriple("i686-pc-windows");
           specs.Append(ModuleSpec(file, spec));
         }
+        else if (coff_header.machine == MachineArmNt)
+        {
+          spec.SetTriple("arm-pc-windows");
+          specs.Append(ModuleSpec(file, spec));
+        }
       }
     }
   }
