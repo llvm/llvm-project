@@ -306,8 +306,8 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
 BodyFarm *AnalysisDeclContextManager::getBodyFarm() {
   if (!BdyFrm)
-    BdyFrm = new BodyFarm(ASTCtx, Injector.get());
-  return BdyFrm;
+    BdyFrm = llvm::make_unique<BodyFarm>(ASTCtx, Injector.get());
+  return BdyFrm.get();
 }
 
 const StackFrameContext *
@@ -601,11 +601,6 @@ AnalysisDeclContext::~AnalysisDeclContext() {
     llvm::DeleteContainerSeconds(*M);
     delete M;
   }
-}
-
-AnalysisDeclContextManager::~AnalysisDeclContextManager() {
-  if (BdyFrm)
-    delete BdyFrm;
 }
 
 LocationContext::~LocationContext() {}

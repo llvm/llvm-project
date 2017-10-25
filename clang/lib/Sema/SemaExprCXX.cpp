@@ -4175,6 +4175,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsDestructible:
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
+  case UTT_HasUniqueObjectRepresentations:
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 
@@ -4614,6 +4615,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     //   Returns True if and only if T is a complete type at the point of the
     //   function call.
     return !T->isIncompleteType();
+  case UTT_HasUniqueObjectRepresentations:
+    return T.hasUniqueObjectRepresentations(C);
   }
 }
 

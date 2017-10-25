@@ -1,4 +1,4 @@
-//===-- InductiveRangeCheckElimination.cpp - ------------------------------===//
+//===- InductiveRangeCheckElimination.cpp - -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // The InductiveRangeCheckElimination pass splits a loop's iteration space into
 // three disjoint ranges.  It does that in a way such that the loop running in
 // the middle loop provably does not need range checks. As an example, it will
@@ -39,30 +40,61 @@
 //       throw_out_of_bounds();
 //     }
 //   }
+//
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<unsigned> LoopSizeCutoff("irce-loop-size-cutoff", cl::Hidden,
                                         cl::init(64));
@@ -203,6 +235,7 @@ public:
 class InductiveRangeCheckElimination : public LoopPass {
 public:
   static char ID;
+
   InductiveRangeCheckElimination() : LoopPass(ID) {
     initializeInductiveRangeCheckEliminationPass(
         *PassRegistry::getPassRegistry());
@@ -216,8 +249,9 @@ public:
   bool runOnLoop(Loop *L, LPPassManager &LPM) override;
 };
 
+} // end anonymous namespace
+
 char InductiveRangeCheckElimination::ID = 0;
-}
 
 INITIALIZE_PASS_BEGIN(InductiveRangeCheckElimination, "irce",
                       "Inductive range check elimination", false, false)
@@ -251,12 +285,10 @@ StringRef InductiveRangeCheck::rangeCheckKindToStr(
 /// range checked, and set `Length` to the upper limit `Index` is being range
 /// checked with if (and only if) the range check type is stronger or equal to
 /// RANGE_CHECK_UPPER.
-///
 InductiveRangeCheck::RangeCheckKind
 InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                          ScalarEvolution &SE, Value *&Index,
                                          Value *&Length) {
-
   auto IsNonNegativeAndNotLoopVarying = [&SE, L](Value *V) {
     const SCEV *S = SE.getSCEV(V);
     if (isa<SCEVCouldNotCompute>(S))
@@ -265,8 +297,6 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     return SE.getLoopDisposition(S, L) == ScalarEvolution::LoopInvariant &&
            SE.isKnownNonNegative(S);
   };
-
-  using namespace llvm::PatternMatch;
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LHS = ICI->getOperand(0);
@@ -321,8 +351,6 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
     Loop *L, ScalarEvolution &SE, Use &ConditionUse,
     SmallVectorImpl<InductiveRangeCheck> &Checks,
     SmallPtrSetImpl<Value *> &Visited) {
-  using namespace llvm::PatternMatch;
-
   Value *Condition = ConditionUse.get();
   if (!Visited.insert(Condition).second)
     return;
@@ -341,7 +369,6 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
       const auto &RChkB = SubChecks[1];
       if ((RChkA.Length == RChkB.Length || !RChkA.Length || !RChkB.Length) &&
           RChkA.Offset == RChkB.Offset && RChkA.Scale == RChkB.Scale) {
-
         // If RChkA.Kind == RChkB.Kind then we just found two identical checks.
         // But if one of them is a RANGE_CHECK_LOWER and the other is a
         // RANGE_CHECK_UPPER (only possibility if they're different) then
@@ -388,7 +415,6 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 void InductiveRangeCheck::extractRangeChecksFromBranch(
     BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo &BPI,
     SmallVectorImpl<InductiveRangeCheck> &Checks) {
-
   if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
     return;
 
@@ -439,16 +465,16 @@ namespace {
 // kinds of loops we can deal with -- ones that have a single latch that is also
 // an exiting block *and* have a canonical induction variable.
 struct LoopStructure {
-  const char *Tag;
+  const char *Tag = "";
 
-  BasicBlock *Header;
-  BasicBlock *Latch;
+  BasicBlock *Header = nullptr;
+  BasicBlock *Latch = nullptr;
 
   // `Latch's terminator instruction is `LatchBr', and it's `LatchBrExitIdx'th
   // successor is `LatchExit', the exit block of the loop.
-  BranchInst *LatchBr;
-  BasicBlock *LatchExit;
-  unsigned LatchBrExitIdx;
+  BranchInst *LatchBr = nullptr;
+  BasicBlock *LatchExit = nullptr;
+  unsigned LatchBrExitIdx = std::numeric_limits<unsigned>::max();
 
   // The loop represented by this instance of LoopStructure is semantically
   // equivalent to:
@@ -459,18 +485,14 @@ struct LoopStructure {
   // for (intN_ty iv = IndVarStart; predicate(iv, LoopExitAt); iv = IndVarBase)
   //   ... body ...
 
-  Value *IndVarBase;
-  Value *IndVarStart;
-  Value *IndVarStep;
-  Value *LoopExitAt;
-  bool IndVarIncreasing;
-  bool IsSignedPredicate;
+  Value *IndVarBase = nullptr;
+  Value *IndVarStart = nullptr;
+  Value *IndVarStep = nullptr;
+  Value *LoopExitAt = nullptr;
+  bool IndVarIncreasing = false;
+  bool IsSignedPredicate = true;
 
-  LoopStructure()
-      : Tag(""), Header(nullptr), Latch(nullptr), LatchBr(nullptr),
-        LatchExit(nullptr), LatchBrExitIdx(-1), IndVarBase(nullptr),
-        IndVarStart(nullptr), IndVarStep(nullptr), LoopExitAt(nullptr),
-        IndVarIncreasing(false), IsSignedPredicate(true) {}
+  LoopStructure() = default;
 
   template <typename M> LoopStructure map(M Map) const {
     LoopStructure Result;
@@ -503,7 +525,6 @@ struct LoopStructure {
 /// loops to run any remaining iterations.  The pre loop runs any iterations in
 /// which the induction variable is < Begin, and the post loop runs any
 /// iterations in which the induction variable is >= End.
-///
 class LoopConstrainer {
   // The representation of a clone of the original loop we started out with.
   struct ClonedLoop {
@@ -520,13 +541,12 @@ class LoopConstrainer {
   // Result of rewriting the range of a loop.  See changeIterationSpaceEnd for
   // more details on what these fields mean.
   struct RewrittenRangeInfo {
-    BasicBlock *PseudoExit;
-    BasicBlock *ExitSelector;
+    BasicBlock *PseudoExit = nullptr;
+    BasicBlock *ExitSelector = nullptr;
     std::vector<PHINode *> PHIValuesAtPseudoExit;
-    PHINode *IndVarEnd;
+    PHINode *IndVarEnd = nullptr;
 
-    RewrittenRangeInfo()
-        : PseudoExit(nullptr), ExitSelector(nullptr), IndVarEnd(nullptr) {}
+    RewrittenRangeInfo() = default;
   };
 
   // Calculated subranges we restrict the iteration space of the main loop to.
@@ -550,14 +570,12 @@ class LoopConstrainer {
   // Compute a safe set of limits for the main loop to run in -- effectively the
   // intersection of `Range' and the iteration space of the original loop.
   // Return None if unable to compute the set of subranges.
-  //
   Optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
 
   // Clone `OriginalLoop' and return the result in CLResult.  The IR after
   // running `cloneLoop' is well formed except for the PHI nodes in CLResult --
   // the PHI nodes say that there is an incoming edge from `OriginalPreheader`
   // but there is no such edge.
-  //
   void cloneLoop(ClonedLoop &CLResult, const char *Tag) const;
 
   // Create the appropriate loop structure needed to describe a cloned copy of
@@ -586,7 +604,6 @@ class LoopConstrainer {
   // After changeIterationSpaceEnd, `Preheader' is no longer a legitimate
   // preheader because it is made to branch to the loop header only
   // conditionally.
-  //
   RewrittenRangeInfo
   changeIterationSpaceEnd(const LoopStructure &LS, BasicBlock *Preheader,
                           Value *ExitLoopAt,
@@ -594,7 +611,6 @@ class LoopConstrainer {
 
   // The loop denoted by `LS' has `OldPreheader' as its preheader.  This
   // function creates a new preheader for `LS' and returns it.
-  //
   BasicBlock *createPreheader(const LoopStructure &LS, BasicBlock *OldPreheader,
                               const char *Tag) const;
 
@@ -622,12 +638,13 @@ class LoopConstrainer {
 
   // Information about the original loop we started out with.
   Loop &OriginalLoop;
-  const SCEV *LatchTakenCount;
-  BasicBlock *OriginalPreheader;
+
+  const SCEV *LatchTakenCount = nullptr;
+  BasicBlock *OriginalPreheader = nullptr;
 
   // The preheader of the main loop.  This may or may not be different from
   // `OriginalPreheader'.
-  BasicBlock *MainLoopPreheader;
+  BasicBlock *MainLoopPreheader = nullptr;
 
   // The range we need to run the main loop in.
   InductiveRangeCheck::Range Range;
@@ -641,15 +658,14 @@ public:
                   const LoopStructure &LS, ScalarEvolution &SE,
                   DominatorTree &DT, InductiveRangeCheck::Range R)
       : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()),
-        SE(SE), DT(DT), LPM(LPM), LI(LI), OriginalLoop(L),
-        LatchTakenCount(nullptr), OriginalPreheader(nullptr),
-        MainLoopPreheader(nullptr), Range(R), MainLoopStructure(LS) {}
+        SE(SE), DT(DT), LPM(LPM), LI(LI), OriginalLoop(L), Range(R),
+        MainLoopStructure(LS) {}
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();
 };
 
-}
+} // end anonymous namespace
 
 void LoopConstrainer::replacePHIBlock(PHINode *PN, BasicBlock *Block,
                                       BasicBlock *ReplaceBy) {
@@ -1099,7 +1115,6 @@ LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
     //    that case, `Clamp` will always return `Smallest` and
     //    [`Result.LowLimit`, `Result.HighLimit`) = [`Smallest`, `Smallest`)
     //    will be an empty range.  Returning an empty range is always safe.
-    //
 
     Smallest = SE.getAddExpr(End, One);
     Greatest = SE.getAddExpr(Start, One);
@@ -1189,7 +1204,6 @@ void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
 LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
     const LoopStructure &LS, BasicBlock *Preheader, Value *ExitSubloopAt,
     BasicBlock *ContinuationBlock) const {
-
   // We start with a loop with a single latch:
   //
   //    +--------------------+
@@ -1260,7 +1274,6 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   //     |   original exit    <----+
   //     |                    |
   //     +--------------------+
-  //
 
   RewrittenRangeInfo RRI;
 
@@ -1363,7 +1376,6 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
 void LoopConstrainer::rewriteIncomingValuesForPHIs(
     LoopStructure &LS, BasicBlock *ContinuationBlock,
     const LoopConstrainer::RewrittenRangeInfo &RRI) const {
-
   unsigned PHIIndex = 0;
   for (Instruction &I : *LS.Header) {
     auto *PN = dyn_cast<PHINode>(&I);
@@ -1381,7 +1393,6 @@ void LoopConstrainer::rewriteIncomingValuesForPHIs(
 BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
                                              BasicBlock *OldPreheader,
                                              const char *Tag) const {
-
   BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
   BranchInst::Create(LS.Header, Preheader);
 

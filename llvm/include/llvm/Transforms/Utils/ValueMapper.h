@@ -91,7 +91,7 @@ enum RemapFlags {
   RF_NullMapMissingGlobalValues = 8,
 };
 
-static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
+inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
   return RemapFlags(unsigned(LHS) | unsigned(RHS));
 }
 

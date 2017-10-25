@@ -106,6 +106,11 @@ void fatal(llvm::Error &Err, const Twine &Msg) {
 }
 
 void warn(const Twine &Msg) {
+  if (Config->FatalWarnings) {
+    error(Msg);
+    return;
+  }
+
   std::lock_guard<std::mutex> Lock(Mu);
   print("warning: ", raw_ostream::MAGENTA);
   *ErrorOS << Msg << "\n";

@@ -421,7 +421,7 @@ class AnalysisDeclContextManager {
 
   /// Pointer to a factory for creating and caching implementations for common
   /// methods during the analysis.
-  BodyFarm *BdyFrm = nullptr;
+  std::unique_ptr<BodyFarm> BdyFrm;
 
   /// Flag to indicate whether or not bodies should be synthesized
   /// for well-known functions.
@@ -437,8 +437,6 @@ public:
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
                              CodeInjector *injector = nullptr);
-
-  ~AnalysisDeclContextManager();
 
   AnalysisDeclContext *getContext(const Decl *D);
 

@@ -16,16 +16,20 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -40,18 +44,26 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -515,7 +527,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   // If all elements out of range or UNDEF, return vector of zeros/undefs.
   // ArithmeticShift should only hit this if they are all UNDEF.
   auto OutOfRange = [&](int Idx) { return (Idx < 0) || (BitWidth <= Idx); };
-  if (all_of(ShiftAmts, OutOfRange)) {
+  if (llvm::all_of(ShiftAmts, OutOfRange)) {
     SmallVector<Constant *, 8> ConstantVec;
     for (int Idx : ShiftAmts) {
       if (Idx < 0) {
@@ -1584,7 +1596,6 @@ static Instruction *SimplifyNVVMIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // IntrinsicInstr with target-generic LLVM IR.
   const SimplifyAction Action = [II]() -> SimplifyAction {
     switch (II->getIntrinsicID()) {
-
     // NVVM intrinsics that map directly to LLVM intrinsics.
     case Intrinsic::nvvm_ceil_d:
       return {Intrinsic::ceil, FTZ_Any};
@@ -2313,11 +2324,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_pmovmskb_128:
   case Intrinsic::x86_avx_movmsk_pd_256:
   case Intrinsic::x86_avx_movmsk_ps_256:
-  case Intrinsic::x86_avx2_pmovmskb: {
+  case Intrinsic::x86_avx2_pmovmskb:
     if (Value *V = simplifyX86movmsk(*II))
       return replaceInstUsesWith(*II, V);
     break;
-  }
 
   case Intrinsic::x86_sse_comieq_ss:
   case Intrinsic::x86_sse_comige_ss:
@@ -3371,7 +3381,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return II;
 
     break;
-
   }
   case Intrinsic::amdgcn_fmed3: {
     // Note this does not preserve proper sNaN behavior if IEEE-mode is enabled
@@ -3727,7 +3736,6 @@ Instruction *InstCombiner::visitFenceInst(FenceInst &FI) {
 }
 
 // InvokeInst simplification
-//
 Instruction *InstCombiner::visitInvokeInst(InvokeInst &II) {
   return visitCallSite(&II);
 }
@@ -3840,7 +3848,6 @@ static IntrinsicInst *findInitTrampolineFromBB(IntrinsicInst *AdjustTramp,
 // Given a call to llvm.adjust.trampoline, find and return the corresponding
 // call to llvm.init.trampoline if the call to the trampoline can be optimized
 // to a direct call to a function.  Otherwise return NULL.
-//
 static IntrinsicInst *findInitTrampoline(Value *Callee) {
   Callee = Callee->stripPointerCasts();
   IntrinsicInst *AdjustTramp = dyn_cast<IntrinsicInst>(Callee);
@@ -4008,7 +4015,6 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   // Okay, this is a cast from a function to a different type.  Unless doing so
   // would cause a type conversion of one of our arguments, change this call to
   // be a direct call with arguments casted to the appropriate types.
-  //
   FunctionType *FT = Callee->getFunctionType();
   Type *OldRetTy = Caller->getType();
   Type *NewRetTy = FT->getReturnType();

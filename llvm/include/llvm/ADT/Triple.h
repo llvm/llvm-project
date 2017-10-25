@@ -501,6 +501,8 @@ public:
     return getOS() == Triple::ELFIAMCU;
   }
 
+  bool isOSUnknown() const { return getOS() == Triple::UnknownOS; }
+
   bool isGNUEnvironment() const {
     EnvironmentType Env = getEnvironment();
     return Env == Triple::GNU || Env == Triple::GNUABIN32 ||

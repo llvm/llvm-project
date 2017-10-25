@@ -38,11 +38,9 @@ namespace ARM_AM {
     add
   };
 
-  static inline const char *getAddrOpcStr(AddrOpc Op) {
-    return Op == sub ? "-" : "";
-  }
+  inline const char *getAddrOpcStr(AddrOpc Op) { return Op == sub ? "-" : ""; }
 
-  static inline const char *getShiftOpcStr(ShiftOpc Op) {
+  inline const char *getShiftOpcStr(ShiftOpc Op) {
     switch (Op) {
     default: llvm_unreachable("Unknown shift opc!");
     case ARM_AM::asr: return "asr";
@@ -53,7 +51,7 @@ namespace ARM_AM {
     }
   }
 
-  static inline unsigned getShiftOpcEncoding(ShiftOpc Op) {
+  inline unsigned getShiftOpcEncoding(ShiftOpc Op) {
     switch (Op) {
     default: llvm_unreachable("Unknown shift opc!");
     case ARM_AM::asr: return 2;
@@ -71,7 +69,7 @@ namespace ARM_AM {
     db
   };
 
-  static inline const char *getAMSubModeStr(AMSubMode Mode) {
+  inline const char *getAMSubModeStr(AMSubMode Mode) {
     switch (Mode) {
     default: llvm_unreachable("Unknown addressing sub-mode!");
     case ARM_AM::ia: return "ia";
@@ -83,14 +81,14 @@ namespace ARM_AM {
 
   /// rotr32 - Rotate a 32-bit unsigned value right by a specified # bits.
   ///
-  static inline unsigned rotr32(unsigned Val, unsigned Amt) {
+  inline unsigned rotr32(unsigned Val, unsigned Amt) {
     assert(Amt < 32 && "Invalid rotate amount");
     return (Val >> Amt) | (Val << ((32-Amt)&31));
   }
 
   /// rotl32 - Rotate a 32-bit unsigned value left by a specified # bits.
   ///
-  static inline unsigned rotl32(unsigned Val, unsigned Amt) {
+  inline unsigned rotl32(unsigned Val, unsigned Amt) {
     assert(Amt < 32 && "Invalid rotate amount");
     return (Val << Amt) | (Val >> ((32-Amt)&31));
   }
@@ -109,32 +107,24 @@ namespace ARM_AM {
   // reg, the second is the shift amount (or reg0 if not present or imm).  The
   // third operand encodes the shift opcode and the imm if a reg isn't present.
   //
-  static inline unsigned getSORegOpc(ShiftOpc ShOp, unsigned Imm) {
+  inline unsigned getSORegOpc(ShiftOpc ShOp, unsigned Imm) {
     return ShOp | (Imm << 3);
   }
-  static inline unsigned getSORegOffset(unsigned Op) {
-    return Op >> 3;
-  }
-  static inline ShiftOpc getSORegShOp(unsigned Op) {
-    return (ShiftOpc)(Op & 7);
-  }
+  inline unsigned getSORegOffset(unsigned Op) { return Op >> 3; }
+  inline ShiftOpc getSORegShOp(unsigned Op) { return (ShiftOpc)(Op & 7); }
 
   /// getSOImmValImm - Given an encoded imm field for the reg/imm form, return
   /// the 8-bit imm value.
-  static inline unsigned getSOImmValImm(unsigned Imm) {
-    return Imm & 0xFF;
-  }
+  inline unsigned getSOImmValImm(unsigned Imm) { return Imm & 0xFF; }
   /// getSOImmValRot - Given an encoded imm field for the reg/imm form, return
   /// the rotate amount.
-  static inline unsigned getSOImmValRot(unsigned Imm) {
-    return (Imm >> 8) * 2;
-  }
+  inline unsigned getSOImmValRot(unsigned Imm) { return (Imm >> 8) * 2; }
 
   /// getSOImmValRotate - Try to handle Imm with an immediate shifter operand,
   /// computing the rotate amount to use.  If this immediate value cannot be
   /// handled with a single shifter-op, determine a good rotate amount that will
   /// take a maximal chunk of bits out of the immediate.
-  static inline unsigned getSOImmValRotate(unsigned Imm) {
+  inline unsigned getSOImmValRotate(unsigned Imm) {
     // 8-bit (or less) immediates are trivially shifter_operands with a rotate
     // of zero.
     if ((Imm & ~255U) == 0) return 0;
@@ -168,7 +158,7 @@ namespace ARM_AM {
   /// getSOImmVal - Given a 32-bit immediate, if it is something that can fit
   /// into an shifter_operand immediate operand, return the 12-bit encoding for
   /// it.  If not, return -1.
-  static inline int getSOImmVal(unsigned Arg) {
+  inline int getSOImmVal(unsigned Arg) {
     // 8-bit (or less) immediates are trivially shifter_operands with a rotate
     // of zero.
     if ((Arg & ~255U) == 0) return Arg;
@@ -185,7 +175,7 @@ namespace ARM_AM {
 
   /// isSOImmTwoPartVal - Return true if the specified value can be obtained by
   /// or'ing together two SOImmVal's.
-  static inline bool isSOImmTwoPartVal(unsigned V) {
+  inline bool isSOImmTwoPartVal(unsigned V) {
     // If this can be handled with a single shifter_op, bail out.
     V = rotr32(~255U, getSOImmValRotate(V)) & V;
     if (V == 0)
@@ -198,13 +188,13 @@ namespace ARM_AM {
 
   /// getSOImmTwoPartFirst - If V is a value that satisfies isSOImmTwoPartVal,
   /// return the first chunk of it.
-  static inline unsigned getSOImmTwoPartFirst(unsigned V) {
+  inline unsigned getSOImmTwoPartFirst(unsigned V) {
     return rotr32(255U, getSOImmValRotate(V)) & V;
   }
 
   /// getSOImmTwoPartSecond - If V is a value that satisfies isSOImmTwoPartVal,
   /// return the second chunk of it.
-  static inline unsigned getSOImmTwoPartSecond(unsigned V) {
+  inline unsigned getSOImmTwoPartSecond(unsigned V) {
     // Mask out the first hunk.
     V = rotr32(~255U, getSOImmValRotate(V)) & V;
 
@@ -215,7 +205,7 @@ namespace ARM_AM {
 
   /// getThumbImmValShift - Try to handle Imm with a 8-bit immediate followed
   /// by a left shift. Returns the shift amount to use.
-  static inline unsigned getThumbImmValShift(unsigned Imm) {
+  inline unsigned getThumbImmValShift(unsigned Imm) {
     // 8-bit (or less) immediates are trivially immediate operand with a shift
     // of zero.
     if ((Imm & ~255U) == 0) return 0;
@@ -226,7 +216,7 @@ namespace ARM_AM {
 
   /// isThumbImmShiftedVal - Return true if the specified value can be obtained
   /// by left shifting a 8-bit immediate.
-  static inline bool isThumbImmShiftedVal(unsigned V) {
+  inline bool isThumbImmShiftedVal(unsigned V) {
     // If this can be handled with
     V = (~255U << getThumbImmValShift(V)) & V;
     return V == 0;
@@ -234,7 +224,7 @@ namespace ARM_AM {
 
   /// getThumbImm16ValShift - Try to handle Imm with a 16-bit immediate followed
   /// by a left shift. Returns the shift amount to use.
-  static inline unsigned getThumbImm16ValShift(unsigned Imm) {
+  inline unsigned getThumbImm16ValShift(unsigned Imm) {
     // 16-bit (or less) immediates are trivially immediate operand with a shift
     // of zero.
     if ((Imm & ~65535U) == 0) return 0;
@@ -245,7 +235,7 @@ namespace ARM_AM {
 
   /// isThumbImm16ShiftedVal - Return true if the specified value can be
   /// obtained by left shifting a 16-bit immediate.
-  static inline bool isThumbImm16ShiftedVal(unsigned V) {
+  inline bool isThumbImm16ShiftedVal(unsigned V) {
     // If this can be handled with
     V = (~65535U << getThumbImm16ValShift(V)) & V;
     return V == 0;
@@ -253,7 +243,7 @@ namespace ARM_AM {
 
   /// getThumbImmNonShiftedVal - If V is a value that satisfies
   /// isThumbImmShiftedVal, return the non-shiftd value.
-  static inline unsigned getThumbImmNonShiftedVal(unsigned V) {
+  inline unsigned getThumbImmNonShiftedVal(unsigned V) {
     return V >> getThumbImmValShift(V);
   }
 
@@ -267,7 +257,7 @@ namespace ARM_AM {
   ///     abcdefgh abcdefgh abcdefgh abcdefgh    control = 3
   /// Return -1 if none of the above apply.
   /// See ARM Reference Manual A6.3.2.
-  static inline int getT2SOImmValSplatVal(unsigned V) {
+  inline int getT2SOImmValSplatVal(unsigned V) {
     unsigned u, Vs, Imm;
     // control = 0
     if ((V & 0xffffff00) == 0)
@@ -295,7 +285,7 @@ namespace ARM_AM {
   /// specified value is a rotated 8-bit value. Return -1 if no rotation
   /// encoding is possible.
   /// See ARM Reference Manual A6.3.2.
-  static inline int getT2SOImmValRotateVal(unsigned V) {
+  inline int getT2SOImmValRotateVal(unsigned V) {
     unsigned RotAmt = countLeadingZeros(V);
     if (RotAmt >= 24)
       return -1;
@@ -311,7 +301,7 @@ namespace ARM_AM {
   /// into a Thumb-2 shifter_operand immediate operand, return the 12-bit
   /// encoding for it.  If not, return -1.
   /// See ARM Reference Manual A6.3.2.
-  static inline int getT2SOImmVal(unsigned Arg) {
+  inline int getT2SOImmVal(unsigned Arg) {
     // If 'Arg' is an 8-bit splat, then get the encoded value.
     int Splat = getT2SOImmValSplatVal(Arg);
     if (Splat != -1)
@@ -325,14 +315,14 @@ namespace ARM_AM {
     return -1;
   }
 
-  static inline unsigned getT2SOImmValRotate(unsigned V) {
+  inline unsigned getT2SOImmValRotate(unsigned V) {
     if ((V & ~255U) == 0) return 0;
     // Use CTZ to compute the rotate amount.
     unsigned RotAmt = countTrailingZeros(V);
     return (32 - RotAmt) & 31;
   }
 
-  static inline bool isT2SOImmTwoPartVal (unsigned Imm) {
+  inline bool isT2SOImmTwoPartVal(unsigned Imm) {
     unsigned V = Imm;
     // Passing values can be any combination of splat values and shifter
     // values. If this can be handled with a single shifter or splat, bail
@@ -359,7 +349,7 @@ namespace ARM_AM {
     return false;
   }
 
-  static inline unsigned getT2SOImmTwoPartFirst(unsigned Imm) {
+  inline unsigned getT2SOImmTwoPartFirst(unsigned Imm) {
     assert (isT2SOImmTwoPartVal(Imm) &&
             "Immedate cannot be encoded as two part immediate!");
     // Try a shifter operand as one part
@@ -376,7 +366,7 @@ namespace ARM_AM {
     return Imm & 0x00ff00ffU;
   }
 
-  static inline unsigned getT2SOImmTwoPartSecond(unsigned Imm) {
+  inline unsigned getT2SOImmTwoPartSecond(unsigned Imm) {
     // Mask out the first hunk
     Imm ^= getT2SOImmTwoPartFirst(Imm);
     // Return what's left
@@ -404,25 +394,22 @@ namespace ARM_AM {
   // and code rewriting), this operand will have the form:  FI#, reg0, <offs>
   // with no shift amount for the frame offset.
   //
-  static inline unsigned getAM2Opc(AddrOpc Opc, unsigned Imm12, ShiftOpc SO,
-                                   unsigned IdxMode = 0) {
+  inline unsigned getAM2Opc(AddrOpc Opc, unsigned Imm12, ShiftOpc SO,
+                            unsigned IdxMode = 0) {
     assert(Imm12 < (1 << 12) && "Imm too large!");
     bool isSub = Opc == sub;
     return Imm12 | ((int)isSub << 12) | (SO << 13) | (IdxMode << 16) ;
   }
-  static inline unsigned getAM2Offset(unsigned AM2Opc) {
+  inline unsigned getAM2Offset(unsigned AM2Opc) {
     return AM2Opc & ((1 << 12)-1);
   }
-  static inline AddrOpc getAM2Op(unsigned AM2Opc) {
+  inline AddrOpc getAM2Op(unsigned AM2Opc) {
     return ((AM2Opc >> 12) & 1) ? sub : add;
   }
-  static inline ShiftOpc getAM2ShiftOpc(unsigned AM2Opc) {
+  inline ShiftOpc getAM2ShiftOpc(unsigned AM2Opc) {
     return (ShiftOpc)((AM2Opc >> 13) & 7);
   }
-  static inline unsigned getAM2IdxMode(unsigned AM2Opc) {
-    return (AM2Opc >> 16);
-  }
-
+  inline unsigned getAM2IdxMode(unsigned AM2Opc) { return (AM2Opc >> 16); }
 
   //===--------------------------------------------------------------------===//
   // Addressing Mode #3
@@ -439,20 +426,16 @@ namespace ARM_AM {
   // index mode.
 
   /// getAM3Opc - This function encodes the addrmode3 opc field.
-  static inline unsigned getAM3Opc(AddrOpc Opc, unsigned char Offset,
-                                   unsigned IdxMode = 0) {
+  inline unsigned getAM3Opc(AddrOpc Opc, unsigned char Offset,
+                            unsigned IdxMode = 0) {
     bool isSub = Opc == sub;
     return ((int)isSub << 8) | Offset | (IdxMode << 9);
   }
-  static inline unsigned char getAM3Offset(unsigned AM3Opc) {
-    return AM3Opc & 0xFF;
-  }
-  static inline AddrOpc getAM3Op(unsigned AM3Opc) {
+  inline unsigned char getAM3Offset(unsigned AM3Opc) { return AM3Opc & 0xFF; }
+  inline AddrOpc getAM3Op(unsigned AM3Opc) {
     return ((AM3Opc >> 8) & 1) ? sub : add;
   }
-  static inline unsigned getAM3IdxMode(unsigned AM3Opc) {
-    return (AM3Opc >> 9);
-  }
+  inline unsigned getAM3IdxMode(unsigned AM3Opc) { return (AM3Opc >> 9); }
 
   //===--------------------------------------------------------------------===//
   // Addressing Mode #4
@@ -469,13 +452,11 @@ namespace ARM_AM {
   //    DB - Decrement before
   // For VFP instructions, only the IA and DB modes are valid.
 
-  static inline AMSubMode getAM4SubMode(unsigned Mode) {
+  inline AMSubMode getAM4SubMode(unsigned Mode) {
     return (AMSubMode)(Mode & 0x7);
   }
 
-  static inline unsigned getAM4ModeImm(AMSubMode SubMode) {
-    return (int)SubMode;
-  }
+  inline unsigned getAM4ModeImm(AMSubMode SubMode) { return (int)SubMode; }
 
   //===--------------------------------------------------------------------===//
   // Addressing Mode #5
@@ -489,14 +470,12 @@ namespace ARM_AM {
   // operation (add or subtract) in bit 8 and the immediate in bits 0-7.
 
   /// getAM5Opc - This function encodes the addrmode5 opc field.
-  static inline unsigned getAM5Opc(AddrOpc Opc, unsigned char Offset) {
+  inline unsigned getAM5Opc(AddrOpc Opc, unsigned char Offset) {
     bool isSub = Opc == sub;
     return ((int)isSub << 8) | Offset;
   }
-  static inline unsigned char getAM5Offset(unsigned AM5Opc) {
-    return AM5Opc & 0xFF;
-  }
-  static inline AddrOpc getAM5Op(unsigned AM5Opc) {
+  inline unsigned char getAM5Offset(unsigned AM5Opc) { return AM5Opc & 0xFF; }
+  inline AddrOpc getAM5Op(unsigned AM5Opc) {
     return ((AM5Opc >> 8) & 1) ? sub : add;
   }
 
@@ -512,14 +491,14 @@ namespace ARM_AM {
   // operation (add or subtract) in bit 8 and the immediate in bits 0-7.
 
   /// getAM5FP16Opc - This function encodes the addrmode5fp16 opc field.
-  static inline unsigned getAM5FP16Opc(AddrOpc Opc, unsigned char Offset) {
+  inline unsigned getAM5FP16Opc(AddrOpc Opc, unsigned char Offset) {
     bool isSub = Opc == sub;
     return ((int)isSub << 8) | Offset;
   }
-  static inline unsigned char getAM5FP16Offset(unsigned AM5Opc) {
+  inline unsigned char getAM5FP16Offset(unsigned AM5Opc) {
     return AM5Opc & 0xFF;
   }
-  static inline AddrOpc getAM5FP16Op(unsigned AM5Opc) {
+  inline AddrOpc getAM5FP16Op(unsigned AM5Opc) {
     return ((AM5Opc >> 8) & 1) ? sub : add;
   }
 
@@ -548,20 +527,18 @@ namespace ARM_AM {
   // the "Cmode" field of the instruction.  The interfaces below treat the
   // Op and Cmode values as a single 5-bit value.
 
-  static inline unsigned createNEONModImm(unsigned OpCmode, unsigned Val) {
+  inline unsigned createNEONModImm(unsigned OpCmode, unsigned Val) {
     return (OpCmode << 8) | Val;
   }
-  static inline unsigned getNEONModImmOpCmode(unsigned ModImm) {
+  inline unsigned getNEONModImmOpCmode(unsigned ModImm) {
     return (ModImm >> 8) & 0x1f;
   }
-  static inline unsigned getNEONModImmVal(unsigned ModImm) {
-    return ModImm & 0xff;
-  }
+  inline unsigned getNEONModImmVal(unsigned ModImm) { return ModImm & 0xff; }
 
   /// decodeNEONModImm - Decode a NEON modified immediate value into the
   /// element value and the element size in bits.  (If the element size is
   /// smaller than the vector, it is splatted into all the elements.)
-  static inline uint64_t decodeNEONModImm(unsigned ModImm, unsigned &EltBits) {
+  inline uint64_t decodeNEONModImm(unsigned ModImm, unsigned &EltBits) {
     unsigned OpCmode = getNEONModImmOpCmode(ModImm);
     unsigned Imm8 = getNEONModImmVal(ModImm);
     uint64_t Val = 0;
@@ -599,7 +576,7 @@ namespace ARM_AM {
   }
 
   // Generic validation for single-byte immediate (0X00, 00X0, etc).
-  static inline bool isNEONBytesplat(unsigned Value, unsigned Size) {
+  inline bool isNEONBytesplat(unsigned Value, unsigned Size) {
     assert(Size >= 1 && Size <= 4 && "Invalid size");
     unsigned count = 0;
     for (unsigned i = 0; i < Size; ++i) {
@@ -610,7 +587,7 @@ namespace ARM_AM {
   }
 
   /// Checks if Value is a correct immediate for instructions like VBIC/VORR.
-  static inline bool isNEONi16splat(unsigned Value) {
+  inline bool isNEONi16splat(unsigned Value) {
     if (Value > 0xffff)
       return false;
     // i16 value with set bits only in one byte X0 or 0X.
@@ -618,7 +595,7 @@ namespace ARM_AM {
   }
 
   // Encode NEON 16 bits Splat immediate for instructions like VBIC/VORR
-  static inline unsigned encodeNEONi16splat(unsigned Value) {
+  inline unsigned encodeNEONi16splat(unsigned Value) {
     assert(isNEONi16splat(Value) && "Invalid NEON splat value");
     if (Value >= 0x100)
       Value = (Value >> 8) | 0xa00;
@@ -628,13 +605,13 @@ namespace ARM_AM {
   }
 
   /// Checks if Value is a correct immediate for instructions like VBIC/VORR.
-  static inline bool isNEONi32splat(unsigned Value) {
+  inline bool isNEONi32splat(unsigned Value) {
     // i32 value with set bits only in one byte X000, 0X00, 00X0, or 000X.
     return Value == 0 || isNEONBytesplat(Value, 4);
   }
 
   /// Encode NEON 32 bits Splat immediate for instructions like VBIC/VORR.
-  static inline unsigned encodeNEONi32splat(unsigned Value) {
+  inline unsigned encodeNEONi32splat(unsigned Value) {
     assert(isNEONi32splat(Value) && "Invalid NEON splat value");
     if (Value >= 0x100 && Value <= 0xff00)
       Value = (Value >> 8) | 0x200;
@@ -648,7 +625,7 @@ namespace ARM_AM {
   //===--------------------------------------------------------------------===//
   // Floating-point Immediates
   //
-  static inline float getFPImmFloat(unsigned Imm) {
+  inline float getFPImmFloat(unsigned Imm) {
     // We expect an 8-bit binary encoding of a floating-point number here.
     union {
       uint32_t I;
@@ -676,7 +653,7 @@ namespace ARM_AM {
   /// getFP16Imm - Return an 8-bit floating-point version of the 16-bit
   /// floating-point value. If the value cannot be represented as an 8-bit
   /// floating-point value, then return -1.
-  static inline int getFP16Imm(const APInt &Imm) {
+  inline int getFP16Imm(const APInt &Imm) {
     uint32_t Sign = Imm.lshr(15).getZExtValue() & 1;
     int32_t Exp = (Imm.lshr(10).getSExtValue() & 0x1f) - 15;  // -14 to 15
     int64_t Mantissa = Imm.getZExtValue() & 0x3ff;  // 10 bits
@@ -695,14 +672,14 @@ namespace ARM_AM {
     return ((int)Sign << 7) | (Exp << 4) | Mantissa;
   }
 
-  static inline int getFP16Imm(const APFloat &FPImm) {
+  inline int getFP16Imm(const APFloat &FPImm) {
     return getFP16Imm(FPImm.bitcastToAPInt());
   }
 
   /// getFP32Imm - Return an 8-bit floating-point version of the 32-bit
   /// floating-point value. If the value cannot be represented as an 8-bit
   /// floating-point value, then return -1.
-  static inline int getFP32Imm(const APInt &Imm) {
+  inline int getFP32Imm(const APInt &Imm) {
     uint32_t Sign = Imm.lshr(31).getZExtValue() & 1;
     int32_t Exp = (Imm.lshr(23).getSExtValue() & 0xff) - 127;  // -126 to 127
     int64_t Mantissa = Imm.getZExtValue() & 0x7fffff;  // 23 bits
@@ -723,14 +700,14 @@ namespace ARM_AM {
     return ((int)Sign << 7) | (Exp << 4) | Mantissa;
   }
 
-  static inline int getFP32Imm(const APFloat &FPImm) {
+  inline int getFP32Imm(const APFloat &FPImm) {
     return getFP32Imm(FPImm.bitcastToAPInt());
   }
 
   /// getFP64Imm - Return an 8-bit floating-point version of the 64-bit
   /// floating-point value. If the value cannot be represented as an 8-bit
   /// floating-point value, then return -1.
-  static inline int getFP64Imm(const APInt &Imm) {
+  inline int getFP64Imm(const APInt &Imm) {
     uint64_t Sign = Imm.lshr(63).getZExtValue() & 1;
     int64_t Exp = (Imm.lshr(52).getSExtValue() & 0x7ff) - 1023; // -1022 to 1023
     uint64_t Mantissa = Imm.getZExtValue() & 0xfffffffffffffULL;
@@ -751,7 +728,7 @@ namespace ARM_AM {
     return ((int)Sign << 7) | (Exp << 4) | Mantissa;
   }
 
-  static inline int getFP64Imm(const APFloat &FPImm) {
+  inline int getFP64Imm(const APFloat &FPImm) {
     return getFP64Imm(FPImm.bitcastToAPInt());
   }
 

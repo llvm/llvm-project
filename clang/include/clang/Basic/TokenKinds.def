@@ -455,6 +455,8 @@ TYPE_TRAIT_1(__is_pod, IsPOD, KEYCXX)
 TYPE_TRAIT_1(__is_polymorphic, IsPolymorphic, KEYCXX)
 TYPE_TRAIT_1(__is_trivial, IsTrivial, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
+TYPE_TRAIT_1(__has_unique_object_representations,
+             HasUniqueObjectRepresentations, KEYCXX)
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_N(__is_trivially_constructible, IsTriviallyConstructible, KEYCXX)

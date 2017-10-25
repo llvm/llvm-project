@@ -10,6 +10,13 @@
 // VECTORCALL: define x86_vectorcallcc void @_Z5test1v
 void test1() {}
 
+// fastcall, stdcall, and vectorcall all do not support variadic functions.
+// CDECL: define void @_Z12testVariadicz
+// FASTCALL: define void @_Z12testVariadicz
+// STDCALL: define void @_Z12testVariadicz
+// VECTORCALL: define void @_Z12testVariadicz
+void testVariadic(...){}
+
 // ALL: define void @_Z5test2v
 void __attribute__((cdecl)) test2() {}
 
