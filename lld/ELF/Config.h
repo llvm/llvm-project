@@ -46,6 +46,9 @@ enum class StripPolicy { None, All, Debug };
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { ReportError, Warn, Ignore, IgnoreAll };
 
+// For --orphan-handling.
+enum class OrphanHandlingPolicy { Place, Warn, Error };
+
 // For --sort-section and linkerscript sorting rules.
 enum class SortSectionPolicy { Default, None, Alignment, Name, Priority };
 
@@ -155,6 +158,7 @@ struct Configuration {
   bool ExitEarly;
   bool ZWxneeded;
   DiscardPolicy Discard;
+  OrphanHandlingPolicy OrphanHandling;
   SortSectionPolicy SortSection;
   StripPolicy Strip;
   UnresolvedPolicy UnresolvedSymbols;

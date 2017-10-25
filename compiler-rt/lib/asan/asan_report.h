@@ -47,7 +47,8 @@ bool ParseFrameDescription(const char *frame_descr,
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal);
 void ReportDeadlySignal(const SignalContext &sig);
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
+                                 uptr delete_alignment,
                                  BufferedStackTrace *free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack);

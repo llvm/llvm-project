@@ -109,6 +109,12 @@ def FeatureApertureRegs : SubtargetFeature<"aperture-regs",
   "Has Memory Aperture Base and Size Registers"
 >;
 
+def FeatureMadMixInsts : SubtargetFeature<"mad-mix-insts",
+  "HasMadMixInsts",
+  "true",
+  "Has v_mad_mix_f32, v_mad_mixlo_f16, v_mad_mixhi_f16 instructions"
+>;
+
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
 // XNACK. The current default kernel driver setting is:
 // - graphics ring: XNACK disabled
@@ -553,19 +559,25 @@ def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
 
 def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
   [FeatureGFX9,
-   FeatureLDSBankCount32]>;
+   FeatureMadMixInsts,
+   FeatureLDSBankCount32
+   ]>;
 
 def FeatureISAVersion9_0_1 : SubtargetFeatureISAVersion <9,0,1,
   [FeatureGFX9,
+   FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK]>;
 
 def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
   [FeatureGFX9,
-   FeatureLDSBankCount32]>;
+   FeatureMadMixInsts,
+   FeatureLDSBankCount32
+   ]>;
 
 def FeatureISAVersion9_0_3 : SubtargetFeatureISAVersion <9,0,3,
   [FeatureGFX9,
+   FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK]>;
 
@@ -728,8 +740,8 @@ def HasDPP : Predicate<"Subtarget->hasDPP()">,
 def HasIntClamp : Predicate<"Subtarget->hasIntClamp()">,
   AssemblerPredicate<"FeatureIntClamp">;
 
-def HasMadMix : Predicate<"Subtarget->hasMadMixInsts()">,
-  AssemblerPredicate<"FeatureGFX9Insts">;
+def HasMadMixInsts : Predicate<"Subtarget->hasMadMixInsts()">,
+  AssemblerPredicate<"FeatureMadMixInsts">;
 
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;

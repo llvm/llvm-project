@@ -231,6 +231,8 @@ bool X86TargetInfo::initFeatureMap(
 
   case CK_KNM:
     // TODO: Add avx5124fmaps/avx5124vnniw.
+    setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
+    LLVM_FALLTHROUGH;
   case CK_KNL:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);

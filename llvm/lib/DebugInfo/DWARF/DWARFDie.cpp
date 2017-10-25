@@ -511,6 +511,12 @@ DWARFDie DWARFDie::getSibling() const {
   return DWARFDie();
 }
 
+DWARFDie DWARFDie::getFirstChild() const {
+  if (isValid())
+    return U->getFirstChild(Die);
+  return DWARFDie();
+}
+
 iterator_range<DWARFDie::attribute_iterator> DWARFDie::attributes() const {
   return make_range(attribute_iterator(*this, false),
                     attribute_iterator(*this, true));

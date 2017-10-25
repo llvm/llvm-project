@@ -234,6 +234,9 @@ public:
   /// and AST and rebuild them from scratch.
   std::future<void> forceReparse(PathRef File);
 
+  /// DEPRECATED. Please use a callback-based version, this API is deprecated
+  /// and will soon be removed.
+  ///
   /// Run code completion for \p File at \p Pos.
   ///
   /// Request is processed asynchronously. You can use the returned future to
@@ -252,6 +255,14 @@ public:
   codeComplete(PathRef File, Position Pos,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
+  /// A version of `codeComplete` that runs \p Callback on the processing thread
+  /// when codeComplete results become available.
+  void codeComplete(
+      UniqueFunction<void(Tagged<std::vector<CompletionItem>>)> Callback,
+      PathRef File, Position Pos,
+      llvm::Optional<StringRef> OverridenContents = llvm::None,
+      IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
   /// not None, they will used only for signature help, i.e. no diagnostics

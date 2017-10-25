@@ -824,14 +824,10 @@ template <class ELFT> void EhInputSection::split() {
   if (!this->Pieces.empty())
     return;
 
-  if (this->NumRelocations) {
-    if (this->AreRelocsRela)
-      split<ELFT>(this->relas<ELFT>());
-    else
-      split<ELFT>(this->rels<ELFT>());
-    return;
-  }
-  split<ELFT>(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));
+  if (this->AreRelocsRela)
+    split<ELFT>(this->relas<ELFT>());
+  else
+    split<ELFT>(this->rels<ELFT>());
 }
 
 template <class ELFT, class RelTy>

@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -irce-allow-unsigned-latch=true -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -7,6 +7,8 @@
 ; CHECK: irce: in function test_05: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_06: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_07: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
+; CHECK: irce: in function test_08: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
+; CHECK-NOT: irce: in function test_09: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 ; ULT condition for increasing loop.
 define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
@@ -297,6 +299,86 @@ in.bounds:
   store i32 0, i32* %addr
   %next = icmp ult i32 %idx.next, 0
   br i1 %next, label %exit, label %loop
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
+; Unsigned walking through signed border is allowed.
+; Iteration space [0; UINT_MAX - 99), the fact that SINT_MAX is within this
+; range does not prevent us from performing IRCE.
+
+define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
+
+; CHECK:      test_08
+; CHECK:        entry:
+; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, !range !0
+; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
+; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
+; CHECK:        loop:
+; CHECK-NEXT:     %idx = phi i32 [ %idx.next, %in.bounds ], [ 0, %loop.preheader ]
+; CHECK-NEXT:     %idx.next = add i32 %idx, 1
+; CHECK-NEXT:     %abc = icmp ult i32 %idx, %exit.mainloop.at
+; CHECK-NEXT:     br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
+; CHECK-NOT:    loop.preloop:
+; CHECK:        loop.postloop:
+; CHECK-NEXT:     %idx.postloop = phi i32 [ %idx.copy, %postloop ], [ %idx.next.postloop, %in.bounds.postloop ]
+; CHECK-NEXT:     %idx.next.postloop = add i32 %idx.postloop, 1
+; CHECK-NEXT:     %abc.postloop = icmp ult i32 %idx.postloop, %exit.mainloop.at
+; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
+
+entry:
+  %len = load i32, i32* %a_len_ptr, !range !0
+  br label %loop
+
+loop:
+  %idx = phi i32 [ 0, %entry ], [ %idx.next, %in.bounds ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp ult i32 %idx, %len
+  br i1 %abc, label %in.bounds, label %out.of.bounds
+
+in.bounds:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp ult i32 %idx.next, -100
+  br i1 %next, label %loop, label %exit
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
+; Walking through the border of unsigned range is not allowed
+; (iteration space [-100; 100)). Negative test.
+
+define void @test_09(i32* %arr, i32* %a_len_ptr) #0 {
+
+; CHECK:      test_09
+; CHECK-NOT:  preloop
+; CHECK-NOT:  postloop
+; CHECK-NOT:  br i1 false
+; CHECK-NOT:  br i1 true
+
+entry:
+  %len = load i32, i32* %a_len_ptr, !range !0
+  br label %loop
+
+loop:
+  %idx = phi i32 [ -100, %entry ], [ %idx.next, %in.bounds ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp ult i32 %idx, %len
+  br i1 %abc, label %in.bounds, label %out.of.bounds
+
+in.bounds:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp ult i32 %idx.next, 100
+  br i1 %next, label %loop, label %exit
 
 out.of.bounds:
   ret void

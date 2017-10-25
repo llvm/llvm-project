@@ -216,11 +216,12 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   in_report.ReportError(error);
 }
 
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
+                                 uptr delete_alignment,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorNewDeleteSizeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
-                                   delete_size);
+  ErrorNewDeleteTypeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
+                                   delete_size, delete_alignment);
   in_report.ReportError(error);
 }
 
