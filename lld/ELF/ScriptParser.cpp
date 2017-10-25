@@ -642,6 +642,17 @@ void ScriptParser::readSectionAddressType(OutputSection *Cmd) {
   }
 }
 
+static Expr checkAlignment(Expr E, std::string &Loc) {
+  return [=] {
+    uint64_t Alignment = std::max((uint64_t)1, E().getValue());
+    if (!isPowerOf2_64(Alignment)) {
+      error(Loc + ": alignment must be power of 2");
+      return (uint64_t)1; // Return a dummy value.
+    }
+    return Alignment;
+  };
+}
+
 OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSection *Cmd =
       Script->createOutputSection(OutSec, getCurrentLocation());
@@ -650,12 +661,13 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     readSectionAddressType(Cmd);
   expect(":");
 
+  std::string Location = getCurrentLocation();
   if (consume("AT"))
     Cmd->LMAExpr = readParenExpr();
   if (consume("ALIGN"))
-    Cmd->AlignExpr = readParenExpr();
+    Cmd->AlignExpr = checkAlignment(readParenExpr(), Location);
   if (consume("SUBALIGN"))
-    Cmd->SubalignExpr = readParenExpr();
+    Cmd->SubalignExpr = checkAlignment(readParenExpr(), Location);
 
   // Parse constraints.
   if (consume("ONLY_IF_RO"))
@@ -959,16 +971,16 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ALIGN") {
     expect("(");
     Expr E = readExpr();
-    if (consume(")"))
-      return [=] {
-        return alignTo(Script->getDot(), std::max((uint64_t)1, E().getValue()));
-      };
+    if (consume(")")) {
+      E = checkAlignment(E, Location);
+      return [=] { return alignTo(Script->getDot(), E().getValue()); };
+    }
     expect(",");
-    Expr E2 = readExpr();
+    Expr E2 = checkAlignment(readExpr(), Location);
     expect(")");
     return [=] {
       ExprValue V = E();
-      V.Alignment = std::max((uint64_t)1, E2().getValue());
+      V.Alignment = E2().getValue();
       return V;
     };
   }
