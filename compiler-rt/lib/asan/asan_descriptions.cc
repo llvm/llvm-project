@@ -122,6 +122,7 @@ static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
   }
   descr->chunk_begin = chunk.Beg();
   descr->chunk_size = chunk.UsedSize();
+  descr->user_requested_alignment = chunk.UserRequestedAlignment();
   descr->alloc_type = chunk.GetAllocType();
 }
 

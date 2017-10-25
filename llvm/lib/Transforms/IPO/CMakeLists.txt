@@ -2,6 +2,7 @@ add_llvm_library(LLVMipo
   AlwaysInliner.cpp
   ArgumentPromotion.cpp
   BarrierNoopPass.cpp
+  CalledValuePropagation.cpp
   ConstantMerge.cpp
   CrossDSOCFI.cpp
   DeadArgumentElimination.cpp

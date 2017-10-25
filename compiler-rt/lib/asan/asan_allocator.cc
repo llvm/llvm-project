@@ -84,7 +84,10 @@ struct ChunkHeader {
   // This field is used for small sizes. For large sizes it is equal to
   // SizeClassMap::kMaxSize and the actual size is stored in the
   // SecondaryAllocator's metadata.
-  u32 user_requested_size;
+  u32 user_requested_size : 29;
+  // align < 8 -> 0
+  // else      -> log2(min(align, 512)) - 2
+  u32 user_requested_alignment_log : 3;
   u32 alloc_context_id;
 };
 
@@ -351,6 +354,20 @@ struct Allocator {
     return Min(Max(rz_log, RZSize2Log(min_rz)), RZSize2Log(max_rz));
   }
 
+  static uptr ComputeUserRequestedAlignmentLog(uptr user_requested_alignment) {
+    if (user_requested_alignment < 8)
+      return 0;
+    if (user_requested_alignment > 512)
+      user_requested_alignment = 512;
+    return Log2(user_requested_alignment) - 2;
+  }
+
+  static uptr ComputeUserAlignment(uptr user_requested_alignment_log) {
+    if (user_requested_alignment_log == 0)
+      return 0;
+    return 1LL << (user_requested_alignment_log + 2);
+  }
+
   // We have an address between two chunks, and we want to report just one.
   AsanChunk *ChooseChunk(uptr addr, AsanChunk *left_chunk,
                          AsanChunk *right_chunk) {
@@ -385,6 +402,8 @@ struct Allocator {
     Flags &fl = *flags();
     CHECK(stack);
     const uptr min_alignment = SHADOW_GRANULARITY;
+    const uptr user_requested_alignment_log =
+        ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
       alignment = min_alignment;
     if (size == 0) {
@@ -472,6 +491,7 @@ struct Allocator {
       meta[0] = size;
       meta[1] = chunk_beg;
     }
+    m->user_requested_alignment_log = user_requested_alignment_log;
 
     m->alloc_context_id = StackDepotPut(*stack);
 
@@ -573,8 +593,8 @@ struct Allocator {
     }
   }
 
-  void Deallocate(void *ptr, uptr delete_size, BufferedStackTrace *stack,
-                  AllocType alloc_type) {
+  void Deallocate(void *ptr, uptr delete_size, uptr delete_alignment,
+                  BufferedStackTrace *stack, AllocType alloc_type) {
     uptr p = reinterpret_cast<uptr>(ptr);
     if (p == 0) return;
 
@@ -601,11 +621,14 @@ struct Allocator {
         ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
                                 (AllocType)alloc_type);
       }
-    }
-
-    if (delete_size && flags()->new_delete_type_mismatch &&
-        delete_size != m->UsedSize()) {
-      ReportNewDeleteSizeMismatch(p, delete_size, stack);
+    } else {
+      if (flags()->new_delete_type_mismatch &&
+          (alloc_type == FROM_NEW || alloc_type == FROM_NEW_BR) &&
+          ((delete_size && delete_size != m->UsedSize()) ||
+           ComputeUserRequestedAlignmentLog(delete_alignment) !=
+               m->user_requested_alignment_log)) {
+        ReportNewDeleteTypeMismatch(p, delete_size, delete_alignment, stack);
+      }
     }
 
     QuarantineChunk(m, ptr, stack);
@@ -631,7 +654,7 @@ struct Allocator {
       // If realloc() races with free(), we may start copying freed memory.
       // However, we will report racy double-free later anyway.
       REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
-      Deallocate(old_ptr, 0, stack, FROM_MALLOC);
+      Deallocate(old_ptr, 0, 0, stack, FROM_MALLOC);
     }
     return new_ptr;
   }
@@ -766,6 +789,9 @@ bool AsanChunkView::IsQuarantined() const {
 uptr AsanChunkView::Beg() const { return chunk_->Beg(); }
 uptr AsanChunkView::End() const { return Beg() + UsedSize(); }
 uptr AsanChunkView::UsedSize() const { return chunk_->UsedSize(); }
+u32 AsanChunkView::UserRequestedAlignment() const {
+  return Allocator::ComputeUserAlignment(chunk_->user_requested_alignment_log);
+}
 uptr AsanChunkView::AllocTid() const { return chunk_->alloc_tid; }
 uptr AsanChunkView::FreeTid() const { return chunk_->free_tid; }
 AllocType AsanChunkView::GetAllocType() const {
@@ -818,12 +844,12 @@ void PrintInternalAllocatorStats() {
 }
 
 void asan_free(void *ptr, BufferedStackTrace *stack, AllocType alloc_type) {
-  instance.Deallocate(ptr, 0, stack, alloc_type);
+  instance.Deallocate(ptr, 0, 0, stack, alloc_type);
 }
 
-void asan_sized_free(void *ptr, uptr size, BufferedStackTrace *stack,
-                     AllocType alloc_type) {
-  instance.Deallocate(ptr, size, stack, alloc_type);
+void asan_delete(void *ptr, uptr size, uptr alignment,
+                 BufferedStackTrace *stack, AllocType alloc_type) {
+  instance.Deallocate(ptr, size, alignment, stack, alloc_type);
 }
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack) {
@@ -839,7 +865,7 @@ void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
     return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
   if (size == 0) {
     if (flags()->allocator_frees_and_returns_null_on_realloc_zero) {
-      instance.Deallocate(p, 0, stack, FROM_MALLOC);
+      instance.Deallocate(p, 0, 0, stack, FROM_MALLOC);
       return nullptr;
     }
     // Allocate a size of 1 if we shouldn't free() on Realloc to 0
