@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -24,10 +25,12 @@ namespace llvm {
 class LegalizerCombiner {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
+  const LegalizerInfo &LI;
 
 public:
-  LegalizerCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI)
-      : Builder(B), MRI(MRI) {}
+  LegalizerCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                    const LegalizerInfo &LI)
+      : Builder(B), MRI(MRI), LI(LI) {}
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
@@ -54,12 +57,15 @@ public:
       return false;
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (DefMI->getOpcode() == TargetOpcode::G_TRUNC) {
+      unsigned DstReg = MI.getOperand(0).getReg();
+      LLT DstTy = MRI.getType(DstReg);
+      if (isInstUnsupported(TargetOpcode::G_AND, DstTy) ||
+          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
+        return false;
       DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
-      unsigned DstReg = MI.getOperand(0).getReg();
       unsigned ZExtSrc = MI.getOperand(1).getReg();
       LLT ZExtSrcTy = MRI.getType(ZExtSrc);
-      LLT DstTy = MRI.getType(DstReg);
       APInt Mask = APInt::getAllOnesValue(ZExtSrcTy.getSizeInBits());
       auto MaskCstMIB = Builder.buildConstant(DstTy, Mask.getZExtValue());
       unsigned TruncSrc = DefMI->getOperand(1).getReg();
@@ -79,10 +85,13 @@ public:
       return false;
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (DefMI->getOpcode() == TargetOpcode::G_TRUNC) {
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
-      Builder.setInstr(MI);
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
+      if (isInstUnsupported(TargetOpcode::G_SHL, DstTy) ||
+          isInstUnsupported(TargetOpcode::G_ASHR, DstTy))
+        return false;
+      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      Builder.setInstr(MI);
       unsigned SExtSrc = MI.getOperand(1).getReg();
       LLT SExtSrcTy = MRI.getType(SExtSrc);
       unsigned SizeDiff = DstTy.getSizeInBits() - SExtSrcTy.getSizeInBits();
@@ -201,6 +210,13 @@ private:
     DeadInsts.push_back(&MI);
     if (MRI.hasOneUse(DefMI.getOperand(0).getReg()))
       DeadInsts.push_back(&DefMI);
+  }
+  /// Checks if the target legalizer info has specified anything about the
+  /// instruction, or if unsupported.
+  bool isInstUnsupported(unsigned Opcode, const LLT &DstTy) const {
+    auto Action = LI.getAction({Opcode, 0, DstTy});
+    return Action.first == LegalizerInfo::LegalizeAction::Unsupported ||
+           Action.first == LegalizerInfo::LegalizeAction::NotFound;
   }
 };
 

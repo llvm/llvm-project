@@ -597,18 +597,6 @@ class SizeClassAllocator64 {
   };
   COMPILER_CHECK(sizeof(RegionInfo) >= kCacheLineSize);
 
-  u32 Rand(u32 *state) {  // ANSI C linear congruential PRNG.
-    return (*state = *state * 1103515245 + 12345) >> 16;
-  }
-
-  u32 RandN(u32 *state, u32 n) { return Rand(state) % n; }  // [0, n)
-
-  void RandomShuffle(u32 *a, u32 n, u32 *rand_state) {
-    if (n <= 1) return;
-    for (u32 i = n - 1; i > 0; i--)
-      Swap(a[i], a[RandN(rand_state, i + 1)]);
-  }
-
   RegionInfo *GetRegionInfo(uptr class_id) const {
     CHECK_LT(class_id, kNumClasses);
     RegionInfo *regions =
@@ -681,8 +669,10 @@ class SizeClassAllocator64 {
 
     // Map more space for chunks, if necessary.
     if (new_space_end > region->mapped_user) {
-      if (!kUsingConstantSpaceBeg && region->mapped_user == 0)
-        region->rand_state = static_cast<u32>(region_beg >> 12);  // From ASLR.
+      if (!kUsingConstantSpaceBeg && kRandomShuffleChunks)
+        if (UNLIKELY(region->mapped_user == 0))
+          // The random state is initialized from ASLR.
+          region->rand_state = static_cast<u32>(region_beg >> 12);
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
       while (new_space_end > region->mapped_user + map_size)
