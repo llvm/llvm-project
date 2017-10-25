@@ -730,6 +730,10 @@ enum : unsigned {
   SHT_GROUP = 17,                  // Section group.
   SHT_SYMTAB_SHNDX = 18,           // Indices for SHN_XINDEX entries.
   SHT_LOOS = 0x60000000,           // Lowest operating system-specific type.
+  // Android packed relocation section types.
+  // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
+  SHT_ANDROID_REL = 0x60000001,
+  SHT_ANDROID_RELA = 0x60000002,
   SHT_LLVM_ODRTAB = 0x6fff4c00,    // LLVM ODR table.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
@@ -1166,6 +1170,13 @@ enum {
   DT_LOPROC = 0x70000000, // Start of processor specific tags.
   DT_HIPROC = 0x7FFFFFFF, // End of processor specific tags.
 
+  // Android packed relocation section tags.
+  // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#31
+  DT_ANDROID_REL = 0x6000000F,
+  DT_ANDROID_RELSZ = 0x60000010,
+  DT_ANDROID_RELA = 0x60000011,
+  DT_ANDROID_RELASZ = 0x60000012,
+
   DT_GNU_HASH = 0x6FFFFEF5, // Reference to the GNU hash table.
   DT_TLSDESC_PLT =
       0x6FFFFEF6, // Location of PLT entry for TLS descriptor resolver calls.
@@ -1385,6 +1396,14 @@ enum {
   GNU_ABI_TAG_NETBSD = 4,
   GNU_ABI_TAG_SYLLABLE = 5,
   GNU_ABI_TAG_NACL = 6,
+};
+
+// Android packed relocation group flags.
+enum {
+  RELOCATION_GROUPED_BY_INFO_FLAG = 1,
+  RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG = 2,
+  RELOCATION_GROUPED_BY_ADDEND_FLAG = 4,
+  RELOCATION_GROUP_HAS_ADDEND_FLAG = 8,
 };
 
 // Compressed section header for ELF32.
