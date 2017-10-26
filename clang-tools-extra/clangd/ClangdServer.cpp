@@ -13,6 +13,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -266,15 +267,17 @@ void ClangdServer::codeComplete(
   WorkScheduler.addToFront(std::move(Task), std::move(Callback));
 }
 
-Tagged<SignatureHelp>
+llvm::Expected<Tagged<SignatureHelp>>
 ClangdServer::signatureHelp(PathRef File, Position Pos,
                             llvm::Optional<StringRef> OverridenContents,
                             IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   std::string DraftStorage;
   if (!OverridenContents) {
     auto FileContents = DraftMgr.getDraft(File);
-    assert(FileContents.Draft &&
-           "signatureHelp is called for non-added document");
+    if (!FileContents.Draft)
+      return llvm::make_error<llvm::StringError>(
+          "signatureHelp is called for non-added document",
+          llvm::errc::invalid_argument);
 
     DraftStorage = std::move(*FileContents.Draft);
     OverridenContents = DraftStorage;
@@ -285,7 +288,10 @@ ClangdServer::signatureHelp(PathRef File, Position Pos,
     *UsedFS = TaggedFS.Value;
 
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
-  assert(Resources && "Calling signatureHelp on non-added file");
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "signatureHelp is called for non-added document",
+        llvm::errc::invalid_argument);
 
   auto Preamble = Resources->getPossiblyStalePreamble();
   auto Result = clangd::signatureHelp(File, Resources->getCompileCommand(),
@@ -347,16 +353,15 @@ std::string ClangdServer::dumpAST(PathRef File) {
   return Result;
 }
 
-Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
-                                                            Position Pos) {
-  auto FileContents = DraftMgr.getDraft(File);
-  assert(FileContents.Draft &&
-         "findDefinitions is called for non-added document");
-
+llvm::Expected<Tagged<std::vector<Location>>>
+ClangdServer::findDefinitions(PathRef File, Position Pos) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
 
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
-  assert(Resources && "Calling findDefinitions on non-added file");
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "findDefinitions called on non-added file",
+        llvm::errc::invalid_argument);
 
   std::vector<Location> Result;
   Resources->getAST().get()->runUnderLock([Pos, &Result, this](ParsedAST *AST) {
