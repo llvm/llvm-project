@@ -1178,6 +1178,17 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   ObjCCategoryDecl> objcCategoryDecl;
 
+/// \brief Matches Objective-C category definitions.
+///
+/// Example matches Foo (Additions)
+/// \code
+///   @implementation Foo (Additions)
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCCategoryImplDecl> objcCategoryImplDecl;
+
 /// \brief Matches Objective-C method declarations.
 ///
 /// Example matches both declaration and definition of -[Foo method]
